@@ -4,7 +4,7 @@
 */
 
 import fetch from "@codedm/client-typescript/typescript/_http";
-import type { GetChannelPairingStatusQueryResponse } from "../types/GetChannelPairingStatus.ts";
+import type { GetChannelPairingStatusQueryResponse, GetChannelPairingStatusQueryParams } from "../types/GetChannelPairingStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getGetChannelPairingStatusUrl() {
@@ -13,14 +13,14 @@ function getGetChannelPairingStatusUrl() {
 }
 
 /**
- * @description WhatsApp pairing status + live QR for the connect dialog poll (T06)
+ * @description WhatsApp pairing status for the connect dialog poll (T06)
  * {@link /v1/ui/channels/pairing-status}
  */
-export async function getChannelPairingStatus(config: Partial<RequestConfig> & { client?: Client } = {}) {
+export async function getChannelPairingStatus(params: GetChannelPairingStatusQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config
 
 
 
-  const res = await request<GetChannelPairingStatusQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : getGetChannelPairingStatusUrl().url.toString(), ... requestConfig })
+  const res = await request<GetChannelPairingStatusQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : getGetChannelPairingStatusUrl().url.toString(), params, ... requestConfig })
   return res.data
 }

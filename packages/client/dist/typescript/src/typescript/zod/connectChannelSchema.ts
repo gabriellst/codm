@@ -11,6 +11,7 @@ import { z } from "zod/v4";
  */
 export const connectChannel200Schema = z.object({
     "channelId": z.uuid(),
+"qr": z.nullable(z.string()),
 get "status"(){
                 return channelStatusSchema
               }

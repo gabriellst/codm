@@ -60,11 +60,12 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	// Routing + agent output → live transcript (T09)
 	{ name: 'integration.message.classified' },
 	{ name: 'integration.agent.reply_drafted' },
-	// Thread + channel health (T03 / T05 / T06 live QR)
+	// Thread + channel health (T03 / T05 / T06). The pairing QR is delivered SYNCHRONOUSLY by the
+	// gateway's connect call (proxied by ui/ConnectChannel), not streamed — so there is no
+	// pairing_qr SSE frame; only the connect/disconnect health transitions ride this surface.
 	{ name: 'integration.thread.attached' },
 	{ name: 'integration.channel.connected' },
 	{ name: 'integration.channel.disconnected' },
-	{ name: 'integration.channel.pairing_qr_updated' },
 	// Contact directory sync (T15 attach wizard): a bootstrap remotes-sync pass finished → the browser
 	// invalidates its attach-wizard contacts read. Paired with the load-bearing ConsumeChannelRemotesSynced.
 	{ name: 'integration.channel.remotes_synced' },

@@ -6,7 +6,7 @@ import { ChannelRemotesSyncedEvent } from '@codedm/contracts-typescript/wire/eve
  * BC1 → console. Subscribes to the gateway's `integration.channel.remotes_synced` (a bootstrap
  * contact-sync pass finished inserting `gateway.remotes` rows).
  *
- * The subscription is load-bearing (same reason as {@link ConsumeChannelPairingQr}): the
+ * The subscription is load-bearing: the
  * RedisExternalMediator only opens a stream when a NAMED handler registers for it, and the
  * ListenEvents SSE relay is a catch-all that piggybacks on already-open streams. With this handler
  * registered — and `integration.channel.remotes_synced` listed in the ListenEvents BROWSER_EVENTS —

@@ -1087,6 +1087,11 @@ type GetAttachThreadWizardParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// GetChannelPairingStatusParams defines parameters for GetChannelPairingStatus.
+type GetChannelPairingStatusParams struct {
+	ChannelId openapi_types.UUID `form:"channelId" json:"channelId"`
+}
+
 // AddWorkspaceJSONBody defines parameters for AddWorkspace.
 type AddWorkspaceJSONBody struct {
 	Path string `json:"path"`
@@ -1519,7 +1524,7 @@ type ClientInterface interface {
 	ConnectChannel(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetChannelPairingStatus request
-	GetChannelPairingStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetChannelPairingStatus(ctx context.Context, params *GetChannelPairingStatusParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListenEvents request
 	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2100,8 +2105,8 @@ func (c *Client) ConnectChannel(ctx context.Context, reqEditors ...RequestEditor
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetChannelPairingStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetChannelPairingStatusRequest(c.Server)
+func (c *Client) GetChannelPairingStatus(ctx context.Context, params *GetChannelPairingStatusParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetChannelPairingStatusRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3521,7 +3526,7 @@ func NewConnectChannelRequest(server string) (*http.Request, error) {
 }
 
 // NewGetChannelPairingStatusRequest generates requests for GetChannelPairingStatus
-func NewGetChannelPairingStatusRequest(server string) (*http.Request, error) {
+func NewGetChannelPairingStatusRequest(server string, params *GetChannelPairingStatusParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -3537,6 +3542,29 @@ func NewGetChannelPairingStatusRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "channelId", params.ChannelId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: "uuid"}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -3952,7 +3980,7 @@ type ClientWithResponsesInterface interface {
 	ConnectChannelWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
 
 	// GetChannelPairingStatusWithResponse request
-	GetChannelPairingStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetChannelPairingStatusResponse, error)
+	GetChannelPairingStatusWithResponse(ctx context.Context, params *GetChannelPairingStatusParams, reqEditors ...RequestEditorFn) (*GetChannelPairingStatusResponse, error)
 
 	// ListenEventsWithResponse request
 	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
@@ -5177,8 +5205,9 @@ type ConnectChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		ChannelId openapi_types.UUID `json:"channelId"`
-		Status    ChannelStatus      `json:"status"`
+		ChannelId openapi_types.UUID        `json:"channelId"`
+		Qr        nullable.Nullable[string] `json:"qr"`
+		Status    ChannelStatus             `json:"status"`
 	}
 }
 
@@ -5210,10 +5239,8 @@ type GetChannelPairingStatusResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		ChannelId   nullable.Nullable[openapi_types.UUID] `json:"channelId"`
-		Qr          nullable.Nullable[string]             `json:"qr"`
-		QrExpiresAt nullable.Nullable[string]             `json:"qrExpiresAt"`
-		Status      ChannelStatus                         `json:"status"`
+		ChannelId openapi_types.UUID `json:"channelId"`
+		Status    ChannelStatus      `json:"status"`
 	}
 }
 
@@ -5962,8 +5989,8 @@ func (c *ClientWithResponses) ConnectChannelWithResponse(ctx context.Context, re
 }
 
 // GetChannelPairingStatusWithResponse request returning *GetChannelPairingStatusResponse
-func (c *ClientWithResponses) GetChannelPairingStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetChannelPairingStatusResponse, error) {
-	rsp, err := c.GetChannelPairingStatus(ctx, reqEditors...)
+func (c *ClientWithResponses) GetChannelPairingStatusWithResponse(ctx context.Context, params *GetChannelPairingStatusParams, reqEditors ...RequestEditorFn) (*GetChannelPairingStatusResponse, error) {
+	rsp, err := c.GetChannelPairingStatus(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -7121,8 +7148,9 @@ func ParseConnectChannelResponse(rsp *http.Response) (*ConnectChannelResponse, e
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			ChannelId openapi_types.UUID `json:"channelId"`
-			Status    ChannelStatus      `json:"status"`
+			ChannelId openapi_types.UUID        `json:"channelId"`
+			Qr        nullable.Nullable[string] `json:"qr"`
+			Status    ChannelStatus             `json:"status"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -7150,10 +7178,8 @@ func ParseGetChannelPairingStatusResponse(rsp *http.Response) (*GetChannelPairin
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			ChannelId   nullable.Nullable[openapi_types.UUID] `json:"channelId"`
-			Qr          nullable.Nullable[string]             `json:"qr"`
-			QrExpiresAt nullable.Nullable[string]             `json:"qrExpiresAt"`
-			Status      ChannelStatus                         `json:"status"`
+			ChannelId openapi_types.UUID `json:"channelId"`
+			Status    ChannelStatus      `json:"status"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

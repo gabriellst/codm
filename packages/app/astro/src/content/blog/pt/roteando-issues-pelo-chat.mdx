@@ -1,0 +1,41 @@
+---
+title: "Roteando issues pelo chat"
+description: "Como o CodeDM transforma uma thread movimentada em várias sessões de terminal em paralelo — e como as respostas acham o caminho de volta."
+publishedAt: 2026-07-20
+author: "Equipe"
+tags: ["router", "issues"]
+translationKey: "routing-issues"
+---
+
+Dez pedidos numa mesma thread não entram em fila no CodeDM — eles rodam. Este post percorre o modelo de roteamento que torna isso possível: como uma mensagem vira uma issue, e como uma resposta encontra o caminho de volta para a sessão exata que está trabalhando nela.
+
+## Da mensagem à issue
+
+Quando uma mensagem chega num chat conectado, o router a classifica antes de qualquer outra coisa. Três desfechos são possíveis:
+
+- **Trabalho novo** — a mensagem descreve algo que nenhuma issue aberta cobre. O router abre uma issue, dá a ela uma chave curta como `coupon-focus` e abre uma sessão de terminal nova na pasta do projeto.
+- **Match de contexto** — a mensagem claramente se refere a algo já aberto ("ainda quebrado no iOS"). Ela é anexada à sessão daquela issue como contexto novo.
+- **Ambíguo** — o router não consegue decidir. Em vez de chutar, ele pergunta: *"o do Pix, ou o bug da nav?"* Nada roda no cara ou coroa.
+
+Cada issue é dona da sua própria sessão de terminal, então dez pedidos viram dez sessões trabalhando em paralelo na sua máquina — zero colisões, nenhum estado compartilhado entre elas.
+
+## Labels: o caminho de volta
+
+Toda mensagem que um agente manda de volta carrega a chave da issue como um pequeno label mono acima do balão:
+
+```
+✳ coupon-focus · Claude Code
+Found it — the input remounts on every keystroke. Fixing now.
+```
+
+Esse label é o protocolo de roteamento inteiro. Não há sintaxe pra aprender nem prefixo de comando: qualquer pessoa no chat **cita** uma mensagem do agente pra respondê-la, e a resposta cai naquela sessão exata, sempre. O quote *é* o endereço.
+
+## Reply-quote ganha do match de contexto
+
+Match de contexto é heurística; reply-quote é determinístico. Quando os dois estão disponíveis, o router sempre prefere o quote — uma resposta a uma mensagem de `pix-payment` vai para `pix-payment` mesmo que o texto mencione cupons. É isso que permite que um cliente, um PM e você dividam uma thread com cinco issues em andamento sem nunca cruzar os fios.
+
+## Quando o router espera
+
+Algumas mensagens não roteiam pra sessão nenhuma. Um rate limit, um comando arriscado ou alguém pedindo um humano disparam um **stop**: o agente segura a linha, o router te avisa, e a thread espera até você aprovar, negar ou assumir. Esperar também é um desfecho de roteamento — o mais seguro deles.
+
+Esse é o modelo inteiro: classificar, rotular, citar. Um chat, várias issues, e toda resposta sabe pra onde vai.

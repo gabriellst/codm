@@ -1,29 +1,35 @@
 import { injectable } from 'tsyringe-neo'
-import { and, desc, eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
-import { channels } from '@codedm/contracts/db'
-import { ChannelKind, ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
-import { PairingQrCache } from '../services/PairingQrCache'
+import { Handler, z, BaseError, Config } from '@codedm/core-typescript'
+import { Client } from '@codedm/client-typescript'
+import { ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
+import { normalizeChannelStatus } from '../channelStatus'
+import type { ApplicationErrors } from '../errors'
 
-export const GetChannelPairingStatusInputSchema = z.object({ ownerId: z.uuid() })
+export const GetChannelPairingStatusInputSchema = z.object({
+	ownerId: z.uuid(),
+	channelId: z.uuid(),
+})
 export const GetChannelPairingStatusOutputSchema = z.object({
-	channelId: z.uuid().nullable(),
+	channelId: z.uuid(),
 	status: z.enum(ChannelStatus),
-	qr: z.string().nullable(),
-	qrExpiresAt: z.string().nullable(),
 })
 
+// Match the connect timeout — a status poll that outlives the dialog's 2s interval is useless.
+const GATEWAY_TIMEOUT_MS = 8000
+
 /**
- * Read — the connect dialog's pairing poll (T06). Surfaces the operator's WhatsApp channel state so
- * the dialog can render the live QR and detect CONNECTED without a second real-time channel:
- *   - `status`      — from the gateway-owned `channels` row (the gateway's status projector writes
- *     CONNECTED on pairing). No row yet → DISCONNECTED.
- *   - `qr` / `qrExpiresAt` — the freshest still-valid rotation captured from
- *     `integration.channel.pairing_qr_updated` into {@link PairingQrCache}; `null` between rotations
- *     or once expired, so the dialog waits for the next code (or offers retry after the TTL).
+ * Read — the connect dialog's pairing poll (T06). A SERVER-SIDE proxy that reads the operator's
+ * WhatsApp channel state straight from the gateway's channels resource
+ * (`GET /channels/{id}` on the Go gateway), so the dialog can detect CONNECTED and flip to success
+ * without a second real-time channel. Polled ~every 2s while the dialog is open.
  *
- * A BFF existence read: direct table + in-process cache, no aggregate orchestration. Polled ~every
- * 2s while the dialog is open — deliberately lean (single indexed lookup) versus the Home dashboard.
+ * The gateway is the source of truth for pairing state (its status projector writes CONNECTED once
+ * whatsmeow reports the device paired); api-ts does not mirror that row, so this proxies over the
+ * apikey-guarded S2S surface rather than reading a local table. `channelId` comes from the preceding
+ * `ConnectChannel` response. The raw gateway status is normalized onto the contracts
+ * {@link ChannelStatus} the browser speaks. Any transport failure maps to the same honest
+ * {@link ApplicationErrors} `GATEWAY_UNAVAILABLE` the connect proxy raises — under `CODEDM_E2E` the
+ * gateway is absent, so the poll surfaces exactly that.
  */
 @injectable()
 export class GetChannelPairingStatus extends Handler<typeof GetChannelPairingStatusInputSchema, typeof GetChannelPairingStatusOutputSchema> {
@@ -31,35 +37,27 @@ export class GetChannelPairingStatus extends Handler<typeof GetChannelPairingSta
 	readonly inputSchema = GetChannelPairingStatusInputSchema
 	readonly outputSchema = GetChannelPairingStatusOutputSchema
 
-	constructor(
-		private readonly db: DrizzleClient,
-		private readonly qrCache: PairingQrCache,
-	) {
+	constructor(private readonly client: Client) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const [row] = await this.db
-			.select({ id: channels.id, status: channels.status })
-			.from(channels)
-			.where(and(eq(channels.ownerId, input.ownerId), eq(channels.kind, ChannelKind.WHATSAPP)))
-			.orderBy(desc(channels.updatedAt))
-			.limit(1)
-
-		const status = (row?.status as ChannelStatus | undefined) ?? ChannelStatus.DISCONNECTED
-
-		// A paired channel needs no QR — drop any stale rotation so the dialog flips straight to success.
-		if (status === ChannelStatus.CONNECTED) {
-			this.qrCache.clear(input.ownerId)
-			return { channelId: row?.id ?? null, status, qr: null, qrExpiresAt: null }
+		const gatewayConfig = {
+			headers: { apikey: Config.env.CODEDM_GATEWAY_API_KEY, 'X-Owner-Id': input.ownerId },
+			timeout: GATEWAY_TIMEOUT_MS,
+			retry: false as const,
 		}
 
-		const cached = this.qrCache.get(input.ownerId)
+		let channel: { id?: string; status?: string } | undefined
+		try {
+			channel = await this.client.go.getChannel(input.channelId, gatewayConfig)
+		} catch {
+			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', 'the WhatsApp channel gateway is unreachable')
+		}
+
 		return {
-			channelId: row?.id ?? null,
-			status,
-			qr: cached?.qr ?? null,
-			qrExpiresAt: cached?.qrExpiresAt.toISOString() ?? null,
+			channelId: channel?.id ?? input.channelId,
+			status: normalizeChannelStatus(channel?.status),
 		}
 	}
 }

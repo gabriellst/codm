@@ -2,40 +2,41 @@ import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError, Config } from '@codedm/core-typescript'
 import { Client } from '@codedm/client-typescript'
 import { ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
+import { normalizeChannelStatus } from '../channelStatus'
 import type { ApplicationErrors } from '../errors'
 
 export const ConnectChannelInputSchema = z.object({ ownerId: z.uuid() })
 export const ConnectChannelOutputSchema = z.object({
 	channelId: z.uuid(),
+	// The live pairing QR string (WhatsApp `2@…` ref) the browser renders as a scannable code. Null
+	// when the connect returns no QR — i.e. an already-paired device reconnecting (status CONNECTED).
+	qr: z.string().nullable(),
 	status: z.enum(ChannelStatus),
 })
-
-// The Go gateway's connect surface returns fast with the row's live status: a fresh session is
-// PAIRING (QR codes then stream over `integration.channel.pairing_qr_updated`); an already-paired
-// device reconnects straight to CONNECTED. Anything unexpected is normalised to PAIRING so a stray
-// upstream value never trips the output contract into a 500.
-function normalizeStatus(raw: string): ChannelStatus {
-	return (Object.values(ChannelStatus) as string[]).includes(raw) ? (raw as ChannelStatus) : ChannelStatus.PAIRING
-}
 
 // Fail fast — pairing is an interactive ceremony; a hung gateway call must surface as
 // GATEWAY_UNAVAILABLE quickly, not spin for the SDK's default 30s.
 const GATEWAY_TIMEOUT_MS = 8000
 
 /**
- * SERVER-SIDE proxy to the Go channel gateway's `POST /channel/connect` (BC1). Starts or resumes the
- * operator's WhatsApp session and returns `{ channelId, status }`.
+ * SERVER-SIDE proxy to the Go channel gateway. Starts or resumes the operator's WhatsApp session and
+ * returns `{ channelId, qr, status }` — the QR is delivered SYNCHRONOUSLY by the gateway's connect
+ * call (the verbatim medscall `POST /channels/{id}/connect` blocks on the first QR rotation and hands
+ * it back in the response body), so there is no async QR stream to consume.
  *
- * The gateway HTTP surface is service-to-service: it is guarded by the `apikey` header, which is read
- * from `Config.env` and attached HERE — it never reaches the browser (the console calls THIS proxy,
- * not the gateway). The apikey is empty by default (the gateway allows-all locally), so local dev
- * needs no secret.
+ * Two gateway calls compose the ceremony:
+ *   1. `GET /channels/resolve?platform=WHATSAPP` (get-or-create the operator's WhatsApp channel).
+ *      Owner scoping rides the `X-Owner-Id` header (swagger-ignored, so it isn't a client param).
+ *   2. `POST /channels/{id}/connect` — starts whatsmeow and returns `{ id, state, qrCode? }`.
  *
- * The connect response carries no QR: a fresh pairing streams rotating QR codes as integration events
- * that `ConsumeChannelPairingQr` caches and `GetChannelPairingStatus` (the dialog's 2s poll) hands to
- * the browser. Any transport failure — gateway not running (connection refused), timeout, upstream
- * 5xx — is mapped to a single honest {@link ApplicationErrors} `GATEWAY_UNAVAILABLE`, never a 500
- * soup. Under `CODEDM_E2E` the gateway is absent, so this error path is exactly what the seam sees.
+ * The gateway HTTP surface is service-to-service: it is guarded by the `apikey` header, read from
+ * `Config.env.CODEDM_GATEWAY_API_KEY` and attached HERE — it NEVER reaches the browser (the console
+ * calls THIS proxy, not the gateway). The key is empty by default (the gateway allows-all locally),
+ * so local dev needs no secret.
+ *
+ * Any transport failure — gateway not running (connection refused), timeout, upstream 5xx — is mapped
+ * to a single honest {@link ApplicationErrors} `GATEWAY_UNAVAILABLE`, never a 500 soup. Under
+ * `CODEDM_E2E` the gateway is absent, so this error path is exactly what the seam sees.
  */
 @injectable()
 export class ConnectChannel extends Handler<typeof ConnectChannelInputSchema, typeof ConnectChannelOutputSchema> {
@@ -54,11 +55,7 @@ export class ConnectChannel extends Handler<typeof ConnectChannelInputSchema, ty
 			retry: false as const,
 		}
 
-		// The verbatim gateway splits pairing into two calls: resolve
-		// (`GET /channels/resolve`, get-or-create the owner's WhatsApp channel) then connect
-		// (`POST /channels/{id}/connect`, which starts whatsmeow and returns the live state + QR).
-		// Owner scoping rides the `X-Owner-Id` header (swagger-ignored, so it isn't a client param).
-		let out: { channelId?: string; state?: string } | undefined
+		let out: { channelId?: string; qrCode?: string; state?: string } | undefined
 		try {
 			const channel = await this.client.go.getOrCreateChannel(
 				{ platform: 'WHATSAPP' },
@@ -66,7 +63,7 @@ export class ConnectChannel extends Handler<typeof ConnectChannelInputSchema, ty
 			)
 			if (channel?.id) {
 				const connected = await this.client.go.connectChannel(channel.id, gatewayConfig)
-				out = { channelId: connected?.id ?? channel.id, state: connected?.state }
+				out = { channelId: connected?.id ?? channel.id, qrCode: connected?.qrCode, state: connected?.state }
 			}
 		} catch {
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', 'the WhatsApp channel gateway is unreachable')
@@ -76,6 +73,10 @@ export class ConnectChannel extends Handler<typeof ConnectChannelInputSchema, ty
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', 'the WhatsApp channel gateway returned no channel')
 		}
 
-		return { channelId: out.channelId, status: normalizeStatus(out.state ?? ChannelStatus.PAIRING) }
+		return {
+			channelId: out.channelId,
+			qr: out.qrCode ?? null,
+			status: normalizeChannelStatus(out.state),
+		}
 	}
 }

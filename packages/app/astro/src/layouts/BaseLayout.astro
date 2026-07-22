@@ -47,7 +47,7 @@ const rssHref = locale === 'pt' ? '/blog/rss.xml' : '/en/blog/rss.xml'
 		<meta name="twitter:title" content={title} />
 		<meta name="twitter:description" content={description} />
 		{ogImage && <meta name="twitter:image" content={ogImage} />}
-		{jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+		{jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
 		<slot name="head" />
 	</head>
 	<body class="min-h-screen bg-[var(--background)] text-[var(--foreground)]">

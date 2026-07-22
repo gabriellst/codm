@@ -78,7 +78,7 @@ export type { DetectProviders200, DetectProvidersQuery, DetectProvidersQueryPara
 export type { DisableOwner200, DisableOwnerMutation, DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "./types/DisableOwner.ts";
 export type { EnableOwner200, EnableOwnerMutation, EnableOwnerMutationResponse } from "./types/EnableOwner.ts";
 export type { GetAttachThreadWizard200, GetAttachThreadWizardQuery, GetAttachThreadWizardQueryParams, GetAttachThreadWizardQueryResponse } from "./types/GetAttachThreadWizard.ts";
-export type { GetChannelPairingStatus200, GetChannelPairingStatusQuery, GetChannelPairingStatusQueryResponse } from "./types/GetChannelPairingStatus.ts";
+export type { GetChannelPairingStatus200, GetChannelPairingStatusQuery, GetChannelPairingStatusQueryParams, GetChannelPairingStatusQueryResponse } from "./types/GetChannelPairingStatus.ts";
 export type { GetHomeDashboard200, GetHomeDashboardQuery, GetHomeDashboardQueryResponse } from "./types/GetHomeDashboard.ts";
 export type { GetIssueDetail200, GetIssueDetailPathParams, GetIssueDetailQuery, GetIssueDetailQueryResponse } from "./types/GetIssueDetail.ts";
 export type { GetIssuesOverview200, GetIssuesOverviewQuery, GetIssuesOverviewQueryParams, GetIssuesOverviewQueryResponse } from "./types/GetIssuesOverview.ts";
@@ -393,7 +393,7 @@ export { detectProviders200Schema, detectProvidersQueryParamsSchema, detectProvi
 export { disableOwner200Schema, disableOwnerMutationRequestSchema, disableOwnerMutationResponseSchema } from "./zod/disableOwnerSchema.ts";
 export { enableOwner200Schema, enableOwnerMutationResponseSchema } from "./zod/enableOwnerSchema.ts";
 export { getAttachThreadWizard200Schema, getAttachThreadWizardQueryParamsSchema, getAttachThreadWizardQueryResponseSchema } from "./zod/getAttachThreadWizardSchema.ts";
-export { getChannelPairingStatus200Schema, getChannelPairingStatusQueryResponseSchema } from "./zod/getChannelPairingStatusSchema.ts";
+export { getChannelPairingStatus200Schema, getChannelPairingStatusQueryParamsSchema, getChannelPairingStatusQueryResponseSchema } from "./zod/getChannelPairingStatusSchema.ts";
 export { getHomeDashboard200Schema, getHomeDashboardQueryResponseSchema } from "./zod/getHomeDashboardSchema.ts";
 export { getIssueDetail200Schema, getIssueDetailPathParamsSchema, getIssueDetailQueryResponseSchema } from "./zod/getIssueDetailSchema.ts";
 export { getIssuesOverview200Schema, getIssuesOverviewQueryParamsSchema, getIssuesOverviewQueryResponseSchema } from "./zod/getIssuesOverviewSchema.ts";

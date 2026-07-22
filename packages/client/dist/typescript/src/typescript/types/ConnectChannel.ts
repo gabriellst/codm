@@ -16,6 +16,10 @@ export type ConnectChannel200 = {
     /**
      * @type string
     */
+    qr: string | null;
+    /**
+     * @type string
+    */
     status: ChannelStatus;
 };
 

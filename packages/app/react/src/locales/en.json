@@ -136,6 +136,14 @@
 		"title": "Channels",
 		"whatsappPairDescription": "Pairing happens through the local WhatsApp gateway. Once it's running, scan this QR code with WhatsApp on your phone to link the channel.",
 		"whatsappPairTitle": "Pair WhatsApp",
+		"whatsappPairScanHint": "Open WhatsApp › Linked devices › Link a device, then scan this code.",
+		"pairStarting": "Starting the WhatsApp gateway…",
+		"pairWaitingScan": "Waiting for you to scan the code…",
+		"pairConnectedTitle": "WhatsApp connected",
+		"pairConnectedHint": "This channel is now linked and ready to route messages.",
+		"pairExpiredTitle": "Code expired",
+		"pairExpiredHint": "Pairing codes expire after a few minutes. Generate a fresh one to continue.",
+		"pairRegenerate": "Generate a new code",
 		"yourChannels": "Your channels"
 	},
 	"common": {

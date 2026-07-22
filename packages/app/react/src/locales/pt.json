@@ -136,6 +136,14 @@
 		"title": "Canais",
 		"whatsappPairDescription": "O pareamento acontece pelo gateway local do WhatsApp. Assim que ele estiver ativo, escaneie este QR code com o WhatsApp no seu celular para vincular o canal.",
 		"whatsappPairTitle": "Parear WhatsApp",
+		"whatsappPairScanHint": "Abra o WhatsApp › Aparelhos conectados › Conectar aparelho e escaneie este código.",
+		"pairStarting": "Iniciando o gateway do WhatsApp…",
+		"pairWaitingScan": "Aguardando você escanear o código…",
+		"pairConnectedTitle": "WhatsApp conectado",
+		"pairConnectedHint": "Este canal está vinculado e pronto para rotear mensagens.",
+		"pairExpiredTitle": "Código expirado",
+		"pairExpiredHint": "Os códigos de pareamento expiram após alguns minutos. Gere um novo para continuar.",
+		"pairRegenerate": "Gerar novo código",
 		"yourChannels": "Seus canais"
 	},
 	"common": {

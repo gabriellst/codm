@@ -1,0 +1,41 @@
+---
+title: "Routing issues from chat"
+description: "How CodeDM turns one busy thread into many parallel terminal sessions — and how replies find their way back."
+publishedAt: 2026-07-20
+author: "Team"
+tags: ["router", "issues"]
+translationKey: "routing-issues"
+---
+
+Ten requests in one thread don't queue in CodeDM — they run. This post walks through the routing model that makes that possible: how a message becomes an issue, and how a reply finds its way back to the exact session working on it.
+
+## From message to issue
+
+When a message lands on a connected chat, the router classifies it before anything else happens. Three outcomes are possible:
+
+- **New work** — the message describes something no open issue covers. The router opens an issue, gives it a short key like `coupon-focus`, and spawns a fresh terminal session on the project folder.
+- **Context match** — the message clearly refers to something already open ("still broken on iOS"). It's appended to that issue's session as new context.
+- **Ambiguous** — the router can't tell. Instead of guessing, it asks: *"the Pix one, or the nav bug?"* Nothing runs on a coin flip.
+
+Each issue owns its own terminal session, so ten asks become ten sessions working in parallel on your machine — zero collisions, no shared state between them.
+
+## Labels: the return path
+
+Every message an agent sends back carries its issue key as a small mono label above the bubble:
+
+```
+✳ coupon-focus · Claude Code
+Found it — the input remounts on every keystroke. Fixing now.
+```
+
+That label is the whole routing protocol. There is no syntax to learn and no command prefix: anyone in the chat **quotes** an agent message to answer it, and the reply lands in that exact session, always. The quote *is* the address.
+
+## Reply-quote beats context matching
+
+Context matching is a heuristic; reply-quotes are deterministic. When both are available the router always prefers the quote — a reply to a `pix-payment` message goes to `pix-payment` even if the text mentions coupons. This is what lets a client, a PM and you share one thread with five issues in flight and never cross wires.
+
+## When the router waits
+
+Some messages route to no session at all. A rate limit, a risky command, or someone asking for a human all trigger a **stop**: the agent holds the line, the router flags you, and the thread waits until you approve, deny or take over. Waiting is a routing outcome too — the safest one.
+
+That's the whole model: classify, label, quote. One chat, many issues, and every reply knows where it's going.

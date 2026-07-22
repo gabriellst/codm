@@ -3,34 +3,34 @@
 * Do not edit manually.
 */
 
-import type { GetChannelPairingStatusQueryResponse } from "../types/GetChannelPairingStatus.ts";
+import type { GetChannelPairingStatusQueryResponse, GetChannelPairingStatusQueryParams } from "../types/GetChannelPairingStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
 import { getChannelPairingStatus } from "../client/getChannelPairingStatus.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getChannelPairingStatusSuspenseQueryKey = () => [{ url: '/v1/ui/channels/pairing-status' }] as const
+export const getChannelPairingStatusSuspenseQueryKey = (params: GetChannelPairingStatusQueryParams) => [{ url: '/v1/ui/channels/pairing-status' }, ...(params ? [params] : [])] as const
 
 export type GetChannelPairingStatusSuspenseQueryKey = ReturnType<typeof getChannelPairingStatusSuspenseQueryKey>
 
-export function getChannelPairingStatusSuspenseQueryOptions(config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getChannelPairingStatusSuspenseQueryOptions(params: GetChannelPairingStatusQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
 
-        const queryKey = getChannelPairingStatusSuspenseQueryKey()
+        const queryKey = getChannelPairingStatusSuspenseQueryKey(params)
         return queryOptions<GetChannelPairingStatusQueryResponse, ResponseErrorConfig<Error>, GetChannelPairingStatusQueryResponse, typeof queryKey>({
          
          queryKey,
          queryFn: async ({ signal }) => {
-            return getChannelPairingStatus({ ...config, signal: config.signal ?? signal })
+            return getChannelPairingStatus(params, { ...config, signal: config.signal ?? signal })
          },
         })
 
 }
 
 /**
- * @description WhatsApp pairing status + live QR for the connect dialog poll (T06)
+ * @description WhatsApp pairing status for the connect dialog poll (T06)
  * {@link /v1/ui/channels/pairing-status}
  */
-export function useGetChannelPairingStatusSuspense<TData = GetChannelPairingStatusQueryResponse, TQueryKey extends QueryKey = GetChannelPairingStatusSuspenseQueryKey>(options: 
+export function useGetChannelPairingStatusSuspense<TData = GetChannelPairingStatusQueryResponse, TQueryKey extends QueryKey = GetChannelPairingStatusSuspenseQueryKey>(params: GetChannelPairingStatusQueryParams, options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetChannelPairingStatusQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }
@@ -39,11 +39,11 @@ export function useGetChannelPairingStatusSuspense<TData = GetChannelPairingStat
 
          const { query: queryConfig = {}, client: config = {} } = options ?? {}
          const { client: queryClient, ...resolvedOptions } = queryConfig
-         const queryKey = resolvedOptions?.queryKey ?? getChannelPairingStatusSuspenseQueryKey()
+         const queryKey = resolvedOptions?.queryKey ?? getChannelPairingStatusSuspenseQueryKey(params)
          
 
          const query = useSuspenseQuery({
-          ...getChannelPairingStatusSuspenseQueryOptions(config),
+          ...getChannelPairingStatusSuspenseQueryOptions(params, config),
           ...resolvedOptions,
           queryKey,
          } as unknown as UseSuspenseQueryOptions, queryClient) as UseSuspenseQueryResult<TData, ResponseErrorConfig<Error>> & { queryKey: TQueryKey }

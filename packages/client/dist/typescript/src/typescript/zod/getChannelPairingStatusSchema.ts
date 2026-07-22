@@ -6,16 +6,18 @@
 import { channelStatusSchema } from "./channelStatusSchema.ts";
 import { z } from "zod/v4";
 
+export const getChannelPairingStatusQueryParamsSchema = z.object({
+    "channelId": z.uuid()
+    })
+
 /**
- * @description WhatsApp pairing status + live QR for the connect dialog poll (T06)
+ * @description WhatsApp pairing status for the connect dialog poll (T06)
  */
 export const getChannelPairingStatus200Schema = z.object({
-    "channelId": z.nullable(z.uuid()),
+    "channelId": z.uuid(),
 get "status"(){
                 return channelStatusSchema
-              },
-"qr": z.nullable(z.string()),
-"qrExpiresAt": z.nullable(z.string())
+              }
     })
 
 export const getChannelPairingStatusQueryResponseSchema = z.lazy(() => getChannelPairingStatus200Schema)

@@ -5,31 +5,31 @@
 
 import type { ChannelStatus } from "./ChannelStatus.ts";
 
+export type GetChannelPairingStatusQueryParams = {
+    /**
+     * @type string, uuid
+    */
+    channelId: string;
+};
+
 /**
- * @description WhatsApp pairing status + live QR for the connect dialog poll (T06)
+ * @description WhatsApp pairing status for the connect dialog poll (T06)
 */
 export type GetChannelPairingStatus200 = {
     /**
      * @type string, uuid
     */
-    channelId: string | null;
+    channelId: string;
     /**
      * @type string
     */
     status: ChannelStatus;
-    /**
-     * @type string
-    */
-    qr: string | null;
-    /**
-     * @type string
-    */
-    qrExpiresAt: string | null;
 };
 
 export type GetChannelPairingStatusQueryResponse = GetChannelPairingStatus200;
 
 export type GetChannelPairingStatusQuery = {
     Response: GetChannelPairingStatus200;
+    QueryParams: GetChannelPairingStatusQueryParams;
     Errors: any;
 };

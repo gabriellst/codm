@@ -2530,12 +2530,17 @@
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     },
+                    "qr": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "status": {
                       "$ref": "#/components/schemas/ChannelStatus"
                     }
                   },
                   "required": [
                     "channelId",
+                    "qr",
                     "status"
                   ],
                   "additionalProperties": false
@@ -2733,40 +2738,40 @@
         "tags": [
           "ui"
         ],
-        "description": "WhatsApp pairing status + live QR for the connect dialog poll (T06)",
+        "description": "WhatsApp pairing status for the connect dialog poll (T06)",
         "operationId": "GetChannelPairingStatus",
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "channelId",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
-            "description": "WhatsApp pairing status + live QR for the connect dialog poll (T06)",
+            "description": "WhatsApp pairing status for the connect dialog poll (T06)",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "channelId": {
-                      "nullable": true,
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     },
                     "status": {
                       "$ref": "#/components/schemas/ChannelStatus"
-                    },
-                    "qr": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "qrExpiresAt": {
-                      "nullable": true,
-                      "type": "string"
                     }
                   },
                   "required": [
                     "channelId",
-                    "status",
-                    "qr",
-                    "qrExpiresAt"
+                    "status"
                   ],
                   "additionalProperties": false
                 }
