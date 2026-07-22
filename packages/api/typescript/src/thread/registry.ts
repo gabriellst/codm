@@ -12,6 +12,7 @@ import { TranscriptRepository, DrizzleTranscriptRepository, MockTranscriptReposi
 import { ClarificationRepository, DrizzleClarificationRepository, MockClarificationRepository } from './repositories/ClarificationRepository'
 import { OpenIssuesReader, DrizzleOpenIssuesReader, MockOpenIssuesReader } from './services/OpenIssuesReader'
 import { ChannelConnectivity, DrizzleChannelConnectivity, MockChannelConnectivity } from './services/ChannelConnectivity'
+import { GroupMemberReader, DrizzleGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: ThreadRepository, mock: MockThreadRepository, real: DrizzleThreadRepository },
@@ -29,4 +30,7 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: OpenIssuesReader, mock: MockOpenIssuesReader, integration: DrizzleOpenIssuesReader, real: DrizzleOpenIssuesReader },
 	// Channel-connected gate reads the Go gateway read model: real in real+integration, always-true in mock.
 	{ token: ChannelConnectivity, mock: MockChannelConnectivity, integration: DrizzleChannelConnectivity, real: DrizzleChannelConnectivity },
+	// Group-member hydration reads the Go gateway `remote_memberships` read model: real in
+	// real+integration, empty in mock.
+	{ token: GroupMemberReader, mock: MockGroupMemberReader, integration: DrizzleGroupMemberReader, real: DrizzleGroupMemberReader },
 ])

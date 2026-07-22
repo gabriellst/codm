@@ -3,7 +3,15 @@ import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetAttachThreadWizard, GetAttachThreadWizardOutputSchema } from '../usecases/GetAttachThreadWizard'
 
-export const GetAttachThreadWizardControllerInputSchema = z.object({ ctx: z.object({ ownerId: z.uuid() }) })
+export const GetAttachThreadWizardControllerInputSchema = z.object({
+	ctx: z.object({ ownerId: z.uuid() }),
+	query: z.object({
+		// Case-insensitive contact-name search over the gateway remote directory.
+		search: z.string().optional(),
+		// Opaque keyset cursor from a previous page's `contactsNextCursor`.
+		cursor: z.string().optional(),
+	}),
+})
 export const GetAttachThreadWizardControllerOutputSchema = GetAttachThreadWizardOutputSchema
 
 @injectable()
@@ -24,7 +32,11 @@ export class GetAttachThreadWizardController extends Controller<
 	}
 
 	async handle(request: this['input']): Promise<this['output']> {
-		const data = await this.query.execute({ ownerId: request.ctx.ownerId })
+		const data = await this.query.execute({
+			ownerId: request.ctx.ownerId,
+			search: request.query.search,
+			cursor: request.query.cursor,
+		})
 		return { status: HttpStatusCode.OK, data }
 	}
 }

@@ -65,6 +65,9 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	{ name: 'integration.channel.connected' },
 	{ name: 'integration.channel.disconnected' },
 	{ name: 'integration.channel.pairing_qr_updated' },
+	// Contact directory sync (T15 attach wizard): a bootstrap remotes-sync pass finished → the browser
+	// invalidates its attach-wizard contacts read. Paired with the load-bearing ConsumeChannelRemotesSynced.
+	{ name: 'integration.channel.remotes_synced' },
 ]
 
 const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))

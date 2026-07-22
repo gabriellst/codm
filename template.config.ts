@@ -319,7 +319,8 @@ export const REPO = {
 		},
 		// ── channel gateway (BC1, api-go) ──
 		CODEDM_GATEWAY_API_KEY: {
-			consumers: ['apiGo'],
+			consumers: ['apiTs', 'apiGo'],
+			schema: 'kernel',
 			example: '',
 			secret: true,
 			doc: "api-key guarding the Go channel-gateway HTTP surface (S2S 'apikey' header); empty = allow all (local single-operator)",

@@ -33,6 +33,7 @@ const (
 	ENTRYNOTFOUND               ApiErrors = "ENTRY_NOT_FOUND"
 	ENTRYNOTINVOCABLE           ApiErrors = "ENTRY_NOT_INVOCABLE"
 	FORBIDDEN                   ApiErrors = "FORBIDDEN"
+	GATEWAYUNAVAILABLE          ApiErrors = "GATEWAY_UNAVAILABLE"
 	HANDLERNOTBOUND             ApiErrors = "HANDLER_NOT_BOUND"
 	INVALIDATEDAUTHTOKEN        ApiErrors = "INVALIDATED_AUTH_TOKEN"
 	INVALIDAUTHTOKEN            ApiErrors = "INVALID_AUTH_TOKEN"
@@ -118,6 +119,8 @@ func (e ApiErrors) Valid() bool {
 	case ENTRYNOTINVOCABLE:
 		return true
 	case FORBIDDEN:
+		return true
+	case GATEWAYUNAVAILABLE:
 		return true
 	case HANDLERNOTBOUND:
 		return true
@@ -1503,6 +1506,12 @@ type ClientInterface interface {
 	// GetAttachThreadWizard request
 	GetAttachThreadWizard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ConnectChannel request
+	ConnectChannel(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetChannelPairingStatus request
+	GetChannelPairingStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListenEvents request
 	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2060,6 +2069,30 @@ func (c *Client) GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn
 
 func (c *Client) GetAttachThreadWizard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAttachThreadWizardRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConnectChannel(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectChannelRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetChannelPairingStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetChannelPairingStatusRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -3412,6 +3445,60 @@ func NewGetAttachThreadWizardRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewConnectChannelRequest generates requests for ConnectChannel
+func NewConnectChannelRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/channels/connect")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetChannelPairingStatusRequest generates requests for GetChannelPairingStatus
+func NewGetChannelPairingStatusRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/channels/pairing-status")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListenEventsRequest generates requests for ListenEvents
 func NewListenEventsRequest(server string) (*http.Request, error) {
 	var err error
@@ -3812,6 +3899,12 @@ type ClientWithResponsesInterface interface {
 
 	// GetAttachThreadWizardWithResponse request
 	GetAttachThreadWizardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error)
+
+	// ConnectChannelWithResponse request
+	ConnectChannelWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
+
+	// GetChannelPairingStatusWithResponse request
+	GetChannelPairingStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetChannelPairingStatusResponse, error)
 
 	// ListenEventsWithResponse request
 	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
@@ -5028,6 +5121,74 @@ func (r GetAttachThreadWizardResponse) ContentType() string {
 	return ""
 }
 
+type ConnectChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ChannelId openapi_types.UUID `json:"channelId"`
+		Status    ChannelStatus      `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConnectChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConnectChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConnectChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetChannelPairingStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ChannelId   nullable.Nullable[openapi_types.UUID] `json:"channelId"`
+		Qr          nullable.Nullable[string]             `json:"qr"`
+		QrExpiresAt nullable.Nullable[string]             `json:"qrExpiresAt"`
+		Status      ChannelStatus                         `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetChannelPairingStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetChannelPairingStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetChannelPairingStatusResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListenEventsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5737,6 +5898,24 @@ func (c *ClientWithResponses) GetAttachThreadWizardWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseGetAttachThreadWizardResponse(rsp)
+}
+
+// ConnectChannelWithResponse request returning *ConnectChannelResponse
+func (c *ClientWithResponses) ConnectChannelWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error) {
+	rsp, err := c.ConnectChannel(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConnectChannelResponse(rsp)
+}
+
+// GetChannelPairingStatusWithResponse request returning *GetChannelPairingStatusResponse
+func (c *ClientWithResponses) GetChannelPairingStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetChannelPairingStatusResponse, error) {
+	rsp, err := c.GetChannelPairingStatus(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetChannelPairingStatusResponse(rsp)
 }
 
 // ListenEventsWithResponse request returning *ListenEventsResponse
@@ -6859,6 +7038,66 @@ func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWiz
 				Path        string             `json:"path"`
 				WorkspaceId openapi_types.UUID `json:"workspaceId"`
 			} `json:"workspaces"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConnectChannelResponse parses an HTTP response from a ConnectChannelWithResponse call
+func ParseConnectChannelResponse(rsp *http.Response) (*ConnectChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConnectChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ChannelId openapi_types.UUID `json:"channelId"`
+			Status    ChannelStatus      `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetChannelPairingStatusResponse parses an HTTP response from a GetChannelPairingStatusWithResponse call
+func ParseGetChannelPairingStatusResponse(rsp *http.Response) (*GetChannelPairingStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetChannelPairingStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ChannelId   nullable.Nullable[openapi_types.UUID] `json:"channelId"`
+			Qr          nullable.Nullable[string]             `json:"qr"`
+			QrExpiresAt nullable.Nullable[string]             `json:"qrExpiresAt"`
+			Status      ChannelStatus                         `json:"status"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
