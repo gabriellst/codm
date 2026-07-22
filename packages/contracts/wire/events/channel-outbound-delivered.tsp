@@ -12,5 +12,6 @@ model ChannelOutboundDeliveredEvent extends IntegrationEvent {
   labelIssueKey?: string;
   labelThreadId?: string;
   senderIdentity: SenderIdentity;
+  @encode("rfc3339", string)
   deliveredAt: utcDateTime;
 }

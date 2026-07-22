@@ -405,19 +405,6 @@
         ],
         "type": "object"
       },
-      "FcmPlatform": {
-        "enum": [
-          "IOS",
-          "ANDROID",
-          "WEB"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "FcmPlatformIOS",
-          "FcmPlatformANDROID",
-          "FcmPlatformWEB"
-        ]
-      },
       "IssueArchiveReason": {
         "enum": [
           "MANUAL",

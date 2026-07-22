@@ -2,7 +2,7 @@ import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
 import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
 
 // The auth context owns the whole user surface since the identity collapse: BetterAuth identity +
-// the supplementary UserProfile / FCM-token aggregates. Former identity error codes live here now.
+// the supplementary UserProfile aggregate. Former identity error codes live here now.
 export type AuthDomainErrors =
 	| 'WEAK_PASSWORD'
 	| 'INVALID_EMAIL_FORMAT'
@@ -14,13 +14,7 @@ export type AuthDomainErrors =
 	| 'INVALID_PICTURE_URL'
 export type DomainErrors = BaseDomainErrors | AuthDomainErrors
 
-export type AuthApplicationErrors =
-	| 'USER_NOT_FOUND'
-	| 'EMAIL_ALREADY_REGISTERED'
-	| 'INVALID_AUTH_TOKEN'
-	| 'INVALIDATED_AUTH_TOKEN'
-	| 'USER_PROFILE_NOT_FOUND'
-	| 'FCM_TOKEN_NOT_FOUND'
+export type AuthApplicationErrors = 'USER_NOT_FOUND' | 'EMAIL_ALREADY_REGISTERED' | 'INVALID_AUTH_TOKEN' | 'INVALIDATED_AUTH_TOKEN'
 export type ApplicationErrors = BaseApplicationErrors | AuthApplicationErrors
 
 export type AuthInterfaceErrors = 'PASSWORDS_DONT_MATCH'
@@ -47,6 +41,4 @@ registerErrorCodes({
 	INVALID_TIMEZONE: HttpStatusCode.BAD_REQUEST,
 	INVALID_LANGUAGE: HttpStatusCode.BAD_REQUEST,
 	INVALID_PICTURE_URL: HttpStatusCode.BAD_REQUEST,
-	USER_PROFILE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
-	FCM_TOKEN_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 })

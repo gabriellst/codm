@@ -8,5 +8,6 @@ model IssueCompletedEvent extends IntegrationEvent {
   issueId: string;
   threadId: string;
   key: string;
+  @encode("rfc3339", string)
   completedAt: utcDateTime;
 }

@@ -469,27 +469,6 @@ func (e ErrorCode) Valid() bool {
 	}
 }
 
-// Defines values for FcmPlatform.
-const (
-	ANDROID FcmPlatform = "ANDROID"
-	IOS     FcmPlatform = "IOS"
-	WEB     FcmPlatform = "WEB"
-)
-
-// Valid indicates whether the value is a known member of the FcmPlatform enum.
-func (e FcmPlatform) Valid() bool {
-	switch e {
-	case ANDROID:
-		return true
-	case IOS:
-		return true
-	case WEB:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for IssueArchiveReason.
 const (
 	AUTO24H        IssueArchiveReason = "AUTO_24H"
@@ -1775,9 +1754,6 @@ type ErrorResponse struct {
 	Details interface{} `json:"details,omitempty"`
 	Message string      `json:"message"`
 }
-
-// FcmPlatform defines model for FcmPlatform.
-type FcmPlatform string
 
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string

@@ -26,6 +26,24 @@ import { OperatorMiddleware } from '@auth/middlewares'
  * Names are the frozen wire discriminators (the codegen gates every one to the `integration.`
  * prefix), so they are listed as string literals — the contract, not a runtime import.
  *
+ * DEFERRAL — the three frozen `browser.*` frames are NOT materialized as discrete on-wire frames
+ * in this phase (DEFERRED to the gateway/terminal phase; needs founder confirmation). The draft
+ * froze them with denormalized display fields that are computed at broadcast time, not carried on
+ * any outbox fact — so they cannot exist as `integration.*` wire events, and the wire codegen only
+ * emits models that `extends IntegrationEvent`. The exact frozen shapes, recorded here so the
+ * gateway phase materializes them verbatim:
+ *   - browser.thread_status_changed   { threadId: string; status: ThreadStatus; agentsRunningNow: number }
+ *       ← denormalized from the issue-lifecycle events below (status + a live running-agent count).
+ *   - browser.stop_raised             { threadId: string; threadDisplayName: string; issueId: string;
+ *                                       issueKey: string; stopKind: StopKind }
+ *       ← integration.issue.stop_raised enriched with threadDisplayName + issueKey for the callout.
+ *   - browser.terminal_output_appended { issueId: string; line: string; at: string }
+ *       ← the two-stream TRANSPORT frame (per the draft's own note: NOT a domain fact / outbox fact);
+ *         it belongs to the terminal-session stream, NOT this owner-scoped outbox broadcaster.
+ * Until then, the broadcaster below re-emits the raw `integration.*` events; the denormalized
+ * fields (agentsRunningNow / threadDisplayName / issueKey) are synthesized in the gateway phase
+ * when the display-projection + terminal transport land.
+ *
  * WIRING NOTE (finalized in the gateway/terminal phase): the broadcaster below filters each
  * client by an `ownerId` read from the event *payload*, whereas the CodeDM lock carries `ownerId`
  * on the envelope only and collapses tenancy to a single constant operator. Populating the union

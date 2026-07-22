@@ -1,3 +1,8 @@
+// HAND-WRITTEN conformance test — intentionally authored, NOT emitted by codegen.
+// emit-wire-go.ts does not generate or overwrite this file (it has no AUTO-GENERATED
+// header for that reason). It lives here to exercise the generated wire discriminator
+// unmarshalling against real JSON envelopes. Safe to edit by hand; a wire regen will
+// not touch it. Do not add an AUTO-GENERATED header.
 package tests
 
 import (

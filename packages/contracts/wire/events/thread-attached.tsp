@@ -6,6 +6,10 @@ namespace TemplateContracts;
 model ThreadAttachedEvent extends IntegrationEvent {
   name: "integration.thread.attached";
   threadId: string;
+  // Thread-level channel binding (the channel the thread is bound to), NOT a flattened ContactRef member.
+  // Intentionally bare `channelId` to mirror the top-level `channelId` on ChannelMessageReceivedEvent and
+  // the `channel_id` column on the threads table; only the contact* fields are the flattened ContactRef VO.
+  @doc("The channel this thread is bound to (thread-level binding, not part of the flattened ContactRef).")
   channelId: string;
   contactExternalId: string;
   contactDisplayName: string;

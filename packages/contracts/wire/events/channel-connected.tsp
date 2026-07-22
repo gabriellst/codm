@@ -8,5 +8,6 @@ model ChannelConnectedEvent extends IntegrationEvent {
   channelId: string;
   kind: ChannelKind;
   accountDetail: string;
+  @encode("rfc3339", string)
   pairedAt: utcDateTime;
 }

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'bun:test'
-import { FcmPlatform } from '@template/contracts-typescript/wire/enums'
 import {
 	UserRegisteredEvent,
 	UserSignedInEvent,
@@ -8,8 +7,6 @@ import {
 	PasswordChangedEvent,
 	PasswordResetRequestedEvent,
 	PasswordResetEvent,
-	FcmTokenRegisteredEvent,
-	FcmTokenUnregisteredEvent,
 } from './index'
 
 describe('Identity domain events', () => {
@@ -21,8 +18,6 @@ describe('Identity domain events', () => {
 		expect(PasswordChangedEvent.name).toBe('auth.user.password_changed')
 		expect(PasswordResetRequestedEvent.name).toBe('auth.user.password_reset_requested')
 		expect(PasswordResetEvent.name).toBe('auth.user.password_reset')
-		expect(FcmTokenRegisteredEvent.name).toBe('auth.fcm_token.registered')
-		expect(FcmTokenUnregisteredEvent.name).toBe('auth.fcm_token.unregistered')
 	})
 
 	it('UserRegisteredEvent payload requires userId + email + carries optional leadEmail', () => {
@@ -82,23 +77,5 @@ describe('Identity domain events', () => {
 		expect(changed.payload.changedAt).toBe(now)
 		expect(requested.payload.requestedAt).toBe(now)
 		expect(reset.payload.resetAt).toBe(now)
-	})
-
-	it('FcmTokenRegisteredEvent payload requires a known FcmPlatform', () => {
-		const e = new FcmTokenRegisteredEvent({
-			entityId: 'tok-1',
-			ownerId: 'u1',
-			payload: { userId: 'u1', tokenId: 'tok-1', platform: FcmPlatform.IOS },
-		})
-		expect(e.payload.platform).toBe(FcmPlatform.IOS)
-	})
-
-	it('FcmTokenUnregisteredEvent payload carries userId + tokenId', () => {
-		const e = new FcmTokenUnregisteredEvent({
-			entityId: 'tok-1',
-			ownerId: 'u1',
-			payload: { userId: 'u1', tokenId: 'tok-1' },
-		})
-		expect(e.payload.tokenId).toBe('tok-1')
 	})
 })

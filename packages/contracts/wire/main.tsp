@@ -12,7 +12,6 @@ import "./enums/timezone.tsp";
 // Tenancy / identity
 import "./enums/role.tsp";
 import "./enums/owner-kind.tsp";
-import "./enums/fcm-platform.tsp";
 
 // CodeDM domain enums (Phase-0 contract lock) — single-sourced here, pgEnum-paired
 // (materialized as text columns per the repo's never-pgEnum convention), consumed by

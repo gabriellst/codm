@@ -1,6 +1,6 @@
 namespace TemplateContracts;
 
-@doc("ISO-4217 currency codes accepted across BK Dash. Stored on every MonetaryAmount; never freeform.")
+@doc("ISO-4217 currency codes. Stored on every monetary amount; never freeform.")
 enum CurrencyCode {
   AED: "AED",
   ALL: "ALL",

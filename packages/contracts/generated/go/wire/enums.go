@@ -217,23 +217,6 @@ func ParseCurrencyCode(s string) (CurrencyCode, error) {
 	}
 }
 
-type FcmPlatform string
-
-const (
-	FcmPlatformIOS FcmPlatform = "IOS"
-	FcmPlatformANDROID FcmPlatform = "ANDROID"
-	FcmPlatformWEB FcmPlatform = "WEB"
-)
-
-func ParseFcmPlatform(s string) (FcmPlatform, error) {
-	switch FcmPlatform(s) {
-	case FcmPlatformIOS, FcmPlatformANDROID, FcmPlatformWEB:
-		return FcmPlatform(s), nil
-	default:
-		return "", fmt.Errorf("invalid FcmPlatform: %q", s)
-	}
-}
-
 type IssueArchiveReason string
 
 const (

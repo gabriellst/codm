@@ -27,7 +27,6 @@ const (
 	CREDENTIALDECRYPTFAILED    ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
 	EMAILALREADYREGISTERED     ApiErrors = "EMAIL_ALREADY_REGISTERED"
 	ENTITYNOTFOUNDWHILESAVING  ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
-	FCMTOKENNOTFOUND           ApiErrors = "FCM_TOKEN_NOT_FOUND"
 	FORBIDDEN                  ApiErrors = "FORBIDDEN"
 	HANDLERNOTBOUND            ApiErrors = "HANDLER_NOT_BOUND"
 	INVALIDATEDAUTHTOKEN       ApiErrors = "INVALIDATED_AUTH_TOKEN"
@@ -58,7 +57,6 @@ const (
 	RATELIMITED                ApiErrors = "RATE_LIMITED"
 	UNAUTHORIZED               ApiErrors = "UNAUTHORIZED"
 	USERNOTFOUND               ApiErrors = "USER_NOT_FOUND"
-	USERPROFILENOTFOUND        ApiErrors = "USER_PROFILE_NOT_FOUND"
 	VALIDATIONERROR            ApiErrors = "VALIDATION_ERROR"
 	WEAKPASSWORD               ApiErrors = "WEAK_PASSWORD"
 )
@@ -77,8 +75,6 @@ func (e ApiErrors) Valid() bool {
 	case EMAILALREADYREGISTERED:
 		return true
 	case ENTITYNOTFOUNDWHILESAVING:
-		return true
-	case FCMTOKENNOTFOUND:
 		return true
 	case FORBIDDEN:
 		return true
@@ -139,8 +135,6 @@ func (e ApiErrors) Valid() bool {
 	case UNAUTHORIZED:
 		return true
 	case USERNOTFOUND:
-		return true
-	case USERPROFILENOTFOUND:
 		return true
 	case VALIDATIONERROR:
 		return true

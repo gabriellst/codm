@@ -15,5 +15,6 @@ model ChannelMessageReceivedEvent extends IntegrationEvent {
   text: string;
   quotedEntryId?: string;
   platform: ChannelKind;
+  @encode("rfc3339", string)
   receivedAt: utcDateTime;
 }

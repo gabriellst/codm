@@ -8,5 +8,6 @@ model ChannelPairingQrUpdatedEvent extends IntegrationEvent {
   channelId: string;
   kind: ChannelKind;
   qrPayload: string;
+  @encode("rfc3339", string)
   qrExpiresAt: utcDateTime;
 }

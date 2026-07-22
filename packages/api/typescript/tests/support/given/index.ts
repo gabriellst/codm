@@ -23,4 +23,4 @@ export function createGivenHelpers(testBed: TestBed) {
 export { givenUser, givenAccount, givenUserWithAccount, givenActiveSession }
 export { givenOwner, givenOwnerWithResponsible } from './owners'
 export { givenDomainEvent } from './events'
-export { givenUserProfile, givenFcmRegistrationToken } from './identity'
+export { givenUserProfile } from './identity'
