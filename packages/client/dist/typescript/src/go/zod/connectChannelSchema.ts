@@ -7,6 +7,10 @@ import { connectChannelOutputSchema } from "./connectChannelOutputSchema.ts";
 import { errorResponseSchema } from "./errorResponseSchema.ts";
 import { z } from "zod/v4";
 
+export const connectChannelPathParamsSchema = z.object({
+    "id": z.string()
+    })
+
 /**
  * @description OK
  */
@@ -15,10 +19,6 @@ export const connectChannel200Schema = z.lazy(() => connectChannelOutputSchema)
 /**
  * @description Error
  */
-export const connectChannel4XXSchema = z.lazy(() => errorResponseSchema)
-
-export const connectChannelMutationRequestSchema = z.object({
-    "ownerId": z.optional(z.string())
-    })
+export const connectChannelErrorSchema = z.lazy(() => errorResponseSchema)
 
 export const connectChannelMutationResponseSchema = z.lazy(() => connectChannel200Schema)

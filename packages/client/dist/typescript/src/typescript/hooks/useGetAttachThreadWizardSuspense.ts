@@ -3,24 +3,24 @@
 * Do not edit manually.
 */
 
-import type { GetAttachThreadWizardQueryResponse } from "../types/GetAttachThreadWizard.ts";
+import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../types/GetAttachThreadWizard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
 import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getAttachThreadWizardSuspenseQueryKey = () => [{ url: '/v1/ui/attach-thread-wizard' }] as const
+export const getAttachThreadWizardSuspenseQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/v1/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
 
 export type GetAttachThreadWizardSuspenseQueryKey = ReturnType<typeof getAttachThreadWizardSuspenseQueryKey>
 
-export function getAttachThreadWizardSuspenseQueryOptions(config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getAttachThreadWizardSuspenseQueryOptions(params?: GetAttachThreadWizardQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
 
-        const queryKey = getAttachThreadWizardSuspenseQueryKey()
+        const queryKey = getAttachThreadWizardSuspenseQueryKey(params)
         return queryOptions<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, GetAttachThreadWizardQueryResponse, typeof queryKey>({
          
          queryKey,
          queryFn: async ({ signal }) => {
-            return getAttachThreadWizard({ ...config, signal: config.signal ?? signal })
+            return getAttachThreadWizard(params, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getAttachThreadWizardSuspenseQueryOptions(config: Partial<Reques
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
  * {@link /v1/ui/attach-thread-wizard}
  */
-export function useGetAttachThreadWizardSuspense<TData = GetAttachThreadWizardQueryResponse, TQueryKey extends QueryKey = GetAttachThreadWizardSuspenseQueryKey>(options: 
+export function useGetAttachThreadWizardSuspense<TData = GetAttachThreadWizardQueryResponse, TQueryKey extends QueryKey = GetAttachThreadWizardSuspenseQueryKey>(params?: GetAttachThreadWizardQueryParams, options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }
@@ -39,11 +39,11 @@ export function useGetAttachThreadWizardSuspense<TData = GetAttachThreadWizardQu
 
          const { query: queryConfig = {}, client: config = {} } = options ?? {}
          const { client: queryClient, ...resolvedOptions } = queryConfig
-         const queryKey = resolvedOptions?.queryKey ?? getAttachThreadWizardSuspenseQueryKey()
+         const queryKey = resolvedOptions?.queryKey ?? getAttachThreadWizardSuspenseQueryKey(params)
          
 
          const query = useSuspenseQuery({
-          ...getAttachThreadWizardSuspenseQueryOptions(config),
+          ...getAttachThreadWizardSuspenseQueryOptions(params, config),
           ...resolvedOptions,
           queryKey,
          } as unknown as UseSuspenseQueryOptions, queryClient) as UseSuspenseQueryResult<TData, ResponseErrorConfig<Error>> & { queryKey: TQueryKey }

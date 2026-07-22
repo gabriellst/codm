@@ -8,9 +8,13 @@ export type ConnectChannelOutput = {
     /**
      * @type string
     */
-    channelId: string;
+    id: string;
+    /**
+     * @type string | undefined
+    */
+    qrCode?: string;
     /**
      * @type string
     */
-    status: string;
+    state: string;
 };

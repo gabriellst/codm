@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { listChannels } from "../client/listChannels.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const listChannelsSuspenseQueryKey = (params?: ListChannelsQueryParams) => [{ url: '/channel/list' }, ...(params ? [params] : [])] as const
+export const listChannelsSuspenseQueryKey = (params?: ListChannelsQueryParams) => [{ url: '/channel/channels' }, ...(params ? [params] : [])] as const
 
 export type ListChannelsSuspenseQueryKey = ReturnType<typeof listChannelsSuspenseQueryKey>
 
@@ -27,8 +27,8 @@ export function listChannelsSuspenseQueryOptions(params?: ListChannelsQueryParam
 }
 
 /**
- * @summary List the operator's channel sessions
- * {@link /channel/list}
+ * @summary List channels
+ * {@link /channel/channels}
  */
 export function useListChannelsSuspense<TData = ListChannelsQueryResponse, TQueryKey extends QueryKey = ListChannelsSuspenseQueryKey>(params?: ListChannelsQueryParams, options: 
 {

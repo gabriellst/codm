@@ -6,6 +6,13 @@
 import type { ConnectChannelOutput } from "./ConnectChannelOutput.ts";
 import type { ErrorResponse } from "./ErrorResponse.ts";
 
+export type ConnectChannelPathParams = {
+    /**
+     * @type string
+    */
+    id: string;
+};
+
 /**
  * @description OK
 */
@@ -14,19 +21,12 @@ export type ConnectChannel200 = ConnectChannelOutput;
 /**
  * @description Error
 */
-export type ConnectChannel4XX = ErrorResponse;
-
-export type ConnectChannelMutationRequest = {
-    /**
-     * @type string | undefined
-    */
-    ownerId?: string;
-};
+export type ConnectChannelError = ErrorResponse;
 
 export type ConnectChannelMutationResponse = ConnectChannel200;
 
 export type ConnectChannelMutation = {
     Response: ConnectChannel200;
-    Request: ConnectChannelMutationRequest;
+    PathParams: ConnectChannelPathParams;
     Errors: any;
 };

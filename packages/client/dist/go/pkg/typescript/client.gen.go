@@ -354,13 +354,16 @@ func (e ClassificationMethod) Valid() bool {
 
 // Defines values for ContactKind.
 const (
-	ContactKindCONTACT ContactKind = "CONTACT"
-	ContactKindGROUP   ContactKind = "GROUP"
+	ContactKindBROADCAST ContactKind = "BROADCAST"
+	ContactKindCONTACT   ContactKind = "CONTACT"
+	ContactKindGROUP     ContactKind = "GROUP"
 )
 
 // Valid indicates whether the value is a known member of the ContactKind enum.
 func (e ContactKind) Valid() bool {
 	switch e {
+	case ContactKindBROADCAST:
+		return true
 	case ContactKindCONTACT:
 		return true
 	case ContactKindGROUP:
@@ -1078,6 +1081,12 @@ type SteerThreadJSONBody struct {
 	Text string `json:"text"`
 }
 
+// GetAttachThreadWizardParams defines parameters for GetAttachThreadWizard.
+type GetAttachThreadWizardParams struct {
+	Search *string `form:"search,omitempty" json:"search,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // AddWorkspaceJSONBody defines parameters for AddWorkspace.
 type AddWorkspaceJSONBody struct {
 	Path string `json:"path"`
@@ -1504,7 +1513,7 @@ type ClientInterface interface {
 	GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetAttachThreadWizard request
-	GetAttachThreadWizard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetAttachThreadWizard(ctx context.Context, params *GetAttachThreadWizardParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ConnectChannel request
 	ConnectChannel(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2067,8 +2076,8 @@ func (c *Client) GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetAttachThreadWizard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetAttachThreadWizardRequest(c.Server)
+func (c *Client) GetAttachThreadWizard(ctx context.Context, params *GetAttachThreadWizardParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAttachThreadWizardRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3419,7 +3428,7 @@ func NewGetMyAccountRequest(server string) (*http.Request, error) {
 }
 
 // NewGetAttachThreadWizardRequest generates requests for GetAttachThreadWizard
-func NewGetAttachThreadWizardRequest(server string) (*http.Request, error) {
+func NewGetAttachThreadWizardRequest(server string, params *GetAttachThreadWizardParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -3435,6 +3444,45 @@ func NewGetAttachThreadWizardRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "search", *params.Search, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -3898,7 +3946,7 @@ type ClientWithResponsesInterface interface {
 	GetMyAccountWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyAccountResponse, error)
 
 	// GetAttachThreadWizardWithResponse request
-	GetAttachThreadWizardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error)
+	GetAttachThreadWizardWithResponse(ctx context.Context, params *GetAttachThreadWizardParams, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error)
 
 	// ConnectChannelWithResponse request
 	ConnectChannelWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
@@ -5076,13 +5124,17 @@ type GetAttachThreadWizardResponse struct {
 			Kind      ChannelKind        `json:"kind"`
 		} `json:"channels"`
 		Contacts []struct {
-			AlreadyAttached bool               `json:"alreadyAttached"`
-			ChannelId       openapi_types.UUID `json:"channelId"`
-			DisplayName     string             `json:"displayName"`
-			ExternalId      string             `json:"externalId"`
-			Kind            ContactKind        `json:"kind"`
+			AlreadyAttached  bool                      `json:"alreadyAttached"`
+			AvatarUrl        nullable.Nullable[string] `json:"avatarUrl"`
+			ChannelId        openapi_types.UUID        `json:"channelId"`
+			DisplayName      string                    `json:"displayName"`
+			ExternalId       string                    `json:"externalId"`
+			Kind             ContactKind               `json:"kind"`
+			LastMessageAt    nullable.Nullable[string] `json:"lastMessageAt"`
+			ParticipantCount nullable.Nullable[int]    `json:"participantCount"`
 		} `json:"contacts"`
-		NoChannelConnected bool `json:"noChannelConnected"`
+		ContactsNextCursor nullable.Nullable[string] `json:"contactsNextCursor"`
+		NoChannelConnected bool                      `json:"noChannelConnected"`
 		Providers          []struct {
 			Available bool           `json:"available"`
 			Provider  ProviderKind   `json:"provider"`
@@ -5892,8 +5944,8 @@ func (c *ClientWithResponses) GetMyAccountWithResponse(ctx context.Context, reqE
 }
 
 // GetAttachThreadWizardWithResponse request returning *GetAttachThreadWizardResponse
-func (c *ClientWithResponses) GetAttachThreadWizardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error) {
-	rsp, err := c.GetAttachThreadWizard(ctx, reqEditors...)
+func (c *ClientWithResponses) GetAttachThreadWizardWithResponse(ctx context.Context, params *GetAttachThreadWizardParams, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error) {
+	rsp, err := c.GetAttachThreadWizard(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -7020,13 +7072,17 @@ func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWiz
 				Kind      ChannelKind        `json:"kind"`
 			} `json:"channels"`
 			Contacts []struct {
-				AlreadyAttached bool               `json:"alreadyAttached"`
-				ChannelId       openapi_types.UUID `json:"channelId"`
-				DisplayName     string             `json:"displayName"`
-				ExternalId      string             `json:"externalId"`
-				Kind            ContactKind        `json:"kind"`
+				AlreadyAttached  bool                      `json:"alreadyAttached"`
+				AvatarUrl        nullable.Nullable[string] `json:"avatarUrl"`
+				ChannelId        openapi_types.UUID        `json:"channelId"`
+				DisplayName      string                    `json:"displayName"`
+				ExternalId       string                    `json:"externalId"`
+				Kind             ContactKind               `json:"kind"`
+				LastMessageAt    nullable.Nullable[string] `json:"lastMessageAt"`
+				ParticipantCount nullable.Nullable[int]    `json:"participantCount"`
 			} `json:"contacts"`
-			NoChannelConnected bool `json:"noChannelConnected"`
+			ContactsNextCursor nullable.Nullable[string] `json:"contactsNextCursor"`
+			NoChannelConnected bool                      `json:"noChannelConnected"`
 			Providers          []struct {
 				Available bool           `json:"available"`
 				Provider  ProviderKind   `json:"provider"`

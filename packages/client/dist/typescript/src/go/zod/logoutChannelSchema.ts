@@ -19,6 +19,6 @@ export const logoutChannel200Schema = z.lazy(() => logoutChannelOutputSchema)
 /**
  * @description Error
  */
-export const logoutChannel4XXSchema = z.lazy(() => errorResponseSchema)
+export const logoutChannelErrorSchema = z.lazy(() => errorResponseSchema)
 
 export const logoutChannelMutationResponseSchema = z.lazy(() => logoutChannel200Schema)

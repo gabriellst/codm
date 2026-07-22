@@ -4,12 +4,12 @@
 */
 
 
-export const ConnectionStatusEnum = {
-    CONNECTED: "CONNECTED",
-    DISCONNECTED: "DISCONNECTED",
-    CONNECTING: "CONNECTING"
+export const ConnectionStatus = {
+    ConnectionStatusConnected: "CONNECTED",
+    ConnectionStatusDisconnected: "DISCONNECTED",
+    ConnectionStatusConnecting: "CONNECTING"
 } as const;
 
-export type ConnectionStatusEnumKey = (typeof ConnectionStatusEnum)[keyof typeof ConnectionStatusEnum];
+export type ConnectionStatusEnumKey = (typeof ConnectionStatus)[keyof typeof ConnectionStatus];
 
 export type ConnectionStatus = ConnectionStatusEnumKey;

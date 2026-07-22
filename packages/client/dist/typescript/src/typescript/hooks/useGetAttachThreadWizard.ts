@@ -3,24 +3,24 @@
 * Do not edit manually.
 */
 
-import type { GetAttachThreadWizardQueryResponse } from "../types/GetAttachThreadWizard.ts";
+import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../types/GetAttachThreadWizard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getAttachThreadWizardQueryKey = () => [{ url: '/v1/ui/attach-thread-wizard' }] as const
+export const getAttachThreadWizardQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/v1/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
 
 export type GetAttachThreadWizardQueryKey = ReturnType<typeof getAttachThreadWizardQueryKey>
 
-export function getAttachThreadWizardQueryOptions(config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getAttachThreadWizardQueryOptions(params?: GetAttachThreadWizardQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
 
-        const queryKey = getAttachThreadWizardQueryKey()
+        const queryKey = getAttachThreadWizardQueryKey(params)
         return queryOptions<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, GetAttachThreadWizardQueryResponse, typeof queryKey>({
          
          queryKey,
          queryFn: async ({ signal }) => {
-            return getAttachThreadWizard({ ...config, signal: config.signal ?? signal })
+            return getAttachThreadWizard(params, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getAttachThreadWizardQueryOptions(config: Partial<RequestConfig>
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
  * {@link /v1/ui/attach-thread-wizard}
  */
-export function useGetAttachThreadWizard<TData = GetAttachThreadWizardQueryResponse, TQueryData = GetAttachThreadWizardQueryResponse, TQueryKey extends QueryKey = GetAttachThreadWizardQueryKey>(options: 
+export function useGetAttachThreadWizard<TData = GetAttachThreadWizardQueryResponse, TQueryData = GetAttachThreadWizardQueryResponse, TQueryKey extends QueryKey = GetAttachThreadWizardQueryKey>(params?: GetAttachThreadWizardQueryParams, options: 
 {
   query?: Partial<QueryObserverOptions<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, TData, TQueryData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }
@@ -39,11 +39,11 @@ export function useGetAttachThreadWizard<TData = GetAttachThreadWizardQueryRespo
 
          const { query: queryConfig = {}, client: config = {} } = options ?? {}
          const { client: queryClient, ...resolvedOptions } = queryConfig
-         const queryKey = resolvedOptions?.queryKey ?? getAttachThreadWizardQueryKey()
+         const queryKey = resolvedOptions?.queryKey ?? getAttachThreadWizardQueryKey(params)
          
 
          const query = useQuery({
-          ...getAttachThreadWizardQueryOptions(config),
+          ...getAttachThreadWizardQueryOptions(params, config),
           ...resolvedOptions,
           queryKey,
          } as unknown as QueryObserverOptions, queryClient) as UseQueryResult<TData, ResponseErrorConfig<Error>> & { queryKey: TQueryKey }

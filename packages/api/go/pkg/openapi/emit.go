@@ -98,7 +98,11 @@ type Spec struct {
 
 func newSpec() *Spec {
 	return &Spec{
-		OpenAPI: "3.1.0",
+		// OpenAPI 3.0.3, not 3.1: the codedm SDK pipeline (packages/client
+		// lib/preprocess.ts, COMPLIANCE.md R-01/R-05) validates a 3.0-flavored
+		// spec — version must start with "3.0" and nullability must use the
+		// `nullable: true` keyword, never 3.1 `type: "null"` forms (see makeNullable).
+		OpenAPI: "3.0.3",
 		Info: map[string]any{
 			"title":       "Channel API",
 			"description": "Channel service API — emitted by channel/pkg/openapi",

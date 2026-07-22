@@ -3,11 +3,15 @@
 * Do not edit manually.
 */
 
-import type { ChannelView } from "./ChannelView.ts";
+import type { ListChannelsItem } from "./ListChannelsItem.ts";
 
 export type ListChannelsOutput = {
     /**
      * @type array
     */
-    channels: ChannelView[];
+    items: ListChannelsItem[];
+    /**
+     * @type integer
+    */
+    total: number;
 };

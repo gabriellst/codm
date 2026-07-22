@@ -8,9 +8,13 @@ import type { ListChannelsOutput } from "./ListChannelsOutput.ts";
 
 export type ListChannelsQueryParams = {
     /**
-     * @type string | undefined
+     * @type integer | undefined
     */
-    ownerId?: string;
+    limit?: number;
+    /**
+     * @type integer | undefined
+    */
+    offset?: number;
 };
 
 /**
@@ -21,7 +25,7 @@ export type ListChannels200 = ListChannelsOutput;
 /**
  * @description Error
 */
-export type ListChannels4XX = ErrorResponse;
+export type ListChannelsError = ErrorResponse;
 
 export type ListChannelsQueryResponse = ListChannels200;
 

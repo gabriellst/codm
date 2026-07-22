@@ -4,23 +4,23 @@
 */
 
 import fetch from "@codedm/client-typescript/go/_http";
-import type { ConnectChannelMutationRequest, ConnectChannelMutationResponse } from "../types/ConnectChannel.ts";
+import type { ConnectChannelMutationResponse, ConnectChannelPathParams } from "../types/ConnectChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 
-function getConnectChannelUrl() {
-  const res = { method: 'POST', url: `/channel/connect` as const }
+function getConnectChannelUrl(id: ConnectChannelPathParams["id"]) {
+  const res = { method: 'POST', url: `/channel/channels/${id}/connect` as const }
   return res
 }
 
 /**
- * @summary Start or resume a WhatsApp channel session (QR pairing or reconnect)
- * {@link /channel/connect}
+ * @summary Connect channel (returns QR code)
+ * {@link /channel/channels/:id/connect}
  */
-export async function connectChannel(data: ConnectChannelMutationRequest, config: Partial<RequestConfig<ConnectChannelMutationRequest>> & { client?: Client } = {}) {
+export async function connectChannel(id: ConnectChannelPathParams["id"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config
 
-  const requestData = data
 
-  const res = await request<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, ConnectChannelMutationRequest>({ method : "POST", url : getConnectChannelUrl().url.toString(), data : requestData, ... requestConfig })
+
+  const res = await request<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "POST", url : getConnectChannelUrl(id).url.toString(), ... requestConfig })
   return res.data
 }

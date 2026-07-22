@@ -9,6 +9,17 @@ import type { ProviderKind } from "./ProviderKind.ts";
 import type { ProviderStatus } from "./ProviderStatus.ts";
 import type { WorkspaceBadge } from "./WorkspaceBadge.ts";
 
+export type GetAttachThreadWizardQueryParams = {
+    /**
+     * @type string | undefined
+    */
+    search?: string;
+    /**
+     * @type string | undefined
+    */
+    cursor?: string;
+};
+
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
 */
@@ -51,10 +62,28 @@ export type GetAttachThreadWizard200 = {
         */
         kind: ContactKind;
         /**
+         * @type string
+        */
+        avatarUrl: string | null;
+        /**
+         * @type string
+        */
+        lastMessageAt: string | null;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        participantCount: number | null;
+        /**
          * @type boolean
         */
         alreadyAttached: boolean;
     }[];
+    /**
+     * @type string
+    */
+    contactsNextCursor: string | null;
     /**
      * @type array
     */
@@ -99,5 +128,6 @@ export type GetAttachThreadWizardQueryResponse = GetAttachThreadWizard200;
 
 export type GetAttachThreadWizardQuery = {
     Response: GetAttachThreadWizard200;
+    QueryParams: GetAttachThreadWizardQueryParams;
     Errors: any;
 };

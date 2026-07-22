@@ -10,6 +10,11 @@ import { providerStatusSchema } from "./providerStatusSchema.ts";
 import { workspaceBadgeSchema } from "./workspaceBadgeSchema.ts";
 import { z } from "zod/v4";
 
+export const getAttachThreadWizardQueryParamsSchema = z.object({
+    "search": z.optional(z.string()),
+"cursor": z.optional(z.string())
+    }).optional()
+
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
  */
@@ -28,8 +33,12 @@ get "kind"(){
 get "kind"(){
                 return contactKindSchema
               },
+"avatarUrl": z.nullable(z.string()),
+"lastMessageAt": z.nullable(z.string()),
+"participantCount": z.nullable(z.int().min(-9007199254740991).max(9007199254740991)),
 "alreadyAttached": z.boolean()
     })),
+"contactsNextCursor": z.nullable(z.string()),
 "workspaces": z.array(z.object({
     "workspaceId": z.uuid(),
 "path": z.string(),

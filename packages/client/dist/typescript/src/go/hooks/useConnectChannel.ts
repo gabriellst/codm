@@ -3,36 +3,36 @@
 * Do not edit manually.
 */
 
-import type { ConnectChannelMutationRequest, ConnectChannelMutationResponse } from "../types/ConnectChannel.ts";
+import type { ConnectChannelMutationResponse, ConnectChannelPathParams } from "../types/ConnectChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { connectChannel } from "../client/connectChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const connectChannelMutationKey = () => [{ url: '/channel/connect' }] as const
+export const connectChannelMutationKey = () => [{ url: '/channel/channels/:id/connect' }] as const
 
 export type ConnectChannelMutationKey = ReturnType<typeof connectChannelMutationKey>
 
-export function connectChannelMutationOptions<TContext = unknown>(config: Partial<RequestConfig<ConnectChannelMutationRequest>> & { client?: Client } = {}) {
+export function connectChannelMutationOptions<TContext = unknown>(config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const mutationKey = connectChannelMutationKey()
-        return mutationOptions<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {data: ConnectChannelMutationRequest}, TContext>({
+        return mutationOptions<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {id: ConnectChannelPathParams["id"]}, TContext>({
           mutationKey,
-          mutationFn: async({ data }) => {
-            return connectChannel(data, config)
+          mutationFn: async({ id }) => {
+            return connectChannel(id, config)
           },
         })
 
 }
 
 /**
- * @summary Start or resume a WhatsApp channel session (QR pairing or reconnect)
- * {@link /channel/connect}
+ * @summary Connect channel (returns QR code)
+ * {@link /channel/channels/:id/connect}
  */
 export function useConnectChannel<TContext>(options: 
 {
-  mutation?: UseMutationOptions<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {data: ConnectChannelMutationRequest}, TContext> & { client?: QueryClient },
-  client?: Partial<RequestConfig<ConnectChannelMutationRequest>> & { client?: Client },
+  mutation?: UseMutationOptions<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {id: ConnectChannelPathParams["id"]}, TContext> & { client?: QueryClient },
+  client?: Partial<RequestConfig> & { client?: Client },
 }
  = {}) {
 
@@ -40,13 +40,13 @@ export function useConnectChannel<TContext>(options:
           const { client: queryClient, ...mutationOptions } = mutation;
           const mutationKey = mutationOptions.mutationKey ?? connectChannelMutationKey()
 
-          const baseOptions = connectChannelMutationOptions(config) as UseMutationOptions<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {data: ConnectChannelMutationRequest}, TContext>
+          const baseOptions = connectChannelMutationOptions(config) as UseMutationOptions<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {id: ConnectChannelPathParams["id"]}, TContext>
           
 
-          return useMutation<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {data: ConnectChannelMutationRequest}, TContext>({
+          return useMutation<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {id: ConnectChannelPathParams["id"]}, TContext>({
             ...baseOptions,
             mutationKey,
             ...mutationOptions,
-          }, queryClient) as UseMutationResult<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {data: ConnectChannelMutationRequest}, TContext>
+          }, queryClient) as UseMutationResult<ConnectChannelMutationResponse, ResponseErrorConfig<Error>, {id: ConnectChannelPathParams["id"]}, TContext>
       
 }

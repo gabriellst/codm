@@ -6,7 +6,8 @@
 
 export const ContactKindEnum = {
     CONTACT: "CONTACT",
-    GROUP: "GROUP"
+    GROUP: "GROUP",
+    BROADCAST: "BROADCAST"
 } as const;
 
 export type ContactKindEnumKey = (typeof ContactKindEnum)[keyof typeof ContactKindEnum];

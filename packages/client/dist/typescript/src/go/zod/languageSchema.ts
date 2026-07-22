@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const languageSchema = z.enum(["pt-BR", "en-US"])
+export const languageSchema = z.enum(["PT", "EN", "ES"])

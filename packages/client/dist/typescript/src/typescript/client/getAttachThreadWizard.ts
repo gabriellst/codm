@@ -4,7 +4,7 @@
 */
 
 import fetch from "@codedm/client-typescript/typescript/_http";
-import type { GetAttachThreadWizardQueryResponse } from "../types/GetAttachThreadWizard.ts";
+import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../types/GetAttachThreadWizard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getGetAttachThreadWizardUrl() {
@@ -16,11 +16,11 @@ function getGetAttachThreadWizardUrl() {
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
  * {@link /v1/ui/attach-thread-wizard}
  */
-export async function getAttachThreadWizard(config: Partial<RequestConfig> & { client?: Client } = {}) {
+export async function getAttachThreadWizard(params?: GetAttachThreadWizardQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config
 
 
 
-  const res = await request<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : getGetAttachThreadWizardUrl().url.toString(), ... requestConfig })
+  const res = await request<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : getGetAttachThreadWizardUrl().url.toString(), params, ... requestConfig })
   return res.data
 }

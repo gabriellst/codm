@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,132 +15,53 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oapi-codegen/nullable"
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
-
-// Defines values for ArtifactKind.
-const (
-	FILE  ArtifactKind = "FILE"
-	IMAGE ArtifactKind = "IMAGE"
-	LINK  ArtifactKind = "LINK"
-)
-
-// Valid indicates whether the value is a known member of the ArtifactKind enum.
-func (e ArtifactKind) Valid() bool {
-	switch e {
-	case FILE:
-		return true
-	case IMAGE:
-		return true
-	case LINK:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AttachFlowStyle.
-const (
-	FULLSCREEN AttachFlowStyle = "FULLSCREEN"
-	SIDEPANEL  AttachFlowStyle = "SIDE_PANEL"
-)
-
-// Valid indicates whether the value is a known member of the AttachFlowStyle enum.
-func (e AttachFlowStyle) Valid() bool {
-	switch e {
-	case FULLSCREEN:
-		return true
-	case SIDEPANEL:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BufferSize.
-const (
-	N100 BufferSize = "100"
-	N200 BufferSize = "200"
-	N25  BufferSize = "25"
-	N50  BufferSize = "50"
-)
-
-// Valid indicates whether the value is a known member of the BufferSize enum.
-func (e BufferSize) Valid() bool {
-	switch e {
-	case N100:
-		return true
-	case N200:
-		return true
-	case N25:
-		return true
-	case N50:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ChannelKind.
-const (
-	INSTAGRAMDM ChannelKind = "INSTAGRAM_DM"
-	TELEGRAM    ChannelKind = "TELEGRAM"
-	WHATSAPP    ChannelKind = "WHATSAPP"
-)
-
-// Valid indicates whether the value is a known member of the ChannelKind enum.
-func (e ChannelKind) Valid() bool {
-	switch e {
-	case INSTAGRAMDM:
-		return true
-	case TELEGRAM:
-		return true
-	case WHATSAPP:
-		return true
-	default:
-		return false
-	}
-}
 
 // Defines values for ChannelStatus.
 const (
-	ChannelStatusCONNECTED    ChannelStatus = "CONNECTED"
-	ChannelStatusDISCONNECTED ChannelStatus = "DISCONNECTED"
-	ChannelStatusPAIRING      ChannelStatus = "PAIRING"
+	ChannelStatusConnected    ChannelStatus = "CONNECTED"
+	ChannelStatusConnecting   ChannelStatus = "CONNECTING"
+	ChannelStatusCreated      ChannelStatus = "CREATED"
+	ChannelStatusDeleted      ChannelStatus = "DELETED"
+	ChannelStatusDisconnected ChannelStatus = "DISCONNECTED"
 )
 
 // Valid indicates whether the value is a known member of the ChannelStatus enum.
 func (e ChannelStatus) Valid() bool {
 	switch e {
-	case ChannelStatusCONNECTED:
+	case ChannelStatusConnected:
 		return true
-	case ChannelStatusDISCONNECTED:
+	case ChannelStatusConnecting:
 		return true
-	case ChannelStatusPAIRING:
+	case ChannelStatusCreated:
+		return true
+	case ChannelStatusDeleted:
+		return true
+	case ChannelStatusDisconnected:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for ClassificationMethod.
+// Defines values for ChatPresenceType.
 const (
-	CLARIFIED    ClassificationMethod = "CLARIFIED"
-	CONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
-	NEWISSUE     ClassificationMethod = "NEW_ISSUE"
-	REPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+	ChatPresenceTypeComposing ChatPresenceType = "composing"
+	ChatPresenceTypePaused    ChatPresenceType = "paused"
+	ChatPresenceTypeRecording ChatPresenceType = "recording"
 )
 
-// Valid indicates whether the value is a known member of the ClassificationMethod enum.
-func (e ClassificationMethod) Valid() bool {
+// Valid indicates whether the value is a known member of the ChatPresenceType enum.
+func (e ChatPresenceType) Valid() bool {
 	switch e {
-	case CLARIFIED:
+	case ChatPresenceTypeComposing:
 		return true
-	case CONTEXTMATCH:
+	case ChatPresenceTypePaused:
 		return true
-	case NEWISSUE:
-		return true
-	case REPLYQUOTE:
+	case ChatPresenceTypeRecording:
 		return true
 	default:
 		return false
@@ -148,289 +70,97 @@ func (e ClassificationMethod) Valid() bool {
 
 // Defines values for ConnectionStatus.
 const (
-	ConnectionStatusCONNECTED    ConnectionStatus = "CONNECTED"
-	ConnectionStatusCONNECTING   ConnectionStatus = "CONNECTING"
-	ConnectionStatusDISCONNECTED ConnectionStatus = "DISCONNECTED"
+	ConnectionStatusConnected    ConnectionStatus = "CONNECTED"
+	ConnectionStatusConnecting   ConnectionStatus = "CONNECTING"
+	ConnectionStatusDisconnected ConnectionStatus = "DISCONNECTED"
 )
 
 // Valid indicates whether the value is a known member of the ConnectionStatus enum.
 func (e ConnectionStatus) Valid() bool {
 	switch e {
-	case ConnectionStatusCONNECTED:
+	case ConnectionStatusConnected:
 		return true
-	case ConnectionStatusCONNECTING:
+	case ConnectionStatusConnecting:
 		return true
-	case ConnectionStatusDISCONNECTED:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ContactKind.
-const (
-	ContactKindCONTACT ContactKind = "CONTACT"
-	ContactKindGROUP   ContactKind = "GROUP"
-)
-
-// Valid indicates whether the value is a known member of the ContactKind enum.
-func (e ContactKind) Valid() bool {
-	switch e {
-	case ContactKindCONTACT:
-		return true
-	case ContactKindGROUP:
+	case ConnectionStatusDisconnected:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for CurrencyCode.
+// Defines values for Country.
 const (
-	AED CurrencyCode = "AED"
-	ALL CurrencyCode = "ALL"
-	ARS CurrencyCode = "ARS"
-	AUD CurrencyCode = "AUD"
-	BDT CurrencyCode = "BDT"
-	BGN CurrencyCode = "BGN"
-	BHD CurrencyCode = "BHD"
-	BIF CurrencyCode = "BIF"
-	BOB CurrencyCode = "BOB"
-	BRL CurrencyCode = "BRL"
-	BWP CurrencyCode = "BWP"
-	CAD CurrencyCode = "CAD"
-	CHF CurrencyCode = "CHF"
-	CLP CurrencyCode = "CLP"
-	CNY CurrencyCode = "CNY"
-	COP CurrencyCode = "COP"
-	CVE CurrencyCode = "CVE"
-	CZK CurrencyCode = "CZK"
-	DKK CurrencyCode = "DKK"
-	DOP CurrencyCode = "DOP"
-	EGP CurrencyCode = "EGP"
-	ETB CurrencyCode = "ETB"
-	EUR CurrencyCode = "EUR"
-	FJD CurrencyCode = "FJD"
-	GBP CurrencyCode = "GBP"
-	GHS CurrencyCode = "GHS"
-	GIP CurrencyCode = "GIP"
-	GMD CurrencyCode = "GMD"
-	GNF CurrencyCode = "GNF"
-	GTQ CurrencyCode = "GTQ"
-	HKD CurrencyCode = "HKD"
-	HUF CurrencyCode = "HUF"
-	IDR CurrencyCode = "IDR"
-	INR CurrencyCode = "INR"
-	ISK CurrencyCode = "ISK"
-	JOD CurrencyCode = "JOD"
-	JPY CurrencyCode = "JPY"
-	KES CurrencyCode = "KES"
-	KRW CurrencyCode = "KRW"
-	KWD CurrencyCode = "KWD"
-	LAK CurrencyCode = "LAK"
-	LKR CurrencyCode = "LKR"
-	MAD CurrencyCode = "MAD"
-	MGA CurrencyCode = "MGA"
-	MWK CurrencyCode = "MWK"
-	MXN CurrencyCode = "MXN"
-	MYR CurrencyCode = "MYR"
-	MZN CurrencyCode = "MZN"
-	NGN CurrencyCode = "NGN"
-	NOK CurrencyCode = "NOK"
-	NPR CurrencyCode = "NPR"
-	NZD CurrencyCode = "NZD"
-	OMR CurrencyCode = "OMR"
-	PEN CurrencyCode = "PEN"
-	PHP CurrencyCode = "PHP"
-	PKR CurrencyCode = "PKR"
-	PLN CurrencyCode = "PLN"
-	PYG CurrencyCode = "PYG"
-	QAR CurrencyCode = "QAR"
-	RON CurrencyCode = "RON"
-	RUB CurrencyCode = "RUB"
-	RWF CurrencyCode = "RWF"
-	SAR CurrencyCode = "SAR"
-	SEK CurrencyCode = "SEK"
-	SGD CurrencyCode = "SGD"
-	SLE CurrencyCode = "SLE"
-	SRD CurrencyCode = "SRD"
-	THB CurrencyCode = "THB"
-	TND CurrencyCode = "TND"
-	TRY CurrencyCode = "TRY"
-	TWD CurrencyCode = "TWD"
-	TZS CurrencyCode = "TZS"
-	UGX CurrencyCode = "UGX"
-	USD CurrencyCode = "USD"
-	VND CurrencyCode = "VND"
-	XAF CurrencyCode = "XAF"
-	XCD CurrencyCode = "XCD"
-	XOF CurrencyCode = "XOF"
-	ZAR CurrencyCode = "ZAR"
-	ZMW CurrencyCode = "ZMW"
+	CountryBR Country = "BR"
+	CountryUS Country = "US"
 )
 
-// Valid indicates whether the value is a known member of the CurrencyCode enum.
-func (e CurrencyCode) Valid() bool {
+// Valid indicates whether the value is a known member of the Country enum.
+func (e Country) Valid() bool {
 	switch e {
-	case AED:
-		return true
-	case ALL:
-		return true
-	case ARS:
-		return true
-	case AUD:
-		return true
-	case BDT:
-		return true
-	case BGN:
-		return true
-	case BHD:
-		return true
-	case BIF:
-		return true
-	case BOB:
-		return true
-	case BRL:
-		return true
-	case BWP:
-		return true
-	case CAD:
-		return true
-	case CHF:
-		return true
-	case CLP:
-		return true
-	case CNY:
-		return true
-	case COP:
-		return true
-	case CVE:
-		return true
-	case CZK:
-		return true
-	case DKK:
-		return true
-	case DOP:
-		return true
-	case EGP:
-		return true
-	case ETB:
-		return true
-	case EUR:
-		return true
-	case FJD:
-		return true
-	case GBP:
-		return true
-	case GHS:
-		return true
-	case GIP:
-		return true
-	case GMD:
-		return true
-	case GNF:
-		return true
-	case GTQ:
-		return true
-	case HKD:
-		return true
-	case HUF:
-		return true
-	case IDR:
-		return true
-	case INR:
-		return true
-	case ISK:
-		return true
-	case JOD:
-		return true
-	case JPY:
-		return true
-	case KES:
-		return true
-	case KRW:
-		return true
-	case KWD:
-		return true
-	case LAK:
-		return true
-	case LKR:
-		return true
-	case MAD:
-		return true
-	case MGA:
-		return true
-	case MWK:
-		return true
-	case MXN:
-		return true
-	case MYR:
-		return true
-	case MZN:
-		return true
-	case NGN:
-		return true
-	case NOK:
-		return true
-	case NPR:
-		return true
-	case NZD:
-		return true
-	case OMR:
-		return true
-	case PEN:
-		return true
-	case PHP:
-		return true
-	case PKR:
-		return true
-	case PLN:
-		return true
-	case PYG:
-		return true
-	case QAR:
-		return true
-	case RON:
-		return true
-	case RUB:
-		return true
-	case RWF:
-		return true
-	case SAR:
-		return true
-	case SEK:
-		return true
-	case SGD:
-		return true
-	case SLE:
-		return true
-	case SRD:
-		return true
-	case THB:
-		return true
-	case TND:
-		return true
-	case TRY:
-		return true
-	case TWD:
-		return true
-	case TZS:
-		return true
-	case UGX:
-		return true
-	case USD:
-		return true
-	case VND:
-		return true
-	case XAF:
-		return true
-	case XCD:
-		return true
-	case XOF:
-		return true
-	case ZAR:
-		return true
-	case ZMW:
+	case CountryBR:
+		return true
+	case CountryUS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Currency.
+const (
+	CurrencyBRL Currency = "BRL"
+	CurrencyEUR Currency = "EUR"
+	CurrencyUSD Currency = "USD"
+)
+
+// Valid indicates whether the value is a known member of the Currency enum.
+func (e Currency) Valid() bool {
+	switch e {
+	case CurrencyBRL:
+		return true
+	case CurrencyEUR:
+		return true
+	case CurrencyUSD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Direction.
+const (
+	DirectionReceived Direction = "RECEIVED"
+	DirectionSent     Direction = "SENT"
+)
+
+// Valid indicates whether the value is a known member of the Direction enum.
+func (e Direction) Valid() bool {
+	switch e {
+	case DirectionReceived:
+		return true
+	case DirectionSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Environment.
+const (
+	EnvironmentDevelopment Environment = "DEVELOPMENT"
+	EnvironmentProduction  Environment = "PRODUCTION"
+	EnvironmentStaging     Environment = "STAGING"
+)
+
+// Valid indicates whether the value is a known member of the Environment enum.
+func (e Environment) Valid() bool {
+	switch e {
+	case EnvironmentDevelopment:
+		return true
+	case EnvironmentProduction:
+		return true
+	case EnvironmentStaging:
 		return true
 	default:
 		return false
@@ -439,94 +169,229 @@ func (e CurrencyCode) Valid() bool {
 
 // Defines values for ErrorCode.
 const (
-	BADREQUEST                 ErrorCode = "BAD_REQUEST"
-	BUSINESSRULEVIOLATION      ErrorCode = "BUSINESS_RULE_VIOLATION"
-	DATABASEERROR              ErrorCode = "DATABASE_ERROR"
-	ENTITYCONFLICT             ErrorCode = "ENTITY_CONFLICT"
-	EXTERNALSERVICEERROR       ErrorCode = "EXTERNAL_SERVICE_ERROR"
-	FORBIDDEN                  ErrorCode = "FORBIDDEN"
-	INVALIDENTITY              ErrorCode = "INVALID_ENTITY"
-	INVALIDID                  ErrorCode = "INVALID_ID"
-	METHODNOTALLOWED           ErrorCode = "METHOD_NOT_ALLOWED"
-	MISSINGENVIRONMENTVARIABLE ErrorCode = "MISSING_ENVIRONMENT_VARIABLE"
-	NOTFOUND                   ErrorCode = "NOT_FOUND"
-	OPTIMISTICLOCKCONFLICT     ErrorCode = "OPTIMISTIC_LOCK_CONFLICT"
-	UNAUTHORIZED               ErrorCode = "UNAUTHORIZED"
-	VALIDATIONFAILED           ErrorCode = "VALIDATION_FAILED"
+	CodeAudioConversionFailed    ErrorCode = "AUDIO_CONVERSION_FAILED"
+	CodeBadRequest               ErrorCode = "BAD_REQUEST"
+	CodeBusinessRule             ErrorCode = "BUSINESS_RULE_VIOLATION"
+	CodeCannotEditOthers         ErrorCode = "CANNOT_EDIT_OTHERS_MESSAGE"
+	CodeChannelAlreadyConnected  ErrorCode = "INTEGRATION_ALREADY_CONNECTED"
+	CodeChannelNameAlreadyExists ErrorCode = "INTEGRATION_NAME_ALREADY_EXISTS"
+	CodeChannelNotConnected      ErrorCode = "INTEGRATION_NOT_CONNECTED"
+	CodeChannelNotFound          ErrorCode = "INTEGRATION_NOT_FOUND"
+	CodeDatabaseError            ErrorCode = "DATABASE_ERROR"
+	CodeEmptyContactList         ErrorCode = "EMPTY_CONTACT_LIST"
+	CodeEmptyNumberList          ErrorCode = "EMPTY_NUMBER_LIST"
+	CodeEmptySections            ErrorCode = "EMPTY_SECTIONS"
+	CodeEntityConflict           ErrorCode = "ENTITY_CONFLICT"
+	CodeExternalService          ErrorCode = "EXTERNAL_SERVICE_ERROR"
+	CodeForbidden                ErrorCode = "FORBIDDEN"
+	CodeInvalidAddress           ErrorCode = "INVALID_ADDRESS"
+	CodeInvalidAudioURL          ErrorCode = "INVALID_AUDIO_URL"
+	CodeInvalidCNPJ              ErrorCode = "INVALID_CNPJ"
+	CodeInvalidCPF               ErrorCode = "INVALID_CPF"
+	CodeInvalidCoordinates       ErrorCode = "INVALID_COORDINATES"
+	CodeInvalidEmail             ErrorCode = "INVALID_EMAIL"
+	CodeInvalidEntity            ErrorCode = "INVALID_ENTITY"
+	CodeInvalidID                ErrorCode = "INVALID_ID"
+	CodeInvalidImage             ErrorCode = "INVALID_IMAGE"
+	CodeInvalidMediaURL          ErrorCode = "INVALID_MEDIA_URL"
+	CodeInvalidMoney             ErrorCode = "INVALID_MONEY"
+	CodeInvalidName              ErrorCode = "INVALID_NAME"
+	CodeInvalidNumber            ErrorCode = "INVALID_NUMBER"
+	CodeInvalidOwnerId           ErrorCode = "INVALID_OWNER_ID"
+	CodeInvalidPhone             ErrorCode = "INVALID_PHONE"
+	CodeInvalidPlatform          ErrorCode = "INVALID_PLATFORM"
+	CodeInvalidPresenceType      ErrorCode = "INVALID_PRESENCE_TYPE"
+	CodeInvalidRemoteID          ErrorCode = "INVALID_REMOTE_ID"
+	CodeInvalidStatusType        ErrorCode = "INVALID_STATUS_TYPE"
+	CodeInvalidStickerSource     ErrorCode = "INVALID_STICKER_SOURCE"
+	CodeMediaTooLarge            ErrorCode = "MEDIA_TOO_LARGE"
+	CodeMessageAlreadyDeleted    ErrorCode = "MESSAGE_ALREADY_DELETED"
+	CodeMessageDeleted           ErrorCode = "MESSAGE_DELETED"
+	CodeMessageNotFound          ErrorCode = "MESSAGE_NOT_FOUND"
+	CodeMessageSendFailed        ErrorCode = "MESSAGE_SEND_FAILED"
+	CodeMessageTooLong           ErrorCode = "MESSAGE_TOO_LONG"
+	CodeMethodNotAllowed         ErrorCode = "METHOD_NOT_ALLOWED"
+	CodeMissingEnvVar            ErrorCode = "MISSING_ENVIRONMENT_VARIABLE"
+	CodeNotFound                 ErrorCode = "NOT_FOUND"
+	CodeOptimisticLockConflict   ErrorCode = "OPTIMISTIC_LOCK_CONFLICT"
+	CodeProxyHostRequired        ErrorCode = "PROXY_HOST_REQUIRED_WHEN_ENABLED"
+	CodeProxyPortRequired        ErrorCode = "PROXY_PORT_REQUIRED_WHEN_ENABLED"
+	CodeRemoteAlreadyArchived    ErrorCode = "REMOTE_ALREADY_ARCHIVED"
+	CodeRemoteAlreadyDeleted     ErrorCode = "REMOTE_ALREADY_DELETED"
+	CodeRemoteAlreadyPinned      ErrorCode = "REMOTE_ALREADY_PINNED"
+	CodeRemoteDeleted            ErrorCode = "REMOTE_DELETED"
+	CodeRemoteInvalidParams      ErrorCode = "REMOTE_INVALID_PARAMS"
+	CodeRemoteNotArchived        ErrorCode = "REMOTE_NOT_ARCHIVED"
+	CodeRemoteNotPinned          ErrorCode = "REMOTE_NOT_PINNED"
+	CodeTooFewPollOptions        ErrorCode = "TOO_FEW_POLL_OPTIONS"
+	CodeTooManyButtons           ErrorCode = "TOO_MANY_BUTTONS"
+	CodeTooManyPollOptions       ErrorCode = "TOO_MANY_POLL_OPTIONS"
+	CodeUnauthorized             ErrorCode = "UNAUTHORIZED"
+	CodeUnsupportedMediaType     ErrorCode = "UNSUPPORTED_MEDIA_TYPE"
+	CodeValidationFailed         ErrorCode = "VALIDATION_FAILED"
 )
 
 // Valid indicates whether the value is a known member of the ErrorCode enum.
 func (e ErrorCode) Valid() bool {
 	switch e {
-	case BADREQUEST:
+	case CodeAudioConversionFailed:
 		return true
-	case BUSINESSRULEVIOLATION:
+	case CodeBadRequest:
 		return true
-	case DATABASEERROR:
+	case CodeBusinessRule:
 		return true
-	case ENTITYCONFLICT:
+	case CodeCannotEditOthers:
 		return true
-	case EXTERNALSERVICEERROR:
+	case CodeChannelAlreadyConnected:
 		return true
-	case FORBIDDEN:
+	case CodeChannelNameAlreadyExists:
 		return true
-	case INVALIDENTITY:
+	case CodeChannelNotConnected:
 		return true
-	case INVALIDID:
+	case CodeChannelNotFound:
 		return true
-	case METHODNOTALLOWED:
+	case CodeDatabaseError:
 		return true
-	case MISSINGENVIRONMENTVARIABLE:
+	case CodeEmptyContactList:
 		return true
-	case NOTFOUND:
+	case CodeEmptyNumberList:
 		return true
-	case OPTIMISTICLOCKCONFLICT:
+	case CodeEmptySections:
 		return true
-	case UNAUTHORIZED:
+	case CodeEntityConflict:
 		return true
-	case VALIDATIONFAILED:
+	case CodeExternalService:
+		return true
+	case CodeForbidden:
+		return true
+	case CodeInvalidAddress:
+		return true
+	case CodeInvalidAudioURL:
+		return true
+	case CodeInvalidCNPJ:
+		return true
+	case CodeInvalidCPF:
+		return true
+	case CodeInvalidCoordinates:
+		return true
+	case CodeInvalidEmail:
+		return true
+	case CodeInvalidEntity:
+		return true
+	case CodeInvalidID:
+		return true
+	case CodeInvalidImage:
+		return true
+	case CodeInvalidMediaURL:
+		return true
+	case CodeInvalidMoney:
+		return true
+	case CodeInvalidName:
+		return true
+	case CodeInvalidNumber:
+		return true
+	case CodeInvalidOwnerId:
+		return true
+	case CodeInvalidPhone:
+		return true
+	case CodeInvalidPlatform:
+		return true
+	case CodeInvalidPresenceType:
+		return true
+	case CodeInvalidRemoteID:
+		return true
+	case CodeInvalidStatusType:
+		return true
+	case CodeInvalidStickerSource:
+		return true
+	case CodeMediaTooLarge:
+		return true
+	case CodeMessageAlreadyDeleted:
+		return true
+	case CodeMessageDeleted:
+		return true
+	case CodeMessageNotFound:
+		return true
+	case CodeMessageSendFailed:
+		return true
+	case CodeMessageTooLong:
+		return true
+	case CodeMethodNotAllowed:
+		return true
+	case CodeMissingEnvVar:
+		return true
+	case CodeNotFound:
+		return true
+	case CodeOptimisticLockConflict:
+		return true
+	case CodeProxyHostRequired:
+		return true
+	case CodeProxyPortRequired:
+		return true
+	case CodeRemoteAlreadyArchived:
+		return true
+	case CodeRemoteAlreadyDeleted:
+		return true
+	case CodeRemoteAlreadyPinned:
+		return true
+	case CodeRemoteDeleted:
+		return true
+	case CodeRemoteInvalidParams:
+		return true
+	case CodeRemoteNotArchived:
+		return true
+	case CodeRemoteNotPinned:
+		return true
+	case CodeTooFewPollOptions:
+		return true
+	case CodeTooManyButtons:
+		return true
+	case CodeTooManyPollOptions:
+		return true
+	case CodeUnauthorized:
+		return true
+	case CodeUnsupportedMediaType:
+		return true
+	case CodeValidationFailed:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for IssueArchiveReason.
+// Defines values for GroupRole.
 const (
-	AUTO24H        IssueArchiveReason = "AUTO_24H"
-	MANUAL         IssueArchiveReason = "MANUAL"
-	THREADDETACHED IssueArchiveReason = "THREAD_DETACHED"
+	GroupRoleAdmin      GroupRole = "admin"
+	GroupRoleMember     GroupRole = "member"
+	GroupRoleSuperAdmin GroupRole = "super_admin"
 )
 
-// Valid indicates whether the value is a known member of the IssueArchiveReason enum.
-func (e IssueArchiveReason) Valid() bool {
+// Valid indicates whether the value is a known member of the GroupRole enum.
+func (e GroupRole) Valid() bool {
 	switch e {
-	case AUTO24H:
+	case GroupRoleAdmin:
 		return true
-	case MANUAL:
+	case GroupRoleMember:
 		return true
-	case THREADDETACHED:
+	case GroupRoleSuperAdmin:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for IssueStatus.
+// Defines values for HistorySyncType.
 const (
-	COMPLETED  IssueStatus = "COMPLETED"
-	NEEDSINPUT IssueStatus = "NEEDS_INPUT"
-	WORKING    IssueStatus = "WORKING"
+	HistorySyncTypeInitial HistorySyncType = "initial"
+	HistorySyncTypeRecent  HistorySyncType = "recent"
 )
 
-// Valid indicates whether the value is a known member of the IssueStatus enum.
-func (e IssueStatus) Valid() bool {
+// Valid indicates whether the value is a known member of the HistorySyncType enum.
+func (e HistorySyncType) Valid() bool {
 	switch e {
-	case COMPLETED:
+	case HistorySyncTypeInitial:
 		return true
-	case NEEDSINPUT:
-		return true
-	case WORKING:
+	case HistorySyncTypeRecent:
 		return true
 	default:
 		return false
@@ -535,1246 +400,1231 @@ func (e IssueStatus) Valid() bool {
 
 // Defines values for Language.
 const (
-	EnUS Language = "en-US"
-	PtBR Language = "pt-BR"
+	LanguageEN Language = "EN"
+	LanguageES Language = "ES"
+	LanguagePT Language = "PT"
 )
 
 // Valid indicates whether the value is a known member of the Language enum.
 func (e Language) Valid() bool {
 	switch e {
-	case EnUS:
+	case LanguageEN:
 		return true
-	case PtBR:
+	case LanguageES:
+		return true
+	case LanguagePT:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for OwnerKind.
+// Defines values for LogLevel.
 const (
-	INDIVIDUAL   OwnerKind = "INDIVIDUAL"
-	ORGANIZATION OwnerKind = "ORGANIZATION"
+	LogLevelDebug LogLevel = "DEBUG"
+	LogLevelError LogLevel = "ERROR"
+	LogLevelInfo  LogLevel = "INFO"
+	LogLevelWarn  LogLevel = "WARN"
 )
 
-// Valid indicates whether the value is a known member of the OwnerKind enum.
-func (e OwnerKind) Valid() bool {
+// Valid indicates whether the value is a known member of the LogLevel enum.
+func (e LogLevel) Valid() bool {
 	switch e {
-	case INDIVIDUAL:
+	case LogLevelDebug:
 		return true
-	case ORGANIZATION:
+	case LogLevelError:
+		return true
+	case LogLevelInfo:
+		return true
+	case LogLevelWarn:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for ProviderKind.
+// Defines values for MembershipAction.
 const (
-	CLAUDECODE ProviderKind = "CLAUDE_CODE"
-	CODEX      ProviderKind = "CODEX"
-	OPENCODE   ProviderKind = "OPENCODE"
+	MembershipActionDemoted  MembershipAction = "demoted"
+	MembershipActionJoined   MembershipAction = "joined"
+	MembershipActionLeft     MembershipAction = "left"
+	MembershipActionPromoted MembershipAction = "promoted"
 )
 
-// Valid indicates whether the value is a known member of the ProviderKind enum.
-func (e ProviderKind) Valid() bool {
+// Valid indicates whether the value is a known member of the MembershipAction enum.
+func (e MembershipAction) Valid() bool {
 	switch e {
-	case CLAUDECODE:
+	case MembershipActionDemoted:
 		return true
-	case CODEX:
+	case MembershipActionJoined:
 		return true
-	case OPENCODE:
+	case MembershipActionLeft:
+		return true
+	case MembershipActionPromoted:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for ProviderStatus.
+// Defines values for MessageType.
 const (
-	DETECTED     ProviderStatus = "DETECTED"
-	NOTINSTALLED ProviderStatus = "NOT_INSTALLED"
+	MessageTypeAudio    MessageType = "AUDIO"
+	MessageTypeButton   MessageType = "BUTTON"
+	MessageTypeContact  MessageType = "CONTACT"
+	MessageTypeDocument MessageType = "DOCUMENT"
+	MessageTypeImage    MessageType = "IMAGE"
+	MessageTypeList     MessageType = "LIST"
+	MessageTypeLocation MessageType = "LOCATION"
+	MessageTypePoll     MessageType = "POLL"
+	MessageTypeReaction MessageType = "REACTION"
+	MessageTypeStatus   MessageType = "STATUS"
+	MessageTypeSticker  MessageType = "STICKER"
+	MessageTypeText     MessageType = "TEXT"
+	MessageTypeVideo    MessageType = "VIDEO"
 )
 
-// Valid indicates whether the value is a known member of the ProviderStatus enum.
-func (e ProviderStatus) Valid() bool {
+// Valid indicates whether the value is a known member of the MessageType enum.
+func (e MessageType) Valid() bool {
 	switch e {
-	case DETECTED:
+	case MessageTypeAudio:
 		return true
-	case NOTINSTALLED:
+	case MessageTypeButton:
+		return true
+	case MessageTypeContact:
+		return true
+	case MessageTypeDocument:
+		return true
+	case MessageTypeImage:
+		return true
+	case MessageTypeList:
+		return true
+	case MessageTypeLocation:
+		return true
+	case MessageTypePoll:
+		return true
+	case MessageTypeReaction:
+		return true
+	case MessageTypeStatus:
+		return true
+	case MessageTypeSticker:
+		return true
+	case MessageTypeText:
+		return true
+	case MessageTypeVideo:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for Role.
+// Defines values for Platform.
 const (
-	ADMIN  Role = "ADMIN"
-	MEMBER Role = "MEMBER"
-	OWNER  Role = "OWNER"
+	PlatformInternal Platform = "INTERNAL"
+	PlatformWhatsApp Platform = "WHATSAPP"
 )
 
-// Valid indicates whether the value is a known member of the Role enum.
-func (e Role) Valid() bool {
+// Valid indicates whether the value is a known member of the Platform enum.
+func (e Platform) Valid() bool {
 	switch e {
-	case ADMIN:
+	case PlatformInternal:
 		return true
-	case MEMBER:
-		return true
-	case OWNER:
+	case PlatformWhatsApp:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for SenderIdentity.
+// Defines values for PresenceType.
 const (
-	AGENT    SenderIdentity = "AGENT"
-	OPERATOR SenderIdentity = "OPERATOR"
-	ROUTER   SenderIdentity = "ROUTER"
+	PresenceTypeAvailable   PresenceType = "AVAILABLE"
+	PresenceTypeComposing   PresenceType = "COMPOSING"
+	PresenceTypePaused      PresenceType = "PAUSED"
+	PresenceTypeRecording   PresenceType = "RECORDING"
+	PresenceTypeUnavailable PresenceType = "UNAVAILABLE"
 )
 
-// Valid indicates whether the value is a known member of the SenderIdentity enum.
-func (e SenderIdentity) Valid() bool {
+// Valid indicates whether the value is a known member of the PresenceType enum.
+func (e PresenceType) Valid() bool {
 	switch e {
-	case AGENT:
+	case PresenceTypeAvailable:
 		return true
-	case OPERATOR:
+	case PresenceTypeComposing:
 		return true
-	case ROUTER:
+	case PresenceTypePaused:
+		return true
+	case PresenceTypeRecording:
+		return true
+	case PresenceTypeUnavailable:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for StopKind.
+// Defines values for ProxyProtocol.
 const (
-	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
-	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
-	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
-	SERVERERROR             StopKind = "SERVER_ERROR"
+	ProxyProtocolHTTP   ProxyProtocol = "HTTP"
+	ProxyProtocolHTTPS  ProxyProtocol = "HTTPS"
+	ProxyProtocolSOCKS4 ProxyProtocol = "SOCKS4"
+	ProxyProtocolSOCKS5 ProxyProtocol = "SOCKS5"
 )
 
-// Valid indicates whether the value is a known member of the StopKind enum.
-func (e StopKind) Valid() bool {
+// Valid indicates whether the value is a known member of the ProxyProtocol enum.
+func (e ProxyProtocol) Valid() bool {
 	switch e {
-	case APPROVALNEEDED:
+	case ProxyProtocolHTTP:
 		return true
-	case BLOCKEDBYCLASSIFICATION:
+	case ProxyProtocolHTTPS:
 		return true
-	case HUMANREQUESTED:
+	case ProxyProtocolSOCKS4:
 		return true
-	case SERVERERROR:
+	case ProxyProtocolSOCKS5:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for StopResolution.
+// Defines values for ReceiptType.
 const (
-	APPROVE       StopResolution = "APPROVE"
-	DENY          StopResolution = "DENY"
-	RETRY         StopResolution = "RETRY"
-	REVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
-	TAKEOVER      StopResolution = "TAKE_OVER"
+	ReceiptTypeDelivered ReceiptType = "delivered"
+	ReceiptTypePlayed    ReceiptType = "played"
+	ReceiptTypeRead      ReceiptType = "read"
+	ReceiptTypeReadSelf  ReceiptType = "read-self"
 )
 
-// Valid indicates whether the value is a known member of the StopResolution enum.
-func (e StopResolution) Valid() bool {
+// Valid indicates whether the value is a known member of the ReceiptType enum.
+func (e ReceiptType) Valid() bool {
 	switch e {
-	case APPROVE:
+	case ReceiptTypeDelivered:
 		return true
-	case DENY:
+	case ReceiptTypePlayed:
 		return true
-	case RETRY:
+	case ReceiptTypeRead:
 		return true
-	case REVIEWANDSEND:
-		return true
-	case TAKEOVER:
+	case ReceiptTypeReadSelf:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for ThreadMode.
+// Defines values for RemoteType.
 const (
-	DIRECT ThreadMode = "DIRECT"
-	STEER  ThreadMode = "STEER"
+	RemoteTypeBroadcast RemoteType = "BROADCAST"
+	RemoteTypeGroup     RemoteType = "GROUP"
+	RemoteTypeUser      RemoteType = "USER"
 )
 
-// Valid indicates whether the value is a known member of the ThreadMode enum.
-func (e ThreadMode) Valid() bool {
+// Valid indicates whether the value is a known member of the RemoteType enum.
+func (e RemoteType) Valid() bool {
 	switch e {
-	case DIRECT:
+	case RemoteTypeBroadcast:
 		return true
-	case STEER:
+	case RemoteTypeGroup:
+		return true
+	case RemoteTypeUser:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for ThreadStatus.
+// Defines values for ServerEventName.
 const (
-	IDLE           ThreadStatus = "IDLE"
-	NEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
-	PAUSED         ThreadStatus = "PAUSED"
-	RUNNING        ThreadStatus = "RUNNING"
+	IntegrationChannelChatPresenceUpdated          ServerEventName = "integration.channel.chat_presence_updated"
+	IntegrationChannelConnected                    ServerEventName = "integration.channel.connected"
+	IntegrationChannelDisconnected                 ServerEventName = "integration.channel.disconnected"
+	IntegrationChannelLoggedOut                    ServerEventName = "integration.channel.logged_out"
+	IntegrationChannelMembershipAdded              ServerEventName = "integration.channel.membership_added"
+	IntegrationChannelMembershipRemoved            ServerEventName = "integration.channel.membership_removed"
+	IntegrationChannelMessageDelivered             ServerEventName = "integration.channel_message.delivered"
+	IntegrationChannelMessageReceived              ServerEventName = "integration.channel_message.received"
+	IntegrationChannelMessageSeen                  ServerEventName = "integration.channel_message.seen"
+	IntegrationChannelMessagesSynced               ServerEventName = "integration.channel.messages_synced"
+	IntegrationChannelPresenceUpdated              ServerEventName = "integration.channel.presence_updated"
+	IntegrationChannelRemoteCreated                ServerEventName = "integration.channel.remote_created"
+	IntegrationChannelRemoteDeleted                ServerEventName = "integration.channel.remote_deleted"
+	IntegrationChannelRemoteUpdated                ServerEventName = "integration.channel.remote_updated"
+	IntegrationChannelRemotesSynced                ServerEventName = "integration.channel.remotes_synced"
+	IntegrationChannelSpecialPlatformEventReceived ServerEventName = "integration.channel_special_platform_event.received"
+	IntegrationChannelSyncCompleted                ServerEventName = "integration.channel.sync_completed"
+	IntegrationChannelSyncProgress                 ServerEventName = "integration.channel.sync_progress"
+	IntegrationChannelSyncStarted                  ServerEventName = "integration.channel.sync_started"
 )
 
-// Valid indicates whether the value is a known member of the ThreadStatus enum.
-func (e ThreadStatus) Valid() bool {
+// Valid indicates whether the value is a known member of the ServerEventName enum.
+func (e ServerEventName) Valid() bool {
 	switch e {
-	case IDLE:
+	case IntegrationChannelChatPresenceUpdated:
 		return true
-	case NEEDSATTENTION:
+	case IntegrationChannelConnected:
 		return true
-	case PAUSED:
+	case IntegrationChannelDisconnected:
 		return true
-	case RUNNING:
+	case IntegrationChannelLoggedOut:
+		return true
+	case IntegrationChannelMembershipAdded:
+		return true
+	case IntegrationChannelMembershipRemoved:
+		return true
+	case IntegrationChannelMessageDelivered:
+		return true
+	case IntegrationChannelMessageReceived:
+		return true
+	case IntegrationChannelMessageSeen:
+		return true
+	case IntegrationChannelMessagesSynced:
+		return true
+	case IntegrationChannelPresenceUpdated:
+		return true
+	case IntegrationChannelRemoteCreated:
+		return true
+	case IntegrationChannelRemoteDeleted:
+		return true
+	case IntegrationChannelRemoteUpdated:
+		return true
+	case IntegrationChannelRemotesSynced:
+		return true
+	case IntegrationChannelSpecialPlatformEventReceived:
+		return true
+	case IntegrationChannelSyncCompleted:
+		return true
+	case IntegrationChannelSyncProgress:
+		return true
+	case IntegrationChannelSyncStarted:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for Timezone.
-const (
-	AfricaAbidjan               Timezone = "Africa/Abidjan"
-	AfricaAlgiers               Timezone = "Africa/Algiers"
-	AfricaBissau                Timezone = "Africa/Bissau"
-	AfricaCairo                 Timezone = "Africa/Cairo"
-	AfricaCasablanca            Timezone = "Africa/Casablanca"
-	AfricaCeuta                 Timezone = "Africa/Ceuta"
-	AfricaElAaiun               Timezone = "Africa/El_Aaiun"
-	AfricaJohannesburg          Timezone = "Africa/Johannesburg"
-	AfricaJuba                  Timezone = "Africa/Juba"
-	AfricaKhartoum              Timezone = "Africa/Khartoum"
-	AfricaLagos                 Timezone = "Africa/Lagos"
-	AfricaMaputo                Timezone = "Africa/Maputo"
-	AfricaMonrovia              Timezone = "Africa/Monrovia"
-	AfricaNairobi               Timezone = "Africa/Nairobi"
-	AfricaNdjamena              Timezone = "Africa/Ndjamena"
-	AfricaSaoTome               Timezone = "Africa/Sao_Tome"
-	AfricaTripoli               Timezone = "Africa/Tripoli"
-	AfricaTunis                 Timezone = "Africa/Tunis"
-	AfricaWindhoek              Timezone = "Africa/Windhoek"
-	AmericaAdak                 Timezone = "America/Adak"
-	AmericaAnchorage            Timezone = "America/Anchorage"
-	AmericaAraguaina            Timezone = "America/Araguaina"
-	AmericaArgentinaBuenosAires Timezone = "America/Argentina/Buenos_Aires"
-	AmericaArgentinaCatamarca   Timezone = "America/Argentina/Catamarca"
-	AmericaArgentinaCordoba     Timezone = "America/Argentina/Cordoba"
-	AmericaArgentinaJujuy       Timezone = "America/Argentina/Jujuy"
-	AmericaArgentinaLaRioja     Timezone = "America/Argentina/La_Rioja"
-	AmericaArgentinaMendoza     Timezone = "America/Argentina/Mendoza"
-	AmericaArgentinaRioGallegos Timezone = "America/Argentina/Rio_Gallegos"
-	AmericaArgentinaSalta       Timezone = "America/Argentina/Salta"
-	AmericaArgentinaSanJuan     Timezone = "America/Argentina/San_Juan"
-	AmericaArgentinaSanLuis     Timezone = "America/Argentina/San_Luis"
-	AmericaArgentinaTucuman     Timezone = "America/Argentina/Tucuman"
-	AmericaArgentinaUshuaia     Timezone = "America/Argentina/Ushuaia"
-	AmericaAsuncion             Timezone = "America/Asuncion"
-	AmericaBahia                Timezone = "America/Bahia"
-	AmericaBahiaBanderas        Timezone = "America/Bahia_Banderas"
-	AmericaBarbados             Timezone = "America/Barbados"
-	AmericaBelem                Timezone = "America/Belem"
-	AmericaBelize               Timezone = "America/Belize"
-	AmericaBoaVista             Timezone = "America/Boa_Vista"
-	AmericaBogota               Timezone = "America/Bogota"
-	AmericaBoise                Timezone = "America/Boise"
-	AmericaCambridgeBay         Timezone = "America/Cambridge_Bay"
-	AmericaCampoGrande          Timezone = "America/Campo_Grande"
-	AmericaCancun               Timezone = "America/Cancun"
-	AmericaCaracas              Timezone = "America/Caracas"
-	AmericaCayenne              Timezone = "America/Cayenne"
-	AmericaChicago              Timezone = "America/Chicago"
-	AmericaChihuahua            Timezone = "America/Chihuahua"
-	AmericaCiudadJuarez         Timezone = "America/Ciudad_Juarez"
-	AmericaCostaRica            Timezone = "America/Costa_Rica"
-	AmericaCoyhaique            Timezone = "America/Coyhaique"
-	AmericaCuiaba               Timezone = "America/Cuiaba"
-	AmericaDanmarkshavn         Timezone = "America/Danmarkshavn"
-	AmericaDawson               Timezone = "America/Dawson"
-	AmericaDawsonCreek          Timezone = "America/Dawson_Creek"
-	AmericaDenver               Timezone = "America/Denver"
-	AmericaDetroit              Timezone = "America/Detroit"
-	AmericaEdmonton             Timezone = "America/Edmonton"
-	AmericaEirunepe             Timezone = "America/Eirunepe"
-	AmericaElSalvador           Timezone = "America/El_Salvador"
-	AmericaFortNelson           Timezone = "America/Fort_Nelson"
-	AmericaFortaleza            Timezone = "America/Fortaleza"
-	AmericaGlaceBay             Timezone = "America/Glace_Bay"
-	AmericaGooseBay             Timezone = "America/Goose_Bay"
-	AmericaGrandTurk            Timezone = "America/Grand_Turk"
-	AmericaGuatemala            Timezone = "America/Guatemala"
-	AmericaGuayaquil            Timezone = "America/Guayaquil"
-	AmericaGuyana               Timezone = "America/Guyana"
-	AmericaHalifax              Timezone = "America/Halifax"
-	AmericaHavana               Timezone = "America/Havana"
-	AmericaHermosillo           Timezone = "America/Hermosillo"
-	AmericaIndianaIndianapolis  Timezone = "America/Indiana/Indianapolis"
-	AmericaIndianaKnox          Timezone = "America/Indiana/Knox"
-	AmericaIndianaMarengo       Timezone = "America/Indiana/Marengo"
-	AmericaIndianaPetersburg    Timezone = "America/Indiana/Petersburg"
-	AmericaIndianaTellCity      Timezone = "America/Indiana/Tell_City"
-	AmericaIndianaVevay         Timezone = "America/Indiana/Vevay"
-	AmericaIndianaVincennes     Timezone = "America/Indiana/Vincennes"
-	AmericaIndianaWinamac       Timezone = "America/Indiana/Winamac"
-	AmericaInuvik               Timezone = "America/Inuvik"
-	AmericaIqaluit              Timezone = "America/Iqaluit"
-	AmericaJamaica              Timezone = "America/Jamaica"
-	AmericaJuneau               Timezone = "America/Juneau"
-	AmericaKentuckyLouisville   Timezone = "America/Kentucky/Louisville"
-	AmericaKentuckyMonticello   Timezone = "America/Kentucky/Monticello"
-	AmericaLaPaz                Timezone = "America/La_Paz"
-	AmericaLima                 Timezone = "America/Lima"
-	AmericaLosAngeles           Timezone = "America/Los_Angeles"
-	AmericaMaceio               Timezone = "America/Maceio"
-	AmericaManagua              Timezone = "America/Managua"
-	AmericaManaus               Timezone = "America/Manaus"
-	AmericaMartinique           Timezone = "America/Martinique"
-	AmericaMatamoros            Timezone = "America/Matamoros"
-	AmericaMazatlan             Timezone = "America/Mazatlan"
-	AmericaMenominee            Timezone = "America/Menominee"
-	AmericaMerida               Timezone = "America/Merida"
-	AmericaMetlakatla           Timezone = "America/Metlakatla"
-	AmericaMexicoCity           Timezone = "America/Mexico_City"
-	AmericaMiquelon             Timezone = "America/Miquelon"
-	AmericaMoncton              Timezone = "America/Moncton"
-	AmericaMonterrey            Timezone = "America/Monterrey"
-	AmericaMontevideo           Timezone = "America/Montevideo"
-	AmericaNewYork              Timezone = "America/New_York"
-	AmericaNome                 Timezone = "America/Nome"
-	AmericaNoronha              Timezone = "America/Noronha"
-	AmericaNorthDakotaBeulah    Timezone = "America/North_Dakota/Beulah"
-	AmericaNorthDakotaCenter    Timezone = "America/North_Dakota/Center"
-	AmericaNorthDakotaNewSalem  Timezone = "America/North_Dakota/New_Salem"
-	AmericaNuuk                 Timezone = "America/Nuuk"
-	AmericaOjinaga              Timezone = "America/Ojinaga"
-	AmericaPanama               Timezone = "America/Panama"
-	AmericaParamaribo           Timezone = "America/Paramaribo"
-	AmericaPhoenix              Timezone = "America/Phoenix"
-	AmericaPortAuPrince         Timezone = "America/Port-au-Prince"
-	AmericaPortoVelho           Timezone = "America/Porto_Velho"
-	AmericaPuertoRico           Timezone = "America/Puerto_Rico"
-	AmericaPuntaArenas          Timezone = "America/Punta_Arenas"
-	AmericaRankinInlet          Timezone = "America/Rankin_Inlet"
-	AmericaRecife               Timezone = "America/Recife"
-	AmericaRegina               Timezone = "America/Regina"
-	AmericaResolute             Timezone = "America/Resolute"
-	AmericaRioBranco            Timezone = "America/Rio_Branco"
-	AmericaSantarem             Timezone = "America/Santarem"
-	AmericaSantiago             Timezone = "America/Santiago"
-	AmericaSantoDomingo         Timezone = "America/Santo_Domingo"
-	AmericaSaoPaulo             Timezone = "America/Sao_Paulo"
-	AmericaScoresbysund         Timezone = "America/Scoresbysund"
-	AmericaSitka                Timezone = "America/Sitka"
-	AmericaStJohns              Timezone = "America/St_Johns"
-	AmericaSwiftCurrent         Timezone = "America/Swift_Current"
-	AmericaTegucigalpa          Timezone = "America/Tegucigalpa"
-	AmericaThule                Timezone = "America/Thule"
-	AmericaTijuana              Timezone = "America/Tijuana"
-	AmericaToronto              Timezone = "America/Toronto"
-	AmericaVancouver            Timezone = "America/Vancouver"
-	AmericaWhitehorse           Timezone = "America/Whitehorse"
-	AmericaWinnipeg             Timezone = "America/Winnipeg"
-	AmericaYakutat              Timezone = "America/Yakutat"
-	AntarcticaCasey             Timezone = "Antarctica/Casey"
-	AntarcticaDavis             Timezone = "Antarctica/Davis"
-	AntarcticaMacquarie         Timezone = "Antarctica/Macquarie"
-	AntarcticaMawson            Timezone = "Antarctica/Mawson"
-	AntarcticaPalmer            Timezone = "Antarctica/Palmer"
-	AntarcticaRothera           Timezone = "Antarctica/Rothera"
-	AntarcticaTroll             Timezone = "Antarctica/Troll"
-	AntarcticaVostok            Timezone = "Antarctica/Vostok"
-	AsiaAlmaty                  Timezone = "Asia/Almaty"
-	AsiaAmman                   Timezone = "Asia/Amman"
-	AsiaAnadyr                  Timezone = "Asia/Anadyr"
-	AsiaAqtau                   Timezone = "Asia/Aqtau"
-	AsiaAqtobe                  Timezone = "Asia/Aqtobe"
-	AsiaAshgabat                Timezone = "Asia/Ashgabat"
-	AsiaAtyrau                  Timezone = "Asia/Atyrau"
-	AsiaBaghdad                 Timezone = "Asia/Baghdad"
-	AsiaBaku                    Timezone = "Asia/Baku"
-	AsiaBangkok                 Timezone = "Asia/Bangkok"
-	AsiaBarnaul                 Timezone = "Asia/Barnaul"
-	AsiaBeirut                  Timezone = "Asia/Beirut"
-	AsiaBishkek                 Timezone = "Asia/Bishkek"
-	AsiaChita                   Timezone = "Asia/Chita"
-	AsiaColombo                 Timezone = "Asia/Colombo"
-	AsiaDamascus                Timezone = "Asia/Damascus"
-	AsiaDhaka                   Timezone = "Asia/Dhaka"
-	AsiaDili                    Timezone = "Asia/Dili"
-	AsiaDubai                   Timezone = "Asia/Dubai"
-	AsiaDushanbe                Timezone = "Asia/Dushanbe"
-	AsiaFamagusta               Timezone = "Asia/Famagusta"
-	AsiaGaza                    Timezone = "Asia/Gaza"
-	AsiaHebron                  Timezone = "Asia/Hebron"
-	AsiaHoChiMinh               Timezone = "Asia/Ho_Chi_Minh"
-	AsiaHongKong                Timezone = "Asia/Hong_Kong"
-	AsiaHovd                    Timezone = "Asia/Hovd"
-	AsiaIrkutsk                 Timezone = "Asia/Irkutsk"
-	AsiaJakarta                 Timezone = "Asia/Jakarta"
-	AsiaJayapura                Timezone = "Asia/Jayapura"
-	AsiaJerusalem               Timezone = "Asia/Jerusalem"
-	AsiaKabul                   Timezone = "Asia/Kabul"
-	AsiaKamchatka               Timezone = "Asia/Kamchatka"
-	AsiaKarachi                 Timezone = "Asia/Karachi"
-	AsiaKathmandu               Timezone = "Asia/Kathmandu"
-	AsiaKhandyga                Timezone = "Asia/Khandyga"
-	AsiaKolkata                 Timezone = "Asia/Kolkata"
-	AsiaKrasnoyarsk             Timezone = "Asia/Krasnoyarsk"
-	AsiaKuching                 Timezone = "Asia/Kuching"
-	AsiaMacau                   Timezone = "Asia/Macau"
-	AsiaMagadan                 Timezone = "Asia/Magadan"
-	AsiaMakassar                Timezone = "Asia/Makassar"
-	AsiaManila                  Timezone = "Asia/Manila"
-	AsiaNicosia                 Timezone = "Asia/Nicosia"
-	AsiaNovokuznetsk            Timezone = "Asia/Novokuznetsk"
-	AsiaNovosibirsk             Timezone = "Asia/Novosibirsk"
-	AsiaOmsk                    Timezone = "Asia/Omsk"
-	AsiaOral                    Timezone = "Asia/Oral"
-	AsiaPontianak               Timezone = "Asia/Pontianak"
-	AsiaPyongyang               Timezone = "Asia/Pyongyang"
-	AsiaQatar                   Timezone = "Asia/Qatar"
-	AsiaQostanay                Timezone = "Asia/Qostanay"
-	AsiaQyzylorda               Timezone = "Asia/Qyzylorda"
-	AsiaSakhalin                Timezone = "Asia/Sakhalin"
-	AsiaSamarkand               Timezone = "Asia/Samarkand"
-	AsiaSeoul                   Timezone = "Asia/Seoul"
-	AsiaShanghai                Timezone = "Asia/Shanghai"
-	AsiaSingapore               Timezone = "Asia/Singapore"
-	AsiaSrednekolymsk           Timezone = "Asia/Srednekolymsk"
-	AsiaTaipei                  Timezone = "Asia/Taipei"
-	AsiaTashkent                Timezone = "Asia/Tashkent"
-	AsiaTbilisi                 Timezone = "Asia/Tbilisi"
-	AsiaTehran                  Timezone = "Asia/Tehran"
-	AsiaThimphu                 Timezone = "Asia/Thimphu"
-	AsiaTomsk                   Timezone = "Asia/Tomsk"
-	AsiaUlaanbaatar             Timezone = "Asia/Ulaanbaatar"
-	AsiaUrumqi                  Timezone = "Asia/Urumqi"
-	AsiaUstNera                 Timezone = "Asia/Ust-Nera"
-	AsiaVladivostok             Timezone = "Asia/Vladivostok"
-	AsiaYakutsk                 Timezone = "Asia/Yakutsk"
-	AsiaYangon                  Timezone = "Asia/Yangon"
-	AsiaYekaterinburg           Timezone = "Asia/Yekaterinburg"
-	AsiaYerevan                 Timezone = "Asia/Yerevan"
-	AtlanticAzores              Timezone = "Atlantic/Azores"
-	AtlanticBermuda             Timezone = "Atlantic/Bermuda"
-	AtlanticCanary              Timezone = "Atlantic/Canary"
-	AtlanticCapeVerde           Timezone = "Atlantic/Cape_Verde"
-	AtlanticFaroe               Timezone = "Atlantic/Faroe"
-	AtlanticMadeira             Timezone = "Atlantic/Madeira"
-	AtlanticSouthGeorgia        Timezone = "Atlantic/South_Georgia"
-	AtlanticStanley             Timezone = "Atlantic/Stanley"
-	AustraliaAdelaide           Timezone = "Australia/Adelaide"
-	AustraliaBrisbane           Timezone = "Australia/Brisbane"
-	AustraliaBrokenHill         Timezone = "Australia/Broken_Hill"
-	AustraliaDarwin             Timezone = "Australia/Darwin"
-	AustraliaEucla              Timezone = "Australia/Eucla"
-	AustraliaHobart             Timezone = "Australia/Hobart"
-	AustraliaLindeman           Timezone = "Australia/Lindeman"
-	AustraliaLordHowe           Timezone = "Australia/Lord_Howe"
-	AustraliaMelbourne          Timezone = "Australia/Melbourne"
-	AustraliaPerth              Timezone = "Australia/Perth"
-	AustraliaSydney             Timezone = "Australia/Sydney"
-	EuropeAndorra               Timezone = "Europe/Andorra"
-	EuropeAstrakhan             Timezone = "Europe/Astrakhan"
-	EuropeAthens                Timezone = "Europe/Athens"
-	EuropeBelgrade              Timezone = "Europe/Belgrade"
-	EuropeBerlin                Timezone = "Europe/Berlin"
-	EuropeBrussels              Timezone = "Europe/Brussels"
-	EuropeBucharest             Timezone = "Europe/Bucharest"
-	EuropeBudapest              Timezone = "Europe/Budapest"
-	EuropeChisinau              Timezone = "Europe/Chisinau"
-	EuropeDublin                Timezone = "Europe/Dublin"
-	EuropeGibraltar             Timezone = "Europe/Gibraltar"
-	EuropeHelsinki              Timezone = "Europe/Helsinki"
-	EuropeIstanbul              Timezone = "Europe/Istanbul"
-	EuropeKaliningrad           Timezone = "Europe/Kaliningrad"
-	EuropeKirov                 Timezone = "Europe/Kirov"
-	EuropeKyiv                  Timezone = "Europe/Kyiv"
-	EuropeLisbon                Timezone = "Europe/Lisbon"
-	EuropeLondon                Timezone = "Europe/London"
-	EuropeMadrid                Timezone = "Europe/Madrid"
-	EuropeMalta                 Timezone = "Europe/Malta"
-	EuropeMinsk                 Timezone = "Europe/Minsk"
-	EuropeMoscow                Timezone = "Europe/Moscow"
-	EuropeParis                 Timezone = "Europe/Paris"
-	EuropePrague                Timezone = "Europe/Prague"
-	EuropeRiga                  Timezone = "Europe/Riga"
-	EuropeRome                  Timezone = "Europe/Rome"
-	EuropeSamara                Timezone = "Europe/Samara"
-	EuropeSaratov               Timezone = "Europe/Saratov"
-	EuropeSimferopol            Timezone = "Europe/Simferopol"
-	EuropeSofia                 Timezone = "Europe/Sofia"
-	EuropeTallinn               Timezone = "Europe/Tallinn"
-	EuropeTirane                Timezone = "Europe/Tirane"
-	EuropeUlyanovsk             Timezone = "Europe/Ulyanovsk"
-	EuropeVienna                Timezone = "Europe/Vienna"
-	EuropeVilnius               Timezone = "Europe/Vilnius"
-	EuropeVolgograd             Timezone = "Europe/Volgograd"
-	EuropeWarsaw                Timezone = "Europe/Warsaw"
-	EuropeZurich                Timezone = "Europe/Zurich"
-	IndianChagos                Timezone = "Indian/Chagos"
-	IndianMaldives              Timezone = "Indian/Maldives"
-	IndianMauritius             Timezone = "Indian/Mauritius"
-	PacificApia                 Timezone = "Pacific/Apia"
-	PacificAuckland             Timezone = "Pacific/Auckland"
-	PacificBougainville         Timezone = "Pacific/Bougainville"
-	PacificChatham              Timezone = "Pacific/Chatham"
-	PacificEaster               Timezone = "Pacific/Easter"
-	PacificEfate                Timezone = "Pacific/Efate"
-	PacificFakaofo              Timezone = "Pacific/Fakaofo"
-	PacificFiji                 Timezone = "Pacific/Fiji"
-	PacificGalapagos            Timezone = "Pacific/Galapagos"
-	PacificGambier              Timezone = "Pacific/Gambier"
-	PacificGuadalcanal          Timezone = "Pacific/Guadalcanal"
-	PacificGuam                 Timezone = "Pacific/Guam"
-	PacificHonolulu             Timezone = "Pacific/Honolulu"
-	PacificKanton               Timezone = "Pacific/Kanton"
-	PacificKiritimati           Timezone = "Pacific/Kiritimati"
-	PacificKosrae               Timezone = "Pacific/Kosrae"
-	PacificKwajalein            Timezone = "Pacific/Kwajalein"
-	PacificMarquesas            Timezone = "Pacific/Marquesas"
-	PacificNauru                Timezone = "Pacific/Nauru"
-	PacificNiue                 Timezone = "Pacific/Niue"
-	PacificNorfolk              Timezone = "Pacific/Norfolk"
-	PacificNoumea               Timezone = "Pacific/Noumea"
-	PacificPagoPago             Timezone = "Pacific/Pago_Pago"
-	PacificPalau                Timezone = "Pacific/Palau"
-	PacificPitcairn             Timezone = "Pacific/Pitcairn"
-	PacificPortMoresby          Timezone = "Pacific/Port_Moresby"
-	PacificRarotonga            Timezone = "Pacific/Rarotonga"
-	PacificTahiti               Timezone = "Pacific/Tahiti"
-	PacificTarawa               Timezone = "Pacific/Tarawa"
-	PacificTongatapu            Timezone = "Pacific/Tongatapu"
-	UTC                         Timezone = "UTC"
-)
-
-// Valid indicates whether the value is a known member of the Timezone enum.
-func (e Timezone) Valid() bool {
-	switch e {
-	case AfricaAbidjan:
-		return true
-	case AfricaAlgiers:
-		return true
-	case AfricaBissau:
-		return true
-	case AfricaCairo:
-		return true
-	case AfricaCasablanca:
-		return true
-	case AfricaCeuta:
-		return true
-	case AfricaElAaiun:
-		return true
-	case AfricaJohannesburg:
-		return true
-	case AfricaJuba:
-		return true
-	case AfricaKhartoum:
-		return true
-	case AfricaLagos:
-		return true
-	case AfricaMaputo:
-		return true
-	case AfricaMonrovia:
-		return true
-	case AfricaNairobi:
-		return true
-	case AfricaNdjamena:
-		return true
-	case AfricaSaoTome:
-		return true
-	case AfricaTripoli:
-		return true
-	case AfricaTunis:
-		return true
-	case AfricaWindhoek:
-		return true
-	case AmericaAdak:
-		return true
-	case AmericaAnchorage:
-		return true
-	case AmericaAraguaina:
-		return true
-	case AmericaArgentinaBuenosAires:
-		return true
-	case AmericaArgentinaCatamarca:
-		return true
-	case AmericaArgentinaCordoba:
-		return true
-	case AmericaArgentinaJujuy:
-		return true
-	case AmericaArgentinaLaRioja:
-		return true
-	case AmericaArgentinaMendoza:
-		return true
-	case AmericaArgentinaRioGallegos:
-		return true
-	case AmericaArgentinaSalta:
-		return true
-	case AmericaArgentinaSanJuan:
-		return true
-	case AmericaArgentinaSanLuis:
-		return true
-	case AmericaArgentinaTucuman:
-		return true
-	case AmericaArgentinaUshuaia:
-		return true
-	case AmericaAsuncion:
-		return true
-	case AmericaBahia:
-		return true
-	case AmericaBahiaBanderas:
-		return true
-	case AmericaBarbados:
-		return true
-	case AmericaBelem:
-		return true
-	case AmericaBelize:
-		return true
-	case AmericaBoaVista:
-		return true
-	case AmericaBogota:
-		return true
-	case AmericaBoise:
-		return true
-	case AmericaCambridgeBay:
-		return true
-	case AmericaCampoGrande:
-		return true
-	case AmericaCancun:
-		return true
-	case AmericaCaracas:
-		return true
-	case AmericaCayenne:
-		return true
-	case AmericaChicago:
-		return true
-	case AmericaChihuahua:
-		return true
-	case AmericaCiudadJuarez:
-		return true
-	case AmericaCostaRica:
-		return true
-	case AmericaCoyhaique:
-		return true
-	case AmericaCuiaba:
-		return true
-	case AmericaDanmarkshavn:
-		return true
-	case AmericaDawson:
-		return true
-	case AmericaDawsonCreek:
-		return true
-	case AmericaDenver:
-		return true
-	case AmericaDetroit:
-		return true
-	case AmericaEdmonton:
-		return true
-	case AmericaEirunepe:
-		return true
-	case AmericaElSalvador:
-		return true
-	case AmericaFortNelson:
-		return true
-	case AmericaFortaleza:
-		return true
-	case AmericaGlaceBay:
-		return true
-	case AmericaGooseBay:
-		return true
-	case AmericaGrandTurk:
-		return true
-	case AmericaGuatemala:
-		return true
-	case AmericaGuayaquil:
-		return true
-	case AmericaGuyana:
-		return true
-	case AmericaHalifax:
-		return true
-	case AmericaHavana:
-		return true
-	case AmericaHermosillo:
-		return true
-	case AmericaIndianaIndianapolis:
-		return true
-	case AmericaIndianaKnox:
-		return true
-	case AmericaIndianaMarengo:
-		return true
-	case AmericaIndianaPetersburg:
-		return true
-	case AmericaIndianaTellCity:
-		return true
-	case AmericaIndianaVevay:
-		return true
-	case AmericaIndianaVincennes:
-		return true
-	case AmericaIndianaWinamac:
-		return true
-	case AmericaInuvik:
-		return true
-	case AmericaIqaluit:
-		return true
-	case AmericaJamaica:
-		return true
-	case AmericaJuneau:
-		return true
-	case AmericaKentuckyLouisville:
-		return true
-	case AmericaKentuckyMonticello:
-		return true
-	case AmericaLaPaz:
-		return true
-	case AmericaLima:
-		return true
-	case AmericaLosAngeles:
-		return true
-	case AmericaMaceio:
-		return true
-	case AmericaManagua:
-		return true
-	case AmericaManaus:
-		return true
-	case AmericaMartinique:
-		return true
-	case AmericaMatamoros:
-		return true
-	case AmericaMazatlan:
-		return true
-	case AmericaMenominee:
-		return true
-	case AmericaMerida:
-		return true
-	case AmericaMetlakatla:
-		return true
-	case AmericaMexicoCity:
-		return true
-	case AmericaMiquelon:
-		return true
-	case AmericaMoncton:
-		return true
-	case AmericaMonterrey:
-		return true
-	case AmericaMontevideo:
-		return true
-	case AmericaNewYork:
-		return true
-	case AmericaNome:
-		return true
-	case AmericaNoronha:
-		return true
-	case AmericaNorthDakotaBeulah:
-		return true
-	case AmericaNorthDakotaCenter:
-		return true
-	case AmericaNorthDakotaNewSalem:
-		return true
-	case AmericaNuuk:
-		return true
-	case AmericaOjinaga:
-		return true
-	case AmericaPanama:
-		return true
-	case AmericaParamaribo:
-		return true
-	case AmericaPhoenix:
-		return true
-	case AmericaPortAuPrince:
-		return true
-	case AmericaPortoVelho:
-		return true
-	case AmericaPuertoRico:
-		return true
-	case AmericaPuntaArenas:
-		return true
-	case AmericaRankinInlet:
-		return true
-	case AmericaRecife:
-		return true
-	case AmericaRegina:
-		return true
-	case AmericaResolute:
-		return true
-	case AmericaRioBranco:
-		return true
-	case AmericaSantarem:
-		return true
-	case AmericaSantiago:
-		return true
-	case AmericaSantoDomingo:
-		return true
-	case AmericaSaoPaulo:
-		return true
-	case AmericaScoresbysund:
-		return true
-	case AmericaSitka:
-		return true
-	case AmericaStJohns:
-		return true
-	case AmericaSwiftCurrent:
-		return true
-	case AmericaTegucigalpa:
-		return true
-	case AmericaThule:
-		return true
-	case AmericaTijuana:
-		return true
-	case AmericaToronto:
-		return true
-	case AmericaVancouver:
-		return true
-	case AmericaWhitehorse:
-		return true
-	case AmericaWinnipeg:
-		return true
-	case AmericaYakutat:
-		return true
-	case AntarcticaCasey:
-		return true
-	case AntarcticaDavis:
-		return true
-	case AntarcticaMacquarie:
-		return true
-	case AntarcticaMawson:
-		return true
-	case AntarcticaPalmer:
-		return true
-	case AntarcticaRothera:
-		return true
-	case AntarcticaTroll:
-		return true
-	case AntarcticaVostok:
-		return true
-	case AsiaAlmaty:
-		return true
-	case AsiaAmman:
-		return true
-	case AsiaAnadyr:
-		return true
-	case AsiaAqtau:
-		return true
-	case AsiaAqtobe:
-		return true
-	case AsiaAshgabat:
-		return true
-	case AsiaAtyrau:
-		return true
-	case AsiaBaghdad:
-		return true
-	case AsiaBaku:
-		return true
-	case AsiaBangkok:
-		return true
-	case AsiaBarnaul:
-		return true
-	case AsiaBeirut:
-		return true
-	case AsiaBishkek:
-		return true
-	case AsiaChita:
-		return true
-	case AsiaColombo:
-		return true
-	case AsiaDamascus:
-		return true
-	case AsiaDhaka:
-		return true
-	case AsiaDili:
-		return true
-	case AsiaDubai:
-		return true
-	case AsiaDushanbe:
-		return true
-	case AsiaFamagusta:
-		return true
-	case AsiaGaza:
-		return true
-	case AsiaHebron:
-		return true
-	case AsiaHoChiMinh:
-		return true
-	case AsiaHongKong:
-		return true
-	case AsiaHovd:
-		return true
-	case AsiaIrkutsk:
-		return true
-	case AsiaJakarta:
-		return true
-	case AsiaJayapura:
-		return true
-	case AsiaJerusalem:
-		return true
-	case AsiaKabul:
-		return true
-	case AsiaKamchatka:
-		return true
-	case AsiaKarachi:
-		return true
-	case AsiaKathmandu:
-		return true
-	case AsiaKhandyga:
-		return true
-	case AsiaKolkata:
-		return true
-	case AsiaKrasnoyarsk:
-		return true
-	case AsiaKuching:
-		return true
-	case AsiaMacau:
-		return true
-	case AsiaMagadan:
-		return true
-	case AsiaMakassar:
-		return true
-	case AsiaManila:
-		return true
-	case AsiaNicosia:
-		return true
-	case AsiaNovokuznetsk:
-		return true
-	case AsiaNovosibirsk:
-		return true
-	case AsiaOmsk:
-		return true
-	case AsiaOral:
-		return true
-	case AsiaPontianak:
-		return true
-	case AsiaPyongyang:
-		return true
-	case AsiaQatar:
-		return true
-	case AsiaQostanay:
-		return true
-	case AsiaQyzylorda:
-		return true
-	case AsiaSakhalin:
-		return true
-	case AsiaSamarkand:
-		return true
-	case AsiaSeoul:
-		return true
-	case AsiaShanghai:
-		return true
-	case AsiaSingapore:
-		return true
-	case AsiaSrednekolymsk:
-		return true
-	case AsiaTaipei:
-		return true
-	case AsiaTashkent:
-		return true
-	case AsiaTbilisi:
-		return true
-	case AsiaTehran:
-		return true
-	case AsiaThimphu:
-		return true
-	case AsiaTomsk:
-		return true
-	case AsiaUlaanbaatar:
-		return true
-	case AsiaUrumqi:
-		return true
-	case AsiaUstNera:
-		return true
-	case AsiaVladivostok:
-		return true
-	case AsiaYakutsk:
-		return true
-	case AsiaYangon:
-		return true
-	case AsiaYekaterinburg:
-		return true
-	case AsiaYerevan:
-		return true
-	case AtlanticAzores:
-		return true
-	case AtlanticBermuda:
-		return true
-	case AtlanticCanary:
-		return true
-	case AtlanticCapeVerde:
-		return true
-	case AtlanticFaroe:
-		return true
-	case AtlanticMadeira:
-		return true
-	case AtlanticSouthGeorgia:
-		return true
-	case AtlanticStanley:
-		return true
-	case AustraliaAdelaide:
-		return true
-	case AustraliaBrisbane:
-		return true
-	case AustraliaBrokenHill:
-		return true
-	case AustraliaDarwin:
-		return true
-	case AustraliaEucla:
-		return true
-	case AustraliaHobart:
-		return true
-	case AustraliaLindeman:
-		return true
-	case AustraliaLordHowe:
-		return true
-	case AustraliaMelbourne:
-		return true
-	case AustraliaPerth:
-		return true
-	case AustraliaSydney:
-		return true
-	case EuropeAndorra:
-		return true
-	case EuropeAstrakhan:
-		return true
-	case EuropeAthens:
-		return true
-	case EuropeBelgrade:
-		return true
-	case EuropeBerlin:
-		return true
-	case EuropeBrussels:
-		return true
-	case EuropeBucharest:
-		return true
-	case EuropeBudapest:
-		return true
-	case EuropeChisinau:
-		return true
-	case EuropeDublin:
-		return true
-	case EuropeGibraltar:
-		return true
-	case EuropeHelsinki:
-		return true
-	case EuropeIstanbul:
-		return true
-	case EuropeKaliningrad:
-		return true
-	case EuropeKirov:
-		return true
-	case EuropeKyiv:
-		return true
-	case EuropeLisbon:
-		return true
-	case EuropeLondon:
-		return true
-	case EuropeMadrid:
-		return true
-	case EuropeMalta:
-		return true
-	case EuropeMinsk:
-		return true
-	case EuropeMoscow:
-		return true
-	case EuropeParis:
-		return true
-	case EuropePrague:
-		return true
-	case EuropeRiga:
-		return true
-	case EuropeRome:
-		return true
-	case EuropeSamara:
-		return true
-	case EuropeSaratov:
-		return true
-	case EuropeSimferopol:
-		return true
-	case EuropeSofia:
-		return true
-	case EuropeTallinn:
-		return true
-	case EuropeTirane:
-		return true
-	case EuropeUlyanovsk:
-		return true
-	case EuropeVienna:
-		return true
-	case EuropeVilnius:
-		return true
-	case EuropeVolgograd:
-		return true
-	case EuropeWarsaw:
-		return true
-	case EuropeZurich:
-		return true
-	case IndianChagos:
-		return true
-	case IndianMaldives:
-		return true
-	case IndianMauritius:
-		return true
-	case PacificApia:
-		return true
-	case PacificAuckland:
-		return true
-	case PacificBougainville:
-		return true
-	case PacificChatham:
-		return true
-	case PacificEaster:
-		return true
-	case PacificEfate:
-		return true
-	case PacificFakaofo:
-		return true
-	case PacificFiji:
-		return true
-	case PacificGalapagos:
-		return true
-	case PacificGambier:
-		return true
-	case PacificGuadalcanal:
-		return true
-	case PacificGuam:
-		return true
-	case PacificHonolulu:
-		return true
-	case PacificKanton:
-		return true
-	case PacificKiritimati:
-		return true
-	case PacificKosrae:
-		return true
-	case PacificKwajalein:
-		return true
-	case PacificMarquesas:
-		return true
-	case PacificNauru:
-		return true
-	case PacificNiue:
-		return true
-	case PacificNorfolk:
-		return true
-	case PacificNoumea:
-		return true
-	case PacificPagoPago:
-		return true
-	case PacificPalau:
-		return true
-	case PacificPitcairn:
-		return true
-	case PacificPortMoresby:
-		return true
-	case PacificRarotonga:
-		return true
-	case PacificTahiti:
-		return true
-	case PacificTarawa:
-		return true
-	case PacificTongatapu:
-		return true
-	case UTC:
-		return true
-	default:
-		return false
-	}
+// AudioMessageData defines model for AudioMessageData.
+type AudioMessageData struct {
+	FileLength *int    `json:"fileLength,omitempty"`
+	Mimetype   *string `json:"mimetype,omitempty"`
+	Ptt        *bool   `json:"ptt,omitempty"`
+	Seconds    *int    `json:"seconds,omitempty"`
+	Url        *string `json:"url,omitempty"`
 }
 
-// Defines values for TranscriptKind.
-const (
-	TranscriptKindACTION         TranscriptKind = "ACTION"
-	TranscriptKindAGENT          TranscriptKind = "AGENT"
-	TranscriptKindCONTACT        TranscriptKind = "CONTACT"
-	TranscriptKindOPERATORDIRECT TranscriptKind = "OPERATOR_DIRECT"
-	TranscriptKindWHISPER        TranscriptKind = "WHISPER"
-)
-
-// Valid indicates whether the value is a known member of the TranscriptKind enum.
-func (e TranscriptKind) Valid() bool {
-	switch e {
-	case TranscriptKindACTION:
-		return true
-	case TranscriptKindAGENT:
-		return true
-	case TranscriptKindCONTACT:
-		return true
-	case TranscriptKindOPERATORDIRECT:
-		return true
-	case TranscriptKindWHISPER:
-		return true
-	default:
-		return false
-	}
+// ButtonItem defines model for ButtonItem.
+type ButtonItem struct {
+	ButtonId    string `json:"buttonId"`
+	DisplayText string `json:"displayText"`
 }
 
-// Defines values for WorkspaceBadge.
-const (
-	CLAUDEPROJECT WorkspaceBadge = "CLAUDE_PROJECT"
-	GIT           WorkspaceBadge = "GIT"
-)
-
-// Valid indicates whether the value is a known member of the WorkspaceBadge enum.
-func (e WorkspaceBadge) Valid() bool {
-	switch e {
-	case CLAUDEPROJECT:
-		return true
-	case GIT:
-		return true
-	default:
-		return false
-	}
+// ChannelChatPresenceUpdatedPayload defines model for ChannelChatPresenceUpdatedPayload.
+type ChannelChatPresenceUpdatedPayload struct {
+	ChannelId  openapi_types.UUID `json:"channelId"`
+	ChatId     string             `json:"chatId"`
+	ObservedAt time.Time          `json:"observedAt"`
+	OwnerId    string             `json:"ownerId"`
+	SenderId   string             `json:"senderId"`
+	State      interface{}        `json:"state"`
 }
 
-// ArtifactKind defines model for ArtifactKind.
-type ArtifactKind string
+// ChannelCreatedPayload defines model for ChannelCreatedPayload.
+type ChannelCreatedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	Name      string             `json:"name"`
+	OwnerId   string             `json:"ownerId"`
+	Platform  Platform           `json:"platform"`
+}
 
-// AttachFlowStyle defines model for AttachFlowStyle.
-type AttachFlowStyle string
+// ChannelEvent defines model for ChannelEvent.
+type ChannelEvent struct {
+	union json.RawMessage
+}
 
-// BufferSize defines model for BufferSize.
-type BufferSize string
+// ChannelEventChannelChannelCreated defines model for ChannelEvent_ChannelChannelCreated.
+type ChannelEventChannelChannelCreated struct {
+	Name    string                `json:"name"`
+	Payload ChannelCreatedPayload `json:"payload"`
+}
 
-// ChannelKind defines model for ChannelKind.
-type ChannelKind string
+// ChannelEventChannelGatewayConnected defines model for ChannelEvent_ChannelGatewayConnected.
+type ChannelEventChannelGatewayConnected struct {
+	Name    string                  `json:"name"`
+	Payload GatewayConnectedPayload `json:"payload"`
+}
+
+// ChannelEventChannelGatewayDisconnected defines model for ChannelEvent_ChannelGatewayDisconnected.
+type ChannelEventChannelGatewayDisconnected struct {
+	Name    string                     `json:"name"`
+	Payload GatewayDisconnectedPayload `json:"payload"`
+}
+
+// ChannelEventChannelMembershipAdded defines model for ChannelEvent_ChannelMembershipAdded.
+type ChannelEventChannelMembershipAdded struct {
+	Name    string                        `json:"name"`
+	Payload ChannelMembershipAddedPayload `json:"payload"`
+}
+
+// ChannelEventChannelMembershipRemoved defines model for ChannelEvent_ChannelMembershipRemoved.
+type ChannelEventChannelMembershipRemoved struct {
+	Name    string                          `json:"name"`
+	Payload ChannelMembershipRemovedPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessageDeleted defines model for ChannelEvent_ChannelMessageDeleted.
+type ChannelEventChannelMessageDeleted struct {
+	Name    string                       `json:"name"`
+	Payload ChannelMessageDeletedPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessageDelivered defines model for ChannelEvent_ChannelMessageDelivered.
+type ChannelEventChannelMessageDelivered struct {
+	Name    string                         `json:"name"`
+	Payload ChannelMessageDeliveredPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessageEdited defines model for ChannelEvent_ChannelMessageEdited.
+type ChannelEventChannelMessageEdited struct {
+	Name    string                      `json:"name"`
+	Payload ChannelMessageEditedPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessageReceived defines model for ChannelEvent_ChannelMessageReceived.
+type ChannelEventChannelMessageReceived struct {
+	Name    string                        `json:"name"`
+	Payload ChannelMessageReceivedPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessageSeen defines model for ChannelEvent_ChannelMessageSeen.
+type ChannelEventChannelMessageSeen struct {
+	Name    string                    `json:"name"`
+	Payload ChannelMessageSeenPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessageSent defines model for ChannelEvent_ChannelMessageSent.
+type ChannelEventChannelMessageSent struct {
+	Name    string                    `json:"name"`
+	Payload ChannelMessageSentPayload `json:"payload"`
+}
+
+// ChannelEventChannelMessagesSynced defines model for ChannelEvent_ChannelMessagesSynced.
+type ChannelEventChannelMessagesSynced struct {
+	Name    string                       `json:"name"`
+	Payload ChannelMessagesSyncedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteArchived defines model for ChannelEvent_ChannelRemoteArchived.
+type ChannelEventChannelRemoteArchived struct {
+	Name    string                       `json:"name"`
+	Payload ChannelRemoteArchivedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteChatSeen defines model for ChannelEvent_ChannelRemoteChatSeen.
+type ChannelEventChannelRemoteChatSeen struct {
+	Name    string                       `json:"name"`
+	Payload ChannelRemoteChatSeenPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteCreated defines model for ChannelEvent_ChannelRemoteCreated.
+type ChannelEventChannelRemoteCreated struct {
+	Name    string                      `json:"name"`
+	Payload ChannelRemoteCreatedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteDeleted defines model for ChannelEvent_ChannelRemoteDeleted.
+type ChannelEventChannelRemoteDeleted struct {
+	Name    string                      `json:"name"`
+	Payload ChannelRemoteDeletedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteMarkedAsUnread defines model for ChannelEvent_ChannelRemoteMarkedAsUnread.
+type ChannelEventChannelRemoteMarkedAsUnread struct {
+	Name    string                             `json:"name"`
+	Payload ChannelRemoteMarkedAsUnreadPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteMuted defines model for ChannelEvent_ChannelRemoteMuted.
+type ChannelEventChannelRemoteMuted struct {
+	Name    string                    `json:"name"`
+	Payload ChannelRemoteMutedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemotePinned defines model for ChannelEvent_ChannelRemotePinned.
+type ChannelEventChannelRemotePinned struct {
+	Name    string                     `json:"name"`
+	Payload ChannelRemotePinnedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteUnarchived defines model for ChannelEvent_ChannelRemoteUnarchived.
+type ChannelEventChannelRemoteUnarchived struct {
+	Name    string                         `json:"name"`
+	Payload ChannelRemoteUnarchivedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteUnmuted defines model for ChannelEvent_ChannelRemoteUnmuted.
+type ChannelEventChannelRemoteUnmuted struct {
+	Name    string                      `json:"name"`
+	Payload ChannelRemoteUnmutedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteUnpinned defines model for ChannelEvent_ChannelRemoteUnpinned.
+type ChannelEventChannelRemoteUnpinned struct {
+	Name    string                       `json:"name"`
+	Payload ChannelRemoteUnpinnedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemoteUpdated defines model for ChannelEvent_ChannelRemoteUpdated.
+type ChannelEventChannelRemoteUpdated struct {
+	Name    string                      `json:"name"`
+	Payload ChannelRemoteUpdatedPayload `json:"payload"`
+}
+
+// ChannelEventChannelRemotesSynced defines model for ChannelEvent_ChannelRemotesSynced.
+type ChannelEventChannelRemotesSynced struct {
+	Name    string                      `json:"name"`
+	Payload ChannelRemotesSyncedPayload `json:"payload"`
+}
+
+// ChannelLoggedOutPayload defines model for ChannelLoggedOutPayload.
+type ChannelLoggedOutPayload struct {
+	ChannelId    openapi_types.UUID `json:"channelId"`
+	OwnerId      string             `json:"ownerId"`
+	Platform     Platform           `json:"platform"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
+	Reason       string             `json:"reason"`
+}
+
+// ChannelMembershipAddedPayload defines model for ChannelMembershipAddedPayload.
+type ChannelMembershipAddedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	GroupId   string             `json:"groupId"`
+	IsAdmin   bool               `json:"isAdmin"`
+	JoinedAt  time.Time          `json:"joinedAt"`
+	MemberId  string             `json:"memberId"`
+	OwnerId   string             `json:"ownerId"`
+}
+
+// ChannelMembershipRemovedPayload defines model for ChannelMembershipRemovedPayload.
+type ChannelMembershipRemovedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	GroupId   string             `json:"groupId"`
+	MemberId  string             `json:"memberId"`
+	OwnerId   string             `json:"ownerId"`
+	RemovedAt time.Time          `json:"removedAt"`
+}
+
+// ChannelMessageDeletedPayload defines model for ChannelMessageDeletedPayload.
+type ChannelMessageDeletedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	MessageId string             `json:"messageId"`
+	OwnerId   string             `json:"ownerId"`
+	Platform  Platform           `json:"platform"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelMessageDeliveredPayload defines model for ChannelMessageDeliveredPayload.
+type ChannelMessageDeliveredPayload struct {
+	ChannelId  openapi_types.UUID `json:"channelId"`
+	MessageIds []string           `json:"messageIds"`
+	OwnerId    string             `json:"ownerId"`
+	Platform   Platform           `json:"platform"`
+	RemoteId   string             `json:"remoteId"`
+	SenderId   string             `json:"senderId"`
+	Timestamp  int                `json:"timestamp"`
+}
+
+// ChannelMessageEditedPayload defines model for ChannelMessageEditedPayload.
+type ChannelMessageEditedPayload struct {
+	ChannelId   openapi_types.UUID `json:"channelId"`
+	Content     interface{}        `json:"content,omitempty"`
+	MessageId   string             `json:"messageId"`
+	MessageType interface{}        `json:"messageType"`
+	OwnerId     string             `json:"ownerId"`
+	Platform    Platform           `json:"platform"`
+	RemoteId    string             `json:"remoteId"`
+	SenderId    string             `json:"senderId"`
+	Timestamp   int                `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayload defines model for ChannelMessageReceivedPayload.
+type ChannelMessageReceivedPayload struct {
+	union json.RawMessage
+}
+
+// ChannelMessageReceivedPayloadInternalText defines model for ChannelMessageReceivedPayload_Internal_Text.
+type ChannelMessageReceivedPayloadInternalText struct {
+	ChannelId         openapi_types.UUID   `json:"channelId"`
+	Content           *InternalTextContent `json:"content,omitempty"`
+	FromMe            bool                 `json:"fromMe"`
+	InternalMessageId openapi_types.UUID   `json:"internalMessageId"`
+	IsGroup           bool                 `json:"isGroup"`
+	MessageId         string               `json:"messageId"`
+	MessageType       string               `json:"messageType"`
+	ObservedAt        time.Time            `json:"observedAt"`
+	OccurredAt        time.Time            `json:"occurredAt"`
+	OwnerId           string               `json:"ownerId"`
+	Platform          string               `json:"platform"`
+	PlatformData      interface{}          `json:"platformData,omitempty"`
+	RemoteId          string               `json:"remoteId"`
+	SenderId          string               `json:"senderId"`
+	Timestamp         int                  `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappAudio defines model for ChannelMessageReceivedPayload_Whatsapp_Audio.
+type ChannelMessageReceivedPayloadWhatsappAudio struct {
+	ChannelId         openapi_types.UUID    `json:"channelId"`
+	Content           *WhatsAppAudioContent `json:"content,omitempty"`
+	FromMe            bool                  `json:"fromMe"`
+	InternalMessageId openapi_types.UUID    `json:"internalMessageId"`
+	IsGroup           bool                  `json:"isGroup"`
+	MessageId         string                `json:"messageId"`
+	MessageType       string                `json:"messageType"`
+	ObservedAt        time.Time             `json:"observedAt"`
+	OccurredAt        time.Time             `json:"occurredAt"`
+	OwnerId           string                `json:"ownerId"`
+	Platform          string                `json:"platform"`
+	PlatformData      interface{}           `json:"platformData,omitempty"`
+	RemoteId          string                `json:"remoteId"`
+	SenderId          string                `json:"senderId"`
+	Timestamp         int                   `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappContact defines model for ChannelMessageReceivedPayload_Whatsapp_Contact.
+type ChannelMessageReceivedPayloadWhatsappContact struct {
+	ChannelId         openapi_types.UUID      `json:"channelId"`
+	Content           *WhatsAppContactContent `json:"content,omitempty"`
+	FromMe            bool                    `json:"fromMe"`
+	InternalMessageId openapi_types.UUID      `json:"internalMessageId"`
+	IsGroup           bool                    `json:"isGroup"`
+	MessageId         string                  `json:"messageId"`
+	MessageType       string                  `json:"messageType"`
+	ObservedAt        time.Time               `json:"observedAt"`
+	OccurredAt        time.Time               `json:"occurredAt"`
+	OwnerId           string                  `json:"ownerId"`
+	Platform          string                  `json:"platform"`
+	PlatformData      interface{}             `json:"platformData,omitempty"`
+	RemoteId          string                  `json:"remoteId"`
+	SenderId          string                  `json:"senderId"`
+	Timestamp         int                     `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappDocument defines model for ChannelMessageReceivedPayload_Whatsapp_Document.
+type ChannelMessageReceivedPayloadWhatsappDocument struct {
+	ChannelId         openapi_types.UUID       `json:"channelId"`
+	Content           *WhatsAppDocumentContent `json:"content,omitempty"`
+	FromMe            bool                     `json:"fromMe"`
+	InternalMessageId openapi_types.UUID       `json:"internalMessageId"`
+	IsGroup           bool                     `json:"isGroup"`
+	MessageId         string                   `json:"messageId"`
+	MessageType       string                   `json:"messageType"`
+	ObservedAt        time.Time                `json:"observedAt"`
+	OccurredAt        time.Time                `json:"occurredAt"`
+	OwnerId           string                   `json:"ownerId"`
+	Platform          string                   `json:"platform"`
+	PlatformData      interface{}              `json:"platformData,omitempty"`
+	RemoteId          string                   `json:"remoteId"`
+	SenderId          string                   `json:"senderId"`
+	Timestamp         int                      `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappImage defines model for ChannelMessageReceivedPayload_Whatsapp_Image.
+type ChannelMessageReceivedPayloadWhatsappImage struct {
+	ChannelId         openapi_types.UUID    `json:"channelId"`
+	Content           *WhatsAppImageContent `json:"content,omitempty"`
+	FromMe            bool                  `json:"fromMe"`
+	InternalMessageId openapi_types.UUID    `json:"internalMessageId"`
+	IsGroup           bool                  `json:"isGroup"`
+	MessageId         string                `json:"messageId"`
+	MessageType       string                `json:"messageType"`
+	ObservedAt        time.Time             `json:"observedAt"`
+	OccurredAt        time.Time             `json:"occurredAt"`
+	OwnerId           string                `json:"ownerId"`
+	Platform          string                `json:"platform"`
+	PlatformData      interface{}           `json:"platformData,omitempty"`
+	RemoteId          string                `json:"remoteId"`
+	SenderId          string                `json:"senderId"`
+	Timestamp         int                   `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappLocation defines model for ChannelMessageReceivedPayload_Whatsapp_Location.
+type ChannelMessageReceivedPayloadWhatsappLocation struct {
+	ChannelId         openapi_types.UUID       `json:"channelId"`
+	Content           *WhatsAppLocationContent `json:"content,omitempty"`
+	FromMe            bool                     `json:"fromMe"`
+	InternalMessageId openapi_types.UUID       `json:"internalMessageId"`
+	IsGroup           bool                     `json:"isGroup"`
+	MessageId         string                   `json:"messageId"`
+	MessageType       string                   `json:"messageType"`
+	ObservedAt        time.Time                `json:"observedAt"`
+	OccurredAt        time.Time                `json:"occurredAt"`
+	OwnerId           string                   `json:"ownerId"`
+	Platform          string                   `json:"platform"`
+	PlatformData      interface{}              `json:"platformData,omitempty"`
+	RemoteId          string                   `json:"remoteId"`
+	SenderId          string                   `json:"senderId"`
+	Timestamp         int                      `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappPoll defines model for ChannelMessageReceivedPayload_Whatsapp_Poll.
+type ChannelMessageReceivedPayloadWhatsappPoll struct {
+	ChannelId         openapi_types.UUID   `json:"channelId"`
+	Content           *WhatsAppPollContent `json:"content,omitempty"`
+	FromMe            bool                 `json:"fromMe"`
+	InternalMessageId openapi_types.UUID   `json:"internalMessageId"`
+	IsGroup           bool                 `json:"isGroup"`
+	MessageId         string               `json:"messageId"`
+	MessageType       string               `json:"messageType"`
+	ObservedAt        time.Time            `json:"observedAt"`
+	OccurredAt        time.Time            `json:"occurredAt"`
+	OwnerId           string               `json:"ownerId"`
+	Platform          string               `json:"platform"`
+	PlatformData      interface{}          `json:"platformData,omitempty"`
+	RemoteId          string               `json:"remoteId"`
+	SenderId          string               `json:"senderId"`
+	Timestamp         int                  `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappReaction defines model for ChannelMessageReceivedPayload_Whatsapp_Reaction.
+type ChannelMessageReceivedPayloadWhatsappReaction struct {
+	ChannelId         openapi_types.UUID       `json:"channelId"`
+	Content           *WhatsAppReactionContent `json:"content,omitempty"`
+	FromMe            bool                     `json:"fromMe"`
+	InternalMessageId openapi_types.UUID       `json:"internalMessageId"`
+	IsGroup           bool                     `json:"isGroup"`
+	MessageId         string                   `json:"messageId"`
+	MessageType       string                   `json:"messageType"`
+	ObservedAt        time.Time                `json:"observedAt"`
+	OccurredAt        time.Time                `json:"occurredAt"`
+	OwnerId           string                   `json:"ownerId"`
+	Platform          string                   `json:"platform"`
+	PlatformData      interface{}              `json:"platformData,omitempty"`
+	RemoteId          string                   `json:"remoteId"`
+	SenderId          string                   `json:"senderId"`
+	Timestamp         int                      `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappSticker defines model for ChannelMessageReceivedPayload_Whatsapp_Sticker.
+type ChannelMessageReceivedPayloadWhatsappSticker struct {
+	ChannelId         openapi_types.UUID      `json:"channelId"`
+	Content           *WhatsAppStickerContent `json:"content,omitempty"`
+	FromMe            bool                    `json:"fromMe"`
+	InternalMessageId openapi_types.UUID      `json:"internalMessageId"`
+	IsGroup           bool                    `json:"isGroup"`
+	MessageId         string                  `json:"messageId"`
+	MessageType       string                  `json:"messageType"`
+	ObservedAt        time.Time               `json:"observedAt"`
+	OccurredAt        time.Time               `json:"occurredAt"`
+	OwnerId           string                  `json:"ownerId"`
+	Platform          string                  `json:"platform"`
+	PlatformData      interface{}             `json:"platformData,omitempty"`
+	RemoteId          string                  `json:"remoteId"`
+	SenderId          string                  `json:"senderId"`
+	Timestamp         int                     `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappText defines model for ChannelMessageReceivedPayload_Whatsapp_Text.
+type ChannelMessageReceivedPayloadWhatsappText struct {
+	ChannelId         openapi_types.UUID   `json:"channelId"`
+	Content           *WhatsAppTextContent `json:"content,omitempty"`
+	FromMe            bool                 `json:"fromMe"`
+	InternalMessageId openapi_types.UUID   `json:"internalMessageId"`
+	IsGroup           bool                 `json:"isGroup"`
+	MessageId         string               `json:"messageId"`
+	MessageType       string               `json:"messageType"`
+	ObservedAt        time.Time            `json:"observedAt"`
+	OccurredAt        time.Time            `json:"occurredAt"`
+	OwnerId           string               `json:"ownerId"`
+	Platform          string               `json:"platform"`
+	PlatformData      interface{}          `json:"platformData,omitempty"`
+	RemoteId          string               `json:"remoteId"`
+	SenderId          string               `json:"senderId"`
+	Timestamp         int                  `json:"timestamp"`
+}
+
+// ChannelMessageReceivedPayloadWhatsappVideo defines model for ChannelMessageReceivedPayload_Whatsapp_Video.
+type ChannelMessageReceivedPayloadWhatsappVideo struct {
+	ChannelId         openapi_types.UUID    `json:"channelId"`
+	Content           *WhatsAppVideoContent `json:"content,omitempty"`
+	FromMe            bool                  `json:"fromMe"`
+	InternalMessageId openapi_types.UUID    `json:"internalMessageId"`
+	IsGroup           bool                  `json:"isGroup"`
+	MessageId         string                `json:"messageId"`
+	MessageType       string                `json:"messageType"`
+	ObservedAt        time.Time             `json:"observedAt"`
+	OccurredAt        time.Time             `json:"occurredAt"`
+	OwnerId           string                `json:"ownerId"`
+	Platform          string                `json:"platform"`
+	PlatformData      interface{}           `json:"platformData,omitempty"`
+	RemoteId          string                `json:"remoteId"`
+	SenderId          string                `json:"senderId"`
+	Timestamp         int                   `json:"timestamp"`
+}
+
+// ChannelMessageSeenPayload defines model for ChannelMessageSeenPayload.
+type ChannelMessageSeenPayload struct {
+	ChannelId  openapi_types.UUID `json:"channelId"`
+	MessageIds []string           `json:"messageIds"`
+	OwnerId    string             `json:"ownerId"`
+	Platform   Platform           `json:"platform"`
+	RemoteId   string             `json:"remoteId"`
+	Self       bool               `json:"self"`
+	SenderId   string             `json:"senderId"`
+	Timestamp  int                `json:"timestamp"`
+}
+
+// ChannelMessageSentPayload defines model for ChannelMessageSentPayload.
+type ChannelMessageSentPayload struct {
+	union json.RawMessage
+}
+
+// ChannelMessageSentPayloadInternalText defines model for ChannelMessageSentPayload_Internal_Text.
+type ChannelMessageSentPayloadInternalText struct {
+	ChannelId         openapi_types.UUID   `json:"channelId"`
+	Content           *InternalTextContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID   `json:"internalMessageId"`
+	IsGroup           bool                 `json:"isGroup"`
+	MessageId         string               `json:"messageId"`
+	MessageType       string               `json:"messageType"`
+	ObservedAt        time.Time            `json:"observedAt"`
+	OccurredAt        time.Time            `json:"occurredAt"`
+	OwnerId           string               `json:"ownerId"`
+	Platform          string               `json:"platform"`
+	PlatformData      interface{}          `json:"platformData,omitempty"`
+	RemoteId          string               `json:"remoteId"`
+	SenderId          string               `json:"senderId"`
+	Timestamp         int                  `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappAudio defines model for ChannelMessageSentPayload_Whatsapp_Audio.
+type ChannelMessageSentPayloadWhatsappAudio struct {
+	ChannelId         openapi_types.UUID    `json:"channelId"`
+	Content           *WhatsAppAudioContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID    `json:"internalMessageId"`
+	IsGroup           bool                  `json:"isGroup"`
+	MessageId         string                `json:"messageId"`
+	MessageType       string                `json:"messageType"`
+	ObservedAt        time.Time             `json:"observedAt"`
+	OccurredAt        time.Time             `json:"occurredAt"`
+	OwnerId           string                `json:"ownerId"`
+	Platform          string                `json:"platform"`
+	PlatformData      interface{}           `json:"platformData,omitempty"`
+	RemoteId          string                `json:"remoteId"`
+	SenderId          string                `json:"senderId"`
+	Timestamp         int                   `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappContact defines model for ChannelMessageSentPayload_Whatsapp_Contact.
+type ChannelMessageSentPayloadWhatsappContact struct {
+	ChannelId         openapi_types.UUID      `json:"channelId"`
+	Content           *WhatsAppContactContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID      `json:"internalMessageId"`
+	IsGroup           bool                    `json:"isGroup"`
+	MessageId         string                  `json:"messageId"`
+	MessageType       string                  `json:"messageType"`
+	ObservedAt        time.Time               `json:"observedAt"`
+	OccurredAt        time.Time               `json:"occurredAt"`
+	OwnerId           string                  `json:"ownerId"`
+	Platform          string                  `json:"platform"`
+	PlatformData      interface{}             `json:"platformData,omitempty"`
+	RemoteId          string                  `json:"remoteId"`
+	SenderId          string                  `json:"senderId"`
+	Timestamp         int                     `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappDocument defines model for ChannelMessageSentPayload_Whatsapp_Document.
+type ChannelMessageSentPayloadWhatsappDocument struct {
+	ChannelId         openapi_types.UUID       `json:"channelId"`
+	Content           *WhatsAppDocumentContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID       `json:"internalMessageId"`
+	IsGroup           bool                     `json:"isGroup"`
+	MessageId         string                   `json:"messageId"`
+	MessageType       string                   `json:"messageType"`
+	ObservedAt        time.Time                `json:"observedAt"`
+	OccurredAt        time.Time                `json:"occurredAt"`
+	OwnerId           string                   `json:"ownerId"`
+	Platform          string                   `json:"platform"`
+	PlatformData      interface{}              `json:"platformData,omitempty"`
+	RemoteId          string                   `json:"remoteId"`
+	SenderId          string                   `json:"senderId"`
+	Timestamp         int                      `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappImage defines model for ChannelMessageSentPayload_Whatsapp_Image.
+type ChannelMessageSentPayloadWhatsappImage struct {
+	ChannelId         openapi_types.UUID    `json:"channelId"`
+	Content           *WhatsAppImageContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID    `json:"internalMessageId"`
+	IsGroup           bool                  `json:"isGroup"`
+	MessageId         string                `json:"messageId"`
+	MessageType       string                `json:"messageType"`
+	ObservedAt        time.Time             `json:"observedAt"`
+	OccurredAt        time.Time             `json:"occurredAt"`
+	OwnerId           string                `json:"ownerId"`
+	Platform          string                `json:"platform"`
+	PlatformData      interface{}           `json:"platformData,omitempty"`
+	RemoteId          string                `json:"remoteId"`
+	SenderId          string                `json:"senderId"`
+	Timestamp         int                   `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappLocation defines model for ChannelMessageSentPayload_Whatsapp_Location.
+type ChannelMessageSentPayloadWhatsappLocation struct {
+	ChannelId         openapi_types.UUID       `json:"channelId"`
+	Content           *WhatsAppLocationContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID       `json:"internalMessageId"`
+	IsGroup           bool                     `json:"isGroup"`
+	MessageId         string                   `json:"messageId"`
+	MessageType       string                   `json:"messageType"`
+	ObservedAt        time.Time                `json:"observedAt"`
+	OccurredAt        time.Time                `json:"occurredAt"`
+	OwnerId           string                   `json:"ownerId"`
+	Platform          string                   `json:"platform"`
+	PlatformData      interface{}              `json:"platformData,omitempty"`
+	RemoteId          string                   `json:"remoteId"`
+	SenderId          string                   `json:"senderId"`
+	Timestamp         int                      `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappPoll defines model for ChannelMessageSentPayload_Whatsapp_Poll.
+type ChannelMessageSentPayloadWhatsappPoll struct {
+	ChannelId         openapi_types.UUID   `json:"channelId"`
+	Content           *WhatsAppPollContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID   `json:"internalMessageId"`
+	IsGroup           bool                 `json:"isGroup"`
+	MessageId         string               `json:"messageId"`
+	MessageType       string               `json:"messageType"`
+	ObservedAt        time.Time            `json:"observedAt"`
+	OccurredAt        time.Time            `json:"occurredAt"`
+	OwnerId           string               `json:"ownerId"`
+	Platform          string               `json:"platform"`
+	PlatformData      interface{}          `json:"platformData,omitempty"`
+	RemoteId          string               `json:"remoteId"`
+	SenderId          string               `json:"senderId"`
+	Timestamp         int                  `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappReaction defines model for ChannelMessageSentPayload_Whatsapp_Reaction.
+type ChannelMessageSentPayloadWhatsappReaction struct {
+	ChannelId         openapi_types.UUID       `json:"channelId"`
+	Content           *WhatsAppReactionContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID       `json:"internalMessageId"`
+	IsGroup           bool                     `json:"isGroup"`
+	MessageId         string                   `json:"messageId"`
+	MessageType       string                   `json:"messageType"`
+	ObservedAt        time.Time                `json:"observedAt"`
+	OccurredAt        time.Time                `json:"occurredAt"`
+	OwnerId           string                   `json:"ownerId"`
+	Platform          string                   `json:"platform"`
+	PlatformData      interface{}              `json:"platformData,omitempty"`
+	RemoteId          string                   `json:"remoteId"`
+	SenderId          string                   `json:"senderId"`
+	Timestamp         int                      `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappSticker defines model for ChannelMessageSentPayload_Whatsapp_Sticker.
+type ChannelMessageSentPayloadWhatsappSticker struct {
+	ChannelId         openapi_types.UUID      `json:"channelId"`
+	Content           *WhatsAppStickerContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID      `json:"internalMessageId"`
+	IsGroup           bool                    `json:"isGroup"`
+	MessageId         string                  `json:"messageId"`
+	MessageType       string                  `json:"messageType"`
+	ObservedAt        time.Time               `json:"observedAt"`
+	OccurredAt        time.Time               `json:"occurredAt"`
+	OwnerId           string                  `json:"ownerId"`
+	Platform          string                  `json:"platform"`
+	PlatformData      interface{}             `json:"platformData,omitempty"`
+	RemoteId          string                  `json:"remoteId"`
+	SenderId          string                  `json:"senderId"`
+	Timestamp         int                     `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappText defines model for ChannelMessageSentPayload_Whatsapp_Text.
+type ChannelMessageSentPayloadWhatsappText struct {
+	ChannelId         openapi_types.UUID   `json:"channelId"`
+	Content           *WhatsAppTextContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID   `json:"internalMessageId"`
+	IsGroup           bool                 `json:"isGroup"`
+	MessageId         string               `json:"messageId"`
+	MessageType       string               `json:"messageType"`
+	ObservedAt        time.Time            `json:"observedAt"`
+	OccurredAt        time.Time            `json:"occurredAt"`
+	OwnerId           string               `json:"ownerId"`
+	Platform          string               `json:"platform"`
+	PlatformData      interface{}          `json:"platformData,omitempty"`
+	RemoteId          string               `json:"remoteId"`
+	SenderId          string               `json:"senderId"`
+	Timestamp         int                  `json:"timestamp"`
+}
+
+// ChannelMessageSentPayloadWhatsappVideo defines model for ChannelMessageSentPayload_Whatsapp_Video.
+type ChannelMessageSentPayloadWhatsappVideo struct {
+	ChannelId         openapi_types.UUID    `json:"channelId"`
+	Content           *WhatsAppVideoContent `json:"content,omitempty"`
+	InternalMessageId openapi_types.UUID    `json:"internalMessageId"`
+	IsGroup           bool                  `json:"isGroup"`
+	MessageId         string                `json:"messageId"`
+	MessageType       string                `json:"messageType"`
+	ObservedAt        time.Time             `json:"observedAt"`
+	OccurredAt        time.Time             `json:"occurredAt"`
+	OwnerId           string                `json:"ownerId"`
+	Platform          string                `json:"platform"`
+	PlatformData      interface{}           `json:"platformData,omitempty"`
+	RemoteId          string                `json:"remoteId"`
+	SenderId          string                `json:"senderId"`
+	Timestamp         int                   `json:"timestamp"`
+}
+
+// ChannelMessagesSyncedPayload defines model for ChannelMessagesSyncedPayload.
+type ChannelMessagesSyncedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	Inserted  int                `json:"inserted"`
+	OwnerId   string             `json:"ownerId"`
+	Total     int                `json:"total"`
+}
+
+// ChannelPresenceUpdatedPayload defines model for ChannelPresenceUpdatedPayload.
+type ChannelPresenceUpdatedPayload struct {
+	ChannelId   openapi_types.UUID     `json:"channelId"`
+	LastSeen    nullable.Nullable[int] `json:"lastSeen,omitempty"`
+	ObservedAt  time.Time              `json:"observedAt"`
+	OwnerId     string                 `json:"ownerId"`
+	RemoteId    string                 `json:"remoteId"`
+	Unavailable bool                   `json:"unavailable"`
+}
+
+// ChannelRemoteArchivedPayload defines model for ChannelRemoteArchivedPayload.
+type ChannelRemoteArchivedPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteChatSeenPayload defines model for ChannelRemoteChatSeenPayload.
+type ChannelRemoteChatSeenPayload struct {
+	At                time.Time                 `json:"at"`
+	ChannelId         openapi_types.UUID        `json:"channelId"`
+	LastReadMessageId nullable.Nullable[string] `json:"lastReadMessageId,omitempty"`
+	OwnerId           string                    `json:"ownerId"`
+	RemoteId          string                    `json:"remoteId"`
+}
+
+// ChannelRemoteCreatedPayload defines model for ChannelRemoteCreatedPayload.
+type ChannelRemoteCreatedPayload struct {
+	ChannelId  openapi_types.UUID `json:"channelId"`
+	OwnerId    string             `json:"ownerId"`
+	Platform   Platform           `json:"platform"`
+	RemoteId   string             `json:"remoteId"`
+	RemoteType RemoteType         `json:"remoteType"`
+}
+
+// ChannelRemoteDeletedPayload defines model for ChannelRemoteDeletedPayload.
+type ChannelRemoteDeletedPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteMarkedAsUnreadPayload defines model for ChannelRemoteMarkedAsUnreadPayload.
+type ChannelRemoteMarkedAsUnreadPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteMutedPayload defines model for ChannelRemoteMutedPayload.
+type ChannelRemoteMutedPayload struct {
+	At         time.Time                    `json:"at"`
+	ChannelId  openapi_types.UUID           `json:"channelId"`
+	MutedUntil nullable.Nullable[time.Time] `json:"mutedUntil,omitempty"`
+	OwnerId    string                       `json:"ownerId"`
+	RemoteId   string                       `json:"remoteId"`
+}
+
+// ChannelRemotePinnedPayload defines model for ChannelRemotePinnedPayload.
+type ChannelRemotePinnedPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteUnarchivedPayload defines model for ChannelRemoteUnarchivedPayload.
+type ChannelRemoteUnarchivedPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteUnmutedPayload defines model for ChannelRemoteUnmutedPayload.
+type ChannelRemoteUnmutedPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteUnpinnedPayload defines model for ChannelRemoteUnpinnedPayload.
+type ChannelRemoteUnpinnedPayload struct {
+	At        time.Time          `json:"at"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	RemoteId  string             `json:"remoteId"`
+}
+
+// ChannelRemoteUpdatedPayload defines model for ChannelRemoteUpdatedPayload.
+type ChannelRemoteUpdatedPayload struct {
+	ChannelId   openapi_types.UUID        `json:"channelId"`
+	Description nullable.Nullable[string] `json:"description,omitempty"`
+	Name        string                    `json:"name"`
+	ObservedAt  time.Time                 `json:"observedAt"`
+	OwnerId     string                    `json:"ownerId"`
+	RemoteId    string                    `json:"remoteId"`
+	Type        RemoteType                `json:"type"`
+}
+
+// ChannelRemotesSyncedPayload defines model for ChannelRemotesSyncedPayload.
+type ChannelRemotesSyncedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	Inserted  int                `json:"inserted"`
+	OwnerId   string             `json:"ownerId"`
+	Total     int                `json:"total"`
+}
+
+// ChannelSpecialPlatformEventPayload defines model for ChannelSpecialPlatformEventPayload.
+type ChannelSpecialPlatformEventPayload struct {
+	union json.RawMessage
+}
+
+// ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated defines model for ChannelSpecialPlatformEventPayload_Whatsapp_QrCodeUpdated.
+type ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated struct {
+	ChannelId openapi_types.UUID    `json:"channelId"`
+	EventName string                `json:"eventName"`
+	EventType string                `json:"eventType"`
+	OwnerId   string                `json:"ownerId"`
+	Payload   WhatsAppQRCodeUpdated `json:"payload"`
+	Platform  string                `json:"platform"`
+}
 
 // ChannelStatus defines model for ChannelStatus.
 type ChannelStatus string
 
-// ChannelView defines model for ChannelView.
-type ChannelView struct {
-	AccountDetail string    `json:"accountDetail"`
-	CreatedAt     time.Time `json:"createdAt"`
-	Id            string    `json:"id"`
-	Kind          string    `json:"kind"`
-	Status        string    `json:"status"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+// ChannelSyncCompletedPayload defines model for ChannelSyncCompletedPayload.
+type ChannelSyncCompletedPayload struct {
+	ChannelId   openapi_types.UUID `json:"channelId"`
+	CompletedAt time.Time          `json:"completedAt"`
+	OwnerId     string             `json:"ownerId"`
 }
 
-// ClassificationMethod defines model for ClassificationMethod.
-type ClassificationMethod string
+// ChannelSyncProgressPayload defines model for ChannelSyncProgressPayload.
+type ChannelSyncProgressPayload struct {
+	ChannelId       openapi_types.UUID `json:"channelId"`
+	HistorySyncType interface{}        `json:"historySyncType"`
+	OwnerId         string             `json:"ownerId"`
+	Percent         int                `json:"percent"`
+}
+
+// ChannelSyncStartedPayload defines model for ChannelSyncStartedPayload.
+type ChannelSyncStartedPayload struct {
+	ChannelId openapi_types.UUID `json:"channelId"`
+	OwnerId   string             `json:"ownerId"`
+	StartedAt time.Time          `json:"startedAt"`
+}
+
+// ChatPresenceType defines model for ChatPresenceType.
+type ChatPresenceType string
+
+// CheckIsOnPlatformOutput defines model for CheckIsOnPlatformOutput.
+type CheckIsOnPlatformOutput struct {
+	Results []ContactCheck `json:"results"`
+}
 
 // ConnectChannelOutput defines model for ConnectChannelOutput.
 type ConnectChannelOutput struct {
-	ChannelId string `json:"channelId"`
-	Status    string `json:"status"`
+	Id     string  `json:"id"`
+	QrCode *string `json:"qrCode,omitempty"`
+	State  string  `json:"state"`
 }
 
 // ConnectionStatus defines model for ConnectionStatus.
 type ConnectionStatus string
 
-// ContactKind defines model for ContactKind.
-type ContactKind string
+// ContactCheck defines model for ContactCheck.
+type ContactCheck struct {
+	Identifier   string `json:"identifier"`
+	IsOnPlatform bool   `json:"isOnPlatform"`
+	PlatformId   string `json:"platformId"`
+}
 
-// CurrencyCode defines model for CurrencyCode.
-type CurrencyCode string
+// ContactData defines model for ContactData.
+type ContactData struct {
+	Email        *string `json:"email,omitempty"`
+	FullName     string  `json:"fullName"`
+	Organization *string `json:"organization,omitempty"`
+	PhoneNumber  string  `json:"phoneNumber"`
+}
+
+// ContactInfo defines model for ContactInfo.
+type ContactInfo struct {
+	Email        *string `json:"email,omitempty"`
+	FullName     string  `json:"fullName"`
+	Organization *string `json:"organization,omitempty"`
+	PhoneNumber  string  `json:"phoneNumber"`
+}
+
+// ContactMessageData defines model for ContactMessageData.
+type ContactMessageData struct {
+	DisplayName *string `json:"displayName,omitempty"`
+	Vcard       *string `json:"vcard,omitempty"`
+}
+
+// Country defines model for Country.
+type Country string
+
+// CreateChannelOutput defines model for CreateChannelOutput.
+type CreateChannelOutput struct {
+	CreatedAt time.Time     `json:"createdAt"`
+	Id        string        `json:"id"`
+	Name      string        `json:"name"`
+	Platform  Platform      `json:"platform"`
+	Status    ChannelStatus `json:"status"`
+}
+
+// Currency defines model for Currency.
+type Currency string
+
+// DeleteChannelOutput defines model for DeleteChannelOutput.
+type DeleteChannelOutput struct {
+	Id string `json:"id"`
+}
+
+// DeleteMessageOutput defines model for DeleteMessageOutput.
+type DeleteMessageOutput struct {
+	Success bool `json:"success"`
+}
+
+// Direction defines model for Direction.
+type Direction string
+
+// DocumentMessageData defines model for DocumentMessageData.
+type DocumentMessageData struct {
+	Caption       *string `json:"caption,omitempty"`
+	FileLength    *int    `json:"fileLength,omitempty"`
+	FileName      *string `json:"fileName,omitempty"`
+	JpegThumbnail *[]int  `json:"jpegThumbnail,omitempty"`
+	Mimetype      *string `json:"mimetype,omitempty"`
+	Url           *string `json:"url,omitempty"`
+}
+
+// EditMessageOutput defines model for EditMessageOutput.
+type EditMessageOutput struct {
+	Success bool `json:"success"`
+}
+
+// Environment defines model for Environment.
+type Environment string
 
 // ErrorCode defines model for ErrorCode.
 type ErrorCode string
@@ -1786,89 +1636,2930 @@ type ErrorResponse struct {
 	Message string      `json:"message"`
 }
 
-// IssueArchiveReason defines model for IssueArchiveReason.
-type IssueArchiveReason string
+// EventPayloads defines model for EventPayloads.
+type EventPayloads struct {
+	InternalChannelMessageReceivedPlatformData nullable.Nullable[InternalChannelMessageReceivedPlatformData] `json:"InternalChannelMessageReceivedPlatformData,omitempty"`
+	InternalChannelMessageSentPlatformData     nullable.Nullable[InternalChannelMessageSentPlatformData]     `json:"InternalChannelMessageSentPlatformData,omitempty"`
+	InternalTextContent                        nullable.Nullable[InternalTextContent]                        `json:"InternalTextContent,omitempty"`
+	WhatsAppChannelMessageReceivedPlatformData nullable.Nullable[WhatsAppChannelMessageReceivedPlatformData] `json:"WhatsAppChannelMessageReceivedPlatformData,omitempty"`
+	WhatsAppChannelMessageSentPlatformData     nullable.Nullable[WhatsAppChannelMessageSentPlatformData]     `json:"WhatsAppChannelMessageSentPlatformData,omitempty"`
+	ChannelConnected                           nullable.Nullable[GatewayConnectedPayload]                    `json:"channelConnected,omitempty"`
+	ChannelDisconnected                        nullable.Nullable[GatewayDisconnectedPayload]                 `json:"channelDisconnected,omitempty"`
+	ChannelEvent                               nullable.Nullable[ChannelEvent]                               `json:"channelEvent,omitempty"`
+	ChannelLoggedOut                           nullable.Nullable[ChannelLoggedOutPayload]                    `json:"channelLoggedOut,omitempty"`
+	ChatPresenceUpdated                        nullable.Nullable[ChannelChatPresenceUpdatedPayload]          `json:"chatPresenceUpdated,omitempty"`
+	MembershipAdded                            nullable.Nullable[ChannelMembershipAddedPayload]              `json:"membershipAdded,omitempty"`
+	MembershipRemoved                          nullable.Nullable[ChannelMembershipRemovedPayload]            `json:"membershipRemoved,omitempty"`
+	MessageDeleted                             nullable.Nullable[ChannelMessageDeletedPayload]               `json:"messageDeleted,omitempty"`
+	MessageDelivered                           nullable.Nullable[ChannelMessageDeliveredPayload]             `json:"messageDelivered,omitempty"`
+	MessageEdited                              nullable.Nullable[ChannelMessageEditedPayload]                `json:"messageEdited,omitempty"`
+	MessageReceived                            nullable.Nullable[ChannelMessageReceivedPayload]              `json:"messageReceived,omitempty"`
+	MessageSeen                                nullable.Nullable[ChannelMessageSeenPayload]                  `json:"messageSeen,omitempty"`
+	MessageSent                                nullable.Nullable[ChannelMessageSentPayload]                  `json:"messageSent,omitempty"`
+	MessagesSynced                             nullable.Nullable[ChannelMessagesSyncedPayload]               `json:"messagesSynced,omitempty"`
+	PresenceUpdated                            nullable.Nullable[ChannelPresenceUpdatedPayload]              `json:"presenceUpdated,omitempty"`
+	RemoteArchived                             nullable.Nullable[ChannelRemoteArchivedPayload]               `json:"remoteArchived,omitempty"`
+	RemoteChatSeen                             nullable.Nullable[ChannelRemoteChatSeenPayload]               `json:"remoteChatSeen,omitempty"`
+	RemoteCreated                              nullable.Nullable[ChannelRemoteCreatedPayload]                `json:"remoteCreated,omitempty"`
+	RemoteDeleted                              nullable.Nullable[ChannelRemoteDeletedPayload]                `json:"remoteDeleted,omitempty"`
+	RemoteMarkedUnread                         nullable.Nullable[ChannelRemoteMarkedAsUnreadPayload]         `json:"remoteMarkedUnread,omitempty"`
+	RemoteMuted                                nullable.Nullable[ChannelRemoteMutedPayload]                  `json:"remoteMuted,omitempty"`
+	RemotePinned                               nullable.Nullable[ChannelRemotePinnedPayload]                 `json:"remotePinned,omitempty"`
+	RemoteUnarchived                           nullable.Nullable[ChannelRemoteUnarchivedPayload]             `json:"remoteUnarchived,omitempty"`
+	RemoteUnmuted                              nullable.Nullable[ChannelRemoteUnmutedPayload]                `json:"remoteUnmuted,omitempty"`
+	RemoteUnpinned                             nullable.Nullable[ChannelRemoteUnpinnedPayload]               `json:"remoteUnpinned,omitempty"`
+	RemoteUpdated                              nullable.Nullable[ChannelRemoteUpdatedPayload]                `json:"remoteUpdated,omitempty"`
+	RemotesSynced                              nullable.Nullable[ChannelRemotesSyncedPayload]                `json:"remotesSynced,omitempty"`
+	SpecialPlatformEvent                       nullable.Nullable[ChannelSpecialPlatformEventPayload]         `json:"specialPlatformEvent,omitempty"`
+	SyncCompleted                              nullable.Nullable[ChannelSyncCompletedPayload]                `json:"syncCompleted,omitempty"`
+	SyncProgress                               nullable.Nullable[ChannelSyncProgressPayload]                 `json:"syncProgress,omitempty"`
+	SyncStarted                                nullable.Nullable[ChannelSyncStartedPayload]                  `json:"syncStarted,omitempty"`
+	WhatsAppAudioContent                       nullable.Nullable[WhatsAppAudioContent]                       `json:"whatsAppAudioContent,omitempty"`
+	WhatsAppContactContent                     nullable.Nullable[WhatsAppContactContent]                     `json:"whatsAppContactContent,omitempty"`
+	WhatsAppCredentials                        nullable.Nullable[WhatsAppCredentials]                        `json:"whatsAppCredentials,omitempty"`
+	WhatsAppDocumentContent                    nullable.Nullable[WhatsAppDocumentContent]                    `json:"whatsAppDocumentContent,omitempty"`
+	WhatsAppImageContent                       nullable.Nullable[WhatsAppImageContent]                       `json:"whatsAppImageContent,omitempty"`
+	WhatsAppLocationContent                    nullable.Nullable[WhatsAppLocationContent]                    `json:"whatsAppLocationContent,omitempty"`
+	WhatsAppPollContent                        nullable.Nullable[WhatsAppPollContent]                        `json:"whatsAppPollContent,omitempty"`
+	WhatsAppQRCodeUpdated                      nullable.Nullable[WhatsAppQRCodeUpdated]                      `json:"whatsAppQRCodeUpdated,omitempty"`
+	WhatsAppReactionContent                    nullable.Nullable[WhatsAppReactionContent]                    `json:"whatsAppReactionContent,omitempty"`
+	WhatsAppStickerContent                     nullable.Nullable[WhatsAppStickerContent]                     `json:"whatsAppStickerContent,omitempty"`
+	WhatsAppTextContent                        nullable.Nullable[WhatsAppTextContent]                        `json:"whatsAppTextContent,omitempty"`
+	WhatsAppVideoContent                       nullable.Nullable[WhatsAppVideoContent]                       `json:"whatsAppVideoContent,omitempty"`
+}
 
-// IssueStatus defines model for IssueStatus.
-type IssueStatus string
+// ExtendedTextData defines model for ExtendedTextData.
+type ExtendedTextData struct {
+	MatchedText *string `json:"matchedText,omitempty"`
+	Text        *string `json:"text,omitempty"`
+	Title       *string `json:"title,omitempty"`
+}
+
+// ForwardMessageOutput defines model for ForwardMessageOutput.
+type ForwardMessageOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// GatewayConnectedPayload defines model for GatewayConnectedPayload.
+type GatewayConnectedPayload struct {
+	ChannelId    openapi_types.UUID `json:"channelId"`
+	OwnerId      string             `json:"ownerId"`
+	Platform     Platform           `json:"platform"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
+}
+
+// GatewayDisconnectedPayload defines model for GatewayDisconnectedPayload.
+type GatewayDisconnectedPayload struct {
+	ChannelId    openapi_types.UUID `json:"channelId"`
+	OwnerId      string             `json:"ownerId"`
+	Platform     Platform           `json:"platform"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
+}
+
+// GetChannelOutput defines model for GetChannelOutput.
+type GetChannelOutput struct {
+	CreatedAt     time.Time     `json:"createdAt"`
+	Credentials   interface{}   `json:"credentials"`
+	Id            string        `json:"id"`
+	Name          string        `json:"name"`
+	OwnerRemoteId string        `json:"ownerRemoteId"`
+	Platform      Platform      `json:"platform"`
+	Status        ChannelStatus `json:"status"`
+}
+
+// GetOrCreateChannelOutput defines model for GetOrCreateChannelOutput.
+type GetOrCreateChannelOutput struct {
+	Created       bool          `json:"created"`
+	CreatedAt     time.Time     `json:"createdAt"`
+	Id            string        `json:"id"`
+	Name          string        `json:"name"`
+	OwnerRemoteId string        `json:"ownerRemoteId"`
+	Platform      Platform      `json:"platform"`
+	Status        ChannelStatus `json:"status"`
+}
+
+// GroupRole defines model for GroupRole.
+type GroupRole string
+
+// HistorySyncType defines model for HistorySyncType.
+type HistorySyncType string
+
+// ImageMessageData defines model for ImageMessageData.
+type ImageMessageData struct {
+	Caption       *string `json:"caption,omitempty"`
+	FileLength    *int    `json:"fileLength,omitempty"`
+	Height        *int    `json:"height,omitempty"`
+	JpegThumbnail *[]int  `json:"jpegThumbnail,omitempty"`
+	Mimetype      *string `json:"mimetype,omitempty"`
+	Url           *string `json:"url,omitempty"`
+	Width         *int    `json:"width,omitempty"`
+}
+
+// IntegrationChannelChatPresenceUpdatedEvent defines model for IntegrationChannelChatPresenceUpdatedEvent.
+type IntegrationChannelChatPresenceUpdatedEvent struct {
+	Id      string                            `json:"id"`
+	Name    string                            `json:"name"`
+	OwnerId string                            `json:"ownerId"`
+	Payload ChannelChatPresenceUpdatedPayload `json:"payload"`
+	Time    time.Time                         `json:"time"`
+}
+
+// IntegrationChannelConnectedEvent defines model for IntegrationChannelConnectedEvent.
+type IntegrationChannelConnectedEvent struct {
+	Id      string                  `json:"id"`
+	Name    string                  `json:"name"`
+	OwnerId string                  `json:"ownerId"`
+	Payload GatewayConnectedPayload `json:"payload"`
+	Time    time.Time               `json:"time"`
+}
+
+// IntegrationChannelDisconnectedEvent defines model for IntegrationChannelDisconnectedEvent.
+type IntegrationChannelDisconnectedEvent struct {
+	Id      string                     `json:"id"`
+	Name    string                     `json:"name"`
+	OwnerId string                     `json:"ownerId"`
+	Payload GatewayDisconnectedPayload `json:"payload"`
+	Time    time.Time                  `json:"time"`
+}
+
+// IntegrationChannelLoggedOutEvent defines model for IntegrationChannelLoggedOutEvent.
+type IntegrationChannelLoggedOutEvent struct {
+	Id      string                  `json:"id"`
+	Name    string                  `json:"name"`
+	OwnerId string                  `json:"ownerId"`
+	Payload ChannelLoggedOutPayload `json:"payload"`
+	Time    time.Time               `json:"time"`
+}
+
+// IntegrationChannelMembershipAddedEvent defines model for IntegrationChannelMembershipAddedEvent.
+type IntegrationChannelMembershipAddedEvent struct {
+	Id      string                        `json:"id"`
+	Name    string                        `json:"name"`
+	OwnerId string                        `json:"ownerId"`
+	Payload ChannelMembershipAddedPayload `json:"payload"`
+	Time    time.Time                     `json:"time"`
+}
+
+// IntegrationChannelMembershipRemovedEvent defines model for IntegrationChannelMembershipRemovedEvent.
+type IntegrationChannelMembershipRemovedEvent struct {
+	Id      string                          `json:"id"`
+	Name    string                          `json:"name"`
+	OwnerId string                          `json:"ownerId"`
+	Payload ChannelMembershipRemovedPayload `json:"payload"`
+	Time    time.Time                       `json:"time"`
+}
+
+// IntegrationChannelMessageDeliveredEvent defines model for IntegrationChannelMessageDeliveredEvent.
+type IntegrationChannelMessageDeliveredEvent struct {
+	Id      string                         `json:"id"`
+	Name    string                         `json:"name"`
+	OwnerId string                         `json:"ownerId"`
+	Payload ChannelMessageDeliveredPayload `json:"payload"`
+	Time    time.Time                      `json:"time"`
+}
+
+// IntegrationChannelMessageReceivedEvent defines model for IntegrationChannelMessageReceivedEvent.
+type IntegrationChannelMessageReceivedEvent struct {
+	Id      string                        `json:"id"`
+	Name    string                        `json:"name"`
+	OwnerId string                        `json:"ownerId"`
+	Payload ChannelMessageReceivedPayload `json:"payload"`
+	Time    time.Time                     `json:"time"`
+}
+
+// IntegrationChannelMessageSeenEvent defines model for IntegrationChannelMessageSeenEvent.
+type IntegrationChannelMessageSeenEvent struct {
+	Id      string                    `json:"id"`
+	Name    string                    `json:"name"`
+	OwnerId string                    `json:"ownerId"`
+	Payload ChannelMessageSeenPayload `json:"payload"`
+	Time    time.Time                 `json:"time"`
+}
+
+// IntegrationChannelMessagesSyncedEvent defines model for IntegrationChannelMessagesSyncedEvent.
+type IntegrationChannelMessagesSyncedEvent struct {
+	Id      string                       `json:"id"`
+	Name    string                       `json:"name"`
+	OwnerId string                       `json:"ownerId"`
+	Payload ChannelMessagesSyncedPayload `json:"payload"`
+	Time    time.Time                    `json:"time"`
+}
+
+// IntegrationChannelPresenceUpdatedEvent defines model for IntegrationChannelPresenceUpdatedEvent.
+type IntegrationChannelPresenceUpdatedEvent struct {
+	Id      string                        `json:"id"`
+	Name    string                        `json:"name"`
+	OwnerId string                        `json:"ownerId"`
+	Payload ChannelPresenceUpdatedPayload `json:"payload"`
+	Time    time.Time                     `json:"time"`
+}
+
+// IntegrationChannelRemoteCreatedEvent defines model for IntegrationChannelRemoteCreatedEvent.
+type IntegrationChannelRemoteCreatedEvent struct {
+	Id      string                      `json:"id"`
+	Name    string                      `json:"name"`
+	OwnerId string                      `json:"ownerId"`
+	Payload ChannelRemoteCreatedPayload `json:"payload"`
+	Time    time.Time                   `json:"time"`
+}
+
+// IntegrationChannelRemoteDeletedEvent defines model for IntegrationChannelRemoteDeletedEvent.
+type IntegrationChannelRemoteDeletedEvent struct {
+	Id      string                      `json:"id"`
+	Name    string                      `json:"name"`
+	OwnerId string                      `json:"ownerId"`
+	Payload ChannelRemoteDeletedPayload `json:"payload"`
+	Time    time.Time                   `json:"time"`
+}
+
+// IntegrationChannelRemoteUpdatedEvent defines model for IntegrationChannelRemoteUpdatedEvent.
+type IntegrationChannelRemoteUpdatedEvent struct {
+	Id      string                      `json:"id"`
+	Name    string                      `json:"name"`
+	OwnerId string                      `json:"ownerId"`
+	Payload ChannelRemoteUpdatedPayload `json:"payload"`
+	Time    time.Time                   `json:"time"`
+}
+
+// IntegrationChannelRemotesSyncedEvent defines model for IntegrationChannelRemotesSyncedEvent.
+type IntegrationChannelRemotesSyncedEvent struct {
+	Id      string                      `json:"id"`
+	Name    string                      `json:"name"`
+	OwnerId string                      `json:"ownerId"`
+	Payload ChannelRemotesSyncedPayload `json:"payload"`
+	Time    time.Time                   `json:"time"`
+}
+
+// IntegrationChannelSpecialPlatformEventReceivedEvent defines model for IntegrationChannelSpecialPlatformEventReceivedEvent.
+type IntegrationChannelSpecialPlatformEventReceivedEvent struct {
+	Id      string                             `json:"id"`
+	Name    string                             `json:"name"`
+	OwnerId string                             `json:"ownerId"`
+	Payload ChannelSpecialPlatformEventPayload `json:"payload"`
+	Time    time.Time                          `json:"time"`
+}
+
+// IntegrationChannelSyncCompletedEvent defines model for IntegrationChannelSyncCompletedEvent.
+type IntegrationChannelSyncCompletedEvent struct {
+	Id      string                      `json:"id"`
+	Name    string                      `json:"name"`
+	OwnerId string                      `json:"ownerId"`
+	Payload ChannelSyncCompletedPayload `json:"payload"`
+	Time    time.Time                   `json:"time"`
+}
+
+// IntegrationChannelSyncProgressEvent defines model for IntegrationChannelSyncProgressEvent.
+type IntegrationChannelSyncProgressEvent struct {
+	Id      string                     `json:"id"`
+	Name    string                     `json:"name"`
+	OwnerId string                     `json:"ownerId"`
+	Payload ChannelSyncProgressPayload `json:"payload"`
+	Time    time.Time                  `json:"time"`
+}
+
+// IntegrationChannelSyncStartedEvent defines model for IntegrationChannelSyncStartedEvent.
+type IntegrationChannelSyncStartedEvent struct {
+	Id      string                    `json:"id"`
+	Name    string                    `json:"name"`
+	OwnerId string                    `json:"ownerId"`
+	Payload ChannelSyncStartedPayload `json:"payload"`
+	Time    time.Time                 `json:"time"`
+}
+
+// InternalChannelMessageReceivedPlatformData defines model for InternalChannelMessageReceivedPlatformData.
+type InternalChannelMessageReceivedPlatformData struct {
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
+// InternalChannelMessageSentPlatformData defines model for InternalChannelMessageSentPlatformData.
+type InternalChannelMessageSentPlatformData struct {
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
+// InternalTextContent defines model for InternalTextContent.
+type InternalTextContent struct {
+	Text string `json:"text"`
+}
 
 // Language defines model for Language.
 type Language string
 
+// ListChannelsItem defines model for ListChannelsItem.
+type ListChannelsItem struct {
+	CreatedAt   time.Time     `json:"createdAt"`
+	Credentials interface{}   `json:"credentials"`
+	Id          string        `json:"id"`
+	Name        string        `json:"name"`
+	Platform    Platform      `json:"platform"`
+	Status      ChannelStatus `json:"status"`
+}
+
 // ListChannelsOutput defines model for ListChannelsOutput.
 type ListChannelsOutput struct {
-	Channels []ChannelView `json:"channels"`
+	Items []ListChannelsItem `json:"items"`
+	Total int                `json:"total"`
 }
+
+// ListRow defines model for ListRow.
+type ListRow struct {
+	Description *string `json:"description,omitempty"`
+	RowId       string  `json:"rowId"`
+	Title       string  `json:"title"`
+}
+
+// ListSection defines model for ListSection.
+type ListSection struct {
+	Rows  []ListRow `json:"rows"`
+	Title string    `json:"title"`
+}
+
+// LocationMessageData defines model for LocationMessageData.
+type LocationMessageData struct {
+	Address          *string  `json:"address,omitempty"`
+	DegreesLatitude  *float32 `json:"degreesLatitude,omitempty"`
+	DegreesLongitude *float32 `json:"degreesLongitude,omitempty"`
+	JpegThumbnail    *[]int   `json:"jpegThumbnail,omitempty"`
+	Name             *string  `json:"name,omitempty"`
+}
+
+// LogLevel defines model for LogLevel.
+type LogLevel string
 
 // LogoutChannelOutput defines model for LogoutChannelOutput.
 type LogoutChannelOutput struct {
-	ChannelId string `json:"channelId"`
-	Status    string `json:"status"`
+	Id    string `json:"id"`
+	State string `json:"state"`
 }
 
-// OwnerKind defines model for OwnerKind.
-type OwnerKind string
+// MembershipAction defines model for MembershipAction.
+type MembershipAction string
 
-// ProviderKind defines model for ProviderKind.
-type ProviderKind string
+// MessageType defines model for MessageType.
+type MessageType string
 
-// ProviderStatus defines model for ProviderStatus.
-type ProviderStatus string
+// Platform defines model for Platform.
+type Platform string
 
-// Role defines model for Role.
-type Role string
+// PollMessageData defines model for PollMessageData.
+type PollMessageData struct {
+	Options  []string `json:"options"`
+	Question string   `json:"question"`
+}
 
-// SendMessageOutput defines model for SendMessageOutput.
-type SendMessageOutput struct {
+// PollOption defines model for PollOption.
+type PollOption struct {
+	OptionName string `json:"optionName"`
+}
+
+// PresenceType defines model for PresenceType.
+type PresenceType string
+
+// ProxyProtocol defines model for ProxyProtocol.
+type ProxyProtocol string
+
+// ReactionKeyData defines model for ReactionKeyData.
+type ReactionKeyData struct {
+	FromMe   *bool   `json:"fromMe,omitempty"`
+	Id       *string `json:"id,omitempty"`
+	RemoteId *string `json:"remoteId,omitempty"`
+}
+
+// ReactionMessageData defines model for ReactionMessageData.
+type ReactionMessageData struct {
+	Key  nullable.Nullable[ReactionKeyData] `json:"key,omitempty"`
+	Text string                             `json:"text"`
+}
+
+// ReceiptType defines model for ReceiptType.
+type ReceiptType string
+
+// RemoteType defines model for RemoteType.
+type RemoteType string
+
+// RestartChannelOutput defines model for RestartChannelOutput.
+type RestartChannelOutput struct {
+	Id    string `json:"id"`
+	State string `json:"state"`
+}
+
+// SendAudioOutput defines model for SendAudioOutput.
+type SendAudioOutput struct {
 	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
 }
 
-// SenderIdentity defines model for SenderIdentity.
-type SenderIdentity string
+// SendButtonOutput defines model for SendButtonOutput.
+type SendButtonOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// StopKind defines model for StopKind.
-type StopKind string
+// SendChatPresenceOutput defines model for SendChatPresenceOutput.
+type SendChatPresenceOutput struct {
+	Success bool `json:"success"`
+}
 
-// StopResolution defines model for StopResolution.
-type StopResolution string
+// SendContactOutput defines model for SendContactOutput.
+type SendContactOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// ThreadMode defines model for ThreadMode.
-type ThreadMode string
+// SendFileOutput defines model for SendFileOutput.
+type SendFileOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// ThreadStatus defines model for ThreadStatus.
-type ThreadStatus string
+// SendImageOutput defines model for SendImageOutput.
+type SendImageOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// Timezone defines model for Timezone.
-type Timezone string
+// SendLinkOutput defines model for SendLinkOutput.
+type SendLinkOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// TranscriptKind defines model for TranscriptKind.
-type TranscriptKind string
+// SendListOutput defines model for SendListOutput.
+type SendListOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// WorkspaceBadge defines model for WorkspaceBadge.
-type WorkspaceBadge string
+// SendLocationOutput defines model for SendLocationOutput.
+type SendLocationOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
 
-// ConnectChannelJSONBody defines parameters for ConnectChannel.
-type ConnectChannelJSONBody struct {
-	OwnerId *string `json:"ownerId,omitempty"`
+// SendMediaOutput defines model for SendMediaOutput.
+type SendMediaOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// SendPollOutput defines model for SendPollOutput.
+type SendPollOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// SendReactionOutput defines model for SendReactionOutput.
+type SendReactionOutput struct {
+	Success bool `json:"success"`
+}
+
+// SendStatusOutput defines model for SendStatusOutput.
+type SendStatusOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// SendStickerOutput defines model for SendStickerOutput.
+type SendStickerOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// SendTextOutput defines model for SendTextOutput.
+type SendTextOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// SendVideoOutput defines model for SendVideoOutput.
+type SendVideoOutput struct {
+	MessageId string `json:"messageId"`
+	Timestamp int    `json:"timestamp"`
+}
+
+// ServerEvent defines model for ServerEvent.
+type ServerEvent struct {
+	union json.RawMessage
+}
+
+// ServerEventName defines model for ServerEventName.
+type ServerEventName string
+
+// StickerMessageData defines model for StickerMessageData.
+type StickerMessageData struct {
+	FileLength   *int    `json:"fileLength,omitempty"`
+	IsAnimated   *bool   `json:"isAnimated,omitempty"`
+	Mimetype     *string `json:"mimetype,omitempty"`
+	PngThumbnail *[]int  `json:"pngThumbnail,omitempty"`
+	Url          *string `json:"url,omitempty"`
+}
+
+// VideoMessageData defines model for VideoMessageData.
+type VideoMessageData struct {
+	Caption       *string `json:"caption,omitempty"`
+	FileLength    *int    `json:"fileLength,omitempty"`
+	JpegThumbnail *[]int  `json:"jpegThumbnail,omitempty"`
+	Mimetype      *string `json:"mimetype,omitempty"`
+	Seconds       *int    `json:"seconds,omitempty"`
+	Url           *string `json:"url,omitempty"`
+}
+
+// WhatsAppAudioContent defines model for WhatsAppAudioContent.
+type WhatsAppAudioContent struct {
+	AudioMessage AudioMessageData `json:"audioMessage"`
+}
+
+// WhatsAppChannelMessageReceivedPlatformData defines model for WhatsAppChannelMessageReceivedPlatformData.
+type WhatsAppChannelMessageReceivedPlatformData struct {
+	IsEphemeral bool   `json:"isEphemeral"`
+	IsGroup     bool   `json:"isGroup"`
+	IsViewOnce  bool   `json:"isViewOnce"`
+	PushName    string `json:"pushName"`
+}
+
+// WhatsAppChannelMessageSentPlatformData defines model for WhatsAppChannelMessageSentPlatformData.
+type WhatsAppChannelMessageSentPlatformData struct {
+	IsGroup bool `json:"isGroup"`
+}
+
+// WhatsAppContactContent defines model for WhatsAppContactContent.
+type WhatsAppContactContent struct {
+	ContactMessage nullable.Nullable[ContactMessageData] `json:"contactMessage,omitempty"`
+	Contacts       *[]ContactData                        `json:"contacts,omitempty"`
+}
+
+// WhatsAppContextInfo defines model for WhatsAppContextInfo.
+type WhatsAppContextInfo struct {
+	Participant          *string     `json:"participant,omitempty"`
+	QuotedMessageContent interface{} `json:"quotedMessageContent,omitempty"`
+	QuotedMessageType    *string     `json:"quotedMessageType,omitempty"`
+	QuotedSenderName     *string     `json:"quotedSenderName,omitempty"`
+	StanzaId             *string     `json:"stanzaId,omitempty"`
+}
+
+// WhatsAppCredentials defines model for WhatsAppCredentials.
+type WhatsAppCredentials struct {
+	DeviceJid   *string `json:"deviceJid,omitempty"`
+	OwnerJid    *string `json:"ownerJid,omitempty"`
+	PhoneNumber *string `json:"phoneNumber,omitempty"`
+}
+
+// WhatsAppDocumentContent defines model for WhatsAppDocumentContent.
+type WhatsAppDocumentContent struct {
+	DocumentMessage DocumentMessageData `json:"documentMessage"`
+}
+
+// WhatsAppImageContent defines model for WhatsAppImageContent.
+type WhatsAppImageContent struct {
+	ImageMessage ImageMessageData `json:"imageMessage"`
+}
+
+// WhatsAppLocationContent defines model for WhatsAppLocationContent.
+type WhatsAppLocationContent struct {
+	LocationMessage LocationMessageData `json:"locationMessage"`
+}
+
+// WhatsAppPollContent defines model for WhatsAppPollContent.
+type WhatsAppPollContent struct {
+	PollMessage PollMessageData `json:"pollMessage"`
+}
+
+// WhatsAppQRCodeUpdated defines model for WhatsAppQRCodeUpdated.
+type WhatsAppQRCodeUpdated struct {
+	Code string `json:"code"`
+}
+
+// WhatsAppReactionContent defines model for WhatsAppReactionContent.
+type WhatsAppReactionContent struct {
+	ReactionMessage ReactionMessageData `json:"reactionMessage"`
+	Text            *string             `json:"text,omitempty"`
+}
+
+// WhatsAppStickerContent defines model for WhatsAppStickerContent.
+type WhatsAppStickerContent struct {
+	StickerMessage StickerMessageData `json:"stickerMessage"`
+}
+
+// WhatsAppTextContent defines model for WhatsAppTextContent.
+type WhatsAppTextContent struct {
+	ContextInfo         nullable.Nullable[WhatsAppContextInfo] `json:"contextInfo,omitempty"`
+	ExtendedTextMessage nullable.Nullable[ExtendedTextData]    `json:"extendedTextMessage,omitempty"`
+	Forward             *bool                                  `json:"forward,omitempty"`
+	MessageId           *string                                `json:"messageId,omitempty"`
+	RemoteId            *string                                `json:"remoteId,omitempty"`
+	Text                string                                 `json:"text"`
+}
+
+// WhatsAppVideoContent defines model for WhatsAppVideoContent.
+type WhatsAppVideoContent struct {
+	VideoMessage VideoMessageData `json:"videoMessage"`
 }
 
 // ListChannelsParams defines parameters for ListChannels.
 type ListChannelsParams struct {
-	OwnerId *string `form:"ownerId,omitempty" json:"ownerId,omitempty"`
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
-// SendMessageJSONBody defines parameters for SendMessage.
-type SendMessageJSONBody struct {
+// GetOrCreateChannelParams defines parameters for GetOrCreateChannel.
+type GetOrCreateChannelParams struct {
+	Platform Platform `form:"platform" json:"platform"`
+}
+
+// CreateWhatsAppChannelJSONBody defines parameters for CreateWhatsAppChannel.
+type CreateWhatsAppChannelJSONBody struct {
+	Name string `json:"name"`
+}
+
+// SetPresenceJSONBody defines parameters for SetPresence.
+type SetPresenceJSONBody struct {
+	Presence interface{} `json:"presence"`
+}
+
+// ArchiveRemoteJSONBody defines parameters for ArchiveRemote.
+type ArchiveRemoteJSONBody struct {
 	ChannelId string `json:"channelId"`
-	Text      string `json:"text"`
-	To        string `json:"to"`
+	RemoteId  string `json:"remoteId"`
 }
 
-// ConnectChannelJSONRequestBody defines body for ConnectChannel for application/json ContentType.
-type ConnectChannelJSONRequestBody ConnectChannelJSONBody
+// MarkRemoteAsSeenJSONBody defines parameters for MarkRemoteAsSeen.
+type MarkRemoteAsSeenJSONBody struct {
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
 
-// SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
-type SendMessageJSONRequestBody SendMessageJSONBody
+// MarkRemoteAsUnreadJSONBody defines parameters for MarkRemoteAsUnread.
+type MarkRemoteAsUnreadJSONBody struct {
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// MuteRemoteJSONBody defines parameters for MuteRemote.
+type MuteRemoteJSONBody struct {
+	ChannelId      string `json:"channelId"`
+	MuteExpiration *int   `json:"muteExpiration,omitempty"`
+	RemoteId       string `json:"remoteId"`
+}
+
+// PinRemoteJSONBody defines parameters for PinRemote.
+type PinRemoteJSONBody struct {
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// UnarchiveRemoteJSONBody defines parameters for UnarchiveRemote.
+type UnarchiveRemoteJSONBody struct {
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// UnmuteRemoteJSONBody defines parameters for UnmuteRemote.
+type UnmuteRemoteJSONBody struct {
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// UnpinRemoteJSONBody defines parameters for UnpinRemote.
+type UnpinRemoteJSONBody struct {
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// SendAudioJSONBody defines parameters for SendAudio.
+type SendAudioJSONBody struct {
+	AudioUrl  string `json:"audioUrl"`
+	ChannelId string `json:"channelId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// SendButtonJSONBody defines parameters for SendButton.
+type SendButtonJSONBody struct {
+	Buttons     []ButtonItem `json:"buttons"`
+	ChannelId   string       `json:"channelId"`
+	Description string       `json:"description"`
+	Footer      *string      `json:"footer,omitempty"`
+	RemoteId    string       `json:"remoteId"`
+	Title       string       `json:"title"`
+}
+
+// CheckIsOnPlatformJSONBody defines parameters for CheckIsOnPlatform.
+type CheckIsOnPlatformJSONBody struct {
+	ChannelId   string   `json:"channelId"`
+	Identifiers []string `json:"identifiers"`
+}
+
+// SendContactJSONBody defines parameters for SendContact.
+type SendContactJSONBody struct {
+	ChannelId string        `json:"channelId"`
+	Contacts  []ContactInfo `json:"contacts"`
+	RemoteId  string        `json:"remoteId"`
+}
+
+// DeleteMessageJSONBody defines parameters for DeleteMessage.
+type DeleteMessageJSONBody struct {
+	ChannelId string `json:"channelId"`
+	MessageId string `json:"messageId"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// EditMessageJSONBody defines parameters for EditMessage.
+type EditMessageJSONBody struct {
+	ChannelId string `json:"channelId"`
+	MessageId string `json:"messageId"`
+	RemoteId  string `json:"remoteId"`
+	Text      string `json:"text"`
+}
+
+// SendFileJSONBody defines parameters for SendFile.
+type SendFileJSONBody struct {
+	ChannelId string  `json:"channelId"`
+	FileName  *string `json:"fileName,omitempty"`
+	MediaUrl  string  `json:"mediaUrl"`
+	MimeType  *string `json:"mimeType,omitempty"`
+	RemoteId  string  `json:"remoteId"`
+}
+
+// ForwardMessageJSONBody defines parameters for ForwardMessage.
+type ForwardMessageJSONBody struct {
+	ChannelId      string `json:"channelId"`
+	MessageId      string `json:"messageId"`
+	RemoteId       string `json:"remoteId"`
+	SourceRemoteId string `json:"sourceRemoteId"`
+}
+
+// SendImageJSONBody defines parameters for SendImage.
+type SendImageJSONBody struct {
+	Caption   *string   `json:"caption,omitempty"`
+	ChannelId string    `json:"channelId"`
+	MediaUrl  string    `json:"mediaUrl"`
+	Mentioned *[]string `json:"mentioned,omitempty"`
+	RemoteId  string    `json:"remoteId"`
+}
+
+// SendLinkJSONBody defines parameters for SendLink.
+type SendLinkJSONBody struct {
+	ChannelId    string  `json:"channelId"`
+	Description  *string `json:"description,omitempty"`
+	RemoteId     string  `json:"remoteId"`
+	ThumbnailUrl *string `json:"thumbnailUrl,omitempty"`
+	Title        *string `json:"title,omitempty"`
+	Url          string  `json:"url"`
+}
+
+// SendListJSONBody defines parameters for SendList.
+type SendListJSONBody struct {
+	ButtonText  string        `json:"buttonText"`
+	ChannelId   string        `json:"channelId"`
+	Description string        `json:"description"`
+	FooterText  *string       `json:"footerText,omitempty"`
+	RemoteId    string        `json:"remoteId"`
+	Sections    []ListSection `json:"sections"`
+	Title       string        `json:"title"`
+}
+
+// SendLocationJSONBody defines parameters for SendLocation.
+type SendLocationJSONBody struct {
+	Address   *string  `json:"address,omitempty"`
+	ChannelId string   `json:"channelId"`
+	Latitude  *float32 `json:"latitude,omitempty"`
+	Longitude *float32 `json:"longitude,omitempty"`
+	Name      *string  `json:"name,omitempty"`
+	RemoteId  string   `json:"remoteId"`
+}
+
+// SendMediaJSONBody defines parameters for SendMedia.
+type SendMediaJSONBody struct {
+	Caption   *string     `json:"caption,omitempty"`
+	ChannelId string      `json:"channelId"`
+	FileName  *string     `json:"fileName,omitempty"`
+	MediaType interface{} `json:"mediaType"`
+	MediaUrl  string      `json:"mediaUrl"`
+	RemoteId  string      `json:"remoteId"`
+}
+
+// SendPollJSONBody defines parameters for SendPoll.
+type SendPollJSONBody struct {
+	ChannelId       string       `json:"channelId"`
+	Options         []PollOption `json:"options"`
+	PollName        string       `json:"pollName"`
+	RemoteId        string       `json:"remoteId"`
+	SelectableCount *int         `json:"selectableCount,omitempty"`
+}
+
+// SendChatPresenceJSONBody defines parameters for SendChatPresence.
+type SendChatPresenceJSONBody struct {
+	ChannelId string      `json:"channelId"`
+	Presence  interface{} `json:"presence"`
+	RemoteId  string      `json:"remoteId"`
+}
+
+// SendReactionJSONBody defines parameters for SendReaction.
+type SendReactionJSONBody struct {
+	ChannelId string `json:"channelId"`
+	FromMe    *bool  `json:"fromMe,omitempty"`
+	MessageId string `json:"messageId"`
+	Reaction  string `json:"reaction"`
+	RemoteId  string `json:"remoteId"`
+}
+
+// SendStatusJSONBody defines parameters for SendStatus.
+type SendStatusJSONBody struct {
+	BackgroundColor *string     `json:"backgroundColor,omitempty"`
+	Caption         *string     `json:"caption,omitempty"`
+	ChannelId       string      `json:"channelId"`
+	Content         string      `json:"content"`
+	Font            *string     `json:"font,omitempty"`
+	StatusType      interface{} `json:"statusType"`
+}
+
+// SendStickerJSONBody defines parameters for SendSticker.
+type SendStickerJSONBody struct {
+	ChannelId  string `json:"channelId"`
+	RemoteId   string `json:"remoteId"`
+	StickerUrl string `json:"stickerUrl"`
+}
+
+// SendTextJSONBody defines parameters for SendText.
+type SendTextJSONBody struct {
+	ChannelId       string  `json:"channelId"`
+	QuotedMessageId *string `json:"quotedMessageId,omitempty"`
+	RemoteId        string  `json:"remoteId"`
+	Text            string  `json:"text"`
+}
+
+// SendVideoJSONBody defines parameters for SendVideo.
+type SendVideoJSONBody struct {
+	Caption   *string `json:"caption,omitempty"`
+	ChannelId string  `json:"channelId"`
+	MediaUrl  string  `json:"mediaUrl"`
+	RemoteId  string  `json:"remoteId"`
+}
+
+// CreateWhatsAppChannelJSONRequestBody defines body for CreateWhatsAppChannel for application/json ContentType.
+type CreateWhatsAppChannelJSONRequestBody CreateWhatsAppChannelJSONBody
+
+// SetPresenceJSONRequestBody defines body for SetPresence for application/json ContentType.
+type SetPresenceJSONRequestBody SetPresenceJSONBody
+
+// ArchiveRemoteJSONRequestBody defines body for ArchiveRemote for application/json ContentType.
+type ArchiveRemoteJSONRequestBody ArchiveRemoteJSONBody
+
+// MarkRemoteAsSeenJSONRequestBody defines body for MarkRemoteAsSeen for application/json ContentType.
+type MarkRemoteAsSeenJSONRequestBody MarkRemoteAsSeenJSONBody
+
+// MarkRemoteAsUnreadJSONRequestBody defines body for MarkRemoteAsUnread for application/json ContentType.
+type MarkRemoteAsUnreadJSONRequestBody MarkRemoteAsUnreadJSONBody
+
+// MuteRemoteJSONRequestBody defines body for MuteRemote for application/json ContentType.
+type MuteRemoteJSONRequestBody MuteRemoteJSONBody
+
+// PinRemoteJSONRequestBody defines body for PinRemote for application/json ContentType.
+type PinRemoteJSONRequestBody PinRemoteJSONBody
+
+// UnarchiveRemoteJSONRequestBody defines body for UnarchiveRemote for application/json ContentType.
+type UnarchiveRemoteJSONRequestBody UnarchiveRemoteJSONBody
+
+// UnmuteRemoteJSONRequestBody defines body for UnmuteRemote for application/json ContentType.
+type UnmuteRemoteJSONRequestBody UnmuteRemoteJSONBody
+
+// UnpinRemoteJSONRequestBody defines body for UnpinRemote for application/json ContentType.
+type UnpinRemoteJSONRequestBody UnpinRemoteJSONBody
+
+// SendAudioJSONRequestBody defines body for SendAudio for application/json ContentType.
+type SendAudioJSONRequestBody SendAudioJSONBody
+
+// SendButtonJSONRequestBody defines body for SendButton for application/json ContentType.
+type SendButtonJSONRequestBody SendButtonJSONBody
+
+// CheckIsOnPlatformJSONRequestBody defines body for CheckIsOnPlatform for application/json ContentType.
+type CheckIsOnPlatformJSONRequestBody CheckIsOnPlatformJSONBody
+
+// SendContactJSONRequestBody defines body for SendContact for application/json ContentType.
+type SendContactJSONRequestBody SendContactJSONBody
+
+// DeleteMessageJSONRequestBody defines body for DeleteMessage for application/json ContentType.
+type DeleteMessageJSONRequestBody DeleteMessageJSONBody
+
+// EditMessageJSONRequestBody defines body for EditMessage for application/json ContentType.
+type EditMessageJSONRequestBody EditMessageJSONBody
+
+// SendFileJSONRequestBody defines body for SendFile for application/json ContentType.
+type SendFileJSONRequestBody SendFileJSONBody
+
+// ForwardMessageJSONRequestBody defines body for ForwardMessage for application/json ContentType.
+type ForwardMessageJSONRequestBody ForwardMessageJSONBody
+
+// SendImageJSONRequestBody defines body for SendImage for application/json ContentType.
+type SendImageJSONRequestBody SendImageJSONBody
+
+// SendLinkJSONRequestBody defines body for SendLink for application/json ContentType.
+type SendLinkJSONRequestBody SendLinkJSONBody
+
+// SendListJSONRequestBody defines body for SendList for application/json ContentType.
+type SendListJSONRequestBody SendListJSONBody
+
+// SendLocationJSONRequestBody defines body for SendLocation for application/json ContentType.
+type SendLocationJSONRequestBody SendLocationJSONBody
+
+// SendMediaJSONRequestBody defines body for SendMedia for application/json ContentType.
+type SendMediaJSONRequestBody SendMediaJSONBody
+
+// SendPollJSONRequestBody defines body for SendPoll for application/json ContentType.
+type SendPollJSONRequestBody SendPollJSONBody
+
+// SendChatPresenceJSONRequestBody defines body for SendChatPresence for application/json ContentType.
+type SendChatPresenceJSONRequestBody SendChatPresenceJSONBody
+
+// SendReactionJSONRequestBody defines body for SendReaction for application/json ContentType.
+type SendReactionJSONRequestBody SendReactionJSONBody
+
+// SendStatusJSONRequestBody defines body for SendStatus for application/json ContentType.
+type SendStatusJSONRequestBody SendStatusJSONBody
+
+// SendStickerJSONRequestBody defines body for SendSticker for application/json ContentType.
+type SendStickerJSONRequestBody SendStickerJSONBody
+
+// SendTextJSONRequestBody defines body for SendText for application/json ContentType.
+type SendTextJSONRequestBody SendTextJSONBody
+
+// SendVideoJSONRequestBody defines body for SendVideo for application/json ContentType.
+type SendVideoJSONRequestBody SendVideoJSONBody
+
+// AsChannelEventChannelChannelCreated returns the union data inside the ChannelEvent as a ChannelEventChannelChannelCreated
+func (t ChannelEvent) AsChannelEventChannelChannelCreated() (ChannelEventChannelChannelCreated, error) {
+	var body ChannelEventChannelChannelCreated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelChannelCreated overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelChannelCreated
+func (t *ChannelEvent) FromChannelEventChannelChannelCreated(v ChannelEventChannelChannelCreated) error {
+	v.Name = "channel.channel_created"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelChannelCreated performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelChannelCreated
+func (t *ChannelEvent) MergeChannelEventChannelChannelCreated(v ChannelEventChannelChannelCreated) error {
+	v.Name = "channel.channel_created"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelGatewayConnected returns the union data inside the ChannelEvent as a ChannelEventChannelGatewayConnected
+func (t ChannelEvent) AsChannelEventChannelGatewayConnected() (ChannelEventChannelGatewayConnected, error) {
+	var body ChannelEventChannelGatewayConnected
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelGatewayConnected overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelGatewayConnected
+func (t *ChannelEvent) FromChannelEventChannelGatewayConnected(v ChannelEventChannelGatewayConnected) error {
+	v.Name = "channel.gateway_connected"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelGatewayConnected performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelGatewayConnected
+func (t *ChannelEvent) MergeChannelEventChannelGatewayConnected(v ChannelEventChannelGatewayConnected) error {
+	v.Name = "channel.gateway_connected"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelGatewayDisconnected returns the union data inside the ChannelEvent as a ChannelEventChannelGatewayDisconnected
+func (t ChannelEvent) AsChannelEventChannelGatewayDisconnected() (ChannelEventChannelGatewayDisconnected, error) {
+	var body ChannelEventChannelGatewayDisconnected
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelGatewayDisconnected overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelGatewayDisconnected
+func (t *ChannelEvent) FromChannelEventChannelGatewayDisconnected(v ChannelEventChannelGatewayDisconnected) error {
+	v.Name = "channel.gateway_disconnected"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelGatewayDisconnected performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelGatewayDisconnected
+func (t *ChannelEvent) MergeChannelEventChannelGatewayDisconnected(v ChannelEventChannelGatewayDisconnected) error {
+	v.Name = "channel.gateway_disconnected"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessageSent returns the union data inside the ChannelEvent as a ChannelEventChannelMessageSent
+func (t ChannelEvent) AsChannelEventChannelMessageSent() (ChannelEventChannelMessageSent, error) {
+	var body ChannelEventChannelMessageSent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessageSent overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessageSent
+func (t *ChannelEvent) FromChannelEventChannelMessageSent(v ChannelEventChannelMessageSent) error {
+	v.Name = "channel.message_sent"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessageSent performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessageSent
+func (t *ChannelEvent) MergeChannelEventChannelMessageSent(v ChannelEventChannelMessageSent) error {
+	v.Name = "channel.message_sent"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessageReceived returns the union data inside the ChannelEvent as a ChannelEventChannelMessageReceived
+func (t ChannelEvent) AsChannelEventChannelMessageReceived() (ChannelEventChannelMessageReceived, error) {
+	var body ChannelEventChannelMessageReceived
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessageReceived overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessageReceived
+func (t *ChannelEvent) FromChannelEventChannelMessageReceived(v ChannelEventChannelMessageReceived) error {
+	v.Name = "channel.message_received"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessageReceived performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessageReceived
+func (t *ChannelEvent) MergeChannelEventChannelMessageReceived(v ChannelEventChannelMessageReceived) error {
+	v.Name = "channel.message_received"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessageEdited returns the union data inside the ChannelEvent as a ChannelEventChannelMessageEdited
+func (t ChannelEvent) AsChannelEventChannelMessageEdited() (ChannelEventChannelMessageEdited, error) {
+	var body ChannelEventChannelMessageEdited
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessageEdited overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessageEdited
+func (t *ChannelEvent) FromChannelEventChannelMessageEdited(v ChannelEventChannelMessageEdited) error {
+	v.Name = "channel.message_edited"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessageEdited performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessageEdited
+func (t *ChannelEvent) MergeChannelEventChannelMessageEdited(v ChannelEventChannelMessageEdited) error {
+	v.Name = "channel.message_edited"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessageDeleted returns the union data inside the ChannelEvent as a ChannelEventChannelMessageDeleted
+func (t ChannelEvent) AsChannelEventChannelMessageDeleted() (ChannelEventChannelMessageDeleted, error) {
+	var body ChannelEventChannelMessageDeleted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessageDeleted overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessageDeleted
+func (t *ChannelEvent) FromChannelEventChannelMessageDeleted(v ChannelEventChannelMessageDeleted) error {
+	v.Name = "channel.message_deleted"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessageDeleted performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessageDeleted
+func (t *ChannelEvent) MergeChannelEventChannelMessageDeleted(v ChannelEventChannelMessageDeleted) error {
+	v.Name = "channel.message_deleted"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessageDelivered returns the union data inside the ChannelEvent as a ChannelEventChannelMessageDelivered
+func (t ChannelEvent) AsChannelEventChannelMessageDelivered() (ChannelEventChannelMessageDelivered, error) {
+	var body ChannelEventChannelMessageDelivered
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessageDelivered overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessageDelivered
+func (t *ChannelEvent) FromChannelEventChannelMessageDelivered(v ChannelEventChannelMessageDelivered) error {
+	v.Name = "channel.message_delivered"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessageDelivered performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessageDelivered
+func (t *ChannelEvent) MergeChannelEventChannelMessageDelivered(v ChannelEventChannelMessageDelivered) error {
+	v.Name = "channel.message_delivered"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessageSeen returns the union data inside the ChannelEvent as a ChannelEventChannelMessageSeen
+func (t ChannelEvent) AsChannelEventChannelMessageSeen() (ChannelEventChannelMessageSeen, error) {
+	var body ChannelEventChannelMessageSeen
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessageSeen overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessageSeen
+func (t *ChannelEvent) FromChannelEventChannelMessageSeen(v ChannelEventChannelMessageSeen) error {
+	v.Name = "channel.message_seen"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessageSeen performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessageSeen
+func (t *ChannelEvent) MergeChannelEventChannelMessageSeen(v ChannelEventChannelMessageSeen) error {
+	v.Name = "channel.message_seen"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemotePinned returns the union data inside the ChannelEvent as a ChannelEventChannelRemotePinned
+func (t ChannelEvent) AsChannelEventChannelRemotePinned() (ChannelEventChannelRemotePinned, error) {
+	var body ChannelEventChannelRemotePinned
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemotePinned overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemotePinned
+func (t *ChannelEvent) FromChannelEventChannelRemotePinned(v ChannelEventChannelRemotePinned) error {
+	v.Name = "channel.remote_pinned"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemotePinned performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemotePinned
+func (t *ChannelEvent) MergeChannelEventChannelRemotePinned(v ChannelEventChannelRemotePinned) error {
+	v.Name = "channel.remote_pinned"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteUnpinned returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteUnpinned
+func (t ChannelEvent) AsChannelEventChannelRemoteUnpinned() (ChannelEventChannelRemoteUnpinned, error) {
+	var body ChannelEventChannelRemoteUnpinned
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteUnpinned overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteUnpinned
+func (t *ChannelEvent) FromChannelEventChannelRemoteUnpinned(v ChannelEventChannelRemoteUnpinned) error {
+	v.Name = "channel.remote_unpinned"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteUnpinned performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteUnpinned
+func (t *ChannelEvent) MergeChannelEventChannelRemoteUnpinned(v ChannelEventChannelRemoteUnpinned) error {
+	v.Name = "channel.remote_unpinned"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteArchived returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteArchived
+func (t ChannelEvent) AsChannelEventChannelRemoteArchived() (ChannelEventChannelRemoteArchived, error) {
+	var body ChannelEventChannelRemoteArchived
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteArchived overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteArchived
+func (t *ChannelEvent) FromChannelEventChannelRemoteArchived(v ChannelEventChannelRemoteArchived) error {
+	v.Name = "channel.remote_archived"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteArchived performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteArchived
+func (t *ChannelEvent) MergeChannelEventChannelRemoteArchived(v ChannelEventChannelRemoteArchived) error {
+	v.Name = "channel.remote_archived"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteUnarchived returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteUnarchived
+func (t ChannelEvent) AsChannelEventChannelRemoteUnarchived() (ChannelEventChannelRemoteUnarchived, error) {
+	var body ChannelEventChannelRemoteUnarchived
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteUnarchived overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteUnarchived
+func (t *ChannelEvent) FromChannelEventChannelRemoteUnarchived(v ChannelEventChannelRemoteUnarchived) error {
+	v.Name = "channel.remote_unarchived"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteUnarchived performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteUnarchived
+func (t *ChannelEvent) MergeChannelEventChannelRemoteUnarchived(v ChannelEventChannelRemoteUnarchived) error {
+	v.Name = "channel.remote_unarchived"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteMuted returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteMuted
+func (t ChannelEvent) AsChannelEventChannelRemoteMuted() (ChannelEventChannelRemoteMuted, error) {
+	var body ChannelEventChannelRemoteMuted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteMuted overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteMuted
+func (t *ChannelEvent) FromChannelEventChannelRemoteMuted(v ChannelEventChannelRemoteMuted) error {
+	v.Name = "channel.remote_muted"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteMuted performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteMuted
+func (t *ChannelEvent) MergeChannelEventChannelRemoteMuted(v ChannelEventChannelRemoteMuted) error {
+	v.Name = "channel.remote_muted"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteUnmuted returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteUnmuted
+func (t ChannelEvent) AsChannelEventChannelRemoteUnmuted() (ChannelEventChannelRemoteUnmuted, error) {
+	var body ChannelEventChannelRemoteUnmuted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteUnmuted overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteUnmuted
+func (t *ChannelEvent) FromChannelEventChannelRemoteUnmuted(v ChannelEventChannelRemoteUnmuted) error {
+	v.Name = "channel.remote_unmuted"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteUnmuted performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteUnmuted
+func (t *ChannelEvent) MergeChannelEventChannelRemoteUnmuted(v ChannelEventChannelRemoteUnmuted) error {
+	v.Name = "channel.remote_unmuted"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteMarkedAsUnread returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteMarkedAsUnread
+func (t ChannelEvent) AsChannelEventChannelRemoteMarkedAsUnread() (ChannelEventChannelRemoteMarkedAsUnread, error) {
+	var body ChannelEventChannelRemoteMarkedAsUnread
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteMarkedAsUnread overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteMarkedAsUnread
+func (t *ChannelEvent) FromChannelEventChannelRemoteMarkedAsUnread(v ChannelEventChannelRemoteMarkedAsUnread) error {
+	v.Name = "channel.remote_marked_as_unread"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteMarkedAsUnread performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteMarkedAsUnread
+func (t *ChannelEvent) MergeChannelEventChannelRemoteMarkedAsUnread(v ChannelEventChannelRemoteMarkedAsUnread) error {
+	v.Name = "channel.remote_marked_as_unread"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteChatSeen returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteChatSeen
+func (t ChannelEvent) AsChannelEventChannelRemoteChatSeen() (ChannelEventChannelRemoteChatSeen, error) {
+	var body ChannelEventChannelRemoteChatSeen
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteChatSeen overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteChatSeen
+func (t *ChannelEvent) FromChannelEventChannelRemoteChatSeen(v ChannelEventChannelRemoteChatSeen) error {
+	v.Name = "channel.remote_chat_seen"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteChatSeen performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteChatSeen
+func (t *ChannelEvent) MergeChannelEventChannelRemoteChatSeen(v ChannelEventChannelRemoteChatSeen) error {
+	v.Name = "channel.remote_chat_seen"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteUpdated returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteUpdated
+func (t ChannelEvent) AsChannelEventChannelRemoteUpdated() (ChannelEventChannelRemoteUpdated, error) {
+	var body ChannelEventChannelRemoteUpdated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteUpdated overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteUpdated
+func (t *ChannelEvent) FromChannelEventChannelRemoteUpdated(v ChannelEventChannelRemoteUpdated) error {
+	v.Name = "channel.remote_updated"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteUpdated performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteUpdated
+func (t *ChannelEvent) MergeChannelEventChannelRemoteUpdated(v ChannelEventChannelRemoteUpdated) error {
+	v.Name = "channel.remote_updated"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteCreated returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteCreated
+func (t ChannelEvent) AsChannelEventChannelRemoteCreated() (ChannelEventChannelRemoteCreated, error) {
+	var body ChannelEventChannelRemoteCreated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteCreated overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteCreated
+func (t *ChannelEvent) FromChannelEventChannelRemoteCreated(v ChannelEventChannelRemoteCreated) error {
+	v.Name = "channel.remote_created"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteCreated performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteCreated
+func (t *ChannelEvent) MergeChannelEventChannelRemoteCreated(v ChannelEventChannelRemoteCreated) error {
+	v.Name = "channel.remote_created"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemoteDeleted returns the union data inside the ChannelEvent as a ChannelEventChannelRemoteDeleted
+func (t ChannelEvent) AsChannelEventChannelRemoteDeleted() (ChannelEventChannelRemoteDeleted, error) {
+	var body ChannelEventChannelRemoteDeleted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemoteDeleted overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemoteDeleted
+func (t *ChannelEvent) FromChannelEventChannelRemoteDeleted(v ChannelEventChannelRemoteDeleted) error {
+	v.Name = "channel.remote_deleted"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemoteDeleted performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemoteDeleted
+func (t *ChannelEvent) MergeChannelEventChannelRemoteDeleted(v ChannelEventChannelRemoteDeleted) error {
+	v.Name = "channel.remote_deleted"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelRemotesSynced returns the union data inside the ChannelEvent as a ChannelEventChannelRemotesSynced
+func (t ChannelEvent) AsChannelEventChannelRemotesSynced() (ChannelEventChannelRemotesSynced, error) {
+	var body ChannelEventChannelRemotesSynced
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelRemotesSynced overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelRemotesSynced
+func (t *ChannelEvent) FromChannelEventChannelRemotesSynced(v ChannelEventChannelRemotesSynced) error {
+	v.Name = "channel.remotes_synced"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelRemotesSynced performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelRemotesSynced
+func (t *ChannelEvent) MergeChannelEventChannelRemotesSynced(v ChannelEventChannelRemotesSynced) error {
+	v.Name = "channel.remotes_synced"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMessagesSynced returns the union data inside the ChannelEvent as a ChannelEventChannelMessagesSynced
+func (t ChannelEvent) AsChannelEventChannelMessagesSynced() (ChannelEventChannelMessagesSynced, error) {
+	var body ChannelEventChannelMessagesSynced
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMessagesSynced overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMessagesSynced
+func (t *ChannelEvent) FromChannelEventChannelMessagesSynced(v ChannelEventChannelMessagesSynced) error {
+	v.Name = "channel.messages_synced"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMessagesSynced performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMessagesSynced
+func (t *ChannelEvent) MergeChannelEventChannelMessagesSynced(v ChannelEventChannelMessagesSynced) error {
+	v.Name = "channel.messages_synced"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMembershipAdded returns the union data inside the ChannelEvent as a ChannelEventChannelMembershipAdded
+func (t ChannelEvent) AsChannelEventChannelMembershipAdded() (ChannelEventChannelMembershipAdded, error) {
+	var body ChannelEventChannelMembershipAdded
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMembershipAdded overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMembershipAdded
+func (t *ChannelEvent) FromChannelEventChannelMembershipAdded(v ChannelEventChannelMembershipAdded) error {
+	v.Name = "channel.membership_added"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMembershipAdded performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMembershipAdded
+func (t *ChannelEvent) MergeChannelEventChannelMembershipAdded(v ChannelEventChannelMembershipAdded) error {
+	v.Name = "channel.membership_added"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelEventChannelMembershipRemoved returns the union data inside the ChannelEvent as a ChannelEventChannelMembershipRemoved
+func (t ChannelEvent) AsChannelEventChannelMembershipRemoved() (ChannelEventChannelMembershipRemoved, error) {
+	var body ChannelEventChannelMembershipRemoved
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelEventChannelMembershipRemoved overwrites any union data inside the ChannelEvent as the provided ChannelEventChannelMembershipRemoved
+func (t *ChannelEvent) FromChannelEventChannelMembershipRemoved(v ChannelEventChannelMembershipRemoved) error {
+	v.Name = "channel.membership_removed"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelEventChannelMembershipRemoved performs a merge with any union data inside the ChannelEvent, using the provided ChannelEventChannelMembershipRemoved
+func (t *ChannelEvent) MergeChannelEventChannelMembershipRemoved(v ChannelEventChannelMembershipRemoved) error {
+	v.Name = "channel.membership_removed"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ChannelEvent) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"name"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ChannelEvent) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "channel.channel_created":
+		return t.AsChannelEventChannelChannelCreated()
+	case "channel.gateway_connected":
+		return t.AsChannelEventChannelGatewayConnected()
+	case "channel.gateway_disconnected":
+		return t.AsChannelEventChannelGatewayDisconnected()
+	case "channel.membership_added":
+		return t.AsChannelEventChannelMembershipAdded()
+	case "channel.membership_removed":
+		return t.AsChannelEventChannelMembershipRemoved()
+	case "channel.message_deleted":
+		return t.AsChannelEventChannelMessageDeleted()
+	case "channel.message_delivered":
+		return t.AsChannelEventChannelMessageDelivered()
+	case "channel.message_edited":
+		return t.AsChannelEventChannelMessageEdited()
+	case "channel.message_received":
+		return t.AsChannelEventChannelMessageReceived()
+	case "channel.message_seen":
+		return t.AsChannelEventChannelMessageSeen()
+	case "channel.message_sent":
+		return t.AsChannelEventChannelMessageSent()
+	case "channel.messages_synced":
+		return t.AsChannelEventChannelMessagesSynced()
+	case "channel.remote_archived":
+		return t.AsChannelEventChannelRemoteArchived()
+	case "channel.remote_chat_seen":
+		return t.AsChannelEventChannelRemoteChatSeen()
+	case "channel.remote_created":
+		return t.AsChannelEventChannelRemoteCreated()
+	case "channel.remote_deleted":
+		return t.AsChannelEventChannelRemoteDeleted()
+	case "channel.remote_marked_as_unread":
+		return t.AsChannelEventChannelRemoteMarkedAsUnread()
+	case "channel.remote_muted":
+		return t.AsChannelEventChannelRemoteMuted()
+	case "channel.remote_pinned":
+		return t.AsChannelEventChannelRemotePinned()
+	case "channel.remote_unarchived":
+		return t.AsChannelEventChannelRemoteUnarchived()
+	case "channel.remote_unmuted":
+		return t.AsChannelEventChannelRemoteUnmuted()
+	case "channel.remote_unpinned":
+		return t.AsChannelEventChannelRemoteUnpinned()
+	case "channel.remote_updated":
+		return t.AsChannelEventChannelRemoteUpdated()
+	case "channel.remotes_synced":
+		return t.AsChannelEventChannelRemotesSynced()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ChannelEvent) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ChannelEvent) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappText returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappText
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappText() (ChannelMessageReceivedPayloadWhatsappText, error) {
+	var body ChannelMessageReceivedPayloadWhatsappText
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappText overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappText
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappText(v ChannelMessageReceivedPayloadWhatsappText) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappText performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappText
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappText(v ChannelMessageReceivedPayloadWhatsappText) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappImage returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappImage
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappImage() (ChannelMessageReceivedPayloadWhatsappImage, error) {
+	var body ChannelMessageReceivedPayloadWhatsappImage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappImage overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappImage
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappImage(v ChannelMessageReceivedPayloadWhatsappImage) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappImage performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappImage
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappImage(v ChannelMessageReceivedPayloadWhatsappImage) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappVideo returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappVideo
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappVideo() (ChannelMessageReceivedPayloadWhatsappVideo, error) {
+	var body ChannelMessageReceivedPayloadWhatsappVideo
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappVideo overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappVideo
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappVideo(v ChannelMessageReceivedPayloadWhatsappVideo) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappVideo performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappVideo
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappVideo(v ChannelMessageReceivedPayloadWhatsappVideo) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappAudio returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappAudio
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappAudio() (ChannelMessageReceivedPayloadWhatsappAudio, error) {
+	var body ChannelMessageReceivedPayloadWhatsappAudio
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappAudio overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappAudio
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappAudio(v ChannelMessageReceivedPayloadWhatsappAudio) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappAudio performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappAudio
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappAudio(v ChannelMessageReceivedPayloadWhatsappAudio) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappDocument returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappDocument
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappDocument() (ChannelMessageReceivedPayloadWhatsappDocument, error) {
+	var body ChannelMessageReceivedPayloadWhatsappDocument
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappDocument overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappDocument
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappDocument(v ChannelMessageReceivedPayloadWhatsappDocument) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappDocument performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappDocument
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappDocument(v ChannelMessageReceivedPayloadWhatsappDocument) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappSticker returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappSticker
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappSticker() (ChannelMessageReceivedPayloadWhatsappSticker, error) {
+	var body ChannelMessageReceivedPayloadWhatsappSticker
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappSticker overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappSticker
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappSticker(v ChannelMessageReceivedPayloadWhatsappSticker) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappSticker performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappSticker
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappSticker(v ChannelMessageReceivedPayloadWhatsappSticker) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappLocation returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappLocation
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappLocation() (ChannelMessageReceivedPayloadWhatsappLocation, error) {
+	var body ChannelMessageReceivedPayloadWhatsappLocation
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappLocation overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappLocation
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappLocation(v ChannelMessageReceivedPayloadWhatsappLocation) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappLocation performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappLocation
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappLocation(v ChannelMessageReceivedPayloadWhatsappLocation) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappContact returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappContact
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappContact() (ChannelMessageReceivedPayloadWhatsappContact, error) {
+	var body ChannelMessageReceivedPayloadWhatsappContact
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappContact overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappContact
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappContact(v ChannelMessageReceivedPayloadWhatsappContact) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappContact performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappContact
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappContact(v ChannelMessageReceivedPayloadWhatsappContact) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappPoll returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappPoll
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappPoll() (ChannelMessageReceivedPayloadWhatsappPoll, error) {
+	var body ChannelMessageReceivedPayloadWhatsappPoll
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappPoll overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappPoll
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappPoll(v ChannelMessageReceivedPayloadWhatsappPoll) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappPoll performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappPoll
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappPoll(v ChannelMessageReceivedPayloadWhatsappPoll) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadWhatsappReaction returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadWhatsappReaction
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadWhatsappReaction() (ChannelMessageReceivedPayloadWhatsappReaction, error) {
+	var body ChannelMessageReceivedPayloadWhatsappReaction
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadWhatsappReaction overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadWhatsappReaction
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadWhatsappReaction(v ChannelMessageReceivedPayloadWhatsappReaction) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadWhatsappReaction performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadWhatsappReaction
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadWhatsappReaction(v ChannelMessageReceivedPayloadWhatsappReaction) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageReceivedPayloadInternalText returns the union data inside the ChannelMessageReceivedPayload as a ChannelMessageReceivedPayloadInternalText
+func (t ChannelMessageReceivedPayload) AsChannelMessageReceivedPayloadInternalText() (ChannelMessageReceivedPayloadInternalText, error) {
+	var body ChannelMessageReceivedPayloadInternalText
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageReceivedPayloadInternalText overwrites any union data inside the ChannelMessageReceivedPayload as the provided ChannelMessageReceivedPayloadInternalText
+func (t *ChannelMessageReceivedPayload) FromChannelMessageReceivedPayloadInternalText(v ChannelMessageReceivedPayloadInternalText) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageReceivedPayloadInternalText performs a merge with any union data inside the ChannelMessageReceivedPayload, using the provided ChannelMessageReceivedPayloadInternalText
+func (t *ChannelMessageReceivedPayload) MergeChannelMessageReceivedPayloadInternalText(v ChannelMessageReceivedPayloadInternalText) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ChannelMessageReceivedPayload) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ChannelMessageReceivedPayload) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappText returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappText
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappText() (ChannelMessageSentPayloadWhatsappText, error) {
+	var body ChannelMessageSentPayloadWhatsappText
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappText overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappText
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappText(v ChannelMessageSentPayloadWhatsappText) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappText performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappText
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappText(v ChannelMessageSentPayloadWhatsappText) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappImage returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappImage
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappImage() (ChannelMessageSentPayloadWhatsappImage, error) {
+	var body ChannelMessageSentPayloadWhatsappImage
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappImage overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappImage
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappImage(v ChannelMessageSentPayloadWhatsappImage) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappImage performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappImage
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappImage(v ChannelMessageSentPayloadWhatsappImage) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappVideo returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappVideo
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappVideo() (ChannelMessageSentPayloadWhatsappVideo, error) {
+	var body ChannelMessageSentPayloadWhatsappVideo
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappVideo overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappVideo
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappVideo(v ChannelMessageSentPayloadWhatsappVideo) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappVideo performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappVideo
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappVideo(v ChannelMessageSentPayloadWhatsappVideo) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappAudio returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappAudio
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappAudio() (ChannelMessageSentPayloadWhatsappAudio, error) {
+	var body ChannelMessageSentPayloadWhatsappAudio
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappAudio overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappAudio
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappAudio(v ChannelMessageSentPayloadWhatsappAudio) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappAudio performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappAudio
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappAudio(v ChannelMessageSentPayloadWhatsappAudio) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappDocument returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappDocument
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappDocument() (ChannelMessageSentPayloadWhatsappDocument, error) {
+	var body ChannelMessageSentPayloadWhatsappDocument
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappDocument overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappDocument
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappDocument(v ChannelMessageSentPayloadWhatsappDocument) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappDocument performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappDocument
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappDocument(v ChannelMessageSentPayloadWhatsappDocument) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappSticker returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappSticker
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappSticker() (ChannelMessageSentPayloadWhatsappSticker, error) {
+	var body ChannelMessageSentPayloadWhatsappSticker
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappSticker overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappSticker
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappSticker(v ChannelMessageSentPayloadWhatsappSticker) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappSticker performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappSticker
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappSticker(v ChannelMessageSentPayloadWhatsappSticker) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappLocation returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappLocation
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappLocation() (ChannelMessageSentPayloadWhatsappLocation, error) {
+	var body ChannelMessageSentPayloadWhatsappLocation
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappLocation overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappLocation
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappLocation(v ChannelMessageSentPayloadWhatsappLocation) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappLocation performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappLocation
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappLocation(v ChannelMessageSentPayloadWhatsappLocation) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappContact returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappContact
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappContact() (ChannelMessageSentPayloadWhatsappContact, error) {
+	var body ChannelMessageSentPayloadWhatsappContact
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappContact overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappContact
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappContact(v ChannelMessageSentPayloadWhatsappContact) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappContact performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappContact
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappContact(v ChannelMessageSentPayloadWhatsappContact) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappPoll returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappPoll
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappPoll() (ChannelMessageSentPayloadWhatsappPoll, error) {
+	var body ChannelMessageSentPayloadWhatsappPoll
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappPoll overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappPoll
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappPoll(v ChannelMessageSentPayloadWhatsappPoll) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappPoll performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappPoll
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappPoll(v ChannelMessageSentPayloadWhatsappPoll) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadWhatsappReaction returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadWhatsappReaction
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadWhatsappReaction() (ChannelMessageSentPayloadWhatsappReaction, error) {
+	var body ChannelMessageSentPayloadWhatsappReaction
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadWhatsappReaction overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadWhatsappReaction
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadWhatsappReaction(v ChannelMessageSentPayloadWhatsappReaction) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadWhatsappReaction performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadWhatsappReaction
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadWhatsappReaction(v ChannelMessageSentPayloadWhatsappReaction) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChannelMessageSentPayloadInternalText returns the union data inside the ChannelMessageSentPayload as a ChannelMessageSentPayloadInternalText
+func (t ChannelMessageSentPayload) AsChannelMessageSentPayloadInternalText() (ChannelMessageSentPayloadInternalText, error) {
+	var body ChannelMessageSentPayloadInternalText
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelMessageSentPayloadInternalText overwrites any union data inside the ChannelMessageSentPayload as the provided ChannelMessageSentPayloadInternalText
+func (t *ChannelMessageSentPayload) FromChannelMessageSentPayloadInternalText(v ChannelMessageSentPayloadInternalText) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelMessageSentPayloadInternalText performs a merge with any union data inside the ChannelMessageSentPayload, using the provided ChannelMessageSentPayloadInternalText
+func (t *ChannelMessageSentPayload) MergeChannelMessageSentPayloadInternalText(v ChannelMessageSentPayloadInternalText) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ChannelMessageSentPayload) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ChannelMessageSentPayload) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated returns the union data inside the ChannelSpecialPlatformEventPayload as a ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
+func (t ChannelSpecialPlatformEventPayload) AsChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated() (ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated, error) {
+	var body ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated overwrites any union data inside the ChannelSpecialPlatformEventPayload as the provided ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
+func (t *ChannelSpecialPlatformEventPayload) FromChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated(v ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated performs a merge with any union data inside the ChannelSpecialPlatformEventPayload, using the provided ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
+func (t *ChannelSpecialPlatformEventPayload) MergeChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated(v ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ChannelSpecialPlatformEventPayload) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ChannelSpecialPlatformEventPayload) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsIntegrationChannelChatPresenceUpdatedEvent returns the union data inside the ServerEvent as a IntegrationChannelChatPresenceUpdatedEvent
+func (t ServerEvent) AsIntegrationChannelChatPresenceUpdatedEvent() (IntegrationChannelChatPresenceUpdatedEvent, error) {
+	var body IntegrationChannelChatPresenceUpdatedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelChatPresenceUpdatedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelChatPresenceUpdatedEvent
+func (t *ServerEvent) FromIntegrationChannelChatPresenceUpdatedEvent(v IntegrationChannelChatPresenceUpdatedEvent) error {
+	v.Name = "integration.channel.chat_presence_updated"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelChatPresenceUpdatedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelChatPresenceUpdatedEvent
+func (t *ServerEvent) MergeIntegrationChannelChatPresenceUpdatedEvent(v IntegrationChannelChatPresenceUpdatedEvent) error {
+	v.Name = "integration.channel.chat_presence_updated"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelConnectedEvent returns the union data inside the ServerEvent as a IntegrationChannelConnectedEvent
+func (t ServerEvent) AsIntegrationChannelConnectedEvent() (IntegrationChannelConnectedEvent, error) {
+	var body IntegrationChannelConnectedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelConnectedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelConnectedEvent
+func (t *ServerEvent) FromIntegrationChannelConnectedEvent(v IntegrationChannelConnectedEvent) error {
+	v.Name = "integration.channel.connected"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelConnectedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelConnectedEvent
+func (t *ServerEvent) MergeIntegrationChannelConnectedEvent(v IntegrationChannelConnectedEvent) error {
+	v.Name = "integration.channel.connected"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelDisconnectedEvent returns the union data inside the ServerEvent as a IntegrationChannelDisconnectedEvent
+func (t ServerEvent) AsIntegrationChannelDisconnectedEvent() (IntegrationChannelDisconnectedEvent, error) {
+	var body IntegrationChannelDisconnectedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelDisconnectedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelDisconnectedEvent
+func (t *ServerEvent) FromIntegrationChannelDisconnectedEvent(v IntegrationChannelDisconnectedEvent) error {
+	v.Name = "integration.channel.disconnected"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelDisconnectedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelDisconnectedEvent
+func (t *ServerEvent) MergeIntegrationChannelDisconnectedEvent(v IntegrationChannelDisconnectedEvent) error {
+	v.Name = "integration.channel.disconnected"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelLoggedOutEvent returns the union data inside the ServerEvent as a IntegrationChannelLoggedOutEvent
+func (t ServerEvent) AsIntegrationChannelLoggedOutEvent() (IntegrationChannelLoggedOutEvent, error) {
+	var body IntegrationChannelLoggedOutEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelLoggedOutEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelLoggedOutEvent
+func (t *ServerEvent) FromIntegrationChannelLoggedOutEvent(v IntegrationChannelLoggedOutEvent) error {
+	v.Name = "integration.channel.logged_out"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelLoggedOutEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelLoggedOutEvent
+func (t *ServerEvent) MergeIntegrationChannelLoggedOutEvent(v IntegrationChannelLoggedOutEvent) error {
+	v.Name = "integration.channel.logged_out"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelMembershipAddedEvent returns the union data inside the ServerEvent as a IntegrationChannelMembershipAddedEvent
+func (t ServerEvent) AsIntegrationChannelMembershipAddedEvent() (IntegrationChannelMembershipAddedEvent, error) {
+	var body IntegrationChannelMembershipAddedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelMembershipAddedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelMembershipAddedEvent
+func (t *ServerEvent) FromIntegrationChannelMembershipAddedEvent(v IntegrationChannelMembershipAddedEvent) error {
+	v.Name = "integration.channel.membership_added"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelMembershipAddedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelMembershipAddedEvent
+func (t *ServerEvent) MergeIntegrationChannelMembershipAddedEvent(v IntegrationChannelMembershipAddedEvent) error {
+	v.Name = "integration.channel.membership_added"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelMembershipRemovedEvent returns the union data inside the ServerEvent as a IntegrationChannelMembershipRemovedEvent
+func (t ServerEvent) AsIntegrationChannelMembershipRemovedEvent() (IntegrationChannelMembershipRemovedEvent, error) {
+	var body IntegrationChannelMembershipRemovedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelMembershipRemovedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelMembershipRemovedEvent
+func (t *ServerEvent) FromIntegrationChannelMembershipRemovedEvent(v IntegrationChannelMembershipRemovedEvent) error {
+	v.Name = "integration.channel.membership_removed"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelMembershipRemovedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelMembershipRemovedEvent
+func (t *ServerEvent) MergeIntegrationChannelMembershipRemovedEvent(v IntegrationChannelMembershipRemovedEvent) error {
+	v.Name = "integration.channel.membership_removed"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelMessagesSyncedEvent returns the union data inside the ServerEvent as a IntegrationChannelMessagesSyncedEvent
+func (t ServerEvent) AsIntegrationChannelMessagesSyncedEvent() (IntegrationChannelMessagesSyncedEvent, error) {
+	var body IntegrationChannelMessagesSyncedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelMessagesSyncedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelMessagesSyncedEvent
+func (t *ServerEvent) FromIntegrationChannelMessagesSyncedEvent(v IntegrationChannelMessagesSyncedEvent) error {
+	v.Name = "integration.channel.messages_synced"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelMessagesSyncedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelMessagesSyncedEvent
+func (t *ServerEvent) MergeIntegrationChannelMessagesSyncedEvent(v IntegrationChannelMessagesSyncedEvent) error {
+	v.Name = "integration.channel.messages_synced"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelPresenceUpdatedEvent returns the union data inside the ServerEvent as a IntegrationChannelPresenceUpdatedEvent
+func (t ServerEvent) AsIntegrationChannelPresenceUpdatedEvent() (IntegrationChannelPresenceUpdatedEvent, error) {
+	var body IntegrationChannelPresenceUpdatedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelPresenceUpdatedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelPresenceUpdatedEvent
+func (t *ServerEvent) FromIntegrationChannelPresenceUpdatedEvent(v IntegrationChannelPresenceUpdatedEvent) error {
+	v.Name = "integration.channel.presence_updated"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelPresenceUpdatedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelPresenceUpdatedEvent
+func (t *ServerEvent) MergeIntegrationChannelPresenceUpdatedEvent(v IntegrationChannelPresenceUpdatedEvent) error {
+	v.Name = "integration.channel.presence_updated"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelRemoteCreatedEvent returns the union data inside the ServerEvent as a IntegrationChannelRemoteCreatedEvent
+func (t ServerEvent) AsIntegrationChannelRemoteCreatedEvent() (IntegrationChannelRemoteCreatedEvent, error) {
+	var body IntegrationChannelRemoteCreatedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelRemoteCreatedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelRemoteCreatedEvent
+func (t *ServerEvent) FromIntegrationChannelRemoteCreatedEvent(v IntegrationChannelRemoteCreatedEvent) error {
+	v.Name = "integration.channel.remote_created"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelRemoteCreatedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelRemoteCreatedEvent
+func (t *ServerEvent) MergeIntegrationChannelRemoteCreatedEvent(v IntegrationChannelRemoteCreatedEvent) error {
+	v.Name = "integration.channel.remote_created"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelRemoteDeletedEvent returns the union data inside the ServerEvent as a IntegrationChannelRemoteDeletedEvent
+func (t ServerEvent) AsIntegrationChannelRemoteDeletedEvent() (IntegrationChannelRemoteDeletedEvent, error) {
+	var body IntegrationChannelRemoteDeletedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelRemoteDeletedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelRemoteDeletedEvent
+func (t *ServerEvent) FromIntegrationChannelRemoteDeletedEvent(v IntegrationChannelRemoteDeletedEvent) error {
+	v.Name = "integration.channel.remote_deleted"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelRemoteDeletedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelRemoteDeletedEvent
+func (t *ServerEvent) MergeIntegrationChannelRemoteDeletedEvent(v IntegrationChannelRemoteDeletedEvent) error {
+	v.Name = "integration.channel.remote_deleted"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelRemoteUpdatedEvent returns the union data inside the ServerEvent as a IntegrationChannelRemoteUpdatedEvent
+func (t ServerEvent) AsIntegrationChannelRemoteUpdatedEvent() (IntegrationChannelRemoteUpdatedEvent, error) {
+	var body IntegrationChannelRemoteUpdatedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelRemoteUpdatedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelRemoteUpdatedEvent
+func (t *ServerEvent) FromIntegrationChannelRemoteUpdatedEvent(v IntegrationChannelRemoteUpdatedEvent) error {
+	v.Name = "integration.channel.remote_updated"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelRemoteUpdatedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelRemoteUpdatedEvent
+func (t *ServerEvent) MergeIntegrationChannelRemoteUpdatedEvent(v IntegrationChannelRemoteUpdatedEvent) error {
+	v.Name = "integration.channel.remote_updated"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelRemotesSyncedEvent returns the union data inside the ServerEvent as a IntegrationChannelRemotesSyncedEvent
+func (t ServerEvent) AsIntegrationChannelRemotesSyncedEvent() (IntegrationChannelRemotesSyncedEvent, error) {
+	var body IntegrationChannelRemotesSyncedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelRemotesSyncedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelRemotesSyncedEvent
+func (t *ServerEvent) FromIntegrationChannelRemotesSyncedEvent(v IntegrationChannelRemotesSyncedEvent) error {
+	v.Name = "integration.channel.remotes_synced"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelRemotesSyncedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelRemotesSyncedEvent
+func (t *ServerEvent) MergeIntegrationChannelRemotesSyncedEvent(v IntegrationChannelRemotesSyncedEvent) error {
+	v.Name = "integration.channel.remotes_synced"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelSyncCompletedEvent returns the union data inside the ServerEvent as a IntegrationChannelSyncCompletedEvent
+func (t ServerEvent) AsIntegrationChannelSyncCompletedEvent() (IntegrationChannelSyncCompletedEvent, error) {
+	var body IntegrationChannelSyncCompletedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelSyncCompletedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelSyncCompletedEvent
+func (t *ServerEvent) FromIntegrationChannelSyncCompletedEvent(v IntegrationChannelSyncCompletedEvent) error {
+	v.Name = "integration.channel.sync_completed"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelSyncCompletedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelSyncCompletedEvent
+func (t *ServerEvent) MergeIntegrationChannelSyncCompletedEvent(v IntegrationChannelSyncCompletedEvent) error {
+	v.Name = "integration.channel.sync_completed"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelSyncProgressEvent returns the union data inside the ServerEvent as a IntegrationChannelSyncProgressEvent
+func (t ServerEvent) AsIntegrationChannelSyncProgressEvent() (IntegrationChannelSyncProgressEvent, error) {
+	var body IntegrationChannelSyncProgressEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelSyncProgressEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelSyncProgressEvent
+func (t *ServerEvent) FromIntegrationChannelSyncProgressEvent(v IntegrationChannelSyncProgressEvent) error {
+	v.Name = "integration.channel.sync_progress"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelSyncProgressEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelSyncProgressEvent
+func (t *ServerEvent) MergeIntegrationChannelSyncProgressEvent(v IntegrationChannelSyncProgressEvent) error {
+	v.Name = "integration.channel.sync_progress"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelSyncStartedEvent returns the union data inside the ServerEvent as a IntegrationChannelSyncStartedEvent
+func (t ServerEvent) AsIntegrationChannelSyncStartedEvent() (IntegrationChannelSyncStartedEvent, error) {
+	var body IntegrationChannelSyncStartedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelSyncStartedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelSyncStartedEvent
+func (t *ServerEvent) FromIntegrationChannelSyncStartedEvent(v IntegrationChannelSyncStartedEvent) error {
+	v.Name = "integration.channel.sync_started"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelSyncStartedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelSyncStartedEvent
+func (t *ServerEvent) MergeIntegrationChannelSyncStartedEvent(v IntegrationChannelSyncStartedEvent) error {
+	v.Name = "integration.channel.sync_started"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelMessageDeliveredEvent returns the union data inside the ServerEvent as a IntegrationChannelMessageDeliveredEvent
+func (t ServerEvent) AsIntegrationChannelMessageDeliveredEvent() (IntegrationChannelMessageDeliveredEvent, error) {
+	var body IntegrationChannelMessageDeliveredEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelMessageDeliveredEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelMessageDeliveredEvent
+func (t *ServerEvent) FromIntegrationChannelMessageDeliveredEvent(v IntegrationChannelMessageDeliveredEvent) error {
+	v.Name = "integration.channel_message.delivered"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelMessageDeliveredEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelMessageDeliveredEvent
+func (t *ServerEvent) MergeIntegrationChannelMessageDeliveredEvent(v IntegrationChannelMessageDeliveredEvent) error {
+	v.Name = "integration.channel_message.delivered"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelMessageReceivedEvent returns the union data inside the ServerEvent as a IntegrationChannelMessageReceivedEvent
+func (t ServerEvent) AsIntegrationChannelMessageReceivedEvent() (IntegrationChannelMessageReceivedEvent, error) {
+	var body IntegrationChannelMessageReceivedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelMessageReceivedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelMessageReceivedEvent
+func (t *ServerEvent) FromIntegrationChannelMessageReceivedEvent(v IntegrationChannelMessageReceivedEvent) error {
+	v.Name = "integration.channel_message.received"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelMessageReceivedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelMessageReceivedEvent
+func (t *ServerEvent) MergeIntegrationChannelMessageReceivedEvent(v IntegrationChannelMessageReceivedEvent) error {
+	v.Name = "integration.channel_message.received"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelMessageSeenEvent returns the union data inside the ServerEvent as a IntegrationChannelMessageSeenEvent
+func (t ServerEvent) AsIntegrationChannelMessageSeenEvent() (IntegrationChannelMessageSeenEvent, error) {
+	var body IntegrationChannelMessageSeenEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelMessageSeenEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelMessageSeenEvent
+func (t *ServerEvent) FromIntegrationChannelMessageSeenEvent(v IntegrationChannelMessageSeenEvent) error {
+	v.Name = "integration.channel_message.seen"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelMessageSeenEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelMessageSeenEvent
+func (t *ServerEvent) MergeIntegrationChannelMessageSeenEvent(v IntegrationChannelMessageSeenEvent) error {
+	v.Name = "integration.channel_message.seen"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsIntegrationChannelSpecialPlatformEventReceivedEvent returns the union data inside the ServerEvent as a IntegrationChannelSpecialPlatformEventReceivedEvent
+func (t ServerEvent) AsIntegrationChannelSpecialPlatformEventReceivedEvent() (IntegrationChannelSpecialPlatformEventReceivedEvent, error) {
+	var body IntegrationChannelSpecialPlatformEventReceivedEvent
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromIntegrationChannelSpecialPlatformEventReceivedEvent overwrites any union data inside the ServerEvent as the provided IntegrationChannelSpecialPlatformEventReceivedEvent
+func (t *ServerEvent) FromIntegrationChannelSpecialPlatformEventReceivedEvent(v IntegrationChannelSpecialPlatformEventReceivedEvent) error {
+	v.Name = "integration.channel_special_platform_event.received"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeIntegrationChannelSpecialPlatformEventReceivedEvent performs a merge with any union data inside the ServerEvent, using the provided IntegrationChannelSpecialPlatformEventReceivedEvent
+func (t *ServerEvent) MergeIntegrationChannelSpecialPlatformEventReceivedEvent(v IntegrationChannelSpecialPlatformEventReceivedEvent) error {
+	v.Name = "integration.channel_special_platform_event.received"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ServerEvent) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"name"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ServerEvent) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "integration.channel.chat_presence_updated":
+		return t.AsIntegrationChannelChatPresenceUpdatedEvent()
+	case "integration.channel.connected":
+		return t.AsIntegrationChannelConnectedEvent()
+	case "integration.channel.disconnected":
+		return t.AsIntegrationChannelDisconnectedEvent()
+	case "integration.channel.logged_out":
+		return t.AsIntegrationChannelLoggedOutEvent()
+	case "integration.channel.membership_added":
+		return t.AsIntegrationChannelMembershipAddedEvent()
+	case "integration.channel.membership_removed":
+		return t.AsIntegrationChannelMembershipRemovedEvent()
+	case "integration.channel.messages_synced":
+		return t.AsIntegrationChannelMessagesSyncedEvent()
+	case "integration.channel.presence_updated":
+		return t.AsIntegrationChannelPresenceUpdatedEvent()
+	case "integration.channel.remote_created":
+		return t.AsIntegrationChannelRemoteCreatedEvent()
+	case "integration.channel.remote_deleted":
+		return t.AsIntegrationChannelRemoteDeletedEvent()
+	case "integration.channel.remote_updated":
+		return t.AsIntegrationChannelRemoteUpdatedEvent()
+	case "integration.channel.remotes_synced":
+		return t.AsIntegrationChannelRemotesSyncedEvent()
+	case "integration.channel.sync_completed":
+		return t.AsIntegrationChannelSyncCompletedEvent()
+	case "integration.channel.sync_progress":
+		return t.AsIntegrationChannelSyncProgressEvent()
+	case "integration.channel.sync_started":
+		return t.AsIntegrationChannelSyncStartedEvent()
+	case "integration.channel_message.delivered":
+		return t.AsIntegrationChannelMessageDeliveredEvent()
+	case "integration.channel_message.received":
+		return t.AsIntegrationChannelMessageReceivedEvent()
+	case "integration.channel_message.seen":
+		return t.AsIntegrationChannelMessageSeenEvent()
+	case "integration.channel_special_platform_event.received":
+		return t.AsIntegrationChannelSpecialPlatformEventReceivedEvent()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ServerEvent) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ServerEvent) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -1943,45 +4634,179 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// ConnectChannelWithBody request with any body
-	ConnectChannelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	ConnectChannel(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListChannels request
 	ListChannels(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// SendMessageWithBody request with any body
-	SendMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetOrCreateChannel request
+	GetOrCreateChannel(ctx context.Context, params *GetOrCreateChannelParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	SendMessage(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateWhatsAppChannelWithBody request with any body
+	CreateWhatsAppChannelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateWhatsAppChannel(ctx context.Context, body CreateWhatsAppChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteChannel request
+	DeleteChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetChannel request
+	GetChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConnectChannel request
+	ConnectChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// LogoutChannel request
 	LogoutChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
-}
 
-func (c *Client) ConnectChannelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewConnectChannelRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
+	// SetPresenceWithBody request with any body
+	SetPresenceWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-func (c *Client) ConnectChannel(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewConnectChannelRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
+	SetPresence(ctx context.Context, id string, body SetPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RestartChannel request
+	RestartChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ArchiveRemoteWithBody request with any body
+	ArchiveRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ArchiveRemote(ctx context.Context, body ArchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// MarkRemoteAsSeenWithBody request with any body
+	MarkRemoteAsSeenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	MarkRemoteAsSeen(ctx context.Context, body MarkRemoteAsSeenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// MarkRemoteAsUnreadWithBody request with any body
+	MarkRemoteAsUnreadWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	MarkRemoteAsUnread(ctx context.Context, body MarkRemoteAsUnreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// MuteRemoteWithBody request with any body
+	MuteRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	MuteRemote(ctx context.Context, body MuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PinRemoteWithBody request with any body
+	PinRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PinRemote(ctx context.Context, body PinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnarchiveRemoteWithBody request with any body
+	UnarchiveRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UnarchiveRemote(ctx context.Context, body UnarchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnmuteRemoteWithBody request with any body
+	UnmuteRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UnmuteRemote(ctx context.Context, body UnmuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnpinRemoteWithBody request with any body
+	UnpinRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UnpinRemote(ctx context.Context, body UnpinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListenEvents request
+	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendAudioWithBody request with any body
+	SendAudioWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendAudio(ctx context.Context, body SendAudioJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendButtonWithBody request with any body
+	SendButtonWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendButton(ctx context.Context, body SendButtonJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CheckIsOnPlatformWithBody request with any body
+	CheckIsOnPlatformWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CheckIsOnPlatform(ctx context.Context, body CheckIsOnPlatformJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendContactWithBody request with any body
+	SendContactWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendContact(ctx context.Context, body SendContactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteMessageWithBody request with any body
+	DeleteMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	DeleteMessage(ctx context.Context, body DeleteMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// EditMessageWithBody request with any body
+	EditMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	EditMessage(ctx context.Context, body EditMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendFileWithBody request with any body
+	SendFileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendFile(ctx context.Context, body SendFileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ForwardMessageWithBody request with any body
+	ForwardMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ForwardMessage(ctx context.Context, body ForwardMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendImageWithBody request with any body
+	SendImageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendImage(ctx context.Context, body SendImageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendLinkWithBody request with any body
+	SendLinkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendLink(ctx context.Context, body SendLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendListWithBody request with any body
+	SendListWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendList(ctx context.Context, body SendListJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendLocationWithBody request with any body
+	SendLocationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendLocation(ctx context.Context, body SendLocationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendMediaWithBody request with any body
+	SendMediaWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendMedia(ctx context.Context, body SendMediaJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendPollWithBody request with any body
+	SendPollWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendPoll(ctx context.Context, body SendPollJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendChatPresenceWithBody request with any body
+	SendChatPresenceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendChatPresence(ctx context.Context, body SendChatPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendReactionWithBody request with any body
+	SendReactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendReaction(ctx context.Context, body SendReactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendStatusWithBody request with any body
+	SendStatusWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendStatus(ctx context.Context, body SendStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendStickerWithBody request with any body
+	SendStickerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendSticker(ctx context.Context, body SendStickerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendTextWithBody request with any body
+	SendTextWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendText(ctx context.Context, body SendTextJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendVideoWithBody request with any body
+	SendVideoWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendVideo(ctx context.Context, body SendVideoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) ListChannels(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1996,8 +4821,8 @@ func (c *Client) ListChannels(ctx context.Context, params *ListChannelsParams, r
 	return c.Client.Do(req)
 }
 
-func (c *Client) SendMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSendMessageRequestWithBody(c.Server, contentType, body)
+func (c *Client) GetOrCreateChannel(ctx context.Context, params *GetOrCreateChannelParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrCreateChannelRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2008,8 +4833,56 @@ func (c *Client) SendMessageWithBody(ctx context.Context, contentType string, bo
 	return c.Client.Do(req)
 }
 
-func (c *Client) SendMessage(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSendMessageRequest(c.Server, body)
+func (c *Client) CreateWhatsAppChannelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWhatsAppChannelRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateWhatsAppChannel(ctx context.Context, body CreateWhatsAppChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWhatsAppChannelRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteChannelRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetChannelRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConnectChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectChannelRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -2032,44 +4905,724 @@ func (c *Client) LogoutChannel(ctx context.Context, id string, reqEditors ...Req
 	return c.Client.Do(req)
 }
 
-// NewConnectChannelRequest calls the generic ConnectChannel builder with application/json body
-func NewConnectChannelRequest(server string, body ConnectChannelJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
+func (c *Client) SetPresenceWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetPresenceRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	bodyReader = bytes.NewReader(buf)
-	return NewConnectChannelRequestWithBody(server, "application/json", bodyReader)
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
-// NewConnectChannelRequestWithBody generates requests for ConnectChannel with any type of body
-func NewConnectChannelRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
+func (c *Client) SetPresence(ctx context.Context, id string, body SetPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetPresenceRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
-
-	operationPath := fmt.Sprintf("/channel/connect")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
+	return c.Client.Do(req)
+}
 
-	queryURL, err := serverURL.Parse(operationPath)
+func (c *Client) RestartChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRestartChannelRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+func (c *Client) ArchiveRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewArchiveRemoteRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	req.Header.Add("Content-Type", contentType)
+func (c *Client) ArchiveRemote(ctx context.Context, body ArchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewArchiveRemoteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	return req, nil
+func (c *Client) MarkRemoteAsSeenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMarkRemoteAsSeenRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MarkRemoteAsSeen(ctx context.Context, body MarkRemoteAsSeenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMarkRemoteAsSeenRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MarkRemoteAsUnreadWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMarkRemoteAsUnreadRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MarkRemoteAsUnread(ctx context.Context, body MarkRemoteAsUnreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMarkRemoteAsUnreadRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MuteRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMuteRemoteRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MuteRemote(ctx context.Context, body MuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMuteRemoteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PinRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPinRemoteRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PinRemote(ctx context.Context, body PinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPinRemoteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnarchiveRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnarchiveRemoteRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnarchiveRemote(ctx context.Context, body UnarchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnarchiveRemoteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnmuteRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnmuteRemoteRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnmuteRemote(ctx context.Context, body UnmuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnmuteRemoteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnpinRemoteWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnpinRemoteRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnpinRemote(ctx context.Context, body UnpinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnpinRemoteRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListenEventsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendAudioWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendAudioRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendAudio(ctx context.Context, body SendAudioJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendAudioRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendButtonWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendButtonRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendButton(ctx context.Context, body SendButtonJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendButtonRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CheckIsOnPlatformWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCheckIsOnPlatformRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CheckIsOnPlatform(ctx context.Context, body CheckIsOnPlatformJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCheckIsOnPlatformRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendContactWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendContactRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendContact(ctx context.Context, body SendContactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendContactRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteMessageRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteMessage(ctx context.Context, body DeleteMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteMessageRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) EditMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEditMessageRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) EditMessage(ctx context.Context, body EditMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEditMessageRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendFileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendFileRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendFile(ctx context.Context, body SendFileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendFileRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ForwardMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForwardMessageRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ForwardMessage(ctx context.Context, body ForwardMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForwardMessageRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendImageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendImageRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendImage(ctx context.Context, body SendImageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendImageRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendLinkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendLinkRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendLink(ctx context.Context, body SendLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendLinkRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendListWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendListRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendList(ctx context.Context, body SendListJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendListRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendLocationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendLocationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendLocation(ctx context.Context, body SendLocationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendLocationRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendMediaWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendMediaRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendMedia(ctx context.Context, body SendMediaJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendMediaRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendPollWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendPollRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendPoll(ctx context.Context, body SendPollJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendPollRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendChatPresenceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendChatPresenceRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendChatPresence(ctx context.Context, body SendChatPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendChatPresenceRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendReactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendReactionRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendReaction(ctx context.Context, body SendReactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendReactionRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendStatusWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendStatusRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendStatus(ctx context.Context, body SendStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendStatusRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendStickerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendStickerRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendSticker(ctx context.Context, body SendStickerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendStickerRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendTextWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendTextRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendText(ctx context.Context, body SendTextJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendTextRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendVideoWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendVideoRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendVideo(ctx context.Context, body SendVideoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendVideoRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // NewListChannelsRequest generates requests for ListChannels
@@ -2081,7 +5634,7 @@ func NewListChannelsRequest(server string, params *ListChannelsParams) (*http.Re
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/channel/list")
+	operationPath := fmt.Sprintf("/channel/channels")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2100,9 +5653,21 @@ func NewListChannelsRequest(server string, params *ListChannelsParams) (*http.Re
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.OwnerId != nil {
+		if params.Limit != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "ownerId", *params.OwnerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -2126,19 +5691,8 @@ func NewListChannelsRequest(server string, params *ListChannelsParams) (*http.Re
 	return req, nil
 }
 
-// NewSendMessageRequest calls the generic SendMessage builder with application/json body
-func NewSendMessageRequest(server string, body SendMessageJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSendMessageRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewSendMessageRequestWithBody generates requests for SendMessage with any type of body
-func NewSendMessageRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewGetOrCreateChannelRequest generates requests for GetOrCreateChannel
+func NewGetOrCreateChannelRequest(server string, params *GetOrCreateChannelParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -2146,7 +5700,68 @@ func NewSendMessageRequestWithBody(server string, contentType string, body io.Re
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/channel/send")
+	operationPath := fmt.Sprintf("/channel/channels/resolve")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "platform", params.Platform, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateWhatsAppChannelRequest calls the generic CreateWhatsAppChannel builder with application/json body
+func NewCreateWhatsAppChannelRequest(server string, body CreateWhatsAppChannelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateWhatsAppChannelRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateWhatsAppChannelRequestWithBody generates requests for CreateWhatsAppChannel with any type of body
+func NewCreateWhatsAppChannelRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/channels/whatsapp")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2162,6 +5777,108 @@ func NewSendMessageRequestWithBody(server string, contentType string, body io.Re
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteChannelRequest generates requests for DeleteChannel
+func NewDeleteChannelRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/channels/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetChannelRequest generates requests for GetChannel
+func NewGetChannelRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/channels/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewConnectChannelRequest generates requests for ConnectChannel
+func NewConnectChannelRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/channels/%s/connect", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -2182,7 +5899,88 @@ func NewLogoutChannelRequest(server string, id string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/channel/%s/logout", pathParam0)
+	operationPath := fmt.Sprintf("/channel/channels/%s/logout", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetPresenceRequest calls the generic SetPresence builder with application/json body
+func NewSetPresenceRequest(server string, id string, body SetPresenceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetPresenceRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewSetPresenceRequestWithBody generates requests for SetPresence with any type of body
+func NewSetPresenceRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/channels/%s/presence", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRestartChannelRequest generates requests for RestartChannel
+func NewRestartChannelRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/channels/%s/restart", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2196,6 +5994,1153 @@ func NewLogoutChannelRequest(server string, id string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewArchiveRemoteRequest calls the generic ArchiveRemote builder with application/json body
+func NewArchiveRemoteRequest(server string, body ArchiveRemoteJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewArchiveRemoteRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewArchiveRemoteRequestWithBody generates requests for ArchiveRemote with any type of body
+func NewArchiveRemoteRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/archive")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewMarkRemoteAsSeenRequest calls the generic MarkRemoteAsSeen builder with application/json body
+func NewMarkRemoteAsSeenRequest(server string, body MarkRemoteAsSeenJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewMarkRemoteAsSeenRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewMarkRemoteAsSeenRequestWithBody generates requests for MarkRemoteAsSeen with any type of body
+func NewMarkRemoteAsSeenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/mark-as-seen")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewMarkRemoteAsUnreadRequest calls the generic MarkRemoteAsUnread builder with application/json body
+func NewMarkRemoteAsUnreadRequest(server string, body MarkRemoteAsUnreadJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewMarkRemoteAsUnreadRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewMarkRemoteAsUnreadRequestWithBody generates requests for MarkRemoteAsUnread with any type of body
+func NewMarkRemoteAsUnreadRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/mark-as-unread")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewMuteRemoteRequest calls the generic MuteRemote builder with application/json body
+func NewMuteRemoteRequest(server string, body MuteRemoteJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewMuteRemoteRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewMuteRemoteRequestWithBody generates requests for MuteRemote with any type of body
+func NewMuteRemoteRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/mute")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewPinRemoteRequest calls the generic PinRemote builder with application/json body
+func NewPinRemoteRequest(server string, body PinRemoteJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPinRemoteRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewPinRemoteRequestWithBody generates requests for PinRemote with any type of body
+func NewPinRemoteRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/pin")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewUnarchiveRemoteRequest calls the generic UnarchiveRemote builder with application/json body
+func NewUnarchiveRemoteRequest(server string, body UnarchiveRemoteJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUnarchiveRemoteRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUnarchiveRemoteRequestWithBody generates requests for UnarchiveRemote with any type of body
+func NewUnarchiveRemoteRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/unarchive")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewUnmuteRemoteRequest calls the generic UnmuteRemote builder with application/json body
+func NewUnmuteRemoteRequest(server string, body UnmuteRemoteJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUnmuteRemoteRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUnmuteRemoteRequestWithBody generates requests for UnmuteRemote with any type of body
+func NewUnmuteRemoteRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/unmute")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewUnpinRemoteRequest calls the generic UnpinRemote builder with application/json body
+func NewUnpinRemoteRequest(server string, body UnpinRemoteJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUnpinRemoteRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUnpinRemoteRequestWithBody generates requests for UnpinRemote with any type of body
+func NewUnpinRemoteRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/remotes/unpin")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListenEventsRequest generates requests for ListenEvents
+func NewListenEventsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/events")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSendAudioRequest calls the generic SendAudio builder with application/json body
+func NewSendAudioRequest(server string, body SendAudioJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendAudioRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendAudioRequestWithBody generates requests for SendAudio with any type of body
+func NewSendAudioRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/audio")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendButtonRequest calls the generic SendButton builder with application/json body
+func NewSendButtonRequest(server string, body SendButtonJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendButtonRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendButtonRequestWithBody generates requests for SendButton with any type of body
+func NewSendButtonRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/button")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewCheckIsOnPlatformRequest calls the generic CheckIsOnPlatform builder with application/json body
+func NewCheckIsOnPlatformRequest(server string, body CheckIsOnPlatformJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCheckIsOnPlatformRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCheckIsOnPlatformRequestWithBody generates requests for CheckIsOnPlatform with any type of body
+func NewCheckIsOnPlatformRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/check-number")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendContactRequest calls the generic SendContact builder with application/json body
+func NewSendContactRequest(server string, body SendContactJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendContactRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendContactRequestWithBody generates requests for SendContact with any type of body
+func NewSendContactRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/contact")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteMessageRequest calls the generic DeleteMessage builder with application/json body
+func NewDeleteMessageRequest(server string, body DeleteMessageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewDeleteMessageRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewDeleteMessageRequestWithBody generates requests for DeleteMessage with any type of body
+func NewDeleteMessageRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/delete")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewEditMessageRequest calls the generic EditMessage builder with application/json body
+func NewEditMessageRequest(server string, body EditMessageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewEditMessageRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewEditMessageRequestWithBody generates requests for EditMessage with any type of body
+func NewEditMessageRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/edit")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendFileRequest calls the generic SendFile builder with application/json body
+func NewSendFileRequest(server string, body SendFileJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendFileRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendFileRequestWithBody generates requests for SendFile with any type of body
+func NewSendFileRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/file")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewForwardMessageRequest calls the generic ForwardMessage builder with application/json body
+func NewForwardMessageRequest(server string, body ForwardMessageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewForwardMessageRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewForwardMessageRequestWithBody generates requests for ForwardMessage with any type of body
+func NewForwardMessageRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/forward")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendImageRequest calls the generic SendImage builder with application/json body
+func NewSendImageRequest(server string, body SendImageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendImageRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendImageRequestWithBody generates requests for SendImage with any type of body
+func NewSendImageRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/image")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendLinkRequest calls the generic SendLink builder with application/json body
+func NewSendLinkRequest(server string, body SendLinkJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendLinkRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendLinkRequestWithBody generates requests for SendLink with any type of body
+func NewSendLinkRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/link")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendListRequest calls the generic SendList builder with application/json body
+func NewSendListRequest(server string, body SendListJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendListRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendListRequestWithBody generates requests for SendList with any type of body
+func NewSendListRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/list")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendLocationRequest calls the generic SendLocation builder with application/json body
+func NewSendLocationRequest(server string, body SendLocationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendLocationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendLocationRequestWithBody generates requests for SendLocation with any type of body
+func NewSendLocationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/location")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendMediaRequest calls the generic SendMedia builder with application/json body
+func NewSendMediaRequest(server string, body SendMediaJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendMediaRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendMediaRequestWithBody generates requests for SendMedia with any type of body
+func NewSendMediaRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/media")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendPollRequest calls the generic SendPoll builder with application/json body
+func NewSendPollRequest(server string, body SendPollJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendPollRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendPollRequestWithBody generates requests for SendPoll with any type of body
+func NewSendPollRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/poll")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendChatPresenceRequest calls the generic SendChatPresence builder with application/json body
+func NewSendChatPresenceRequest(server string, body SendChatPresenceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendChatPresenceRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendChatPresenceRequestWithBody generates requests for SendChatPresence with any type of body
+func NewSendChatPresenceRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/presence")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendReactionRequest calls the generic SendReaction builder with application/json body
+func NewSendReactionRequest(server string, body SendReactionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendReactionRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendReactionRequestWithBody generates requests for SendReaction with any type of body
+func NewSendReactionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/reaction")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendStatusRequest calls the generic SendStatus builder with application/json body
+func NewSendStatusRequest(server string, body SendStatusJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendStatusRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendStatusRequestWithBody generates requests for SendStatus with any type of body
+func NewSendStatusRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/status")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendStickerRequest calls the generic SendSticker builder with application/json body
+func NewSendStickerRequest(server string, body SendStickerJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendStickerRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendStickerRequestWithBody generates requests for SendSticker with any type of body
+func NewSendStickerRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/sticker")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendTextRequest calls the generic SendText builder with application/json body
+func NewSendTextRequest(server string, body SendTextJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendTextRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendTextRequestWithBody generates requests for SendText with any type of body
+func NewSendTextRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/text")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendVideoRequest calls the generic SendVideo builder with application/json body
+func NewSendVideoRequest(server string, body SendVideoJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendVideoRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendVideoRequestWithBody generates requests for SendVideo with any type of body
+func NewSendVideoRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/messaging/messages/video")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -2243,59 +7188,186 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// ConnectChannelWithBodyWithResponse request with any body
-	ConnectChannelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
-
-	ConnectChannelWithResponse(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
-
 	// ListChannelsWithResponse request
 	ListChannelsWithResponse(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*ListChannelsResponse, error)
 
-	// SendMessageWithBodyWithResponse request with any body
-	SendMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendMessageResponse, error)
+	// GetOrCreateChannelWithResponse request
+	GetOrCreateChannelWithResponse(ctx context.Context, params *GetOrCreateChannelParams, reqEditors ...RequestEditorFn) (*GetOrCreateChannelResponse, error)
 
-	SendMessageWithResponse(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendMessageResponse, error)
+	// CreateWhatsAppChannelWithBodyWithResponse request with any body
+	CreateWhatsAppChannelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWhatsAppChannelResponse, error)
+
+	CreateWhatsAppChannelWithResponse(ctx context.Context, body CreateWhatsAppChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWhatsAppChannelResponse, error)
+
+	// DeleteChannelWithResponse request
+	DeleteChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteChannelResponse, error)
+
+	// GetChannelWithResponse request
+	GetChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetChannelResponse, error)
+
+	// ConnectChannelWithResponse request
+	ConnectChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
 
 	// LogoutChannelWithResponse request
 	LogoutChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*LogoutChannelResponse, error)
-}
 
-type ConnectChannelResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *ConnectChannelOutput
-	JSON4XX      *ErrorResponse
-}
+	// SetPresenceWithBodyWithResponse request with any body
+	SetPresenceWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetPresenceResponse, error)
 
-// Status returns HTTPResponse.Status
-func (r ConnectChannelResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
+	SetPresenceWithResponse(ctx context.Context, id string, body SetPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*SetPresenceResponse, error)
 
-// StatusCode returns HTTPResponse.StatusCode
-func (r ConnectChannelResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
+	// RestartChannelWithResponse request
+	RestartChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*RestartChannelResponse, error)
 
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ConnectChannelResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
+	// ArchiveRemoteWithBodyWithResponse request with any body
+	ArchiveRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ArchiveRemoteResponse, error)
+
+	ArchiveRemoteWithResponse(ctx context.Context, body ArchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*ArchiveRemoteResponse, error)
+
+	// MarkRemoteAsSeenWithBodyWithResponse request with any body
+	MarkRemoteAsSeenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MarkRemoteAsSeenResponse, error)
+
+	MarkRemoteAsSeenWithResponse(ctx context.Context, body MarkRemoteAsSeenJSONRequestBody, reqEditors ...RequestEditorFn) (*MarkRemoteAsSeenResponse, error)
+
+	// MarkRemoteAsUnreadWithBodyWithResponse request with any body
+	MarkRemoteAsUnreadWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MarkRemoteAsUnreadResponse, error)
+
+	MarkRemoteAsUnreadWithResponse(ctx context.Context, body MarkRemoteAsUnreadJSONRequestBody, reqEditors ...RequestEditorFn) (*MarkRemoteAsUnreadResponse, error)
+
+	// MuteRemoteWithBodyWithResponse request with any body
+	MuteRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MuteRemoteResponse, error)
+
+	MuteRemoteWithResponse(ctx context.Context, body MuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*MuteRemoteResponse, error)
+
+	// PinRemoteWithBodyWithResponse request with any body
+	PinRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PinRemoteResponse, error)
+
+	PinRemoteWithResponse(ctx context.Context, body PinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*PinRemoteResponse, error)
+
+	// UnarchiveRemoteWithBodyWithResponse request with any body
+	UnarchiveRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnarchiveRemoteResponse, error)
+
+	UnarchiveRemoteWithResponse(ctx context.Context, body UnarchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*UnarchiveRemoteResponse, error)
+
+	// UnmuteRemoteWithBodyWithResponse request with any body
+	UnmuteRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnmuteRemoteResponse, error)
+
+	UnmuteRemoteWithResponse(ctx context.Context, body UnmuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*UnmuteRemoteResponse, error)
+
+	// UnpinRemoteWithBodyWithResponse request with any body
+	UnpinRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnpinRemoteResponse, error)
+
+	UnpinRemoteWithResponse(ctx context.Context, body UnpinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*UnpinRemoteResponse, error)
+
+	// ListenEventsWithResponse request
+	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
+
+	// SendAudioWithBodyWithResponse request with any body
+	SendAudioWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendAudioResponse, error)
+
+	SendAudioWithResponse(ctx context.Context, body SendAudioJSONRequestBody, reqEditors ...RequestEditorFn) (*SendAudioResponse, error)
+
+	// SendButtonWithBodyWithResponse request with any body
+	SendButtonWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendButtonResponse, error)
+
+	SendButtonWithResponse(ctx context.Context, body SendButtonJSONRequestBody, reqEditors ...RequestEditorFn) (*SendButtonResponse, error)
+
+	// CheckIsOnPlatformWithBodyWithResponse request with any body
+	CheckIsOnPlatformWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CheckIsOnPlatformResponse, error)
+
+	CheckIsOnPlatformWithResponse(ctx context.Context, body CheckIsOnPlatformJSONRequestBody, reqEditors ...RequestEditorFn) (*CheckIsOnPlatformResponse, error)
+
+	// SendContactWithBodyWithResponse request with any body
+	SendContactWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendContactResponse, error)
+
+	SendContactWithResponse(ctx context.Context, body SendContactJSONRequestBody, reqEditors ...RequestEditorFn) (*SendContactResponse, error)
+
+	// DeleteMessageWithBodyWithResponse request with any body
+	DeleteMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteMessageResponse, error)
+
+	DeleteMessageWithResponse(ctx context.Context, body DeleteMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteMessageResponse, error)
+
+	// EditMessageWithBodyWithResponse request with any body
+	EditMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EditMessageResponse, error)
+
+	EditMessageWithResponse(ctx context.Context, body EditMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*EditMessageResponse, error)
+
+	// SendFileWithBodyWithResponse request with any body
+	SendFileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendFileResponse, error)
+
+	SendFileWithResponse(ctx context.Context, body SendFileJSONRequestBody, reqEditors ...RequestEditorFn) (*SendFileResponse, error)
+
+	// ForwardMessageWithBodyWithResponse request with any body
+	ForwardMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ForwardMessageResponse, error)
+
+	ForwardMessageWithResponse(ctx context.Context, body ForwardMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*ForwardMessageResponse, error)
+
+	// SendImageWithBodyWithResponse request with any body
+	SendImageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendImageResponse, error)
+
+	SendImageWithResponse(ctx context.Context, body SendImageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendImageResponse, error)
+
+	// SendLinkWithBodyWithResponse request with any body
+	SendLinkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendLinkResponse, error)
+
+	SendLinkWithResponse(ctx context.Context, body SendLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*SendLinkResponse, error)
+
+	// SendListWithBodyWithResponse request with any body
+	SendListWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendListResponse, error)
+
+	SendListWithResponse(ctx context.Context, body SendListJSONRequestBody, reqEditors ...RequestEditorFn) (*SendListResponse, error)
+
+	// SendLocationWithBodyWithResponse request with any body
+	SendLocationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendLocationResponse, error)
+
+	SendLocationWithResponse(ctx context.Context, body SendLocationJSONRequestBody, reqEditors ...RequestEditorFn) (*SendLocationResponse, error)
+
+	// SendMediaWithBodyWithResponse request with any body
+	SendMediaWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendMediaResponse, error)
+
+	SendMediaWithResponse(ctx context.Context, body SendMediaJSONRequestBody, reqEditors ...RequestEditorFn) (*SendMediaResponse, error)
+
+	// SendPollWithBodyWithResponse request with any body
+	SendPollWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendPollResponse, error)
+
+	SendPollWithResponse(ctx context.Context, body SendPollJSONRequestBody, reqEditors ...RequestEditorFn) (*SendPollResponse, error)
+
+	// SendChatPresenceWithBodyWithResponse request with any body
+	SendChatPresenceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendChatPresenceResponse, error)
+
+	SendChatPresenceWithResponse(ctx context.Context, body SendChatPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*SendChatPresenceResponse, error)
+
+	// SendReactionWithBodyWithResponse request with any body
+	SendReactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendReactionResponse, error)
+
+	SendReactionWithResponse(ctx context.Context, body SendReactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendReactionResponse, error)
+
+	// SendStatusWithBodyWithResponse request with any body
+	SendStatusWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendStatusResponse, error)
+
+	SendStatusWithResponse(ctx context.Context, body SendStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*SendStatusResponse, error)
+
+	// SendStickerWithBodyWithResponse request with any body
+	SendStickerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendStickerResponse, error)
+
+	SendStickerWithResponse(ctx context.Context, body SendStickerJSONRequestBody, reqEditors ...RequestEditorFn) (*SendStickerResponse, error)
+
+	// SendTextWithBodyWithResponse request with any body
+	SendTextWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendTextResponse, error)
+
+	SendTextWithResponse(ctx context.Context, body SendTextJSONRequestBody, reqEditors ...RequestEditorFn) (*SendTextResponse, error)
+
+	// SendVideoWithBodyWithResponse request with any body
+	SendVideoWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendVideoResponse, error)
+
+	SendVideoWithResponse(ctx context.Context, body SendVideoJSONRequestBody, reqEditors ...RequestEditorFn) (*SendVideoResponse, error)
 }
 
 type ListChannelsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ListChannelsOutput
-	JSON4XX      *ErrorResponse
+	JSONDefault  *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2322,15 +7394,15 @@ func (r ListChannelsResponse) ContentType() string {
 	return ""
 }
 
-type SendMessageResponse struct {
+type GetOrCreateChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *SendMessageOutput
-	JSON4XX      *ErrorResponse
+	JSON200      *GetOrCreateChannelOutput
+	JSONDefault  *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r SendMessageResponse) Status() string {
+func (r GetOrCreateChannelResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2338,7 +7410,7 @@ func (r SendMessageResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r SendMessageResponse) StatusCode() int {
+func (r GetOrCreateChannelResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2346,7 +7418,131 @@ func (r SendMessageResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r SendMessageResponse) ContentType() string {
+func (r GetOrCreateChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateWhatsAppChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *CreateChannelOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateWhatsAppChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateWhatsAppChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateWhatsAppChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DeleteChannelOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetChannelOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConnectChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ConnectChannelOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ConnectChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConnectChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConnectChannelResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -2357,7 +7553,7 @@ type LogoutChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *LogoutChannelOutput
-	JSON4XX      *ErrorResponse
+	JSONDefault  *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2384,21 +7580,956 @@ func (r LogoutChannelResponse) ContentType() string {
 	return ""
 }
 
-// ConnectChannelWithBodyWithResponse request with arbitrary body returning *ConnectChannelResponse
-func (c *ClientWithResponses) ConnectChannelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error) {
-	rsp, err := c.ConnectChannelWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseConnectChannelResponse(rsp)
+type SetPresenceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
 }
 
-func (c *ClientWithResponses) ConnectChannelWithResponse(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error) {
-	rsp, err := c.ConnectChannel(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
+// Status returns HTTPResponse.Status
+func (r SetPresenceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
 	}
-	return ParseConnectChannelResponse(rsp)
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetPresenceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetPresenceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RestartChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *RestartChannelOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r RestartChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RestartChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RestartChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ArchiveRemoteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ArchiveRemoteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ArchiveRemoteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ArchiveRemoteResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type MarkRemoteAsSeenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r MarkRemoteAsSeenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r MarkRemoteAsSeenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r MarkRemoteAsSeenResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type MarkRemoteAsUnreadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r MarkRemoteAsUnreadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r MarkRemoteAsUnreadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r MarkRemoteAsUnreadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type MuteRemoteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r MuteRemoteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r MuteRemoteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r MuteRemoteResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PinRemoteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PinRemoteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PinRemoteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PinRemoteResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UnarchiveRemoteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UnarchiveRemoteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnarchiveRemoteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UnarchiveRemoteResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UnmuteRemoteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UnmuteRemoteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnmuteRemoteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UnmuteRemoteResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UnpinRemoteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UnpinRemoteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnpinRemoteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UnpinRemoteResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListenEventsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ServerEvent
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListenEventsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListenEventsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListenEventsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendAudioResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendAudioOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendAudioResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendAudioResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendAudioResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendButtonResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendButtonOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendButtonResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendButtonResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendButtonResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CheckIsOnPlatformResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CheckIsOnPlatformOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CheckIsOnPlatformResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CheckIsOnPlatformResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CheckIsOnPlatformResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendContactResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendContactOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendContactResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendContactResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendContactResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteMessageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DeleteMessageOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteMessageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteMessageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteMessageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type EditMessageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *EditMessageOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r EditMessageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r EditMessageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r EditMessageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendFileOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendFileResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ForwardMessageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *ForwardMessageOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ForwardMessageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ForwardMessageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ForwardMessageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendImageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendImageOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendImageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendImageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendImageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendLinkResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendLinkOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendLinkResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendLinkResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendLinkResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendListResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendListOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendListResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendListResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendListResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendLocationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendLocationOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendLocationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendLocationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendLocationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendMediaResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendMediaOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendMediaResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendMediaResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendMediaResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendPollResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendPollOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendPollResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendPollResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendPollResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendChatPresenceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SendChatPresenceOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendChatPresenceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendChatPresenceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendChatPresenceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendReactionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SendReactionOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendReactionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendReactionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendReactionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendStatusOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendStatusResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendStickerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendStickerOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendStickerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendStickerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendStickerResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendTextResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendTextOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendTextResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendTextResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendTextResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendVideoResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SendVideoOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendVideoResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendVideoResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendVideoResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 // ListChannelsWithResponse request returning *ListChannelsResponse
@@ -2410,21 +8541,57 @@ func (c *ClientWithResponses) ListChannelsWithResponse(ctx context.Context, para
 	return ParseListChannelsResponse(rsp)
 }
 
-// SendMessageWithBodyWithResponse request with arbitrary body returning *SendMessageResponse
-func (c *ClientWithResponses) SendMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendMessageResponse, error) {
-	rsp, err := c.SendMessageWithBody(ctx, contentType, body, reqEditors...)
+// GetOrCreateChannelWithResponse request returning *GetOrCreateChannelResponse
+func (c *ClientWithResponses) GetOrCreateChannelWithResponse(ctx context.Context, params *GetOrCreateChannelParams, reqEditors ...RequestEditorFn) (*GetOrCreateChannelResponse, error) {
+	rsp, err := c.GetOrCreateChannel(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseSendMessageResponse(rsp)
+	return ParseGetOrCreateChannelResponse(rsp)
 }
 
-func (c *ClientWithResponses) SendMessageWithResponse(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendMessageResponse, error) {
-	rsp, err := c.SendMessage(ctx, body, reqEditors...)
+// CreateWhatsAppChannelWithBodyWithResponse request with arbitrary body returning *CreateWhatsAppChannelResponse
+func (c *ClientWithResponses) CreateWhatsAppChannelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWhatsAppChannelResponse, error) {
+	rsp, err := c.CreateWhatsAppChannelWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseSendMessageResponse(rsp)
+	return ParseCreateWhatsAppChannelResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateWhatsAppChannelWithResponse(ctx context.Context, body CreateWhatsAppChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWhatsAppChannelResponse, error) {
+	rsp, err := c.CreateWhatsAppChannel(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateWhatsAppChannelResponse(rsp)
+}
+
+// DeleteChannelWithResponse request returning *DeleteChannelResponse
+func (c *ClientWithResponses) DeleteChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteChannelResponse, error) {
+	rsp, err := c.DeleteChannel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteChannelResponse(rsp)
+}
+
+// GetChannelWithResponse request returning *GetChannelResponse
+func (c *ClientWithResponses) GetChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetChannelResponse, error) {
+	rsp, err := c.GetChannel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetChannelResponse(rsp)
+}
+
+// ConnectChannelWithResponse request returning *ConnectChannelResponse
+func (c *ClientWithResponses) ConnectChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error) {
+	rsp, err := c.ConnectChannel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConnectChannelResponse(rsp)
 }
 
 // LogoutChannelWithResponse request returning *LogoutChannelResponse
@@ -2436,37 +8603,515 @@ func (c *ClientWithResponses) LogoutChannelWithResponse(ctx context.Context, id 
 	return ParseLogoutChannelResponse(rsp)
 }
 
-// ParseConnectChannelResponse parses an HTTP response from a ConnectChannelWithResponse call
-func ParseConnectChannelResponse(rsp *http.Response) (*ConnectChannelResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
+// SetPresenceWithBodyWithResponse request with arbitrary body returning *SetPresenceResponse
+func (c *ClientWithResponses) SetPresenceWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetPresenceResponse, error) {
+	rsp, err := c.SetPresenceWithBody(ctx, id, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
+	return ParseSetPresenceResponse(rsp)
+}
 
-	response := &ConnectChannelResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
+func (c *ClientWithResponses) SetPresenceWithResponse(ctx context.Context, id string, body SetPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*SetPresenceResponse, error) {
+	rsp, err := c.SetPresence(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
+	return ParseSetPresenceResponse(rsp)
+}
 
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ConnectChannelOutput
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON4XX = &dest
-
+// RestartChannelWithResponse request returning *RestartChannelResponse
+func (c *ClientWithResponses) RestartChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*RestartChannelResponse, error) {
+	rsp, err := c.RestartChannel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
+	return ParseRestartChannelResponse(rsp)
+}
 
-	return response, nil
+// ArchiveRemoteWithBodyWithResponse request with arbitrary body returning *ArchiveRemoteResponse
+func (c *ClientWithResponses) ArchiveRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ArchiveRemoteResponse, error) {
+	rsp, err := c.ArchiveRemoteWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseArchiveRemoteResponse(rsp)
+}
+
+func (c *ClientWithResponses) ArchiveRemoteWithResponse(ctx context.Context, body ArchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*ArchiveRemoteResponse, error) {
+	rsp, err := c.ArchiveRemote(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseArchiveRemoteResponse(rsp)
+}
+
+// MarkRemoteAsSeenWithBodyWithResponse request with arbitrary body returning *MarkRemoteAsSeenResponse
+func (c *ClientWithResponses) MarkRemoteAsSeenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MarkRemoteAsSeenResponse, error) {
+	rsp, err := c.MarkRemoteAsSeenWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMarkRemoteAsSeenResponse(rsp)
+}
+
+func (c *ClientWithResponses) MarkRemoteAsSeenWithResponse(ctx context.Context, body MarkRemoteAsSeenJSONRequestBody, reqEditors ...RequestEditorFn) (*MarkRemoteAsSeenResponse, error) {
+	rsp, err := c.MarkRemoteAsSeen(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMarkRemoteAsSeenResponse(rsp)
+}
+
+// MarkRemoteAsUnreadWithBodyWithResponse request with arbitrary body returning *MarkRemoteAsUnreadResponse
+func (c *ClientWithResponses) MarkRemoteAsUnreadWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MarkRemoteAsUnreadResponse, error) {
+	rsp, err := c.MarkRemoteAsUnreadWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMarkRemoteAsUnreadResponse(rsp)
+}
+
+func (c *ClientWithResponses) MarkRemoteAsUnreadWithResponse(ctx context.Context, body MarkRemoteAsUnreadJSONRequestBody, reqEditors ...RequestEditorFn) (*MarkRemoteAsUnreadResponse, error) {
+	rsp, err := c.MarkRemoteAsUnread(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMarkRemoteAsUnreadResponse(rsp)
+}
+
+// MuteRemoteWithBodyWithResponse request with arbitrary body returning *MuteRemoteResponse
+func (c *ClientWithResponses) MuteRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*MuteRemoteResponse, error) {
+	rsp, err := c.MuteRemoteWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMuteRemoteResponse(rsp)
+}
+
+func (c *ClientWithResponses) MuteRemoteWithResponse(ctx context.Context, body MuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*MuteRemoteResponse, error) {
+	rsp, err := c.MuteRemote(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMuteRemoteResponse(rsp)
+}
+
+// PinRemoteWithBodyWithResponse request with arbitrary body returning *PinRemoteResponse
+func (c *ClientWithResponses) PinRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PinRemoteResponse, error) {
+	rsp, err := c.PinRemoteWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePinRemoteResponse(rsp)
+}
+
+func (c *ClientWithResponses) PinRemoteWithResponse(ctx context.Context, body PinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*PinRemoteResponse, error) {
+	rsp, err := c.PinRemote(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePinRemoteResponse(rsp)
+}
+
+// UnarchiveRemoteWithBodyWithResponse request with arbitrary body returning *UnarchiveRemoteResponse
+func (c *ClientWithResponses) UnarchiveRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnarchiveRemoteResponse, error) {
+	rsp, err := c.UnarchiveRemoteWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnarchiveRemoteResponse(rsp)
+}
+
+func (c *ClientWithResponses) UnarchiveRemoteWithResponse(ctx context.Context, body UnarchiveRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*UnarchiveRemoteResponse, error) {
+	rsp, err := c.UnarchiveRemote(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnarchiveRemoteResponse(rsp)
+}
+
+// UnmuteRemoteWithBodyWithResponse request with arbitrary body returning *UnmuteRemoteResponse
+func (c *ClientWithResponses) UnmuteRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnmuteRemoteResponse, error) {
+	rsp, err := c.UnmuteRemoteWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnmuteRemoteResponse(rsp)
+}
+
+func (c *ClientWithResponses) UnmuteRemoteWithResponse(ctx context.Context, body UnmuteRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*UnmuteRemoteResponse, error) {
+	rsp, err := c.UnmuteRemote(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnmuteRemoteResponse(rsp)
+}
+
+// UnpinRemoteWithBodyWithResponse request with arbitrary body returning *UnpinRemoteResponse
+func (c *ClientWithResponses) UnpinRemoteWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnpinRemoteResponse, error) {
+	rsp, err := c.UnpinRemoteWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnpinRemoteResponse(rsp)
+}
+
+func (c *ClientWithResponses) UnpinRemoteWithResponse(ctx context.Context, body UnpinRemoteJSONRequestBody, reqEditors ...RequestEditorFn) (*UnpinRemoteResponse, error) {
+	rsp, err := c.UnpinRemote(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnpinRemoteResponse(rsp)
+}
+
+// ListenEventsWithResponse request returning *ListenEventsResponse
+func (c *ClientWithResponses) ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error) {
+	rsp, err := c.ListenEvents(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListenEventsResponse(rsp)
+}
+
+// SendAudioWithBodyWithResponse request with arbitrary body returning *SendAudioResponse
+func (c *ClientWithResponses) SendAudioWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendAudioResponse, error) {
+	rsp, err := c.SendAudioWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendAudioResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendAudioWithResponse(ctx context.Context, body SendAudioJSONRequestBody, reqEditors ...RequestEditorFn) (*SendAudioResponse, error) {
+	rsp, err := c.SendAudio(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendAudioResponse(rsp)
+}
+
+// SendButtonWithBodyWithResponse request with arbitrary body returning *SendButtonResponse
+func (c *ClientWithResponses) SendButtonWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendButtonResponse, error) {
+	rsp, err := c.SendButtonWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendButtonResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendButtonWithResponse(ctx context.Context, body SendButtonJSONRequestBody, reqEditors ...RequestEditorFn) (*SendButtonResponse, error) {
+	rsp, err := c.SendButton(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendButtonResponse(rsp)
+}
+
+// CheckIsOnPlatformWithBodyWithResponse request with arbitrary body returning *CheckIsOnPlatformResponse
+func (c *ClientWithResponses) CheckIsOnPlatformWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CheckIsOnPlatformResponse, error) {
+	rsp, err := c.CheckIsOnPlatformWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCheckIsOnPlatformResponse(rsp)
+}
+
+func (c *ClientWithResponses) CheckIsOnPlatformWithResponse(ctx context.Context, body CheckIsOnPlatformJSONRequestBody, reqEditors ...RequestEditorFn) (*CheckIsOnPlatformResponse, error) {
+	rsp, err := c.CheckIsOnPlatform(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCheckIsOnPlatformResponse(rsp)
+}
+
+// SendContactWithBodyWithResponse request with arbitrary body returning *SendContactResponse
+func (c *ClientWithResponses) SendContactWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendContactResponse, error) {
+	rsp, err := c.SendContactWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendContactResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendContactWithResponse(ctx context.Context, body SendContactJSONRequestBody, reqEditors ...RequestEditorFn) (*SendContactResponse, error) {
+	rsp, err := c.SendContact(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendContactResponse(rsp)
+}
+
+// DeleteMessageWithBodyWithResponse request with arbitrary body returning *DeleteMessageResponse
+func (c *ClientWithResponses) DeleteMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteMessageResponse, error) {
+	rsp, err := c.DeleteMessageWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteMessageResponse(rsp)
+}
+
+func (c *ClientWithResponses) DeleteMessageWithResponse(ctx context.Context, body DeleteMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteMessageResponse, error) {
+	rsp, err := c.DeleteMessage(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteMessageResponse(rsp)
+}
+
+// EditMessageWithBodyWithResponse request with arbitrary body returning *EditMessageResponse
+func (c *ClientWithResponses) EditMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*EditMessageResponse, error) {
+	rsp, err := c.EditMessageWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEditMessageResponse(rsp)
+}
+
+func (c *ClientWithResponses) EditMessageWithResponse(ctx context.Context, body EditMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*EditMessageResponse, error) {
+	rsp, err := c.EditMessage(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEditMessageResponse(rsp)
+}
+
+// SendFileWithBodyWithResponse request with arbitrary body returning *SendFileResponse
+func (c *ClientWithResponses) SendFileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendFileResponse, error) {
+	rsp, err := c.SendFileWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendFileResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendFileWithResponse(ctx context.Context, body SendFileJSONRequestBody, reqEditors ...RequestEditorFn) (*SendFileResponse, error) {
+	rsp, err := c.SendFile(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendFileResponse(rsp)
+}
+
+// ForwardMessageWithBodyWithResponse request with arbitrary body returning *ForwardMessageResponse
+func (c *ClientWithResponses) ForwardMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ForwardMessageResponse, error) {
+	rsp, err := c.ForwardMessageWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForwardMessageResponse(rsp)
+}
+
+func (c *ClientWithResponses) ForwardMessageWithResponse(ctx context.Context, body ForwardMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*ForwardMessageResponse, error) {
+	rsp, err := c.ForwardMessage(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForwardMessageResponse(rsp)
+}
+
+// SendImageWithBodyWithResponse request with arbitrary body returning *SendImageResponse
+func (c *ClientWithResponses) SendImageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendImageResponse, error) {
+	rsp, err := c.SendImageWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendImageResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendImageWithResponse(ctx context.Context, body SendImageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendImageResponse, error) {
+	rsp, err := c.SendImage(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendImageResponse(rsp)
+}
+
+// SendLinkWithBodyWithResponse request with arbitrary body returning *SendLinkResponse
+func (c *ClientWithResponses) SendLinkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendLinkResponse, error) {
+	rsp, err := c.SendLinkWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendLinkResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendLinkWithResponse(ctx context.Context, body SendLinkJSONRequestBody, reqEditors ...RequestEditorFn) (*SendLinkResponse, error) {
+	rsp, err := c.SendLink(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendLinkResponse(rsp)
+}
+
+// SendListWithBodyWithResponse request with arbitrary body returning *SendListResponse
+func (c *ClientWithResponses) SendListWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendListResponse, error) {
+	rsp, err := c.SendListWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendListResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendListWithResponse(ctx context.Context, body SendListJSONRequestBody, reqEditors ...RequestEditorFn) (*SendListResponse, error) {
+	rsp, err := c.SendList(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendListResponse(rsp)
+}
+
+// SendLocationWithBodyWithResponse request with arbitrary body returning *SendLocationResponse
+func (c *ClientWithResponses) SendLocationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendLocationResponse, error) {
+	rsp, err := c.SendLocationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendLocationResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendLocationWithResponse(ctx context.Context, body SendLocationJSONRequestBody, reqEditors ...RequestEditorFn) (*SendLocationResponse, error) {
+	rsp, err := c.SendLocation(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendLocationResponse(rsp)
+}
+
+// SendMediaWithBodyWithResponse request with arbitrary body returning *SendMediaResponse
+func (c *ClientWithResponses) SendMediaWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendMediaResponse, error) {
+	rsp, err := c.SendMediaWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendMediaResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendMediaWithResponse(ctx context.Context, body SendMediaJSONRequestBody, reqEditors ...RequestEditorFn) (*SendMediaResponse, error) {
+	rsp, err := c.SendMedia(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendMediaResponse(rsp)
+}
+
+// SendPollWithBodyWithResponse request with arbitrary body returning *SendPollResponse
+func (c *ClientWithResponses) SendPollWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendPollResponse, error) {
+	rsp, err := c.SendPollWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendPollResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendPollWithResponse(ctx context.Context, body SendPollJSONRequestBody, reqEditors ...RequestEditorFn) (*SendPollResponse, error) {
+	rsp, err := c.SendPoll(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendPollResponse(rsp)
+}
+
+// SendChatPresenceWithBodyWithResponse request with arbitrary body returning *SendChatPresenceResponse
+func (c *ClientWithResponses) SendChatPresenceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendChatPresenceResponse, error) {
+	rsp, err := c.SendChatPresenceWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendChatPresenceResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendChatPresenceWithResponse(ctx context.Context, body SendChatPresenceJSONRequestBody, reqEditors ...RequestEditorFn) (*SendChatPresenceResponse, error) {
+	rsp, err := c.SendChatPresence(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendChatPresenceResponse(rsp)
+}
+
+// SendReactionWithBodyWithResponse request with arbitrary body returning *SendReactionResponse
+func (c *ClientWithResponses) SendReactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendReactionResponse, error) {
+	rsp, err := c.SendReactionWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendReactionResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendReactionWithResponse(ctx context.Context, body SendReactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendReactionResponse, error) {
+	rsp, err := c.SendReaction(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendReactionResponse(rsp)
+}
+
+// SendStatusWithBodyWithResponse request with arbitrary body returning *SendStatusResponse
+func (c *ClientWithResponses) SendStatusWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendStatusResponse, error) {
+	rsp, err := c.SendStatusWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendStatusResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendStatusWithResponse(ctx context.Context, body SendStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*SendStatusResponse, error) {
+	rsp, err := c.SendStatus(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendStatusResponse(rsp)
+}
+
+// SendStickerWithBodyWithResponse request with arbitrary body returning *SendStickerResponse
+func (c *ClientWithResponses) SendStickerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendStickerResponse, error) {
+	rsp, err := c.SendStickerWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendStickerResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendStickerWithResponse(ctx context.Context, body SendStickerJSONRequestBody, reqEditors ...RequestEditorFn) (*SendStickerResponse, error) {
+	rsp, err := c.SendSticker(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendStickerResponse(rsp)
+}
+
+// SendTextWithBodyWithResponse request with arbitrary body returning *SendTextResponse
+func (c *ClientWithResponses) SendTextWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendTextResponse, error) {
+	rsp, err := c.SendTextWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendTextResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendTextWithResponse(ctx context.Context, body SendTextJSONRequestBody, reqEditors ...RequestEditorFn) (*SendTextResponse, error) {
+	rsp, err := c.SendText(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendTextResponse(rsp)
+}
+
+// SendVideoWithBodyWithResponse request with arbitrary body returning *SendVideoResponse
+func (c *ClientWithResponses) SendVideoWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendVideoResponse, error) {
+	rsp, err := c.SendVideoWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendVideoResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendVideoWithResponse(ctx context.Context, body SendVideoJSONRequestBody, reqEditors ...RequestEditorFn) (*SendVideoResponse, error) {
+	rsp, err := c.SendVideo(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendVideoResponse(rsp)
 }
 
 // ParseListChannelsResponse parses an HTTP response from a ListChannelsWithResponse call
@@ -2490,45 +9135,177 @@ func ParseListChannelsResponse(rsp *http.Response) (*ListChannelsResponse, error
 		}
 		response.JSON200 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON4XX = &dest
+		response.JSONDefault = &dest
 
 	}
 
 	return response, nil
 }
 
-// ParseSendMessageResponse parses an HTTP response from a SendMessageWithResponse call
-func ParseSendMessageResponse(rsp *http.Response) (*SendMessageResponse, error) {
+// ParseGetOrCreateChannelResponse parses an HTTP response from a GetOrCreateChannelWithResponse call
+func ParseGetOrCreateChannelResponse(rsp *http.Response) (*GetOrCreateChannelResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &SendMessageResponse{
+	response := &GetOrCreateChannelResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest SendMessageOutput
+		var dest GetOrCreateChannelOutput
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON4XX = &dest
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateWhatsAppChannelResponse parses an HTTP response from a CreateWhatsAppChannelWithResponse call
+func ParseCreateWhatsAppChannelResponse(rsp *http.Response) (*CreateWhatsAppChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateWhatsAppChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest CreateChannelOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteChannelResponse parses an HTTP response from a DeleteChannelWithResponse call
+func ParseDeleteChannelResponse(rsp *http.Response) (*DeleteChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DeleteChannelOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetChannelResponse parses an HTTP response from a GetChannelWithResponse call
+func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetChannelOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConnectChannelResponse parses an HTTP response from a ConnectChannelWithResponse call
+func ParseConnectChannelResponse(rsp *http.Response) (*ConnectChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConnectChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ConnectChannelOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
 
 	}
 
@@ -2556,12 +9333,972 @@ func ParseLogoutChannelResponse(rsp *http.Response) (*LogoutChannelResponse, err
 		}
 		response.JSON200 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON4XX = &dest
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetPresenceResponse parses an HTTP response from a SetPresenceWithResponse call
+func ParseSetPresenceResponse(rsp *http.Response) (*SetPresenceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetPresenceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRestartChannelResponse parses an HTTP response from a RestartChannelWithResponse call
+func ParseRestartChannelResponse(rsp *http.Response) (*RestartChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RestartChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RestartChannelOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseArchiveRemoteResponse parses an HTTP response from a ArchiveRemoteWithResponse call
+func ParseArchiveRemoteResponse(rsp *http.Response) (*ArchiveRemoteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ArchiveRemoteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseMarkRemoteAsSeenResponse parses an HTTP response from a MarkRemoteAsSeenWithResponse call
+func ParseMarkRemoteAsSeenResponse(rsp *http.Response) (*MarkRemoteAsSeenResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &MarkRemoteAsSeenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseMarkRemoteAsUnreadResponse parses an HTTP response from a MarkRemoteAsUnreadWithResponse call
+func ParseMarkRemoteAsUnreadResponse(rsp *http.Response) (*MarkRemoteAsUnreadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &MarkRemoteAsUnreadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseMuteRemoteResponse parses an HTTP response from a MuteRemoteWithResponse call
+func ParseMuteRemoteResponse(rsp *http.Response) (*MuteRemoteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &MuteRemoteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePinRemoteResponse parses an HTTP response from a PinRemoteWithResponse call
+func ParsePinRemoteResponse(rsp *http.Response) (*PinRemoteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PinRemoteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUnarchiveRemoteResponse parses an HTTP response from a UnarchiveRemoteWithResponse call
+func ParseUnarchiveRemoteResponse(rsp *http.Response) (*UnarchiveRemoteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnarchiveRemoteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUnmuteRemoteResponse parses an HTTP response from a UnmuteRemoteWithResponse call
+func ParseUnmuteRemoteResponse(rsp *http.Response) (*UnmuteRemoteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnmuteRemoteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUnpinRemoteResponse parses an HTTP response from a UnpinRemoteWithResponse call
+func ParseUnpinRemoteResponse(rsp *http.Response) (*UnpinRemoteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnpinRemoteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListenEventsResponse parses an HTTP response from a ListenEventsWithResponse call
+func ParseListenEventsResponse(rsp *http.Response) (*ListenEventsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListenEventsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ServerEvent
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendAudioResponse parses an HTTP response from a SendAudioWithResponse call
+func ParseSendAudioResponse(rsp *http.Response) (*SendAudioResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendAudioResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendAudioOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendButtonResponse parses an HTTP response from a SendButtonWithResponse call
+func ParseSendButtonResponse(rsp *http.Response) (*SendButtonResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendButtonResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendButtonOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCheckIsOnPlatformResponse parses an HTTP response from a CheckIsOnPlatformWithResponse call
+func ParseCheckIsOnPlatformResponse(rsp *http.Response) (*CheckIsOnPlatformResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CheckIsOnPlatformResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CheckIsOnPlatformOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendContactResponse parses an HTTP response from a SendContactWithResponse call
+func ParseSendContactResponse(rsp *http.Response) (*SendContactResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendContactResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendContactOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteMessageResponse parses an HTTP response from a DeleteMessageWithResponse call
+func ParseDeleteMessageResponse(rsp *http.Response) (*DeleteMessageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteMessageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DeleteMessageOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseEditMessageResponse parses an HTTP response from a EditMessageWithResponse call
+func ParseEditMessageResponse(rsp *http.Response) (*EditMessageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &EditMessageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EditMessageOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendFileResponse parses an HTTP response from a SendFileWithResponse call
+func ParseSendFileResponse(rsp *http.Response) (*SendFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendFileOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseForwardMessageResponse parses an HTTP response from a ForwardMessageWithResponse call
+func ParseForwardMessageResponse(rsp *http.Response) (*ForwardMessageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ForwardMessageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest ForwardMessageOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendImageResponse parses an HTTP response from a SendImageWithResponse call
+func ParseSendImageResponse(rsp *http.Response) (*SendImageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendImageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendImageOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendLinkResponse parses an HTTP response from a SendLinkWithResponse call
+func ParseSendLinkResponse(rsp *http.Response) (*SendLinkResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendLinkResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendLinkOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendListResponse parses an HTTP response from a SendListWithResponse call
+func ParseSendListResponse(rsp *http.Response) (*SendListResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendListResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendListOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendLocationResponse parses an HTTP response from a SendLocationWithResponse call
+func ParseSendLocationResponse(rsp *http.Response) (*SendLocationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendLocationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendLocationOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendMediaResponse parses an HTTP response from a SendMediaWithResponse call
+func ParseSendMediaResponse(rsp *http.Response) (*SendMediaResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendMediaResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendMediaOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendPollResponse parses an HTTP response from a SendPollWithResponse call
+func ParseSendPollResponse(rsp *http.Response) (*SendPollResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendPollResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendPollOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendChatPresenceResponse parses an HTTP response from a SendChatPresenceWithResponse call
+func ParseSendChatPresenceResponse(rsp *http.Response) (*SendChatPresenceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendChatPresenceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SendChatPresenceOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendReactionResponse parses an HTTP response from a SendReactionWithResponse call
+func ParseSendReactionResponse(rsp *http.Response) (*SendReactionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendReactionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SendReactionOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendStatusResponse parses an HTTP response from a SendStatusWithResponse call
+func ParseSendStatusResponse(rsp *http.Response) (*SendStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendStatusOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendStickerResponse parses an HTTP response from a SendStickerWithResponse call
+func ParseSendStickerResponse(rsp *http.Response) (*SendStickerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendStickerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendStickerOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendTextResponse parses an HTTP response from a SendTextWithResponse call
+func ParseSendTextResponse(rsp *http.Response) (*SendTextResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendTextResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendTextOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendVideoResponse parses an HTTP response from a SendVideoWithResponse call
+func ParseSendVideoResponse(rsp *http.Response) (*SendVideoResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendVideoResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SendVideoOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
 
 	}
 

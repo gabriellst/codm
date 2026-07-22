@@ -4,12 +4,14 @@
 */
 
 
-export const ChannelStatusEnum = {
-    DISCONNECTED: "DISCONNECTED",
-    PAIRING: "PAIRING",
-    CONNECTED: "CONNECTED"
+export const ChannelStatus = {
+    ChannelStatusCreated: "CREATED",
+    ChannelStatusConnecting: "CONNECTING",
+    ChannelStatusConnected: "CONNECTED",
+    ChannelStatusDisconnected: "DISCONNECTED",
+    ChannelStatusDeleted: "DELETED"
 } as const;
 
-export type ChannelStatusEnumKey = (typeof ChannelStatusEnum)[keyof typeof ChannelStatusEnum];
+export type ChannelStatusEnumKey = (typeof ChannelStatus)[keyof typeof ChannelStatus];
 
 export type ChannelStatus = ChannelStatusEnumKey;

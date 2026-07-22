@@ -33,8 +33,8 @@ func TestEmitterHappyPath(t *testing.T) {
 		t.Fatalf("parse spec: %v", err)
 	}
 
-	// 1. OpenAPI version is 3.1.0.
-	if got, want := spec["openapi"], "3.1.0"; got != want {
+	// 1. OpenAPI version is 3.0.3 (codedm SDK pipeline requires 3.0 — R-01).
+	if got, want := spec["openapi"], "3.0.3"; got != want {
 		t.Errorf("openapi: got %q, want %q", got, want)
 	}
 

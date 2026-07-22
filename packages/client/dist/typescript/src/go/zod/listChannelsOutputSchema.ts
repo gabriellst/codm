@@ -3,11 +3,12 @@
 * Do not edit manually.
 */
 
-import { channelViewSchema } from "./channelViewSchema.ts";
+import { listChannelsItemSchema } from "./listChannelsItemSchema.ts";
 import { z } from "zod/v4";
 
 export const listChannelsOutputSchema = z.object({
-    get "channels"(){
-                return z.array(channelViewSchema)
-              }
+    get "items"(){
+                return z.array(listChannelsItemSchema)
+              },
+"total": z.int()
     })

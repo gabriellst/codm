@@ -48,16 +48,26 @@ export class ConnectChannel extends Handler<typeof ConnectChannelInputSchema, ty
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		let out: { channelId?: string; status?: string } | undefined
+		const gatewayConfig = {
+			headers: { apikey: Config.env.CODEDM_GATEWAY_API_KEY },
+			timeout: GATEWAY_TIMEOUT_MS,
+			retry: false as const,
+		}
+
+		// The verbatim gateway splits pairing into two calls: resolve
+		// (`GET /channels/resolve`, get-or-create the owner's WhatsApp channel) then connect
+		// (`POST /channels/{id}/connect`, which starts whatsmeow and returns the live state + QR).
+		// Owner scoping rides the `X-Owner-Id` header (swagger-ignored, so it isn't a client param).
+		let out: { channelId?: string; state?: string } | undefined
 		try {
-			out = await this.client.go.connectChannel(
-				{ ownerId: input.ownerId },
-				{
-					headers: { apikey: Config.env.CODEDM_GATEWAY_API_KEY },
-					timeout: GATEWAY_TIMEOUT_MS,
-					retry: false,
-				},
+			const channel = await this.client.go.getOrCreateChannel(
+				{ platform: 'WHATSAPP' },
+				{ ...gatewayConfig, headers: { ...gatewayConfig.headers, 'X-Owner-Id': input.ownerId } },
 			)
+			if (channel?.id) {
+				const connected = await this.client.go.connectChannel(channel.id, gatewayConfig)
+				out = { channelId: connected?.id ?? channel.id, state: connected?.state }
+			}
 		} catch {
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', 'the WhatsApp channel gateway is unreachable')
 		}
@@ -66,6 +76,6 @@ export class ConnectChannel extends Handler<typeof ConnectChannelInputSchema, ty
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', 'the WhatsApp channel gateway returned no channel')
 		}
 
-		return { channelId: out.channelId, status: normalizeStatus(out.status ?? ChannelStatus.PAIRING) }
+		return { channelId: out.channelId, status: normalizeStatus(out.state ?? ChannelStatus.PAIRING) }
 	}
 }

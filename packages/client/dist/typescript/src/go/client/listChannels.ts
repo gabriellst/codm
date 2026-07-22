@@ -8,13 +8,13 @@ import type { ListChannelsQueryResponse, ListChannelsQueryParams } from "../type
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 
 function getListChannelsUrl() {
-  const res = { method: 'GET', url: `/channel/list` as const }
+  const res = { method: 'GET', url: `/channel/channels` as const }
   return res
 }
 
 /**
- * @summary List the operator's channel sessions
- * {@link /channel/list}
+ * @summary List channels
+ * {@link /channel/channels}
  */
 export async function listChannels(params?: ListChannelsQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

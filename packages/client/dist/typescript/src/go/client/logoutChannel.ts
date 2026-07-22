@@ -8,19 +8,19 @@ import type { LogoutChannelMutationResponse, LogoutChannelPathParams } from "../
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 
 function getLogoutChannelUrl(id: LogoutChannelPathParams["id"]) {
-  const res = { method: 'POST', url: `/channel/${id}/logout` as const }
+  const res = { method: 'DELETE', url: `/channel/channels/${id}/logout` as const }
   return res
 }
 
 /**
- * @summary Log out and remove a channel session
- * {@link /channel/:id/logout}
+ * @summary Logout channel
+ * {@link /channel/channels/:id/logout}
  */
 export async function logoutChannel(id: LogoutChannelPathParams["id"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config
 
 
 
-  const res = await request<LogoutChannelMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "POST", url : getLogoutChannelUrl(id).url.toString(), ... requestConfig })
+  const res = await request<LogoutChannelMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "DELETE", url : getLogoutChannelUrl(id).url.toString(), ... requestConfig })
   return res.data
 }

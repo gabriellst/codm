@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { listChannels } from "../client/listChannels.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const listChannelsQueryKey = (params?: ListChannelsQueryParams) => [{ url: '/channel/list' }, ...(params ? [params] : [])] as const
+export const listChannelsQueryKey = (params?: ListChannelsQueryParams) => [{ url: '/channel/channels' }, ...(params ? [params] : [])] as const
 
 export type ListChannelsQueryKey = ReturnType<typeof listChannelsQueryKey>
 
@@ -27,8 +27,8 @@ export function listChannelsQueryOptions(params?: ListChannelsQueryParams, confi
 }
 
 /**
- * @summary List the operator's channel sessions
- * {@link /channel/list}
+ * @summary List channels
+ * {@link /channel/channels}
  */
 export function useListChannels<TData = ListChannelsQueryResponse, TQueryData = ListChannelsQueryResponse, TQueryKey extends QueryKey = ListChannelsQueryKey>(params?: ListChannelsQueryParams, options: 
 {

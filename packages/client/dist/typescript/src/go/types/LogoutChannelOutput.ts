@@ -8,9 +8,9 @@ export type LogoutChannelOutput = {
     /**
      * @type string
     */
-    channelId: string;
+    id: string;
     /**
      * @type string
     */
-    status: string;
+    state: string;
 };

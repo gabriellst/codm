@@ -6,6 +6,6 @@
 import { z } from "zod/v4";
 
 export const logoutChannelOutputSchema = z.object({
-    "channelId": z.string(),
-"status": z.string()
+    "id": z.string(),
+"state": z.string()
     })

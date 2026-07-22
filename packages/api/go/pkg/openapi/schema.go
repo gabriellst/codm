@@ -317,42 +317,45 @@ func (c *schemaCtx) basicSchema(b *types.Basic) map[string]any {
 	}
 }
 
-// makeNullable converts a schema to its OpenAPI 3.1 nullable form.
+// makeNullable converts a schema to its OpenAPI 3.0 nullable form.
+//
+// OpenAPI 3.0 has no `type: "null"`; nullability is the `nullable: true`
+// keyword. The codedm SDK pipeline enforces this (preprocess.ts R-05 rejects
+// 3.1 type-array / anyOf-null forms), so the emitter is responsible for
+// producing 3.0-compliant output.
 func makeNullable(schema map[string]any) map[string]any {
-	// `$ref` can't be mixed — emit oneOf [ref, {type: null}].
+	// A `$ref` cannot carry sibling keywords in 3.0 — wrap it so `nullable`
+	// has somewhere legal to live: `{ allOf: [ref], nullable: true }`.
 	if _, hasRef := schema["$ref"]; hasRef {
 		return map[string]any{
-			"oneOf": []map[string]any{
-				schema,
-				{"type": "null"},
-			},
+			"allOf":    []map[string]any{schema},
+			"nullable": true,
 		}
-	}
-	if t, ok := schema["type"].(string); ok {
-		schema["type"] = []string{t, "null"}
-		return schema
 	}
 	if t, ok := schema["type"].([]string); ok {
-		// already array form
-		found := false
+		// Re-entrant call left a 3.1 array form behind — strip "null", keep the
+		// concrete type(s), and mark nullable the 3.0 way.
+		rest := make([]string, 0, len(t))
 		for _, s := range t {
-			if s == "null" {
-				found = true
-				break
+			if s != "null" {
+				rest = append(rest, s)
 			}
 		}
-		if !found {
-			schema["type"] = append(t, "null")
+		switch len(rest) {
+		case 0:
+			delete(schema, "type")
+		case 1:
+			schema["type"] = rest[0]
+		default:
+			schema["type"] = rest
 		}
+		schema["nullable"] = true
 		return schema
 	}
-	// default — wrap in oneOf
-	return map[string]any{
-		"oneOf": []map[string]any{
-			schema,
-			{"type": "null"},
-		},
-	}
+	// `type: string` (the common case) or a typeless composed schema
+	// (oneOf/x-unknown): nullability rides alongside as the `nullable` keyword.
+	schema["nullable"] = true
+	return schema
 }
 
 // parseJSONTag extracts the name and omitempty flag from a Go json tag.

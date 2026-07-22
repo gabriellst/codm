@@ -21,7 +21,7 @@ export type LogoutChannel200 = LogoutChannelOutput;
 /**
  * @description Error
 */
-export type LogoutChannel4XX = ErrorResponse;
+export type LogoutChannelError = ErrorResponse;
 
 export type LogoutChannelMutationResponse = LogoutChannel200;
 

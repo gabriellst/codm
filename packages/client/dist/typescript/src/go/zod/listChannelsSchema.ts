@@ -8,7 +8,8 @@ import { listChannelsOutputSchema } from "./listChannelsOutputSchema.ts";
 import { z } from "zod/v4";
 
 export const listChannelsQueryParamsSchema = z.object({
-    "ownerId": z.optional(z.string())
+    "limit": z.optional(z.coerce.number().int()),
+"offset": z.optional(z.coerce.number().int())
     }).optional()
 
 /**
@@ -19,6 +20,6 @@ export const listChannels200Schema = z.lazy(() => listChannelsOutputSchema)
 /**
  * @description Error
  */
-export const listChannels4XXSchema = z.lazy(() => errorResponseSchema)
+export const listChannelsErrorSchema = z.lazy(() => errorResponseSchema)
 
 export const listChannelsQueryResponseSchema = z.lazy(() => listChannels200Schema)

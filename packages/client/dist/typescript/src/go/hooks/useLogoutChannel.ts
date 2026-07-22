@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { logoutChannel } from "../client/logoutChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const logoutChannelMutationKey = () => [{ url: '/channel/:id/logout' }] as const
+export const logoutChannelMutationKey = () => [{ url: '/channel/channels/:id/logout' }] as const
 
 export type LogoutChannelMutationKey = ReturnType<typeof logoutChannelMutationKey>
 
@@ -26,8 +26,8 @@ export function logoutChannelMutationOptions<TContext = unknown>(config: Partial
 }
 
 /**
- * @summary Log out and remove a channel session
- * {@link /channel/:id/logout}
+ * @summary Logout channel
+ * {@link /channel/channels/:id/logout}
  */
 export function useLogoutChannel<TContext>(options: 
 {
