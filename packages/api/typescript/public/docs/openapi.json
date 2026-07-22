@@ -2553,7 +2553,24 @@
         ],
         "description": "Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)",
         "operationId": "GetAttachThreadWizard",
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
         "responses": {
           "200": {
             "description": "Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)",
@@ -2605,6 +2622,20 @@
                           "kind": {
                             "$ref": "#/components/schemas/ContactKind"
                           },
+                          "avatarUrl": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lastMessageAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "participantCount": {
+                            "nullable": true,
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
                           "alreadyAttached": {
                             "type": "boolean"
                           }
@@ -2614,10 +2645,17 @@
                           "externalId",
                           "displayName",
                           "kind",
+                          "avatarUrl",
+                          "lastMessageAt",
+                          "participantCount",
                           "alreadyAttached"
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "contactsNextCursor": {
+                      "nullable": true,
+                      "type": "string"
                     },
                     "workspaces": {
                       "type": "array",
@@ -2678,6 +2716,7 @@
                     "noChannelConnected",
                     "channels",
                     "contacts",
+                    "contactsNextCursor",
                     "workspaces",
                     "providers"
                   ],
@@ -3498,7 +3537,8 @@
         "type": "string",
         "enum": [
           "CONTACT",
-          "GROUP"
+          "GROUP",
+          "BROADCAST"
         ]
       },
       "BufferSize": {
