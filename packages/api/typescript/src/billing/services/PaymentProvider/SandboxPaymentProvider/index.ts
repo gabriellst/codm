@@ -1,1 +1,0 @@
-export { SandboxPaymentProvider } from './SandboxPaymentProvider'

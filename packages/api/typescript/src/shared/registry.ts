@@ -74,18 +74,7 @@ function realSdkClient(): Client {
 const ClientToken = Client as unknown as abstract new (...args: any[]) => Client
 
 import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
-import { INSTANCE_REGISTRY as billingRegistry } from '@billing/registry'
-import { INSTANCE_REGISTRY as quotaRegistry } from '@quota/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
-
-// ── Product-plug merge-root seam (medscall@f04e8a0f) ──────────────────────────────────────────────
-// A downstream product OVERRIDES quota's two placeholder bindings here with its real per-key maps —
-// the merge root is the composition root that legitimately knows every context's counters/governors:
-//   { token: QuotaUsageSource, useFactory: c => new DefaultQuotaUsageSource({ [PRODUCT_KEY]: c.resolve(ProductCounter), … }) }
-//   { token: ResourceGovernorRegistry, useFactory: c => new DefaultResourceGovernorRegistry({ [PRODUCT_KEY]: c.resolve(ProductGovernor), … }) }
-// The template ships NO override — quota's own EMPTY defaults (quota/registry.ts) stay in place, so a
-// stock build resolves the quota context with zero product keys wired. Append any override AFTER the
-// `...quotaRegistry.*` spread below so registerAll's last-write-wins replaces the placeholder.
 import { INSTANCE_REGISTRY as notificationsRegistry } from '@notifications/registry'
 import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
 
@@ -146,8 +135,6 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 const CONTEXT_REGISTRIES = {
 	shared: CORE_REGISTRY,
 	auth: authRegistry,
-	billing: billingRegistry,
-	quota: quotaRegistry,
 	owner: ownerRegistry,
 	notifications: notificationsRegistry,
 	ui: uiRegistry,

@@ -15,19 +15,11 @@ import type { ContextModule } from './contexts'
  * per-edge channel lists. Exceptions to the policy are NAMED, per-file, with a why.
  */
 export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextModule, { note: string }>>>> = {
-	billing: {
-		quota: { note: 'BillingClockJob reads quota overrides (repositories) to price metered usage — partnership leg 1.' },
-	},
-	quota: {
-		billing: { note: 'Entitlement derives from the effective plan (objects/services) — partnership leg 2; the billing↔quota cycle is ANNOTATED below.' },
-	},
 	owner: {
-		auth: { note: 'RequireOwner reads the session shape (SessionSchema from @auth/schemas).' },
+		auth: { note: 'OperatorMiddleware / owner tenancy read the session shape (SessionSchema from @auth/schemas).' },
 	},
 	ui: {
-		billing: { note: 'BFF read model: plans/invoices/payment-methods via repositories/services/objects/enums.' },
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
-		quota: { note: 'BFF read model: usage/entitlement via services.' },
 	},
 }
 
@@ -58,24 +50,13 @@ export const AMBIENT: Partial<Record<ContextModule, readonly string[] | '*'>> = 
  * exception is a conscious decision with a review trail, never a silent branch. Liveness-gated:
  * an entry whose file/import no longer exists fails the rail (no fossil permissions).
  */
-export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: string }[] = [
-	{
-		file: 'quota/usecases/RequestDowngrade.ts',
-		imports: '@billing/usecases/ChangePlan',
-		why: 'Deliberate atomicity: schedules the downgrade (ChangePlan) and persists the keep-selection in the SAME transaction — an event would break the single-tx invariant, a wrapping service would add pure indirection. Part of the annotated billing↔quota partnership.',
-	},
-]
+export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: string }[] = []
 
 /**
  * Cycles that are CONSCIOUS partnerships (DDD Partnership) rather than accidents. Any cycle in
  * CONTEXT_MAP not listed here fails the rail.
  */
-export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = [
-	{
-		between: ['billing', 'quota'],
-		why: 'billing meters usage priced by quota overrides; quota derives entitlement from the billing plan. Coupled by design — they ship together or not at all.',
-	},
-]
+export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = []
 
 /**
  * Composition-root files EXCLUDED from edge checking — they exist to aggregate every context

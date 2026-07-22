@@ -16,7 +16,6 @@ import { ALL_REGISTRIES } from './registry'
 import * as wireEnums from '@template/contracts-typescript/wire/enums'
 import * as sharedEnums from './enums'
 import * as authEnums from '@auth/enums'
-import * as billingEnums from '@billing/enums'
 import * as sharedObjects from './objects'
 // Generic, wire-facing BFF read atoms (Metric/Tally) — safe to register: no refinements,
 // no entity coupling. The `segmented*` factory functions in this barrel are non-Zod and
@@ -40,7 +39,7 @@ const ctx = await BoundedContext.create({
 // by matching sorted value lists (handleEnumSchema → resolveEnumName). Without this,
 // enum components get generated names like `ReactionType2` whenever the path-based
 // fallback collides with a sibling field. See cc-bp-13.
-openapi.registerEnums({ ...wireEnums, ...sharedEnums, ...authEnums, ...billingEnums })
+openapi.registerEnums({ ...wireEnums, ...sharedEnums, ...authEnums })
 
 // Register the SHARED value objects + read atoms as named `$ref` components, so any
 // controller body/response that embeds them emits a `$ref: '#/components/schemas/<Name>'`

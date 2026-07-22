@@ -1,7 +1,5 @@
 export * from './auth'
 export * from './infrastructure'
-export * from './billing'
-export * from './quota'
 export * from './owner'
 export * from './notifications'
 export * from './activity'

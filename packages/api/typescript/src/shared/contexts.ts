@@ -19,10 +19,8 @@
  */
 export const CONTEXTS = {
 	auth: { pgSchema: 'authentication' },
-	billing: { pgSchema: 'billing' },
 	notifications: { pgSchema: 'notifications' },
 	owner: { pgSchema: 'owner' },
-	quota: { pgSchema: 'quota' },
 	shared: { pgSchema: 'shared' },
 	ui: { pgSchema: null },
 } as const satisfies Record<string, ContextDecl>

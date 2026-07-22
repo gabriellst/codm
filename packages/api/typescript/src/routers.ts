@@ -24,18 +24,14 @@ import type { ContextModule } from '@shared/contexts'
 // scripts/emit-openapi.ts ordering.
 import SharedRouter from '@shared/index'
 import AuthRouter from '@auth/index'
-import BillingRouter from '@billing/index'
 import OwnerRouter from '@owner/index'
-import QuotaRouter from '@quota/index'
 import NotificationsRouter from '@notifications/index'
 import UiRouter from '@ui/index'
 
 const ROUTERS = {
 	shared: SharedRouter,
 	auth: AuthRouter,
-	billing: BillingRouter,
 	owner: OwnerRouter,
-	quota: QuotaRouter,
 	notifications: NotificationsRouter,
 	ui: UiRouter,
 } satisfies Record<ContextModule, Router>

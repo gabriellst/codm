@@ -119,12 +119,12 @@ describe('wiring-completeness (an artifact that exists MUST be registered — or
 		}
 		try {
 			// Uses a REAL context module name so MODULES matches inside the fixture root.
-			write(join(tmpRoot, 'billing', 'handlers', 'GhostHandler.ts'), 'export class GhostHandler {}\n')
-			write(join(tmpRoot, 'billing', 'handlers', 'internal.ts'), "export { OtherHandler } from './OtherHandler'\n")
-			write(join(tmpRoot, 'billing', 'jobs', 'GhostJob.ts'), 'export class GhostJob {}\n')
-			write(join(tmpRoot, 'billing', 'index.ts'), 'const jobs = []\n')
-			write(join(tmpRoot, 'billing', 'controllers', 'Ghost.ts'), 'export class GhostController extends Controller {}\n')
-			write(join(tmpRoot, 'billing', 'controllers', 'index.ts'), '// empty barrel\n')
+			write(join(tmpRoot, 'owner', 'handlers', 'GhostHandler.ts'), 'export class GhostHandler {}\n')
+			write(join(tmpRoot, 'owner', 'handlers', 'internal.ts'), "export { OtherHandler } from './OtherHandler'\n")
+			write(join(tmpRoot, 'owner', 'jobs', 'GhostJob.ts'), 'export class GhostJob {}\n')
+			write(join(tmpRoot, 'owner', 'index.ts'), 'const jobs = []\n')
+			write(join(tmpRoot, 'owner', 'controllers', 'Ghost.ts'), 'export class GhostController extends Controller {}\n')
+			write(join(tmpRoot, 'owner', 'controllers', 'index.ts'), '// empty barrel\n')
 			expect(scanHandlers(tmpRoot).map(v => v.artifact)).toEqual(['handlers/GhostHandler.ts'])
 			expect(scanJobs(tmpRoot).map(v => v.artifact)).toEqual(['jobs/GhostJob.ts'])
 			expect(scanControllers(tmpRoot).map(v => v.artifact)).toEqual(['controllers/Ghost.ts#GhostController'])
