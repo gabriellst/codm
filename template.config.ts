@@ -235,6 +235,12 @@ export const REPO = {
 			schema: 'kernel',
 			example: 'postgres://postgres:postgres@localhost:5432/template?sslmode=disable',
 		},
+		CODEDM_DATA_DIR: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '~/.codedm/data',
+			doc: 'embedded file-backed PGlite data dir for the real daemon (migrations apply on boot); ~ expands to $HOME',
+		},
 		REDIS_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'redis://localhost:6379' },
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
