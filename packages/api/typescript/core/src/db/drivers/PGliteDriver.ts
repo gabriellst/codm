@@ -5,6 +5,7 @@ import type { DrizzleClient } from '../client'
 import { DrizzleDatabaseDriver, type MigrationJournal } from './DrizzleDatabaseDriver'
 import { readMigrationJournal, readMigrationSql, truncateAllTables } from './utils'
 import { drizzle } from 'drizzle-orm/pglite'
+import { migrate } from 'drizzle-orm/pglite/migrator'
 
 /**
  * PGlite is single-connection: running a query via `this.db` inside a `db.transaction()`
@@ -36,19 +37,34 @@ export interface PGliteDriverOptions {
 	schema: Record<string, any>
 	/** Absolute path to the migrations directory (Drizzle output). */
 	migrationsDir: string
+	/**
+	 * When set, PGlite is FILE-BACKED at this absolute path — the real daemon's embedded, persistent
+	 * store (founder decision 3). Absent → in-memory (`memory://`), the ephemeral test/integration
+	 * store reset per suite. The two modes also pick different migration strategies (see
+	 * `runMigrations`): file-backed uses the idempotent drizzle migrator, in-memory execs all once.
+	 */
+	dataDir?: string
 }
 
 export class PGliteDriver extends DrizzleDatabaseDriver {
 	readonly db: DrizzleClient
 	readonly unitOfWorkFactory: UnitOfWorkFactory
 	private readonly pg: PGlite
+	// Raw drizzle/pglite handle (statically typed) — the migrator needs the concrete PgliteDatabase,
+	// not the app-facing DrizzleClient cast. `this.db` is the same object; kept separately to avoid
+	// an `as any` at the migrate call site.
+	private readonly migratorDb: ReturnType<typeof drizzle>
 	private readonly migrationsDir: string
+	private readonly dataDir?: string
 
 	constructor(options: PGliteDriverOptions) {
 		super()
 		this.migrationsDir = options.migrationsDir
-		this.pg = new PGlite()
+		this.dataDir = options.dataDir
+		// A plain path selects PGlite's node filesystem backend (persistent); no arg is in-memory.
+		this.pg = options.dataDir ? new PGlite(options.dataDir) : new PGlite()
 		const db = drizzle({ client: this.pg, schema: options.schema })
+		this.migratorDb = db
 		this.db = db as unknown as DrizzleClient
 		this.unitOfWorkFactory = new PGliteUnitOfWorkFactory(this.db)
 	}
@@ -62,6 +78,18 @@ export class PGliteDriver extends DrizzleDatabaseDriver {
 	}
 
 	async runMigrations(): Promise<void> {
+		// File-backed (real daemon boot): idempotent + ordered. The drizzle migrator tracks applied
+		// migrations in `drizzle.__drizzle_migrations` and runs ONLY the pending ones, so re-running on
+		// every boot over a populated data dir is a no-op. PGlite is single-connection; the pglite-
+		// specific migrator drives it correctly (no pool assumptions).
+		if (this.dataDir) {
+			await migrate(this.migratorDb, { migrationsFolder: this.migrationsDir })
+			return
+		}
+
+		// In-memory (tests): the DB is fresh every process, so exec each migration once — no tracking
+		// table needed. `pg.exec` runs the whole multi-statement file (statement-breakpoint markers are
+		// plain SQL comments).
 		const journal = await this.readMigrations()
 
 		for (const entry of journal.entries) {
