@@ -1,46 +1,134 @@
 {
 	"nav": {
-		"docs": "Docs",
+		"links": {
+			"demo": "Demo",
+			"router": "Router",
+			"features": "Recursos",
+			"github": "GitHub ↗",
+			"blog": "Blog"
+		},
 		"download": "Baixar"
 	},
 	"hero": {
-		"eyebrow": "Open source · roda localmente · sem conta",
-		"title": "MANDE DM PRO SEU CÓDIGO",
-		"subtitle": "O CodeDM conecta WhatsApp, Instagram e Telegram a agentes de código rodando neste Mac — mande DM pro seu código como se fosse qualquer conversa. Nada sai da sua máquina.",
-		"primaryCta": "Baixar",
-		"secondaryCta": "Ler a documentação",
-		"flow": {
-			"channels": ["WhatsApp", "Instagram", "Telegram"],
-			"target": "Agentes no terminal"
+		"badge": "Open source · roda na sua máquina · sem conta",
+		"titleBold": "Mande mensagem pro seu código.",
+		"titleLight": "Ele te responde.",
+		"subtitle": "As issues chegam no seu chat em grupo. Os agentes resolvem por você.",
+		"primaryCta": "Baixar — macOS · Windows · Linux",
+		"secondaryCta": "Dar estrela no GitHub"
+	},
+	"marquee": {
+		"items": ["WhatsApp", "Instagram DM", "Telegram", "Claude Code", "Codex", "OpenCode"]
+	},
+	"demo": {
+		"eyebrow": "SEUS PROJETOS, DE PLANTÃO",
+		"title": "Rode seus projetos de onde você conseguir mandar mensagem",
+		"body": "O CodeDM transforma qualquer conversa numa mesa de operações para os seus projetos — código, deploys, arquivos, o que os seus agentes puderem fazer. Seu cliente reporta o bug no almoço; na hora do café o fix já está no ar e a resposta está no chat dele.",
+		"steps": [
+			{ "body": "mensagem classificada → issue", "title": "coupon-focus" },
+			{ "body": "sessão de terminal aberta na pasta", "title": "" },
+			{ "body": "fix no ar → resposta enviada com o label", "title": "" }
+		],
+		"chat": {
+			"initials": "RL",
+			"name": "Rafa Lima",
+			"meta": "WhatsApp · ~/dev/acme-storefront",
+			"status": "Running",
+			"messages": [
+				{ "kind": "in", "text": "the coupon field is broken on mobile, can you check?" },
+				{ "kind": "system", "text": "classified → issue coupon-focus · terminal started" },
+				{
+					"kind": "out",
+					"label": "✳ coupon-focus · Claude Code",
+					"text": "Found it — the input remounts on every keystroke. Fixing now."
+				},
+				{ "kind": "out", "text": "Done. Pushed fix/coupon-focus — preview is live." },
+				{ "kind": "in", "text": "works!! thank you 🙌" }
+			]
 		}
 	},
-	"featuresHeading": "COMO FUNCIONA",
+	"router": {
+		"eyebrow": "O ROUTER",
+		"titleBold": "Um chat.",
+		"titleLight": "Várias issues.",
+		"body": "Dez pedidos na mesma thread não entram em fila — eles rodam. Cada um vira uma issue com sua própria sessão de terminal, trabalhando em paralelo na sua máquina. As respostas carregam o label de volta, então responder um quote acerta a sessão certa toda vez.",
+		"rows": [
+			{ "key": "reply-quote", "text": "vai pra aquela issue exata, sempre" },
+			{ "key": "context", "text": "casa com o que já está aberto" },
+			{ "key": "new work", "text": "abre uma issue e um terminal novo" },
+			{ "key": "ambiguous", "text": "pergunta — “o do Pix, ou o bug da nav?”" }
+		],
+		"terminal": {
+			"header": "~/dev/acme-storefront · 3 sessions",
+			"lines": [
+				{ "key": "coupon-focus", "tone": "dim", "text": "pnpm test — 42 passed · pushed fix/coupon-focus" },
+				{ "key": "coupon-focus", "tone": "mid", "text": "reply sent → WhatsApp · Rafa Lima" },
+				{ "key": "pix-payment", "tone": "dim", "text": "scaffolding PixProvider.ts behind feature flag" },
+				{ "key": "pix-payment", "tone": "mid", "text": "steer: keep the flag off until legal signs off" },
+				{ "key": "mobile-nav", "tone": "dim", "text": "waiting: which iPhone / iOS version?" },
+				{ "key": "router", "tone": "mid", "text": "clarify → “the Pix one, or the nav bug?”" },
+				{ "key": "invoice-500", "tone": "dim", "text": "stopped · 429 rate limit · waiting for operator" },
+				{ "key": "router", "tone": "faint", "text": "watching 3 threads · buffer 100 msgs" }
+			]
+		}
+	},
 	"features": {
-		"channels": {
-			"title": "Canais viram agentes no terminal",
-			"description": "Pareie WhatsApp, Instagram ou Telegram uma vez. Cada mensagem cai direto num agente de código rodando numa sessão de terminal no seu Mac — Claude Code, Codex, o que você apontar."
-		},
-		"issues": {
-			"title": "Issues escritas a partir de uma mensagem",
-			"description": "\"O campo de cupom está quebrado no mobile\" vira uma issue classificada, escopada numa pasta de projeto e entregue a um agente. Sem board, sem formulário de ticket — só a conversa que você já mandou."
-		},
-		"human": {
-			"title": "Pausas com humano no loop",
-			"description": "Os agentes param e te chamam no instante em que precisam de uma decisão. Abra a sessão, decida, retome — ou deixe uma thread autônoma pra respostas seguirem sem revisão. Você controla cada merge."
-		},
-		"local": {
-			"title": "Local-first, sempre",
-			"description": "Sem conta, sem nuvem, sem telemetria. Os agentes rodam contra pastas de projeto na sua própria máquina e tudo — mensagens, sessões, artefatos — fica local. Open source, licença MIT."
-		}
+		"title": "Tudo entre o ping e o pull request",
+		"intro": "Não é um chatbot. Seus agentes rodam qualquer coisa que o workspace permitir — builds, testes, deploys, scripts, skills — tudo dirigido pelo chat.",
+		"cards": [
+			{
+				"kicker": "ISSUES",
+				"title": "Um chat, trabalho em paralelo",
+				"body": "Cada pedido ganha sua própria issue e terminal. Seu backlog esvazia enquanto você está em reunião — dez pedidos, dez sessões, zero colisões."
+			},
+			{
+				"kicker": "LABELS",
+				"title": "As respostas se roteiam sozinhas",
+				"body": "As mensagens do agente carregam a chave da issue. Qualquer pessoa no chat pode citar uma pra respondê-la — sem sintaxe pra aprender, a resposta cai na sessão certa."
+			},
+			{
+				"kicker": "WHISPERS",
+				"title": "Uma voz na cabeça do agente",
+				"body": "Sussurre “mantém atrás da flag” no meio da tarefa — o agente ajusta, o cliente nunca vê. Pause a thread e o microfone é seu."
+			},
+			{
+				"kicker": "STOPS",
+				"title": "Sabe a hora de esperar",
+				"body": "Rate limit, comando arriscado, alguém pediu um humano — o agente para, te avisa e segura a linha até você aprovar, negar ou assumir."
+			},
+			{
+				"kicker": "ARTIFACTS",
+				"title": "Mais que código",
+				"body": "Links de preview, screenshots, exports, relatórios — cada entregável que um agente produz é catalogado por thread, pronto pra recompartilhar."
+			},
+			{
+				"kicker": "LOCAL",
+				"title": "Nada sai da sua máquina",
+				"body": "Sem servidores de relay, sem telemetria, sem conta. Seu código, suas chaves e seus chats nunca saem da máquina que é sua."
+			}
+		],
+		"controls": [
+			"pausar / retomar",
+			"whisper steering",
+			"@mention gate",
+			"permissões por pessoa",
+			"aprovação em comandos arriscados",
+			"buffer de contexto 25–200"
+		]
 	},
-	"cta": {
-		"title": "COLOQUE SEUS CONTATOS PRA TRABALHAR",
-		"subtitle": "Conecte um canal, aponte pra uma pasta de projeto, anexe uma thread. Seu primeiro agente de código está a três passos.",
-		"primary": "Baixar",
-		"secondary": "Ler a documentação",
-		"note": "macOS · open source · roda inteiro no seu Mac"
+	"closingCta": {
+		"titleBold": "Entregue de qualquer lugar",
+		"titleLight": "onde dê pra mandar mensagem",
+		"note": "Licença MIT · zero telemetria · macOS · Windows · Linux",
+		"primary": "Baixar para o seu OS",
+		"secondary": "Ler a documentação"
 	},
 	"footer": {
-		"copyright": "CodeDM · Open source · MIT"
+		"copyright": "© 2026 · Licença MIT",
+		"links": {
+			"github": "https://github.com/codedm",
+			"docs": "Docs",
+			"changelog": "Changelog"
+		}
 	}
 }

@@ -1,46 +1,134 @@
 {
 	"nav": {
-		"docs": "Docs",
+		"links": {
+			"demo": "Demo",
+			"router": "Router",
+			"features": "Features",
+			"github": "GitHub ↗",
+			"blog": "Blog"
+		},
 		"download": "Download"
 	},
 	"hero": {
-		"eyebrow": "Open source · runs locally · no account",
-		"title": "DM YOUR CODEBASE",
-		"subtitle": "CodeDM connects WhatsApp, Instagram and Telegram to coding agents running on this Mac — DM your codebase like it's any other chat. Nothing leaves your machine.",
-		"primaryCta": "Download",
-		"secondaryCta": "Read the docs",
-		"flow": {
-			"channels": ["WhatsApp", "Instagram", "Telegram"],
-			"target": "Terminal agents"
+		"badge": "Open source · runs on your machine · no account",
+		"titleBold": "Text your codebase.",
+		"titleLight": "It texts you back.",
+		"subtitle": "Issues land on your group chat. Agents solve them for you.",
+		"primaryCta": "Download — macOS · Windows · Linux",
+		"secondaryCta": "Star on GitHub"
+	},
+	"marquee": {
+		"items": ["WhatsApp", "Instagram DM", "Telegram", "Claude Code", "Codex", "OpenCode"]
+	},
+	"demo": {
+		"eyebrow": "YOUR PROJECTS, ON CALL",
+		"title": "Run your projects from anywhere you can text",
+		"body": "CodeDM turns any conversation into an operations desk for your projects — code, deploys, files, whatever your agents can do. Your client reports the bug at lunch; by coffee the fix is deployed and the reply is in their chat.",
+		"steps": [
+			{ "body": "message classified → issue", "title": "coupon-focus" },
+			{ "body": "terminal session spawned on the folder", "title": "" },
+			{ "body": "fix pushed → reply sent with the label", "title": "" }
+		],
+		"chat": {
+			"initials": "RL",
+			"name": "Rafa Lima",
+			"meta": "WhatsApp · ~/dev/acme-storefront",
+			"status": "Running",
+			"messages": [
+				{ "kind": "in", "text": "the coupon field is broken on mobile, can you check?" },
+				{ "kind": "system", "text": "classified → issue coupon-focus · terminal started" },
+				{
+					"kind": "out",
+					"label": "✳ coupon-focus · Claude Code",
+					"text": "Found it — the input remounts on every keystroke. Fixing now."
+				},
+				{ "kind": "out", "text": "Done. Pushed fix/coupon-focus — preview is live." },
+				{ "kind": "in", "text": "works!! thank you 🙌" }
+			]
 		}
 	},
-	"featuresHeading": "HOW IT WORKS",
+	"router": {
+		"eyebrow": "THE ROUTER",
+		"titleBold": "One chat.",
+		"titleLight": "Many issues.",
+		"body": "Ten requests in one thread don’t queue — they run. Each becomes an issue with its own terminal session, working in parallel on your machine. Replies carry the label back, so answering a quote hits the right session every time.",
+		"rows": [
+			{ "key": "reply-quote", "text": "routes to that exact issue, always" },
+			{ "key": "context", "text": "matches against what’s already open" },
+			{ "key": "new work", "text": "opens an issue and a fresh terminal" },
+			{ "key": "ambiguous", "text": "asks — “the Pix one, or the nav bug?”" }
+		],
+		"terminal": {
+			"header": "~/dev/acme-storefront · 3 sessions",
+			"lines": [
+				{ "key": "coupon-focus", "tone": "dim", "text": "pnpm test — 42 passed · pushed fix/coupon-focus" },
+				{ "key": "coupon-focus", "tone": "mid", "text": "reply sent → WhatsApp · Rafa Lima" },
+				{ "key": "pix-payment", "tone": "dim", "text": "scaffolding PixProvider.ts behind feature flag" },
+				{ "key": "pix-payment", "tone": "mid", "text": "steer: keep the flag off until legal signs off" },
+				{ "key": "mobile-nav", "tone": "dim", "text": "waiting: which iPhone / iOS version?" },
+				{ "key": "router", "tone": "mid", "text": "clarify → “the Pix one, or the nav bug?”" },
+				{ "key": "invoice-500", "tone": "dim", "text": "stopped · 429 rate limit · waiting for operator" },
+				{ "key": "router", "tone": "faint", "text": "watching 3 threads · buffer 100 msgs" }
+			]
+		}
+	},
 	"features": {
-		"channels": {
-			"title": "Channels become terminal agents",
-			"description": "Pair WhatsApp, Instagram or Telegram once. Every message routes straight to a coding agent running in a terminal session on your Mac — Claude Code, Codex, whichever you point it at."
-		},
-		"issues": {
-			"title": "Issues, written from a message",
-			"description": "\"The coupon field is broken on mobile\" gets classified into a tracked issue, scoped to a workspace folder, and handed to an agent. No board, no ticket forms — just the chat you already sent."
-		},
-		"human": {
-			"title": "Human-in-the-loop stops",
-			"description": "Agents pause and ping you the moment they need a call. Open the session, decide, resume — or leave a thread autonomous so replies ship without review. You stay in control of every merge."
-		},
-		"local": {
-			"title": "Local-first, always",
-			"description": "No account, no cloud, no telemetry. Agents run against project folders on your own machine and everything — messages, sessions, artifacts — stays local. Open source, MIT licensed."
-		}
+		"title": "Everything between the ping and the pull request",
+		"intro": "Not a chatbot. Your agents can run anything the workspace allows — builds, tests, deploys, scripts, skills — driven entirely from chat.",
+		"cards": [
+			{
+				"kicker": "ISSUES",
+				"title": "One chat, parallel work",
+				"body": "Every request gets its own issue and terminal. Your backlog drains while you’re in a meeting — ten asks, ten sessions, zero collisions."
+			},
+			{
+				"kicker": "LABELS",
+				"title": "Replies route themselves",
+				"body": "Agent messages carry the issue key. Anyone in the chat can quote one to answer it — no syntax to learn, replies just land in the right session."
+			},
+			{
+				"kicker": "WHISPERS",
+				"title": "A voice in the agent’s head",
+				"body": "Whisper “keep it behind the flag” mid-task — the agent adjusts, the client never sees it. Pause the thread and the mic is yours."
+			},
+			{
+				"kicker": "STOPS",
+				"title": "Knows when to wait",
+				"body": "Rate limit, risky command, someone asked for a human — the agent stops, flags you, and holds the line until you approve, deny or take over."
+			},
+			{
+				"kicker": "ARTIFACTS",
+				"title": "More than code",
+				"body": "Preview links, screenshots, exports, reports — every deliverable an agent produces is cataloged per thread, ready to reshare."
+			},
+			{
+				"kicker": "LOCAL",
+				"title": "Nothing leaves your machine",
+				"body": "No relay servers, no telemetry, no account. Your code, keys and chats never leave the machine you own."
+			}
+		],
+		"controls": [
+			"pause / resume",
+			"whisper steering",
+			"@mention gate",
+			"per-person permissions",
+			"approval on risky commands",
+			"context buffer 25–200"
+		]
 	},
-	"cta": {
-		"title": "PUT YOUR CONTACTS TO WORK",
-		"subtitle": "Connect a channel, point at a project folder, attach a thread. Your first coding agent is three steps away.",
-		"primary": "Download",
-		"secondary": "Read the docs",
-		"note": "macOS · open source · runs entirely on your Mac"
+	"closingCta": {
+		"titleBold": "Ship from anywhere",
+		"titleLight": "you can text",
+		"note": "MIT license · zero telemetry · macOS · Windows · Linux",
+		"primary": "Download for your OS",
+		"secondary": "Read the docs"
 	},
 	"footer": {
-		"copyright": "CodeDM · Open source · MIT"
+		"copyright": "© 2026 · MIT license",
+		"links": {
+			"github": "https://github.com/codedm",
+			"docs": "Docs",
+			"changelog": "Changelog"
+		}
 	}
 }

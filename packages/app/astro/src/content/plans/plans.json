@@ -1,0 +1,98 @@
+[
+	{
+		"id": "community",
+		"order": 1,
+		"price": { "monthly": 0, "currency": "USD" },
+		"highlighted": false,
+		"copy": {
+			"en": {
+				"name": "Community",
+				"blurb": "Everything. Open source, MIT licensed, running on your machine.",
+				"cta": "Download",
+				"features": [
+					"Unlimited projects and threads",
+					"WhatsApp, Instagram DM and Telegram",
+					"Any terminal agent — Claude Code, Codex, OpenCode",
+					"Whispers, stops and per-person permissions",
+					"Zero telemetry, no account"
+				]
+			},
+			"pt": {
+				"name": "Community",
+				"blurb": "Tudo. Open source, licença MIT, rodando na sua máquina.",
+				"cta": "Baixar",
+				"features": [
+					"Projetos e threads ilimitados",
+					"WhatsApp, Instagram DM e Telegram",
+					"Qualquer agente de terminal — Claude Code, Codex, OpenCode",
+					"Whispers, stops e permissões por pessoa",
+					"Zero telemetria, sem conta"
+				]
+			}
+		}
+	},
+	{
+		"id": "pro",
+		"order": 2,
+		"price": { "monthly": 12, "currency": "USD" },
+		"highlighted": true,
+		"copy": {
+			"en": {
+				"name": "Pro",
+				"blurb": "For solo operators running client work through chat, full time.",
+				"cta": "Coming soon",
+				"features": [
+					"Everything in Community",
+					"Priority routing across many machines",
+					"Longer context buffers",
+					"Artifact gallery hosting",
+					"Email support"
+				]
+			},
+			"pt": {
+				"name": "Pro",
+				"blurb": "Para quem opera trabalho de cliente pelo chat, em tempo integral.",
+				"cta": "Em breve",
+				"features": [
+					"Tudo do Community",
+					"Roteamento prioritário entre várias máquinas",
+					"Buffers de contexto maiores",
+					"Hospedagem da galeria de artifacts",
+					"Suporte por email"
+				]
+			}
+		}
+	},
+	{
+		"id": "team",
+		"order": 3,
+		"price": { "monthly": 39, "currency": "USD" },
+		"highlighted": false,
+		"copy": {
+			"en": {
+				"name": "Team",
+				"blurb": "Shared routing for agencies — one chat, one team, many operators.",
+				"cta": "Coming soon",
+				"features": [
+					"Everything in Pro",
+					"Shared thread ownership",
+					"Org-wide permission policies",
+					"Audit log export",
+					"Priority support"
+				]
+			},
+			"pt": {
+				"name": "Team",
+				"blurb": "Roteamento compartilhado para agências — um chat, um time, vários operadores.",
+				"cta": "Em breve",
+				"features": [
+					"Tudo do Pro",
+					"Threads com dono compartilhado",
+					"Políticas de permissão para a organização",
+					"Export de audit log",
+					"Suporte prioritário"
+				]
+			}
+		}
+	}
+]
