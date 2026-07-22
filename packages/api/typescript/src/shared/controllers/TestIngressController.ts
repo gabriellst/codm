@@ -1,0 +1,120 @@
+import { injectable } from 'tsyringe-neo'
+import { Controller, HttpStatusCode, z, ExternalMediator, DrizzleClient } from '@codedm/core-typescript'
+import { channels } from '@codedm/contracts/db'
+import { ChannelKind, ContactKind, ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
+import { OperatorMiddleware } from '@auth/middlewares'
+
+/**
+ * TEST-ONLY gateway ingress seam — mounted ONLY under `CODEDM_E2E` (see shared/index.ts) and refused
+ * outright under NODE_ENV=production (src/boot/assert-e2e-safe.ts). Never emitted to the SDK/OpenAPI
+ * (route collection runs under EMIT_OPENAPI, where CODEDM_E2E is unset, so the controller is not mounted).
+ *
+ * Founder decision 3 runs two processes — the Go Channel Gateway and this TS daemon — bridged over
+ * Redis Streams. The Playwright harness boots ONLY the TS daemon; the gateway is simulated at the
+ * integration-event seam. This endpoint is that simulator. It reproduces the two gateway side effects
+ * a spec needs:
+ *
+ *   - `channel-connected` — the gateway's status projector writes a CONNECTED row into the (Go-owned)
+ *     `gateway.channels` read table on pairing. No TS code path writes it, so a hermetic spec seeds it
+ *     here (a direct upsert) to make a channel `CONNECTED` for AttachThread + inbound routing.
+ *   - `inbound-message`   — a normalized inbound message arriving on a connected channel. In production
+ *     the gateway XADDs the frozen `integration.channel_message.received` wire event onto Redis and the
+ *     RedisExternalMediator consumes it; here we publish the SAME event straight into the in-process
+ *     ExternalMediator (bound to EventEmitter2Mediator under CODEDM_E2E), so `ConsumeInboundMessage`
+ *     drives the identical dedup → ingest → classify chain. `publish` matches the fire-and-forget
+ *     delivery semantics of the Redis transport; the spec polls for the downstream issue.
+ */
+const ChannelConnectedBody = z.object({
+	kind: z.literal('channel-connected'),
+	channelId: z.uuid().optional(),
+	platform: z.enum(ChannelKind).default(ChannelKind.WHATSAPP),
+	accountDetail: z.string().default('e2e-account'),
+})
+
+const InboundMessageBody = z.object({
+	kind: z.literal('inbound-message'),
+	channelId: z.uuid(),
+	contactExternalId: z.string().min(1),
+	messageId: z.string().min(1).optional(),
+	senderExternalId: z.string().min(1).optional(),
+	contactDisplayName: z.string().min(1).default('Ada'),
+	contactKind: z.enum(ContactKind).default(ContactKind.CONTACT),
+	isGroup: z.boolean().default(false),
+	text: z.string().min(1),
+	quotedEntryId: z.uuid().optional(),
+	platform: z.enum(ChannelKind).default(ChannelKind.WHATSAPP),
+})
+
+export const TestIngressInputSchema = z.object({
+	ctx: z.object({ ownerId: z.uuid() }),
+	body: z.discriminatedUnion('kind', [ChannelConnectedBody, InboundMessageBody]),
+})
+
+export const TestIngressOutputSchema = z.object({
+	ok: z.boolean(),
+	channelId: z.string().optional(),
+	messageId: z.string().optional(),
+})
+
+@injectable()
+export class TestIngressController extends Controller<typeof TestIngressInputSchema, typeof TestIngressOutputSchema> {
+	readonly path = '/_test/gateway'
+	readonly method = 'post' as const
+	readonly description = 'TEST-ONLY: simulate a Go-gateway side effect (seed a connected channel / inject an inbound message)'
+	readonly inputSchema = TestIngressInputSchema
+	readonly outputSchema = TestIngressOutputSchema
+
+	override middlewares = [OperatorMiddleware]
+
+	constructor(
+		private readonly externalMediator: ExternalMediator,
+		private readonly db: DrizzleClient,
+	) {
+		super()
+	}
+
+	async handle(request: this['input']): Promise<this['output']> {
+		const { ownerId } = request.ctx
+		const body = request.body
+
+		if (body.kind === 'channel-connected') {
+			const channelId = body.channelId ?? crypto.randomUUID()
+			await this.db
+				.insert(channels)
+				.values({
+					id: channelId,
+					ownerId,
+					kind: body.platform,
+					status: ChannelStatus.CONNECTED,
+					accountDetail: body.accountDetail,
+				})
+				.onConflictDoUpdate({
+					target: channels.id,
+					set: { status: ChannelStatus.CONNECTED, accountDetail: body.accountDetail, updatedAt: new Date() },
+				})
+			return { status: HttpStatusCode.OK, data: { ok: true, channelId } }
+		}
+
+		const messageId = body.messageId ?? `wamid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+		await this.externalMediator.publish(
+			new ChannelMessageReceivedEvent({
+				ownerId,
+				payload: {
+					channelId: body.channelId,
+					messageId,
+					contactExternalId: body.contactExternalId,
+					contactDisplayName: body.contactDisplayName,
+					contactKind: body.contactKind,
+					senderExternalId: body.senderExternalId ?? body.contactExternalId,
+					isGroup: body.isGroup,
+					text: body.text,
+					quotedEntryId: body.quotedEntryId,
+					platform: body.platform,
+					receivedAt: new Date(),
+				},
+			}),
+		)
+		return { status: HttpStatusCode.OK, data: { ok: true, messageId } }
+	}
+}

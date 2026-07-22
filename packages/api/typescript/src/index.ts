@@ -19,6 +19,10 @@ import 'reflect-metadata'
 // above the composition-root import below. (Idempotent for this pid; the driver re-acquires as a no-op.)
 import './boot/acquire-data-dir-lock'
 
+// Refuse the hermetic e2e flag under production BEFORE anything reads it (the registry binding is at
+// module eval). Side-effect import — no context creation.
+import './boot/assert-e2e-safe'
+
 import {
 	Config,
 	MainRouter,
@@ -35,11 +39,13 @@ import {
 	Router,
 } from '@codedm/core-typescript'
 
-// Composition root — all context routers wired + checked against the manifest. Importing this
-// pulls in every context's side-effect module (starting with @shared/index, which creates the
-// root BoundedContext, applies ALL_REGISTRIES, starts the outbox dispatcher + the in-process
-// EventEmitter2 external mediator, registers external handlers).
-import { ALL_ROUTERS } from './routers'
+// The embedded-PGlite migration step — a plain function, NOT a side-effect import: it must run
+// BEFORE the composition root, and awaiting a top-level-await side-effect module does NOT serialize
+// against a statically-imported `./routers` (ESM evaluates both async branches concurrently, so the
+// contexts create — and a `registerJobs` enqueue races the migration — before the await resolves).
+// Calling it explicitly in start(), then DYNAMICALLY importing `./routers` after it, is what forces
+// the ordering: migrate → then contexts create against the already-migrated singleton.
+import { migrateEmbeddedDatabase } from '@shared/registry'
 import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.
@@ -48,6 +54,16 @@ let isShuttingDown = false
 async function start(): Promise<void> {
 	// Trace all framework classes for OpenTelemetry span injection.
 	traceClass([Controller, HttpRouter, Middleware, Router, MainRouter])
+
+	// EARLY, SERIALIZED migration: apply the embedded-PGlite schema on the ONE real driver singleton
+	// before any BoundedContext.create runs. The dynamic `import('./routers')` below is what pulls in
+	// every context's side-effect module (starting with @shared/index) — deferring it until AFTER this
+	// await guarantees the schema exists before any context (or its jobs) touches the DB.
+	await migrateEmbeddedDatabase()
+
+	// Composition root — all context routers wired + checked against the manifest. Dynamically imported
+	// (not static) so it evaluates strictly after the migration above.
+	const { ALL_ROUTERS } = await import('./routers')
 
 	// Collect routers from all contexts (composition root — checked against the manifest).
 	const routers = ALL_ROUTERS

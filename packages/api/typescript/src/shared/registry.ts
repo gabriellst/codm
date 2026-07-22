@@ -103,12 +103,53 @@ const pgliteDriver = { useFactory: () => new PGliteDriver({ schema, migrationsDi
 // as the pre-phase-2 NodePgDriver was inert during codegen. The shared/index setup guard already
 // skips migrations/memoization under EMIT_OPENAPI, but it cannot cover controller resolution — this
 // binding-level carve-out is what keeps codegen from ever touching the real persistence path.
-const filePgliteDriver = {
-	useFactory: () =>
-		process.env.EMIT_OPENAPI === 'true'
-			? new PGliteDriver({ schema, migrationsDir })
-			: new PGliteDriver({ schema, migrationsDir, dataDir: resolveDataDir(Config.env.CODEDM_DATA_DIR) }),
+//
+// SINGLETON — the `real` binding is a `useFactory` and tsyringe-neo invokes it on EVERY resolve with
+// no caching, so it MUST return a memoized instance. Two live `new PGlite(dataDir)` over one data dir
+// diverge (they load from disk at open but don't share subsequent state); the outbox dispatcher / a
+// repo / a job could each mint a separate one. The former fix memoized the driver in shared/index's
+// setup (`registerInstance`), but that runs too LATE: ESM top-level `await BoundedContext.create`
+// across the sibling context modules INTERLEAVES, and shared's setup (migrations + memoize) resolves
+// AFTER a context whose `registerJobs` already enqueued a repeatable command against a fresh,
+// un-migrated PGlite (`relation "shared.scheduled_commands" does not exist`, real-boot only — masked
+// in tests by MockCommandQueue). Memoizing HERE (module scope) + migrating EARLY (migrateEmbeddedDatabase
+// in src/boot, before the composition root) guarantees every resolve — including a racing job enqueue —
+// gets the ONE migrated instance. Found by the first real e2e boot (phase 9-2).
+let realDriverSingleton: PGliteDriver | undefined
+export function getRealDatabaseDriver(): PGliteDriver {
+	// CODEGEN CARVE-OUT (see comment above): under EMIT_OPENAPI the driver must be INERT (in-memory, no
+	// dataDir → no lock, no mkdir) so route collection never touches the real persistence path. Not
+	// memoized — emission never runs the daemon.
+	if (process.env.EMIT_OPENAPI === 'true') return new PGliteDriver({ schema, migrationsDir })
+	if (!realDriverSingleton) {
+		realDriverSingleton = new PGliteDriver({ schema, migrationsDir, dataDir: resolveDataDir(Config.env.CODEDM_DATA_DIR) })
+	}
+	return realDriverSingleton
 }
+
+/**
+ * Apply the embedded-PGlite migrations on the ONE real driver singleton. Called as an EARLY boot step
+ * (src/boot/migrate-embedded.ts) BEFORE the composition root imports any context, so the schema exists
+ * before any `registerJobs` enqueue can race it. Idempotent (the drizzle/pglite migrator tracks
+ * applied migrations); shared/index's setup re-runs it as a no-op. No-op under EMIT_OPENAPI.
+ */
+export async function migrateEmbeddedDatabase(): Promise<void> {
+	if (process.env.EMIT_OPENAPI === 'true') return
+	await getRealDatabaseDriver().runMigrations()
+}
+
+const filePgliteDriver = { useFactory: () => getRealDatabaseDriver() }
+// E2E HERMETIC SEAM — the real ExternalMediator is normally RedisExternalMediator (the Go↔TS
+// cross-process Redis Streams transport). The e2e harness boots ONLY the TS daemon (founder decision
+// 3's Go gateway is NOT booted) and simulates gateway ingress at the integration-event seam via a
+// test-only HTTP endpoint (TestIngressController) that publishes directly into the in-process
+// mediator. Under CODEDM_E2E the real ExternalMediator therefore binds the in-process
+// EventEmitter2Mediator — no Redis socket, no network beyond localhost — so a published
+// `integration.channel_message.received` fans out to the SAME external handlers (ConsumeInboundMessage)
+// that Redis delivery would drive. Production (flag unset) is unchanged: RedisExternalMediator. The
+// flag is refused under NODE_ENV=production at boot (src/boot/assert-e2e-safe.ts).
+const realExternalMediator = process.env.CODEDM_E2E === 'true' ? EventEmitter2Mediator : RedisExternalMediator
+
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
 const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }
 const stubSdkClient = { useFactory: () => mockSdkClient() }
@@ -139,7 +180,7 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// tests must never open a Redis socket, and TestBed swaps in a SpyMediator for both mock and
 	// integration anyway — so this pin only guards a stray non-TestBed resolve, leaving mock/
 	// integration behaviour exactly as before.
-	{ token: ExternalMediator, mock: MockExternalMediator, integration: EventEmitter2Mediator, real: RedisExternalMediator },
+	{ token: ExternalMediator, mock: MockExternalMediator, integration: EventEmitter2Mediator, real: realExternalMediator },
 	{ token: OutboxDispatcher, mock: MockOutboxDispatcher, real: DrizzleOutboxDispatcher },
 	// OTLP-backed in production; falls back to MockLoggingService if OTEL_COLLECTOR_LOG_URL is
 	// unset. useFactory (not a class) because construction needs Config-derived args and must
