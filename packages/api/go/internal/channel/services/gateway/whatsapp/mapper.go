@@ -7,6 +7,7 @@ package whatsapp
 // directly by the adapter (they need live client state), so they are not here.
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,18 +72,43 @@ func mapMessage(channelID uuid.UUID, ownerID string, device *store.Device, v *ev
 	senderJID := resolvePN(device, v.Info.Sender)
 
 	displayName := v.Info.PushName
+	contactID := StripDeviceSuffix(contactJID.String())
+	receivedAt := time.Unix(v.Info.Timestamp.Unix(), 0).UTC()
 
 	return chanevents.NewMessageReceivedEvent(channelID, ownerID, chanevents.MessageReceivedPayload{
 		ChannelID:   channelID,
 		MessageID:   v.Info.ID,
-		ContactID:   StripDeviceSuffix(contactJID.String()),
+		ContactID:   contactID,
 		DisplayName: displayName,
 		SenderID:    StripDeviceSuffix(senderJID.String()),
 		IsGroup:     v.Info.IsGroup,
 		Text:        text,
 		QuotedID:    quotedStanzaID(v.Message),
 		Kind:        wire.ChannelKindWHATSAPP,
-		ReceivedAt:  time.Unix(v.Info.Timestamp.Unix(), 0).UTC(),
+		ReceivedAt:  receivedAt,
 		OwnerID:     ownerID,
+
+		// Read-model fields: the same fact drives the gateway.messages insert +
+		// gateway.remotes preview fold. RemoteID == the canonical counterparty id;
+		// Content is the opaque JSONB body (text-only for now — richer content
+		// types land with the full whatsmeow content mapper).
+		InternalMessageID: uuid.New(),
+		RemoteID:          contactID,
+		Content:           textContentJSON(text),
+		ObservedAt:        time.Now().UTC(),
 	})
+}
+
+// textContentJSON builds the opaque JSONB message body for a text message. The
+// read model stores it verbatim; the shape mirrors the frozen MessageType TEXT
+// discriminant so a later content mapper can extend it without a migration.
+func textContentJSON(text string) json.RawMessage {
+	b, err := json.Marshal(struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}{Type: string(wire.MessageTypeTEXT), Text: text})
+	if err != nil {
+		return json.RawMessage(`{"type":"TEXT","text":""}`)
+	}
+	return b
 }
