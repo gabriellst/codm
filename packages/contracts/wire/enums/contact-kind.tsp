@@ -1,0 +1,7 @@
+namespace TemplateContracts;
+
+@doc("Whether a channel counterparty is a single contact or a group conversation. Flattened out of the ContactRef value object onto the wire (the codegen carries scalars + enums, not nested models); the domain reassembles ContactRef as a Value Object.")
+enum ContactKind {
+  CONTACT: "CONTACT",
+  GROUP: "GROUP",
+}

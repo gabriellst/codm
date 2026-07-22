@@ -4,6 +4,125 @@ package wire
 
 import "fmt"
 
+type ArtifactKind string
+
+const (
+	ArtifactKindIMAGE ArtifactKind = "IMAGE"
+	ArtifactKindFILE ArtifactKind = "FILE"
+	ArtifactKindLINK ArtifactKind = "LINK"
+)
+
+func ParseArtifactKind(s string) (ArtifactKind, error) {
+	switch ArtifactKind(s) {
+	case ArtifactKindIMAGE, ArtifactKindFILE, ArtifactKindLINK:
+		return ArtifactKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid ArtifactKind: %q", s)
+	}
+}
+
+type AttachFlowStyle string
+
+const (
+	AttachFlowStyleFULLSCREEN AttachFlowStyle = "FULLSCREEN"
+	AttachFlowStyleSIDE_PANEL AttachFlowStyle = "SIDE_PANEL"
+)
+
+func ParseAttachFlowStyle(s string) (AttachFlowStyle, error) {
+	switch AttachFlowStyle(s) {
+	case AttachFlowStyleFULLSCREEN, AttachFlowStyleSIDE_PANEL:
+		return AttachFlowStyle(s), nil
+	default:
+		return "", fmt.Errorf("invalid AttachFlowStyle: %q", s)
+	}
+}
+
+type BufferSize string
+
+const (
+	BufferSize25 BufferSize = "25"
+	BufferSize50 BufferSize = "50"
+	BufferSize100 BufferSize = "100"
+	BufferSize200 BufferSize = "200"
+)
+
+func ParseBufferSize(s string) (BufferSize, error) {
+	switch BufferSize(s) {
+	case BufferSize25, BufferSize50, BufferSize100, BufferSize200:
+		return BufferSize(s), nil
+	default:
+		return "", fmt.Errorf("invalid BufferSize: %q", s)
+	}
+}
+
+type ChannelKind string
+
+const (
+	ChannelKindWHATSAPP ChannelKind = "WHATSAPP"
+	ChannelKindINSTAGRAM_DM ChannelKind = "INSTAGRAM_DM"
+	ChannelKindTELEGRAM ChannelKind = "TELEGRAM"
+)
+
+func ParseChannelKind(s string) (ChannelKind, error) {
+	switch ChannelKind(s) {
+	case ChannelKindWHATSAPP, ChannelKindINSTAGRAM_DM, ChannelKindTELEGRAM:
+		return ChannelKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid ChannelKind: %q", s)
+	}
+}
+
+type ChannelStatus string
+
+const (
+	ChannelStatusDISCONNECTED ChannelStatus = "DISCONNECTED"
+	ChannelStatusPAIRING ChannelStatus = "PAIRING"
+	ChannelStatusCONNECTED ChannelStatus = "CONNECTED"
+)
+
+func ParseChannelStatus(s string) (ChannelStatus, error) {
+	switch ChannelStatus(s) {
+	case ChannelStatusDISCONNECTED, ChannelStatusPAIRING, ChannelStatusCONNECTED:
+		return ChannelStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid ChannelStatus: %q", s)
+	}
+}
+
+type ClassificationMethod string
+
+const (
+	ClassificationMethodREPLY_QUOTE ClassificationMethod = "REPLY_QUOTE"
+	ClassificationMethodCONTEXT_MATCH ClassificationMethod = "CONTEXT_MATCH"
+	ClassificationMethodNEW_ISSUE ClassificationMethod = "NEW_ISSUE"
+	ClassificationMethodCLARIFIED ClassificationMethod = "CLARIFIED"
+)
+
+func ParseClassificationMethod(s string) (ClassificationMethod, error) {
+	switch ClassificationMethod(s) {
+	case ClassificationMethodREPLY_QUOTE, ClassificationMethodCONTEXT_MATCH, ClassificationMethodNEW_ISSUE, ClassificationMethodCLARIFIED:
+		return ClassificationMethod(s), nil
+	default:
+		return "", fmt.Errorf("invalid ClassificationMethod: %q", s)
+	}
+}
+
+type ContactKind string
+
+const (
+	ContactKindCONTACT ContactKind = "CONTACT"
+	ContactKindGROUP ContactKind = "GROUP"
+)
+
+func ParseContactKind(s string) (ContactKind, error) {
+	switch ContactKind(s) {
+	case ContactKindCONTACT, ContactKindGROUP:
+		return ContactKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid ContactKind: %q", s)
+	}
+}
+
 type CurrencyCode string
 
 const (
@@ -115,6 +234,40 @@ func ParseFcmPlatform(s string) (FcmPlatform, error) {
 	}
 }
 
+type IssueArchiveReason string
+
+const (
+	IssueArchiveReasonMANUAL IssueArchiveReason = "MANUAL"
+	IssueArchiveReasonAUTO_24H IssueArchiveReason = "AUTO_24H"
+	IssueArchiveReasonTHREAD_DETACHED IssueArchiveReason = "THREAD_DETACHED"
+)
+
+func ParseIssueArchiveReason(s string) (IssueArchiveReason, error) {
+	switch IssueArchiveReason(s) {
+	case IssueArchiveReasonMANUAL, IssueArchiveReasonAUTO_24H, IssueArchiveReasonTHREAD_DETACHED:
+		return IssueArchiveReason(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssueArchiveReason: %q", s)
+	}
+}
+
+type IssueStatus string
+
+const (
+	IssueStatusNEEDS_INPUT IssueStatus = "NEEDS_INPUT"
+	IssueStatusWORKING IssueStatus = "WORKING"
+	IssueStatusCOMPLETED IssueStatus = "COMPLETED"
+)
+
+func ParseIssueStatus(s string) (IssueStatus, error) {
+	switch IssueStatus(s) {
+	case IssueStatusNEEDS_INPUT, IssueStatusWORKING, IssueStatusCOMPLETED:
+		return IssueStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssueStatus: %q", s)
+	}
+}
+
 type Language string
 
 const (
@@ -147,6 +300,39 @@ func ParseOwnerKind(s string) (OwnerKind, error) {
 	}
 }
 
+type ProviderKind string
+
+const (
+	ProviderKindCLAUDE_CODE ProviderKind = "CLAUDE_CODE"
+	ProviderKindCODEX ProviderKind = "CODEX"
+	ProviderKindOPENCODE ProviderKind = "OPENCODE"
+)
+
+func ParseProviderKind(s string) (ProviderKind, error) {
+	switch ProviderKind(s) {
+	case ProviderKindCLAUDE_CODE, ProviderKindCODEX, ProviderKindOPENCODE:
+		return ProviderKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid ProviderKind: %q", s)
+	}
+}
+
+type ProviderStatus string
+
+const (
+	ProviderStatusDETECTED ProviderStatus = "DETECTED"
+	ProviderStatusNOT_INSTALLED ProviderStatus = "NOT_INSTALLED"
+)
+
+func ParseProviderStatus(s string) (ProviderStatus, error) {
+	switch ProviderStatus(s) {
+	case ProviderStatusDETECTED, ProviderStatusNOT_INSTALLED:
+		return ProviderStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid ProviderStatus: %q", s)
+	}
+}
+
 type Role string
 
 const (
@@ -161,6 +347,94 @@ func ParseRole(s string) (Role, error) {
 		return Role(s), nil
 	default:
 		return "", fmt.Errorf("invalid Role: %q", s)
+	}
+}
+
+type SenderIdentity string
+
+const (
+	SenderIdentityAGENT SenderIdentity = "AGENT"
+	SenderIdentityROUTER SenderIdentity = "ROUTER"
+	SenderIdentityOPERATOR SenderIdentity = "OPERATOR"
+)
+
+func ParseSenderIdentity(s string) (SenderIdentity, error) {
+	switch SenderIdentity(s) {
+	case SenderIdentityAGENT, SenderIdentityROUTER, SenderIdentityOPERATOR:
+		return SenderIdentity(s), nil
+	default:
+		return "", fmt.Errorf("invalid SenderIdentity: %q", s)
+	}
+}
+
+type StopKind string
+
+const (
+	StopKindSERVER_ERROR StopKind = "SERVER_ERROR"
+	StopKindBLOCKED_BY_CLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	StopKindHUMAN_REQUESTED StopKind = "HUMAN_REQUESTED"
+	StopKindAPPROVAL_NEEDED StopKind = "APPROVAL_NEEDED"
+)
+
+func ParseStopKind(s string) (StopKind, error) {
+	switch StopKind(s) {
+	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED:
+		return StopKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid StopKind: %q", s)
+	}
+}
+
+type StopResolution string
+
+const (
+	StopResolutionRETRY StopResolution = "RETRY"
+	StopResolutionREVIEW_AND_SEND StopResolution = "REVIEW_AND_SEND"
+	StopResolutionTAKE_OVER StopResolution = "TAKE_OVER"
+	StopResolutionAPPROVE StopResolution = "APPROVE"
+	StopResolutionDENY StopResolution = "DENY"
+)
+
+func ParseStopResolution(s string) (StopResolution, error) {
+	switch StopResolution(s) {
+	case StopResolutionRETRY, StopResolutionREVIEW_AND_SEND, StopResolutionTAKE_OVER, StopResolutionAPPROVE, StopResolutionDENY:
+		return StopResolution(s), nil
+	default:
+		return "", fmt.Errorf("invalid StopResolution: %q", s)
+	}
+}
+
+type ThreadMode string
+
+const (
+	ThreadModeSTEER ThreadMode = "STEER"
+	ThreadModeDIRECT ThreadMode = "DIRECT"
+)
+
+func ParseThreadMode(s string) (ThreadMode, error) {
+	switch ThreadMode(s) {
+	case ThreadModeSTEER, ThreadModeDIRECT:
+		return ThreadMode(s), nil
+	default:
+		return "", fmt.Errorf("invalid ThreadMode: %q", s)
+	}
+}
+
+type ThreadStatus string
+
+const (
+	ThreadStatusRUNNING ThreadStatus = "RUNNING"
+	ThreadStatusIDLE ThreadStatus = "IDLE"
+	ThreadStatusNEEDS_ATTENTION ThreadStatus = "NEEDS_ATTENTION"
+	ThreadStatusPAUSED ThreadStatus = "PAUSED"
+)
+
+func ParseThreadStatus(s string) (ThreadStatus, error) {
+	switch ThreadStatus(s) {
+	case ThreadStatusRUNNING, ThreadStatusIDLE, ThreadStatusNEEDS_ATTENTION, ThreadStatusPAUSED:
+		return ThreadStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid ThreadStatus: %q", s)
 	}
 }
 
@@ -486,5 +760,40 @@ func ParseTimezone(s string) (Timezone, error) {
 		return Timezone(s), nil
 	default:
 		return "", fmt.Errorf("invalid Timezone: %q", s)
+	}
+}
+
+type TranscriptKind string
+
+const (
+	TranscriptKindCONTACT TranscriptKind = "CONTACT"
+	TranscriptKindAGENT TranscriptKind = "AGENT"
+	TranscriptKindOPERATOR_DIRECT TranscriptKind = "OPERATOR_DIRECT"
+	TranscriptKindWHISPER TranscriptKind = "WHISPER"
+	TranscriptKindACTION TranscriptKind = "ACTION"
+)
+
+func ParseTranscriptKind(s string) (TranscriptKind, error) {
+	switch TranscriptKind(s) {
+	case TranscriptKindCONTACT, TranscriptKindAGENT, TranscriptKindOPERATOR_DIRECT, TranscriptKindWHISPER, TranscriptKindACTION:
+		return TranscriptKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid TranscriptKind: %q", s)
+	}
+}
+
+type WorkspaceBadge string
+
+const (
+	WorkspaceBadgeGIT WorkspaceBadge = "GIT"
+	WorkspaceBadgeCLAUDE_PROJECT WorkspaceBadge = "CLAUDE_PROJECT"
+)
+
+func ParseWorkspaceBadge(s string) (WorkspaceBadge, error) {
+	switch WorkspaceBadge(s) {
+	case WorkspaceBadgeGIT, WorkspaceBadgeCLAUDE_PROJECT:
+		return WorkspaceBadge(s), nil
+	default:
+		return "", fmt.Errorf("invalid WorkspaceBadge: %q", s)
 	}
 }

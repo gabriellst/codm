@@ -1,0 +1,9 @@
+namespace TemplateContracts;
+
+@doc("How the router demultiplexed a single-stream inbound message into an issue. Resolution order: REPLY_QUOTE (authoritative) > CONTEXT_MATCH (>= threshold) > NEW_ISSUE > CLARIFIED (resolved a prior clarification).")
+enum ClassificationMethod {
+  REPLY_QUOTE: "REPLY_QUOTE",
+  CONTEXT_MATCH: "CONTEXT_MATCH",
+  NEW_ISSUE: "NEW_ISSUE",
+  CLARIFIED: "CLARIFIED",
+}
