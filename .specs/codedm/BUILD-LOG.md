@@ -18,6 +18,8 @@
 
 | 7 SCOPE @codedm | 2 + fix | ✅ VERDE | Rebrand config-first completo: zero @template vivo, packages/generated renomeados, self-model verde, install fresco resolve. Reds eram phantom deps pré-existentes expostas pelo install limpo (contracts→filho gerado; e2e→bare playwright) — declaradas. Gates finais: tsc=0, test=0, tooling=0, check:generated=0. Go modulePrefix mantém template/ por design documentado. |
 
+| 8a DESIGN+REACT | 2 (91) | ✅ VERDE | Tokens monocromáticos oklch + primitives pill + styleguide /app/styleguide; 15 telas T01-T15 (chrome rail, home checklist/dashboard fork, sessão T09-T14 com terminal dark único, onboarding+wizard). Zero endpoint inventado; estados vazios honestos (QR = gateway). PENDÊNCIA tooling: eslint flat config não carrega (jiti/@typescript-eslint/utils phantom, pré-existente). |
+
 ## Decisões da noite
 - (fase 1) manter FCM-token e eventos auth como stubs compiláveis em vez de cirurgia profunda — remoção definitiva fica pro contract lock da fase 3, que redefine a superfície.
 - (fase 2 / grader iteration 1) O binding `real` é um `useFactory` per-resolve e o tsyringe-neo NÃO memoiza factories → cada `resolve` mintava um `new PGlite(dataDir)` divergente (instâncias vivas sobre o mesmo dir não compartilham estado), matando o write-side event-driven. Fix: memoizar a instância única do driver + `db` via `registerInstance` no boot (`shared/index.ts`, espelha `TestBed.ts:92-93`). Segundo fix: guarda single-instance por lockfile PID **sibling** (`<dataDir>.lock`, fora do pgdata pra não quebrar o initdb do PGlite) — segunda daemon no mesmo dir falha alto com `DataDirLockedError`.
