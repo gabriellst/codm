@@ -1,43 +1,49 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenIssue } from '@test/support'
-import { DomainEventRepository } from '@template/core-typescript'
+import { MockOutboxDispatcher } from '@template/core-typescript'
 import { StopKind, StopResolution } from '@template/contracts-typescript/wire/enums'
 import { IssueStopRaisedEvent } from '@template/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
+import { PublishIssueIntegrationEvents } from '@issue/handlers/PublishIssueIntegrationEvents'
 import { ResolveStop } from '@issue/usecases/ResolveStop'
 import { StopRepository } from '@issue/repositories/StopRepository'
 import { StopPolicyConfigRepository } from '@issue/repositories/StopPolicyConfigRepository'
-import { IssueStopResolvedEvent } from '@issue/events'
 
 /**
- * FLOW — the Needs-You control-plane saga: the terminal engine raises a stop
- * (`integration.issue.stop_raised`) → BC5 materializes it (`RaiseStop`, gated on the enabled
- * criterion) → the operator resolves it (`ResolveStop` → `integration.issue.stop_resolved`).
- * Captures the cross-context hand-off (StopRaised → stop recorded → stop_resolved).
+ * FLOW (mock DI) — the Needs-You control-plane saga, asserted by the integration events CAPTURED on
+ * the external mediator (mock mode's isolation): the terminal engine's `integration.issue.stop_raised`
+ * → BC5 materializes it (`RaiseStop`, gated on the enabled criterion) → the operator resolves it
+ * (`ResolveStop`) whose `issue.stop_resolved` fact BRIDGES to `integration.issue.stop_resolved` (BC4
+ * thread resume / status). Stop-recording/gating internals stay in the RaiseStop use-case spec.
  */
-describe('Flow: stop raised → recorded → resolved', () => {
+describe('Flow (mock): stop raised → recorded → resolved → integration.issue.stop_resolved', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 
-	beforeAll(async () => {
-		testContainer = container.createChildContainer()
-		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-	})
 	beforeEach(async () => {
-		await testBed.reset()
+		// Fresh container per test — mock mode has no DB reset, so isolation comes from fresh singletons.
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('mock', { testContainer, ownerId: OPERATOR_ID })
 	})
 	afterAll(async () => {
 		await testBed.destroy()
 	})
 
-	it('materializes a stop from the execution fact, then resolves it', async () => {
+	/** Register the BC5 bridge so a flushed `issue.stop_resolved` fact publishes its integration event. */
+	async function wireBridge(): Promise<MockOutboxDispatcher> {
+		await testBed.spy.register(testBed.resolve(PublishIssueIntegrationEvents))
+		return testBed.resolve(MockOutboxDispatcher)
+	}
+
+	it('materializes a stop from the execution fact, then resolves it → integration.issue.stop_resolved fires', async () => {
+		const outbox = await wireBridge()
 		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID })
 		const stopId = uuidv7()
 
-		// 1. The terminal engine's execution fact — BC5 reacts by recording the stop (criterion enabled by default).
+		// 1. The terminal engine's execution fact — BC5 records the stop (criterion enabled by default).
 		await testBed.resolve(MaterializeIssueFromExecution).handle(
 			new IssueStopRaisedEvent({
 				ownerId: OPERATOR_ID,
@@ -50,17 +56,19 @@ describe('Flow: stop raised → recorded → resolved', () => {
 
 		// 2. The operator resolves it — REVIEW_AND_SEND is applicable to HUMAN_REQUESTED.
 		await testBed.resolve(ResolveStop).execute({ ownerId: OPERATOR_ID, stopId, resolution: StopResolution.REVIEW_AND_SEND })
+		await outbox.flush()
 
 		expect(await stops.openByIssue(issue.id.value)).toHaveLength(0)
-		const resolved = await stops.findById(stopId)
-		expect(resolved?.resolution).toBe(StopResolution.REVIEW_AND_SEND)
+		expect((await stops.findById(stopId))?.resolution).toBe(StopResolution.REVIEW_AND_SEND)
 
-		// The cross-context resolution fact is emitted for BC4 (thread resume / status).
-		expect(await testBed.resolve(DomainEventRepository).findByType(IssueStopResolvedEvent)).toHaveLength(1)
+		// The cross-context resolution fact is PUBLISHED for BC4 (captured on the external mediator).
+		expect(testBed.externalSpy.getPublishedOfType('integration.issue.stop_resolved')).toHaveLength(1)
 	})
 
-	it('a disabled criterion swallows the stop (no row recorded)', async () => {
+	it('a disabled criterion swallows the stop (no row, no integration event)', async () => {
+		const outbox = await wireBridge()
 		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID })
+
 		// Disable the HUMAN_REQUESTED criterion for this owner.
 		await testBed.resolve(StopPolicyConfigRepository).upsert(OPERATOR_ID, {
 			serverErrors: true,
@@ -76,6 +84,9 @@ describe('Flow: stop raised → recorded → resolved', () => {
 				payload: { stopId: uuidv7(), issueId: issue.id.value, threadId: issue.threadId, kind: StopKind.HUMAN_REQUESTED },
 			}) as never,
 		)
+		await outbox.flush()
+
 		expect(await testBed.resolve(StopRepository).openByIssue(issue.id.value)).toHaveLength(0)
+		expect(testBed.externalSpy.getPublishedOfType('integration.issue.stop_resolved')).toHaveLength(0)
 	})
 })

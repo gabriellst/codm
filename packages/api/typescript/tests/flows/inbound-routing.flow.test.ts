@@ -1,38 +1,58 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenThread, givenIssue } from '@test/support'
-import { DomainEventRepository } from '@template/core-typescript'
-import { ChannelKind, ContactKind, ClassificationMethod, TranscriptKind } from '@template/contracts-typescript/wire/enums'
+import type { z, ZodType } from 'zod'
+import { TestBed, givenThread, givenWorkspace } from '@test/support'
+import { MockOutboxDispatcher } from '@template/core-typescript'
+import { ChannelKind, ContactKind, TranscriptKind } from '@template/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedEvent } from '@template/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
+import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIntegrationEvents'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { MessageClassifiedEvent } from '@thread/events'
+import { PublishTerminalIntegrationEvents } from '@terminal/handlers/PublishTerminalIntegrationEvents'
+import { RunTerminalSessionOnClassification } from '@terminal/handlers/RunTerminalSessionOnClassification'
+import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type TerminalRuntimeEvent } from '@terminal/services/AgentRunner'
+import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
+import { IssueRepository } from '@issue/repositories/IssueRepository'
+import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
 
 /**
- * FLOW — inbound → route → classify choreography (the reachable Core saga leg).
+ * FLOW (mock DI) — inbound → route → classify → SPAWN → issue OPENED → SSE, the now-CLOSED Core saga.
  *
- * The gateway delivers `integration.channel_message.received` AT LEAST ONCE; the BC4 consumer
- * (`ConsumeInboundMessage`) turns that into exactly-once PROCESSING (dedup ledger), appends the
- * transcript entry, and — when the sender may invoke — demultiplexes it into an issue
- * (`ClassifyMessage`), emitting `thread.message_classified` (→ integration.message.classified).
+ * Ported from integration to 'mock' DI mode: the choreography is asserted by the integration events
+ * CAPTURED on the external mediator (no DB), the point of mock mode. The reachable saga is driven
+ * IN-PROCESS with a stub runner (no provider CLI, no LLM): the gateway fact → `ConsumeInboundMessage`
+ * → `ClassifyMessage` emits `integration.message.classified`; the phase-6b closer
+ * `RunTerminalSessionOnClassification` consumes it → `RunTerminalSession` → the terminal facts bridge
+ * to `integration.issue.opened` / completed; `MaterializeIssueFromExecution` materializes the Issue
+ * row and the `BrowserFrameEnricher` synthesizes the `browser.*` SSE frame.
  *
- * NOTE — the downstream `classified → terminal RunTerminalSession → integration.issue.opened → SSE`
- * leg is intentionally NOT asserted here: the terminal external handler that would consume
- * `integration.message.classified` is still empty (BUILD-LOG deferral, gateway phase), so an
- * end-to-end "issue opened from inbound" fact is unreachable today. This flow covers everything up to
- * and including the classification hand-off, which is closed.
+ * Reply-quote / context-match DB resolution stays in the ClassifyMessage use-case + OpenIssuesReader
+ * repository specs (integration) — a flow spec asserts the cross-context hand-offs, not DB reads.
  */
-describe('Flow: inbound message → route → classify', () => {
+
+/** Stub runner: `generate()` → a NEW_ISSUE classification decision; `stream()` → a clean session. */
+class NewIssueStubRunner extends AgentRunner {
+	async generate<OutputSchema extends ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<z.output<OutputSchema>> {
+		return { decision: 'NEW_ISSUE', title: 'Ship the coupon fix' } as z.output<OutputSchema>
+	}
+	async *stream(request: AgentStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
+		const at = new Date().toISOString()
+		yield { type: 'output', line: { at, line: `$ ${request.provider} (stub) in ${request.cwd}`, stream: 'stdout' } }
+		yield { type: 'output', line: { at, line: request.prompt, stream: 'stdout' } }
+		yield { type: 'output', line: { at, line: 'done', stream: 'stdout' } }
+		yield { type: 'exit', code: 0 }
+	}
+}
+
+describe('Flow (mock): inbound → classify → spawn → issue opened → SSE', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 
-	beforeAll(async () => {
-		testContainer = container.createChildContainer()
-		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-	})
 	beforeEach(async () => {
-		await testBed.reset()
+		// Fresh container per test — mock mode has no DB reset, so isolation comes from fresh singletons.
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('mock', { testContainer, ownerId: OPERATOR_ID })
 	})
 	afterAll(async () => {
 		await testBed.destroy()
@@ -42,7 +62,7 @@ describe('Flow: inbound message → route → classify', () => {
 		channelId: string,
 		contactExternalId: string,
 		messageId: string,
-		opts: Partial<{ senderExternalId: string; quotedEntryId: string; text: string }> = {},
+		opts: Partial<{ senderExternalId: string; text: string }> = {},
 	) =>
 		new ChannelMessageReceivedEvent({
 			ownerId: OPERATOR_ID,
@@ -55,11 +75,18 @@ describe('Flow: inbound message → route → classify', () => {
 				senderExternalId: opts.senderExternalId ?? contactExternalId,
 				isGroup: false,
 				text: opts.text ?? 'ship the coupon fix',
-				quotedEntryId: opts.quotedEntryId,
+				quotedEntryId: undefined,
 				platform: ChannelKind.WHATSAPP,
 				receivedAt: new Date(),
 			},
 		})
+
+	/** Register the internal bridges so a flushed domain fact publishes its integration event (captured). */
+	async function wireBridges(): Promise<MockOutboxDispatcher> {
+		await testBed.spy.register(testBed.resolve(PublishThreadIntegrationEvents))
+		await testBed.spy.register(testBed.resolve(PublishTerminalIntegrationEvents))
+		return testBed.resolve(MockOutboxDispatcher)
+	}
 
 	it('at-least-once delivery becomes exactly-once processing (one transcript entry)', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
@@ -74,34 +101,57 @@ describe('Flow: inbound message → route → classify', () => {
 		expect(entries.filter(e => e.kind === TranscriptKind.CONTACT)).toHaveLength(1)
 	})
 
-	it('an invocable inbound quoting an open issue routes there (classified ACTION line + fact)', async () => {
+	it('an invocable inbound is classified → integration.message.classified is published (captured)', async () => {
+		testBed.override(AgentRunner, new NewIssueStubRunner())
+		const outbox = await wireBridges()
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
-		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID, threadId: thread.id.value })
-		// A prior entry already routed to that open issue — the reply-quote target.
-		const quoted = await testBed.resolve(TranscriptRepository).append({
-			ownerId: OPERATOR_ID,
-			threadId: thread.id.value,
-			kind: TranscriptKind.CONTACT,
-			text: 'the earlier message',
-			senderExternalId: 'stranger-42',
-			issueId: issue.id.value,
-		})
 
-		const consumer = testBed.resolve(ConsumeInboundMessage)
-		// Sender is not the read-only seeded contact → invocable; quotes the routed entry.
-		await consumer.handle(
-			inbound(thread.channelId, thread.contactRef.externalId, 'wamid-quote', {
-				senderExternalId: 'stranger-42',
-				quotedEntryId: quoted.entryId,
-			}) as never,
-		)
+		// Sender is not the read-only seeded contact → invocable.
+		await testBed
+			.resolve(ConsumeInboundMessage)
+			.handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-1', { senderExternalId: 'stranger-42' }) as never)
+		await outbox.flush()
 
-		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
-		const action = entries.filter(e => e.kind === TranscriptKind.ACTION)
-		expect(action.some(e => e.text === `classified: ${ClassificationMethod.REPLY_QUOTE}`)).toBe(true)
-
-		const classified = await testBed.resolve(DomainEventRepository).findByType(MessageClassifiedEvent)
+		const classified = testBed.externalSpy.getPublishedOfType('integration.message.classified')
 		expect(classified).toHaveLength(1)
-		expect(classified[0]?.payload.issueId).toBe(issue.id.value)
+	})
+
+	it('classified → RunTerminalSession → issue OPENED fires live, materializes the Issue + an SSE frame', async () => {
+		testBed.override(AgentRunner, new NewIssueStubRunner())
+		const outbox = await wireBridges()
+
+		// A workspace bound to the thread so the closer can resolve the run cwd.
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
+
+		// 1. Inbound → classify → integration.message.classified.
+		await testBed
+			.resolve(ConsumeInboundMessage)
+			.handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-open', { senderExternalId: 'stranger-42' }) as never)
+		await outbox.flush()
+		const classified = testBed.externalSpy.getPublishedOfType('integration.message.classified')[0]
+		expect(classified).toBeDefined()
+
+		// 2. The phase-6b closer consumes it and runs the (stub) terminal session in-process.
+		await testBed.resolve(RunTerminalSessionOnClassification).handle(classified as never)
+		await outbox.flush()
+
+		// 3. integration.issue.opened + issue.completed FIRE live off the terminal facts.
+		const opened = testBed.externalSpy.getPublishedOfType('integration.issue.opened')
+		expect(opened).toHaveLength(1)
+		expect(testBed.externalSpy.getPublishedOfType('integration.issue.completed')).toHaveLength(1)
+
+		const openedEvent = opened[0] as { payload: { issueId: string; threadId: string } }
+		expect(openedEvent.payload.threadId).toBe(thread.id.value)
+
+		// 4. MaterializeIssueFromExecution materializes the Issue row from the opened fact.
+		await testBed.resolve(MaterializeIssueFromExecution).handle(opened[0] as never)
+		const issue = await testBed.resolve(IssueRepository).findById(openedEvent.payload.issueId)
+		expect(issue).toBeDefined()
+		expect(issue?.threadId).toBe(thread.id.value)
+
+		// 5. The SSE enricher synthesizes a browser.thread_status_changed frame from the opened fact.
+		const frames = await testBed.resolve(BrowserFrameEnricher).enrich(opened[0] as never)
+		expect(frames.some(f => f.name === 'browser.thread_status_changed')).toBe(true)
 	})
 })
