@@ -1,5 +1,5 @@
 import { r as reactExports, j as jsxRuntimeExports } from "./react.mjs";
-import { s as shouldThrowError, n as notifyManager, a as noop, e as environmentManager, Q as QueryObserver } from "./tanstack__query-core.mjs";
+import { s as shouldThrowError, n as notifyManager, a as noop, e as environmentManager, Q as QueryObserver, M as MutationObserver } from "./tanstack__query-core.mjs";
 var QueryClientContext = reactExports.createContext(
   void 0
 );
@@ -159,8 +159,44 @@ function useQuery(options, queryClient) {
 function queryOptions(options) {
   return options;
 }
+function useMutation(options, queryClient) {
+  const client = useQueryClient(queryClient);
+  const [observer] = reactExports.useState(
+    () => new MutationObserver(
+      client,
+      options
+    )
+  );
+  reactExports.useEffect(() => {
+    observer.setOptions(options);
+  }, [observer, options]);
+  const result = reactExports.useSyncExternalStore(
+    reactExports.useCallback(
+      (onStoreChange) => observer.subscribe(notifyManager.batchCalls(onStoreChange)),
+      [observer]
+    ),
+    () => observer.getCurrentResult(),
+    () => observer.getCurrentResult()
+  );
+  const mutate = reactExports.useCallback(
+    (variables, mutateOptions) => {
+      observer.mutate(variables, mutateOptions).catch(noop);
+    },
+    [observer]
+  );
+  if (result.error && shouldThrowError(observer.options.throwOnError, [result.error])) {
+    throw result.error;
+  }
+  return { ...result, mutate, mutateAsync: result.mutate };
+}
+function mutationOptions(options) {
+  return options;
+}
 export {
   QueryClientProvider as Q,
+  useQuery as a,
+  useMutation as b,
+  mutationOptions as m,
   queryOptions as q,
-  useQuery as u
+  useQueryClient as u
 };

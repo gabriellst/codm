@@ -4,18 +4,28 @@
     "landing": {
       "type": "object",
       "properties": {
-        "brand": {
-          "type": "string"
-        },
-        "getStarted": {
-          "type": "string"
-        },
-        "openApp": {
-          "type": "string"
+        "nav": {
+          "type": "object",
+          "properties": {
+            "docs": {
+              "type": "string"
+            },
+            "download": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "docs",
+            "download"
+          ],
+          "additionalProperties": false
         },
         "hero": {
           "type": "object",
           "properties": {
+            "eyebrow": {
+              "type": "string"
+            },
             "title": {
               "type": "string"
             },
@@ -27,72 +37,102 @@
             },
             "secondaryCta": {
               "type": "string"
+            },
+            "flow": {
+              "type": "object",
+              "properties": {
+                "channels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "target": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "channels",
+                "target"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "eyebrow",
+            "title",
+            "subtitle",
+            "primaryCta",
+            "secondaryCta",
+            "flow"
+          ],
+          "additionalProperties": false
+        },
+        "featuresHeading": {
+          "type": "string"
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "channels": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "issues": {
+              "$ref": "#/definitions/landing/properties/features/properties/channels"
+            },
+            "human": {
+              "$ref": "#/definitions/landing/properties/features/properties/channels"
+            },
+            "local": {
+              "$ref": "#/definitions/landing/properties/features/properties/channels"
+            }
+          },
+          "required": [
+            "channels",
+            "issues",
+            "human",
+            "local"
+          ],
+          "additionalProperties": false
+        },
+        "cta": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "primary": {
+              "type": "string"
+            },
+            "secondary": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
             }
           },
           "required": [
             "title",
             "subtitle",
-            "primaryCta",
-            "secondaryCta"
-          ],
-          "additionalProperties": false
-        },
-        "features": {
-          "type": "object",
-          "properties": {
-            "fast": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "title",
-                "description"
-              ],
-              "additionalProperties": false
-            },
-            "typesafe": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "title",
-                "description"
-              ],
-              "additionalProperties": false
-            },
-            "domain": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "title",
-                "description"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "fast",
-            "typesafe",
-            "domain"
+            "primary",
+            "secondary",
+            "note"
           ],
           "additionalProperties": false
         },
@@ -113,11 +153,11 @@
         }
       },
       "required": [
-        "brand",
-        "getStarted",
-        "openApp",
+        "nav",
         "hero",
+        "featuresHeading",
         "features",
+        "cta",
         "footer"
       ],
       "additionalProperties": false

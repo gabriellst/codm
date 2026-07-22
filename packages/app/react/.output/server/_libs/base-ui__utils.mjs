@@ -1,5 +1,5 @@
 import { b as React, r as reactExports } from "./react.mjs";
-import { w as withSelectorExports, a as shimExports } from "./use-sync-external-store.mjs";
+import { w as withSelectorExports, s as shimExports } from "./use-sync-external-store.mjs";
 import "./react-dom.mjs";
 import { g as getWindow, i as isOverflowElement } from "./floating-ui__utils.mjs";
 const SafeReact = {
@@ -164,7 +164,131 @@ function getReactElementRef(element) {
 }
 function NOOP() {
 }
+const EMPTY_ARRAY = Object.freeze([]);
 const EMPTY_OBJECT = Object.freeze({});
+const EMPTY$2 = [];
+function useOnMount(fn) {
+  reactExports.useEffect(fn, EMPTY$2);
+}
+const EMPTY$1 = null;
+class Scheduler {
+  /* This implementation uses an array as a backing data-structure for frame callbacks.
+   * It allows `O(1)` callback cancelling by inserting a `null` in the array, though it
+   * never calls the native `cancelAnimationFrame` if there are no frames left. This can
+   * be much more efficient if there is a call pattern that alterns as
+   * "request-cancel-request-cancel-…".
+   * But in the case of "request-request-…-cancel-cancel-…", it leaves the final animation
+   * frame to run anyway. We turn that frame into a `O(1)` no-op via `callbacksCount`. */
+  callbacks = [];
+  callbacksCount = 0;
+  nextId = 1;
+  startId = 1;
+  isScheduled = false;
+  tick = (timestamp) => {
+    this.isScheduled = false;
+    const currentCallbacks = this.callbacks;
+    const currentCallbacksCount = this.callbacksCount;
+    this.callbacks = [];
+    this.callbacksCount = 0;
+    this.startId = this.nextId;
+    if (currentCallbacksCount > 0) {
+      for (let i = 0; i < currentCallbacks.length; i += 1) {
+        currentCallbacks[i]?.(timestamp);
+      }
+    }
+  };
+  request(fn) {
+    const id = this.nextId;
+    this.nextId += 1;
+    this.callbacks.push(fn);
+    this.callbacksCount += 1;
+    const didRAFChange = false;
+    if (!this.isScheduled || didRAFChange) {
+      requestAnimationFrame(this.tick);
+      this.isScheduled = true;
+    }
+    return id;
+  }
+  cancel(id) {
+    const index = id - this.startId;
+    if (index < 0 || index >= this.callbacks.length) {
+      return;
+    }
+    this.callbacks[index] = null;
+    this.callbacksCount -= 1;
+  }
+}
+const scheduler = new Scheduler();
+class AnimationFrame {
+  static create() {
+    return new AnimationFrame();
+  }
+  static request(fn) {
+    return scheduler.request(fn);
+  }
+  static cancel(id) {
+    return scheduler.cancel(id);
+  }
+  currentId = EMPTY$1;
+  /**
+   * Executes `fn` after `delay`, clearing any previously scheduled call.
+   */
+  request(fn) {
+    this.cancel();
+    this.currentId = scheduler.request(() => {
+      this.currentId = EMPTY$1;
+      fn();
+    });
+  }
+  cancel = () => {
+    if (this.currentId !== EMPTY$1) {
+      scheduler.cancel(this.currentId);
+      this.currentId = EMPTY$1;
+    }
+  };
+  disposeEffect = () => {
+    return this.cancel;
+  };
+}
+function useAnimationFrame() {
+  const timeout = useRefWithInit(AnimationFrame.create).current;
+  useOnMount(timeout.disposeEffect);
+  return timeout;
+}
+const EMPTY = 0;
+class Timeout {
+  static create() {
+    return new Timeout();
+  }
+  currentId = EMPTY;
+  /**
+   * Executes `fn` after `delay`, clearing any previously scheduled call.
+   */
+  start(delay, fn) {
+    this.clear();
+    this.currentId = setTimeout(() => {
+      this.currentId = EMPTY;
+      fn();
+    }, delay);
+  }
+  isStarted() {
+    return this.currentId !== EMPTY;
+  }
+  clear = () => {
+    if (this.currentId !== EMPTY) {
+      clearTimeout(this.currentId);
+      this.currentId = EMPTY;
+    }
+  };
+  disposeEffect = () => {
+    return this.clear;
+  };
+}
+function useTimeout() {
+  const timeout = useRefWithInit(Timeout.create).current;
+  useOnMount(timeout.disposeEffect);
+  return timeout;
+}
 let globalId = 0;
 function useGlobalId(idOverride, prefix = "mui") {
   const [defaultId, setDefaultId] = reactExports.useState(idOverride);
@@ -184,44 +308,6 @@ function useId(idOverride, prefix) {
     return idOverride ?? (prefix ? `${prefix}-${reactId}` : reactId);
   }
   return useGlobalId(idOverride, prefix);
-}
-const EMPTY$2 = [];
-function useOnMount(fn) {
-  reactExports.useEffect(fn, EMPTY$2);
-}
-const EMPTY$1 = 0;
-class Timeout {
-  static create() {
-    return new Timeout();
-  }
-  currentId = EMPTY$1;
-  /**
-   * Executes `fn` after `delay`, clearing any previously scheduled call.
-   */
-  start(delay, fn) {
-    this.clear();
-    this.currentId = setTimeout(() => {
-      this.currentId = EMPTY$1;
-      fn();
-    }, delay);
-  }
-  isStarted() {
-    return this.currentId !== EMPTY$1;
-  }
-  clear = () => {
-    if (this.currentId !== EMPTY$1) {
-      clearTimeout(this.currentId);
-      this.currentId = EMPTY$1;
-    }
-  };
-  disposeEffect = () => {
-    return this.clear;
-  };
-}
-function useTimeout() {
-  const timeout = useRefWithInit(Timeout.create).current;
-  useOnMount(timeout.disposeEffect);
-  return timeout;
 }
 function readRawData() {
   if (typeof navigator === "undefined") {
@@ -287,91 +373,6 @@ function createLatestRef(value) {
   };
   return latest;
 }
-const EMPTY = null;
-class Scheduler {
-  /* This implementation uses an array as a backing data-structure for frame callbacks.
-   * It allows `O(1)` callback cancelling by inserting a `null` in the array, though it
-   * never calls the native `cancelAnimationFrame` if there are no frames left. This can
-   * be much more efficient if there is a call pattern that alterns as
-   * "request-cancel-request-cancel-…".
-   * But in the case of "request-request-…-cancel-cancel-…", it leaves the final animation
-   * frame to run anyway. We turn that frame into a `O(1)` no-op via `callbacksCount`. */
-  callbacks = [];
-  callbacksCount = 0;
-  nextId = 1;
-  startId = 1;
-  isScheduled = false;
-  tick = (timestamp) => {
-    this.isScheduled = false;
-    const currentCallbacks = this.callbacks;
-    const currentCallbacksCount = this.callbacksCount;
-    this.callbacks = [];
-    this.callbacksCount = 0;
-    this.startId = this.nextId;
-    if (currentCallbacksCount > 0) {
-      for (let i = 0; i < currentCallbacks.length; i += 1) {
-        currentCallbacks[i]?.(timestamp);
-      }
-    }
-  };
-  request(fn) {
-    const id = this.nextId;
-    this.nextId += 1;
-    this.callbacks.push(fn);
-    this.callbacksCount += 1;
-    const didRAFChange = false;
-    if (!this.isScheduled || didRAFChange) {
-      requestAnimationFrame(this.tick);
-      this.isScheduled = true;
-    }
-    return id;
-  }
-  cancel(id) {
-    const index = id - this.startId;
-    if (index < 0 || index >= this.callbacks.length) {
-      return;
-    }
-    this.callbacks[index] = null;
-    this.callbacksCount -= 1;
-  }
-}
-const scheduler = new Scheduler();
-class AnimationFrame {
-  static create() {
-    return new AnimationFrame();
-  }
-  static request(fn) {
-    return scheduler.request(fn);
-  }
-  static cancel(id) {
-    return scheduler.cancel(id);
-  }
-  currentId = EMPTY;
-  /**
-   * Executes `fn` after `delay`, clearing any previously scheduled call.
-   */
-  request(fn) {
-    this.cancel();
-    this.currentId = scheduler.request(() => {
-      this.currentId = EMPTY;
-      fn();
-    });
-  }
-  cancel = () => {
-    if (this.currentId !== EMPTY) {
-      scheduler.cancel(this.currentId);
-      this.currentId = EMPTY;
-    }
-  };
-  disposeEffect = () => {
-    return this.cancel;
-  };
-}
-function useAnimationFrame() {
-  const timeout = useRefWithInit(AnimationFrame.create).current;
-  useOnMount(timeout.disposeEffect);
-  return timeout;
-}
 function ownerDocument(node) {
   return node?.ownerDocument || document;
 }
@@ -390,6 +391,10 @@ const visuallyHidden = {
   position: "fixed",
   top: 0,
   left: 0
+};
+const visuallyHiddenInput = {
+  ...visuallyHiddenBase,
+  position: "absolute"
 };
 function useOnFirstRender(fn) {
   const ref = reactExports.useRef(true);
@@ -921,38 +926,43 @@ function useControlled({
   }, []);
   return [value, setValueIfUncontrolled];
 }
+function isElementDisabled(element) {
+  return element == null || element.hasAttribute("disabled") || element.getAttribute("aria-disabled") === "true";
+}
 export {
   AnimationFrame as A,
-  useEnhancedClickHandler as B,
-  useControlled as C,
+  useControlled as B,
+  isElementDisabled as C,
+  EMPTY_ARRAY as D,
   EMPTY_OBJECT as E,
+  visuallyHiddenInput as F,
   NOOP as N,
   ReactStore as R,
   Timeout as T,
   useStableCallback as a,
   useMergedRefs as b,
   useMergedRefsN as c,
-  useId as d,
-  android as e,
+  useAnimationFrame as d,
+  useTimeout as e,
   formatErrorMessage as f,
   getReactElementRef as g,
-  visuallyHidden as h,
-  mergeCleanups as i,
+  useId as h,
+  android as i,
   jsdom as j,
-  addEventListener as k,
-  useRefWithInit as l,
+  visuallyHidden as k,
+  mergeCleanups as l,
   mergeObjects as m,
-  useValueAsRef as n,
+  addEventListener as n,
   ownerDocument as o,
-  useTimeout as p,
-  useAnimationFrame as q,
-  createSelector as r,
-  useOnFirstRender as s,
-  useOnMount as t,
+  useValueAsRef as p,
+  createSelector as q,
+  inertValue as r,
+  useScrollLock as s,
+  useOnFirstRender as t,
   useIsoLayoutEffect as u,
   voiceOver as v,
   webkit as w,
-  inertValue as x,
-  useScrollLock as y,
-  ios as z
+  ios as x,
+  useEnhancedClickHandler as y,
+  useRefWithInit as z
 };

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "version": "v1",
-    "title": "template-backend"
+    "title": "codedm-backend"
   },
   "paths": {
     "/v1/session": {
@@ -2509,6 +2509,43 @@
         }
       }
     },
+    "/v1/ui/channels/connect": {
+      "post": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Start or resume WhatsApp pairing via the channel gateway (T06)",
+        "operationId": "ConnectChannel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Start or resume WhatsApp pairing via the channel gateway (T06)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channelId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/ChannelStatus"
+                    }
+                  },
+                  "required": [
+                    "channelId",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/ui/attach-thread-wizard": {
       "get": {
         "tags": [
@@ -2643,6 +2680,54 @@
                     "contacts",
                     "workspaces",
                     "providers"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/channels/pairing-status": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "WhatsApp pairing status + live QR for the connect dialog poll (T06)",
+        "operationId": "GetChannelPairingStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "WhatsApp pairing status + live QR for the connect dialog poll (T06)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channelId": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/ChannelStatus"
+                    },
+                    "qr": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "qrExpiresAt": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "channelId",
+                    "status",
+                    "qr",
+                    "qrExpiresAt"
                   ],
                   "additionalProperties": false
                 }
@@ -3311,6 +3396,7 @@
           "ENTRY_NOT_FOUND",
           "ENTRY_NOT_INVOCABLE",
           "FORBIDDEN",
+          "GATEWAY_UNAVAILABLE",
           "HANDLER_NOT_BOUND",
           "INVALIDATED_AUTH_TOKEN",
           "INVALID_AUTH_TOKEN",
@@ -3617,6 +3703,7 @@
     "ENTRY_NOT_FOUND",
     "ENTRY_NOT_INVOCABLE",
     "FORBIDDEN",
+    "GATEWAY_UNAVAILABLE",
     "HANDLER_NOT_BOUND",
     "INVALIDATED_AUTH_TOKEN",
     "INVALID_AUTH_TOKEN",

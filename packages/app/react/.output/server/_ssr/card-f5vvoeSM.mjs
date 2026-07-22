@@ -1,0 +1,107 @@
+import { c as jsxDevRuntimeExports } from "../_libs/react.mjs";
+import { c as cn, s as surface } from "./router-NNnLbzcz.mjs";
+function Card({ className, size = "default", ...props }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "div",
+    {
+      "data-slot": "card",
+      "data-size": size,
+      className: cn(
+        surface,
+        "gap-4 overflow-hidden rounded-[1.25rem] pt-5 text-sm transition-all duration-150 ease-out has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-4 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-[1.25rem] *:[img:last-child]:rounded-b-[1.25rem] group/card flex flex-col",
+        className
+      ),
+      ...props
+    },
+    void 0,
+    false,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/card.tsx",
+      lineNumber: 8,
+      columnNumber: 3
+    },
+    this
+  );
+}
+function CardHeader({ className, ...props }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "div",
+    {
+      "data-slot": "card-header",
+      className: cn(
+        "gap-1 rounded-t-xl px-4 group-data-[size=sm]/card:px-3 [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3 group/card-header @container/card-header grid auto-rows-min items-start has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto]",
+        className
+      ),
+      ...props
+    },
+    void 0,
+    false,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/card.tsx",
+      lineNumber: 23,
+      columnNumber: 3
+    },
+    this
+  );
+}
+function CardTitle({ className, ...props }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "div",
+    {
+      "data-slot": "card-title",
+      className: cn("text-base leading-snug font-semibold group-data-[size=sm]/card:text-sm", className),
+      ...props
+    },
+    void 0,
+    false,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/card.tsx",
+      lineNumber: 36,
+      columnNumber: 3
+    },
+    this
+  );
+}
+function CardDescription({ className, ...props }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { "data-slot": "card-description", className: cn("text-muted-foreground text-sm", className), ...props }, void 0, false, {
+    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/card.tsx",
+    lineNumber: 45,
+    columnNumber: 9
+  }, this);
+}
+function CardContent({ className, ...props }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { "data-slot": "card-content", className: cn("px-4 group-data-[size=sm]/card:px-3", className), ...props }, void 0, false, {
+    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/card.tsx",
+    lineNumber: 55,
+    columnNumber: 9
+  }, this);
+}
+function CardFooter({ className, ...props }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "div",
+    {
+      "data-slot": "card-footer",
+      className: cn(
+        "bg-muted/40 rounded-b-[1.25rem] border-t border-border p-4 group-data-[size=sm]/card:p-3 flex items-center",
+        className
+      ),
+      ...props
+    },
+    void 0,
+    false,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/card.tsx",
+      lineNumber: 60,
+      columnNumber: 3
+    },
+    this
+  );
+}
+export {
+  Card as C,
+  CardHeader as a,
+  CardTitle as b,
+  CardDescription as c,
+  CardContent as d,
+  CardFooter as e
+};

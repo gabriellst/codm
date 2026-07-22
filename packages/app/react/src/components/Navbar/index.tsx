@@ -12,7 +12,7 @@ import type { FileRouteTypes } from '@/routeTree.gen'
 
 type AppRoute = FileRouteTypes['to']
 
-const rowBase = 'flex items-center gap-3 rounded-xl px-3 h-11 text-sm font-medium transition-colors'
+const rowBase = 'flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-colors'
 const rowIdle = 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60'
 const rowActive = 'bg-sidebar-accent text-sidebar-foreground'
 
@@ -77,12 +77,6 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 						))
 					)}
 				</div>
-			</div>
-
-			<div className="px-2 text-xs leading-relaxed text-muted-foreground">
-				{t('console.footerLocal')}
-				<br />
-				{t('console.footerNoAccount')}
 			</div>
 		</aside>
 	)

@@ -1,5 +1,5 @@
 import { r as reactExports, j as jsxRuntimeExports, R as React__default } from "./react.mjs";
-import { i as invariant, a as isDangerousProtocol, e as exactPathTest, r as removeTrailingSlash, h as hasKeys, d as deepEqual, f as functionalUpdate, B as BaseRootRoute, b as BaseRoute, c as isModuleNotFoundError, g as isNotFound, j as getScrollRestorationScriptForRouter, k as rootRouteId, l as isServer, m as isRedirect, n as createNonReactiveReadonlyStore, o as createNonReactiveMutableStore, R as RouterCore, p as escapeHtml, q as getAssetCrossOrigin, s as getScriptPreloadAttrs, t as appendUniqueUserTags, u as resolveManifestCssLink, v as transformReadableStreamWithRouter, w as createSsrStreamResponse, x as transformPipeableStreamWithRouter } from "./tanstack__router-core.mjs";
+import { i as invariant, a as isDangerousProtocol, e as exactPathTest, r as removeTrailingSlash, h as hasKeys, d as deepEqual, f as functionalUpdate, B as BaseRootRoute, b as BaseRoute, c as BaseRouteApi, n as notFound, g as isModuleNotFoundError, j as isNotFound, k as getScrollRestorationScriptForRouter, l as rootRouteId, m as isServer, o as isRedirect, p as createNonReactiveReadonlyStore, q as createNonReactiveMutableStore, R as RouterCore, s as escapeHtml, t as getAssetCrossOrigin, u as getScriptPreloadAttrs, v as appendUniqueUserTags, w as resolveManifestCssLink, x as transformReadableStreamWithRouter, y as createSsrStreamResponse, z as transformPipeableStreamWithRouter } from "./tanstack__router-core.mjs";
 import { R as ReactDOMServer } from "./react-dom.mjs";
 import { PassThrough } from "node:stream";
 import { i as isbot } from "./isbot.mjs";
@@ -359,6 +359,75 @@ var Link = reactExports.forwardRef((props, ref) => {
   }
   return reactExports.createElement(_asChild, linkProps, children);
 });
+function getRouteApi(id) {
+  return new RouteApi({ id });
+}
+var RouteApi = class extends BaseRouteApi {
+  /**
+  * @deprecated Use the `getRouteApi` function instead.
+  */
+  constructor({ id }) {
+    super({ id });
+    this.useMatch = (opts) => {
+      return useMatch({
+        select: opts?.select,
+        from: this.id,
+        structuralSharing: opts?.structuralSharing
+      });
+    };
+    this.useRouteContext = (opts) => {
+      return useRouteContext({
+        ...opts,
+        from: this.id
+      });
+    };
+    this.useSearch = (opts) => {
+      return useSearch({
+        select: opts?.select,
+        structuralSharing: opts?.structuralSharing,
+        from: this.id
+      });
+    };
+    this.useParams = (opts) => {
+      return useParams({
+        select: opts?.select,
+        structuralSharing: opts?.structuralSharing,
+        from: this.id
+      });
+    };
+    this.useLoaderDeps = (opts) => {
+      return useLoaderDeps({
+        ...opts,
+        from: this.id,
+        strict: false
+      });
+    };
+    this.useLoaderData = (opts) => {
+      return useLoaderData({
+        ...opts,
+        from: this.id,
+        strict: false
+      });
+    };
+    this.useNavigate = () => {
+      return useNavigate({ from: useRouter().routesById[this.id].fullPath });
+    };
+    this.notFound = (opts) => {
+      return notFound({
+        routeId: this.id,
+        ...opts
+      });
+    };
+    this.Link = React__default.forwardRef((props, ref) => {
+      const fullPath = useRouter().routesById[this.id].fullPath;
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Link, {
+        ref,
+        from: fullPath,
+        ...props
+      });
+    });
+  }
+};
 var Route = class extends BaseRoute {
   /**
   * @deprecated Use the `createRoute` function instead.
@@ -743,13 +812,6 @@ function MatchesInner() {
     })
   });
 }
-function useMatches(opts) {
-  const router = useRouter();
-  {
-    const matches = router.stores.matches.get();
-    return matches;
-  }
-}
 var getStoreFactory = (opts) => {
   return {
     createMutableStore: createNonReactiveMutableStore,
@@ -789,11 +851,11 @@ function RouterProvider({ router, ...rest }) {
   });
 }
 function useRouterState(opts) {
-  const contextRouter = useRouter();
-  const router = contextRouter;
+  const contextRouter = useRouter({ warn: opts?.router === void 0 });
+  const router = opts?.router || contextRouter;
   {
     const state = router.stores.__store.get();
-    return state;
+    return opts?.select ? opts.select(state) : state;
   }
 }
 var noopScriptHandler = () => {
@@ -1189,12 +1251,13 @@ export {
   Outlet as O,
   RouterProvider as R,
   Scripts as S,
-  useRouterState as a,
-  createRootRouteWithContext as b,
+  useRouter as a,
+  useRouterState as b,
   createRouter as c,
-  createFileRoute as d,
-  useRouter as e,
+  createRootRouteWithContext as d,
+  createFileRoute as e,
+  getRouteApi as g,
   lazyRouteComponent as l,
   renderRouterToStream as r,
-  useMatches as u
+  useNavigate as u
 };

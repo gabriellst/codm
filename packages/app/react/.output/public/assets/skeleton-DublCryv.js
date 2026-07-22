@@ -1,0 +1,1 @@
+import{j as o,a as t}from"./index-BO3g0mcg.js";function r({className:e,...s}){return o.jsxDEV("div",{"data-slot":"skeleton",className:t("bg-hover rounded-md animate-pulse",e),...s},void 0,!1,{fileName:"/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/components/ui/skeleton.tsx",lineNumber:4,columnNumber:9},this)}export{r as S};

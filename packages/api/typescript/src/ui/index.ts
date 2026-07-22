@@ -1,9 +1,9 @@
 import { BoundedContext } from '@codedm/core-typescript'
 import * as controllers from './controllers'
+import * as externalHandlers from './handlers/external'
 import { INSTANCE_REGISTRY } from './registry'
 
 const internalHandlers = {}
-const externalHandlers = {}
 
 const ctx = await BoundedContext.create({
 	name: 'ui',

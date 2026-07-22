@@ -1,0 +1,38 @@
+import { f as fetch } from "../_http-B7Tvv7R3.mjs";
+import { a as useQuery, q as queryOptions } from "../_libs/tanstack__react-query.mjs";
+function getGetSessionChatUrl(threadId) {
+  const res = { method: "GET", url: `/v1/threads/${threadId}/chat` };
+  return res;
+}
+async function getSessionChat(threadId, config = {}) {
+  const { client: request = fetch, ...requestConfig } = config;
+  const res = await request({ method: "GET", url: getGetSessionChatUrl(threadId).url.toString(), ...requestConfig });
+  return res.data;
+}
+const getSessionChatQueryKey = (threadId) => [{ url: "/v1/threads/:threadId/chat", params: { threadId } }];
+function getSessionChatQueryOptions(threadId, config = {}) {
+  const queryKey = getSessionChatQueryKey(threadId);
+  return queryOptions({
+    enabled: !!threadId,
+    queryKey,
+    queryFn: async ({ signal }) => {
+      return getSessionChat(threadId, { ...config, signal: config.signal ?? signal });
+    }
+  });
+}
+function useGetSessionChat(threadId, options = {}) {
+  const { query: queryConfig = {}, client: config = {} } = options ?? {};
+  const { client: queryClient, ...resolvedOptions } = queryConfig;
+  const queryKey = resolvedOptions?.queryKey ?? getSessionChatQueryKey(threadId);
+  const query = useQuery({
+    ...getSessionChatQueryOptions(threadId, config),
+    ...resolvedOptions,
+    queryKey
+  }, queryClient);
+  query.queryKey = queryKey;
+  return query;
+}
+export {
+  getSessionChatQueryKey as g,
+  useGetSessionChat as u
+};

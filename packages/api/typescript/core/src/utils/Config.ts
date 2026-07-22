@@ -42,6 +42,12 @@ const RawEnvSchema = z.object({
 	REDIS_URL: z.string().default('redis://localhost:6379'),
 	// api-go public base URL — the SDK aggregate client (shared/registry) targets the Go service with it.
 	API_GO_URL: z.string().default('http://localhost:3032'),
+	// Shared secret guarding the Go channel-gateway HTTP surface (S2S). The api-ts channel PROXY
+	// (ui/ConnectChannel) sends it as the `apikey` header on the SERVER-SIDE connect call — it never
+	// reaches the browser. Empty = allow-all (the gateway's local single-operator default); the Go
+	// APIKey middleware short-circuits when its configured key is empty, so an empty value here pairs
+	// with an empty gateway key. Read by BOTH services (api-go binds it as cfg.GatewayAPIKey).
+	CODEDM_GATEWAY_API_KEY: z.string().default(''),
 	// Declared escape hatch for hermetic test stacks (the e2e runner sets it): the sign-in/up
 	// windows are per-IP, and a full suite from one host legitimately exceeds them.
 	RATE_LIMIT_DISABLED: z

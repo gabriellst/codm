@@ -1,0 +1,939 @@
+import { r as reactExports, c as jsxDevRuntimeExports } from "../_libs/react.mjs";
+import { u as useForm } from "../_libs/tanstack__react-form.mjs";
+import { u as useNavigate } from "../_libs/tanstack__react-router.mjs";
+import { c as cn, B as Button, E as Empty, b as EmptyTitle, d as EmptyDescription, a as attachThreadMutationRequestSchema } from "./router-NNnLbzcz.mjs";
+import { f as fetch } from "../_http-B7Tvv7R3.mjs";
+import { a as useQuery, b as useMutation, q as queryOptions, m as mutationOptions } from "../_libs/tanstack__react-query.mjs";
+import { S as Skeleton } from "./skeleton-CMW2_JAA.mjs";
+import { L as Logo } from "./Logo-yUfi7q_5.mjs";
+import { I as Input } from "./input-D11kk7yl.mjs";
+import { B as Badge } from "./badge-CKHT7bhp.mjs";
+import { S as Spinner } from "./spinner-BF9CKMGy.mjs";
+import { T as ThreadAvatar } from "./ThreadAvatar-DOwlc1eN.mjs";
+import { c as channelLabel, p as providerLabel, a as providerGlyph } from "./glyphs-D8fG7IZJ.mjs";
+import { e as enumLabel } from "./enums-By4KP5D8.mjs";
+import "../_libs/i18next.mjs";
+import "../_libs/sonner.mjs";
+import "./avatar-CUy_TWwL.mjs";
+import { u as useTranslation } from "../_libs/react-i18next.mjs";
+import { f as IconX, g as IconArrowLeft, h as IconCheck, i as IconArrowRight, j as IconChevronRight } from "../_libs/tabler__icons-react.mjs";
+import { c as create } from "../_libs/zustand.mjs";
+import "../_libs/tanstack__form-core.mjs";
+import "../_libs/tanstack__store.mjs";
+import "../_libs/tanstack__pacer-lite.mjs";
+import "../_libs/@tanstack/devtools-event-client+[...].mjs";
+import "../_libs/tanstack__react-store.mjs";
+import "../_libs/use-sync-external-store.mjs";
+import "../_libs/tanstack__router-core.mjs";
+import "../_libs/tanstack__history.mjs";
+import "node:stream/web";
+import "node:stream";
+import "../_libs/react-dom.mjs";
+import "util";
+import "crypto";
+import "async_hooks";
+import "stream";
+import "../_libs/isbot.mjs";
+import "../_libs/tanstack__query-core.mjs";
+import "../_libs/clsx.mjs";
+import "../_libs/class-variance-authority.mjs";
+import "../_libs/tailwind-merge.mjs";
+import "../_libs/tanstack__react-query-devtools.mjs";
+import "../_libs/@tanstack/react-router-devtools+[...].mjs";
+import "../_libs/base-ui__react.mjs";
+import "../_libs/base-ui__utils.mjs";
+import "../_libs/floating-ui__utils.mjs";
+import "../_libs/zod.mjs";
+function getAttachThreadUrl() {
+  const res = { method: "POST", url: `/v1/threads` };
+  return res;
+}
+async function attachThread(data, config = {}) {
+  const { client: request = fetch, ...requestConfig } = config;
+  const requestData = data;
+  const res = await request({ method: "POST", url: getAttachThreadUrl().url.toString(), data: requestData, ...requestConfig });
+  return res.data;
+}
+function getGetAttachThreadWizardUrl() {
+  const res = { method: "GET", url: `/v1/ui/attach-thread-wizard` };
+  return res;
+}
+async function getAttachThreadWizard(config = {}) {
+  const { client: request = fetch, ...requestConfig } = config;
+  const res = await request({ method: "GET", url: getGetAttachThreadWizardUrl().url.toString(), ...requestConfig });
+  return res.data;
+}
+const attachThreadMutationKey = () => [{ url: "/v1/threads" }];
+function attachThreadMutationOptions(config = {}) {
+  const mutationKey = attachThreadMutationKey();
+  return mutationOptions({
+    mutationKey,
+    mutationFn: async ({ data }) => {
+      return attachThread(data, config);
+    }
+  });
+}
+function useAttachThread(options = {}) {
+  const { mutation = {}, client: config = {} } = options ?? {};
+  const { client: queryClient, ...mutationOptions2 } = mutation;
+  const mutationKey = mutationOptions2.mutationKey ?? attachThreadMutationKey();
+  const baseOptions = attachThreadMutationOptions(config);
+  return useMutation({
+    ...baseOptions,
+    mutationKey,
+    ...mutationOptions2
+  }, queryClient);
+}
+const getAttachThreadWizardQueryKey = () => [{ url: "/v1/ui/attach-thread-wizard" }];
+function getAttachThreadWizardQueryOptions(config = {}) {
+  const queryKey = getAttachThreadWizardQueryKey();
+  return queryOptions({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      return getAttachThreadWizard({ ...config, signal: config.signal ?? signal });
+    }
+  });
+}
+function useGetAttachThreadWizard(options = {}) {
+  const { query: queryConfig = {}, client: config = {} } = options ?? {};
+  const { client: queryClient, ...resolvedOptions } = queryConfig;
+  const queryKey = resolvedOptions?.queryKey ?? getAttachThreadWizardQueryKey();
+  const query = useQuery({
+    ...getAttachThreadWizardQueryOptions(config),
+    ...resolvedOptions,
+    queryKey
+  }, queryClient);
+  query.queryKey = queryKey;
+  return query;
+}
+const initialState = {
+  currentStepIndex: 0,
+  direction: 1
+};
+const useAttachWizardStore = create()((set) => ({
+  ...initialState,
+  setCurrentStepIndex: (currentStepIndex) => set({ currentStepIndex }),
+  setDirection: (direction) => set({ direction }),
+  reset: () => set(initialState)
+}));
+function StepHeading({ title, subtitle }) {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center gap-2 pb-6 text-center", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h1", { className: "heading-display text-3xl text-foreground md:text-4xl", children: title }, void 0, false, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/StepHeading/index.tsx",
+      lineNumber: 5,
+      columnNumber: 4
+    }, this),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-muted-foreground", children: subtitle }, void 0, false, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/StepHeading/index.tsx",
+      lineNumber: 6,
+      columnNumber: 4
+    }, this)
+  ] }, void 0, true, {
+    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/StepHeading/index.tsx",
+    lineNumber: 4,
+    columnNumber: 3
+  }, this);
+}
+const ContactStepSchema = attachThreadMutationRequestSchema.pick({ contactRef: true });
+function ContactStep({ contacts, channelKindById, defaultValues, onSubmit, isSubmitting, className, ...props }) {
+  const { t } = useTranslation();
+  const [search, setSearch] = reactExports.useState("");
+  const form = useForm({
+    defaultValues,
+    validators: { onChange: ContactStepSchema },
+    onSubmit: async (form2) => {
+      const result = ContactStepSchema.safeParse(form2.value);
+      if (!result.success) return;
+      onSubmit(result.data);
+    }
+  });
+  const filtered = contacts.filter((c) => c.displayName.toLowerCase().includes(search.trim().toLowerCase()));
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "form",
+    {
+      className: cn("flex flex-col gap-5", className),
+      ...props,
+      onSubmit: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      },
+      children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(StepHeading, { title: t("attach.stepThreadTitle"), subtitle: t("attach.stepThreadSubtitle") }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+          lineNumber: 60,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Input, { placeholder: t("attach.searchContacts"), value: search, onChange: (e) => setSearch(e.target.value) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+          lineNumber: 61,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => state.values.contactRef, children: (selected) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-1", children: filtered.map((contact) => {
+          const channelKind = channelKindById.get(contact.channelId);
+          const isSelected = selected?.externalId === contact.externalId && selected?.channelId === contact.channelId;
+          return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+            "button",
+            {
+              type: "button",
+              disabled: contact.alreadyAttached,
+              onClick: () => form.setFieldValue("contactRef", {
+                channelId: contact.channelId,
+                externalId: contact.externalId,
+                displayName: contact.displayName,
+                kind: contact.kind
+              }),
+              className: cn(
+                "flex items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors",
+                contact.alreadyAttached ? "cursor-not-allowed opacity-50" : "hover:bg-muted",
+                isSelected && "bg-muted"
+              ),
+              children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ThreadAvatar, { name: contact.displayName, channelKind }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+                  lineNumber: 88,
+                  columnNumber: 10
+                }, this),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex min-w-0 flex-1 flex-col", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "truncate font-semibold text-foreground", children: contact.displayName }, void 0, false, {
+                    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+                    lineNumber: 90,
+                    columnNumber: 11
+                  }, this),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-muted-foreground", children: channelKind ? channelLabel[channelKind] : "" }, void 0, false, {
+                    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+                    lineNumber: 91,
+                    columnNumber: 11
+                  }, this)
+                ] }, void 0, true, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+                  lineNumber: 89,
+                  columnNumber: 10
+                }, this),
+                contact.alreadyAttached ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { variant: "outline", children: t("attach.attached") }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+                  lineNumber: 94,
+                  columnNumber: 11
+                }, this) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconChevronRight, { className: "size-4 text-muted-foreground" }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+                  lineNumber: 96,
+                  columnNumber: 11
+                }, this)
+              ]
+            },
+            `${contact.channelId}-${contact.externalId}`,
+            true,
+            {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+              lineNumber: 70,
+              columnNumber: 9
+            },
+            this
+          );
+        }) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+          lineNumber: 65,
+          columnNumber: 6
+        }, this) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+          lineNumber: 63,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => ({ canSubmit: state.canSubmit, values: state.values }), children: ({ canSubmit, values }) => {
+          const isDisabled = isSubmitting || !canSubmit || !ContactStepSchema.safeParse(values).success;
+          return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "submit", disabled: isDisabled, children: [
+            isSubmitting && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Spinner, { className: "mr-2" }, void 0, false, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+              lineNumber: 111,
+              columnNumber: 26
+            }, this),
+            t("attach.continue"),
+            " ",
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconArrowRight, { "data-icon": "inline-end" }, void 0, false, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+              lineNumber: 112,
+              columnNumber: 32
+            }, this)
+          ] }, void 0, true, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+            lineNumber: 110,
+            columnNumber: 8
+          }, this) }, void 0, false, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+            lineNumber: 109,
+            columnNumber: 7
+          }, this);
+        } }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+          lineNumber: 105,
+          columnNumber: 4
+        }, this)
+      ]
+    },
+    void 0,
+    true,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ContactStep/index.tsx",
+      lineNumber: 51,
+      columnNumber: 3
+    },
+    this
+  );
+}
+const WorkspaceStepSchema = attachThreadMutationRequestSchema.pick({ workspaceId: true });
+function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isSubmitting, className, ...props }) {
+  const { t } = useTranslation();
+  const form = useForm({
+    defaultValues,
+    validators: { onChange: WorkspaceStepSchema },
+    onSubmit: async (form2) => {
+      const result = WorkspaceStepSchema.safeParse(form2.value);
+      if (!result.success) return;
+      onSubmit(result.data);
+    }
+  });
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "form",
+    {
+      className: cn("flex flex-col gap-5", className),
+      ...props,
+      onSubmit: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      },
+      children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(StepHeading, { title: t("attach.stepWorkspaceTitle"), subtitle: t("attach.stepWorkspaceSubtitle") }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+          lineNumber: 48,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => state.values.workspaceId, children: (selected) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-1", children: workspaces.map((workspace) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            type: "button",
+            onClick: () => form.setFieldValue("workspaceId", workspace.workspaceId),
+            className: cn(
+              "flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-muted",
+              selected === workspace.workspaceId && "bg-muted"
+            ),
+            children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex min-w-0 flex-1 flex-col gap-1.5", children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "truncate font-mono text-sm font-semibold text-foreground", children: workspace.path }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                  lineNumber: 64,
+                  columnNumber: 10
+                }, this),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-1.5", children: workspace.badges.map((badge) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { variant: "outline", children: enumLabel("WorkspaceBadge", badge) }, badge, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                  lineNumber: 67,
+                  columnNumber: 12
+                }, this)) }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                  lineNumber: 65,
+                  columnNumber: 10
+                }, this)
+              ] }, void 0, true, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                lineNumber: 63,
+                columnNumber: 9
+              }, this),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconChevronRight, { className: "size-4 text-muted-foreground" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                lineNumber: 73,
+                columnNumber: 9
+              }, this)
+            ]
+          },
+          workspace.workspaceId,
+          true,
+          {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+            lineNumber: 54,
+            columnNumber: 8
+          },
+          this
+        )) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+          lineNumber: 52,
+          columnNumber: 6
+        }, this) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+          lineNumber: 50,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => ({ canSubmit: state.canSubmit, values: state.values }), children: ({ canSubmit, values }) => {
+          const isDisabled = isSubmitting || !canSubmit || !WorkspaceStepSchema.safeParse(values).success;
+          return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: onBack && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "button", variant: "ghost", onClick: onBack, disabled: isSubmitting, children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconArrowLeft, { "data-icon": "inline-start" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                lineNumber: 88,
+                columnNumber: 11
+              }, this),
+              " ",
+              t("attach.back")
+            ] }, void 0, true, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+              lineNumber: 87,
+              columnNumber: 10
+            }, this) }, void 0, false, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+              lineNumber: 85,
+              columnNumber: 8
+            }, this),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "submit", disabled: isDisabled, children: [
+              isSubmitting && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Spinner, { className: "mr-2" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                lineNumber: 93,
+                columnNumber: 26
+              }, this),
+              t("attach.continue"),
+              " ",
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconArrowRight, { "data-icon": "inline-end" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+                lineNumber: 94,
+                columnNumber: 32
+              }, this)
+            ] }, void 0, true, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+              lineNumber: 92,
+              columnNumber: 8
+            }, this)
+          ] }, void 0, true, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+            lineNumber: 84,
+            columnNumber: 7
+          }, this);
+        } }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+          lineNumber: 80,
+          columnNumber: 4
+        }, this)
+      ]
+    },
+    void 0,
+    true,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/WorkspaceStep/index.tsx",
+      lineNumber: 39,
+      columnNumber: 3
+    },
+    this
+  );
+}
+const AgentsStepSchema = attachThreadMutationRequestSchema.pick({ providers: true });
+function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmitting, className, ...props }) {
+  const { t } = useTranslation();
+  const form = useForm({
+    defaultValues,
+    validators: { onChange: AgentsStepSchema },
+    onSubmit: async (form2) => {
+      const result = AgentsStepSchema.safeParse(form2.value);
+      if (!result.success) return;
+      onSubmit(result.data);
+    }
+  });
+  const toggle = (provider) => {
+    const current = form.getFieldValue("providers") ?? [];
+    const next = current.includes(provider) ? current.filter((p) => p !== provider) : [...current, provider];
+    form.setFieldValue("providers", next);
+  };
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "form",
+    {
+      className: cn("flex flex-col gap-5", className),
+      ...props,
+      onSubmit: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      },
+      children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(StepHeading, { title: t("attach.stepAgentsTitle"), subtitle: t("attach.stepAgentsSubtitle") }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+          lineNumber: 54,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => state.values.providers ?? [], children: (selected) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-2", children: providers.map((entry) => {
+          const Glyph = providerGlyph[entry.provider];
+          const available = entry.available;
+          const isSelected = selected.includes(entry.provider);
+          return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+            "button",
+            {
+              type: "button",
+              disabled: !available,
+              onClick: () => toggle(entry.provider),
+              className: cn(
+                "flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
+                available ? "hover:bg-muted" : "cursor-not-allowed opacity-50",
+                isSelected ? "border-foreground bg-muted" : "border-border"
+              ),
+              children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex size-10 items-center justify-center rounded-full bg-secondary text-foreground", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Glyph, { className: "size-5" }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                  lineNumber: 76,
+                  columnNumber: 11
+                }, this) }, void 0, false, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                  lineNumber: 75,
+                  columnNumber: 10
+                }, this),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-1 flex-col", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-foreground", children: providerLabel[entry.provider] }, void 0, false, {
+                    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                    lineNumber: 79,
+                    columnNumber: 11
+                  }, this),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-muted-foreground", children: enumLabel("ProviderStatus", entry.status) }, void 0, false, {
+                    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                    lineNumber: 80,
+                    columnNumber: 11
+                  }, this)
+                ] }, void 0, true, {
+                  fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                  lineNumber: 78,
+                  columnNumber: 10
+                }, this),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                  "span",
+                  {
+                    className: cn(
+                      "flex size-6 items-center justify-center rounded-full border",
+                      isSelected ? "border-transparent bg-primary text-primary-foreground" : "border-border"
+                    ),
+                    children: isSelected && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconCheck, { className: "size-3.5" }, void 0, false, {
+                      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                      lineNumber: 88,
+                      columnNumber: 26
+                    }, this)
+                  },
+                  void 0,
+                  false,
+                  {
+                    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                    lineNumber: 82,
+                    columnNumber: 10
+                  },
+                  this
+                )
+              ]
+            },
+            entry.provider,
+            true,
+            {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+              lineNumber: 64,
+              columnNumber: 9
+            },
+            this
+          );
+        }) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+          lineNumber: 58,
+          columnNumber: 6
+        }, this) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+          lineNumber: 56,
+          columnNumber: 4
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => ({ canSubmit: state.canSubmit, values: state.values }), children: ({ canSubmit, values }) => {
+          const isDisabled = isSubmitting || !canSubmit || !AgentsStepSchema.safeParse(values).success;
+          return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: onBack && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "button", variant: "ghost", onClick: onBack, disabled: isSubmitting, children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconArrowLeft, { "data-icon": "inline-start" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                lineNumber: 105,
+                columnNumber: 11
+              }, this),
+              " ",
+              t("attach.back")
+            ] }, void 0, true, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+              lineNumber: 104,
+              columnNumber: 10
+            }, this) }, void 0, false, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+              lineNumber: 102,
+              columnNumber: 8
+            }, this),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "submit", disabled: isDisabled, children: [
+              isSubmitting && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Spinner, { className: "mr-2" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                lineNumber: 110,
+                columnNumber: 26
+              }, this),
+              t("attach.continue"),
+              " ",
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconArrowRight, { "data-icon": "inline-end" }, void 0, false, {
+                fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+                lineNumber: 111,
+                columnNumber: 32
+              }, this)
+            ] }, void 0, true, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+              lineNumber: 109,
+              columnNumber: 8
+            }, this)
+          ] }, void 0, true, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+            lineNumber: 101,
+            columnNumber: 7
+          }, this);
+        } }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+          lineNumber: 97,
+          columnNumber: 4
+        }, this)
+      ]
+    },
+    void 0,
+    true,
+    {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AgentsStep/index.tsx",
+      lineNumber: 45,
+      columnNumber: 3
+    },
+    this
+  );
+}
+function ReviewStep({ form, channelKindById, workspaces, onBack, onFinish, isSubmitting, className, ...props }) {
+  const { t } = useTranslation();
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: cn("flex flex-col gap-5", className), ...props, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(StepHeading, { title: t("attach.stepReviewTitle"), subtitle: t("attach.stepReviewSubtitle") }, void 0, false, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+      lineNumber: 30,
+      columnNumber: 4
+    }, this),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(form.Subscribe, { selector: (state) => state.values, children: (values) => {
+      const canFinish = attachThreadMutationRequestSchema.safeParse(values).success;
+      const channelKind = values.contactRef?.channelId ? channelKindById.get(values.contactRef.channelId) : void 0;
+      const workspacePath = workspaces.find((w) => w.workspaceId === values.workspaceId)?.path ?? "—";
+      const rows = [
+        {
+          label: t("attach.rowContact"),
+          value: `${values.contactRef?.displayName ?? "—"}${channelKind ? ` · ${channelLabel[channelKind]}` : ""}`
+        },
+        { label: t("attach.rowWorkspace"), value: workspacePath, mono: true },
+        { label: t("attach.rowAgents"), value: (values.providers ?? []).map((p) => providerLabel[p]).join(", ") || "—" }
+      ];
+      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card", children: rows.map((row) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between gap-4 p-4", children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-muted-foreground", children: row.label }, void 0, false, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+            lineNumber: 50,
+            columnNumber: 11
+          }, this),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: cn("truncate text-sm text-foreground", row.mono && "font-mono"), children: row.value }, void 0, false, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+            lineNumber: 51,
+            columnNumber: 11
+          }, this)
+        ] }, row.label, true, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+          lineNumber: 49,
+          columnNumber: 10
+        }, this)) }, void 0, false, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+          lineNumber: 47,
+          columnNumber: 8
+        }, this),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: onBack && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "button", variant: "ghost", onClick: onBack, disabled: isSubmitting, children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconArrowLeft, { "data-icon": "inline-start" }, void 0, false, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+              lineNumber: 60,
+              columnNumber: 12
+            }, this),
+            " ",
+            t("attach.back")
+          ] }, void 0, true, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+            lineNumber: 59,
+            columnNumber: 11
+          }, this) }, void 0, false, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+            lineNumber: 57,
+            columnNumber: 9
+          }, this),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { type: "button", onClick: onFinish, disabled: isSubmitting || !canFinish, children: [
+            isSubmitting && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Spinner, { className: "mr-2" }, void 0, false, {
+              fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+              lineNumber: 65,
+              columnNumber: 27
+            }, this),
+            isSubmitting ? t("attach.attaching") : t("attach.finish")
+          ] }, void 0, true, {
+            fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+            lineNumber: 64,
+            columnNumber: 9
+          }, this)
+        ] }, void 0, true, {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+          lineNumber: 56,
+          columnNumber: 8
+        }, this)
+      ] }, void 0, true, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+        lineNumber: 46,
+        columnNumber: 7
+      }, this);
+    } }, void 0, false, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+      lineNumber: 32,
+      columnNumber: 4
+    }, this)
+  ] }, void 0, true, {
+    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/ReviewStep/index.tsx",
+    lineNumber: 29,
+    columnNumber: 3
+  }, this);
+}
+const STEPS = ["CONTACT", "WORKSPACE", "AGENTS", "REVIEW"];
+const STEP_NAV = {
+  CONTACT: "attach.navContact",
+  WORKSPACE: "attach.navWorkspace",
+  AGENTS: "attach.navAgents",
+  REVIEW: "attach.navReview"
+};
+function _inferAttachForm() {
+  return useForm({
+    defaultValues: {}
+  });
+}
+function AttachThreadWizard() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { data, isLoading } = useGetAttachThreadWizard();
+  const attach = useAttachThread();
+  const { currentStepIndex, direction, setCurrentStepIndex, setDirection, reset } = useAttachWizardStore();
+  const form = _inferAttachForm();
+  reactExports.useEffect(() => reset(), [reset]);
+  const stepId = STEPS[currentStepIndex] ?? STEPS[0];
+  const channelKindById = reactExports.useMemo(() => new Map((data?.channels ?? []).map((c) => [c.channelId, c.kind])), [data]);
+  const close = () => navigate({ to: "/dashboard" });
+  const advance = () => {
+    setDirection(1);
+    setCurrentStepIndex(currentStepIndex + 1);
+  };
+  const handleBack = () => {
+    setDirection(-1);
+    setCurrentStepIndex(Math.max(0, currentStepIndex - 1));
+  };
+  const handleContactSubmit = (d) => {
+    form.setFieldValue("contactRef", d.contactRef);
+    advance();
+  };
+  const handleWorkspaceSubmit = (d) => {
+    form.setFieldValue("workspaceId", d.workspaceId);
+    advance();
+  };
+  const handleAgentsSubmit = (d) => {
+    form.setFieldValue("providers", d.providers);
+    advance();
+  };
+  const handleFinish = async () => {
+    const result = attachThreadMutationRequestSchema.safeParse(form.state.values);
+    if (!result.success) return;
+    const res = await attach.mutateAsync({ data: result.data });
+    navigate({ to: "/threads/$threadId", params: { threadId: res.threadId } });
+  };
+  const values = form.state.values;
+  const STEP_COMPONENTS = {
+    CONTACT: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+      ContactStep,
+      {
+        contacts: data?.contacts ?? [],
+        channelKindById,
+        defaultValues: { contactRef: values.contactRef },
+        onSubmit: handleContactSubmit
+      },
+      void 0,
+      false,
+      {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 95,
+        columnNumber: 4
+      },
+      this
+    ),
+    WORKSPACE: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+      WorkspaceStep,
+      {
+        workspaces: data?.workspaces ?? [],
+        defaultValues: { workspaceId: values.workspaceId },
+        onSubmit: handleWorkspaceSubmit,
+        onBack: handleBack
+      },
+      void 0,
+      false,
+      {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 103,
+        columnNumber: 4
+      },
+      this
+    ),
+    AGENTS: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+      AgentsStep,
+      {
+        providers: data?.providers ?? [],
+        defaultValues: { providers: values.providers },
+        onSubmit: handleAgentsSubmit,
+        onBack: handleBack
+      },
+      void 0,
+      false,
+      {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 111,
+        columnNumber: 4
+      },
+      this
+    ),
+    REVIEW: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+      ReviewStep,
+      {
+        form,
+        channelKindById,
+        workspaces: data?.workspaces ?? [],
+        onBack: handleBack,
+        onFinish: handleFinish,
+        isSubmitting: attach.isPending
+      },
+      void 0,
+      false,
+      {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 119,
+        columnNumber: 4
+      },
+      this
+    )
+  };
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex min-h-dvh flex-col bg-route-background text-foreground", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("header", { className: "grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-5 md:px-10", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Logo, { className: "text-base" }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 133,
+        columnNumber: 5
+      }, this),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("nav", { className: "flex items-center justify-center gap-6", children: STEPS.map((id, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        "button",
+        {
+          type: "button",
+          disabled: i > currentStepIndex,
+          onClick: () => {
+            if (i <= currentStepIndex) {
+              setDirection(i < currentStepIndex ? -1 : 1);
+              setCurrentStepIndex(i);
+            }
+          },
+          className: cn(
+            "border-b-2 pb-1 text-sm font-medium transition-colors",
+            i === currentStepIndex ? "border-foreground text-foreground" : "border-transparent text-muted-foreground",
+            i > currentStepIndex && "cursor-not-allowed opacity-50"
+          ),
+          children: t(STEP_NAV[id])
+        },
+        id,
+        false,
+        {
+          fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+          lineNumber: 136,
+          columnNumber: 7
+        },
+        this
+      )) }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 134,
+        columnNumber: 5
+      }, this),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { variant: "secondary", size: "icon", "aria-label": t("attach.close"), className: "rounded-full", onClick: close, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(IconX, {}, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 157,
+        columnNumber: 6
+      }, this) }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 156,
+        columnNumber: 5
+      }, this)
+    ] }, void 0, true, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+      lineNumber: 132,
+      columnNumber: 4
+    }, this),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("main", { className: "flex flex-1 justify-center px-6 pb-24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full max-w-xl pt-6", children: isLoading || !data ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-4", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Skeleton, { className: "mx-auto h-10 w-64" }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 165,
+        columnNumber: 8
+      }, this),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Skeleton, { className: "h-12 rounded-full" }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 166,
+        columnNumber: 8
+      }, this),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Skeleton, { className: "h-16 rounded-2xl" }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 167,
+        columnNumber: 8
+      }, this)
+    ] }, void 0, true, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+      lineNumber: 164,
+      columnNumber: 7
+    }, this) : data.noChannelConnected ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Empty, { className: "pt-16", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(EmptyTitle, { children: t("attach.needChannelTitle") }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 171,
+        columnNumber: 8
+      }, this),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(EmptyDescription, { children: t("attach.needChannelDescription") }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 172,
+        columnNumber: 8
+      }, this),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { className: "mt-2", onClick: () => navigate({ to: "/channels" }), children: t("attach.goToChannels") }, void 0, false, {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 173,
+        columnNumber: 8
+      }, this)
+    ] }, void 0, true, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+      lineNumber: 170,
+      columnNumber: 7
+    }, this) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+      "div",
+      {
+        className: cn("animate-in fade-in duration-300 ease-out", direction === 1 ? "slide-in-from-right-8" : "slide-in-from-left-8"),
+        children: STEP_COMPONENTS[stepId]
+      },
+      stepId,
+      false,
+      {
+        fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+        lineNumber: 178,
+        columnNumber: 7
+      },
+      this
+    ) }, void 0, false, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+      lineNumber: 162,
+      columnNumber: 5
+    }, this) }, void 0, false, {
+      fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+      lineNumber: 161,
+      columnNumber: 4
+    }, this)
+  ] }, void 0, true, {
+    fileName: "/Users/work/Desktop/Projetos/pessoal/codedm/packages/app/react/src/routes/attach/-components/AttachThreadWizard/index.tsx",
+    lineNumber: 131,
+    columnNumber: 3
+  }, this);
+}
+const SplitComponent = AttachThreadWizard;
+export {
+  SplitComponent as component
+};
