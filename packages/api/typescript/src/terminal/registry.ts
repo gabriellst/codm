@@ -6,7 +6,7 @@ import { AgentRunner, StubAgentRunner, E2eStubAgentRunner, CliAgentRunner } from
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { TerminalSessionRegistry } from './services/TerminalSessionRegistry'
 
-// E2E HERMETIC SEAM (see shared/registry.ts + src/boot/assert-e2e-safe.ts). The Playwright harness
+// E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness
 // boots the REAL daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the
 // `real` AgentRunner drops to a deterministic stub (NEW_ISSUE decision + canned reply frames, no
 // subprocess) and the `real` ProviderDetector drops to the canned catalog (claude-code DETECTED), so

@@ -147,7 +147,7 @@ const filePgliteDriver = { useFactory: () => getRealDatabaseDriver() }
 // EventEmitter2Mediator — no Redis socket, no network beyond localhost — so a published
 // `integration.channel_message.received` fans out to the SAME external handlers (ConsumeInboundMessage)
 // that Redis delivery would drive. Production (flag unset) is unchanged: RedisExternalMediator. The
-// flag is refused under NODE_ENV=production at boot (src/boot/assert-e2e-safe.ts).
+// flag is refused under NODE_ENV=production at boot (src/boot.ts).
 const realExternalMediator = process.env.CODEDM_E2E === 'true' ? EventEmitter2Mediator : RedisExternalMediator
 
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }

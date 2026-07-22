@@ -32,7 +32,7 @@ import * as sharedSchemas from './schemas'
 import { TestIngressController } from './controllers'
 
 // TEST-ONLY gateway ingress seam — mounted ONLY under CODEDM_E2E (the Playwright harness), refused
-// under NODE_ENV=production by src/boot/assert-e2e-safe.ts, and never emitted to the SDK/OpenAPI
+// under NODE_ENV=production by src/boot.ts, and never emitted to the SDK/OpenAPI
 // (emission runs under EMIT_OPENAPI with CODEDM_E2E unset). Lets a spec simulate the Go gateway's side
 // effects (seed a connected channel / inject an inbound message) against the TS-only daemon.
 const testControllers: Record<string, typeof TestIngressController> = process.env.CODEDM_E2E === 'true' ? { TestIngressController } : {}

@@ -13,15 +13,9 @@
 // Register reflect-metadata first (required by tsyringe-neo decorators).
 import 'reflect-metadata'
 
-// EARLY single-instance guard — acquire the CODEDM_DATA_DIR lock BEFORE `./routers` triggers any
-// BoundedContext.create, so a dir already held by a live daemon fails with ONE legible
-// DataDirLockedError instead of a cascade of buried "Failed to resolve controller" traces. Must sit
-// above the composition-root import below. (Idempotent for this pid; the driver re-acquires as a no-op.)
-import './boot/acquire-data-dir-lock'
-
-// Refuse the hermetic e2e flag under production BEFORE anything reads it (the registry binding is at
-// module eval). Side-effect import — no context creation.
-import './boot/assert-e2e-safe'
+// EARLY boot side-effects (single-instance data-dir lock + e2e fail-closed guard) — must sit
+// above the composition-root import below; see src/boot.ts.
+import './boot'
 
 import {
 	Config,
