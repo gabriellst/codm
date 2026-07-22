@@ -43,6 +43,13 @@
       "when": 1784711857729,
       "tag": "0005_aromatic_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784753305606,
+      "tag": "0006_overjoyed_strong_guy",
+      "breakpoints": true
     }
   ]
 }
