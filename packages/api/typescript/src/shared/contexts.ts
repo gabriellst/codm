@@ -19,7 +19,6 @@
  */
 export const CONTEXTS = {
 	auth: { pgSchema: 'authentication' },
-	notifications: { pgSchema: 'notifications' },
 	owner: { pgSchema: 'owner' },
 	shared: { pgSchema: 'shared' },
 	ui: { pgSchema: null },

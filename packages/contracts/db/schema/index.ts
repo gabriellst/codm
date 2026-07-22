@@ -1,5 +1,4 @@
 export * from './auth'
 export * from './infrastructure'
 export * from './owner'
-export * from './notifications'
 export * from './activity'

@@ -14,11 +14,6 @@ import "./enums/role.tsp";
 import "./enums/owner-kind.tsp";
 import "./enums/fcm-platform.tsp";
 
-// Notifications
-import "./enums/notification-category.tsp";
-import "./enums/notification-origin.tsp";
-import "./enums/notification-channel.tsp";
-
 import "./events/index.tsp";
 
 @service(#{ title: "Template Contracts" })
