@@ -4,34 +4,32 @@ import (
 	"encoding/json"
 	"time"
 
-	"template/contracts-go/wire"
+	sharedenums "template/api-go/internal/shared/enums"
 )
 
-// Message is a pure read-model record that mirrors the gateway.messages
-// projection table. It is written by the message projectors and read directly
+// Message is a pure read-model record that mirrors the messages
+// projection table. It is written by the messageProjector and read directly
 // by query handlers. No domain logic, no invariants, no events.
 //
 // Content is stored as JSONB in Postgres and represented as json.RawMessage
-// here, consistent with how the channel event repository handles JSONB payloads
-// throughout the codebase.
-//
-// Direction stores the wire.Direction value (SENT/RECEIVED) as a plain string.
+// here, consistent with how the channel entity and event repository handle
+// JSONB payloads throughout the codebase.
 type Message struct {
-	ID                string           `db:"id"`
-	ChannelID         string           `db:"channel_id"`
-	RemoteID          string           `db:"remote_id"`
-	PlatformMessageID string           `db:"platform_message_id"`
-	Direction         string           `db:"direction"`
-	Platform          wire.ChannelKind `db:"platform"`
-	SenderRemoteID    string           `db:"sender_remote_id"`
-	Content           json.RawMessage  `db:"content"`
-	OccurredAt        time.Time        `db:"occurred_at"`
-	ObservedAt        time.Time        `db:"observed_at"`
-	DeliveredAt       *time.Time       `db:"delivered_at"`
-	SeenAt            *time.Time       `db:"seen_at"`
-	EditedAt          *time.Time       `db:"edited_at"`
-	DeletedAt         *time.Time       `db:"deleted_at"`
-	Version           int64            `db:"version"`
+	ID                string          `db:"id"`
+	ChannelID         string          `db:"channel_id"`
+	RemoteID          string          `db:"remote_id"`
+	PlatformMessageID string          `db:"platform_message_id"`
+	Direction         string          `db:"direction"`
+	Platform          sharedenums.Platform `db:"platform"`
+	SenderRemoteID    string          `db:"sender_remote_id"`
+	Content           json.RawMessage `db:"content"`
+	OccurredAt        time.Time       `db:"occurred_at"`
+	ObservedAt        time.Time       `db:"observed_at"`
+	DeliveredAt       *time.Time      `db:"delivered_at"`
+	SeenAt            *time.Time      `db:"seen_at"`
+	EditedAt          *time.Time      `db:"edited_at"`
+	DeletedAt         *time.Time      `db:"deleted_at"`
+	Version           int64           `db:"version"`
 }
 
 // ApplyDelivered advances DeliveredAt when the delivery receipt arrives.

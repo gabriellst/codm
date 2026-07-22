@@ -1,0 +1,32 @@
+package handlers
+
+import (
+	"context"
+	"log/slog"
+	ctxevents "template/api-go/internal/channel/events"
+	"template/api-go/internal/shared/types"
+)
+
+type ChannelDeletedHandler struct{}
+
+func NewChannelDeletedHandler() *ChannelDeletedHandler {
+	return &ChannelDeletedHandler{}
+}
+
+func (h *ChannelDeletedHandler) EventName() string {
+	return ctxevents.ChannelDeletedEventName
+}
+
+func (h *ChannelDeletedHandler) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelDeletedPayload](event)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("instance deleted",
+		"event", e.Name,
+		"instanceId", e.Payload.ChannelID,
+	)
+
+	return nil
+}

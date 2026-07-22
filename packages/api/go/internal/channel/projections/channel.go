@@ -1,45 +1,18 @@
-// Package projections holds the channel gateway's read model — one row per
-// channel session, materialized from the domain lifecycle events. It backs the
-// gateway's own read endpoints (list/get channels) and is the source of truth
-// for reconnection (owner_remote_id / account_detail).
 package projections
 
-import (
-	"context"
-	"time"
+import "time"
 
-	"template/contracts-go/wire"
-)
-
-// ChannelProjection is a pure read-model record mirroring gateway.channels.
-// No invariants, no domain logic — the projectors own its transitions.
-type ChannelProjection struct {
-	ID            string             `db:"id"`
-	OwnerID       string             `db:"owner_id"`
-	Kind          wire.ChannelKind   `db:"kind"`
-	Status        wire.ChannelStatus `db:"status"`
-	AccountDetail string             `db:"account_detail"`
-	CreatedAt     time.Time          `db:"created_at"`
-	UpdatedAt     time.Time          `db:"updated_at"`
-}
-
-// ChannelProjectionRepository is the atomic vocabulary for the channels read model.
-type ChannelProjectionRepository interface {
-	Upsert(ctx context.Context, row *ChannelProjection) error
-	FindByID(ctx context.Context, id string) (*ChannelProjection, error)
-	FindByOwnerAndKind(ctx context.Context, ownerID string, kind wire.ChannelKind) (*ChannelProjection, error)
-	ListByOwner(ctx context.Context, ownerID string) ([]*ChannelProjection, error)
-	// ListPaired returns every channel that already has a paired platform account
-	// (account_detail <> ''), across all owners. The boot lifecycle hook uses it
-	// to restore live sessions after a restart.
-	ListPaired(ctx context.Context) ([]*ChannelProjection, error)
-	// SetStatus updates the live status. A non-empty accountDetail is stored; an
-	// empty accountDetail is treated as "no change" (transient-disconnect safe),
-	// so it NEVER clears an existing pairing. Use ClearAccount to unpair.
-	SetStatus(ctx context.Context, id string, status wire.ChannelStatus, accountDetail string) error
-	// ClearAccount force-clears account_detail and marks the row DISCONNECTED. It
-	// is the terminal-unpair op (operator logout / platform-side LoggedOut): after
-	// it, ListPaired no longer returns the row, so the boot hook won't try to
-	// resurrect a session the platform already deleted.
-	ClearAccount(ctx context.Context, id string) error
+// Channel is a pure read-model record that mirrors the channels projection
+// table. It is written by the channelProjector and read directly by query
+// handlers. No domain logic, no invariants, no events.
+type Channel struct {
+	ID             string     `db:"id"`
+	OwnerID        string     `db:"owner_id"`
+	Platform       string     `db:"platform"`
+	Status         string     `db:"status"`
+	ConnectedAt    *time.Time `db:"connected_at"`
+	DisconnectedAt *time.Time `db:"disconnected_at"`
+	CreatedAt      time.Time  `db:"created_at"`
+	UpdatedAt      time.Time  `db:"updated_at"`
+	Version        int64      `db:"version"`
 }

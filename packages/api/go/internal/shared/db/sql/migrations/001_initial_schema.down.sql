@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS outbox;
+DROP TABLE IF EXISTS shared.events;
+DROP TABLE IF EXISTS group_participants;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS labels;
+DROP TABLE IF EXISTS chats;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS webhook_configs;
+DROP TABLE IF EXISTS proxy_configs;
+DROP TABLE IF EXISTS channel_settings;
+DROP TABLE IF EXISTS channels;

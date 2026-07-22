@@ -3,38 +3,34 @@ package projections
 import (
 	"time"
 
-	"template/contracts-go/wire"
+	sharedenums "template/api-go/internal/shared/enums"
 )
 
-// Remote is a pure read-model record that mirrors the gateway.remotes
-// projection table. It is written by the remote projectors and read directly
+// Remote is a pure read-model record that mirrors the remotes
+// projection table. It is written by the remoteProjector and read directly
 // by query handlers. No domain logic, no invariants, no events.
 //
 // AvatarURL uses an empty string to represent the NULL/absent state, consistent
 // with how other TEXT columns in the codebase avoid sql.NullString.
-//
-// Type stores the harmonized ContactKind value (CONTACT/GROUP/BROADCAST); it is
-// kept as a plain string on the record so the projector owns the mapping and the
-// read side never has to re-validate a stored enum.
 type Remote struct {
-	ChannelID          string           `db:"channel_id"`
-	RemoteID           string           `db:"remote_id"`
-	Type               string           `db:"type"`
-	Platform           wire.ChannelKind `db:"platform"`
-	Name               string           `db:"name"`
-	AvatarURL          string           `db:"avatar_url"`
-	IsBlocked          bool             `db:"is_blocked"`
-	PinnedAt           *time.Time       `db:"pinned_at"`
-	Archived           bool             `db:"archived"`
-	MuteExpiration     *time.Time       `db:"mute_expiration"`
-	MarkedAsUnread     bool             `db:"marked_as_unread"`
-	UnreadMessageCount int              `db:"unread_message_count"`
-	LastMessageAt      *time.Time       `db:"last_message_at"`
-	LastMessageID      *string          `db:"last_message_id"`
-	DeletedAt          *time.Time       `db:"deleted_at"`
-	CreatedAt          time.Time        `db:"created_at"`
-	UpdatedAt          time.Time        `db:"updated_at"`
-	Version            int64            `db:"version"`
+	ChannelID          string     `db:"channel_id"`
+	RemoteID           string     `db:"remote_id"`
+	Type               string     `db:"type"`
+	Platform           sharedenums.Platform `db:"platform"`
+	Name               string     `db:"name"`
+	AvatarURL          string     `db:"avatar_url"`
+	IsBlocked          bool       `db:"is_blocked"`
+	PinnedAt           *time.Time `db:"pinned_at"`
+	Archived           bool       `db:"archived"`
+	MuteExpiration     *time.Time `db:"mute_expiration"`
+	MarkedAsUnread     bool       `db:"marked_as_unread"`
+	UnreadMessageCount int        `db:"unread_message_count"`
+	LastMessageAt      *time.Time `db:"last_message_at"`
+	LastMessageID      *string    `db:"last_message_id"`
+	DeletedAt          *time.Time `db:"deleted_at"`
+	CreatedAt          time.Time  `db:"created_at"`
+	UpdatedAt          time.Time  `db:"updated_at"`
+	Version            int64      `db:"version"`
 }
 
 // ApplyMessageReceived bumps the unread counter and advances the preview

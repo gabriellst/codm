@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"template/api-go/internal/channel/projections"
-	"template/contracts-go/wire"
-	"template/core-go/db/dbutil"
-	"template/core-go/services/unitofwork"
+	"template/api-go/internal/shared/db/dbutil"
+	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/shared/services/unitofwork"
 )
 
 // PgMessageProjectionRepository implements MessageProjectionRepository with
 // Postgres. It stores and retrieves Message projection rows from the
-// gateway.messages table.
+// `messages` table.
 //
 // InsertIfNew and UpsertAllIfNew use ON CONFLICT DO NOTHING to provide
 // idempotent insert semantics for the live-message and history-sync paths.
@@ -28,8 +28,7 @@ type PgMessageProjectionRepository struct {
 }
 
 // NewPgMessageProjectionRepository constructs the read/projection-write repository.
-// It returns the interface type so fx binds it directly.
-func NewPgMessageProjectionRepository(db *sql.DB) MessageProjectionRepository {
+func NewPgMessageProjectionRepository(db *sql.DB) *PgMessageProjectionRepository {
 	return &PgMessageProjectionRepository{db: db}
 }
 
@@ -39,10 +38,6 @@ var _ MessageProjectionRepository = (*PgMessageProjectionRepository)(nil)
 // msgChunkSize limits rows per batch INSERT to stay well under Postgres'
 // 65535-parameter limit. messages has 15 columns × 500 = 7500 params.
 const msgChunkSize = 500
-
-const messageColumns = `id, channel_id, remote_id, platform_message_id, direction, platform,
-	        sender_remote_id, content, occurred_at, observed_at,
-	        delivered_at, seen_at, edited_at, deleted_at, version`
 
 // -------------------------------------------------------------------------------
 // Reads
@@ -54,8 +49,10 @@ func (r *PgMessageProjectionRepository) Find(ctx context.Context, messageID stri
 	db := r.txOrDB(ctx)
 
 	row := db.QueryRowContext(ctx,
-		`SELECT `+messageColumns+`
-		 FROM gateway.messages
+		`SELECT id, channel_id, remote_id, platform_message_id, direction, platform,
+		        sender_remote_id, content, occurred_at, observed_at,
+		        delivered_at, seen_at, edited_at, deleted_at, version
+		 FROM messages
 		 WHERE id = $1`,
 		messageID,
 	)
@@ -77,8 +74,10 @@ func (r *PgMessageProjectionRepository) FindByPlatformID(ctx context.Context, ch
 	db := r.txOrDB(ctx)
 
 	row := db.QueryRowContext(ctx,
-		`SELECT `+messageColumns+`
-		 FROM gateway.messages
+		`SELECT id, channel_id, remote_id, platform_message_id, direction, platform,
+		        sender_remote_id, content, occurred_at, observed_at,
+		        delivered_at, seen_at, edited_at, deleted_at, version
+		 FROM messages
 		 WHERE channel_id = $1 AND platform_message_id = $2`,
 		channelID, platformMessageID,
 	)
@@ -114,8 +113,10 @@ func (r *PgMessageProjectionRepository) ListByRemote(ctx context.Context, channe
 	args = append(args, limit)
 
 	q := fmt.Sprintf(
-		`SELECT `+messageColumns+`
-		 FROM gateway.messages
+		`SELECT id, channel_id, remote_id, platform_message_id, direction, platform,
+		        sender_remote_id, content, occurred_at, observed_at,
+		        delivered_at, seen_at, edited_at, deleted_at, version
+		 FROM messages
 		 WHERE %s
 		 ORDER BY occurred_at DESC, observed_at DESC
 		 LIMIT $%d`,
@@ -149,7 +150,7 @@ func (r *PgMessageProjectionRepository) InsertIfNew(ctx context.Context, msg *pr
 
 	var id string
 	err := db.QueryRowContext(ctx,
-		`INSERT INTO gateway.messages
+		`INSERT INTO messages
 		   (id, channel_id, remote_id, platform_message_id, direction, platform,
 		    sender_remote_id, content, occurred_at, observed_at,
 		    delivered_at, seen_at, edited_at, deleted_at, version)
@@ -221,14 +222,14 @@ func upsertMessageChunkIfNew(ctx context.Context, db msgQueryExecContext, chunk 
 	// leave all other columns untouched. Use xmax=0 to distinguish true inserts
 	// from updates so the returned count reflects only new rows.
 	q := fmt.Sprintf(
-		`INSERT INTO gateway.messages
+		`INSERT INTO messages
 		   (id, channel_id, remote_id, platform_message_id, direction, platform,
 		    sender_remote_id, content, occurred_at, observed_at,
 		    delivered_at, seen_at, edited_at, deleted_at, version)
 		 VALUES %s
 		 ON CONFLICT (channel_id, platform_message_id) DO UPDATE SET
-		   delivered_at = COALESCE(GREATEST(gateway.messages.delivered_at, EXCLUDED.delivered_at), gateway.messages.delivered_at, EXCLUDED.delivered_at),
-		   seen_at      = COALESCE(GREATEST(gateway.messages.seen_at,      EXCLUDED.seen_at),      gateway.messages.seen_at,      EXCLUDED.seen_at)
+		   delivered_at = COALESCE(GREATEST(messages.delivered_at, EXCLUDED.delivered_at), messages.delivered_at, EXCLUDED.delivered_at),
+		   seen_at      = COALESCE(GREATEST(messages.seen_at,      EXCLUDED.seen_at),      messages.seen_at,      EXCLUDED.seen_at)
 		 RETURNING id, (xmax = 0) AS is_insert`,
 		strings.Join(values, ","),
 	)
@@ -259,7 +260,7 @@ func upsertMessageChunkIfNew(ctx context.Context, db msgQueryExecContext, chunk 
 func upsertMessageRow(ctx context.Context, db msgQueryExecContext, msg *projections.Message) error {
 	now := time.Now().UTC()
 	_, err := db.ExecContext(ctx,
-		`INSERT INTO gateway.messages
+		`INSERT INTO messages
 		   (id, channel_id, remote_id, platform_message_id, direction, platform,
 		    sender_remote_id, content, occurred_at, observed_at,
 		    delivered_at, seen_at, edited_at, deleted_at, version)
@@ -271,7 +272,7 @@ func upsertMessageRow(ctx context.Context, db msgQueryExecContext, msg *projecti
 		   edited_at   = EXCLUDED.edited_at,
 		   deleted_at  = EXCLUDED.deleted_at,
 		   observed_at = EXCLUDED.observed_at,
-		   version     = gateway.messages.version + 1`,
+		   version     = messages.version + 1`,
 		msg.ID, msg.ChannelID, msg.RemoteID, msg.PlatformMessageID,
 		msg.Direction, string(msg.Platform), msg.SenderRemoteID, []byte(msg.Content),
 		msg.OccurredAt.UTC(), now,
@@ -293,7 +294,7 @@ func upsertMessageRow(ctx context.Context, db msgQueryExecContext, msg *projecti
 func (r *PgMessageProjectionRepository) FindDistinctLIDRemoteIDs(ctx context.Context, channelID string) ([]string, error) {
 	db := r.txOrDB(ctx)
 	rows, err := db.QueryContext(ctx,
-		`SELECT DISTINCT remote_id FROM gateway.messages WHERE channel_id = $1 AND remote_id LIKE '%@lid'`,
+		`SELECT DISTINCT remote_id FROM messages WHERE channel_id = $1 AND remote_id LIKE '%@lid'`,
 		channelID,
 	)
 	if err != nil {
@@ -333,7 +334,7 @@ func (r *PgMessageProjectionRepository) RewriteRemoteIDs(ctx context.Context, ch
 	}
 
 	q := fmt.Sprintf(`
-		UPDATE gateway.messages m
+		UPDATE messages m
 		SET remote_id = mapping.pn
 		FROM (VALUES %s) AS mapping(lid, pn)
 		WHERE m.channel_id = $1 AND m.remote_id = mapping.lid
@@ -361,7 +362,7 @@ func (r *PgMessageProjectionRepository) RewriteRemoteIDs(ctx context.Context, ch
 func (r *PgMessageProjectionRepository) UpdateDelivered(ctx context.Context, messageID string, at time.Time) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.messages
+		`UPDATE messages
 		 SET delivered_at = COALESCE(GREATEST(delivered_at, $2::timestamptz), $2::timestamptz),
 		     version      = version + 1
 		 WHERE id = $1`,
@@ -378,7 +379,7 @@ func (r *PgMessageProjectionRepository) UpdateDelivered(ctx context.Context, mes
 func (r *PgMessageProjectionRepository) UpdateSeen(ctx context.Context, messageID string, at time.Time) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.messages
+		`UPDATE messages
 		 SET seen_at = COALESCE(GREATEST(seen_at, $2::timestamptz), $2::timestamptz),
 		     version = version + 1
 		 WHERE id = $1`,
@@ -429,7 +430,7 @@ func scanMessage(row msgRowScanner) (*projections.Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg.Platform = wire.ChannelKind(platform)
+	msg.Platform = sharedenums.Platform(platform)
 	msg.Content = json.RawMessage(content)
 	msg.DeliveredAt = dbutil.TimePtr(deliveredAt)
 	msg.SeenAt = dbutil.TimePtr(seenAt)

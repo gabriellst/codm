@@ -1,15 +1,11 @@
-// Package remote is the read side + projection writes for the Remote projection
-// (gateway.remotes + gateway.remote_memberships). Mirrors the medscall channel
-// remote repository, adapted to the CodeDM `gateway` pg schema and the frozen
-// wire enums.
 package remote
 
 import (
 	"context"
 	"time"
 
+	"template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/projections"
-	"template/contracts-go/wire"
 )
 
 // ListOptions controls pagination for remote listings.
@@ -17,7 +13,7 @@ type ListOptions struct {
 	Limit      int
 	Cursor     *time.Time       // cursor pagination on last_message_at (null means first page)
 	Search     string           // optional substring match on Name
-	Type       wire.ContactKind // empty = any type (harmonized ContactKind: CONTACT/GROUP/BROADCAST)
+	Type       enums.RemoteType // empty = any type
 	OnlyPinned bool
 }
 
@@ -29,9 +25,9 @@ type MembershipRow struct {
 }
 
 // RemoteProjectionRepository is the read side + projection writes for the
-// Remote projection (gateway.remotes + gateway.remote_memberships).
+// Remote projection (remotes + remote_memberships).
 //
-// Reads return *projections.Remote. Writes are either whole-row Save/UpsertAll
+// Reads return *projections.Remote. Writes are either whole-row Save/Upsert
 // (projector read-modify-write) or atomic column operations for concurrent-safe
 // mutations like counter bumps.
 //
@@ -47,10 +43,10 @@ type RemoteProjectionRepository interface {
 	Save(ctx context.Context, remote *projections.Remote) error
 	// InsertIfNew inserts the Remote projection row only when no row with the
 	// same (channel_id, remote_id) exists. Returns inserted=true when a row was
-	// created, inserted=false on conflict (DO NOTHING). Used by the
+	// created, inserted=false on conflict (DO NOTHING). Used by
 	// RemoteCreatedProjector to ensure first-write-wins semantics so that a
 	// late-arriving remote_created event never overwrites fields populated by
-	// an earlier remote_updated or remotes_synced event.
+	// an earlier remote_updated or remote_synced event.
 	InsertIfNew(ctx context.Context, remote *projections.Remote) (inserted bool, err error)
 	UpsertAll(ctx context.Context, remotes []*projections.Remote) error
 	// UpsertContactSnapshot upserts contact-owned fields (name, avatar_url) only.

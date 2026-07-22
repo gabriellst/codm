@@ -3,57 +3,56 @@ package controllers
 import (
 	"net/http"
 
-	"template/api-go/internal/channel/middlewares"
 	"template/api-go/internal/channel/usecases"
-	"template/core-go/config"
-	"template/core-go/errors"
-	"template/core-go/pkg/httputil"
-	"template/core-go/types"
+	"template/api-go/internal/shared/types"
+	"template/api-go/pkg/httputil"
 )
 
-// ListChannelsRequest lists the operator's channels. OwnerID is optional.
-type ListChannelsRequest struct {
-	OwnerID string `from:"query" name:"ownerId" validate:"omitempty,uuid"`
+type ListInstancesRequest struct {
+	Limit    int    `from:"query" name:"limit" validate:"omitempty,min=1,max=100"`
+	Offset   int    `from:"query" name:"offset" validate:"omitempty,min=0"`
+	OwnerID  string `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
 }
 
 type ListChannelsController struct {
 	handler *usecases.ListChannelsHandler
-	apiKey  types.Middleware
 }
 
-func NewListChannelsController(handler *usecases.ListChannelsHandler, cfg *config.Config) *ListChannelsController {
-	return &ListChannelsController{handler: handler, apiKey: middlewares.APIKey(cfg.GatewayAPIKey)}
+func NewListChannelsController(handler *usecases.ListChannelsHandler) *ListChannelsController {
+	return &ListChannelsController{handler: handler}
 }
-
-var _ types.Controller = (*ListChannelsController)(nil)
 
 func (c *ListChannelsController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
-		Path:        "/list",
+		Path:        "/channels",
 		Method:      "GET",
-		Description: "List the operator's channel sessions",
+		Description: "List channels",
 		Tags:        []string{"Channel"},
-		Middlewares: []types.Middleware{c.apiKey},
-		Request:     ListChannelsRequest{},
+	
+		Request:     ListInstancesRequest{},
 		Response:    usecases.ListChannelsOutput{},
 		Status:      http.StatusOK,
-		Errors:      []errors.ErrorCode{errors.CodeUnauthorized},
 	}
 }
 
+// Owner ID is resolved from session cookie automatically
 func (c *ListChannelsController) Handle(w http.ResponseWriter, r *http.Request) {
-	req, err := httputil.DecodeRequest[ListChannelsRequest](r)
+	req, err := httputil.DecodeRequest[ListInstancesRequest](r)
 	if err != nil {
 		httputil.RespondError(w, err)
 		return
 	}
 
-	out, err := c.handler.Execute(r.Context(), usecases.ListChannelsInput{OwnerID: req.OwnerID})
+	output, err := c.handler.Execute(r.Context(), usecases.ListChannelsInput{
+		OwnerID: req.OwnerID,
+		Limit:    req.Limit,
+		Offset:   req.Offset,
+	})
 	if err != nil {
 		httputil.RespondError(w, err)
 		return
 	}
 
-	httputil.RespondJSON(w, http.StatusOK, out)
+	httputil.RespondJSON(w, http.StatusOK, output)
 }

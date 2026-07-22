@@ -2,52 +2,34 @@ package whatsapp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"strings"
 
-	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store"
-	waTypes "go.mau.fi/whatsmeow/types"
+	waMeowTypes "go.mau.fi/whatsmeow/types"
 )
 
-const whatsAppUserSuffix = "@s.whatsapp.net"
-
-// ErrInvalidRemoteID is the domain-normalized error returned when a caller
-// supplied an external id that cannot be parsed into a platform JID. The
-// whatsmeow-shaped wrapped error never crosses the adapter boundary.
+// ErrInvalidRemoteID is the domain-normalized error returned when the caller
+// supplied a remote_id that cannot be parsed into a platform JID. The use case
+// layer never sees the whatsmeow-shaped "invalid JID: ..." wrapped error; this
+// sentinel crosses the adapter boundary instead.
 var ErrInvalidRemoteID = errors.New("invalid remote_id")
 
-// StripDeviceSuffix removes the WhatsApp multi-device identifier from a JID.
-// "558386387518:96@s.whatsapp.net" → "558386387518@s.whatsapp.net"
-// "558386387518:96" → "558386387518". JIDs without a colon are unchanged.
-func StripDeviceSuffix(jid string) string {
-	at := strings.IndexByte(jid, '@')
-	user := jid
-	server := ""
-	if at >= 0 {
-		user = jid[:at]
-		server = jid[at:]
-	}
-	if colon := strings.IndexByte(user, ':'); colon >= 0 {
-		user = user[:colon]
-	}
-	return user + server
-}
+// This package owns JID-format translation. Callers outside this package
+// consume already-normalized remote_id strings. Inside:
+//   - resolveLID: domain event emission path — converts user JIDs to LID form
+//     so the outbox carries platform-canonical remote_ids.
+//   - resolvePN: WhatsApp-API callout path — converts LIDs back to PN when
+//     whatsmeow endpoints (mark-read, pin, app-state patches) still require
+//     phone-form JIDs.
+//
+// Both helpers pass group JIDs (@g.us) through unchanged; group identifiers
+// are never re-keyed.
 
-// parseOrBuildJID parses a full JID or builds a default-server user JID from a
-// bare phone number.
-func parseOrBuildJID(input string) (waTypes.JID, error) {
-	if strings.Contains(input, "@") {
-		return waTypes.ParseJID(input)
-	}
-	return waTypes.NewJID(input, waTypes.DefaultUserServer), nil
-}
-
-// resolvePN converts a LID JID to its phone-number JID via the device store.
-// Returns the input unchanged when it is not a LID or resolution fails; group
-// JIDs pass through untouched.
-func resolvePN(device *store.Device, jid waTypes.JID) waTypes.JID {
-	if device == nil || jid.Server != waTypes.HiddenUserServer {
+// resolvePN converts a LID JID to its phone number JID using the device store.
+// Returns the original JID unchanged if it's not a LID or resolution fails.
+func resolvePN(device *store.Device, jid waMeowTypes.JID) waMeowTypes.JID {
+	if device == nil || jid.Server != waMeowTypes.HiddenUserServer {
 		return jid
 	}
 	pn, err := device.GetAltJID(context.Background(), jid)
@@ -57,30 +39,33 @@ func resolvePN(device *store.Device, jid waTypes.JID) waTypes.JID {
 	return pn
 }
 
-// extractText pulls the plain-text body from a whatsmeow message. Non-text
-// messages (media, protocol, reactions) return "".
-func extractText(m *waE2E.Message) string {
-	if m == nil {
-		return ""
+// resolveLID returns the LID-form JID for a WhatsApp user JID. If the input is
+// already a LID (@lid suffix) it is returned unchanged. If the input is a
+// phone-number JID (@s.whatsapp.net), the device store is consulted to find
+// the linked LID; on failure (no mapping yet, e.g. brand-new contact), the
+// original PN JID is returned so upstream code can still key off a stable
+// identifier. Group and broadcast JIDs pass through unchanged — groups do not
+// have LIDs.
+func resolveLID(device *store.Device, jid waMeowTypes.JID) waMeowTypes.JID {
+	if device == nil {
+		return jid
 	}
-	if c := m.GetConversation(); c != "" {
-		return c
+	switch jid.Server {
+	case waMeowTypes.HiddenUserServer:
+		return jid // already LID
+	case waMeowTypes.DefaultUserServer:
+		lid, err := device.GetAltJID(context.Background(), jid)
+		if err != nil || lid.IsEmpty() {
+			return jid
+		}
+		return lid
+	default:
+		return jid
 	}
-	if e := m.GetExtendedTextMessage(); e != nil {
-		return e.GetText()
-	}
-	return ""
 }
 
-// quotedStanzaID returns the id of the message this one replies to, or "".
-func quotedStanzaID(m *waE2E.Message) string {
-	if m == nil {
-		return ""
-	}
-	if e := m.GetExtendedTextMessage(); e != nil {
-		if ci := e.GetContextInfo(); ci != nil {
-			return ci.GetStanzaID()
-		}
-	}
-	return ""
+// marshalPlatformData marshals any platform-data struct to json.RawMessage.
+func marshalPlatformData(v any) json.RawMessage {
+	b, _ := json.Marshal(v)
+	return b
 }

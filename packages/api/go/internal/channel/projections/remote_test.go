@@ -1,104 +1,163 @@
-package projections
+package projections_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"template/api-go/internal/channel/projections"
 )
 
-func TestRemote_ApplyMessageReceived_BumpsUnreadAndAdvancesPreview(t *testing.T) {
-	r := &Remote{}
-	t0 := time.Unix(1_700_000_000, 0).UTC()
-	r.ApplyMessageReceived("m1", t0)
+func TestRemote_ApplyMessageReceived_IncrementsUnreadAndAdvancesLastMessageAt(t *testing.T) {
+	r := &projections.Remote{}
 
-	if r.UnreadMessageCount != 1 {
-		t.Errorf("unread = %d, want 1", r.UnreadMessageCount)
-	}
-	if r.LastMessageAt == nil || !r.LastMessageAt.Equal(t0) {
-		t.Errorf("lastMessageAt = %v, want %v", r.LastMessageAt, t0)
-	}
-	if r.LastMessageID == nil || *r.LastMessageID != "m1" {
-		t.Errorf("lastMessageId = %v, want m1", r.LastMessageID)
-	}
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	r.ApplyMessageReceived("msg-1", t1)
 
-	// A newer message advances the preview and bumps unread again.
-	t1 := t0.Add(time.Minute)
-	r.ApplyMessageReceived("m2", t1)
-	if r.UnreadMessageCount != 2 {
-		t.Errorf("unread = %d, want 2", r.UnreadMessageCount)
-	}
-	if r.LastMessageID == nil || *r.LastMessageID != "m2" {
-		t.Errorf("lastMessageId = %v, want m2", r.LastMessageID)
-	}
-
-	// An older (out-of-order) message still bumps unread but does NOT roll back
-	// the preview pointers.
-	tOld := t0.Add(-time.Minute)
-	r.ApplyMessageReceived("m0", tOld)
-	if r.UnreadMessageCount != 3 {
-		t.Errorf("unread = %d, want 3", r.UnreadMessageCount)
-	}
-	if *r.LastMessageID != "m2" {
-		t.Errorf("preview rolled back to %v, want m2", *r.LastMessageID)
-	}
+	assert.Equal(t, 1, r.UnreadMessageCount)
+	require.NotNil(t, r.LastMessageAt)
+	assert.Equal(t, t1, *r.LastMessageAt)
+	require.NotNil(t, r.LastMessageID)
+	assert.Equal(t, "msg-1", *r.LastMessageID)
 }
 
-func TestRemote_ApplyMessageSent_AdvancesPreviewWithoutUnread(t *testing.T) {
-	r := &Remote{UnreadMessageCount: 2}
-	t0 := time.Unix(1_700_000_000, 0).UTC()
-	r.ApplyMessageSent("out1", t0)
+func TestRemote_ApplyMessageReceived_LastMessageAt_ForwardOnly(t *testing.T) {
+	r := &projections.Remote{}
 
-	if r.UnreadMessageCount != 2 {
-		t.Errorf("sent must not touch unread; got %d", r.UnreadMessageCount)
-	}
-	if r.LastMessageID == nil || *r.LastMessageID != "out1" {
-		t.Errorf("lastMessageId = %v, want out1", r.LastMessageID)
-	}
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC) // earlier
+
+	r.ApplyMessageReceived("msg-1", t1)
+	r.ApplyMessageReceived("msg-2", t2) // out-of-order: older timestamp should not roll back
+
+	assert.Equal(t, 2, r.UnreadMessageCount, "unread counter still increments")
+	assert.Equal(t, t1, *r.LastMessageAt, "LastMessageAt stays at the later time")
+	assert.Equal(t, "msg-1", *r.LastMessageID, "older message must not overwrite preview id")
 }
 
-func TestRemote_ApplyChatSeen_ClearsUnreadState(t *testing.T) {
-	r := &Remote{UnreadMessageCount: 5, MarkedAsUnread: true}
+func TestRemote_ApplyMessageReceived_MultipleMessages(t *testing.T) {
+	r := &projections.Remote{}
+
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 1, 1, 11, 0, 0, 0, time.UTC)
+	t3 := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	r.ApplyMessageReceived("msg-1", t1)
+	r.ApplyMessageReceived("msg-2", t2)
+	r.ApplyMessageReceived("msg-3", t3)
+
+	assert.Equal(t, 3, r.UnreadMessageCount)
+	assert.Equal(t, t3, *r.LastMessageAt)
+	require.NotNil(t, r.LastMessageID)
+	assert.Equal(t, "msg-3", *r.LastMessageID)
+}
+
+func TestRemote_ApplyMessageSent_DoesNotTouchUnreadCounter(t *testing.T) {
+	r := &projections.Remote{UnreadMessageCount: 5}
+
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	r.ApplyMessageSent("msg-1", t1)
+
+	assert.Equal(t, 5, r.UnreadMessageCount, "sent messages must not change unread count")
+	assert.Equal(t, t1, *r.LastMessageAt)
+	require.NotNil(t, r.LastMessageID)
+	assert.Equal(t, "msg-1", *r.LastMessageID)
+}
+
+func TestRemote_ApplyMessageSent_LastMessageAt_ForwardOnly(t *testing.T) {
+	r := &projections.Remote{}
+
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC) // earlier
+
+	r.ApplyMessageSent("msg-1", t1)
+	r.ApplyMessageSent("msg-2", t2)
+
+	assert.Equal(t, t1, *r.LastMessageAt, "out-of-order sent does not roll back LastMessageAt")
+	assert.Equal(t, "msg-1", *r.LastMessageID, "older message must not overwrite preview id")
+}
+
+func TestRemote_ApplyChatSeen_ResetsUnreadState(t *testing.T) {
+	r := &projections.Remote{
+		UnreadMessageCount: 7,
+		MarkedAsUnread:     true,
+	}
+
 	r.ApplyChatSeen()
-	if r.UnreadMessageCount != 0 || r.MarkedAsUnread {
-		t.Errorf("chat-seen did not clear unread state: %+v", r)
-	}
+
+	assert.Equal(t, 0, r.UnreadMessageCount)
+	assert.False(t, r.MarkedAsUnread)
 }
 
-func TestRemote_PinMuteArchiveToggles(t *testing.T) {
-	r := &Remote{}
-	at := time.Unix(1_700_000_000, 0).UTC()
+func TestRemote_ApplyMirrorDiff_UpdatesExternalFields(t *testing.T) {
+	r := &projections.Remote{
+		Name:      "Old Name",
+		AvatarURL: "https://old.example.com/avatar.jpg",
+		IsBlocked: false,
+	}
+
+	r.ApplyMirrorDiff("New Name", "https://new.example.com/avatar.jpg", true)
+
+	assert.Equal(t, "New Name", r.Name)
+	assert.Equal(t, "https://new.example.com/avatar.jpg", r.AvatarURL)
+	assert.True(t, r.IsBlocked)
+}
+
+func TestRemote_ApplyMirrorDiff_ClearsAvatarURL(t *testing.T) {
+	r := &projections.Remote{AvatarURL: "https://example.com/avatar.jpg"}
+
+	r.ApplyMirrorDiff("Name", "", false)
+
+	assert.Equal(t, "", r.AvatarURL)
+}
+
+func TestRemote_ApplyPinned_SetsPinnedAt(t *testing.T) {
+	r := &projections.Remote{}
+	at := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
 
 	r.ApplyPinned(at)
-	if r.PinnedAt == nil || !r.PinnedAt.Equal(at) {
-		t.Errorf("pinnedAt = %v", r.PinnedAt)
-	}
-	r.ApplyUnpinned()
-	if r.PinnedAt != nil {
-		t.Errorf("unpin did not clear pinnedAt")
-	}
 
-	r.ApplyMuted(at)
-	if r.MuteExpiration == nil {
-		t.Errorf("muteExpiration not set")
-	}
-	r.ApplyUnmuted()
-	if r.MuteExpiration != nil {
-		t.Errorf("unmute did not clear muteExpiration")
-	}
-
-	r.ApplyArchived()
-	if !r.Archived {
-		t.Errorf("archived not set")
-	}
-	r.ApplyUnarchived()
-	if r.Archived {
-		t.Errorf("unarchive did not clear archived")
-	}
+	require.NotNil(t, r.PinnedAt)
+	assert.Equal(t, at, *r.PinnedAt)
 }
 
-func TestRemote_ApplyMirrorDiff(t *testing.T) {
-	r := &Remote{}
-	r.ApplyMirrorDiff("Ada Lovelace", "https://cdn/a.jpg", true)
-	if r.Name != "Ada Lovelace" || r.AvatarURL != "https://cdn/a.jpg" || !r.IsBlocked {
-		t.Errorf("mirror diff not applied: %+v", r)
-	}
+func TestRemote_ApplyUnpinned_ClearsPinnedAt(t *testing.T) {
+	at := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	r := &projections.Remote{PinnedAt: &at}
+
+	r.ApplyUnpinned()
+
+	assert.Nil(t, r.PinnedAt)
+}
+
+func TestRemote_ApplyArchived_UnarchiveCycle(t *testing.T) {
+	r := &projections.Remote{}
+
+	r.ApplyArchived()
+	assert.True(t, r.Archived)
+
+	r.ApplyUnarchived()
+	assert.False(t, r.Archived)
+}
+
+func TestRemote_ApplyMuted_SetsAndClears(t *testing.T) {
+	r := &projections.Remote{}
+	until := time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC)
+
+	r.ApplyMuted(until)
+	require.NotNil(t, r.MuteExpiration)
+	assert.Equal(t, until, *r.MuteExpiration)
+
+	r.ApplyUnmuted()
+	assert.Nil(t, r.MuteExpiration)
+}
+
+func TestRemote_ApplyMarkedAsUnread_SetsFlag(t *testing.T) {
+	r := &projections.Remote{MarkedAsUnread: false}
+
+	r.ApplyMarkedAsUnread()
+
+	assert.True(t, r.MarkedAsUnread)
 }

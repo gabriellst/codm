@@ -1,66 +1,108 @@
-package projections
+package projections_test
 
 import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"template/api-go/internal/channel/projections"
 )
 
+func TestMessage_ApplyDelivered_SetsDeliveredAt(t *testing.T) {
+	m := &projections.Message{}
+	at := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+
+	m.ApplyDelivered(at)
+
+	require.NotNil(t, m.DeliveredAt)
+	assert.Equal(t, at, *m.DeliveredAt)
+}
+
 func TestMessage_ApplyDelivered_ForwardOnly(t *testing.T) {
-	m := &Message{}
-	t1 := time.Unix(1_700_000_000, 0).UTC()
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC) // earlier — out-of-order receipt
+
+	m := &projections.Message{}
 	m.ApplyDelivered(t1)
-	if m.DeliveredAt == nil || !m.DeliveredAt.Equal(t1) {
-		t.Fatalf("deliveredAt = %v, want %v", m.DeliveredAt, t1)
-	}
+	m.ApplyDelivered(t2) // must not roll back
 
-	// Earlier receipt is ignored (forward-only).
-	m.ApplyDelivered(t1.Add(-time.Hour))
-	if !m.DeliveredAt.Equal(t1) {
-		t.Errorf("deliveredAt rolled back to %v, want %v", m.DeliveredAt, t1)
-	}
+	assert.Equal(t, t1, *m.DeliveredAt, "DeliveredAt must not go backward")
+}
 
-	// Later receipt advances.
-	t2 := t1.Add(time.Hour)
-	m.ApplyDelivered(t2)
-	if !m.DeliveredAt.Equal(t2) {
-		t.Errorf("deliveredAt = %v, want %v", m.DeliveredAt, t2)
-	}
+func TestMessage_ApplyDelivered_Idempotent_SameTimestamp(t *testing.T) {
+	at := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	m := &projections.Message{}
+
+	m.ApplyDelivered(at)
+	m.ApplyDelivered(at) // same timestamp — no change
+
+	assert.Equal(t, at, *m.DeliveredAt)
+}
+
+func TestMessage_ApplySeen_SetSeenAt(t *testing.T) {
+	m := &projections.Message{}
+	at := time.Date(2026, 1, 1, 10, 30, 0, 0, time.UTC)
+
+	m.ApplySeen(at)
+
+	require.NotNil(t, m.SeenAt)
+	assert.Equal(t, at, *m.SeenAt)
 }
 
 func TestMessage_ApplySeen_ForwardOnly(t *testing.T) {
-	m := &Message{}
-	t1 := time.Unix(1_700_000_000, 0).UTC()
+	t1 := time.Date(2026, 1, 1, 10, 30, 0, 0, time.UTC)
+	t2 := time.Date(2026, 1, 1, 9, 30, 0, 0, time.UTC) // earlier
+
+	m := &projections.Message{}
 	m.ApplySeen(t1)
-	m.ApplySeen(t1.Add(-time.Hour))
-	if !m.SeenAt.Equal(t1) {
-		t.Errorf("seenAt should not roll back; got %v", m.SeenAt)
-	}
+	m.ApplySeen(t2) // out-of-order — must not roll back
+
+	assert.Equal(t, t1, *m.SeenAt, "SeenAt must not go backward")
 }
 
-func TestMessage_ApplyEdited_OverlaysContent(t *testing.T) {
-	m := &Message{Content: json.RawMessage(`{"type":"TEXT","text":"old"}`)}
-	at := time.Unix(1_700_000_000, 0).UTC()
-	newContent := json.RawMessage(`{"type":"TEXT","text":"new"}`)
-	m.ApplyEdited(newContent, at)
+func TestMessage_ApplySeen_AdvancesFromEarlier(t *testing.T) {
+	t1 := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 1, 1, 11, 0, 0, 0, time.UTC) // later
 
-	if string(m.Content) != `{"type":"TEXT","text":"new"}` {
-		t.Errorf("content = %s", m.Content)
-	}
-	if m.EditedAt == nil || !m.EditedAt.Equal(at) {
-		t.Errorf("editedAt = %v, want %v", m.EditedAt, at)
-	}
+	m := &projections.Message{}
+	m.ApplySeen(t1)
+	m.ApplySeen(t2)
+
+	assert.Equal(t, t2, *m.SeenAt)
 }
 
-func TestMessage_ApplySoftDelete_StampsWithoutRemoving(t *testing.T) {
-	m := &Message{Content: json.RawMessage(`{"type":"TEXT","text":"x"}`)}
-	at := time.Unix(1_700_000_000, 0).UTC()
+func TestMessage_ApplyEdited_ReplacesContentAndSetsEditedAt(t *testing.T) {
+	original := json.RawMessage(`{"text":"hello"}`)
+	updated := json.RawMessage(`{"text":"hello world"}`)
+	at := time.Date(2026, 1, 1, 11, 0, 0, 0, time.UTC)
+
+	m := &projections.Message{Content: original}
+	m.ApplyEdited(updated, at)
+
+	assert.JSONEq(t, `{"text":"hello world"}`, string(m.Content))
+	require.NotNil(t, m.EditedAt)
+	assert.Equal(t, at, *m.EditedAt)
+}
+
+func TestMessage_ApplySoftDelete_SetsDeletedAt(t *testing.T) {
+	m := &projections.Message{}
+	at := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
 	m.ApplySoftDelete(at)
-	if m.DeletedAt == nil || !m.DeletedAt.Equal(at) {
-		t.Errorf("deletedAt = %v, want %v", m.DeletedAt, at)
-	}
-	// Content is preserved for audit.
-	if string(m.Content) != `{"type":"TEXT","text":"x"}` {
-		t.Errorf("soft-delete must keep content; got %s", m.Content)
-	}
+
+	require.NotNil(t, m.DeletedAt)
+	assert.Equal(t, at, *m.DeletedAt)
+}
+
+func TestMessage_ApplySoftDelete_DoesNotClearContent(t *testing.T) {
+	content := json.RawMessage(`{"text":"important"}`)
+	m := &projections.Message{Content: content}
+	at := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	m.ApplySoftDelete(at)
+
+	assert.JSONEq(t, `{"text":"important"}`, string(m.Content), "content preserved on soft delete")
 }

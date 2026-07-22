@@ -1,116 +1,101 @@
-// Package usecases holds the channel gateway's application operations.
 package usecases
 
 import (
 	"context"
 	"log/slog"
-	"time"
 
-	"github.com/google/uuid"
-
-	"template/api-go/internal/channel/projections"
+	"template/api-go/internal/channel/entities"
+	"template/api-go/internal/channel/enums"
+	ctxerrors "template/api-go/internal/channel/errors"
+	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/registry"
-	"template/contracts-go/wire"
+	"template/api-go/internal/shared/errors"
+
+	"github.com/google/uuid"
 )
 
-// OperatorID is the single implicit operator of the local daemon. CodeDM has no
-// accounts/tenancy — the ownerId axis is collapsed to this one constant.
-const OperatorID = "00000000-0000-0000-0000-000000000001"
-
-// ConnectChannelInput starts (or resumes) a WhatsApp session for the operator.
 type ConnectChannelInput struct {
-	OwnerID string
+	ID string `validate:"required,uuid"`
 }
 
-// ConnectChannelOutput returns the channel id and its status after the connect
-// attempt. A fresh pairing streams QR codes over SSE
-// (integration.channel.pairing_qr_updated); a reconnect goes straight to
-// CONNECTED once the platform confirms.
 type ConnectChannelOutput struct {
-	ChannelID string `json:"channelId"`
-	Status    string `json:"status"`
+	ID     string `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	State  string `json:"state" example:"CONNECTING"`
+	QRCode string `json:"qrCode,omitempty" example:"2@ABC123..."`
 }
 
-// ConnectChannelHandler orchestrates get-or-create + registry registration +
-// pairing/reconnect.
 type ConnectChannelHandler struct {
+	repo     channelrepo.ChannelRepository
 	registry registry.ChannelRegistry
-	repo     projections.ChannelProjectionRepository
 }
 
 func NewConnectChannelHandler(
-	reg registry.ChannelRegistry,
-	repo projections.ChannelProjectionRepository,
+	repo channelrepo.ChannelRepository,
+	registry registry.ChannelRegistry,
 ) *ConnectChannelHandler {
-	return &ConnectChannelHandler{registry: reg, repo: repo}
+	return &ConnectChannelHandler{repo: repo, registry: registry}
 }
 
-func (h *ConnectChannelHandler) Name() string { return "ConnectChannel" }
+func (h *ConnectChannelHandler) Name() string { return "ConnectInstance" }
 
 func (h *ConnectChannelHandler) Execute(ctx context.Context, input ConnectChannelInput) (ConnectChannelOutput, error) {
-	ownerID := input.OwnerID
-	if ownerID == "" {
-		ownerID = OperatorID
-	}
-
-	// Get-or-create the WhatsApp channel row for this operator.
-	existing, err := h.repo.FindByOwnerAndKind(ctx, ownerID, wire.ChannelKindWHATSAPP)
+	instance, err := h.repo.Find(ctx, input.ID)
 	if err != nil {
 		return ConnectChannelOutput{}, err
 	}
-
-	var channelID uuid.UUID
-	accountDetail := ""
-	if existing != nil {
-		channelID, err = uuid.Parse(existing.ID)
-		if err != nil {
-			return ConnectChannelOutput{}, err
-		}
-		accountDetail = existing.AccountDetail
-	} else {
-		channelID = uuid.New()
-		now := time.Now().UTC()
-		if err := h.repo.Upsert(ctx, &projections.ChannelProjection{
-			ID:        channelID.String(),
-			OwnerID:   ownerID,
-			Kind:      wire.ChannelKindWHATSAPP,
-			Status:    wire.ChannelStatusPAIRING,
-			CreatedAt: now,
-			UpdatedAt: now,
-		}); err != nil {
-			return ConnectChannelOutput{}, err
-		}
+	if instance == nil {
+		return ConnectChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "instance not found")
 	}
 
-	ch, err := h.registry.Register(ctx, channelID, gateway.ChannelConfig{
-		OwnerID:       ownerID,
-		OwnerRemoteID: accountDetail,
+	instanceUUID, _ := uuid.Parse(input.ID)
+
+	ch, err := h.registry.Register(ctx, instanceUUID, gateway.ChannelConfig{
+		OwnerID:       instance.OwnerID,
+		OwnerRemoteID: instance.OwnerRemoteID,
 	})
 	if err != nil {
 		return ConnectChannelOutput{}, err
 	}
 
-	// Reconnect an already-paired device, or start a fresh QR pairing.
-	if accountDetail != "" {
-		if err := ch.Connect(ctx); err != nil {
-			return ConnectChannelOutput{}, err
-		}
-		return ConnectChannelOutput{ChannelID: channelID.String(), Status: string(wire.ChannelStatusCONNECTED)}, nil
+	// Already connected or connecting — return current state without a DB write.
+	switch ch.Status() {
+	case gateway.ConnectionStatusConnected:
+		return ConnectChannelOutput{ID: input.ID, State: string(enums.ChannelStatusConnected)}, nil
+	case gateway.ConnectionStatusConnecting:
+		return ConnectChannelOutput{ID: input.ID, State: string(enums.ChannelStatusConnecting)}, nil
 	}
 
-	qrCh, err := ch.GetQRChannel(ctx)
+	// Try to get QR channel (new pairing or re-pairing)
+	qrChan, err := ch.GetQRChannel(ctx)
 	if err != nil {
-		return ConnectChannelOutput{}, err
-	}
-	// Drain the QR stream so the adapter goroutine keeps producing rotations.
-	// Each rotation is emitted as a domain event inside the adapter → SSE.
-	go func() {
-		for range qrCh {
+		// Session already stored — just reconnect
+		if connectErr := ch.Connect(ctx); connectErr != nil {
+			return ConnectChannelOutput{}, connectErr
 		}
-		slog.Info("qr stream closed", "channelId", channelID)
-	}()
+		h.persistConnecting(ctx, instance)
+		return ConnectChannelOutput{ID: input.ID, State: string(enums.ChannelStatusConnecting)}, nil
+	}
 
-	_ = h.repo.SetStatus(ctx, channelID.String(), wire.ChannelStatusPAIRING, "")
-	return ConnectChannelOutput{ChannelID: channelID.String(), Status: string(wire.ChannelStatusPAIRING)}, nil
+	qrCode := ""
+	select {
+	case data, ok := <-qrChan:
+		if ok {
+			qrCode = data.Code
+		}
+	case <-ctx.Done():
+		return ConnectChannelOutput{}, ctx.Err()
+	}
+
+	h.persistConnecting(ctx, instance)
+	return ConnectChannelOutput{ID: input.ID, State: string(enums.ChannelStatusConnecting), QRCode: qrCode}, nil
+}
+
+// persistConnecting marks the entity as CONNECTING and upserts it. Errors are
+// non-fatal — the gateway is already connecting regardless of projection state.
+func (h *ConnectChannelHandler) persistConnecting(ctx context.Context, instance *entities.Channel) {
+	instance.SetConnecting()
+	if err := h.repo.Save(ctx, instance); err != nil {
+		slog.Warn("failed to persist CONNECTING status", "channelId", instance.ID.String(), "error", err)
+	}
 }

@@ -1,330 +1,394 @@
-// Package channel is BC1 — the Channel Gateway bounded context.
-//
-// Role (Go side = external-gateway worker): own the platform sessions
-// (whatsmeow/WhatsApp today), normalize inbound messages into the FROZEN wire
-// contract, and deliver outbound messages the core requests. It publishes/
-// consumes ONLY the locked integration.channel* events.
-//
-// Composition:
-//   - services/gateway/           — the platform-agnostic Channel port + factory
-//   - services/gateway/whatsapp/  — the whatsmeow adapter (store, factory,
-//     channel, mapper ACL)
-//   - services/registry/          — in-process live-session map
-//   - events/                     — domain lifecycle facts (channel.*)
-//   - handlers/                   — egress (domain→wire, InternalMediator) +
-//     delivery_requested (wire→session, ExternalMediator)
-//   - projections/                — channels read model + status projectors
-//   - usecases/ + controllers/    — the api-key-guarded HTTP surface
-//
-// Exactly-once (dedup) delegation: the gateway does NOT dedup inbound messages.
-// whatsmeow legitimately redelivers the same events.Message (reconnect, retry
-// receipts, offline drain), and the outbox→Redis Streams egress is at-least-once,
-// so duplicate MessageIDs can reach the consumer. The frozen wire event carries
-// a stable MessageID for exactly this reason: the downstream Thread & Routing
-// context (BC4) owns dedup, keying on ChannelMessageReceivedEvent.MessageID with
-// a unique constraint. That context is not yet built (see PENDING_PGSCHEMAS:
-// thread); when it lands it MUST enforce that guarantee — the gateway
-// deliberately keeps no seen-message state.
-//
-// Runtime contract: the Go gateway currently requires external Postgres + Redis
-// (the worker topology). NewPostgresDB eagerly pings Postgres and the
-// RedisExternalMediator pings Redis at OnStart, so the process only boots with
-// infra up — bring it up with `bun docker:compose` before starting the gateway
-// or asserting boot health against GET /healthz. (A file-backed embedded path
-// parallel to the TS PGlite daemon is a follow-up; until then the smoke test is
-// gated on docker:compose.)
 package channel
 
 import (
 	"context"
 	"log/slog"
-	"strings"
-
-	"github.com/google/uuid"
-	"go.uber.org/fx"
-
+	"time"
 	"template/api-go/internal/channel/controllers"
 	"template/api-go/internal/channel/handlers"
-	"template/api-go/internal/channel/projections"
-	"template/api-go/internal/channel/projections/projectors"
+	projectors "template/api-go/internal/channel/projections/projectors"
+	channelrepo "template/api-go/internal/channel/repositories/channel"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
-	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/channel/services/gateway/whatsapp"
+	gateway "template/api-go/internal/channel/services/gateway"
+	whatsapp "template/api-go/internal/channel/services/gateway/whatsapp"
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/usecases"
-	"template/core-go/services/mediator"
-	"template/core-go/types"
+	"template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/mediator"
+	"template/api-go/internal/shared/services/unitofwork"
+	"template/api-go/internal/shared/types"
+
+	"go.uber.org/fx"
+
+	_ "template/api-go/internal/channel/errors"
 )
 
 var Module = fx.Module("channel",
-	// ── Platform seam (WhatsApp realized; INSTAGRAM_DM/TELEGRAM are new adapters) ──
+	// Infrastructure - whatsmeow channel factory
 	fx.Provide(whatsapp.NewSQLStore),
-	fx.Provide(fx.Annotate(whatsapp.NewWhatsmeowChannelFactory, fx.As(new(gateway.ChannelFactory)))),
-	fx.Provide(fx.Annotate(registry.NewChannelRegistry, fx.As(new(registry.ChannelRegistry)))),
+	fx.Provide(fx.Annotate(
+		whatsapp.NewWhatsmeowChannelFactory,
+		fx.As(new(gateway.ChannelFactory)),
+	)),
 
-	// ── Read model ──
-	fx.Provide(projections.NewPgChannelProjectionRepository),
-	fx.Provide(projectors.NewConnectedProjector),
-	fx.Provide(projectors.NewDisconnectedProjector),
+	// Repository — projection-backed implementation (T6). Reads and writes the
+	// `channels` table directly; appends domain events to shared.events via
+	// DomainEventRepository inside Save. Strict 404 on miss (no event replay).
+	fx.Provide(fx.Annotate(
+		channelrepo.NewPgChannelRepository,
+		fx.As(new(channelrepo.ChannelRepository)),
+	)),
 
-	// Read-model repos (gateway.remotes / gateway.remote_memberships / gateway.messages).
-	fx.Provide(remoterepo.NewPgRemoteProjectionRepository),
-	fx.Provide(messagerepo.NewPgMessageProjectionRepository),
+	// Projection repositories (T7/T8) — read/write projection tables.
+	fx.Provide(fx.Annotate(
+		channelrepo.NewPgChannelProjectionRepository,
+		fx.As(new(channelrepo.ChannelProjectionRepository)),
+	)),
+	fx.Provide(fx.Annotate(
+		remoterepo.NewPgRemoteProjectionRepository,
+		fx.As(new(remoterepo.RemoteProjectionRepository)),
+	)),
+	fx.Provide(fx.Annotate(
+		messagerepo.NewPgMessageProjectionRepository,
+		fx.As(new(messagerepo.MessageProjectionRepository)),
+	)),
 
-	// Remote projectors.
-	fx.Provide(projectors.NewRemoteCreatedProjector),
-	fx.Provide(projectors.NewRemoteUpdatedProjector),
-	fx.Provide(projectors.NewRemoteDeletedProjector),
-	fx.Provide(projectors.NewMembershipAddedProjector),
-	fx.Provide(projectors.NewMembershipRemovedProjector),
-	fx.Provide(projectors.NewRemoteOnMessageReceivedProjector),
-	fx.Provide(projectors.NewRemoteOnMessageSentProjector),
-	fx.Provide(projectors.NewRemoteOnMessageDeletedProjector),
+	// Write-side repositories (needed by future use cases: Pin/Archive/Mute).
+	fx.Provide(fx.Annotate(
+		remoterepo.NewPgRemoteRepository,
+		fx.As(new(remoterepo.RemoteRepository)),
+	)),
+	fx.Provide(fx.Annotate(
+		messagerepo.NewPgMessageRepository,
+		fx.As(new(messagerepo.MessageRepository)),
+	)),
 
-	// Message projectors.
-	fx.Provide(projectors.NewMessageReceivedProjector),
-	fx.Provide(projectors.NewMessageSentProjector),
-	fx.Provide(projectors.NewMessageEditedProjector),
-	fx.Provide(projectors.NewMessageDeletedProjector),
-	fx.Provide(projectors.NewMessageDeliveredProjector),
-	fx.Provide(projectors.NewMessageSeenProjector),
+	// Registry service
+	fx.Provide(fx.Annotate(
+		registry.NewChannelRegistry,
+		fx.As(new(registry.ChannelRegistry)),
+	)),
 
-	// ── Egress: domain fact → frozen wire integration event (InternalMediator) ──
-	fx.Provide(handlers.NewMessageReceivedEgress),
-	fx.Provide(handlers.NewConnectedEgress),
-	fx.Provide(handlers.NewDisconnectedEgress),
-	fx.Provide(handlers.NewPairingQRUpdatedEgress),
-	fx.Provide(handlers.NewOutboundDeliveredEgress),
-
-	// Read-model egress: rich domain facts → frozen wire integration events.
-	fx.Provide(handlers.NewMessageSentEgress),
-	fx.Provide(handlers.NewMessageEditedEgress),
-	fx.Provide(handlers.NewMessageDeletedEgress),
-	fx.Provide(handlers.NewMessageDeliveredEgress),
-	fx.Provide(handlers.NewMessageSeenEgress),
-	fx.Provide(handlers.NewRemoteCreatedEgress),
-	fx.Provide(handlers.NewRemoteUpdatedEgress),
-	fx.Provide(handlers.NewRemoteDeletedEgress),
-	fx.Provide(handlers.NewMembershipAddedEgress),
-	fx.Provide(handlers.NewMembershipRemovedEgress),
-	fx.Provide(handlers.NewPresenceUpdatedEgress),
-	fx.Provide(handlers.NewChatPresenceUpdatedEgress),
-	fx.Provide(handlers.NewContactsSyncedEgress),
-	fx.Provide(handlers.NewMessagesSyncedEgress),
-
-	// ── Ingress: core delivery command → live session (ExternalMediator) ──
-	fx.Provide(handlers.NewDeliveryRequestedHandler),
-
-	// ── Use cases ──
+	// Use cases — channel management
+	fx.Provide(usecases.NewCreateChannelHandler),
 	fx.Provide(usecases.NewConnectChannelHandler),
-	fx.Provide(usecases.NewSendMessageHandler),
-	fx.Provide(usecases.NewLogoutChannelHandler),
 	fx.Provide(usecases.NewListChannelsHandler),
+	fx.Provide(usecases.NewGetChannelHandler),
+	fx.Provide(usecases.NewDeleteChannelHandler),
+	fx.Provide(usecases.NewRestartChannelHandler),
+	fx.Provide(usecases.NewLogoutChannelHandler),
+	fx.Provide(usecases.NewSetPresenceHandler),
+	fx.Provide(usecases.NewGetOrCreateChannelHandler),
 
-	// ── Controllers (auto-registered via group:"controllers") ──
-	provideController(controllers.NewConnectChannelController),
-	provideController(controllers.NewSendMessageController),
-	provideController(controllers.NewLogoutChannelController),
-	provideController(controllers.NewListChannelsController),
+	// Use cases — messaging
+	fx.Provide(usecases.NewSendTextHandler),
+	fx.Provide(usecases.NewSendMediaHandler),
+	fx.Provide(usecases.NewCheckIsOnPlatformHandler),
+	fx.Provide(usecases.NewDeleteMessageHandler),
+	fx.Provide(usecases.NewSendImageHandler),
+	fx.Provide(usecases.NewSendVideoHandler),
+	fx.Provide(usecases.NewSendFileHandler),
+	fx.Provide(usecases.NewSendAudioHandler),
+	fx.Provide(usecases.NewSendStickerHandler),
+	fx.Provide(usecases.NewSendLinkHandler),
+	fx.Provide(usecases.NewSendLocationHandler),
+	fx.Provide(usecases.NewSendContactHandler),
+	fx.Provide(usecases.NewSendReactionHandler),
+	fx.Provide(usecases.NewSendPollHandler),
+	fx.Provide(usecases.NewSendListHandler),
+	fx.Provide(usecases.NewSendButtonHandler),
+	fx.Provide(usecases.NewSendStatusHandler),
+	fx.Provide(usecases.NewEditMessageHandler),
+	fx.Provide(usecases.NewForwardMessageHandler),
+	fx.Provide(usecases.NewSendChatPresenceHandler),
 
-	fx.Invoke(registerHandlers),
-	fx.Invoke(registerReadModelHandlers),
-	fx.Invoke(registerLifecycleHooks),
-)
+	// Use cases — remote (chat state: pin/archive/mute/mark-read)
+	fx.Provide(usecases.NewPinRemoteHandler),
+	fx.Provide(usecases.NewUnpinRemoteHandler),
+	fx.Provide(usecases.NewArchiveRemoteHandler),
+	fx.Provide(usecases.NewUnarchiveRemoteHandler),
+	fx.Provide(usecases.NewMuteRemoteHandler),
+	fx.Provide(usecases.NewUnmuteRemoteHandler),
+	fx.Provide(usecases.NewMarkRemoteAsUnreadHandler),
+	fx.Provide(usecases.NewMarkRemoteAsSeenHandler),
 
-// isUndefinedTable reports whether err is Postgres 42P01 (undefined_table) — the
-// expected shape when the contracts-owned gateway.channels is not migrated yet.
-func isUndefinedTable(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "42P01") || strings.Contains(msg, "does not exist")
-}
-
-// provideController annotates a controller constructor for the shared
-// group:"controllers" collection the HttpRouter consumes.
-func provideController(ctor any) fx.Option {
-	return fx.Provide(fx.Annotate(
-		ctor,
+	// Controllers — channel management
+	fx.Provide(fx.Annotate(controllers.NewCreateWhatsAppChannelController,
 		fx.As(new(types.Controller)),
 		fx.ResultTags(`group:"controllers"`),
-	))
-}
+	)),
+	fx.Provide(fx.Annotate(controllers.NewListChannelsController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewGetChannelController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewDeleteChannelController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewConnectChannelController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewRestartChannelController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewLogoutChannelController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSetPresenceController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewGetOrCreateChannelController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
 
-// registerHandlers subscribes the context's write-side consumers.
-//   - egress handlers + status projectors listen on the InternalMediator (fed
-//     by the OutboxDispatcher from the durable outbox).
-//   - the delivery handler listens on the ExternalMediator (Redis Streams).
-func registerHandlers(
-	im mediator.InternalMediator,
-	ext mediator.ExternalMediator,
-	msgRecv *handlers.MessageReceivedEgress,
-	connected *handlers.ConnectedEgress,
-	disconnected *handlers.DisconnectedEgress,
-	qr *handlers.PairingQRUpdatedEgress,
-	outbound *handlers.OutboundDeliveredEgress,
-	connectedProj *projectors.ConnectedProjector,
-	disconnectedProj *projectors.DisconnectedProjector,
-	delivery *handlers.DeliveryRequestedHandler,
-) {
-	im.Register(msgRecv)
-	im.Register(connected)
-	im.Register(disconnected)
-	im.Register(qr)
-	im.Register(outbound)
-	im.Register(connectedProj)
-	im.Register(disconnectedProj)
+	// Controllers — messaging
+	fx.Provide(fx.Annotate(controllers.NewSendTextController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendMediaController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewCheckIsOnPlatformController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewDeleteMessageController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendImageController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendVideoController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendFileController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendAudioController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendStickerController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendLinkController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendLocationController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendContactController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendReactionController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendPollController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendListController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendButtonController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendStatusController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewEditMessageController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewForwardMessageController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewSendChatPresenceController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
 
-	ext.Register(delivery)
-}
+	// Controllers — remote (chat state mutations)
+	fx.Provide(fx.Annotate(controllers.NewPinRemoteController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewUnpinRemoteController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewArchiveRemoteController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewUnarchiveRemoteController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewMuteRemoteController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewUnmuteRemoteController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewMarkRemoteAsUnreadController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+	fx.Provide(fx.Annotate(controllers.NewMarkRemoteAsSeenController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
 
-// readModelHandlers collects the read-model projectors + egress bridges so they
-// can be registered without a 28-argument positional signature. Each field is a
-// mediator.DomainEventHandler; fx populates them from the providers above.
-type readModelHandlers struct {
-	fx.In
+	// Lifecycle hooks
+	fx.Invoke(registerLifecycleHooks),
+	fx.Invoke(registerDomainEventHandlers),
+)
 
-	IM mediator.InternalMediator
-
-	// Remote projectors (write gateway.remotes / gateway.remote_memberships).
-	RemoteCreated    *projectors.RemoteCreatedProjector
-	RemoteUpdated    *projectors.RemoteUpdatedProjector
-	RemoteDeleted    *projectors.RemoteDeletedProjector
-	MembershipAdded  *projectors.MembershipAddedProjector
-	MembershipRemove *projectors.MembershipRemovedProjector
-	RemoteOnRecv     *projectors.RemoteOnMessageReceivedProjector
-	RemoteOnSent     *projectors.RemoteOnMessageSentProjector
-	RemoteOnDeleted  *projectors.RemoteOnMessageDeletedProjector
-
-	// Message projectors (write gateway.messages).
-	MsgReceived  *projectors.MessageReceivedProjector
-	MsgSent      *projectors.MessageSentProjector
-	MsgEdited    *projectors.MessageEditedProjector
-	MsgDeleted   *projectors.MessageDeletedProjector
-	MsgDelivered *projectors.MessageDeliveredProjector
-	MsgSeen      *projectors.MessageSeenProjector
-
-	// Read-model egress bridges (domain fact → frozen wire).
-	EgMsgSent      *handlers.MessageSentEgress
-	EgMsgEdited    *handlers.MessageEditedEgress
-	EgMsgDeleted   *handlers.MessageDeletedEgress
-	EgMsgDelivered *handlers.MessageDeliveredEgress
-	EgMsgSeen      *handlers.MessageSeenEgress
-	EgRemoteCreate *handlers.RemoteCreatedEgress
-	EgRemoteUpdate *handlers.RemoteUpdatedEgress
-	EgRemoteDelete *handlers.RemoteDeletedEgress
-	EgMemberAdd    *handlers.MembershipAddedEgress
-	EgMemberRemove *handlers.MembershipRemovedEgress
-	EgPresence     *handlers.PresenceUpdatedEgress
-	EgChatPresence *handlers.ChatPresenceUpdatedEgress
-	EgContactsSync *handlers.ContactsSyncedEgress
-	EgMessagesSync *handlers.MessagesSyncedEgress
-}
-
-// registerReadModelHandlers subscribes the read-model projectors and their
-// egress bridges on the InternalMediator (fed by the OutboxDispatcher). The
-// projectors mutate the local read model; the egress bridges publish the frozen
-// wire events. Both fan out from the same domain fact.
-func registerReadModelHandlers(h readModelHandlers) {
-	// Projectors.
-	h.IM.Register(h.RemoteCreated)
-	h.IM.Register(h.RemoteUpdated)
-	h.IM.Register(h.RemoteDeleted)
-	h.IM.Register(h.MembershipAdded)
-	h.IM.Register(h.MembershipRemove)
-	h.IM.Register(h.RemoteOnRecv)
-	h.IM.Register(h.RemoteOnSent)
-	h.IM.Register(h.RemoteOnDeleted)
-	h.IM.Register(h.MsgReceived)
-	h.IM.Register(h.MsgSent)
-	h.IM.Register(h.MsgEdited)
-	h.IM.Register(h.MsgDeleted)
-	h.IM.Register(h.MsgDelivered)
-	h.IM.Register(h.MsgSeen)
-
-	// Egress bridges.
-	h.IM.Register(h.EgMsgSent)
-	h.IM.Register(h.EgMsgEdited)
-	h.IM.Register(h.EgMsgDeleted)
-	h.IM.Register(h.EgMsgDelivered)
-	h.IM.Register(h.EgMsgSeen)
-	h.IM.Register(h.EgRemoteCreate)
-	h.IM.Register(h.EgRemoteUpdate)
-	h.IM.Register(h.EgRemoteDelete)
-	h.IM.Register(h.EgMemberAdd)
-	h.IM.Register(h.EgMemberRemove)
-	h.IM.Register(h.EgPresence)
-	h.IM.Register(h.EgChatPresence)
-	h.IM.Register(h.EgContactsSync)
-	h.IM.Register(h.EgMessagesSync)
-}
-
-// registerLifecycleHooks restores and tears down live gateway sessions across
-// the process lifecycle.
-//
-//   - OnStart: whatsmeow persists paired devices in its sqlstore, and the
-//     channels read model records which channels are paired (account_detail set).
-//     After a restart/deploy the in-process registry is empty, so we enumerate
-//     the paired channels and re-Register + Connect each one — inbound messages
-//     resume flowing without a human re-hitting POST /connect.
-//   - OnStop: cleanly disconnect every live session (cancels the adapter
-//     goroutines) via the registry's DisconnectAll.
-//
-// Boot ordering: gateway.channels is owned by the `gateway` pg schema declared in
-// packages/contracts (Drizzle), NOT by the Go worker. On a scratch database the
-// table only exists after `bun migrate:dev` runs. So in the two-process topology
-// `bun migrate:dev` MUST run before the Go gateway boots. Until it does, ListPaired
-// hits an undefined table (SQLSTATE 42P01); that is an EXPECTED first-boot state,
-// so it is logged at Warn (not Error) and the hook returns success — the server
-// still starts and reads clean once migrations land.
-func registerLifecycleHooks(
-	lc fx.Lifecycle,
-	reg registry.ChannelRegistry,
-	repo projections.ChannelProjectionRepository,
-) {
+func registerLifecycleHooks(lc fx.Lifecycle, reg registry.ChannelRegistry, repo channelrepo.ChannelRepository, factory gateway.ChannelFactory) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			paired, err := repo.ListPaired(ctx)
+			channels, err := repo.FindAllActive(ctx)
 			if err != nil {
-				// Non-fatal: boot the gateway even if the read model is
-				// unavailable — the operator can still re-Connect manually.
-				if isUndefinedTable(err) {
-					// Expected on a scratch DB before `bun migrate:dev` creates
-					// gateway.channels. Warn, don't Error — scratch boot reads clean.
-					slog.Warn("channel bootstrap: gateway.channels not migrated yet; run `bun migrate:dev` (skipping paired-session restore)", "error", err)
-				} else {
-					slog.Error("channel bootstrap: list paired channels failed", "error", err)
-				}
+				slog.Warn("startup: failed to load active channels", "error", err)
 				return nil
 			}
-			for _, p := range paired {
-				channelID, perr := uuid.Parse(p.ID)
-				if perr != nil {
-					slog.Warn("channel bootstrap: bad channel id, skipping", "id", p.ID, "error", perr)
-					continue
+			slog.Info("startup: reconnecting channels", "count", len(channels))
+			go func() {
+				// Wait for the OS to fully close TCP connections from the previous
+				// process before reconnecting. Without this, WhatsApp may see the
+				// old connection as still alive and reject the new one with 401
+				// "logged out from another device", causing whatsmeow to delete the
+				// local session keys.
+				time.Sleep(3 * time.Second)
+				for _, ch := range channels {
+					id := ch.ID
+					ownerID := ch.OwnerID
+					ownerRemoteID := ch.OwnerRemoteID
+					live, err := reg.Register(context.Background(), id.UUID(), gateway.ChannelConfig{
+						OwnerID:       ownerID,
+						OwnerRemoteID: ownerRemoteID,
+					})
+					if err != nil {
+						slog.Warn("startup: failed to register channel", "channelId", id.UUID(), "error", err)
+						continue
+					}
+					if err := live.Connect(context.Background()); err != nil {
+						slog.Warn("startup: failed to connect channel", "channelId", id.UUID(), "error", err)
+					}
 				}
-				ch, rerr := reg.Register(ctx, channelID, gateway.ChannelConfig{
-					OwnerID:       p.OwnerID,
-					OwnerRemoteID: p.AccountDetail,
-				})
-				if rerr != nil {
-					slog.Error("channel bootstrap: register failed", "channelId", channelID, "error", rerr)
-					continue
-				}
-				if cerr := ch.Connect(ctx); cerr != nil {
-					slog.Error("channel bootstrap: reconnect failed", "channelId", channelID, "error", cerr)
-					continue
-				}
-				slog.Info("channel bootstrap: reconnected paired session", "channelId", channelID)
-			}
-			slog.Info("channel bootstrap complete", "restored", reg.Count())
+			}()
 			return nil
 		},
-		OnStop: func(_ context.Context) error {
+		OnStop: func(ctx context.Context) error {
+			slog.Info("disconnecting all instances...")
 			reg.DisconnectAll()
+			if c, ok := factory.(interface{ Close() error }); ok {
+				_ = c.Close()
+			}
 			return nil
 		},
 	})
 }
+
+func registerDomainEventHandlers(
+	m mediator.InternalMediator,
+	ext mediator.ExternalMediator,
+	repo channelrepo.ChannelRepository,
+	reg registry.ChannelRegistry,
+	domainEventRepo repositories.DomainEventRepository,
+	uow unitofwork.UnitOfWork,
+	remoteProjRepo remoterepo.RemoteProjectionRepository,
+	msgProjRepo messagerepo.MessageProjectionRepository,
+) {
+	m.Register(handlers.NewChannelCreatedHandler())
+	m.Register(handlers.NewChannelDeletedHandler())
+	m.Register(handlers.NewChannelConnectedHandler(repo, reg, domainEventRepo, ext, uow))
+	m.Register(handlers.NewChannelDisconnectedHandler(repo, domainEventRepo, ext, uow))
+	m.Register(handlers.NewChannelLoggedOutHandler(repo, domainEventRepo, ext, uow))
+	m.Register(handlers.NewMessageReceivedHandler(ext, reg))
+	m.Register(handlers.NewMessageDeliveredHandler(ext))
+	m.Register(handlers.NewMessageSeenHandler(ext))
+	m.Register(handlers.NewGatewayPlatformEventHandler(ext))
+
+	// Sync pipeline — gateway events → business sync events → integration events.
+	m.Register(handlers.NewSyncStartedHandler(domainEventRepo))
+	m.Register(handlers.NewSyncProgressHandler(domainEventRepo))
+	m.Register(handlers.NewSyncCompletedHandler(domainEventRepo))
+	m.Register(handlers.NewSyncStartedIntegrationHandler(ext))
+	m.Register(handlers.NewSyncProgressIntegrationHandler(ext))
+	m.Register(handlers.NewSyncCompletedIntegrationHandler(ext))
+
+	// Integration handlers — domain → external mediator.
+	m.Register(handlers.NewPresenceUpdatedIntegrationHandler(ext))
+	m.Register(handlers.NewChatPresenceUpdatedIntegrationHandler(ext))
+
+	// Remote event handler — fan-out remote observation events to integration consumers.
+	m.Register(handlers.NewRemoteUpdatedHandler(ext))
+	m.Register(handlers.NewRemoteCreatedIntegrationHandler(ext))
+	m.Register(handlers.NewRemoteDeletedIntegrationHandler(ext))
+	m.Register(handlers.NewRemotesSyncedIntegrationHandler(ext))
+	m.Register(handlers.NewMessagesSyncedIntegrationHandler(ext))
+	m.Register(handlers.NewMembershipAddedIntegrationHandler(ext))
+	m.Register(handlers.NewMembershipRemovedIntegrationHandler(ext))
+
+	// Remote projectors — write to remotes projection (T8).
+	m.Register(projectors.NewRemoteCreatedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteDeletedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteUpdatedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemotePinnedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteUnpinnedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteArchivedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteUnarchivedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteMutedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteUnmutedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteMarkedAsUnreadProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteChatSeenProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteOnMessageReceivedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteOnMessageSentProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteOnMessageDeletedProjector(msgProjRepo, remoteProjRepo))
+
+	// Message projectors — write to messages projection (T8).
+	m.Register(projectors.NewMessageReceivedProjector(msgProjRepo))
+	m.Register(projectors.NewMessageSentProjector(msgProjRepo))
+	m.Register(projectors.NewMessageEditedProjector(msgProjRepo))
+	m.Register(projectors.NewMessageDeletedProjector(msgProjRepo))
+	m.Register(projectors.NewMessageDeliveredProjector(msgProjRepo))
+	m.Register(projectors.NewMessageSeenProjector(msgProjRepo))
+
+	// Membership projectors — write to remote_memberships projection (T8/T13).
+	m.Register(projectors.NewMembershipAddedProjector(remoteProjRepo))
+	m.Register(projectors.NewMembershipRemovedProjector(remoteProjRepo))
+}
+
+// No message persistence handlers needed: messages are themselves the
+// channel.message_* domain events in shared.events, and the ListMessages
+// query aggregates them at read time. Delivery status is similarly
+// computed from channel.message_delivered / channel.message_seen events.

@@ -1,7 +1,3 @@
-// Package message is the read side + projection writes for the Message
-// projection (gateway.messages). Mirrors the medscall channel message
-// repository, adapted to the CodeDM `gateway` pg schema and the frozen wire
-// enums.
 package message
 
 import (
@@ -18,7 +14,7 @@ type CursorOptions struct {
 }
 
 // MessageProjectionRepository is the read side + projection writes for the
-// Message projection (gateway.messages).
+// Message projection (messages).
 //
 // Reads return *projections.Message. Writes are a mix of whole-row Save
 // (used by Edit/SoftDelete projectors), idempotent InsertIfNew (used by the

@@ -9,15 +9,16 @@ import (
 	"strings"
 	"time"
 
+	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/projections"
-	"template/contracts-go/wire"
-	"template/core-go/db/dbutil"
-	"template/core-go/services/unitofwork"
+	"template/api-go/internal/shared/db/dbutil"
+	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/shared/services/unitofwork"
 )
 
 // PgRemoteProjectionRepository implements RemoteProjectionRepository with
 // Postgres. It stores and retrieves Remote projection rows from the
-// gateway.remotes and gateway.remote_memberships tables.
+// `remotes` and `remote_memberships` tables.
 //
 // Whole-row Save/UpsertAll are used by projectors; atomic column mutations
 // (ResetUnreadCount, UpdateMembership) are safe to call concurrently because
@@ -27,8 +28,7 @@ type PgRemoteProjectionRepository struct {
 }
 
 // NewPgRemoteProjectionRepository constructs the read/projection-write repository.
-// It returns the interface type so fx binds it directly.
-func NewPgRemoteProjectionRepository(db *sql.DB) RemoteProjectionRepository {
+func NewPgRemoteProjectionRepository(db *sql.DB) *PgRemoteProjectionRepository {
 	return &PgRemoteProjectionRepository{db: db}
 }
 
@@ -38,11 +38,6 @@ var _ RemoteProjectionRepository = (*PgRemoteProjectionRepository)(nil)
 // remoteChunkSize limits rows per batch INSERT to stay well under Postgres'
 // 65535 parameter limit. remotes has 18 columns × 500 = 9000 params.
 const remoteChunkSize = 500
-
-const remoteColumns = `channel_id, remote_id, type, platform, name, avatar_url, is_blocked,
-	        pinned_at, archived, mute_expiration, marked_as_unread,
-	        unread_message_count, last_message_at, last_message_id, deleted_at,
-	        created_at, updated_at, version`
 
 // -------------------------------------------------------------------------------
 // Reads
@@ -54,8 +49,11 @@ func (r *PgRemoteProjectionRepository) Find(ctx context.Context, channelID, remo
 	db := r.txOrDB(ctx)
 
 	row := db.QueryRowContext(ctx,
-		`SELECT `+remoteColumns+`
-		 FROM gateway.remotes
+		`SELECT channel_id, remote_id, type, platform, name, avatar_url, is_blocked,
+		        pinned_at, archived, mute_expiration, marked_as_unread,
+		        unread_message_count, last_message_at, last_message_id, deleted_at,
+		        created_at, updated_at, version
+		 FROM remotes
 		 WHERE channel_id = $1 AND remote_id = $2`,
 		channelID, remoteID,
 	)
@@ -100,8 +98,11 @@ func (r *PgRemoteProjectionRepository) List(ctx context.Context, channelID strin
 	args = append(args, limit)
 
 	q := fmt.Sprintf(
-		`SELECT `+remoteColumns+`
-		 FROM gateway.remotes
+		`SELECT channel_id, remote_id, type, platform, name, avatar_url, is_blocked,
+		        pinned_at, archived, mute_expiration, marked_as_unread,
+		        unread_message_count, last_message_at, last_message_id, deleted_at,
+		        created_at, updated_at, version
+		 FROM remotes
 		 WHERE %s
 		 ORDER BY last_message_at DESC NULLS LAST
 		 LIMIT $%d`,
@@ -123,8 +124,11 @@ func (r *PgRemoteProjectionRepository) FindAllByChannel(ctx context.Context, cha
 	db := r.txOrDB(ctx)
 
 	rows, err := db.QueryContext(ctx,
-		`SELECT `+remoteColumns+`
-		 FROM gateway.remotes
+		`SELECT channel_id, remote_id, type, platform, name, avatar_url, is_blocked,
+		        pinned_at, archived, mute_expiration, marked_as_unread,
+		        unread_message_count, last_message_at, last_message_id, deleted_at,
+		        created_at, updated_at, version
+		 FROM remotes
 		 WHERE channel_id = $1`,
 		channelID,
 	)
@@ -160,7 +164,7 @@ func (r *PgRemoteProjectionRepository) Save(ctx context.Context, rem *projection
 // InsertIfNew inserts the Remote projection row only when no row with the same
 // (channel_id, remote_id) exists. Returns inserted=true when a row was created,
 // inserted=false on conflict (DO NOTHING). Used by RemoteCreatedProjector to
-// implement first-write-wins semantics: if remote_updated or remotes_synced ran
+// implement first-write-wins semantics: if remote_updated or remote_synced ran
 // first and created a stub, the later remote_created must not overwrite it.
 func (r *PgRemoteProjectionRepository) InsertIfNew(ctx context.Context, rem *projections.Remote) (bool, error) {
 	db := r.txOrDB(ctx)
@@ -168,7 +172,7 @@ func (r *PgRemoteProjectionRepository) InsertIfNew(ctx context.Context, rem *pro
 
 	var channelID string
 	err := db.QueryRowContext(ctx,
-		`INSERT INTO gateway.remotes
+		`INSERT INTO remotes
 		   (channel_id, remote_id, type, platform, name, avatar_url, is_blocked, pinned_at, archived,
 		    mute_expiration, marked_as_unread, unread_message_count, last_message_at,
 		    deleted_at, created_at, updated_at, version)
@@ -259,14 +263,14 @@ func upsertContactSnapshotChunk(ctx context.Context, db remoteQueryExecContext, 
 	}
 
 	q := fmt.Sprintf(
-		`INSERT INTO gateway.remotes
+		`INSERT INTO remotes
 		   (channel_id, remote_id, type, platform, name, avatar_url, created_at, updated_at, version)
 		 VALUES %s
 		 ON CONFLICT (channel_id, remote_id) DO UPDATE SET
 		   name       = EXCLUDED.name,
 		   avatar_url = EXCLUDED.avatar_url,
 		   updated_at = EXCLUDED.updated_at,
-		   version    = gateway.remotes.version + 1`,
+		   version    = remotes.version + 1`,
 		strings.Join(values, ","),
 	)
 
@@ -296,7 +300,7 @@ func upsertRemoteChunk(ctx context.Context, db remoteQueryExecContext, chunk []*
 	}
 
 	q := fmt.Sprintf(
-		`INSERT INTO gateway.remotes
+		`INSERT INTO remotes
 		   (channel_id, remote_id, type, platform, name, avatar_url, is_blocked, pinned_at, archived,
 		    mute_expiration, marked_as_unread, unread_message_count, last_message_at,
 		    last_message_id, deleted_at, created_at, updated_at, version)
@@ -316,7 +320,7 @@ func upsertRemoteChunk(ctx context.Context, db remoteQueryExecContext, chunk []*
 		   last_message_id     = EXCLUDED.last_message_id,
 		   deleted_at          = EXCLUDED.deleted_at,
 		   updated_at          = EXCLUDED.updated_at,
-		   version             = gateway.remotes.version + 1`,
+		   version             = remotes.version + 1`,
 		strings.Join(values, ","),
 	)
 
@@ -329,7 +333,7 @@ func upsertRemoteChunk(ctx context.Context, db remoteQueryExecContext, chunk []*
 func upsertRemoteRow(ctx context.Context, db remoteQueryExecContext, rem *projections.Remote) error {
 	now := time.Now().UTC()
 	_, err := db.ExecContext(ctx,
-		`INSERT INTO gateway.remotes
+		`INSERT INTO remotes
 		   (channel_id, remote_id, type, platform, name, avatar_url, is_blocked, pinned_at, archived,
 		    mute_expiration, marked_as_unread, unread_message_count, last_message_at,
 		    last_message_id, deleted_at, created_at, updated_at, version)
@@ -349,7 +353,7 @@ func upsertRemoteRow(ctx context.Context, db remoteQueryExecContext, rem *projec
 		   last_message_id     = EXCLUDED.last_message_id,
 		   deleted_at          = EXCLUDED.deleted_at,
 		   updated_at          = EXCLUDED.updated_at,
-		   version             = gateway.remotes.version + 1`,
+		   version             = remotes.version + 1`,
 		rem.ChannelID, rem.RemoteID, rem.Type, string(rem.Platform), rem.Name,
 		dbutil.NullStr(rem.AvatarURL), rem.IsBlocked,
 		dbutil.NullTime(rem.PinnedAt), rem.Archived, dbutil.NullTime(rem.MuteExpiration),
@@ -371,7 +375,7 @@ func upsertRemoteRow(ctx context.Context, db remoteQueryExecContext, rem *projec
 func (r *PgRemoteProjectionRepository) ResetUnreadCount(ctx context.Context, channelID, remoteID string) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.remotes
+		`UPDATE remotes
 		 SET unread_message_count = 0, marked_as_unread = FALSE, updated_at = NOW()
 		 WHERE channel_id = $1 AND remote_id = $2`,
 		channelID, remoteID,
@@ -410,7 +414,7 @@ func (r *PgRemoteProjectionRepository) UpdateMembership(ctx context.Context, cha
 
 func (r *PgRemoteProjectionRepository) updateMembershipOnTx(ctx context.Context, tx remoteQueryExecContext, channelID, groupID string, members []MembershipRow) error {
 	if _, err := tx.ExecContext(ctx,
-		`DELETE FROM gateway.remote_memberships WHERE channel_id = $1 AND group_id = $2`,
+		`DELETE FROM remote_memberships WHERE channel_id = $1 AND group_id = $2`,
 		channelID, groupID,
 	); err != nil {
 		return fmt.Errorf("pg remote projection repo: delete memberships: %w", err)
@@ -426,7 +430,7 @@ func (r *PgRemoteProjectionRepository) updateMembershipOnTx(ctx context.Context,
 			pos += 5
 		}
 		q := fmt.Sprintf(
-			`INSERT INTO gateway.remote_memberships (channel_id, group_id, member_id, is_admin, joined_at)
+			`INSERT INTO remote_memberships (channel_id, group_id, member_id, is_admin, joined_at)
 			 VALUES %s
 			 ON CONFLICT (channel_id, group_id, member_id) DO UPDATE SET
 			   is_admin = EXCLUDED.is_admin, joined_at = EXCLUDED.joined_at`,
@@ -445,7 +449,7 @@ func (r *PgRemoteProjectionRepository) updateMembershipOnTx(ctx context.Context,
 func (r *PgRemoteProjectionRepository) AddMember(ctx context.Context, channelID, groupID string, member MembershipRow) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`INSERT INTO gateway.remote_memberships (channel_id, group_id, member_id, is_admin, joined_at)
+		`INSERT INTO remote_memberships (channel_id, group_id, member_id, is_admin, joined_at)
 		 VALUES ($1, $2, $3, $4, $5)
 		 ON CONFLICT (channel_id, group_id, member_id) DO UPDATE SET
 		   is_admin  = EXCLUDED.is_admin,
@@ -464,7 +468,7 @@ func (r *PgRemoteProjectionRepository) AddMember(ctx context.Context, channelID,
 func (r *PgRemoteProjectionRepository) RemoveMember(ctx context.Context, channelID, groupID, memberID string) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`DELETE FROM gateway.remote_memberships
+		`DELETE FROM remote_memberships
 		 WHERE channel_id = $1 AND group_id = $2 AND member_id = $3`,
 		channelID, groupID, memberID,
 	)
@@ -503,7 +507,7 @@ func (r *PgRemoteProjectionRepository) BulkUpdateMemberships(ctx context.Context
 func (r *PgRemoteProjectionRepository) doBulkUpdateMemberships(ctx context.Context, db remoteQueryExecContext, channelID string, groups map[string][]MembershipRow) error {
 	// Clear all memberships for this channel first.
 	if _, err := db.ExecContext(ctx,
-		`DELETE FROM gateway.remote_memberships WHERE channel_id = $1`, channelID,
+		`DELETE FROM remote_memberships WHERE channel_id = $1`, channelID,
 	); err != nil {
 		return fmt.Errorf("pg remote projection repo: bulk delete memberships: %w", err)
 	}
@@ -544,7 +548,7 @@ func (r *PgRemoteProjectionRepository) doBulkUpdateMemberships(ctx context.Conte
 		}
 		if _, err := db.ExecContext(ctx,
 			fmt.Sprintf(
-				`INSERT INTO gateway.remote_memberships (channel_id, group_id, member_id, is_admin, joined_at)
+				`INSERT INTO remote_memberships (channel_id, group_id, member_id, is_admin, joined_at)
 				 VALUES %s
 				 ON CONFLICT (channel_id, group_id, member_id) DO UPDATE SET is_admin = EXCLUDED.is_admin`,
 				strings.Join(placeholders, ","),
@@ -562,7 +566,7 @@ func (r *PgRemoteProjectionRepository) doBulkUpdateMemberships(ctx context.Conte
 func (r *PgRemoteProjectionRepository) UpdateAvatar(ctx context.Context, channelID, remoteID, avatarURL string) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.remotes SET avatar_url = $1, updated_at = NOW()
+		`UPDATE remotes SET avatar_url = $1, updated_at = NOW()
 		 WHERE channel_id = $2 AND remote_id = $3`,
 		avatarURL, channelID, remoteID,
 	)
@@ -609,7 +613,7 @@ func scanRemote(row rowScanner) (*projections.Remote, error) {
 	if err != nil {
 		return nil, err
 	}
-	rem.Platform = wire.ChannelKind(platform)
+	rem.Platform = sharedenums.Platform(platform)
 	if avatarURL.Valid {
 		rem.AvatarURL = avatarURL.String
 	}
@@ -645,7 +649,7 @@ type rowScanner interface {
 }
 
 // -------------------------------------------------------------------------------
-// Message-fact folds
+// Apply* stubs — implementations land in Tasks 7-9
 // -------------------------------------------------------------------------------
 
 // ApplyLatestMessage folds a single message fact into the Remote projection's
@@ -655,11 +659,11 @@ type rowScanner interface {
 func (r *PgRemoteProjectionRepository) ApplyLatestMessage(ctx context.Context, msg *projections.Message) error {
 	db := r.txOrDB(ctx)
 	incoming := 0
-	if msg.Direction == string(wire.DirectionRECEIVED) {
+	if msg.Direction == string(channelenums.DirectionReceived) {
 		incoming = 1
 	}
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.remotes SET
+		`UPDATE remotes SET
 		   last_message_id      = CASE WHEN last_message_at IS NULL OR last_message_at < $4
 		                               THEN $3::uuid ELSE last_message_id END,
 		   last_message_at      = CASE WHEN last_message_at IS NULL OR last_message_at < $4
@@ -696,7 +700,7 @@ func (r *PgRemoteProjectionRepository) ApplyHistoricalMessages(ctx context.Conte
 // touching unread_message_count. Used exclusively by ApplyHistoricalMessages.
 func applyHistoricalMessage(ctx context.Context, db remoteQueryExecContext, msg *projections.Message) error {
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.remotes SET
+		`UPDATE remotes SET
 		   last_message_id = CASE WHEN last_message_at IS NULL OR last_message_at < $4
 		                          THEN $3::uuid ELSE last_message_id END,
 		   last_message_at = CASE WHEN last_message_at IS NULL OR last_message_at < $4
@@ -718,11 +722,11 @@ func applyHistoricalMessage(ctx context.Context, db remoteQueryExecContext, msg 
 func (r *PgRemoteProjectionRepository) BackfillLastMessagePreview(ctx context.Context, channelID string) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.remotes r
+		`UPDATE remotes r
 		 SET
 		   last_message_at = sub.max_occurred,
 		   last_message_id = (
-		     SELECT id FROM gateway.messages
+		     SELECT id FROM messages
 		     WHERE channel_id = $1 AND remote_id = r.remote_id
 		     ORDER BY occurred_at DESC
 		     LIMIT 1
@@ -730,7 +734,7 @@ func (r *PgRemoteProjectionRepository) BackfillLastMessagePreview(ctx context.Co
 		   updated_at = NOW()
 		 FROM (
 		   SELECT remote_id, MAX(occurred_at) AS max_occurred
-		   FROM gateway.messages
+		   FROM messages
 		   WHERE channel_id = $1
 		   GROUP BY remote_id
 		 ) sub
@@ -753,14 +757,14 @@ func (r *PgRemoteProjectionRepository) BackfillLastMessagePreview(ctx context.Co
 func (r *PgRemoteProjectionRepository) RecomputePreviewIfLatest(ctx context.Context, channelID, remoteID, expectedMessageID string) error {
 	db := r.txOrDB(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE gateway.remotes SET
+		`UPDATE remotes SET
 		   last_message_id = (
-		     SELECT id FROM gateway.messages
+		     SELECT id FROM messages
 		     WHERE channel_id = $1 AND remote_id = $2 AND deleted_at IS NULL
 		     ORDER BY occurred_at DESC LIMIT 1
 		   ),
 		   last_message_at = (
-		     SELECT occurred_at FROM gateway.messages
+		     SELECT occurred_at FROM messages
 		     WHERE channel_id = $1 AND remote_id = $2 AND deleted_at IS NULL
 		     ORDER BY occurred_at DESC LIMIT 1
 		   ),

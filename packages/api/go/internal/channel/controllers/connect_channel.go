@@ -1,48 +1,36 @@
-// Package controllers holds the channel gateway's HTTP ports. Every route is
-// guarded by the api-key middleware (service-to-service). The gateway is called
-// by the TS daemon, never by a browser directly.
 package controllers
 
 import (
 	"net/http"
 
-	"template/api-go/internal/channel/middlewares"
 	"template/api-go/internal/channel/usecases"
-	"template/core-go/config"
-	"template/core-go/errors"
-	"template/core-go/pkg/httputil"
-	"template/core-go/types"
+	"template/api-go/internal/shared/types"
+	"template/api-go/pkg/httputil"
 )
 
-// ConnectChannelRequest starts or resumes a WhatsApp session. OwnerID is
-// optional — the single-operator daemon defaults it to the implicit operator.
 type ConnectChannelRequest struct {
-	OwnerID string `from:"body" json:"ownerId" validate:"omitempty,uuid"`
+	ID string `from:"param" name:"id" validate:"required,uuid"`
 }
 
 type ConnectChannelController struct {
 	handler *usecases.ConnectChannelHandler
-	apiKey  types.Middleware
 }
 
-func NewConnectChannelController(handler *usecases.ConnectChannelHandler, cfg *config.Config) *ConnectChannelController {
-	return &ConnectChannelController{handler: handler, apiKey: middlewares.APIKey(cfg.GatewayAPIKey)}
+func NewConnectChannelController(handler *usecases.ConnectChannelHandler) *ConnectChannelController {
+	return &ConnectChannelController{handler: handler}
 }
-
-var _ types.Controller = (*ConnectChannelController)(nil)
 
 func (c *ConnectChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
-		Path:        "/connect",
+		Path:        "/channels/{id}/connect",
 		Method:      "POST",
-		Description: "Start or resume a WhatsApp channel session (QR pairing or reconnect)",
+		Description: "Connect channel (returns QR code)",
 		Tags:        []string{"Channel"},
-		Middlewares: []types.Middleware{c.apiKey},
+	
 		Request:     ConnectChannelRequest{},
 		Response:    usecases.ConnectChannelOutput{},
 		Status:      http.StatusOK,
-		Errors:      []errors.ErrorCode{errors.CodeUnauthorized, errors.CodeExternalService},
 	}
 }
 
@@ -53,11 +41,13 @@ func (c *ConnectChannelController) Handle(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	out, err := c.handler.Execute(r.Context(), usecases.ConnectChannelInput{OwnerID: req.OwnerID})
+	output, err := c.handler.Execute(r.Context(), usecases.ConnectChannelInput{
+		ID: req.ID,
+	})
 	if err != nil {
 		httputil.RespondError(w, err)
 		return
 	}
 
-	httputil.RespondJSON(w, http.StatusOK, out)
+	httputil.RespondJSON(w, http.StatusOK, output)
 }

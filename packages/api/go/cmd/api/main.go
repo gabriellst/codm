@@ -1,8 +1,3 @@
-// cmd/api — api-go entry point.
-// Bootstraps the shared infrastructure module via fx.New.
-//
-// Bounded contexts add their own fx.Module here (e.g. activity.Module) as they
-// are created.
 package main
 
 import (
@@ -10,27 +5,30 @@ import (
 	"os"
 	"time"
 
-	"template/api-go/internal/channel"
-	shared "template/core-go"
-
+	"github.com/lmittmann/tint"
 	"go.uber.org/fx"
+
+	"template/api-go/internal/channel"
+	"template/api-go/internal/shared"
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	})))
+	slog.SetDefault(slog.New(
+		tint.NewHandler(os.Stderr, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+		}),
+	))
 
 	fx.New(
 		fx.StopTimeout(30*time.Second),
 
-		// Shared infrastructure: DB, mediators, outbox dispatcher, HTTP router.
 		shared.Module,
 
-		// Bounded contexts.
+		// Single bounded context module — channel absorbs messaging and remote.
 		channel.Module,
 
-		// Start the HTTP server.
+		// Start HTTP server
 		fx.Invoke(shared.StartHTTPServer),
 	).Run()
 }

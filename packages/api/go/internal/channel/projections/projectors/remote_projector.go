@@ -5,21 +5,16 @@ import (
 	"log/slog"
 	"time"
 
-	chanevents "template/api-go/internal/channel/events"
+	channelenums "template/api-go/internal/channel/enums"
+	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
-	"template/contracts-go/wire"
-	"template/core-go/services/mediator"
-	fwtypes "template/core-go/types"
+	"template/api-go/internal/shared/types"
 )
 
-// remote_projector.go keeps the gateway.remotes / gateway.remote_memberships read
-// model fresh from the read-model domain facts. Ported from the medscall channel
-// remote projectors, adapted to CodeDM's mediator.DomainEventHandler seam.
-
 // applyToRemote is a shared helper that encapsulates the find → nil-warn →
-// mutate → UpdatedAt → save pattern used by the remote projectors.
+// mutate → UpdatedAt → save pattern used by most remote projectors.
 func applyToRemote(
 	ctx context.Context,
 	repo remoterepo.RemoteProjectionRepository,
@@ -40,11 +35,13 @@ func applyToRemote(
 	return repo.Save(ctx, row)
 }
 
-// ── RemoteCreatedProjector ───────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteCreatedProjector
 //
-// Upserts a minimal row into gateway.remotes when a Remote is first observed.
-// Name/AvatarURL arrive later via remote_updated. InsertIfNew gives
-// first-write-wins so a late remote_created never clobbers an earlier snapshot.
+// Upserts a minimal row into remotes when a new Remote aggregate is
+// first constructed. Name, AvatarURL, and other mirror fields arrive later via
+// remote_updated events.
+// ──────────────────────────────────────────────────────────────────────────────
 
 type RemoteCreatedProjector struct {
 	repo remoterepo.RemoteProjectionRepository
@@ -54,12 +51,10 @@ func NewRemoteCreatedProjector(repo remoterepo.RemoteProjectionRepository) *Remo
 	return &RemoteCreatedProjector{repo: repo}
 }
 
-var _ mediator.DomainEventHandler = (*RemoteCreatedProjector)(nil)
+func (p *RemoteCreatedProjector) EventName() string { return ctxevents.RemoteCreatedEventName }
 
-func (p *RemoteCreatedProjector) EventName() string { return chanevents.RemoteCreatedEventName }
-
-func (p *RemoteCreatedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.RemoteCreatedPayload](event)
+func (p *RemoteCreatedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteCreatedPayload](event)
 	if err != nil {
 		return err
 	}
@@ -67,7 +62,7 @@ func (p *RemoteCreatedProjector) Handle(ctx context.Context, event fwtypes.Domai
 	row := &projections.Remote{
 		ChannelID: e.Payload.ChannelID.String(),
 		RemoteID:  e.Payload.RemoteID,
-		Type:      string(e.Payload.ContactKind),
+		Type:      string(e.Payload.RemoteType),
 		Platform:  e.Payload.Platform,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -78,59 +73,18 @@ func (p *RemoteCreatedProjector) Handle(ctx context.Context, event fwtypes.Domai
 	}
 	if !inserted {
 		slog.Debug("remote already exists — created event is a no-op",
-			"channelId", e.Payload.ChannelID, "remoteId", e.Payload.RemoteID)
+			"channelId", e.Payload.ChannelID,
+			"remoteId", e.Payload.RemoteID,
+		)
 	}
 	return nil
 }
 
-// ── RemoteUpdatedProjector ───────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteDeletedProjector
 //
-// Applies mirror fields (name, type) from a live profile change or bootstrap
-// observation. Creates a stub row when none exists yet.
-
-type RemoteUpdatedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteUpdatedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUpdatedProjector {
-	return &RemoteUpdatedProjector{repo: repo}
-}
-
-var _ mediator.DomainEventHandler = (*RemoteUpdatedProjector)(nil)
-
-func (p *RemoteUpdatedProjector) EventName() string { return chanevents.RemoteUpdatedEventName }
-
-func (p *RemoteUpdatedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.RemoteUpdatedPayload](event)
-	if err != nil {
-		return err
-	}
-	row, err := p.repo.Find(ctx, e.Payload.ChannelID.String(), e.Payload.RemoteID)
-	if err != nil {
-		return err
-	}
-	if row == nil {
-		slog.Warn("remote not found for updated projection — creating stub",
-			"channelId", e.Payload.ChannelID, "remoteId", e.Payload.RemoteID)
-		now := time.Now().UTC()
-		row = &projections.Remote{
-			ChannelID: e.Payload.ChannelID.String(),
-			RemoteID:  e.Payload.RemoteID,
-			Type:      string(e.Payload.ContactKind),
-			// Platform is not carried by remote_updated; a subsequent remote_created
-			// (which does carry Platform) fills it in via RemoteCreatedProjector.
-			CreatedAt: now,
-		}
-	}
-	row.Name = e.Payload.DisplayName
-	row.Type = string(e.Payload.ContactKind)
-	row.UpdatedAt = time.Now().UTC()
-	return p.repo.Save(ctx, row)
-}
-
-// ── RemoteDeletedProjector ───────────────────────────────────────────────────────
-//
-// Stamps deleted_at on the projection row when the Remote is soft-deleted.
+// Sets deleted_at on the projection row when the Remote aggregate is soft-deleted.
+// ──────────────────────────────────────────────────────────────────────────────
 
 type RemoteDeletedProjector struct {
 	repo remoterepo.RemoteProjectionRepository
@@ -140,88 +94,291 @@ func NewRemoteDeletedProjector(repo remoterepo.RemoteProjectionRepository) *Remo
 	return &RemoteDeletedProjector{repo: repo}
 }
 
-var _ mediator.DomainEventHandler = (*RemoteDeletedProjector)(nil)
+func (p *RemoteDeletedProjector) EventName() string { return ctxevents.RemoteDeletedEventName }
 
-func (p *RemoteDeletedProjector) EventName() string { return chanevents.RemoteDeletedEventName }
-
-func (p *RemoteDeletedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.RemoteDeletedPayload](event)
+func (p *RemoteDeletedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteDeletedPayload](event)
 	if err != nil {
 		return err
 	}
-	deletedAt := e.Payload.DeletedAt
-	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "delete",
-		func(r *projections.Remote) { r.DeletedAt = &deletedAt },
+	row, err := p.repo.Find(ctx, e.Payload.ChannelID.String(), e.Payload.RemoteID)
+	if err != nil {
+		return err
+	}
+	if row == nil {
+		slog.Warn("remote not found for delete projection",
+			"channelId", e.Payload.ChannelID,
+			"remoteId", e.Payload.RemoteID,
+		)
+		return nil
+	}
+	row.DeletedAt = &e.Payload.At
+	row.UpdatedAt = time.Now().UTC()
+	return p.repo.Save(ctx, row)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteUpdatedProjector
+//
+// Applies mirror fields (name, description is not stored in projection) that
+// arrive from a live profile change or bootstrap observation.
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteUpdatedProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteUpdatedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUpdatedProjector {
+	return &RemoteUpdatedProjector{repo: repo}
+}
+
+func (p *RemoteUpdatedProjector) EventName() string { return ctxevents.RemoteUpdatedEventName }
+
+func (p *RemoteUpdatedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUpdatedPayload](event)
+	if err != nil {
+		return err
+	}
+	row, err := p.repo.Find(ctx, e.Payload.ChannelID.String(), e.Payload.RemoteID)
+	if err != nil {
+		return err
+	}
+	if row == nil {
+		slog.Warn("remote not found for updated projection — creating stub",
+			"channelId", e.Payload.ChannelID,
+			"remoteId", e.Payload.RemoteID,
+		)
+		now := time.Now().UTC()
+		row = &projections.Remote{
+			ChannelID: e.Payload.ChannelID.String(),
+			RemoteID:  e.Payload.RemoteID,
+			Type:      string(e.Payload.Type),
+			// TODO: Platform is not carried by ChannelRemoteUpdatedPayload; it will
+			// be empty on this stub path. A subsequent remote_created event (which
+			// does carry Platform) will fill it in via RemoteCreatedProjector.
+			CreatedAt: now,
+		}
+	}
+	// Apply the fields carried by this event.
+	row.Name = e.Payload.Name
+	row.Type = string(e.Payload.Type)
+	row.UpdatedAt = time.Now().UTC()
+	return p.repo.Save(ctx, row)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemotePinnedProjector
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemotePinnedProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemotePinnedProjector(repo remoterepo.RemoteProjectionRepository) *RemotePinnedProjector {
+	return &RemotePinnedProjector{repo: repo}
+}
+
+func (p *RemotePinnedProjector) EventName() string { return ctxevents.RemotePinnedEventName }
+
+func (p *RemotePinnedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemotePinnedPayload](event)
+	if err != nil {
+		return err
+	}
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "pin",
+		func(r *projections.Remote) { r.ApplyPinned(e.Payload.At) },
 	)
 }
 
-// ── MembershipAddedProjector ─────────────────────────────────────────────────────
-//
-// Atomically upserts a single member row into gateway.remote_memberships.
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteUnpinnedProjector
+// ──────────────────────────────────────────────────────────────────────────────
 
-type MembershipAddedProjector struct {
+type RemoteUnpinnedProjector struct {
 	repo remoterepo.RemoteProjectionRepository
 }
 
-func NewMembershipAddedProjector(repo remoterepo.RemoteProjectionRepository) *MembershipAddedProjector {
-	return &MembershipAddedProjector{repo: repo}
+func NewRemoteUnpinnedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnpinnedProjector {
+	return &RemoteUnpinnedProjector{repo: repo}
 }
 
-var _ mediator.DomainEventHandler = (*MembershipAddedProjector)(nil)
+func (p *RemoteUnpinnedProjector) EventName() string { return ctxevents.RemoteUnpinnedEventName }
 
-func (p *MembershipAddedProjector) EventName() string { return chanevents.MembershipAddedEventName }
-
-func (p *MembershipAddedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.MembershipAddedPayload](event)
+func (p *RemoteUnpinnedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUnpinnedPayload](event)
 	if err != nil {
 		return err
 	}
-	pl := e.Payload
-	member := remoterepo.MembershipRow{MemberID: pl.MemberID, IsAdmin: pl.IsAdmin, JoinedAt: pl.JoinedAt}
-	if err := p.repo.AddMember(ctx, pl.ChannelID.String(), pl.GroupID, member); err != nil {
-		slog.Warn("failed to add member on membership_added",
-			"channelId", pl.ChannelID, "groupId", pl.GroupID, "memberId", pl.MemberID, "error", err)
-		return err
-	}
-	return nil
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "unpin",
+		func(r *projections.Remote) { r.ApplyUnpinned() },
+	)
 }
 
-// ── MembershipRemovedProjector ───────────────────────────────────────────────────
-//
-// Atomically deletes a single member row from gateway.remote_memberships.
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteArchivedProjector
+// ──────────────────────────────────────────────────────────────────────────────
 
-type MembershipRemovedProjector struct {
+type RemoteArchivedProjector struct {
 	repo remoterepo.RemoteProjectionRepository
 }
 
-func NewMembershipRemovedProjector(repo remoterepo.RemoteProjectionRepository) *MembershipRemovedProjector {
-	return &MembershipRemovedProjector{repo: repo}
+func NewRemoteArchivedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteArchivedProjector {
+	return &RemoteArchivedProjector{repo: repo}
 }
 
-var _ mediator.DomainEventHandler = (*MembershipRemovedProjector)(nil)
+func (p *RemoteArchivedProjector) EventName() string { return ctxevents.RemoteArchivedEventName }
 
-func (p *MembershipRemovedProjector) EventName() string {
-	return chanevents.MembershipRemovedEventName
-}
-
-func (p *MembershipRemovedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.MembershipRemovedPayload](event)
+func (p *RemoteArchivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteArchivedPayload](event)
 	if err != nil {
 		return err
 	}
-	pl := e.Payload
-	if err := p.repo.RemoveMember(ctx, pl.ChannelID.String(), pl.GroupID, pl.MemberID); err != nil {
-		slog.Warn("failed to remove member on membership_removed",
-			"channelId", pl.ChannelID, "groupId", pl.GroupID, "memberId", pl.MemberID, "error", err)
-		return err
-	}
-	return nil
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "archive",
+		func(r *projections.Remote) { r.ApplyArchived() },
+	)
 }
 
-// ── RemoteOnMessageReceivedProjector ─────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteUnarchivedProjector
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteUnarchivedProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteUnarchivedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnarchivedProjector {
+	return &RemoteUnarchivedProjector{repo: repo}
+}
+
+func (p *RemoteUnarchivedProjector) EventName() string { return ctxevents.RemoteUnarchivedEventName }
+
+func (p *RemoteUnarchivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUnarchivedPayload](event)
+	if err != nil {
+		return err
+	}
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "unarchive",
+		func(r *projections.Remote) { r.ApplyUnarchived() },
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteMutedProjector
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteMutedProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteMutedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteMutedProjector {
+	return &RemoteMutedProjector{repo: repo}
+}
+
+func (p *RemoteMutedProjector) EventName() string { return ctxevents.RemoteMutedEventName }
+
+func (p *RemoteMutedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteMutedPayload](event)
+	if err != nil {
+		return err
+	}
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "mute",
+		func(r *projections.Remote) {
+			// MutedUntil nil means "muted forever" — use a far-future sentinel so the
+			// projection reflects the mute state without a NULL mute_expiration.
+			until := e.Payload.MutedUntil
+			if until == nil {
+				forever := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
+				until = &forever
+			}
+			r.ApplyMuted(*until)
+		},
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteUnmutedProjector
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteUnmutedProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteUnmutedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnmutedProjector {
+	return &RemoteUnmutedProjector{repo: repo}
+}
+
+func (p *RemoteUnmutedProjector) EventName() string { return ctxevents.RemoteUnmutedEventName }
+
+func (p *RemoteUnmutedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUnmutedPayload](event)
+	if err != nil {
+		return err
+	}
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "unmute",
+		func(r *projections.Remote) { r.ApplyUnmuted() },
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteMarkedAsUnreadProjector
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteMarkedAsUnreadProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteMarkedAsUnreadProjector(repo remoterepo.RemoteProjectionRepository) *RemoteMarkedAsUnreadProjector {
+	return &RemoteMarkedAsUnreadProjector{repo: repo}
+}
+
+func (p *RemoteMarkedAsUnreadProjector) EventName() string {
+	return ctxevents.RemoteMarkedAsUnreadEventName
+}
+
+func (p *RemoteMarkedAsUnreadProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteMarkedAsUnreadPayload](event)
+	if err != nil {
+		return err
+	}
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "mark-as-unread",
+		func(r *projections.Remote) { r.ApplyMarkedAsUnread() },
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteChatSeenProjector
 //
-// Cross-aggregate: reacts to channel.message_received to bump unread count and
-// advance the preview pointers via the atomic ApplyLatestMessage.
+// Clears unread state when the user opens the chat. Uses ApplyChatSeen which
+// zeroes both UnreadMessageCount and MarkedAsUnread.
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteChatSeenProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteChatSeenProjector(repo remoterepo.RemoteProjectionRepository) *RemoteChatSeenProjector {
+	return &RemoteChatSeenProjector{repo: repo}
+}
+
+func (p *RemoteChatSeenProjector) EventName() string { return ctxevents.RemoteChatSeenEventName }
+
+func (p *RemoteChatSeenProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteChatSeenPayload](event)
+	if err != nil {
+		return err
+	}
+	return applyToRemote(ctx, p.repo, e.Payload.ChannelID.String(), e.Payload.RemoteID, "chat-seen",
+		func(r *projections.Remote) { r.ApplyChatSeen() },
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteOnMessageReceivedProjector
+//
+// Cross-aggregate: reacts to message_received to bump unread count and advance
+// last_message_at. Uses atomic repository methods to avoid read-modify-write
+// races when multiple messages arrive concurrently.
+// ──────────────────────────────────────────────────────────────────────────────
 
 type RemoteOnMessageReceivedProjector struct {
 	repo remoterepo.RemoteProjectionRepository
@@ -231,82 +388,49 @@ func NewRemoteOnMessageReceivedProjector(repo remoterepo.RemoteProjectionReposit
 	return &RemoteOnMessageReceivedProjector{repo: repo}
 }
 
-var _ mediator.DomainEventHandler = (*RemoteOnMessageReceivedProjector)(nil)
-
 func (p *RemoteOnMessageReceivedProjector) EventName() string {
-	return chanevents.MessageReceivedEventName
+	return ctxevents.MessageReceivedEventName
 }
 
-func (p *RemoteOnMessageReceivedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.MessageReceivedPayload](event)
+func (p *RemoteOnMessageReceivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageReceivedPayload](event)
 	if err != nil {
 		return err
 	}
 	channelID := e.Payload.ChannelID.String()
 	remoteID := e.Payload.RemoteID
 
-	// ApplyLatestMessage handles the not-found case as a no-op internally.
+	// ApplyLatestMessage handles the not-found case as a no-op internally,
+	// so there is no need for a pre-fetch Find round-trip on every message event.
 	msg := &projections.Message{
 		ID:         e.Payload.InternalMessageID.String(),
 		ChannelID:  channelID,
 		RemoteID:   remoteID,
-		Direction:  string(wire.DirectionRECEIVED),
-		OccurredAt: e.Payload.ReceivedAt,
-	}
-	if err := p.repo.ApplyLatestMessage(ctx, msg); err != nil {
-		slog.Warn("failed to apply latest message on message_received",
-			"channelId", channelID, "remoteId", remoteID, "error", err)
-		return err
-	}
-	return nil
-}
-
-// ── RemoteOnMessageSentProjector ─────────────────────────────────────────────────
-//
-// Cross-aggregate: reacts to channel_message.sent to advance the preview pointers
-// only. Sent messages do not bump the unread counter.
-
-type RemoteOnMessageSentProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteOnMessageSentProjector(repo remoterepo.RemoteProjectionRepository) *RemoteOnMessageSentProjector {
-	return &RemoteOnMessageSentProjector{repo: repo}
-}
-
-var _ mediator.DomainEventHandler = (*RemoteOnMessageSentProjector)(nil)
-
-func (p *RemoteOnMessageSentProjector) EventName() string { return chanevents.MessageSentEventName }
-
-func (p *RemoteOnMessageSentProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.MessageSentPayload](event)
-	if err != nil {
-		return err
-	}
-	channelID := e.Payload.ChannelID.String()
-	remoteID := e.Payload.RemoteID
-
-	msg := &projections.Message{
-		ID:         e.Payload.InternalMessageID.String(),
-		ChannelID:  channelID,
-		RemoteID:   remoteID,
-		Direction:  string(wire.DirectionSENT),
+		Direction:  string(channelenums.DirectionReceived),
 		OccurredAt: e.Payload.OccurredAt,
 	}
 	if err := p.repo.ApplyLatestMessage(ctx, msg); err != nil {
-		slog.Warn("failed to apply latest message on message_sent",
-			"channelId", channelID, "remoteId", remoteID, "error", err)
+		slog.Warn("failed to apply latest message on message_received",
+			"channelId", channelID,
+			"remoteId", remoteID,
+			"error", err,
+		)
 		return err
 	}
 	return nil
 }
 
-// ── RemoteOnMessageDeletedProjector ──────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteOnMessageDeletedProjector
 //
-// Cross-aggregate: reacts to channel_message.deleted. If the deleted message is
+// Cross-aggregate: reacts to channel.message_deleted. If the deleted message is
 // the current last_message_id on any remote, recomputes the preview to the
-// next-newest non-deleted message (or clears it). Resolves the internal UUID via
-// messagerepo.FindByPlatformID — the payload carries the platform id.
+// next-newest non-deleted message (or clears if none remain).
+//
+// Resolves the internal UUID via messagerepo.FindByPlatformID — the event
+// payload carries the platform id (e.g. WhatsApp message id), not the internal
+// projection UUID.
+// ──────────────────────────────────────────────────────────────────────────────
 
 type RemoteOnMessageDeletedProjector struct {
 	msgRepo    messagerepo.MessageProjectionRepository
@@ -320,14 +444,12 @@ func NewRemoteOnMessageDeletedProjector(
 	return &RemoteOnMessageDeletedProjector{msgRepo: msgRepo, remoteRepo: remoteRepo}
 }
 
-var _ mediator.DomainEventHandler = (*RemoteOnMessageDeletedProjector)(nil)
-
 func (p *RemoteOnMessageDeletedProjector) EventName() string {
-	return chanevents.MessageDeletedEventName
+	return ctxevents.MessageDeletedEventName
 }
 
-func (p *RemoteOnMessageDeletedProjector) Handle(ctx context.Context, event fwtypes.DomainEventI) error {
-	e, err := fwtypes.UnmarshalDomainEvent[chanevents.MessageDeletedPayload](event)
+func (p *RemoteOnMessageDeletedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageDeletedPayload](event)
 	if err != nil {
 		return err
 	}
@@ -341,4 +463,49 @@ func (p *RemoteOnMessageDeletedProjector) Handle(ctx context.Context, event fwty
 		return nil
 	}
 	return p.remoteRepo.RecomputePreviewIfLatest(ctx, msg.ChannelID, msg.RemoteID, msg.ID)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RemoteOnMessageSentProjector
+//
+// Cross-aggregate: reacts to message_sent to advance last_message_at only.
+// Sent messages do not bump the unread counter.
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteOnMessageSentProjector struct {
+	repo remoterepo.RemoteProjectionRepository
+}
+
+func NewRemoteOnMessageSentProjector(repo remoterepo.RemoteProjectionRepository) *RemoteOnMessageSentProjector {
+	return &RemoteOnMessageSentProjector{repo: repo}
+}
+
+func (p *RemoteOnMessageSentProjector) EventName() string { return ctxevents.MessageSentEventName }
+
+func (p *RemoteOnMessageSentProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageSentPayload](event)
+	if err != nil {
+		return err
+	}
+	channelID := e.Payload.ChannelID.String()
+	remoteID := e.Payload.RemoteID
+
+	// ApplyLatestMessage handles the not-found case as a no-op internally,
+	// so there is no need for a pre-fetch Find round-trip on every message event.
+	msg := &projections.Message{
+		ID:         e.Payload.InternalMessageID.String(),
+		ChannelID:  channelID,
+		RemoteID:   remoteID,
+		Direction:  string(channelenums.DirectionSent),
+		OccurredAt: e.Payload.OccurredAt,
+	}
+	if err := p.repo.ApplyLatestMessage(ctx, msg); err != nil {
+		slog.Warn("failed to apply latest message on message_sent",
+			"channelId", channelID,
+			"remoteId", remoteID,
+			"error", err,
+		)
+		return err
+	}
+	return nil
 }

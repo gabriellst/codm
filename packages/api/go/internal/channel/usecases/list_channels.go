@@ -2,60 +2,68 @@ package usecases
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
-	"template/api-go/internal/channel/projections"
+	"template/api-go/internal/channel/enums"
+	channelrepo "template/api-go/internal/channel/repositories/channel"
+	sharedenums "template/api-go/internal/shared/enums"
 )
 
 type ListChannelsInput struct {
-	OwnerID string
+	OwnerID string `validate:"required"`
+	Limit   int    `validate:"omitempty,min=1,max=100"`
+	Offset  int    `validate:"omitempty,min=0"`
 }
 
-// ChannelView is one row of the channels read model.
-type ChannelView struct {
-	ID            string    `json:"id"`
-	Kind          string    `json:"kind"`
-	Status        string    `json:"status"`
-	AccountDetail string    `json:"accountDetail"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+type ListChannelsItem struct {
+	ID          string               `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	Name        string               `json:"name" example:"my-instance"`
+	Platform    sharedenums.Platform `json:"platform" example:"WHATSAPP"`
+	Credentials json.RawMessage      `json:"credentials"`
+	Status      enums.ChannelStatus  `json:"status" example:"CREATED"`
+	CreatedAt   string               `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
 }
 
 type ListChannelsOutput struct {
-	Channels []ChannelView `json:"channels"`
+	Items []ListChannelsItem `json:"items"`
+	Total int                `json:"total" example:"42"`
 }
 
 type ListChannelsHandler struct {
-	repo projections.ChannelProjectionRepository
+	repo channelrepo.ChannelRepository
 }
 
-func NewListChannelsHandler(repo projections.ChannelProjectionRepository) *ListChannelsHandler {
+func NewListChannelsHandler(repo channelrepo.ChannelRepository) *ListChannelsHandler {
 	return &ListChannelsHandler{repo: repo}
 }
 
 func (h *ListChannelsHandler) Name() string { return "ListChannels" }
 
 func (h *ListChannelsHandler) Execute(ctx context.Context, input ListChannelsInput) (ListChannelsOutput, error) {
-	ownerID := input.OwnerID
-	if ownerID == "" {
-		ownerID = OperatorID
+	if input.Limit == 0 {
+		input.Limit = 20
 	}
 
-	rows, err := h.repo.ListByOwner(ctx, ownerID)
+	results, total, err := h.repo.FindAll(ctx, input.OwnerID, input.Limit, input.Offset)
 	if err != nil {
 		return ListChannelsOutput{}, err
 	}
 
-	views := make([]ChannelView, 0, len(rows))
-	for _, r := range rows {
-		views = append(views, ChannelView{
-			ID:            r.ID,
-			Kind:          string(r.Kind),
-			Status:        string(r.Status),
-			AccountDetail: r.AccountDetail,
-			CreatedAt:     r.CreatedAt,
-			UpdatedAt:     r.UpdatedAt,
-		})
+	items := make([]ListChannelsItem, len(results))
+	for i, e := range results {
+		items[i] = ListChannelsItem{
+			ID:          e.ID.String(),
+			Name:        e.Name,
+			Platform:    e.Platform,
+			Credentials: e.Credentials,
+			Status:      e.Status,
+			CreatedAt:   e.CreatedAt.UTC().Format(time.RFC3339),
+		}
 	}
-	return ListChannelsOutput{Channels: views}, nil
+
+	return ListChannelsOutput{
+		Items: items,
+		Total: total,
+	}, nil
 }
