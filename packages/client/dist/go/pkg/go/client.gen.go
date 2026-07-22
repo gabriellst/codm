@@ -4,6 +4,7 @@
 package gopkg
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -102,19 +103,19 @@ func (e ChannelKind) Valid() bool {
 
 // Defines values for ChannelStatus.
 const (
-	CONNECTED    ChannelStatus = "CONNECTED"
-	DISCONNECTED ChannelStatus = "DISCONNECTED"
-	PAIRING      ChannelStatus = "PAIRING"
+	ChannelStatusCONNECTED    ChannelStatus = "CONNECTED"
+	ChannelStatusDISCONNECTED ChannelStatus = "DISCONNECTED"
+	ChannelStatusPAIRING      ChannelStatus = "PAIRING"
 )
 
 // Valid indicates whether the value is a known member of the ChannelStatus enum.
 func (e ChannelStatus) Valid() bool {
 	switch e {
-	case CONNECTED:
+	case ChannelStatusCONNECTED:
 		return true
-	case DISCONNECTED:
+	case ChannelStatusDISCONNECTED:
 		return true
-	case PAIRING:
+	case ChannelStatusPAIRING:
 		return true
 	default:
 		return false
@@ -139,6 +140,27 @@ func (e ClassificationMethod) Valid() bool {
 	case NEWISSUE:
 		return true
 	case REPLYQUOTE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectionStatus.
+const (
+	ConnectionStatusCONNECTED    ConnectionStatus = "CONNECTED"
+	ConnectionStatusCONNECTING   ConnectionStatus = "CONNECTING"
+	ConnectionStatusDISCONNECTED ConnectionStatus = "DISCONNECTED"
+)
+
+// Valid indicates whether the value is a known member of the ConnectionStatus enum.
+func (e ConnectionStatus) Valid() bool {
+	switch e {
+	case ConnectionStatusCONNECTED:
+		return true
+	case ConnectionStatusCONNECTING:
+		return true
+	case ConnectionStatusDISCONNECTED:
 		return true
 	default:
 		return false
@@ -1711,16 +1733,6 @@ func (e WorkspaceBadge) Valid() bool {
 	}
 }
 
-// ActivityEntryDTO defines model for ActivityEntryDTO.
-type ActivityEntryDTO struct {
-	EntityId        string    `json:"entityId"`
-	EventName       string    `json:"eventName"`
-	FirstOccurredAt time.Time `json:"firstOccurredAt"`
-	Id              string    `json:"id"`
-	LastOccurredAt  time.Time `json:"lastOccurredAt"`
-	OccurrenceCount int       `json:"occurrenceCount"`
-}
-
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
@@ -1736,8 +1748,27 @@ type ChannelKind string
 // ChannelStatus defines model for ChannelStatus.
 type ChannelStatus string
 
+// ChannelView defines model for ChannelView.
+type ChannelView struct {
+	AccountDetail string    `json:"accountDetail"`
+	CreatedAt     time.Time `json:"createdAt"`
+	Id            string    `json:"id"`
+	Kind          string    `json:"kind"`
+	Status        string    `json:"status"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
 // ClassificationMethod defines model for ClassificationMethod.
 type ClassificationMethod string
+
+// ConnectChannelOutput defines model for ConnectChannelOutput.
+type ConnectChannelOutput struct {
+	ChannelId string `json:"channelId"`
+	Status    string `json:"status"`
+}
+
+// ConnectionStatus defines model for ConnectionStatus.
+type ConnectionStatus string
 
 // ContactKind defines model for ContactKind.
 type ContactKind string
@@ -1764,9 +1795,15 @@ type IssueStatus string
 // Language defines model for Language.
 type Language string
 
-// ListActivityOutput defines model for ListActivityOutput.
-type ListActivityOutput struct {
-	Entries []ActivityEntryDTO `json:"entries"`
+// ListChannelsOutput defines model for ListChannelsOutput.
+type ListChannelsOutput struct {
+	Channels []ChannelView `json:"channels"`
+}
+
+// LogoutChannelOutput defines model for LogoutChannelOutput.
+type LogoutChannelOutput struct {
+	ChannelId string `json:"channelId"`
+	Status    string `json:"status"`
 }
 
 // OwnerKind defines model for OwnerKind.
@@ -1780,6 +1817,11 @@ type ProviderStatus string
 
 // Role defines model for Role.
 type Role string
+
+// SendMessageOutput defines model for SendMessageOutput.
+type SendMessageOutput struct {
+	MessageId string `json:"messageId"`
+}
 
 // SenderIdentity defines model for SenderIdentity.
 type SenderIdentity string
@@ -1805,11 +1847,28 @@ type TranscriptKind string
 // WorkspaceBadge defines model for WorkspaceBadge.
 type WorkspaceBadge string
 
-// ListActivityParams defines parameters for ListActivity.
-type ListActivityParams struct {
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
-	Before *string `form:"before,omitempty" json:"before,omitempty"`
+// ConnectChannelJSONBody defines parameters for ConnectChannel.
+type ConnectChannelJSONBody struct {
+	OwnerId *string `json:"ownerId,omitempty"`
 }
+
+// ListChannelsParams defines parameters for ListChannels.
+type ListChannelsParams struct {
+	OwnerId *string `form:"ownerId,omitempty" json:"ownerId,omitempty"`
+}
+
+// SendMessageJSONBody defines parameters for SendMessage.
+type SendMessageJSONBody struct {
+	ChannelId string `json:"channelId"`
+	Text      string `json:"text"`
+	To        string `json:"to"`
+}
+
+// ConnectChannelJSONRequestBody defines body for ConnectChannel for application/json ContentType.
+type ConnectChannelJSONRequestBody ConnectChannelJSONBody
+
+// SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
+type SendMessageJSONRequestBody SendMessageJSONBody
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -1884,12 +1943,25 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// ListActivity request
-	ListActivity(ctx context.Context, params *ListActivityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ConnectChannelWithBody request with any body
+	ConnectChannelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConnectChannel(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListChannels request
+	ListChannels(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendMessageWithBody request with any body
+	SendMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendMessage(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// LogoutChannel request
+	LogoutChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) ListActivity(ctx context.Context, params *ListActivityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListActivityRequest(c.Server, params)
+func (c *Client) ConnectChannelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectChannelRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1900,8 +1972,79 @@ func (c *Client) ListActivity(ctx context.Context, params *ListActivityParams, r
 	return c.Client.Do(req)
 }
 
-// NewListActivityRequest generates requests for ListActivity
-func NewListActivityRequest(server string, params *ListActivityParams) (*http.Request, error) {
+func (c *Client) ConnectChannel(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConnectChannelRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListChannels(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListChannelsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendMessageWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendMessageRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendMessage(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendMessageRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) LogoutChannel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLogoutChannelRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// NewConnectChannelRequest calls the generic ConnectChannel builder with application/json body
+func NewConnectChannelRequest(server string, body ConnectChannelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConnectChannelRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewConnectChannelRequestWithBody generates requests for ConnectChannel with any type of body
+func NewConnectChannelRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -1909,7 +2052,36 @@ func NewListActivityRequest(server string, params *ListActivityParams) (*http.Re
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/activity/entries")
+	operationPath := fmt.Sprintf("/channel/connect")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListChannelsRequest generates requests for ListChannels
+func NewListChannelsRequest(server string, params *ListChannelsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/list")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1928,21 +2100,9 @@ func NewListActivityRequest(server string, params *ListActivityParams) (*http.Re
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Limit != nil {
+		if params.OwnerId != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.Before != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "before", *params.Before, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "ownerId", *params.OwnerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -1959,6 +2119,80 @@ func NewListActivityRequest(server string, params *ListActivityParams) (*http.Re
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSendMessageRequest calls the generic SendMessage builder with application/json body
+func NewSendMessageRequest(server string, body SendMessageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendMessageRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendMessageRequestWithBody generates requests for SendMessage with any type of body
+func NewSendMessageRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/send")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewLogoutChannelRequest generates requests for LogoutChannel
+func NewLogoutChannelRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/channel/%s/logout", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2009,19 +2243,32 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// ListActivityWithResponse request
-	ListActivityWithResponse(ctx context.Context, params *ListActivityParams, reqEditors ...RequestEditorFn) (*ListActivityResponse, error)
+	// ConnectChannelWithBodyWithResponse request with any body
+	ConnectChannelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
+
+	ConnectChannelWithResponse(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error)
+
+	// ListChannelsWithResponse request
+	ListChannelsWithResponse(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*ListChannelsResponse, error)
+
+	// SendMessageWithBodyWithResponse request with any body
+	SendMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendMessageResponse, error)
+
+	SendMessageWithResponse(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendMessageResponse, error)
+
+	// LogoutChannelWithResponse request
+	LogoutChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*LogoutChannelResponse, error)
 }
 
-type ListActivityResponse struct {
+type ConnectChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *ListActivityOutput
+	JSON200      *ConnectChannelOutput
 	JSON4XX      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r ListActivityResponse) Status() string {
+func (r ConnectChannelResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2029,7 +2276,7 @@ func (r ListActivityResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ListActivityResponse) StatusCode() int {
+func (r ConnectChannelResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2037,38 +2284,273 @@ func (r ListActivityResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r ListActivityResponse) ContentType() string {
+func (r ConnectChannelResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
 	return ""
 }
 
-// ListActivityWithResponse request returning *ListActivityResponse
-func (c *ClientWithResponses) ListActivityWithResponse(ctx context.Context, params *ListActivityParams, reqEditors ...RequestEditorFn) (*ListActivityResponse, error) {
-	rsp, err := c.ListActivity(ctx, params, reqEditors...)
+type ListChannelsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListChannelsOutput
+	JSON4XX      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListChannelsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListChannelsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListChannelsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendMessageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SendMessageOutput
+	JSON4XX      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SendMessageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendMessageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendMessageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type LogoutChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *LogoutChannelOutput
+	JSON4XX      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r LogoutChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r LogoutChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r LogoutChannelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ConnectChannelWithBodyWithResponse request with arbitrary body returning *ConnectChannelResponse
+func (c *ClientWithResponses) ConnectChannelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error) {
+	rsp, err := c.ConnectChannelWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseListActivityResponse(rsp)
+	return ParseConnectChannelResponse(rsp)
 }
 
-// ParseListActivityResponse parses an HTTP response from a ListActivityWithResponse call
-func ParseListActivityResponse(rsp *http.Response) (*ListActivityResponse, error) {
+func (c *ClientWithResponses) ConnectChannelWithResponse(ctx context.Context, body ConnectChannelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConnectChannelResponse, error) {
+	rsp, err := c.ConnectChannel(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConnectChannelResponse(rsp)
+}
+
+// ListChannelsWithResponse request returning *ListChannelsResponse
+func (c *ClientWithResponses) ListChannelsWithResponse(ctx context.Context, params *ListChannelsParams, reqEditors ...RequestEditorFn) (*ListChannelsResponse, error) {
+	rsp, err := c.ListChannels(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListChannelsResponse(rsp)
+}
+
+// SendMessageWithBodyWithResponse request with arbitrary body returning *SendMessageResponse
+func (c *ClientWithResponses) SendMessageWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendMessageResponse, error) {
+	rsp, err := c.SendMessageWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendMessageResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendMessageWithResponse(ctx context.Context, body SendMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendMessageResponse, error) {
+	rsp, err := c.SendMessage(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendMessageResponse(rsp)
+}
+
+// LogoutChannelWithResponse request returning *LogoutChannelResponse
+func (c *ClientWithResponses) LogoutChannelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*LogoutChannelResponse, error) {
+	rsp, err := c.LogoutChannel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseLogoutChannelResponse(rsp)
+}
+
+// ParseConnectChannelResponse parses an HTTP response from a ConnectChannelWithResponse call
+func ParseConnectChannelResponse(rsp *http.Response) (*ConnectChannelResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ListActivityResponse{
+	response := &ConnectChannelResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ListActivityOutput
+		var dest ConnectChannelOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON4XX = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListChannelsResponse parses an HTTP response from a ListChannelsWithResponse call
+func ParseListChannelsResponse(rsp *http.Response) (*ListChannelsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListChannelsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListChannelsOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON4XX = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendMessageResponse parses an HTTP response from a SendMessageWithResponse call
+func ParseSendMessageResponse(rsp *http.Response) (*SendMessageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendMessageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SendMessageOutput
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode/100 == 4:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON4XX = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseLogoutChannelResponse parses an HTTP response from a LogoutChannelWithResponse call
+func ParseLogoutChannelResponse(rsp *http.Response) (*LogoutChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &LogoutChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest LogoutChannelOutput
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
