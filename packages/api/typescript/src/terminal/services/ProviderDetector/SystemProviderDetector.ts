@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { existsSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { accessSync, constants, existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { KNOWN_PROVIDERS, PROVIDER_BINARIES, ProviderDetector, type ProviderDetection } from './ProviderDetector'
 
@@ -55,7 +56,7 @@ export class SystemProviderDetector extends ProviderDetector {
 
 	/** Resolve a binary on `PATH`, then in the known install dirs. Returns the absolute path or null. */
 	protected probeWhich(command: string): string | null {
-		const onPath = Bun.which(command)
+		const onPath = whichOnPath(command)
 		if (onPath) return onPath
 		for (const dir of this.knownDirs) {
 			const candidate = join(dir, command)
@@ -67,13 +68,33 @@ export class SystemProviderDetector extends ProviderDetector {
 	/** Read `<binaryPath> --version`, returning the trimmed first line, or undefined on any failure. */
 	protected async probeVersion(binaryPath: string): Promise<string | undefined> {
 		try {
-			const proc = Bun.spawn([binaryPath, '--version'], { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' })
-			const stdout = await new Response(proc.stdout).text()
-			const code = await proc.exited
-			if (code !== 0) return undefined
-			return stdout.trim().split('\n')[0]?.trim() || undefined
+			const res = spawnSync(binaryPath, ['--version'], { stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8' })
+			if (res.status !== 0 || !res.stdout) return undefined
+			return res.stdout.trim().split('\n')[0]?.trim() || undefined
 		} catch {
 			return undefined
 		}
 	}
+}
+
+/**
+ * Portable `which`: scan `$PATH` for an executable named `command`, returning the absolute path or
+ * null. Runtime-agnostic on purpose — the `real` daemon runs under **Node** (node-pty is a native
+ * Node addon), where `Bun.which` does not exist. `node:child_process` + `node:fs` used here resolve
+ * identically under both Bun (tests) and Node (daemon).
+ */
+function whichOnPath(command: string): string | null {
+	const pathEnv = process.env.PATH
+	if (!pathEnv) return null
+	for (const dir of pathEnv.split(delimiter)) {
+		if (!dir) continue
+		const candidate = join(dir, command)
+		try {
+			accessSync(candidate, constants.X_OK)
+			return candidate
+		} catch {
+			// not present here or not executable — keep scanning PATH
+		}
+	}
+	return null
 }
