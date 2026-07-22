@@ -118,7 +118,8 @@
 		"ISSUE_ALREADY_COMPLETED": "This issue is already completed.",
 		"STOP_NOT_FOUND": "Stop not found.",
 		"STOP_CRITERION_DISABLED": "This stop criterion is disabled in settings.",
-		"RESOLUTION_NOT_APPLICABLE": "That resolution does not apply to this stop."
+		"RESOLUTION_NOT_APPLICABLE": "That resolution does not apply to this stop.",
+		"GATEWAY_UNAVAILABLE": "Channel gateway unavailable. Check that the service is running."
 	},
 	"screenError": {
 		"message": "Couldn't load. Try again in a moment."

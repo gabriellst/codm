@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Exit on any error
+set -e
+
+echo "Running pre-push checks..."
+
+# Run build to ensure everything compiles
+echo "Running tests..."
+bun run test
+
+echo "Pre-push checks completed successfully!"

@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Exit on any error
+set -e
+
+# git exports GIT_DIR/GIT_INDEX_FILE/... to hook children; any nested git operation the
+# test suites run against fixture repos (sync.test.ts worktrees, run.test.ts archivePatch)
+# would silently target THIS repo's index instead of the fixture. Strip the leak at the
+# boundary so the suites see the same environment as a plain terminal run.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+
+echo "Running pre-commit checks..."
+
+# Run linting and formatting on staged files
+echo "Running lint-staged..."
+bunx lint-staged
+
+# Run tests for workspaces with hermetic test suites
+# (e2e:test needs the full stack — run separately, not in pre-commit.)
+# NOTE: project names must match project.json (template.config.ts Workspace.nxProject) —
+# a nonexistent project makes nx run NOTHING and still exit 0 (silent no-op).
+echo "Running tests..."
+bun x nx run-many -t test --projects=api-typescript
+
+# Tooling gates: hook/detector self-tests + parity gates (taxonomy, workspace
+# contract, skill examples) + eval-harness unit tests. Explicit paths — the
+# skill-evals seeds/ are broken-by-design fixtures a directory sweep would run.
+echo "Running tooling gates..."
+bun run test:tooling
+
+# Run tsc to find compiling errors
+echo "Running type checking..."
+bun run tsc
+
+# Run build to ensure everything compiles
+echo "Running build..."
+bun run build
+
+echo "Pre-commit checks completed successfully!"

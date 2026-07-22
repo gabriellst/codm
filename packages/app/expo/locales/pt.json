@@ -118,7 +118,8 @@
 		"ISSUE_ALREADY_COMPLETED": "Esta issue já foi concluída.",
 		"STOP_NOT_FOUND": "Stop não encontrado.",
 		"STOP_CRITERION_DISABLED": "Este critério de stop está desativado nas configurações.",
-		"RESOLUTION_NOT_APPLICABLE": "Essa resolução não se aplica a este stop."
+		"RESOLUTION_NOT_APPLICABLE": "Essa resolução não se aplica a este stop.",
+		"GATEWAY_UNAVAILABLE": "Gateway de canais indisponível. Verifique se o serviço está rodando."
 	},
 	"screenError": {
 		"message": "Não foi possível carregar. Tente novamente em instantes."

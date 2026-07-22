@@ -1,7 +1,0 @@
-** BUILD FAILED **
-
-
-The following build commands failed:
-	CompileC /Users/work/Library/Developer/Xcode/DerivedData/MonorepoExpo-epvubbncuwfhwdfpkjcohheowhvk/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/react-native-webgpu.build/Objects-normal/arm64/RNWebGPUManager.o /Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/react-native-webgpu/cpp/rnwgpu/RNWebGPUManager.cpp normal arm64 c++ com.apple.compilers.llvm.clang.1_0.compiler (in target 'react-native-webgpu' from project 'Pods')
-	Building workspace MonorepoExpo with scheme MonorepoExpo and configuration Debug
-(2 failures)

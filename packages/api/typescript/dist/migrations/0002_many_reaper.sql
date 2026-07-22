@@ -1,1 +1,0 @@
-DROP TABLE "authentication"."fcm_registration_tokens" CASCADE;

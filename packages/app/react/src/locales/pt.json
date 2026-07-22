@@ -443,7 +443,8 @@
 		"WEBHOOK_SOURCE_UNKNOWN": "Origem de webhook desconhecida.",
 		"WORKSPACE_ALREADY_REGISTERED": "Este workspace já está registrado.",
 		"WORKSPACE_IN_USE": "Há uma issue trabalhando neste workspace.",
-		"WORKSPACE_NOT_FOUND": "Workspace não encontrado."
+		"WORKSPACE_NOT_FOUND": "Workspace não encontrado.",
+		"GATEWAY_UNAVAILABLE": "Gateway de canais indisponível. Verifique se o serviço está rodando."
 	},
 	"home": {
 		"replayIntro": "Rever introdução",
