@@ -30,6 +30,8 @@ export const CONTEXTS = {
 	workspace: { pgSchema: 'workspace' },
 	// BC4 Thread & Routing (Core, TS-owned) — the `thread` schema, promoted out of PENDING_PGSCHEMAS.
 	thread: { pgSchema: 'thread' },
+	// BC5 Issue Execution (Core, TS-owned) — the `issue` schema, promoted out of PENDING_PGSCHEMAS.
+	issue: { pgSchema: 'issue' },
 	ui: { pgSchema: null },
 } as const satisfies Record<string, ContextDecl>
 
@@ -58,7 +60,7 @@ export const FOREIGN_PGSCHEMAS: readonly string[] = ['gateway']
  * CONTEXTS. When a context lands, move its schema OUT of this list and INTO CONTEXTS.pgSchema.
  * (CodeDM new contexts: workspace / thread / issue / artifact.)
  */
-export const PENDING_PGSCHEMAS: readonly string[] = ['issue', 'artifact']
+export const PENDING_PGSCHEMAS: readonly string[] = ['artifact']
 
 /** Folder/import identity — matches `src/<module>/` exactly (e.g. keys used by `@<module>/*` path aliases). */
 export type ContextModule = keyof typeof CONTEXTS

@@ -1,0 +1,54 @@
+import { injectable } from 'tsyringe-neo'
+import { Handler, z } from '@template/core-typescript'
+import type { Transaction } from '@template/core-typescript'
+import { IssueStatus, ProviderKind } from '@template/contracts-typescript/wire/enums'
+import { Issue } from '../entities/Issue'
+import { IssueRepository } from '../repositories/IssueRepository'
+
+export const OpenIssueInputSchema = z.object({
+	issueId: z.uuid(),
+	ownerId: z.uuid(),
+	threadId: z.uuid(),
+	key: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	provider: z.enum(ProviderKind),
+})
+
+export const OpenIssueOutputSchema = z.object({ issueId: z.uuid(), key: z.string() })
+
+/**
+ * C21 OpenIssue — materializes the Issue aggregate from the terminal engine's
+ * `integration.issue.opened` (the engine mints the issueId + slug key when it spawns the session).
+ * Idempotent: a redelivered issue.opened for an existing issue is a no-op. BC5 does NOT re-publish
+ * issue.opened — the terminal owns that execution fact.
+ */
+@injectable()
+export class OpenIssue extends Handler<typeof OpenIssueInputSchema, typeof OpenIssueOutputSchema> {
+	readonly name = 'open_issue' as const
+	readonly inputSchema = OpenIssueInputSchema
+	readonly outputSchema = OpenIssueOutputSchema
+
+	constructor(private readonly issues: IssueRepository) {
+		super()
+	}
+
+	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		const existing = await this.issues.findById(input.issueId)
+		if (existing) return { issueId: existing.id.value, key: existing.key }
+
+		return this.withTransaction(tx, async tx => {
+			const issue = new Issue({
+				ownerId: input.ownerId,
+				threadId: input.threadId,
+				key: input.key,
+				title: input.title,
+				status: IssueStatus.WORKING,
+				provider: input.provider,
+				archived: false,
+				id: input.issueId,
+			})
+			await this.issues.save(issue, tx)
+			return { issueId: issue.id.value, key: issue.key }
+		})
+	}
+}

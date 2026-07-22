@@ -24,5 +24,6 @@ export { givenUser, givenAccount, givenUserWithAccount, givenActiveSession }
 export { givenOwner, givenOwnerWithResponsible } from './owners'
 export { givenWorkspace } from './workspaces'
 export { givenThread } from './threads'
+export { givenIssue } from './issues'
 export { givenDomainEvent } from './events'
 export { givenUserProfile } from './identity'
