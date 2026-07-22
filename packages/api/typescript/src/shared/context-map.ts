@@ -24,8 +24,16 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 			note: 'Classification/routing consumes the ProviderDetector + IssueClassifier services (the Router engine lives in the terminal/agent-runtime context).',
 		},
 	},
+	terminal: {
+		thread: {
+			note: 'The severed-saga closer (RunTerminalSessionOnClassification) resolves the run context — thread providers/workspaceId + the prompt from the transcript — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader).',
+		},
+		workspace: { note: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).' },
+	},
 	ui: {
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
+		terminal: { note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).' },
+		issue: { note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface).' },
 	},
 }
 
@@ -62,7 +70,13 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
  * Cycles that are CONSCIOUS partnerships (DDD Partnership) rather than accidents. Any cycle in
  * CONTEXT_MAP not listed here fails the rail.
  */
-export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = []
+export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = [
+	{
+		between: ['terminal', 'thread'],
+		why:
+			'Partnership across the demux→execute seam: BC4 Thread & Routing consumes the terminal engine’s classification services (IssueClassifier/ProviderDetector) to make the routing decision, while the terminal engine’s saga-closer consumes BC4’s thread/transcript read seams to spawn the session that decision triggers. Two halves of one classify→run boundary; integration events (message.classified / issue.opened) carry the runtime hand-off, the read seams only resolve context.',
+	},
+]
 
 /**
  * Composition-root files EXCLUDED from edge checking — they exist to aggregate every context
