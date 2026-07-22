@@ -1,0 +1,47 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import DotWave from '~/components/islands/DotWave.tsx'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['hero']
+	downloadHref: string
+	githubHref: string
+}
+
+const { t, downloadHref, githubHref } = Astro.props
+---
+
+<header class="relative flex min-h-[88vh] flex-col items-center justify-center px-6 pb-10 pt-[120px] text-center">
+	<div aria-hidden="true" class="pointer-events-none absolute inset-0">
+		<DotWave client:visible variant="hero" />
+	</div>
+	<div class="animate-rise-in relative max-w-[980px]">
+		<div
+			class="mb-7 inline-flex items-center gap-2 rounded-full bg-[var(--muted)] px-[15px] py-[7px] text-[12.5px] font-semibold text-[var(--muted-foreground)]"
+		>
+			<span class="animate-pulse-dot h-[7px] w-[7px] rounded-full bg-[var(--foreground)]"></span>
+			{t.badge}
+		</div>
+		<h1 class="m-0 text-balance text-[length:clamp(46px,7vw,92px)] font-extrabold leading-[0.98] tracking-[-2px]">
+			<span class="block">{t.titleBold}</span>
+			<span class="block font-light">{t.titleLight}</span>
+		</h1>
+		<p class="mx-auto mb-[34px] mt-7 max-w-[460px] text-balance text-base leading-[1.6] text-[var(--muted-foreground)]">
+			{t.subtitle}
+		</p>
+		<div class="flex flex-wrap items-center justify-center gap-2.5">
+			<a
+				href={downloadHref}
+				class="whitespace-nowrap rounded-full bg-[var(--primary)] px-[26px] py-[13px] text-[14.5px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+			>
+				{t.primaryCta}
+			</a>
+			<a
+				href={githubHref}
+				class="whitespace-nowrap rounded-full bg-[var(--muted)] px-6 py-[13px] text-[14.5px] font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--secondary)]"
+			>
+				{t.secondaryCta}
+			</a>
+		</div>
+	</div>
+</header>

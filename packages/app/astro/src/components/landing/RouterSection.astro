@@ -1,0 +1,37 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import TerminalMock from '~/components/landing/TerminalMock.astro'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['router']
+}
+
+const { t } = Astro.props
+---
+
+<section id="router" class="px-6 pb-[110px]">
+	<div
+		class="dark mx-auto grid max-w-[1160px] items-center gap-[60px] rounded-[36px] bg-[var(--route-background)] p-10 text-[var(--foreground)] md:grid-cols-[1fr_0.85fr] md:px-[70px] md:py-[90px]"
+	>
+		<div>
+			<div class="mb-[18px] font-mono text-[11px] tracking-[2px] text-[var(--muted-foreground)]">{t.eyebrow}</div>
+			<h2 class="mb-[18px] mt-0 text-balance text-[38px] font-extrabold leading-[1.08] tracking-[-0.8px]">
+				{t.titleBold}<br /><span class="font-light">{t.titleLight}</span>
+			</h2>
+			<p class="mb-[26px] mt-0 max-w-[420px] text-pretty text-[15px] leading-[1.65] text-[var(--muted-foreground)]">
+				{t.body}
+			</p>
+			<div class="flex flex-col gap-[11px] text-sm">
+				{
+					t.rows.map(row => (
+						<div class="flex items-baseline gap-3">
+							<span class="w-24 shrink-0 font-mono text-[11px] text-[var(--muted-foreground)]">{row.key}</span>
+							<span class="text-[var(--foreground)]/85">{row.text}</span>
+						</div>
+					))
+				}
+			</div>
+		</div>
+		<TerminalMock t={t.terminal} />
+	</div>
+</section>

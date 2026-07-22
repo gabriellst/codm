@@ -1,0 +1,40 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['features']
+}
+
+const { t } = Astro.props
+---
+
+<section id="features" class="px-6 pb-[110px] md:px-11">
+	<div class="mx-auto max-w-[1080px]">
+		<h2 class="mb-3.5 mt-0 max-w-[520px] text-balance text-[34px] font-extrabold leading-[1.12] tracking-[-0.8px]">
+			{t.title}
+		</h2>
+		<p class="mb-11 mt-0 max-w-[460px] text-pretty text-[15px] leading-[1.6] text-[var(--muted-foreground)]">
+			{t.intro}
+		</p>
+		<div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+			{
+				t.cards.map(card => (
+					<div class="rounded-[calc(var(--radius)*1.375)] bg-[var(--muted)] px-6 py-[26px] transition-colors hover:bg-[var(--secondary)]">
+						<div class="mb-4 font-mono text-[10.5px] tracking-[1px] text-[var(--muted-foreground)]/80">{card.kicker}</div>
+						<div class="mb-2 text-base font-extrabold tracking-[-0.2px]">{card.title}</div>
+						<div class="text-pretty text-[13px] leading-[1.6] text-[var(--muted-foreground)]">{card.body}</div>
+					</div>
+				))
+			}
+		</div>
+		<div class="mt-9 flex flex-wrap justify-center gap-2">
+			{
+				t.controls.map(control => (
+					<div class="whitespace-nowrap rounded-full border border-[var(--border)] px-4 py-2 font-mono text-[11.5px] text-[var(--muted-foreground)]">
+						{control}
+					</div>
+				))
+			}
+		</div>
+	</div>
+</section>

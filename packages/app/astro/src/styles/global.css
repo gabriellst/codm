@@ -62,6 +62,11 @@ html {
 	scroll-behavior: smooth;
 }
 
+/* Floating nav (~76px) — keep anchored sections clear of it when jumped to. */
+section[id] {
+	scroll-margin-top: 88px;
+}
+
 ::selection {
 	background: var(--secondary);
 }

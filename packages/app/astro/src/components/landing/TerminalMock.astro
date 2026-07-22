@@ -1,0 +1,30 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['router']['terminal']
+}
+
+const { t } = Astro.props
+
+// Rendered inside the `.dark` wrapper — tokens resolve inverted (D5/§2.1).
+const toneClass = {
+	dim: 'text-[var(--muted-foreground)]',
+	mid: 'text-[var(--foreground)]/85',
+	faint: 'text-[var(--foreground)]/35',
+} as const
+---
+
+<div
+	class="overflow-hidden rounded-[20px] border border-[var(--border)] bg-[var(--background)] p-5 font-mono text-[11.5px] leading-[2]"
+>
+	<div class="mb-2 text-[var(--muted-foreground)]/80">{t.header}</div>
+	{
+		t.lines.map(line => (
+			<div class="flex gap-2.5 whitespace-nowrap">
+				<span class="shrink-0 text-[var(--foreground)]/35">{line.key}</span>
+				<span class:list={['overflow-hidden text-ellipsis', toneClass[line.tone]]}>{line.text}</span>
+			</div>
+		))
+	}
+</div>

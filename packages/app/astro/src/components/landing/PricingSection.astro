@@ -1,0 +1,67 @@
+---
+import { getCollection } from 'astro:content'
+import type { Locale } from '~/i18n'
+
+interface Props {
+	locale: Locale
+}
+
+// Built per D8 but NOT mounted on the landing yet (founder page has no pricing).
+// Mounting is a one-line addition in Landing.astro when product says go.
+const { locale } = Astro.props
+const plans = (await getCollection('plans')).sort((a, b) => a.data.order - b.data.order)
+
+const priceLabel = (monthly: number, currency: string) =>
+	monthly === 0
+		? locale === 'pt'
+			? 'Grátis'
+			: 'Free'
+		: new Intl.NumberFormat(locale === 'pt' ? 'pt-BR' : 'en-US', {
+				style: 'currency',
+				currency,
+				maximumFractionDigits: 0,
+			}).format(monthly)
+---
+
+<section id="pricing" class="px-6 pb-[110px] md:px-11">
+	<div class="mx-auto grid max-w-[1080px] gap-3 md:grid-cols-3">
+		{
+			plans.map(plan => {
+				const copy = plan.data.copy[locale]
+				if (!copy) return null
+				return (
+					<div
+						class:list={[
+							'flex flex-col gap-4 rounded-[calc(var(--radius)*1.375)] bg-[var(--muted)] px-6 py-[26px]',
+							plan.data.highlighted && 'ring-2 ring-[var(--foreground)]',
+						]}
+					>
+						<div class="font-mono text-[10.5px] uppercase tracking-[1px] text-[var(--muted-foreground)]/80">{copy.name}</div>
+						<div class="text-3xl font-extrabold tracking-[-0.8px]">
+							{priceLabel(plan.data.price.monthly, plan.data.price.currency)}
+							{plan.data.price.monthly > 0 && (
+								<span class="text-sm font-medium text-[var(--muted-foreground)]">/{locale === 'pt' ? 'mês' : 'mo'}</span>
+							)}
+						</div>
+						<p class="m-0 text-pretty text-[13px] leading-[1.6] text-[var(--muted-foreground)]">{copy.blurb}</p>
+						<ul class="m-0 flex list-none flex-col gap-2 p-0 text-[13px] leading-[1.5]">
+							{copy.features.map(feature => (
+								<li class="flex items-baseline gap-2">
+									<span aria-hidden="true" class="font-mono text-[10px] text-[var(--muted-foreground)]">
+										✳
+									</span>
+									{feature}
+								</li>
+							))}
+						</ul>
+						<div class="mt-auto pt-2">
+							<span class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full bg-[var(--primary)] px-[26px] py-[13px] text-[14.5px] font-bold text-[var(--primary-foreground)]">
+								{copy.cta}
+							</span>
+						</div>
+					</div>
+				)
+			})
+		}
+	</div>
+</section>
