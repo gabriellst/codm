@@ -70,8 +70,21 @@ export abstract class EventHandler<E extends EventClassOrArray> extends Handler<
 	override async execute(input: any): Promise<void> {
 		const e = this.event as EventClassOrArray
 		if (Array.isArray(e)) {
-			// Multi-event: trust the caller to have constructed the right class.
-			await this.handle(input as this['input'])
+			// Multi-event: reconstruct the plain object into its declared class instance so handlers can
+			// discriminate with `instanceof` (and read the BaseEvent envelope methods). The outbox
+			// dispatcher hands us a PLAIN object (`toBaseEvent` — JSONB has no prototype), so passing it
+			// straight through made every `event instanceof X` branch silently false and multi-event
+			// republish/bridge handlers (e.g. PublishThreadIntegrationEvents) no-op'd under the real
+			// outbox — the whole domain→integration event bridge dead in real mode, masked in tests where
+			// the mock mediators pass the original live instances. Match by the discriminating `name` and
+			// reconstruct; an already-live instance (mock path) or an unmatched name passes through.
+			const classes = e as readonly EventClass[]
+			if (classes.some(Cls => input instanceof Cls)) {
+				await this.handle(input as this['input'])
+				return
+			}
+			const Match = classes.find(Cls => Cls.name === (input as { name?: string } | null)?.name)
+			await this.handle((Match ? new Match(input) : input) as this['input'])
 			return
 		}
 		const Cls = e as EventClass
