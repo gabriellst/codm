@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 }
 
 func sweepTestSchemas(prefix string) {
-	dbURL := os.Getenv("DATABASE_URL")
+	dbURL := os.Getenv("CHANNEL_TEST_DATABASE_URL")
 	if dbURL == "" {
 		return
 	}

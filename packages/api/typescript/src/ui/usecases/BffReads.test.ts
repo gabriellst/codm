@@ -46,7 +46,8 @@ describe('UI BFF reads', () => {
 		expect(out.workspaces.length).toBeGreaterThanOrEqual(1)
 		expect(out.providers.length).toBeGreaterThan(0)
 		expect(out.noChannelConnected).toBe(true)
-		expect(out.contacts).toHaveLength(1)
-		expect(out.contacts[0]).toMatchObject({ displayName: 'Ada', alreadyAttached: true })
+		// Contacts source from the gateway remotes directory; with NO channel connected there are no
+		// owner channels to read remotes for — empty is the CORRECT new semantics (was thread-derived).
+		expect(out.contacts).toHaveLength(0)
 	})
 })

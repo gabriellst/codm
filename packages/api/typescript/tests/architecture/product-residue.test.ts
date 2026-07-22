@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 
@@ -79,6 +79,9 @@ interface Violation {
 }
 
 function listFiles(dir: string, out: string[] = []): string[] {
+	// Scan roots are declared aspirationally (examples/, app targets) — a product repo may have
+	// removed some; a missing root is an empty scan, not a crash.
+	if (!existsSync(dir)) return out
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name)
 		if (entry.isDirectory()) {

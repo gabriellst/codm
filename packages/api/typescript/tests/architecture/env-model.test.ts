@@ -62,8 +62,10 @@ describe('env-model (single env registry; schemas, .env.example and Go reads gat
 	})
 
 	test('ENV-03: every env key config.go reads is declared for Go in the registry', () => {
-		const goSource = readFileSync(join(REPO_ROOT, 'packages/api/go/core/config/config.go'), 'utf8')
-		const goReads = [...new Set([...goSource.matchAll(/"([A-Z][A-Z0-9_]+)"/g)].map(m => m[1] ?? ''))].filter(Boolean)
+		const goSource = readFileSync(join(REPO_ROOT, 'packages/api/go/internal/shared/config/config.go'), 'utf8')
+		// Keys come ONLY from env-accessor call sites — bare quoted UPPERCASE literals elsewhere are
+		// enum VALUES (DEVELOPMENT, WARN), not env keys (the verbatim medscall config style).
+		const goReads = [...new Set([...goSource.matchAll(/(?:getEnvOrDefault|os\.Getenv)\("([A-Z][A-Z0-9_]+)"/g)].map(m => m[1] ?? ''))].filter(Boolean)
 		const declaredForGo = entries.filter(([, d]) => d.consumers.includes('apiGo')).map(([k]) => k)
 		const undeclared = goReads.filter(k => !declaredForGo.includes(k)).sort()
 		expect(

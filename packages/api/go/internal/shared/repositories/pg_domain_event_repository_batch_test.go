@@ -31,9 +31,9 @@ import (
 func newEmbeddedTestDB(t *testing.T) (*sql.DB, func()) {
 	t.Helper()
 
-	dbURL := os.Getenv("DATABASE_URL")
+	dbURL := os.Getenv("CHANNEL_TEST_DATABASE_URL")
 	if dbURL == "" {
-		t.Skip("DATABASE_URL not set, skipping integration test")
+		t.Skip("CHANNEL_TEST_DATABASE_URL not set (dedicated throwaway DB) — skipping pg integration test")
 	}
 
 	// Use a unique schema per test invocation to allow parallel runs.

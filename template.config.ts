@@ -236,6 +236,22 @@ export const REPO = {
 			doc: 'embedded file-backed PGlite data dir for the real daemon (migrations apply on boot); ~ expands to $HOME. api-go reads it as the gateway data-dir root.',
 		},
 		REDIS_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'redis://localhost:6379' },
+		// ── Verbatim medscall channel service config (port b4530e2b) — CHANNEL_* primary keys with
+		// generic fallbacks read by internal/shared/config/config.go. Retarget/rename happens in the
+		// classification step; declared here so ENV-03 parity holds over the verbatim code.
+		CHANNEL_PORT: { consumers: ['apiGo'], example: '3032', doc: 'gateway HTTP port (fallback: PORT)' },
+		PORT: { consumers: ['apiGo'], example: '3030', doc: 'generic port fallback (TS honors it at runtime, outside the Config schema)' },
+		CHANNEL_ALLOWED_ORIGINS: { consumers: ['apiGo'], example: 'http://localhost:5173', doc: 'gateway CORS allowlist (fallback: ALLOWED_ORIGINS)' },
+		ALLOWED_ORIGINS: { consumers: ['apiGo'], example: 'http://localhost:5173', doc: 'generic CORS fallback' },
+		CHANNEL_ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'gateway environment (fallback: ENVIRONMENT)' },
+		ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'generic environment fallback' },
+		CHANNEL_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'codedm-gateway', doc: 'Redis consumer group for the gateway' },
+		CHANNEL_SERVICE_NAME: { consumers: ['apiGo'], example: 'gateway', doc: 'service name for logs/traces (fallback: SERVICE_NAME)' },
+		SERVICE_NAME: { consumers: ['apiGo'], example: 'gateway', doc: 'generic service-name fallback' },
+		CHANNEL_GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'gateway HTTP apikey guard (TS proxy sends it server-side; fallback: GLOBAL_API_KEY)' },
+		GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'generic apikey fallback' },
+		WHATSMEOW_DATABASE_URL: { consumers: ['apiGo'], example: 'postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable', doc: 'whatsmeow session store (empty falls back to DATABASE_URL)' },
+		WHATSMEOW_LOG_LEVEL: { consumers: ['apiGo'], example: 'WARN', doc: 'whatsmeow client log level' },
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
 			schema: 'kernel',
