@@ -9,11 +9,11 @@ import { Switch } from '@/components/ui/switch'
 type Criteria = GetSettingsQueryResponse['stopCriteria']
 type CriteriaKey = keyof Criteria
 
-const CRITERIA: { key: CriteriaKey; label: string; description: string }[] = [
-	{ key: 'serverErrors', label: 'Server errors', description: 'The provider CLI errors out (429s, crashes, timeouts).' },
-	{ key: 'blockedByClassification', label: 'Blocked by classification', description: 'A drafted reply is flagged before it is sent.' },
-	{ key: 'humanRequested', label: 'Human requested', description: 'The contact explicitly asks for a person.' },
-	{ key: 'approvalNeeded', label: 'Approval needed', description: 'The agent wants to run a command that needs sign-off.' },
+const CRITERIA: { key: CriteriaKey; labelKey: string; descKey: string }[] = [
+	{ key: 'serverErrors', labelKey: 'settings.criteriaServerErrors', descKey: 'settings.criteriaServerErrorsDesc' },
+	{ key: 'blockedByClassification', labelKey: 'settings.criteriaBlocked', descKey: 'settings.criteriaBlockedDesc' },
+	{ key: 'humanRequested', labelKey: 'settings.criteriaHumanRequested', descKey: 'settings.criteriaHumanRequestedDesc' },
+	{ key: 'approvalNeeded', labelKey: 'settings.criteriaApprovalNeeded', descKey: 'settings.criteriaApprovalNeededDesc' },
 ]
 
 /**
@@ -53,9 +53,9 @@ export function StopCriteriaSection() {
 				<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
 					{CRITERIA.map(item => (
 						<label key={item.key} className="flex cursor-pointer items-center gap-4 p-4">
-							<div className="flex flex-1 flex-col">
-								<span className="font-medium text-foreground">{item.label}</span>
-								<span className="text-sm text-muted-foreground">{item.description}</span>
+							<div className="flex flex-1 flex-col gap-0.5">
+								<span className="font-medium text-foreground">{t(item.labelKey)}</span>
+								<span className="text-sm text-muted-foreground">{t(item.descKey)}</span>
 							</div>
 							<Switch checked={criteria[item.key]} onCheckedChange={value => toggle(item.key, value)} />
 						</label>

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useDetectProviders } from '@codedm/client-typescript/typescript'
+import { enumLabel } from '@/lib'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,7 +24,7 @@ export function ProvidersSection() {
 					{providers.map(provider => {
 						const Glyph = providerGlyph[provider.name]
 						const detected = provider.status === 'DETECTED'
-						const path = provider.binaryPath ?? 'not found in PATH'
+						const path = provider.binaryPath ?? t('settings.providerNotFound')
 						return (
 							<div key={provider.name} className="flex items-center gap-4 rounded-2xl px-2 py-3">
 								<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
@@ -36,7 +37,7 @@ export function ProvidersSection() {
 										{provider.version ? ` · v${provider.version}` : ''}
 									</span>
 								</div>
-								<Badge variant={detected ? 'secondary' : 'outline'}>{String(detected ? 'Detected' : 'Not installed')}</Badge>
+								<Badge variant={detected ? 'secondary' : 'outline'}>{enumLabel('ProviderStatus', provider.status)}</Badge>
 							</div>
 						)
 					})}

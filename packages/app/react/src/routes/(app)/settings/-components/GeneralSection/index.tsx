@@ -17,10 +17,10 @@ export function GeneralSection() {
 	}
 
 	const rows: { label: string; value: string; mono?: boolean }[] = [
-		{ label: 'Operator', value: data.general.operatorName },
-		{ label: 'Timezone', value: data.general.timezone },
-		{ label: 'Data directory', value: data.general.dataDir, mono: true },
-		{ label: 'App version', value: data.appVersion, mono: true },
+		{ label: t('settings.generalOperator'), value: data.general.operatorName },
+		{ label: t('settings.generalTimezone'), value: data.general.timezone },
+		{ label: t('settings.generalDataDir'), value: data.general.dataDir, mono: true },
+		{ label: t('settings.generalAppVersion'), value: data.appVersion, mono: true },
 	]
 
 	return (
