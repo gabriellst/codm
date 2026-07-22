@@ -13,7 +13,7 @@
 // this file as their source of truth (see packages/api/go/core/pkg/openapi/walker.go
 // `modulePrefix`). Keep them in lockstep when editing here.
 
-const scope = '@template'
+const scope = '@codedm'
 
 /**
  * PER-LANGUAGE identity config — facts owned by a language TOOLCHAIN and shared by every
@@ -25,6 +25,11 @@ const scope = '@template'
  */
 const LANG_CONFIG = {
 	typescript: { packageScope: scope },
+	// Go module prefix is DELIBERATELY DECOUPLED from the npm `scope`/`brand`: it is an
+	// internal Go module path, not a public brand surface, and Go imports are absolute
+	// (`<prefix>/core-go/...`) — renaming it would rewrite every import across the Go tree
+	// with zero brand-facing benefit. It intentionally stays `template` through npm-scope
+	// rebrands; walker.go mirrors THIS value (source of truth), so there is no stray literal.
 	go: { modulePrefix: 'template' },
 } as const
 
@@ -131,9 +136,9 @@ export const REPO = {
 	/** npm scope every workspace package lives under (`<scope>/core-typescript`, …). */
 	scope,
 	/** Human brand label (report titles, generated-doc headers). */
-	brand: 'template',
+	brand: 'codedm',
 	/** GitHub URL — eslint rule docs point here. */
-	repoUrl: 'https://github.com/template/template-fullstack',
+	repoUrl: 'https://github.com/codedm/codedm',
 
 	// ── Well-known package specifiers (all derived from `scope`) ─────────────
 	/** The cross-stack SDK package (Kubb output, committed at packages/client/dist/typescript). */
@@ -154,7 +159,7 @@ export const REPO = {
 	},
 
 	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */
-	rootEnvVar: 'TEMPLATE_ROOT',
+	rootEnvVar: 'CODEDM_ROOT',
 
 	// ── Layout — ALL DERIVED from WORKSPACES (the single source); do not add literals here ──
 	workspaces: WORKSPACES,
