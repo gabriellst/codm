@@ -19,7 +19,7 @@ test('onboarding checklist completes once channel + workspace + thread exist', a
 	const client = user.session.client
 
 	// The wizard read is reachable and enumerates providers before anything is attached.
-	const wizardBefore = await getAttachThreadWizard({ client })
+	const wizardBefore = await getAttachThreadWizard({}, { client })
 	expect(Array.isArray(wizardBefore.providers)).toBe(true)
 
 	// Complete the flow the wizard performs (connected channel → workspace → attached thread).
@@ -31,6 +31,6 @@ test('onboarding checklist completes once channel + workspace + thread exist', a
 	expect(checklist.threadDone).toBe(true)
 
 	// The wizard now offers at least one CONNECTED channel to attach against.
-	const wizardAfter = await getAttachThreadWizard({ client })
+	const wizardAfter = await getAttachThreadWizard({}, { client })
 	expect(wizardAfter.channels.length).toBeGreaterThan(0)
 })
