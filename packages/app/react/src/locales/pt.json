@@ -66,7 +66,6 @@
 	},
 	"auth": {
 		"resetPassword": {
-			"backToSignIn": "Voltar para entrar",
 			"breadcrumb": "Recuperar senha",
 			"confirmNewPassword": "Confirme a nova senha",
 			"email": "E-mail",
@@ -82,32 +81,6 @@
 			"resetSuccess": "Senha alterada",
 			"resetSuccessDescription": "Você já pode entrar com a nova senha",
 			"resetTitle": "Definir nova senha"
-		},
-		"signIn": {
-			"breadcrumb": "Entrar",
-			"email": "E-mail",
-			"forgot": "Esqueceu a senha?",
-			"loginSuccess": "Login realizado com sucesso",
-			"noAccount": "Não tem uma conta?",
-			"password": "Senha",
-			"signUpLink": "Criar conta",
-			"submit": "Entrar",
-			"subtitle": "Entre com suas credenciais para continuar",
-			"title": "Bem-vindo de volta"
-		},
-		"signUp": {
-			"breadcrumb": "Cadastro",
-			"confirmPassword": "Confirmar senha",
-			"email": "E-mail",
-			"hasAccount": "Já tem uma conta?",
-			"name": "Nome",
-			"password": "Senha",
-			"registerSuccess": "Cadastro realizado com sucesso",
-			"signInLink": "Entrar",
-			"submit": "Criar conta",
-			"subtitle": "Preencha os dados para começar",
-			"terms": "Ao continuar você aceita os",
-			"title": "Crie sua conta"
 		}
 	},
 	"calendar": {
@@ -295,10 +268,8 @@
 		"PAYMENT_METHOD_OWNER_ID_REQUIRED": "O identificador da conta é obrigatório para este método de pagamento.",
 		"PAYMENT_METHOD_REQUIRED": "Adicione um método de pagamento para continuar.",
 		"PAYMENT_METHOD_UNSUPPORTED": "Este método de pagamento não é suportado.",
-		"PLAN_NOT_FOUND": "Plano não encontrado.",
 		"PROVIDER_CAPABILITY_UNSUPPORTED": "O provedor de pagamento não suporta esta operação.",
 		"PROVIDER_ERROR": "O provedor de pagamento retornou um erro. Tente novamente em instantes.",
-		"QUOTA_LIMIT_EXCEEDED": "Limite do plano atingido. Faça upgrade para continuar.",
 		"RATE_LIMITED": "Muitas tentativas. Aguarde um momento e tente novamente.",
 		"RESOURCE_LOCKED_BY_PLAN": "Este recurso está bloqueado pelo seu plano atual.",
 		"SESSION_EXPIRED": "Sessão expirada",

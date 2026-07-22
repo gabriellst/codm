@@ -48,9 +48,8 @@ export default function RootLayout() {
 		Montserrat_800ExtraBold,
 	})
 
-	// Session hydration is owned by `@better-auth/expo` + `auth.useSession()`.
-	// Routes call `useSession()` to read the cached state and redirect on 401,
-	// so the splash gate only needs to wait for fonts.
+	// CodeDM has no accounts: `auth.useSession()` is a constant single-operator stub with no
+	// round-trip to hydrate, so there is no session gate — the splash only waits for fonts.
 	useEffect(() => {
 		if (antonLoaded && montserratLoaded) {
 			SplashScreen.hideAsync().catch(() => undefined)

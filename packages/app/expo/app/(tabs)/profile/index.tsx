@@ -2,13 +2,12 @@ import { ScrollView, View } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { Avatar } from '@/components/ui/Avatar'
 import { Text } from '@/components/ui/Text'
-import { SignOutButton } from './-components/SignOutButton'
 import { avatarInitialFor, useCurrentUser } from '@/lib/auth'
 
 /**
- * Minimal profile tab — avatar + display name + sign-out CTA. Domain-specific
- * sections (devices, lifetime stats, session grid, etc.) live behind the
- * product feature work, not in the boilerplate baseline.
+ * Minimal profile tab — avatar + display name. Domain-specific sections
+ * (devices, lifetime stats, session grid, etc.) live behind the product
+ * feature work, not in the boilerplate baseline.
  */
 export default function ProfileTab() {
 	const { t } = useTranslation()
@@ -27,7 +26,6 @@ export default function ProfileTab() {
 					<Text variant="title">{user?.name ?? t('profile.guest')}</Text>
 					{user?.email ? <Text variant="caption">{user.email}</Text> : null}
 				</View>
-				<SignOutButton />
 			</ScrollView>
 		</View>
 	)

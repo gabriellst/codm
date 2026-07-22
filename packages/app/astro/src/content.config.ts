@@ -21,7 +21,6 @@ const landing = defineCollection({
 	loader: glob({ pattern: '**/landing.json', base: './src/content/i18n' }),
 	schema: z.object({
 		brand: z.string(),
-		signIn: z.string(),
 		getStarted: z.string(),
 		openApp: z.string(),
 		hero: z.object({

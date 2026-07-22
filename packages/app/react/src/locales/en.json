@@ -66,7 +66,6 @@
 	},
 	"auth": {
 		"resetPassword": {
-			"backToSignIn": "Back to sign in",
 			"breadcrumb": "Reset password",
 			"confirmNewPassword": "Confirm password",
 			"email": "Email",
@@ -82,32 +81,6 @@
 			"resetSuccess": "Password updated",
 			"resetSuccessDescription": "You can now sign in with the new password",
 			"resetTitle": "Set a new password"
-		},
-		"signIn": {
-			"breadcrumb": "Sign in",
-			"email": "Email",
-			"forgot": "Forgot your password?",
-			"loginSuccess": "Signed in",
-			"noAccount": "Don't have an account?",
-			"password": "Password",
-			"signUpLink": "Sign up",
-			"submit": "Sign in",
-			"subtitle": "Sign in to continue",
-			"title": "Welcome back"
-		},
-		"signUp": {
-			"breadcrumb": "Sign up",
-			"confirmPassword": "Confirm password",
-			"email": "Email",
-			"hasAccount": "Already have an account?",
-			"name": "Name",
-			"password": "Password",
-			"registerSuccess": "Account created",
-			"signInLink": "Sign in",
-			"submit": "Create account",
-			"subtitle": "Fill in a few details to get started",
-			"terms": "By continuing you accept the",
-			"title": "Create your account"
 		}
 	},
 	"calendar": {
@@ -295,10 +268,8 @@
 		"PAYMENT_METHOD_OWNER_ID_REQUIRED": "Account identifier is required for this payment method.",
 		"PAYMENT_METHOD_REQUIRED": "Add a payment method to continue.",
 		"PAYMENT_METHOD_UNSUPPORTED": "This payment method is not supported.",
-		"PLAN_NOT_FOUND": "Plan not found.",
 		"PROVIDER_CAPABILITY_UNSUPPORTED": "The payment provider does not support this operation.",
 		"PROVIDER_ERROR": "The payment provider returned an error. Try again shortly.",
-		"QUOTA_LIMIT_EXCEEDED": "Plan limit reached. Upgrade to continue.",
 		"RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
 		"RESOURCE_LOCKED_BY_PLAN": "This resource is locked by your current plan.",
 		"SESSION_EXPIRED": "Session expired",

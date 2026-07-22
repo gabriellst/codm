@@ -7,9 +7,6 @@
         "brand": {
           "type": "string"
         },
-        "signIn": {
-          "type": "string"
-        },
         "getStarted": {
           "type": "string"
         },
@@ -117,7 +114,6 @@
       },
       "required": [
         "brand",
-        "signIn",
         "getStarted",
         "openApp",
         "hero",
