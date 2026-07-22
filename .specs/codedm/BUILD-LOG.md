@@ -7,6 +7,8 @@
 
 | 2 PGLITE | 3 + fix pós-grade | ✅ VERDE (fechada a 85→fix) | Real mode = PGlite file-backed (CODEDM_DATA_DIR), migração idempotente no boot, DataDirLock com reclaim de lock stale, PostgresCommandQueue. Graders reprovaram 2x (iter fixes commitados); finding final real — signal handlers do lock pre-emptavam graceful shutdown — corrigido em 017d8c36 (release-only + re-raise condicional). Docstring corrigida. |
 
+| 3 CONTRACT LOCK | 3 (2 fixes de grader) | ✅ VERDE (92) | 18 enums + 16 integration events + browser union travados; pgSchemas dos 4 contextos + migração; FCM/profile removidos da superfície; codegen ts+go + SDK regen. Gates re-verificados independentemente: tsc=0, test=0, contracts=0. CONTRATO CONGELADO — mudança daqui em diante é falha de processo. |
+
 ## Decisões da noite
 - (fase 1) manter FCM-token e eventos auth como stubs compiláveis em vez de cirurgia profunda — remoção definitiva fica pro contract lock da fase 3, que redefine a superfície.
 - (fase 2 / grader iteration 1) O binding `real` é um `useFactory` per-resolve e o tsyringe-neo NÃO memoiza factories → cada `resolve` mintava um `new PGlite(dataDir)` divergente (instâncias vivas sobre o mesmo dir não compartilham estado), matando o write-side event-driven. Fix: memoizar a instância única do driver + `db` via `registerInstance` no boot (`shared/index.ts`, espelha `TestBed.ts:92-93`). Segundo fix: guarda single-instance por lockfile PID **sibling** (`<dataDir>.lock`, fora do pgdata pra não quebrar o initdb do PGlite) — segunda daemon no mesmo dir falha alto com `DataDirLockedError`.
