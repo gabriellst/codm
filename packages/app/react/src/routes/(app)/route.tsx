@@ -1,7 +1,6 @@
-import { createFileRoute, Outlet, useMatches } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Sidebar } from '@/components/Navbar'
-import { Header } from '@/components/Header'
-import { cn } from '@/lib/utils'
+import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
 import { Dialog } from '@/components/ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { useDrawerStore } from '@/stores/useDrawerStore'
@@ -12,23 +11,23 @@ export const Route = createFileRoute('/(app)')({
 })
 
 function AuthLayout() {
-	// One SSE connection for the whole authenticated app — children subscribe via useServerEvents.
+	// One SSE connection for the whole authenticated console — children subscribe via useServerEvents.
 	useServerEventSource()
-	const matches = useMatches()
-	const routeWrapperClassName = [...matches].reverse().find(m => m.staticData?.wrapperClassName)?.staticData.wrapperClassName
 	const { content, open, hide } = useDialogStore()
-	// Drawers (Sheets) own their own <Sheet> + read open/hide from the drawer store, so just mount content.
 	const drawerContent = useDrawerStore(s => s.content)
 
 	return (
-		<div className="dark flex h-dvh overflow-hidden bg-route-background">
+		<div className="flex h-dvh overflow-hidden bg-route-background text-foreground">
 			<Sidebar />
-			<main className="flex-1 overflow-hidden relative flex flex-col">
-				<Header />
-				<div className="flex-1 overflow-auto">
-					<div className={cn(routeWrapperClassName ?? 'mx-auto max-w-[100rem] w-full')}>
-						<Outlet />
+			<main className="relative flex flex-1 flex-col overflow-hidden">
+				{/* Persistent operating pulse, pinned above the scrolling content. */}
+				<div className="pointer-events-none absolute right-6 top-5 z-20">
+					<div className="pointer-events-auto">
+						<AgentsRunningPill />
 					</div>
+				</div>
+				<div className="flex-1 overflow-auto">
+					<Outlet />
 				</div>
 			</main>
 			<Dialog open={open} onOpenChange={isOpen => !isOpen && hide()}>

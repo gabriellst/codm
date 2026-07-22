@@ -11,9 +11,20 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
+import { Route as AttachIndexRouteImport } from './routes/attach/index'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as StyleguideIndexRouteImport } from './routes/styleguide/index'
+import { Route as appChannelsIndexRouteImport } from './routes/(app)/channels/index'
 import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+import { Route as appIssuesIndexRouteImport } from './routes/(app)/issues/index'
+import { Route as appSettingsIndexRouteImport } from './routes/(app)/settings/index'
+import { Route as appThreadsThreadIdRouteRouteImport } from './routes/(app)/threads/$threadId/route'
+import { Route as appWorkspacesIndexRouteImport } from './routes/(app)/workspaces/index'
 import { Route as appSettingsAccountIndexRouteImport } from './routes/(app)/settings/account/index'
+import { Route as appThreadsThreadIdIndexRouteImport } from './routes/(app)/threads/$threadId/index'
+import { Route as appThreadsThreadIdArtifactsIndexRouteImport } from './routes/(app)/threads/$threadId/artifacts/index'
+import { Route as appThreadsThreadIdIssuesIndexRouteImport } from './routes/(app)/threads/$threadId/issues/index'
+import { Route as appThreadsThreadIdIssuesIssueIdIndexRouteImport } from './routes/(app)/threads/$threadId/issues/$issueId/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -24,14 +35,49 @@ const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttachIndexRoute = AttachIndexRouteImport.update({
+  id: '/attach/',
+  path: '/attach/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StyleguideIndexRoute = StyleguideIndexRouteImport.update({
   id: '/styleguide/',
   path: '/styleguide/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appChannelsIndexRoute = appChannelsIndexRouteImport.update({
+  id: '/channels/',
+  path: '/channels/',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appDashboardIndexRoute = appDashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appIssuesIndexRoute = appIssuesIndexRouteImport.update({
+  id: '/issues/',
+  path: '/issues/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appSettingsIndexRoute = appSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appThreadsThreadIdRouteRoute = appThreadsThreadIdRouteRouteImport.update({
+  id: '/threads/$threadId',
+  path: '/threads/$threadId',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appWorkspacesIndexRoute = appWorkspacesIndexRouteImport.update({
+  id: '/workspaces/',
+  path: '/workspaces/',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appSettingsAccountIndexRoute = appSettingsAccountIndexRouteImport.update({
@@ -39,44 +85,141 @@ const appSettingsAccountIndexRoute = appSettingsAccountIndexRouteImport.update({
   path: '/settings/account/',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appThreadsThreadIdIndexRoute = appThreadsThreadIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appThreadsThreadIdRouteRoute,
+} as any)
+const appThreadsThreadIdArtifactsIndexRoute =
+  appThreadsThreadIdArtifactsIndexRouteImport.update({
+    id: '/artifacts/',
+    path: '/artifacts/',
+    getParentRoute: () => appThreadsThreadIdRouteRoute,
+  } as any)
+const appThreadsThreadIdIssuesIndexRoute =
+  appThreadsThreadIdIssuesIndexRouteImport.update({
+    id: '/issues/',
+    path: '/issues/',
+    getParentRoute: () => appThreadsThreadIdRouteRoute,
+  } as any)
+const appThreadsThreadIdIssuesIssueIdIndexRoute =
+  appThreadsThreadIdIssuesIssueIdIndexRouteImport.update({
+    id: '/issues/$issueId/',
+    path: '/issues/$issueId/',
+    getParentRoute: () => appThreadsThreadIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/attach/': typeof AttachIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/styleguide/': typeof StyleguideIndexRoute
+  '/threads/$threadId': typeof appThreadsThreadIdRouteRouteWithChildren
+  '/channels/': typeof appChannelsIndexRoute
   '/dashboard/': typeof appDashboardIndexRoute
+  '/issues/': typeof appIssuesIndexRoute
+  '/settings/': typeof appSettingsIndexRoute
+  '/workspaces/': typeof appWorkspacesIndexRoute
   '/settings/account/': typeof appSettingsAccountIndexRoute
+  '/threads/$threadId/': typeof appThreadsThreadIdIndexRoute
+  '/threads/$threadId/artifacts/': typeof appThreadsThreadIdArtifactsIndexRoute
+  '/threads/$threadId/issues/': typeof appThreadsThreadIdIssuesIndexRoute
+  '/threads/$threadId/issues/$issueId/': typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/attach': typeof AttachIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
   '/styleguide': typeof StyleguideIndexRoute
+  '/channels': typeof appChannelsIndexRoute
   '/dashboard': typeof appDashboardIndexRoute
+  '/issues': typeof appIssuesIndexRoute
+  '/settings': typeof appSettingsIndexRoute
+  '/workspaces': typeof appWorkspacesIndexRoute
   '/settings/account': typeof appSettingsAccountIndexRoute
+  '/threads/$threadId': typeof appThreadsThreadIdIndexRoute
+  '/threads/$threadId/artifacts': typeof appThreadsThreadIdArtifactsIndexRoute
+  '/threads/$threadId/issues': typeof appThreadsThreadIdIssuesIndexRoute
+  '/threads/$threadId/issues/$issueId': typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
+  '/attach/': typeof AttachIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/styleguide/': typeof StyleguideIndexRoute
+  '/(app)/threads/$threadId': typeof appThreadsThreadIdRouteRouteWithChildren
+  '/(app)/channels/': typeof appChannelsIndexRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
+  '/(app)/issues/': typeof appIssuesIndexRoute
+  '/(app)/settings/': typeof appSettingsIndexRoute
+  '/(app)/workspaces/': typeof appWorkspacesIndexRoute
   '/(app)/settings/account/': typeof appSettingsAccountIndexRoute
+  '/(app)/threads/$threadId/': typeof appThreadsThreadIdIndexRoute
+  '/(app)/threads/$threadId/artifacts/': typeof appThreadsThreadIdArtifactsIndexRoute
+  '/(app)/threads/$threadId/issues/': typeof appThreadsThreadIdIssuesIndexRoute
+  '/(app)/threads/$threadId/issues/$issueId/': typeof appThreadsThreadIdIssuesIssueIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/styleguide/' | '/dashboard/' | '/settings/account/'
+  fullPaths:
+    | '/'
+    | '/attach/'
+    | '/onboarding/'
+    | '/styleguide/'
+    | '/threads/$threadId'
+    | '/channels/'
+    | '/dashboard/'
+    | '/issues/'
+    | '/settings/'
+    | '/workspaces/'
+    | '/settings/account/'
+    | '/threads/$threadId/'
+    | '/threads/$threadId/artifacts/'
+    | '/threads/$threadId/issues/'
+    | '/threads/$threadId/issues/$issueId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/styleguide' | '/dashboard' | '/settings/account'
+  to:
+    | '/'
+    | '/attach'
+    | '/onboarding'
+    | '/styleguide'
+    | '/channels'
+    | '/dashboard'
+    | '/issues'
+    | '/settings'
+    | '/workspaces'
+    | '/settings/account'
+    | '/threads/$threadId'
+    | '/threads/$threadId/artifacts'
+    | '/threads/$threadId/issues'
+    | '/threads/$threadId/issues/$issueId'
   id:
     | '__root__'
     | '/'
     | '/(app)'
+    | '/attach/'
+    | '/onboarding/'
     | '/styleguide/'
+    | '/(app)/threads/$threadId'
+    | '/(app)/channels/'
     | '/(app)/dashboard/'
+    | '/(app)/issues/'
+    | '/(app)/settings/'
+    | '/(app)/workspaces/'
     | '/(app)/settings/account/'
+    | '/(app)/threads/$threadId/'
+    | '/(app)/threads/$threadId/artifacts/'
+    | '/(app)/threads/$threadId/issues/'
+    | '/(app)/threads/$threadId/issues/$issueId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
+  AttachIndexRoute: typeof AttachIndexRoute
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
   StyleguideIndexRoute: typeof StyleguideIndexRoute
 }
 
@@ -96,6 +239,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attach/': {
+      id: '/attach/'
+      path: '/attach'
+      fullPath: '/attach/'
+      preLoaderRoute: typeof AttachIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/onboarding'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/styleguide/': {
       id: '/styleguide/'
       path: '/styleguide'
@@ -103,11 +260,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StyleguideIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(app)/channels/': {
+      id: '/(app)/channels/'
+      path: '/channels'
+      fullPath: '/channels/'
+      preLoaderRoute: typeof appChannelsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/dashboard/': {
       id: '/(app)/dashboard/'
       path: '/dashboard'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof appDashboardIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/issues/': {
+      id: '/(app)/issues/'
+      path: '/issues'
+      fullPath: '/issues/'
+      preLoaderRoute: typeof appIssuesIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/settings/': {
+      id: '/(app)/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof appSettingsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/threads/$threadId': {
+      id: '/(app)/threads/$threadId'
+      path: '/threads/$threadId'
+      fullPath: '/threads/$threadId'
+      preLoaderRoute: typeof appThreadsThreadIdRouteRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/workspaces/': {
+      id: '/(app)/workspaces/'
+      path: '/workspaces'
+      fullPath: '/workspaces/'
+      preLoaderRoute: typeof appWorkspacesIndexRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(app)/settings/account/': {
@@ -117,16 +309,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appSettingsAccountIndexRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/threads/$threadId/': {
+      id: '/(app)/threads/$threadId/'
+      path: '/'
+      fullPath: '/threads/$threadId/'
+      preLoaderRoute: typeof appThreadsThreadIdIndexRouteImport
+      parentRoute: typeof appThreadsThreadIdRouteRoute
+    }
+    '/(app)/threads/$threadId/artifacts/': {
+      id: '/(app)/threads/$threadId/artifacts/'
+      path: '/artifacts'
+      fullPath: '/threads/$threadId/artifacts/'
+      preLoaderRoute: typeof appThreadsThreadIdArtifactsIndexRouteImport
+      parentRoute: typeof appThreadsThreadIdRouteRoute
+    }
+    '/(app)/threads/$threadId/issues/': {
+      id: '/(app)/threads/$threadId/issues/'
+      path: '/issues'
+      fullPath: '/threads/$threadId/issues/'
+      preLoaderRoute: typeof appThreadsThreadIdIssuesIndexRouteImport
+      parentRoute: typeof appThreadsThreadIdRouteRoute
+    }
+    '/(app)/threads/$threadId/issues/$issueId/': {
+      id: '/(app)/threads/$threadId/issues/$issueId/'
+      path: '/issues/$issueId'
+      fullPath: '/threads/$threadId/issues/$issueId/'
+      preLoaderRoute: typeof appThreadsThreadIdIssuesIssueIdIndexRouteImport
+      parentRoute: typeof appThreadsThreadIdRouteRoute
+    }
   }
 }
 
+interface appThreadsThreadIdRouteRouteChildren {
+  appThreadsThreadIdIndexRoute: typeof appThreadsThreadIdIndexRoute
+  appThreadsThreadIdArtifactsIndexRoute: typeof appThreadsThreadIdArtifactsIndexRoute
+  appThreadsThreadIdIssuesIndexRoute: typeof appThreadsThreadIdIssuesIndexRoute
+  appThreadsThreadIdIssuesIssueIdIndexRoute: typeof appThreadsThreadIdIssuesIssueIdIndexRoute
+}
+
+const appThreadsThreadIdRouteRouteChildren: appThreadsThreadIdRouteRouteChildren =
+  {
+    appThreadsThreadIdIndexRoute: appThreadsThreadIdIndexRoute,
+    appThreadsThreadIdArtifactsIndexRoute:
+      appThreadsThreadIdArtifactsIndexRoute,
+    appThreadsThreadIdIssuesIndexRoute: appThreadsThreadIdIssuesIndexRoute,
+    appThreadsThreadIdIssuesIssueIdIndexRoute:
+      appThreadsThreadIdIssuesIssueIdIndexRoute,
+  }
+
+const appThreadsThreadIdRouteRouteWithChildren =
+  appThreadsThreadIdRouteRoute._addFileChildren(
+    appThreadsThreadIdRouteRouteChildren,
+  )
+
 interface appRouteRouteChildren {
+  appThreadsThreadIdRouteRoute: typeof appThreadsThreadIdRouteRouteWithChildren
+  appChannelsIndexRoute: typeof appChannelsIndexRoute
   appDashboardIndexRoute: typeof appDashboardIndexRoute
+  appIssuesIndexRoute: typeof appIssuesIndexRoute
+  appSettingsIndexRoute: typeof appSettingsIndexRoute
+  appWorkspacesIndexRoute: typeof appWorkspacesIndexRoute
   appSettingsAccountIndexRoute: typeof appSettingsAccountIndexRoute
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
+  appThreadsThreadIdRouteRoute: appThreadsThreadIdRouteRouteWithChildren,
+  appChannelsIndexRoute: appChannelsIndexRoute,
   appDashboardIndexRoute: appDashboardIndexRoute,
+  appIssuesIndexRoute: appIssuesIndexRoute,
+  appSettingsIndexRoute: appSettingsIndexRoute,
+  appWorkspacesIndexRoute: appWorkspacesIndexRoute,
   appSettingsAccountIndexRoute: appSettingsAccountIndexRoute,
 }
 
@@ -137,6 +389,8 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
+  AttachIndexRoute: AttachIndexRoute,
+  OnboardingIndexRoute: OnboardingIndexRoute,
   StyleguideIndexRoute: StyleguideIndexRoute,
 }
 export const routeTree = rootRouteImport
