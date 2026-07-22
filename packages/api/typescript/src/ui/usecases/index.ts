@@ -1,3 +1,6 @@
 export { GetUserInfo, GetUserInfoInputSchema, GetUserInfoOutputSchema } from './GetUserInfo'
 export { GetMyAccount, GetMyAccountInputSchema, GetMyAccountOutputSchema } from './GetMyAccount'
 export { GetHomeDashboard, GetHomeDashboardInputSchema, GetHomeDashboardOutputSchema } from './GetHomeDashboard'
+export { GetAttachThreadWizard, GetAttachThreadWizardInputSchema, GetAttachThreadWizardOutputSchema } from './GetAttachThreadWizard'
+export { GetSettings, GetSettingsInputSchema, GetSettingsOutputSchema } from './GetSettings'
+export { GetSetupChecklist, GetSetupChecklistInputSchema, GetSetupChecklistOutputSchema } from './GetSetupChecklist'
