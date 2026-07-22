@@ -7,7 +7,15 @@
 // Adapted from: dev:packages/api/src/shared/index.ts
 // ref: .claude/skills/bounded-context/SKILL.md
 
-import { BoundedContext, OutboxDispatcher, ExternalMediator, DrizzleDatabaseDriver, LoggingService, openapi } from '@template/core-typescript'
+import {
+	BoundedContext,
+	OutboxDispatcher,
+	ExternalMediator,
+	DrizzleDatabaseDriver,
+	DrizzleClient,
+	LoggingService,
+	openapi,
+} from '@template/core-typescript'
 import { CONTEXTS } from './contexts'
 import { ALL_REGISTRIES } from './registry'
 // Context-local (non-wire) enums: spread each context's enum barrel so any
@@ -38,6 +46,17 @@ const ctx = await BoundedContext.create({
 		// idempotent + ordered. This is the daemon's only migration step — there is no external Postgres
 		// to `bun migrate` against.
 		const databaseDriver = container.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
+		// CRITICAL — memoize the ONE process-wide driver instance. The real binding is a per-resolve
+		// `useFactory` (shared/registry.ts filePgliteDriver), and tsyringe-neo invokes factories on
+		// EVERY resolve with no caching — so without this, each repo / the outbox dispatcher / this boot
+		// path would each mint a SEPARATE `new PGlite(dataDir)`. Live PGlite instances over one data dir
+		// DIVERGE (they load from disk at open but do not share state), leaving the outbox dispatcher
+		// polling an instance that never sees request-path writes — the entire event-driven write-side
+		// dead. Pinning the resolved driver + its db here (before migrations, outbox, or any context
+		// serves) makes DrizzleClient / UnitOfWorkFactory factories resolve this same instance forever.
+		// Mirrors TestBed.ts:92-93.
+		container.registerInstance(DrizzleDatabaseDriver as any, databaseDriver)
+		container.registerInstance(DrizzleClient as any, databaseDriver.db)
 		await databaseDriver.runMigrations()
 		const loggingService = container.resolve(LoggingService as any) as LoggingService
 		loggingService.info({ content: { message: 'Migrations applied (embedded PGlite)' } })

@@ -4,6 +4,7 @@ import type { DrizzleTransaction } from '../../services/UnitOfWork/DrizzleUnitOf
 import type { DrizzleClient } from '../client'
 import { DrizzleDatabaseDriver, type MigrationJournal } from './DrizzleDatabaseDriver'
 import { readMigrationJournal, readMigrationSql, truncateAllTables } from './utils'
+import { acquireDataDirLock } from './DataDirLock'
 import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
 
@@ -62,6 +63,10 @@ export class PGliteDriver extends DrizzleDatabaseDriver {
 		this.migrationsDir = options.migrationsDir
 		this.dataDir = options.dataDir
 		// A plain path selects PGlite's node filesystem backend (persistent); no arg is in-memory.
+		// File-backed only: acquire a single-instance lock BEFORE opening. `new PGlite(dataDir)` takes
+		// no OS advisory lock, so two daemons on one data dir would silently diverge — this fails the
+		// second one loudly with DataDirLockedError. In-memory (tests) skip it.
+		if (options.dataDir) acquireDataDirLock(options.dataDir)
 		this.pg = options.dataDir ? new PGlite(options.dataDir) : new PGlite()
 		const db = drizzle({ client: this.pg, schema: options.schema })
 		this.migratorDb = db

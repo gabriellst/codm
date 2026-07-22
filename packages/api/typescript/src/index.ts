@@ -4,7 +4,9 @@
 // /feed) so MainRouter prepends the version prefix: /v1/session, /v1/feed, etc.
 //
 // shared/index.ts is the root BoundedContext: applies ALL_REGISTRIES, starts
-// outbox dispatcher, connects Redis external mediator, registers external handlers.
+// the outbox dispatcher, starts the in-process EventEmitter2 external mediator
+// (no Redis transport exists in this repo — the real ExternalMediator binding is
+// EventEmitter2Mediator), and registers external handlers.
 //
 // ref: dev:packages/api/src/shared/index.ts (root BoundedContext pattern)
 
@@ -29,7 +31,8 @@ import {
 
 // Composition root — all context routers wired + checked against the manifest. Importing this
 // pulls in every context's side-effect module (starting with @shared/index, which creates the
-// root BoundedContext, applies ALL_REGISTRIES, starts outbox/redis, registers external handlers).
+// root BoundedContext, applies ALL_REGISTRIES, starts the outbox dispatcher + the in-process
+// EventEmitter2 external mediator, registers external handlers).
 import { ALL_ROUTERS } from './routers'
 import { container } from 'tsyringe-neo'
 
