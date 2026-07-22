@@ -489,7 +489,13 @@
 		"slide1Title": "DM your codebase",
 		"slide2Title": "How it works",
 		"slide3Body": "Agents pause on server errors, blocked replies, or when someone asks for a human. You review, steer with a whisper, or take over — nothing ships without your say.",
-		"slide3Title": "You stay in control"
+		"slide3Title": "You stay in control",
+		"stepChannelDesc": "Pair WhatsApp via QR code",
+		"stepChannelTitle": "Connect a channel",
+		"stepThreadDesc": "Bind a contact or group to a folder and pick the agents",
+		"stepThreadTitle": "Attach a thread",
+		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
+		"stepWorkspaceTitle": "Add a workspace"
 	},
 	"session": {
 		"agentStopped": "Agent stopped and is waiting",

@@ -489,7 +489,13 @@
 		"slide1Title": "Converse com seu código",
 		"slide2Title": "Como funciona",
 		"slide3Body": "Os agentes pausam em erros de servidor, respostas bloqueadas ou quando alguém pede um humano. Você revisa, orienta com um sussurro ou assume o controle — nada é enviado sem a sua palavra.",
-		"slide3Title": "Você mantém o controle"
+		"slide3Title": "Você mantém o controle",
+		"stepChannelDesc": "Pareie o WhatsApp por QR code",
+		"stepChannelTitle": "Conecte um canal",
+		"stepThreadDesc": "Ligue um contato ou grupo a uma pasta e escolha os agentes",
+		"stepThreadTitle": "Vincule uma conversa",
+		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
+		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
 	},
 	"session": {
 		"agentStopped": "O agente parou e está aguardando",
