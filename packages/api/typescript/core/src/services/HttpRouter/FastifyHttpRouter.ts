@@ -69,7 +69,7 @@ export class FastifyHttpRouter implements HttpRouter {
 	}
 
 	private async handleControllerRequest(req: FastifyRequest, reply: FastifyReply, controller: Controller, span: Span): Promise<void> {
-		const controllerRequest = await this.buildControllerRequest(req)
+		const controllerRequest = await this.buildControllerRequest(req, reply)
 		const response = await controller.executeController(controllerRequest)
 
 		span.setAttribute('http.status_code', response.status)
@@ -79,7 +79,7 @@ export class FastifyHttpRouter implements HttpRouter {
 		await this.sendWebResponse(reply, response, corsHeaders)
 	}
 
-	private async buildControllerRequest(req: FastifyRequest): Promise<HttpControllerRequest<unknown>> {
+	private async buildControllerRequest(req: FastifyRequest, reply: FastifyReply): Promise<HttpControllerRequest<unknown>> {
 		const bodyBuffer = (req.body as Buffer | undefined) ?? Buffer.alloc(0)
 		const jsonBody =
 			bodyBuffer.length > 0 && (req.headers['content-type'] ?? '').includes('json')
@@ -122,11 +122,11 @@ export class FastifyHttpRouter implements HttpRouter {
 			query,
 			cookie: parsedCookies,
 			ctx: {},
-			raw: this.buildWebRequest(req, bodyBuffer),
+			raw: this.buildWebRequest(req, reply, bodyBuffer),
 		}
 	}
 
-	private buildWebRequest(req: FastifyRequest, body: Buffer): Request {
+	private buildWebRequest(req: FastifyRequest, reply: FastifyReply, body: Buffer): Request {
 		const url = this.fullUrl(req)
 
 		const webHeaders = new Headers()
@@ -139,8 +139,16 @@ export class FastifyHttpRouter implements HttpRouter {
 		// Hook the Node socket close to a Web AbortSignal so that consumers
 		// using `request.raw.signal` (SSE streams, Better Auth) detect client
 		// disconnects.
+		//
+		// Listen on the RESPONSE, not the request: `req.raw`'s 'close' fires as soon as the
+		// request stream is fully read — which for any body-carrying request is BEFORE the
+		// controller runs. Any consumer that forwards this signal to an upstream fetch (the
+		// service proxy) would see every POST born aborted. The response socket only closes
+		// early on a genuine client disconnect, so `writableFinished` discriminates the two.
 		const ac = new AbortController()
-		req.raw.once('close', () => ac.abort())
+		reply.raw.once('close', () => {
+			if (!reply.raw.writableFinished) ac.abort()
+		})
 
 		const method = req.method.toUpperCase()
 		const hasBody = !['GET', 'HEAD'].includes(method) && body.length > 0
