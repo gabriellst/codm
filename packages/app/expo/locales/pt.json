@@ -11,9 +11,9 @@
 		"yesterday": "Ontem"
 	},
 	"errors": {
-		"title": "Algo deu errado",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
 		"CHECKOUT_SESSION_REF_REQUIRED": "A referência da sessão de checkout é obrigatória.",
+		"CLASSIFICATION_FAILED": "Não foi possível classificar a mensagem.",
 		"COMMAND_HANDLER_NOT_FOUND": "Erro interno ao processar a operação. Tente novamente em instantes.",
 		"COMMAND_QUEUE_NOT_FOUND": "Erro interno ao enfileirar a operação. Tente novamente em instantes.",
 		"CREDENTIAL_DECRYPT_FAILED": "Não foi possível ler as credenciais armazenadas. Contate o suporte.",
@@ -71,15 +71,20 @@
 		"PLAN_NOT_FOUND": "Plano não encontrado.",
 		"PROVIDER_CAPABILITY_UNSUPPORTED": "O provedor de pagamento não suporta esta operação.",
 		"PROVIDER_ERROR": "O provedor de pagamento retornou um erro. Tente novamente em instantes.",
+		"PROVIDER_NOT_DETECTED": "Provedor de agente não detectado.",
 		"QUOTA_LIMIT_EXCEEDED": "Limite do plano atingido. Faça upgrade para continuar.",
 		"RATE_LIMITED": "Muitas tentativas. Aguarde um momento e tente novamente.",
 		"RESOURCE_LOCKED_BY_PLAN": "Este recurso está bloqueado pelo seu plano atual.",
+		"SESSION_ALREADY_STREAMING": "Esta sessão já está sendo transmitida.",
 		"SESSION_EXPIRED": "Sua sessão expirou. Faça login novamente.",
 		"SUBSCRIPTION_ALREADY_EXISTS": "Já existe uma assinatura ativa.",
 		"SUBSCRIPTION_ALREADY_FINALIZED": "Esta assinatura já foi finalizada.",
 		"SUBSCRIPTION_NOT_FOUND": "Assinatura não encontrada.",
 		"SUBSCRIPTION_NOT_SCHEDULED_FOR_CANCELLATION": "Esta assinatura não está agendada para cancelamento.",
 		"SUBSCRIPTION_PENDING_CANCELLATION": "Esta assinatura está com cancelamento pendente.",
+		"TERMINAL_ALREADY_RUNNING": "Já existe uma sessão de terminal ativa para esta issue.",
+		"TERMINAL_SPAWN_FAILED": "Falha ao iniciar a sessão de terminal.",
+		"TOO_MANY_TERMINAL_STREAMS": "Muitas sessões de terminal simultâneas.",
 		"UNAUTHORIZED": "Não autorizado.",
 		"UNKNOWN_ERROR": "Algo deu errado. Tente novamente.",
 		"USER_ALREADY_EXISTS": "Já existe uma conta com este email.",
@@ -87,7 +92,8 @@
 		"VALIDATION_ERROR": "Alguns campos são inválidos.",
 		"WEAK_PASSWORD": "Senha muito fraca. Use letras, números e símbolos.",
 		"WEBHOOK_SIGNATURE_INVALID": "Assinatura de webhook inválida.",
-		"WEBHOOK_SOURCE_UNKNOWN": "Origem de webhook desconhecida."
+		"WEBHOOK_SOURCE_UNKNOWN": "Origem de webhook desconhecida.",
+		"title": "Algo deu errado"
 	},
 	"screenError": {
 		"message": "Não foi possível carregar. Tente novamente em instantes."

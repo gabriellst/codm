@@ -25,12 +25,14 @@ import type { ContextModule } from '@shared/contexts'
 import SharedRouter from '@shared/index'
 import AuthRouter from '@auth/index'
 import OwnerRouter from '@owner/index'
+import TerminalRouter from '@terminal/index'
 import UiRouter from '@ui/index'
 
 const ROUTERS = {
 	shared: SharedRouter,
 	auth: AuthRouter,
 	owner: OwnerRouter,
+	terminal: TerminalRouter,
 	ui: UiRouter,
 } satisfies Record<ContextModule, Router>
 

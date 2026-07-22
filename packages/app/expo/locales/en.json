@@ -11,9 +11,9 @@
 		"yesterday": "Yesterday"
 	},
 	"errors": {
-		"title": "Something went wrong",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHECKOUT_SESSION_REF_REQUIRED": "The checkout session reference is required.",
+		"CLASSIFICATION_FAILED": "Could not classify the message.",
 		"COMMAND_HANDLER_NOT_FOUND": "Internal error while processing the operation. Try again shortly.",
 		"COMMAND_QUEUE_NOT_FOUND": "Internal error while queuing the operation. Try again shortly.",
 		"CREDENTIAL_DECRYPT_FAILED": "Stored credentials could not be read. Contact support.",
@@ -71,15 +71,20 @@
 		"PLAN_NOT_FOUND": "Plan not found.",
 		"PROVIDER_CAPABILITY_UNSUPPORTED": "The payment provider does not support this operation.",
 		"PROVIDER_ERROR": "The payment provider returned an error. Try again shortly.",
+		"PROVIDER_NOT_DETECTED": "Agent provider not detected.",
 		"QUOTA_LIMIT_EXCEEDED": "Plan limit reached. Upgrade to continue.",
 		"RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
 		"RESOURCE_LOCKED_BY_PLAN": "This resource is locked by your current plan.",
+		"SESSION_ALREADY_STREAMING": "This session is already streaming.",
 		"SESSION_EXPIRED": "Your session has expired. Please sign in again.",
 		"SUBSCRIPTION_ALREADY_EXISTS": "An active subscription already exists.",
 		"SUBSCRIPTION_ALREADY_FINALIZED": "This subscription has already been finalized.",
 		"SUBSCRIPTION_NOT_FOUND": "Subscription not found.",
 		"SUBSCRIPTION_NOT_SCHEDULED_FOR_CANCELLATION": "This subscription is not scheduled for cancellation.",
 		"SUBSCRIPTION_PENDING_CANCELLATION": "This subscription is pending cancellation.",
+		"TERMINAL_ALREADY_RUNNING": "A terminal session is already running for this issue.",
+		"TERMINAL_SPAWN_FAILED": "Failed to start the terminal session.",
+		"TOO_MANY_TERMINAL_STREAMS": "Too many concurrent terminal streams.",
 		"UNAUTHORIZED": "Unauthorized.",
 		"UNKNOWN_ERROR": "Something went wrong. Please try again.",
 		"USER_ALREADY_EXISTS": "An account with this email already exists.",
@@ -87,7 +92,8 @@
 		"VALIDATION_ERROR": "Some fields are invalid.",
 		"WEAK_PASSWORD": "Password too weak. Use letters, numbers and symbols.",
 		"WEBHOOK_SIGNATURE_INVALID": "Invalid webhook signature.",
-		"WEBHOOK_SOURCE_UNKNOWN": "Unknown webhook source."
+		"WEBHOOK_SOURCE_UNKNOWN": "Unknown webhook source.",
+		"title": "Something went wrong"
 	},
 	"screenError": {
 		"message": "Couldn't load. Try again in a moment."

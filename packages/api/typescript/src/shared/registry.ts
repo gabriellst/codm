@@ -75,6 +75,7 @@ const ClientToken = Client as unknown as abstract new (...args: any[]) => Client
 
 import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
+import { INSTANCE_REGISTRY as terminalRegistry } from '@terminal/registry'
 import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
 
 // Lazy singleton resolver for the `real` LoggingService binding below — see LoggingBinding.ts for why
@@ -156,6 +157,7 @@ const CONTEXT_REGISTRIES = {
 	shared: CORE_REGISTRY,
 	auth: authRegistry,
 	owner: ownerRegistry,
+	terminal: terminalRegistry,
 	ui: uiRegistry,
 } satisfies Record<ContextModule, InstanceRegistry>
 

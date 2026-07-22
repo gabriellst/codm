@@ -21,6 +21,11 @@ export const CONTEXTS = {
 	auth: { pgSchema: 'authentication' },
 	owner: { pgSchema: 'owner' },
 	shared: { pgSchema: 'shared' },
+	// terminal (agent-runtime) — the Phase-5 terminal engine: runtime spine + PTY runner + provider
+	// detection + classification service. Runtime + services only, owns NO tables (its outbound facts
+	// are the frozen `integration.issue.*` events on the shared outbox), so pgSchema is null like ui.
+	// The BC5 Issue AGGREGATE + its `issue` schema (still in PENDING_PGSCHEMAS) land in a later phase.
+	terminal: { pgSchema: null },
 	ui: { pgSchema: null },
 } as const satisfies Record<string, ContextDecl>
 
