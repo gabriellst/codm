@@ -1,12 +1,10 @@
-import os from 'node:os'
-import path from 'node:path'
-import fs from 'node:fs'
 import type { DependencyContainer } from 'tsyringe-neo'
 import type { ContextModule } from './contexts'
 import {
 	type InstanceRegistry,
 	expandBindings,
 	PGliteDriver,
+	resolveDataDir,
 	DrizzleDatabaseDriver,
 	DrizzleClient,
 	UnitOfWorkFactory,
@@ -84,22 +82,27 @@ import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
 // and boot must fall back to MockLoggingService when OTEL_COLLECTOR_LOG_URL is unset).
 const resolveRealLoggingService = createLoggingServiceFactory()
 
-/**
- * Resolve the configured data dir to an absolute path (expanding a leading `~` to $HOME) and ensure
- * it exists before PGlite opens it. Composition-root responsibility: turn the Config string into the
- * concrete filesystem location the file-backed driver mounts.
- */
-function resolveDataDir(raw: string): string {
-	const expanded = raw.startsWith('~') ? path.join(os.homedir(), raw.slice(1)) : path.resolve(raw)
-	fs.mkdirSync(expanded, { recursive: true })
-	return expanded
-}
-
 // Factories shared by more than one env column below.
 const pgliteDriver = { useFactory: () => new PGliteDriver({ schema, migrationsDir }) }
 // Real persistence: embedded, FILE-BACKED PGlite rooted at CODEDM_DATA_DIR (founder decision 3 —
 // 2 processes, embedded DB, no external Postgres). Migrations apply on boot (see shared/index.ts).
-const filePgliteDriver = { useFactory: () => new PGliteDriver({ schema, migrationsDir, dataDir: resolveDataDir(Config.env.CODEDM_DATA_DIR) }) }
+//
+// CODEGEN CARVE-OUT — under EMIT_OPENAPI the real driver must be INERT: `bun sdk`/emit-openapi
+// imports the composition root only to collect routers, and Router.registerControllers eagerly
+// resolves every controller (→ its query use cases → this driver). Constructing the file-backed
+// driver there calls resolveDataDir (mkdir CODEDM_DATA_DIR) + acquireDataDirLock — and with a live
+// `bun dev` daemon holding the lock on the default dir, the lock throws DataDirLockedError, which
+// Router's try/catch swallows → the controller is silently DROPPED from openapi.json + the SDK.
+// So during emission we fall back to the in-memory driver (no dataDir → no lock, no mkdir), exactly
+// as the pre-phase-2 NodePgDriver was inert during codegen. The shared/index setup guard already
+// skips migrations/memoization under EMIT_OPENAPI, but it cannot cover controller resolution — this
+// binding-level carve-out is what keeps codegen from ever touching the real persistence path.
+const filePgliteDriver = {
+	useFactory: () =>
+		process.env.EMIT_OPENAPI === 'true'
+			? new PGliteDriver({ schema, migrationsDir })
+			: new PGliteDriver({ schema, migrationsDir, dataDir: resolveDataDir(Config.env.CODEDM_DATA_DIR) }),
+}
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
 const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }
 const stubSdkClient = { useFactory: () => mockSdkClient() }

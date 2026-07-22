@@ -1,4 +1,6 @@
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
 /**
  * Thrown when a second daemon tries to open a data dir that a LIVE process already holds. Named so
@@ -28,6 +30,18 @@ export class DataDirLockedError extends Error {
  */
 function lockPathFor(dataDir: string): string {
 	return `${dataDir}.lock`
+}
+
+/**
+ * Resolve a configured data dir to an absolute path (expanding a leading `~` to $HOME) and ensure it
+ * exists on disk before PGlite opens it. Lives here (next to the lock) so BOTH the composition-root
+ * driver binding and the early boot-time lock step (src/index.ts) resolve the SAME concrete path —
+ * the lock's sibling `<dataDir>.lock` and the driver's `new PGlite(dataDir)` must agree exactly.
+ */
+export function resolveDataDir(raw: string): string {
+	const expanded = raw.startsWith('~') ? path.join(os.homedir(), raw.slice(1)) : path.resolve(raw)
+	fs.mkdirSync(expanded, { recursive: true })
+	return expanded
 }
 
 /** True when `pid` names a process that is currently alive (signal 0 probes without delivering). */
@@ -60,6 +74,11 @@ export function acquireDataDirLock(dataDir: string): void {
 		if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
 
 		const holder = Number.parseInt(fs.readFileSync(lockPath, 'utf-8').trim(), 10)
+		// Idempotent for THIS process: the lock is acquired once at an early boot step (src/index.ts)
+		// and again when the memoized PGliteDriver constructs — same pid means we already own it, so
+		// this is a no-op (no re-throw, no duplicate exit handler). Only a DIFFERENT live pid is a
+		// genuine second daemon and must fail loud.
+		if (holder === process.pid) return
 		if (isProcessAlive(holder)) throw new DataDirLockedError(dataDir, holder)
 
 		// Stale lock (previous daemon crashed without cleanup) — reclaim it. The retry is still O_EXCL,
@@ -86,4 +105,14 @@ export function acquireDataDirLock(dataDir: string): void {
 		}
 	}
 	process.once('exit', release)
+	// `exit` does NOT fire on an unhandled SIGINT (Ctrl-C) / SIGTERM (kill, container stop) — without
+	// these the lockfile would survive a clean signal shutdown and the NEXT boot would pay a reclaim
+	// round-trip (stale-lock detection) before proceeding. Release synchronously, then re-raise the
+	// default disposition so exit codes/behaviour are unchanged.
+	for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+		process.once(signal, () => {
+			release()
+			process.exit(signal === 'SIGINT' ? 130 : 143)
+		})
+	}
 }
