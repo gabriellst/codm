@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
-const MODES: { value: ThreadMode; label: string }[] = [
-	{ value: 'STEER', label: 'Whisper' },
-	{ value: 'DIRECT', label: 'Direct' },
+const MODES: { value: ThreadMode; labelKey: string }[] = [
+	{ value: 'STEER', labelKey: 'session.modeWhisper' },
+	{ value: 'DIRECT', labelKey: 'session.modeDirect' },
 ]
 
 /**
@@ -52,7 +52,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 							mode === m.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
 						)}
 					>
-						{m.label}
+						{t(m.labelKey)}
 					</button>
 				))}
 			</div>
@@ -66,7 +66,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 							send()
 						}
 					}}
-					placeholder={mode === 'STEER' ? 'Whisper a steer to the agents…' : 'Reply in the channel…'}
+					placeholder={mode === 'STEER' ? t('session.composerPlaceholderSteer') : t('session.composerPlaceholderDirect')}
 					className="min-h-10 flex-1 resize-none border-0 bg-transparent focus-visible:ring-0"
 				/>
 				<Button size="icon" aria-label={t('session.send')} disabled={!text.trim() || pending} onClick={send}>
@@ -74,7 +74,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 				</Button>
 			</div>
 			<p className="px-1 text-xs text-muted-foreground">
-				{String(mode === 'STEER' ? 'Whispers reach agents only — never sent to the channel.' : 'Direct replies are sent to the channel as you.')}
+				{mode === 'STEER' ? t('session.composerSteerHint') : t('session.composerDirectHint')}
 			</p>
 		</div>
 	)

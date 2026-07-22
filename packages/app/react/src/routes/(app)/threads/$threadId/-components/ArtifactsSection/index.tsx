@@ -5,7 +5,7 @@ import { useListArtifacts } from '@codedm/client-typescript/typescript'
 import type { ArtifactKind, ListArtifactsQueryResponse } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
-import { artifactKindLabel } from '@/components/console/glyphs'
+import { enumLabel } from '@/lib'
 
 type Artifact = ListArtifactsQueryResponse['artifacts'][number]
 
@@ -63,7 +63,7 @@ function ArtifactCard({ artifact }: { artifact: Artifact }) {
 				<div className="flex min-w-0 flex-1 flex-col">
 					<span className="truncate font-medium text-foreground">{artifact.name}</span>
 					<span className="truncate text-sm text-muted-foreground">
-						{artifactKindLabel[artifact.kind]} · {artifact.meta}
+						{enumLabel('ArtifactKind', artifact.kind)} · {artifact.meta}
 					</span>
 				</div>
 			</div>

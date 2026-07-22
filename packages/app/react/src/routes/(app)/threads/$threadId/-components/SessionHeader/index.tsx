@@ -14,14 +14,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useServerEvents } from '@/hooks'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
-import { Dot, threadStatusLabel } from '@/components/console/StatusDot'
+import { enumLabel } from '@/lib'
+import { Dot } from '@/components/console/StatusDot'
 import { channelLabel, providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { ThreadSettingsDialog } from '../ThreadSettingsDialog'
 
 const TABS = [
-	{ label: 'Chat', to: '/threads/$threadId' as const },
-	{ label: 'Issues', to: '/threads/$threadId/issues' as const },
-	{ label: 'Artifacts', to: '/threads/$threadId/artifacts' as const },
+	{ labelKey: 'session.tabChat', to: '/threads/$threadId' as const },
+	{ labelKey: 'session.tabIssues', to: '/threads/$threadId/issues' as const },
+	{ labelKey: 'session.tabArtifacts', to: '/threads/$threadId/artifacts' as const },
 ]
 
 /** The session masthead shared by the Chat / Issues / Artifacts tabs: identity, control-plane state, tab switcher. */
@@ -81,7 +82,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 								activeTab === tab.to ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
 							)}
 						>
-							{tab.label}
+							{t(tab.labelKey)}
 						</Link>
 					))}
 				</div>
@@ -116,7 +117,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 										: 'bg-muted-foreground/40'
 							}
 						/>
-						{threadStatusLabel[data.thread.status]}
+						{enumLabel('ThreadStatus', data.thread.status)}
 					</span>
 
 					{data.paused ? (

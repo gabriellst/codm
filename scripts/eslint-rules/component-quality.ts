@@ -52,9 +52,7 @@ export const buttonNeedsHandler = createRule({
 				// disabled placeholders / loading buttons are intentionally inert — not the defect.
 				if (names.has('disabled')) return
 				if ([...names].some(n => ACTION_ATTRS.has(n))) return
-				const isSubmit = named.some(
-					a => a.name.name === 'type' && a.value?.type === 'Literal' && a.value.value === 'submit',
-				)
+				const isSubmit = named.some(a => a.name.name === 'type' && a.value?.type === 'Literal' && a.value.value === 'submit')
 				if (isSubmit) return
 				context.report({ node, messageId: 'deadButton' })
 			},
@@ -70,14 +68,39 @@ const HAS_LETTER = /[A-Za-zÀ-ÿ]/
 const KEY_LIKE = /^[\w-]+(\.[\w-]+)+$/
 const isDisplayText = (s: string) => HAS_LETTER.test(s) && !KEY_LIKE.test(s.trim())
 
+// A string-literal leaf reached in a JSX-child expression position is display text that bypassed
+// t() — the `{cond ? 'Connected' : 'Not connected'}` / `{String(x ? 'A' : 'B')}` family the plain
+// JSXText visitor can't see. Recurse through the shapes that still land a literal in the child slot:
+// ConditionalExpression (both arms), LogicalExpression (either side), and String(...)/x.toString()
+// wrappers (the greppable enum-widening opt-out, often masking a hardcoded label). Anything else
+// (identifiers, member access, t(...) calls, template literals) is not a bare literal and passes.
+function hasDisplayLiteral(node: TSESTree.Expression | TSESTree.PrivateIdentifier): boolean {
+	switch (node.type) {
+		case 'Literal':
+			return typeof node.value === 'string' && isDisplayText(node.value)
+		case 'ConditionalExpression':
+			return hasDisplayLiteral(node.consequent) || hasDisplayLiteral(node.alternate)
+		case 'LogicalExpression':
+			return hasDisplayLiteral(node.left) || hasDisplayLiteral(node.right)
+		case 'CallExpression': {
+			const c = node.callee
+			const isStringCall = c.type === 'Identifier' && c.name === 'String'
+			const isToString = c.type === 'MemberExpression' && c.property.type === 'Identifier' && c.property.name === 'toString'
+			return (isStringCall || isToString) && node.arguments.some(a => a.type !== 'SpreadElement' && hasDisplayLiteral(a))
+		}
+		default:
+			return false
+	}
+}
+
 export const noHardcodedJsxText = createRule({
 	name: 'no-hardcoded-jsx-text',
 	meta: {
 		type: 'problem',
 		docs: { description: 'Disallow hardcoded user-facing text in JSX — use i18n t(...)' },
 		messages: {
-			text: 'Hardcoded UI text — wrap it in i18n: t(\'<key>\'). Inline literals bypass the typed catalog and ship untranslated in one locale.',
-			attr: 'Hardcoded {{attr}} text — use t(\'<key>\'). User-facing attribute strings must go through i18n, never an inline literal.',
+			text: "Hardcoded UI text — wrap it in i18n: t('<key>'). Inline literals bypass the typed catalog and ship untranslated in one locale.",
+			attr: "Hardcoded {{attr}} text — use t('<key>'). User-facing attribute strings must go through i18n, never an inline literal.",
 		},
 		schema: [],
 	},
@@ -87,6 +110,13 @@ export const noHardcodedJsxText = createRule({
 			JSXText(node) {
 				if (!isDisplayText(node.value)) return // whitespace / punctuation / numbers / i18n-key only
 				context.report({ node, messageId: 'text' })
+			},
+			JSXExpressionContainer(node) {
+				// Only a JSX-CHILD expression (parent is an element/fragment) renders as text; the same
+				// container in an attribute (`prop={...}`) is not display text and is handled elsewhere.
+				if (node.parent.type !== 'JSXElement' && node.parent.type !== 'JSXFragment') return
+				if (node.expression.type === 'JSXEmptyExpression') return
+				if (hasDisplayLiteral(node.expression)) context.report({ node: node.expression, messageId: 'text' })
 			},
 			JSXAttribute(node) {
 				if (node.name.type !== 'JSXIdentifier' || !USER_FACING_ATTRS.has(node.name.name)) return

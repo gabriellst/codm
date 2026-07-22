@@ -7,16 +7,18 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { enumLabel } from '@/lib'
 import { useServerEvents } from '@/hooks'
 import { greeting } from '@/components/console/time'
-import { channelGlyph, channelLabel, stopLabel } from '@/components/console/glyphs'
-import { Dot, ThreadStatusDot, threadStatusLabel } from '@/components/console/StatusDot'
+import { channelGlyph, channelLabel } from '@/components/console/glyphs'
+import { Dot, ThreadStatusDot } from '@/components/console/StatusDot'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 
 type Dashboard = GetHomeDashboardQueryResponse
 
 /** The operating overview (T03): agents live, who needs you, active sessions, today's numbers, channel health. */
 export function HomeDashboard() {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetHomeDashboard()
 
@@ -27,8 +29,7 @@ export function HomeDashboard() {
 	if (isLoading || !data) return <DashboardSkeleton />
 
 	const running = data.agentsRunningNow
-	const headline =
-		running === 0 ? 'No agents working right now' : running === 1 ? '1 agent working right now' : `${running} agents working right now`
+	const headline = running === 0 ? t('dashboard.agentsWorkingNone') : t('dashboard.agentsWorking', { count: running })
 
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10">
@@ -54,7 +55,7 @@ export function HomeDashboard() {
 
 function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsYou']> }) {
 	const { t } = useTranslation()
-	const detail = needsYou.stopKinds.map(k => stopLabel[k]).join(' · ') || t('session.agentStopped')
+	const detail = needsYou.stopKinds.map(k => enumLabel('StopKind', k)).join(' · ') || t('session.agentStopped')
 	return (
 		<Card className="border-warning/50">
 			<CardContent className="flex items-center gap-4 p-5">
@@ -101,7 +102,7 @@ function ActiveSessions({ sessions }: { sessions: Dashboard['activeSessions'] })
 								)}
 							>
 								<ThreadStatusDot status={session.status} />
-								{threadStatusLabel[session.status]}
+								{enumLabel('ThreadStatus', session.status)}
 							</span>
 						</Link>
 					))}
@@ -180,7 +181,7 @@ function ChannelsCard({ channels }: { channels: Dashboard['channels'] }) {
 							<span className="flex-1 text-sm font-medium text-foreground">{channelLabel[channel.kind]}</span>
 							<span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
 								<Dot className={connected ? 'bg-success' : 'bg-muted-foreground/40'} />
-								{String(connected ? 'Connected' : 'Not connected')}
+								{enumLabel('ChannelStatus', channel.status)}
 							</span>
 						</div>
 					)

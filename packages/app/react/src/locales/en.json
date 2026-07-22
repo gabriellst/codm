@@ -129,6 +129,7 @@
 		"yourChannels": "Your channels"
 	},
 	"common": {
+		"anonymous": "Anonymous",
 		"back": "Back",
 		"breadcrumbLabel": "Breadcrumb",
 		"cancel": "Cancel",
@@ -164,6 +165,9 @@
 	},
 	"dashboard": {
 		"activeSessions": "Active sessions",
+		"agentsWorkingNone": "No agents working right now",
+		"agentsWorking_one": "{{count}} agent working right now",
+		"agentsWorking_other": "{{count}} agents working right now",
 		"channels": "Channels",
 		"issuesClosed": "Issues closed",
 		"issuesOpened": "Issues opened",
@@ -180,6 +184,16 @@
 		"itemsPerPage": "items per page"
 	},
 	"enums": {
+		"ArtifactKind": {
+			"FILE": "File",
+			"IMAGE": "Screenshot",
+			"LINK": "Preview deploy"
+		},
+		"ChannelStatus": {
+			"CONNECTED": "Connected",
+			"DISCONNECTED": "Not connected",
+			"PAIRING": "Pairing…"
+		},
 		"CurrencyCode": {
 			"AED": "UAE Dirham (AED)",
 			"ALL": "Albanian Lek (ALL)",
@@ -262,6 +276,11 @@
 			"ZAR": "South African Rand (ZAR)",
 			"ZMW": "Zambian Kwacha (ZMW)"
 		},
+		"IssueStatus": {
+			"COMPLETED": "Completed",
+			"NEEDS_INPUT": "Needs input",
+			"WORKING": "Working"
+		},
 		"Language": {
 			"en-US": "English (US)",
 			"pt-BR": "Português (Brasil)"
@@ -274,6 +293,33 @@
 			"ORDER_RECEIVED": "Order received",
 			"OTHER": "Other",
 			"SYNC_ERROR": "Sync error"
+		},
+		"ProviderStatus": {
+			"DETECTED": "Detected",
+			"NOT_INSTALLED": "Not installed"
+		},
+		"StopKind": {
+			"APPROVAL_NEEDED": "Approval needed",
+			"BLOCKED_BY_CLASSIFICATION": "Blocked",
+			"HUMAN_REQUESTED": "Human requested",
+			"SERVER_ERROR": "Server error"
+		},
+		"StopResolution": {
+			"APPROVE": "Approve",
+			"DENY": "Deny",
+			"RETRY": "Retry",
+			"REVIEW_AND_SEND": "Review & send",
+			"TAKE_OVER": "Take over"
+		},
+		"ThreadStatus": {
+			"IDLE": "Idle",
+			"NEEDS_ATTENTION": "Needs attention",
+			"PAUSED": "Paused",
+			"RUNNING": "Running"
+		},
+		"WorkspaceBadge": {
+			"CLAUDE_PROJECT": "Claude project",
+			"GIT": "git"
 		}
 	},
 	"errors": {
@@ -399,6 +445,9 @@
 		"archived": "Archived",
 		"emptyDescription": "Issues appear here once your agents start working on routed messages.",
 		"emptyTitle": "No issues yet",
+		"hideArchived": "Hide archived",
+		"showArchived": "Show archived",
+		"statsLine": "{{awaitingInput}} awaiting input · {{working}} working · {{completed}} completed · {{archived}} archived",
 		"title": "Issues"
 	},
 	"nav": {
@@ -436,6 +485,10 @@
 		"canInvoke": "{{count}} can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
 		"chatEmptyTitle": "No messages yet",
+		"composerDirectHint": "Direct replies are sent to the channel as you.",
+		"composerPlaceholderDirect": "Reply in the channel…",
+		"composerPlaceholderSteer": "Whisper a steer to the agents…",
+		"composerSteerHint": "Whispers reach agents only — never sent to the channel.",
 		"contextBuffer": "Context buffer",
 		"contextBufferHint": "How many recent messages agents see as context.",
 		"issuesEmptyDescription": "Routed messages that spawn work will show up here as issues.",
@@ -444,6 +497,8 @@
 		"mentionTag": "Mention tag",
 		"mentionTagPlaceholder": "@codedm",
 		"messagesRoutedHere": "Messages routed here",
+		"modeDirect": "Direct",
+		"modeWhisper": "Whisper",
 		"needsYou": "Needs you",
 		"onlyWhenMentioned": "Only reply when mentioned",
 		"onlyWhenMentionedHint": "Otherwise agents respond to every message in the thread.",
@@ -457,6 +512,9 @@
 		"steer": "Steer",
 		"steerHint": "Steers reach the agent working this issue only.",
 		"steerPlaceholder": "Steer this issue…",
+		"tabArtifacts": "Artifacts",
+		"tabChat": "Chat",
+		"tabIssues": "Issues",
 		"terminalSession": "Terminal session",
 		"threadSettings": "Thread settings",
 		"transcriptIssue": "issue",
@@ -473,11 +531,14 @@
 		"addDescription": "Point at a project folder on this Mac. Git and Claude-project badges are detected automatically.",
 		"addFolder": "Add folder",
 		"addTitle": "Add a workspace",
+		"adding": "Adding…",
 		"emptyDescription": "Add a project folder and CodeDM will detect its git repo and Claude project.",
 		"emptyTitle": "No workspaces yet",
 		"pathPlaceholder": "~/dev/acme-storefront",
 		"projectFolder": "Project folder",
 		"projectFolders": "Project folders",
+		"threadCount_one": "{{count}} thread",
+		"threadCount_other": "{{count}} threads",
 		"title": "Workspaces"
 	},
 	"zod": {

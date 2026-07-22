@@ -1,4 +1,5 @@
 import { type ComponentProps } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn, getInitials } from '@/lib/utils'
 
@@ -7,9 +8,10 @@ interface UserProfileProps extends ComponentProps<'div'> {
 }
 
 export function UserProfile({ user, className, ...props }: UserProfileProps) {
+	const { t } = useTranslation()
 	if (!user) return null
 
-	const name = user.name ?? 'Anonymous'
+	const name = user.name ?? t('common.anonymous')
 	const picture = user.image ?? null
 
 	return (

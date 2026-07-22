@@ -4,7 +4,7 @@ import { useGetIssuesOverview } from '@codedm/client-typescript/typescript'
 import type { IssueStatus } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
 import { IssueRow } from '@/components/console/IssueRow'
-import { issueGroupLabel } from '@/components/console/glyphs'
+import { enumLabel } from '@/lib'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
@@ -21,7 +21,12 @@ export function IssuesOverviewSection() {
 
 	const stats = data?.statsLine
 	const subtitle = stats
-		? `${stats.awaitingInput} awaiting input · ${stats.working} working · ${stats.completed} completed · ${stats.archived} archived`
+		? t('issues.statsLine', {
+				awaitingInput: stats.awaitingInput,
+				working: stats.working,
+				completed: stats.completed,
+				archived: stats.archived,
+			})
 		: undefined
 
 	const orderedGroups = STATUS_ORDER.map(status => data?.groups.find(g => g.status === status)).filter(
@@ -35,7 +40,7 @@ export function IssuesOverviewSection() {
 				subtitle={subtitle ?? <Skeleton className="h-4 w-64" />}
 				action={
 					<Button variant={archived ? 'secondary' : 'outline'} size="sm" render={<Link to="/issues" search={{ archived: !archived }} />}>
-						{String(archived ? 'Hide archived' : 'Show archived')}
+						{archived ? t('issues.hideArchived') : t('issues.showArchived')}
 					</Button>
 				}
 			/>
@@ -55,7 +60,7 @@ export function IssuesOverviewSection() {
 				<div className="flex flex-col gap-8">
 					{orderedGroups.map(group => (
 						<section key={group.status} className="flex flex-col gap-1">
-							<h2 className="label-eyebrow px-2 pb-1">{issueGroupLabel[group.status]}</h2>
+							<h2 className="label-eyebrow px-2 pb-1">{enumLabel('IssueStatus', group.status)}</h2>
 							{group.items.map(item => (
 								<IssueRow key={item.issueId} item={item} />
 							))}

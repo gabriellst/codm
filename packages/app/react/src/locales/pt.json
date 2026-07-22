@@ -129,6 +129,7 @@
 		"yourChannels": "Seus canais"
 	},
 	"common": {
+		"anonymous": "Anônimo",
 		"back": "Voltar",
 		"breadcrumbLabel": "Trilha de navegação",
 		"cancel": "Cancelar",
@@ -164,6 +165,9 @@
 	},
 	"dashboard": {
 		"activeSessions": "Sessões ativas",
+		"agentsWorkingNone": "Nenhum agente trabalhando agora",
+		"agentsWorking_one": "{{count}} agente trabalhando agora",
+		"agentsWorking_other": "{{count}} agentes trabalhando agora",
 		"channels": "Canais",
 		"issuesClosed": "Tarefas fechadas",
 		"issuesOpened": "Tarefas abertas",
@@ -180,6 +184,16 @@
 		"itemsPerPage": "itens por página"
 	},
 	"enums": {
+		"ArtifactKind": {
+			"FILE": "Arquivo",
+			"IMAGE": "Captura de tela",
+			"LINK": "Deploy de preview"
+		},
+		"ChannelStatus": {
+			"CONNECTED": "Conectado",
+			"DISCONNECTED": "Não conectado",
+			"PAIRING": "Pareando…"
+		},
 		"CurrencyCode": {
 			"AED": "Dirham (AED)",
 			"ALL": "Lek albanês (ALL)",
@@ -262,6 +276,11 @@
 			"ZAR": "Rand sul-africano (ZAR)",
 			"ZMW": "Kwacha zambiano (ZMW)"
 		},
+		"IssueStatus": {
+			"COMPLETED": "Concluída",
+			"NEEDS_INPUT": "Precisa de entrada",
+			"WORKING": "Em andamento"
+		},
 		"Language": {
 			"en-US": "English (US)",
 			"pt-BR": "Português (Brasil)"
@@ -274,6 +293,33 @@
 			"ORDER_RECEIVED": "Pedido recebido",
 			"OTHER": "Outro",
 			"SYNC_ERROR": "Erro de sincronização"
+		},
+		"ProviderStatus": {
+			"DETECTED": "Detectado",
+			"NOT_INSTALLED": "Não instalado"
+		},
+		"StopKind": {
+			"APPROVAL_NEEDED": "Aprovação necessária",
+			"BLOCKED_BY_CLASSIFICATION": "Bloqueada",
+			"HUMAN_REQUESTED": "Humano solicitado",
+			"SERVER_ERROR": "Erro de servidor"
+		},
+		"StopResolution": {
+			"APPROVE": "Aprovar",
+			"DENY": "Negar",
+			"RETRY": "Tentar novamente",
+			"REVIEW_AND_SEND": "Revisar e enviar",
+			"TAKE_OVER": "Assumir"
+		},
+		"ThreadStatus": {
+			"IDLE": "Ocioso",
+			"NEEDS_ATTENTION": "Precisa de atenção",
+			"PAUSED": "Pausado",
+			"RUNNING": "Em execução"
+		},
+		"WorkspaceBadge": {
+			"CLAUDE_PROJECT": "Projeto Claude",
+			"GIT": "git"
 		}
 	},
 	"errors": {
@@ -399,6 +445,9 @@
 		"archived": "Arquivadas",
 		"emptyDescription": "As tarefas aparecem aqui quando seus agentes começam a trabalhar em mensagens encaminhadas.",
 		"emptyTitle": "Nenhuma tarefa ainda",
+		"hideArchived": "Ocultar arquivadas",
+		"showArchived": "Mostrar arquivadas",
+		"statsLine": "{{awaitingInput}} aguardando entrada · {{working}} em andamento · {{completed}} concluídas · {{archived}} arquivadas",
 		"title": "Tarefas"
 	},
 	"nav": {
@@ -436,6 +485,10 @@
 		"canInvoke": "{{count}} podem invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
 		"chatEmptyTitle": "Nenhuma mensagem ainda",
+		"composerDirectHint": "Respostas diretas são enviadas ao canal como você.",
+		"composerPlaceholderDirect": "Responda no canal…",
+		"composerPlaceholderSteer": "Sussurre uma orientação aos agentes…",
+		"composerSteerHint": "Sussurros chegam apenas aos agentes — nunca enviados ao canal.",
 		"contextBuffer": "Buffer de contexto",
 		"contextBufferHint": "Quantas mensagens recentes os agentes veem como contexto.",
 		"issuesEmptyDescription": "Mensagens encaminhadas que geram trabalho aparecerão aqui como tarefas.",
@@ -444,6 +497,8 @@
 		"mentionTag": "Tag de menção",
 		"mentionTagPlaceholder": "@codedm",
 		"messagesRoutedHere": "Mensagens encaminhadas para cá",
+		"modeDirect": "Direto",
+		"modeWhisper": "Sussurro",
 		"needsYou": "Precisa de você",
 		"onlyWhenMentioned": "Responder apenas quando mencionado",
 		"onlyWhenMentionedHint": "Caso contrário, os agentes respondem a todas as mensagens da conversa.",
@@ -457,6 +512,9 @@
 		"steer": "Orientar",
 		"steerHint": "As orientações chegam apenas ao agente que trabalha nesta tarefa.",
 		"steerPlaceholder": "Oriente esta tarefa…",
+		"tabArtifacts": "Artefatos",
+		"tabChat": "Chat",
+		"tabIssues": "Tarefas",
 		"terminalSession": "Sessão de terminal",
 		"threadSettings": "Configurações da conversa",
 		"transcriptIssue": "tarefa",
@@ -473,11 +531,14 @@
 		"addDescription": "Aponte para uma pasta de projeto neste Mac. Selos de Git e de projeto Claude são detectados automaticamente.",
 		"addFolder": "Adicionar pasta",
 		"addTitle": "Adicionar um espaço de trabalho",
+		"adding": "Adicionando…",
 		"emptyDescription": "Adicione uma pasta de projeto e o CodeDM detectará seu repositório git e o projeto Claude.",
 		"emptyTitle": "Nenhum espaço de trabalho ainda",
 		"pathPlaceholder": "~/dev/acme-storefront",
 		"projectFolder": "Pasta do projeto",
 		"projectFolders": "Pastas de projeto",
+		"threadCount_one": "{{count}} conversa",
+		"threadCount_other": "{{count}} conversas",
 		"title": "Espaços de trabalho"
 	},
 	"zod": {

@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { IconFolder } from '@tabler/icons-react'
 import { useListWorkspaces } from '@codedm/client-typescript/typescript'
-import type { ListWorkspacesQueryResponse, WorkspaceBadge } from '@codedm/client-typescript/typescript'
+import type { ListWorkspacesQueryResponse } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
+import { enumLabel } from '@/lib'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
-
-const badgeLabel: Record<WorkspaceBadge, string> = { GIT: 'git', CLAUDE_PROJECT: 'Claude project' }
 
 type Workspace = ListWorkspacesQueryResponse['workspaces'][number]
 
@@ -47,6 +46,7 @@ export function WorkspacesSection() {
 }
 
 function WorkspaceRow({ workspace }: { workspace: Workspace }) {
+	const { t } = useTranslation()
 	return (
 		<div className="flex items-center gap-4 p-4">
 			<span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
@@ -57,14 +57,12 @@ function WorkspaceRow({ workspace }: { workspace: Workspace }) {
 				<div className="flex flex-wrap gap-1.5">
 					{workspace.badges.map(badge => (
 						<Badge key={badge} variant="outline">
-							{badgeLabel[badge]}
+							{enumLabel('WorkspaceBadge', badge)}
 						</Badge>
 					))}
 				</div>
 			</div>
-			<span className="shrink-0 text-sm text-muted-foreground">
-				{workspace.threadCount} {String(workspace.threadCount === 1 ? 'thread' : 'threads')}
-			</span>
+			<span className="shrink-0 text-sm text-muted-foreground">{t('workspaces.threadCount', { count: workspace.threadCount })}</span>
 		</div>
 	)
 }

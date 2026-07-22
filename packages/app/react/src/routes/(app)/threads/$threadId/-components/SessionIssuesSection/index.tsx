@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useGetSessionIssues } from '@codedm/client-typescript/typescript'
 import type { IssueStatus } from '@codedm/client-typescript/typescript'
 import { IssueRow } from '@/components/console/IssueRow'
-import { issueGroupLabel } from '@/components/console/glyphs'
+import { enumLabel } from '@/lib'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 
@@ -44,7 +44,7 @@ export function SessionIssuesSection({ threadId }: { threadId: string }) {
 				<div className="flex flex-col gap-8">
 					{orderedGroups.map(group => (
 						<section key={group.status} className="flex flex-col gap-1">
-							<h2 className="label-eyebrow px-2 pb-1">{issueGroupLabel[group.status]}</h2>
+							<h2 className="label-eyebrow px-2 pb-1">{enumLabel('IssueStatus', group.status)}</h2>
 							{group.items.map(item => (
 								<IssueRow key={item.issueId} item={{ ...item, threadId }} />
 							))}

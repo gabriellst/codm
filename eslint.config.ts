@@ -55,7 +55,7 @@ export default tseslint.config([
 			'local/no-raw-enum-render': ['error', { allowTypes: ['CurrencyCodeEnumKey'] }],
 			// component-quality (warn while we measure/burn down the existing backlog → ratchet to error)
 			'local/button-needs-handler': 'warn',
-			'local/no-hardcoded-jsx-text': 'warn',
+			'local/no-hardcoded-jsx-text': 'error',
 			'@typescript-eslint/no-unused-expressions': 'off',
 			'@typescript-eslint/array-type': 'off',
 			'@typescript-eslint/ban-ts-comment': 'off',

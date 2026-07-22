@@ -68,7 +68,7 @@ export function AddWorkspaceDialog() {
 				<DialogFooter>
 					<DialogClose render={<Button variant="ghost">{t('common.cancel')}</Button>} />
 					<Button onClick={submit} disabled={!path.trim() || addWorkspace.isPending}>
-						{String(addWorkspace.isPending ? 'Adding…' : 'Add folder')}
+						{addWorkspace.isPending ? t('workspaces.adding') : t('workspaces.addFolder')}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

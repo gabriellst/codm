@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { useServerEvents } from '@/hooks'
-import { resolutionIsPrimary, resolutionLabel, stopLabel } from '@/components/console/glyphs'
+import { enumLabel } from '@/lib'
+import { resolutionIsPrimary } from '@/components/console/glyphs'
 
 type Stop = GetNeedsYouPanelQueryResponse['stops'][number]
 
@@ -66,7 +67,7 @@ function StopRow({ threadId, stop }: { threadId: string; stop: Stop }) {
 	return (
 		<div className="flex flex-wrap items-center gap-3 px-5 py-3">
 			<Badge variant="outline" className="shrink-0">
-				{stopLabel[stop.kind]}
+				{enumLabel('StopKind', stop.kind)}
 			</Badge>
 			<div className="flex min-w-0 flex-1 flex-col">
 				<span className="font-medium text-foreground">{stop.title}</span>
@@ -82,7 +83,7 @@ function StopRow({ threadId, stop }: { threadId: string; stop: Stop }) {
 						disabled={resolve.isPending}
 						onClick={() => onResolve(resolution)}
 					>
-						{resolutionLabel[resolution]}
+						{enumLabel('StopResolution', resolution)}
 					</Button>
 				))}
 			</div>

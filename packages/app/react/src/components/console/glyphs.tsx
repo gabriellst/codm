@@ -8,7 +8,7 @@ import {
 	IconTerminal2,
 } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
-import type { ArtifactKind, ChannelKind, IssueStatus, ProviderKind, StopKind, StopResolution } from '@codedm/client-typescript/typescript'
+import type { ChannelKind, IssueStatus, ProviderKind, StopResolution } from '@codedm/client-typescript/typescript'
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
@@ -42,19 +42,10 @@ export const providerLabel: Record<ProviderKind, string> = {
 }
 
 // ── Issues ──────────────────────────────────────────────────────────────────────
-
-export const issueStatusLabel: Record<IssueStatus, string> = {
-	NEEDS_INPUT: 'Needs input',
-	WORKING: 'Working',
-	COMPLETED: 'Completed',
-}
-
-/** Group header caption in the issues lists. */
-export const issueGroupLabel: Record<IssueStatus, string> = {
-	NEEDS_INPUT: 'NEEDS INPUT',
-	WORKING: 'WORKING',
-	COMPLETED: 'COMPLETED',
-}
+// Human labels for IssueStatus / StopKind / StopResolution / ArtifactKind / ThreadStatus live in
+// the typed i18n catalog (`enums.<Enum>.<VALUE>`), rendered via `enumLabel(...)` — never a
+// `Record<Enum,string>` label map in code (react CLAUDE.md bp-23). Only STYLE maps (dot colors,
+// primary/secondary intent) and ICON maps stay here.
 
 /** Small leading dot color per issue status. NEEDS_INPUT uses the asterisk glyph, not a dot. */
 export const issueStatusDot: Record<IssueStatus, string> = {
@@ -64,21 +55,6 @@ export const issueStatusDot: Record<IssueStatus, string> = {
 }
 
 // ── Stops ────────────────────────────────────────────────────────────────────────
-
-export const stopLabel: Record<StopKind, string> = {
-	SERVER_ERROR: 'Server error',
-	BLOCKED_BY_CLASSIFICATION: 'Blocked',
-	HUMAN_REQUESTED: 'Human requested',
-	APPROVAL_NEEDED: 'Approval needed',
-}
-
-export const resolutionLabel: Record<StopResolution, string> = {
-	RETRY: 'Retry',
-	REVIEW_AND_SEND: 'Review & send',
-	TAKE_OVER: 'Take over',
-	APPROVE: 'Approve',
-	DENY: 'Deny',
-}
 
 /** Deny/Take over read as secondary; the rest are the primary black action. */
 export const resolutionIsPrimary: Record<StopResolution, boolean> = {
@@ -90,11 +66,5 @@ export const resolutionIsPrimary: Record<StopResolution, boolean> = {
 }
 
 // ── Artifacts ────────────────────────────────────────────────────────────────────
-
-export const artifactKindLabel: Record<ArtifactKind, string> = {
-	IMAGE: 'Screenshot',
-	FILE: 'File',
-	LINK: 'Preview deploy',
-}
 
 export const emailGlyph = IconMessageDots

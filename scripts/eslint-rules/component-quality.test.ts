@@ -62,4 +62,23 @@ describe('no-hardcoded-jsx-text', () => {
 		expect(count('no-hardcoded-jsx-text', noHardcodedJsxText, 'const a = <Input placeholder="Buscar moeda" />')).toBe(1)
 		expect(count('no-hardcoded-jsx-text', noHardcodedJsxText, 'const a = <button aria-label="Close dialog" />')).toBe(1)
 	})
+	it('flags string-literal display text in JSX-child expressions (ternary / logical / String() wrapper)', () => {
+		expect(count('no-hardcoded-jsx-text', noHardcodedJsxText, "const a = <Badge>{connected ? 'Connected' : 'Not connected'}</Badge>")).toBe(
+			1,
+		)
+		expect(
+			count('no-hardcoded-jsx-text', noHardcodedJsxText, "const a = <Badge>{String(detected ? 'Detected' : 'Not installed')}</Badge>"),
+		).toBe(1)
+		expect(count('no-hardcoded-jsx-text', noHardcodedJsxText, "const a = <span>{name ?? 'Anonymous'}</span>")).toBe(1)
+	})
+	it('allows dynamic expressions, numbers and t() ternaries in JSX children', () => {
+		for (const code of [
+			'const a = <span>{String(count)}</span>', // number → string, no literal display text
+			"const a = <span>{cond ? t('a') : t('b')}</span>", // both arms localized
+			"const a = <span>{value || '—'}</span>", // em dash is not display text
+			'const a = <span>{String(errors[0]?.message ?? "")}</span>', // dynamic message, empty fallback
+		]) {
+			expect(count('no-hardcoded-jsx-text', noHardcodedJsxText, code)).toBe(0)
+		}
+	})
 })

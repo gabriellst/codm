@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
-import { issueStatusLabel } from '@/components/console/glyphs'
+import { enumLabel } from '@/lib'
 import { TranscriptBubble } from '../TranscriptBubble'
 
 type Detail = GetIssueDetailQueryResponse
@@ -64,7 +64,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 				<div className="flex flex-col gap-2">
 					<div className="flex items-center gap-3">
 						<h1 className="heading-display text-2xl text-foreground">{data.issue.title}</h1>
-						<Badge variant="outline">{issueStatusLabel[data.issue.status]}</Badge>
+						<Badge variant="outline">{enumLabel('IssueStatus', data.issue.status)}</Badge>
 					</div>
 					<p className="font-mono text-sm text-muted-foreground">
 						{data.issue.key}
