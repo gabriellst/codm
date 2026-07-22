@@ -18,6 +18,12 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 	owner: {
 		auth: { note: 'OperatorMiddleware / owner tenancy read the session shape (SessionSchema from @auth/schemas).' },
 	},
+	thread: {
+		workspace: { note: 'AttachThread validates the workspace exists via WorkspaceRepository (repositories surface).' },
+		terminal: {
+			note: 'Classification/routing consumes the ProviderDetector + IssueClassifier services (the Router engine lives in the terminal/agent-runtime context).',
+		},
+	},
 	ui: {
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
 	},

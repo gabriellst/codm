@@ -77,6 +77,7 @@ import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
 import { INSTANCE_REGISTRY as terminalRegistry } from '@terminal/registry'
 import { INSTANCE_REGISTRY as workspaceRegistry } from '@workspace/registry'
+import { INSTANCE_REGISTRY as threadRegistry } from '@thread/registry'
 import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
 
 // Lazy singleton resolver for the `real` LoggingService binding below — see LoggingBinding.ts for why
@@ -160,6 +161,7 @@ const CONTEXT_REGISTRIES = {
 	owner: ownerRegistry,
 	terminal: terminalRegistry,
 	workspace: workspaceRegistry,
+	thread: threadRegistry,
 	ui: uiRegistry,
 } satisfies Record<ContextModule, InstanceRegistry>
 

@@ -27,6 +27,7 @@ import AuthRouter from '@auth/index'
 import OwnerRouter from '@owner/index'
 import TerminalRouter from '@terminal/index'
 import WorkspaceRouter from '@workspace/index'
+import ThreadRouter from '@thread/index'
 import UiRouter from '@ui/index'
 
 const ROUTERS = {
@@ -35,6 +36,7 @@ const ROUTERS = {
 	owner: OwnerRouter,
 	terminal: TerminalRouter,
 	workspace: WorkspaceRouter,
+	thread: ThreadRouter,
 	ui: UiRouter,
 } satisfies Record<ContextModule, Router>
 

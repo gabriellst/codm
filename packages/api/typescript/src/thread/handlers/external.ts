@@ -1,0 +1,5 @@
+// External (integration-event) handlers for the thread (BC4 Thread & Routing) context.
+// The inbound ingestion consumer — the phase-6 hard gate: dedup FIRST (UNIQUE(channelId,
+// platformMessageId) INSERT ... ON CONFLICT DO NOTHING) so at-least-once delivery from the gateway
+// becomes exactly-once processing.
+export { ConsumeInboundMessage } from './ConsumeInboundMessage'

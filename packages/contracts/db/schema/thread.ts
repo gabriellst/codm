@@ -115,6 +115,41 @@ export const transcriptEntries = threadSchema.table(
 	}),
 )
 
+/**
+ * `consumed_messages` — the BC4 inbound-message idempotency ledger (phase-6 hard gate). The channel
+ * gateway delivers `integration.channel_message.received` AT LEAST ONCE (Redis PEL redelivery,
+ * boot history-sync replays, retries). This table turns that into EXACTLY-ONCE PROCESSING: the
+ * ingestion consumer does an `INSERT ... ON CONFLICT DO NOTHING` keyed on
+ * `UNIQUE(channel_id, platform_message_id)` and only proceeds when a row was actually inserted; a
+ * redelivery of the same platform message hits the constraint and is a no-op. This is the
+ * idempotent-sink half of "at-least-once delivery + idempotent sinks = exactly-once".
+ */
+export const consumedMessages = threadSchema.table(
+	'consumed_messages',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+
+		ownerId: uuid('owner_id').notNull(),
+
+		// The gateway channel the inbound rode on.
+		channelId: uuid('channel_id').notNull(),
+		// The platform-native message id carried on integration.channel_message.received (WhatsApp
+		// message id, etc.). TEXT — platform ids are opaque strings, not uuids.
+		platformMessageId: text('platform_message_id').notNull(),
+
+		// The thread + transcript entry this message resolved to (set when ingestion succeeds).
+		threadId: uuid('thread_id'),
+		entryId: uuid('entry_id'),
+
+		consumedAt: timestamp('consumed_at', { withTimezone: true }).notNull().defaultNow(),
+	},
+	t => ({
+		// The exactly-once latch: the second delivery of the same (channel, platform message) is a
+		// no-op INSERT ... ON CONFLICT DO NOTHING against this unique constraint.
+		channelMessageUnq: uniqueIndex('consumed_messages_channel_message_unq').on(t.channelId, t.platformMessageId),
+	}),
+)
+
 export const threadClarifications = threadSchema.table(
 	'thread_clarifications',
 	{
