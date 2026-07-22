@@ -15,6 +15,21 @@ const MAX_STREAM_LEN = 10_000
 const READ_COUNT = 32
 const BLOCK_MS = 5_000
 const MAX_DELIVERIES = 5
+// Idle poll when no handler streams are registered yet — the read loop is started BEFORE the
+// bounded contexts register their external handlers (shared/index boots the transport first), so
+// it must pick up streams as handlers arrive rather than snapshotting an empty set once.
+const IDLE_POLL_MS = 200
+
+// Envelope keys the Go egress marshals AROUND the domain payload (the wire struct is flat: the
+// framework fields sit alongside the domain scalars). Everything NOT in this set is a payload field
+// when re-nesting a flat Go wire event into the BaseIntegrationEvent `{ ownerId, payload }` shape.
+const WIRE_ENVELOPE_KEYS = new Set(['name', 'id', 'entityId', 'ownerId', 'occurredAt', 'time'])
+
+// Strict RFC3339 / ISO-8601 datetime (with a time component + zone) — Go marshals `time.Time` this
+// way. Used as a JSON.parse reviver so wire date fields (receivedAt, pairedAt, qrExpiresAt, …)
+// rehydrate to `Date`, which every downstream `z.date()` use-case input requires. Date-only strings
+// and plain IDs never match, so no non-date field is coerced.
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/
 
 type XReadGroupResult = null | [string, [string, string[]][]][]
 
@@ -27,6 +42,9 @@ export class RedisExternalMediator extends ExternalMediator {
 	private handlerMap = new Map<string, Handler[]>()
 	private callbacks = new Set<EventCallback>()
 	private namedCallbacks = new Map<string, Set<EventCallback>>()
+	// Streams whose consumer group has been created on the CURRENT connection. Recomputed each read
+	// pass so streams whose handlers register AFTER start() get their group before the first read.
+	private knownGroups = new Set<string>()
 	private consuming = false
 	private stopped = false
 	private readLoop: Promise<void> | null = null
@@ -47,7 +65,12 @@ export class RedisExternalMediator extends ExternalMediator {
 		this.consuming = false
 		this.stopped = false
 		this.readLoop = null
-		this.handlerMap.clear()
+		// Consumer groups are per-CONNECTION state — a new connection re-ensures them (BUSYGROUP is
+		// tolerated). The handlerMap is NOT cleared here: external handlers are registered by the
+		// bounded-context boot layer INDEPENDENTLY of the transport connect/start lifecycle (and, in
+		// the real composition root, BEFORE the transport is even resolved), so clearing them on
+		// connect would drop the very subscriptions start() needs.
+		this.knownGroups.clear()
 
 		const url = Config.env.REDIS_URL
 		this.groupId = Config.env.API_EVENT_GROUP_ID
@@ -74,13 +97,22 @@ export class RedisExternalMediator extends ExternalMediator {
 	private async startConsuming(): Promise<void> {
 		if (this.consuming) return
 
-		const streams = Array.from(this.handlerMap.keys(), streamKey)
-		if (streams.length === 0) {
-			console.log('No external handler streams to subscribe to, skipping Redis consumer')
-			return
-		}
+		// Start the loop UNCONDITIONALLY — the real composition root starts the transport before the
+		// bounded contexts register their external handlers (shared/index → externalMediator.start()
+		// runs, THEN thread/issue/… contexts call register()). The loop recomputes its stream set from
+		// the handlerMap on every pass and creates each stream's consumer group on first sight, so
+		// handlers registered after start() are picked up without a restart.
+		this.consuming = true
+		this.readLoop = this.runReadLoop().catch(error => {
+			console.error('Redis read loop crashed:', error)
+		})
 
+		console.log('✅ Redis consumer running (streams tracked dynamically from registered handlers)')
+	}
+
+	private async ensureGroups(streams: string[]): Promise<void> {
 		for (const stream of streams) {
+			if (this.knownGroups.has(stream)) continue
 			try {
 				await this.consumer.xgroup('CREATE', stream, this.groupId, '$', 'MKSTREAM')
 			} catch (error) {
@@ -89,14 +121,8 @@ export class RedisExternalMediator extends ExternalMediator {
 					console.warn(`Failed to create consumer group for ${stream}:`, message)
 				}
 			}
+			this.knownGroups.add(stream)
 		}
-
-		this.consuming = true
-		this.readLoop = this.runReadLoop(streams).catch(error => {
-			console.error('Redis read loop crashed:', error)
-		})
-
-		console.log(`✅ Redis consumer running on ${streams.length} streams: ${streams.map(stripPrefix).join(', ')}`)
 	}
 
 	async publish(event: BaseEvent): Promise<void> {
@@ -153,11 +179,19 @@ export class RedisExternalMediator extends ExternalMediator {
 		console.log('✅ Redis mediator disconnected')
 	}
 
-	private async runReadLoop(streams: string[]): Promise<void> {
-		// First drain any pending entries from a previous run, then switch to live mode.
+	private async runReadLoop(): Promise<void> {
+		// First drain any pending entries from a previous run, then switch to live mode. Streams whose
+		// group is created AFTER the drain phase (a handler registered late) open at `$`, so there is
+		// nothing to drain for them and reading them live with `>` is correct.
 		let draining = true
 
 		while (!this.stopped) {
+			const streams = Array.from(this.handlerMap.keys(), streamKey)
+			if (streams.length === 0) {
+				await sleep(IDLE_POLL_MS)
+				continue
+			}
+			await this.ensureGroups(streams)
 			const ids = streams.map(() => (draining ? '0' : '>'))
 			const result = await tryCatchAsync(() =>
 				(this.consumer.xreadgroup as any)(
@@ -204,16 +238,24 @@ export class RedisExternalMediator extends ExternalMediator {
 
 		let parsed: unknown
 		try {
-			parsed = JSON.parse(data)
+			// Revive ISO datetimes on parse so wire date fields land as `Date` (downstream z.date()).
+			parsed = JSON.parse(data, reviveIsoDates)
 		} catch (error) {
 			console.error(`Failed to parse Redis entry on ${stream} (${id}):`, error)
 			await this.moveToDeadLetter(stream, id, data, 'parse_error')
 			return
 		}
 
+		// Reconcile the two envelope shapes on the wire: the Go egress marshals the frozen wire event
+		// FLAT (framework fields alongside the domain scalars — see api-go channel/handlers/publish.go),
+		// while a TS-published event is already the nested BaseIntegrationEvent `{ name, ownerId,
+		// payload }`. Fold a flat Go envelope back into the nested shape the wire event constructor
+		// (BaseIntegrationEvent) reads; a nested TS envelope passes through untouched.
+		const envelope = adaptWireEnvelope(parsed)
+
 		const handlers = this.handlerMap.get(eventName) ?? []
 		for (const handler of handlers) {
-			const result = await tryCatchAsync(() => handler.execute(parsed))
+			const result = await tryCatchAsync(() => handler.execute(envelope))
 			if (!result.success) {
 				console.error(`Handler ${handler.name} failed on ${id}:`, result.error)
 				const deliveries = await this.getDeliveryCount(stream, id)
@@ -225,7 +267,7 @@ export class RedisExternalMediator extends ExternalMediator {
 			}
 		}
 
-		if (isBaseEvent(parsed)) this.notifyCallbacks(eventName, parsed)
+		if (isBaseEvent(envelope)) this.notifyCallbacks(eventName, envelope)
 		await this.ack(stream, id)
 	}
 
@@ -281,6 +323,40 @@ function getField(fields: string[], key: string): string | undefined {
 
 function isBaseEvent(value: unknown): value is BaseEvent {
 	return typeof value === 'object' && value !== null && 'name' in value && 'id' in value && 'payload' in value
+}
+
+/**
+ * JSON.parse reviver: turn a strict ISO-8601 datetime string into a `Date`. Go marshals `time.Time`
+ * as RFC3339 (`2023-11-14T22:13:20Z`), but the TS wire event payloads type those fields `z.date()`
+ * and the downstream use-case inputs (e.g. IngestChannelMessage's `receivedAt`) reject a string —
+ * so the transport revives them here, at the one JSON boundary, for every consumer.
+ */
+function reviveIsoDates(_key: string, value: unknown): unknown {
+	return typeof value === 'string' && ISO_DATETIME_RE.test(value) ? new Date(value) : value
+}
+
+/**
+ * Normalize a decoded wire entry to the nested BaseIntegrationEvent envelope `{ name, ownerId,
+ * payload }` the TS wire event classes construct from.
+ *
+ *   - Go egress → a FLAT wire struct (`{ name, entityId, ownerId, occurredAt, ...domainScalars }`);
+ *     the domain scalars are folded under `payload` and the framework fields are dropped.
+ *   - TS publish → already `{ name, id, time, payload, ownerId }`; returned untouched.
+ *
+ * Detection is by the presence of a `payload` object — a flat Go envelope never has one, a nested TS
+ * envelope always does.
+ */
+function adaptWireEnvelope(parsed: unknown): unknown {
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed
+	const obj = parsed as Record<string, unknown>
+	if ('payload' in obj && obj.payload !== null && typeof obj.payload === 'object') return obj
+	if (!('name' in obj)) return obj
+
+	const payload: Record<string, unknown> = {}
+	for (const [key, value] of Object.entries(obj)) {
+		if (!WIRE_ENVELOPE_KEYS.has(key)) payload[key] = value
+	}
+	return { name: obj.name, ownerId: typeof obj.ownerId === 'string' ? obj.ownerId : '', payload }
 }
 
 function sleep(ms: number): Promise<void> {
