@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { ROOT } from '../../.claude/hooks/classify-edit-core'
-import { ruleInventory, scanContent } from './registry-scan'
+import { defaultTargets, ruleInventory, scanContent } from './registry-scan'
 
 // Routes to skill `component` (lang react) via the components index:
 // packages/app/react/src/routes/**/-components/*/index.tsx
@@ -75,6 +75,19 @@ describe('scanContent', () => {
 		const findings = scanContent(abs, BAD_COMPONENT)
 		expect(findings.length).toBeGreaterThan(0)
 		for (const f of findings) expect(f.file).toBe(COMPONENT_PATH)
+	})
+})
+
+describe('defaultTargets', () => {
+	// Regression guard for the RED GATE: the tracked file list under packages/ (2.47 MiB, ~24k
+	// paths) exceeds execSync's 1 MiB default maxBuffer, which used to ENOBUFS-crash the whole
+	// `bun detect` gate before it scanned a single file. defaultTargets now passes maxBuffer:
+	// 64 MiB. This invokes the real full-repo entrypoint so the crash cannot silently reappear —
+	// the old code threw here; the assertion is that it no longer does. (The real CLI run,
+	// `bun scripts/detectors/registry-scan.ts`, is the end-to-end proof it completes.)
+	test('git ls-files entrypoint runs to completion without throwing', () => {
+		expect(() => defaultTargets()).not.toThrow()
+		expect(Array.isArray(defaultTargets())).toBe(true)
 	})
 })
 

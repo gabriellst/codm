@@ -1,7 +1,7 @@
 import { AggregateRoot, BaseError, z } from '@template/core-typescript'
 import type Z from 'zod'
 import { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@template/contracts-typescript/wire/enums'
-import type { DomainErrors } from '../errors'
+import type { ApplicationErrors, DomainErrors } from '../errors'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
 export const ContactRefSchema = z.object({
@@ -47,8 +47,9 @@ export type Participant = Z.infer<typeof ParticipantSchema>
  * `Thread` (BC4 Thread & Routing, Core) — the binding of a conversation to a workspace + providers,
  * and its control plane: pause/resume, mention gate, participant invocation rights, and the rolling
  * context-buffer size. Invariants with teeth: providers non-empty, at least one invoker must
- * remain, and (enforced by the use cases) direct messages only while paused / whispers only while
- * live. The transcript + pending clarifications are separate entities/records, not embedded here.
+ * remain, and the steer-vs-direct mode guard (whispers only while live, direct messages only while
+ * paused) lives on the aggregate via assertCanSteer/assertCanSendDirect since Thread owns `paused`.
+ * The transcript + pending clarifications are separate entities/records, not embedded here.
  */
 export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	static override schema = ThreadSchema
@@ -116,6 +117,16 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		if (participant && !participant.canInvoke) return false
 		if (this.mentionGate.enabled && !input.text.includes(this.mentionGate.tag)) return false
 		return true
+	}
+
+	/** Whispers (steer) are only valid while the thread is live — a paused thread uses direct mode. */
+	assertCanSteer(): void {
+		if (this.paused) throw new BaseError<ApplicationErrors>('THREAD_PAUSED', 'a paused thread uses direct mode')
+	}
+
+	/** Direct (operator) messages are only valid while paused — the agents must be silenced first. */
+	assertCanSendDirect(): void {
+		if (!this.paused) throw new BaseError<ApplicationErrors>('THREAD_NOT_PAUSED', 'direct conversation requires the agents to be paused')
 	}
 
 	setStatus(status: ThreadStatus): void {

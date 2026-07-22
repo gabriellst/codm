@@ -1,0 +1,36 @@
+name: correctness
+
+# Rung-2 merge gate (docs/CORRECTNESS.md §4): the mechanical detectors run on every push /
+# PR. New violations gate; pre-existing debt is frozen in the per-detector *.baseline.json
+# files and ratcheted down over time. Companion to tsc + test, which run in the same job.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # registry-scan / slice-closure walk `git ls-files` — need full history-free but
+          # complete tree; default fetch-depth 1 is fine since they read the working tree.
+          fetch-depth: 1
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Mechanical detectors (rung-2 gate)
+        run: bun run detect
+
+      - name: Type-check
+        run: bun tsc
+
+      - name: Tests
+        run: bun run test

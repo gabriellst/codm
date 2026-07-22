@@ -70,4 +70,18 @@ describe('Thread entity', () => {
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hello' })).toBe(false)
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @bot go' })).toBe(true)
 	})
+
+	it('assertCanSteer: allowed while live, rejected once paused (THREAD_PAUSED)', () => {
+		const t = Thread.create(base)
+		expect(() => t.assertCanSteer()).not.toThrow()
+		t.pause()
+		expect(() => t.assertCanSteer()).toThrow(BaseError)
+	})
+
+	it('assertCanSendDirect: rejected while live (THREAD_NOT_PAUSED), allowed once paused', () => {
+		const t = Thread.create(base)
+		expect(() => t.assertCanSendDirect()).toThrow(BaseError)
+		t.pause()
+		expect(() => t.assertCanSendDirect()).not.toThrow()
+	})
 })

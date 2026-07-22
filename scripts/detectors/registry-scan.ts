@@ -132,9 +132,17 @@ export function ruleInventory(): { skill: string; id: string; regexCount: number
 
 // ─── File discovery ─────────────────────────────────────────────────
 
-/** git ls-files under packages/ filtered through the engine's scope rules. */
-function defaultTargets(): string[] {
-	return execSync('git ls-files -- packages', { cwd: SCAN_ROOT, encoding: 'utf8' }).split('\n').filter(Boolean).filter(isInScope)
+/**
+ * git ls-files under packages/ filtered through the engine's scope rules.
+ * maxBuffer is bumped to 64 MiB — the tracked file list exceeds the 1 MiB default
+ * (packages/app/expo alone commits ~22k paths), and the default silently ENOBUFS-crashes
+ * the whole `bun detect` gate.
+ */
+export function defaultTargets(): string[] {
+	return execSync('git ls-files -- packages', { cwd: SCAN_ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+		.split('\n')
+		.filter(Boolean)
+		.filter(isInScope)
 }
 
 function toRepoRelative(arg: string): string {

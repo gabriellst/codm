@@ -31,7 +31,7 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
-		if (thread.paused) throw new BaseError<ApplicationErrors>('THREAD_PAUSED', 'a paused thread uses direct mode')
+		thread.assertCanSteer()
 
 		return this.withTransaction(tx, async tx => {
 			const entry = await this.transcript.append(
