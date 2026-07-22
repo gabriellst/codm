@@ -15,6 +15,7 @@
 package events
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,17 +39,27 @@ const (
 // contact* fields describe the conversation counterparty (a person or a group);
 // sender* is the individual author (differs from contact in a group).
 type MessageReceivedPayload struct {
-	ChannelID   uuid.UUID       `json:"channelId"`
-	MessageID   string          `json:"messageId"`
-	ContactID   string          `json:"contactId"`   // external id of the chat (counterparty)
-	DisplayName string          `json:"displayName"` // best-known contact display name
-	SenderID    string          `json:"senderId"`    // external id of the individual author
-	IsGroup     bool            `json:"isGroup"`
-	Text        string          `json:"text"`
-	QuotedID    string          `json:"quotedId,omitempty"`
+	ChannelID   uuid.UUID        `json:"channelId"`
+	MessageID   string           `json:"messageId"`
+	ContactID   string           `json:"contactId"`   // external id of the chat (counterparty)
+	DisplayName string           `json:"displayName"` // best-known contact display name
+	SenderID    string           `json:"senderId"`    // external id of the individual author
+	IsGroup     bool             `json:"isGroup"`
+	Text        string           `json:"text"`
+	QuotedID    string           `json:"quotedId,omitempty"`
 	Kind        wire.ChannelKind `json:"kind"`
-	ReceivedAt  time.Time       `json:"receivedAt"`
-	OwnerID     string          `json:"ownerId"`
+	ReceivedAt  time.Time        `json:"receivedAt"`
+	OwnerID     string           `json:"ownerId"`
+
+	// Read-model fields — drive the gateway.messages + gateway.remotes
+	// projections (message row insert + unread/preview fold). They are carried on
+	// the same fact the egress bridges to wire; the wire event stays lean.
+	// RemoteID is the canonical counterparty id (== ContactID); InternalMessageID
+	// is the projection row's UUID; Content is the opaque JSONB message body.
+	InternalMessageID uuid.UUID       `json:"internalMessageId"`
+	RemoteID          string          `json:"remoteId"`
+	Content           json.RawMessage `json:"content,omitempty"`
+	ObservedAt        time.Time       `json:"observedAt"`
 }
 
 type MessageReceivedEvent = types.DomainEvent[MessageReceivedPayload]

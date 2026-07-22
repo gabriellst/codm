@@ -1,1 +1,0 @@
-{"ts":"2026-06-11T23:26:01.952Z","task":"synthetic-fullstack-crud-realtime","mode":"agent","pass":false,"failedGraders":["enum#catalog-pt","enum#catalog-en","e2e#api-setup","judge#frontend-e2e"],"docTreeHash":"ac3703e45efa","model":"sonnet"}

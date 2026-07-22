@@ -5,10 +5,6 @@ registry:
   depended_by: [entity, controller, repository]
   context_reads: []
   lang: go
-  examples:
-    - examples/citizens/go/enum/message_type.go
-    - examples/citizens/go/enum/channel_status.go
-    - examples/citizens/go/enum/platform.go
 
   snippet:
     skeleton: |

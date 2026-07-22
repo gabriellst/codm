@@ -5,10 +5,6 @@ registry:
   depended_by: [controller]
   context_reads: [schema, entity, repository]
   lang: go
-  examples:
-    - examples/citizens/go/usecase/send_text.go
-    - examples/citizens/go/usecase/connect_channel.go
-    - examples/citizens/go/usecase/create_channel.go
 
   snippet:
     skeleton: |

@@ -4,8 +4,6 @@ registry:
   depends_on: [entity]
   depended_by: [handler]
   context_reads: [entity]
-  examples:
-    - examples/pairs/synthetic-store-visualization-event
 
   patterns:
     - id: EVT-01

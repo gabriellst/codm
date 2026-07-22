@@ -1,2 +1,0 @@
-{"ts":"2026-06-10T02:46:14.892Z","task":"replay-pixel-funnel-section","mode":"gold","pass":true,"failedGraders":[],"docTreeHash":"81432f9d33f5"}
-{"ts":"2026-06-10T02:46:20.892Z","task":"replay-statcard-shared-component","mode":"gold","pass":false,"failedGraders":["tsc:app-react"],"docTreeHash":"81432f9d33f5"}

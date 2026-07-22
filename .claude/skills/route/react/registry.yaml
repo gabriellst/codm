@@ -4,8 +4,6 @@ registry:
   depends_on: [sdk]
   depended_by: [component]
   context_reads: [component]
-  examples:
-    - examples/pairs/synthetic-react-table-route-search
 
   patterns:
     - id: RTE-01

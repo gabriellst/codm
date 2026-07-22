@@ -5,11 +5,6 @@ registry:
   depended_by: [usecase]
   context_reads: [entity, db-schema]
   lang: go
-  examples:
-    - examples/citizens/go/repository/channel_repository.go
-    - examples/citizens/go/repository/pg_channel_repository.go
-    - examples/citizens/go/repository/message_projection_repository.go
-    - examples/citizens/go/repository/pg_message_projection_repository.go
 
   snippet:
     skeleton: |

@@ -1,1 +1,0 @@
-{"ts":"2026-06-16T09:02:24.218Z","task":"synthetic-l6-notion","mode":"agent","pass":false,"failedGraders":["recursion#modeled","build#detect-projection","e2e#spec-exists","e2e#realtime-block","flows#core-coverage"],"docTreeHash":"1a2dc9de7e8e","model":"opus"}

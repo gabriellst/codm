@@ -5,11 +5,6 @@ registry:
   depended_by: [handler]
   context_reads: [entity]
   lang: go
-  examples:
-    - examples/citizens/go/event/message_received.go
-    - examples/citizens/go/event/channel_connected.go
-    - examples/citizens/go/event/channel_event.go
-    - examples/citizens/go/event/channel_message_received.go
 
   snippet:
     skeleton: |

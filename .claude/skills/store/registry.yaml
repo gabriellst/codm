@@ -4,8 +4,6 @@ registry:
   depends_on: []
   depended_by: [component]
   context_reads: []
-  examples:
-    - examples/pairs/synthetic-expo-form-state-subscribe
 
   patterns:
     - id: STR-01

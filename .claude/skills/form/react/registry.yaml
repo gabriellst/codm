@@ -4,8 +4,6 @@ registry:
   depends_on: [sdk, primitive]
   depended_by: []
   context_reads: [schema]
-  examples:
-    - examples/pairs/synthetic-react-onboarding-composed-form
 
   patterns:
     # === Structural patterns (always) ===

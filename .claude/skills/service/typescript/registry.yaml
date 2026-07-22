@@ -4,13 +4,6 @@ registry:
   depends_on: [entity]
   depended_by: [usecase, handler]
   context_reads: [entity]
-  examples:
-    - examples/slices/integration-registry/README.md
-    - examples/slices/integration-registry/registry.ts
-    - examples/slices/integration-registry/leaves/ShopifyDescription.ts
-    - examples/slices/integration-registry/leaves/StripeDescription.ts
-    - examples/slices/integration-registry/factories/HandshakeServiceFactory.ts
-    - examples/slices/integration-registry/factories/AuthorizeUrlBuilderFactory.ts
 
   patterns:
     - id: SVC-01

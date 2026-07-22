@@ -4,8 +4,6 @@ registry:
   depends_on: [sdk, primitive]
   depended_by: []
   context_reads: [route]
-  examples:
-    - examples/pairs/synthetic-notifications-panel
 
   patterns:
     # --- Always patterns ---

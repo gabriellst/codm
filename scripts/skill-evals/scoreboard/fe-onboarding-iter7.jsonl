@@ -1,1 +1,0 @@
-{"ts":"2026-06-12T07:43:47.098Z","task":"synthetic-react-onboarding-composed-form","mode":"agent","pass":false,"failedGraders":["tsc:app-react","form#FRM-P18","form#FRM-P15","store#STR-P10"],"docTreeHash":"c2250fc48222","model":"sonnet"}

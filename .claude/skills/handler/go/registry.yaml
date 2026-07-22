@@ -5,10 +5,6 @@ registry:
   depended_by: []
   context_reads: [event]
   lang: go
-  examples:
-    - examples/citizens/go/handler/message_received_handler.go
-    - examples/citizens/go/handler/channel_connected_handler.go
-    - examples/citizens/go/handler/remote_created_integration_handler.go
 
   snippet:
     skeleton: |

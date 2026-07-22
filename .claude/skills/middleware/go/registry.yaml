@@ -5,10 +5,6 @@ registry:
   depended_by: [controller]
   context_reads: [errors, controller]
   lang: go
-  examples:
-    - examples/citizens/go/middleware/session.go
-    - examples/citizens/go/middleware/apikey.go
-    - examples/citizens/go/middleware/logging.go
 
   snippet:
     skeleton: |

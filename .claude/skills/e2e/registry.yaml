@@ -4,8 +4,6 @@ registry:
   depends_on: [sdk, component, route]
   depended_by: []
   context_reads: [component, route, controller]
-  examples:
-    - examples/pairs/synthetic-e2e-notifications-flow
 
   patterns:
     # --- Always patterns ---

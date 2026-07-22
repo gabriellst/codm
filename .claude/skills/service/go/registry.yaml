@@ -5,10 +5,6 @@ registry:
   depended_by: [usecase, handler]
   context_reads: [entity]
   lang: go
-  examples:
-    - examples/citizens/go/service/registry_service.go
-    - examples/citizens/go/service/registry_service_impl.go
-    - examples/citizens/go/service/gateway.go
 
   snippet:
     skeleton: |

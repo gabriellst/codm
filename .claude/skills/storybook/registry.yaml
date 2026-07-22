@@ -4,8 +4,6 @@ registry:
   depends_on: [component, sdk]
   depended_by: []
   context_reads: [component, route, store, sdk]
-  examples:
-    - examples/pairs/synthetic-react-storybook-data-component
 
   patterns:
     # --- Always ---

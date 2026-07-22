@@ -4,10 +4,6 @@ registry:
   depends_on: [db-schema]
   depended_by: [sdk]
   context_reads: [db-schema, route]
-  examples:
-    - examples/pairs/synthetic-order-detail-read
-    - examples/slices/dashboard-read-model/README.md
-    - examples/slices/dashboard-read-model/GetDashboard.ts
 
   bad_practices:
     - id: bp-01

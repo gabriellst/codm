@@ -5,10 +5,6 @@ registry:
   depended_by: [controller, usecase]
   context_reads: [value-object, enum]
   lang: go
-  examples:
-    - examples/citizens/go/schema/controller.go
-    - examples/citizens/go/schema/events.go
-    - examples/citizens/go/schema/validation.go
 
   snippet:
     skeleton: |

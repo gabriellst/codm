@@ -5,8 +5,6 @@ registry:
   depends_on: [sdk, primitive, store]
   depended_by: []
   context_reads: [primitive, route, sheet, store]
-  examples:
-    - examples/pairs/synthetic-expo-form-state-subscribe
 
   file_patterns:
     - "packages/app/expo/app/**/-components/*Form*/index.tsx"

@@ -5,8 +5,6 @@ registry:
   depends_on: [sdk, primitive]
   depended_by: []
   context_reads: [route]
-  examples:
-    - examples/pairs/synthetic-expo-notifications-screen
 
   patterns:
     # --- Always patterns ---

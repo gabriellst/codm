@@ -5,9 +5,6 @@ registry:
   depended_by: []
   context_reads: [event, handler, projection]
   lang: go
-  examples:
-    - examples/citizens/go/projector/message_projector.go
-    - examples/citizens/go/projector/remote_projector.go
 
   snippet:
     skeleton: |

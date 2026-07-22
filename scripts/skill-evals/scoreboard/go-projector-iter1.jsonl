@@ -1,1 +1,0 @@
-{"ts":"2026-06-11T05:49:29.751Z","task":"synthetic-go-projector-activity","mode":"agent","pass":false,"failedGraders":["go#test","projection#apply-event","projector#fx-wired"],"docTreeHash":"01c433f326ae","model":"sonnet"}

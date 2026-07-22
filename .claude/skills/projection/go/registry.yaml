@@ -5,10 +5,6 @@ registry:
   depended_by: [projector, query]
   context_reads: [event, ddd-modeling]
   lang: go
-  examples:
-    - examples/citizens/go/projection/channel.go
-    - examples/citizens/go/projection/message.go
-    - examples/citizens/go/projection/remote.go
 
   snippet:
     skeleton: |

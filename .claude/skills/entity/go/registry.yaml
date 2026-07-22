@@ -5,10 +5,6 @@ registry:
   depended_by: [repository, usecase]
   context_reads: []
   lang: go
-  examples:
-    - examples/citizens/go/entity/channel.go
-    - examples/citizens/go/entity/remote.go
-    - examples/citizens/go/entity/base_entity.go
 
   snippet:
     skeleton: |

@@ -5,10 +5,6 @@ registry:
   depended_by: [entity, usecase, controller]
   context_reads: []
   lang: go
-  examples:
-    - examples/citizens/go/errors/app_error.go
-    - examples/citizens/go/errors/codes.go
-    - examples/citizens/go/errors/errors.go
 
   snippet:
     skeleton: |

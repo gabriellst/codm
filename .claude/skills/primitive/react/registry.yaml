@@ -4,8 +4,6 @@ registry:
   depends_on: []
   depended_by: [component, form]
   context_reads: []
-  examples:
-    - examples/pairs/synthetic-react-primitive-variant
 
   patterns:
     # --- Structural Rules (PRM-01..PRM-04) ---
