@@ -18,3 +18,11 @@ export function localizedPath(url: URL, targetLocale: Locale): string {
 	const stripped = current === DEFAULT_LOCALE ? url.pathname : url.pathname.replace(new RegExp(`^/${current}`), '') || '/'
 	return routeFor(targetLocale, stripped)
 }
+
+/** Absolute per-locale URLs for the current page — used for hreflang alternates. */
+export function alternateUrls(url: URL, site: URL): Record<Locale, string> {
+	return {
+		pt: new URL(localizedPath(url, 'pt'), site).href,
+		en: new URL(localizedPath(url, 'en'), site).href,
+	}
+}

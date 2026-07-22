@@ -2,7 +2,7 @@
 import '~/styles/global.css'
 import Nav from '~/components/Nav.astro'
 import Footer from '~/components/Footer.astro'
-import { getLocale } from '~/i18n'
+import { alternateUrls, getLocale } from '~/i18n'
 
 interface Props {
 	title: string
@@ -15,26 +15,33 @@ interface Props {
 const { title, description, ogImage, canonical, jsonLd } = Astro.props
 const locale = getLocale(Astro.url)
 const canonicalUrl = canonical ?? Astro.url.href
+const site = Astro.site ?? new URL('http://localhost:4321')
+const alternates = alternateUrls(Astro.url, site)
+const ogLocale = locale === 'pt' ? 'pt_BR' : 'en_US'
+const ogLocaleAlternate = locale === 'pt' ? 'en_US' : 'pt_BR'
+const rssHref = locale === 'pt' ? '/blog/rss.xml' : '/en/blog/rss.xml'
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang={locale === 'pt' ? 'pt-BR' : 'en'}>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700;800&display=swap"
-			rel="stylesheet"
-		/>
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="theme-color" content="#161616" />
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<link rel="canonical" href={canonicalUrl} />
+		<link rel="alternate" hreflang="pt-BR" href={alternates.pt} />
+		<link rel="alternate" hreflang="en-US" href={alternates.en} />
+		<link rel="alternate" hreflang="x-default" href={alternates.pt} />
+		<link rel="alternate" type="application/rss+xml" title="CodeDM Blog" href={rssHref} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:locale" content={ogLocale} />
+		<meta property="og:locale:alternate" content={ogLocaleAlternate} />
 		{ogImage && <meta property="og:image" content={ogImage} />}
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={title} />

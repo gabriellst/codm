@@ -1,19 +1,84 @@
 @import "tailwindcss";
 @import "@codedm/app-styles/tokens.css";
 @import "@codedm/app-styles/web-utilities.css";
+@import "@fontsource/poppins/300.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/poppins/800.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 /*
- * Anton is the condensed display face that carries the "DM YOUR CODEBASE"
- * masthead voice across the console + expo surfaces (expo `font-display` →
- * Anton_400Regular). Registering it here as `--font-display` generates a
- * Tailwind `font-display` utility so the web hero speaks the same family.
+ * Landing typography (D3): Poppins w800 tight-tracked + w300 pairing carries the
+ * hero voice. Anton stays registered as `--font-display` for non-landing surfaces
+ * (console/expo masthead) but is NOT used on the landing. IBM Plex Mono is the
+ * first-class product-vocabulary face (labels, terminal, chips).
  */
 @theme {
+	--font-sans: "Poppins", system-ui, sans-serif;
+	--font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
 	--font-display: "Anton", "Poppins", system-ui, sans-serif;
+
+	--animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+	--animate-pulse-dot-fast: pulse-dot 1.6s ease-in-out infinite;
+	--animate-rise-in: rise-in 0.5s ease both;
+	--animate-marquee: marquee 26s linear infinite;
+}
+
+@keyframes pulse-dot {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}
+@keyframes rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes marquee {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+/* D6 — CSS-only cross-document view transitions; zero JS, inert where unsupported. */
+@view-transition {
+	navigation: auto;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+::selection {
+	background: var(--secondary);
 }
 
 body {
 	background-color: var(--background);
 	color: var(--foreground);
-	font-family: "Poppins", system-ui, sans-serif;
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+	.animate-marquee,
+	.animate-rise-in {
+		animation: none;
+	}
 }
