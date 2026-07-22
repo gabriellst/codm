@@ -9,6 +9,7 @@ import {
 	detectProviders,
 	disableOwner,
 	enableOwner,
+	getAttachThreadWizard,
 	getHomeDashboard,
 	getIssueDetail,
 	getIssuesOverview,
@@ -17,6 +18,8 @@ import {
 	getSession,
 	getSessionChat,
 	getSessionIssues,
+	getSettings,
+	getSetupChecklist,
 	getThreadSettings,
 	getUserInfo,
 	listArtifacts,
@@ -87,6 +90,10 @@ export class TypescriptClient {
 		return (enableOwner as (...a: any[]) => ReturnType<typeof enableOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getAttachThreadWizard(...args: Parameters<typeof getAttachThreadWizard>): ReturnType<typeof getAttachThreadWizard> {
+		return (getAttachThreadWizard as (...a: any[]) => ReturnType<typeof getAttachThreadWizard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getHomeDashboard(...args: Parameters<typeof getHomeDashboard>): ReturnType<typeof getHomeDashboard> {
 		return (getHomeDashboard as (...a: any[]) => ReturnType<typeof getHomeDashboard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -117,6 +124,14 @@ export class TypescriptClient {
 
 	getSessionIssues(...args: Parameters<typeof getSessionIssues>): ReturnType<typeof getSessionIssues> {
 		return (getSessionIssues as (...a: any[]) => ReturnType<typeof getSessionIssues>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getSettings(...args: Parameters<typeof getSettings>): ReturnType<typeof getSettings> {
+		return (getSettings as (...a: any[]) => ReturnType<typeof getSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getSetupChecklist(...args: Parameters<typeof getSetupChecklist>): ReturnType<typeof getSetupChecklist> {
+		return (getSetupChecklist as (...a: any[]) => ReturnType<typeof getSetupChecklist>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getThreadSettings(...args: Parameters<typeof getThreadSettings>): ReturnType<typeof getThreadSettings> {

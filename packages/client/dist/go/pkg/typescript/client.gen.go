@@ -1500,11 +1500,20 @@ type ClientInterface interface {
 	// GetMyAccount request
 	GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetAttachThreadWizard request
+	GetAttachThreadWizard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListenEvents request
 	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetHomeDashboard request
 	GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSettings request
+	GetSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSetupChecklist request
+	GetSetupChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUserInfo request
 	GetUserInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2049,6 +2058,18 @@ func (c *Client) GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetAttachThreadWizard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAttachThreadWizardRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListenEventsRequest(c.Server)
 	if err != nil {
@@ -2063,6 +2084,30 @@ func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn
 
 func (c *Client) GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetHomeDashboardRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSettingsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetSetupChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSetupChecklistRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -3340,6 +3385,33 @@ func NewGetMyAccountRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetAttachThreadWizardRequest generates requests for GetAttachThreadWizard
+func NewGetAttachThreadWizardRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/attach-thread-wizard")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListenEventsRequest generates requests for ListenEvents
 func NewListenEventsRequest(server string) (*http.Request, error) {
 	var err error
@@ -3377,6 +3449,60 @@ func NewGetHomeDashboardRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/v1/ui/home")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSettingsRequest generates requests for GetSettings
+func NewGetSettingsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/settings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSetupChecklistRequest generates requests for GetSetupChecklist
+func NewGetSetupChecklistRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/setup-checklist")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3684,11 +3810,20 @@ type ClientWithResponsesInterface interface {
 	// GetMyAccountWithResponse request
 	GetMyAccountWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyAccountResponse, error)
 
+	// GetAttachThreadWizardWithResponse request
+	GetAttachThreadWizardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error)
+
 	// ListenEventsWithResponse request
 	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
 
 	// GetHomeDashboardWithResponse request
 	GetHomeDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHomeDashboardResponse, error)
+
+	// GetSettingsWithResponse request
+	GetSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSettingsResponse, error)
+
+	// GetSetupChecklistWithResponse request
+	GetSetupChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSetupChecklistResponse, error)
 
 	// GetUserInfoWithResponse request
 	GetUserInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUserInfoResponse, error)
@@ -4839,6 +4974,60 @@ func (r GetMyAccountResponse) ContentType() string {
 	return ""
 }
 
+type GetAttachThreadWizardResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Channels []struct {
+			ChannelId openapi_types.UUID `json:"channelId"`
+			Kind      ChannelKind        `json:"kind"`
+		} `json:"channels"`
+		Contacts []struct {
+			AlreadyAttached bool               `json:"alreadyAttached"`
+			ChannelId       openapi_types.UUID `json:"channelId"`
+			DisplayName     string             `json:"displayName"`
+			ExternalId      string             `json:"externalId"`
+			Kind            ContactKind        `json:"kind"`
+		} `json:"contacts"`
+		NoChannelConnected bool `json:"noChannelConnected"`
+		Providers          []struct {
+			Available bool           `json:"available"`
+			Provider  ProviderKind   `json:"provider"`
+			Status    ProviderStatus `json:"status"`
+			Version   *string        `json:"version,omitempty"`
+		} `json:"providers"`
+		Workspaces []struct {
+			Badges      []WorkspaceBadge   `json:"badges"`
+			Path        string             `json:"path"`
+			WorkspaceId openapi_types.UUID `json:"workspaceId"`
+		} `json:"workspaces"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetAttachThreadWizardResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAttachThreadWizardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetAttachThreadWizardResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListenEventsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4923,6 +5112,89 @@ func (r GetHomeDashboardResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetHomeDashboardResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		AppVersion string `json:"appVersion"`
+		General    struct {
+			DataDir      string `json:"dataDir"`
+			OperatorName string `json:"operatorName"`
+			Timezone     string `json:"timezone"`
+		} `json:"general"`
+		Providers []struct {
+			Available bool           `json:"available"`
+			Provider  ProviderKind   `json:"provider"`
+			Status    ProviderStatus `json:"status"`
+			Version   *string        `json:"version,omitempty"`
+		} `json:"providers"`
+		StopCriteria struct {
+			ApprovalNeeded          bool `json:"approvalNeeded"`
+			BlockedByClassification bool `json:"blockedByClassification"`
+			HumanRequested          bool `json:"humanRequested"`
+			ServerErrors            bool `json:"serverErrors"`
+		} `json:"stopCriteria"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSetupChecklistResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ChannelDone   bool `json:"channelDone"`
+		ThreadDone    bool `json:"threadDone"`
+		WorkspaceDone bool `json:"workspaceDone"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSetupChecklistResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSetupChecklistResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSetupChecklistResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -5458,6 +5730,15 @@ func (c *ClientWithResponses) GetMyAccountWithResponse(ctx context.Context, reqE
 	return ParseGetMyAccountResponse(rsp)
 }
 
+// GetAttachThreadWizardWithResponse request returning *GetAttachThreadWizardResponse
+func (c *ClientWithResponses) GetAttachThreadWizardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error) {
+	rsp, err := c.GetAttachThreadWizard(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAttachThreadWizardResponse(rsp)
+}
+
 // ListenEventsWithResponse request returning *ListenEventsResponse
 func (c *ClientWithResponses) ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error) {
 	rsp, err := c.ListenEvents(ctx, reqEditors...)
@@ -5474,6 +5755,24 @@ func (c *ClientWithResponses) GetHomeDashboardWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetHomeDashboardResponse(rsp)
+}
+
+// GetSettingsWithResponse request returning *GetSettingsResponse
+func (c *ClientWithResponses) GetSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSettingsResponse, error) {
+	rsp, err := c.GetSettings(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSettingsResponse(rsp)
+}
+
+// GetSetupChecklistWithResponse request returning *GetSetupChecklistResponse
+func (c *ClientWithResponses) GetSetupChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSetupChecklistResponse, error) {
+	rsp, err := c.GetSetupChecklist(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSetupChecklistResponse(rsp)
 }
 
 // GetUserInfoWithResponse request returning *GetUserInfoResponse
@@ -6521,6 +6820,56 @@ func ParseGetMyAccountResponse(rsp *http.Response) (*GetMyAccountResponse, error
 	return response, nil
 }
 
+// ParseGetAttachThreadWizardResponse parses an HTTP response from a GetAttachThreadWizardWithResponse call
+func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWizardResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAttachThreadWizardResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Channels []struct {
+				ChannelId openapi_types.UUID `json:"channelId"`
+				Kind      ChannelKind        `json:"kind"`
+			} `json:"channels"`
+			Contacts []struct {
+				AlreadyAttached bool               `json:"alreadyAttached"`
+				ChannelId       openapi_types.UUID `json:"channelId"`
+				DisplayName     string             `json:"displayName"`
+				ExternalId      string             `json:"externalId"`
+				Kind            ContactKind        `json:"kind"`
+			} `json:"contacts"`
+			NoChannelConnected bool `json:"noChannelConnected"`
+			Providers          []struct {
+				Available bool           `json:"available"`
+				Provider  ProviderKind   `json:"provider"`
+				Status    ProviderStatus `json:"status"`
+				Version   *string        `json:"version,omitempty"`
+			} `json:"providers"`
+			Workspaces []struct {
+				Badges      []WorkspaceBadge   `json:"badges"`
+				Path        string             `json:"path"`
+				WorkspaceId openapi_types.UUID `json:"workspaceId"`
+			} `json:"workspaces"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListenEventsResponse parses an HTTP response from a ListenEventsWithResponse call
 func ParseListenEventsResponse(rsp *http.Response) (*ListenEventsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -6583,6 +6932,81 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 				IssuesOpened          int     `json:"issuesOpened"`
 				MedianResponseSeconds float32 `json:"medianResponseSeconds"`
 			} `json:"today"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSettingsResponse parses an HTTP response from a GetSettingsWithResponse call
+func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			AppVersion string `json:"appVersion"`
+			General    struct {
+				DataDir      string `json:"dataDir"`
+				OperatorName string `json:"operatorName"`
+				Timezone     string `json:"timezone"`
+			} `json:"general"`
+			Providers []struct {
+				Available bool           `json:"available"`
+				Provider  ProviderKind   `json:"provider"`
+				Status    ProviderStatus `json:"status"`
+				Version   *string        `json:"version,omitempty"`
+			} `json:"providers"`
+			StopCriteria struct {
+				ApprovalNeeded          bool `json:"approvalNeeded"`
+				BlockedByClassification bool `json:"blockedByClassification"`
+				HumanRequested          bool `json:"humanRequested"`
+				ServerErrors            bool `json:"serverErrors"`
+			} `json:"stopCriteria"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSetupChecklistResponse parses an HTTP response from a GetSetupChecklistWithResponse call
+func ParseGetSetupChecklistResponse(rsp *http.Response) (*GetSetupChecklistResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSetupChecklistResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ChannelDone   bool `json:"channelDone"`
+			ThreadDone    bool `json:"threadDone"`
+			WorkspaceDone bool `json:"workspaceDone"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

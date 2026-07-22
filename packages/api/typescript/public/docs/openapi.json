@@ -2509,6 +2509,149 @@
         }
       }
     },
+    "/v1/ui/attach-thread-wizard": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)",
+        "operationId": "GetAttachThreadWizard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "noChannelConnected": {
+                      "type": "boolean"
+                    },
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "channelId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "kind": {
+                            "$ref": "#/components/schemas/ChannelKind"
+                          }
+                        },
+                        "required": [
+                          "channelId",
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "contacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "channelId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "$ref": "#/components/schemas/ContactKind"
+                          },
+                          "alreadyAttached": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "channelId",
+                          "externalId",
+                          "displayName",
+                          "kind",
+                          "alreadyAttached"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "workspaces": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "workspaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "path": {
+                            "type": "string"
+                          },
+                          "badges": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/WorkspaceBadge"
+                            }
+                          }
+                        },
+                        "required": [
+                          "workspaceId",
+                          "path",
+                          "badges"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "$ref": "#/components/schemas/ProviderKind"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/ProviderStatus"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "status",
+                          "available"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "noChannelConnected",
+                    "channels",
+                    "contacts",
+                    "workspaces",
+                    "providers"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/ui/home": {
       "get": {
         "tags": [
@@ -2782,6 +2925,149 @@
                     "profile",
                     "preferences",
                     "security"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/settings": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Settings — providers, stop criteria, general, app version (T08)",
+        "operationId": "GetSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Settings — providers, stop criteria, general, app version (T08)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "$ref": "#/components/schemas/ProviderKind"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/ProviderStatus"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "status",
+                          "available"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "stopCriteria": {
+                      "type": "object",
+                      "properties": {
+                        "serverErrors": {
+                          "type": "boolean"
+                        },
+                        "blockedByClassification": {
+                          "type": "boolean"
+                        },
+                        "humanRequested": {
+                          "type": "boolean"
+                        },
+                        "approvalNeeded": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "serverErrors",
+                        "blockedByClassification",
+                        "humanRequested",
+                        "approvalNeeded"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "general": {
+                      "type": "object",
+                      "properties": {
+                        "operatorName": {
+                          "type": "string"
+                        },
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "dataDir": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "operatorName",
+                        "timezone",
+                        "dataDir"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "appVersion": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "providers",
+                    "stopCriteria",
+                    "general",
+                    "appVersion"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/setup-checklist": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Onboarding checklist — channel/workspace/thread done flags (cross-context)",
+        "operationId": "GetSetupChecklist",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Onboarding checklist — channel/workspace/thread done flags (cross-context)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channelDone": {
+                      "type": "boolean"
+                    },
+                    "workspaceDone": {
+                      "type": "boolean"
+                    },
+                    "threadDone": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "channelDone",
+                    "workspaceDone",
+                    "threadDone"
                   ],
                   "additionalProperties": false
                 }
