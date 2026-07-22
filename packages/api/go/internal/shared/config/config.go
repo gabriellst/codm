@@ -38,7 +38,9 @@ func Load() (*Config, error) {
 		ChannelEventGroupID:  getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "medscall-channel"),
 		Environment:          enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
 
-		ServiceName:       getEnvOrDefault("CHANNEL_SERVICE_NAME", getEnvOrDefault("SERVICE_NAME", "channel")),
+		// Schema-namespace retarget (classification §D.0/§E.1): channel projections
+		// live under the contracts `gateway` pgSchema; ServiceName drives search_path.
+		ServiceName:       getEnvOrDefault("CHANNEL_SERVICE_NAME", getEnvOrDefault("SERVICE_NAME", "gateway")),
 		GlobalAPIKey:      getEnvOrDefault("CHANNEL_GLOBAL_API_KEY", os.Getenv("GLOBAL_API_KEY")),
 		WhatsmeowLogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),
 		AllowedOrigins:    parseOrigins(getEnvOrDefault("CHANNEL_ALLOWED_ORIGINS", os.Getenv("ALLOWED_ORIGINS"))),

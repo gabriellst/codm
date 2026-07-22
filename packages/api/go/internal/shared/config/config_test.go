@@ -48,6 +48,11 @@ func TestLoad_EnvironmentDefault(t *testing.T) {
 }
 
 func TestLoad_ServiceNameDefault(t *testing.T) {
+	// Schema-namespace retarget (classification §D.0/§E.1): the channel projections
+	// live under the contracts `gateway` pgSchema, so the ServiceName (= search_path)
+	// default is `gateway`, not medscall's `channel`. Clear both env keys to exercise
+	// the code default.
+	t.Setenv("CHANNEL_SERVICE_NAME", "")
 	t.Setenv("SERVICE_NAME", "")
 	t.Setenv("DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
 	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
@@ -57,7 +62,7 @@ func TestLoad_ServiceNameDefault(t *testing.T) {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if cfg.ServiceName != "channel" {
-		t.Errorf("expected ServiceName to be 'channel', got %q", cfg.ServiceName)
+	if cfg.ServiceName != "gateway" {
+		t.Errorf("expected ServiceName to be 'gateway', got %q", cfg.ServiceName)
 	}
 }

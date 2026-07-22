@@ -331,3 +331,81 @@ account_detail text DEFAULT '' · created_at · updated_at
 - Migration tables (final): **6** → 3 faithful (remotes, remote_memberships, messages),
   3 mismatched (channels, shared.events, shared.outbox) + 1 schema-namespace retarget.
 - **WIRE-NEW total: 0.**
+
+---
+
+## G. Step 3 (Retarget) — what was executed vs deferred
+
+Step 2 = contracts amendment; Step 3 = deterministic retarget of the copied Go
+("change names/imports, never logic; LOCAL items untouched"). This section records
+what that mandate could faithfully execute and what it forces to defer.
+
+### G.0 Contracts (Step-1 amendment) — no-op, by design
+
+**Zero WIRE-NEW** (headline / §F). The entire medscall channel integration surface —
+all 19 egress events + every wire enum — was pre-absorbed at `25b8e46c`, so **no
+TypeSpec amendment was authored** and the frozen enums were **not** re-opened. The
+divergent medscall enum values (`ChannelKind.INTERNAL`, `ChannelStatus`
+CREATED/CONNECTING/DELETED) were deliberately **not** back-ported into the frozen
+harmonized enums — doing so would propagate source-system legacy states into the
+contract (violates generalize-over-port + "do not re-open the frozen set"). Verified
+green: `bun run contracts` (tsp + wire codegen + drizzle) reports no generated drift;
+`check:generated` clean.
+
+### G.1 Executed (code, committed)
+
+1. **7 exact-match wire enums aliased onto `template/contracts-go/wire`** (§C.1) via Go
+   `type X = wire.Y` + const re-export: `MessageType`, `Direction`, `ChatPresenceType`,
+   `PresenceType`, `GroupRole`, `MembershipAction`, `HistorySyncType`. Name/import-only
+   swap — identifiers preserved, runtime values byte-identical, zero call-site churn.
+   `api-go/go.mod` gains `require template/contracts-go` + local `replace`.
+2. **Schema namespace `channel` → `gateway`** (§D.0 / §E.1, backlog item 1): the Go
+   `ServiceName` code-default (drives `search_path`) is now `gateway`, matching the
+   contracts `pgSchema('gateway')`. `.env.example` already ships `SERVICE_NAME=gateway`,
+   so runtime was already correct; this aligns the code fallback + its config test. The
+   projection queries are schema-unqualified (resolved via `search_path`), so the rename
+   is confined to config — no query edits, no test-schema churn.
+
+### G.2 Migration source — the canonical decision
+
+**codedm migrations come from `packages/contracts` drizzle ONLY.** The copied Go
+service's embedded golang-migrate set (`internal/shared/db/sql/migrations/001…018`) is
+**retained in-tree strictly as historical reference** and to bootstrap the **isolated**
+repo integration tests (each spins up its own random per-test schema in a **dedicated
+throwaway DB** via `CHANNEL_TEST_DATABASE_URL`; they skip when it is unset). Those
+embedded migrations are **not** the codedm runtime-schema source and must not be treated
+as a second migration authority.
+
+### G.3 Deferred — reconcile-backlog NOT executed in this deterministic step
+
+The remaining §E items change **runtime values or table shapes** (logic), cascade into
+projection structs / projectors / the shared event+outbox infra and ~40 test assertions,
+and would **desync the in-tree reference migrations that back the isolated tests**. They
+are therefore **not** doable as "name/import-only" edits and are handed to the
+**schema-ownership-handoff phase** (when the Go stops applying its own migrations and
+reads/writes the drizzle-owned `gateway.*` / `shared.*` tables directly):
+
+- **`channels` column shape (§D.1):** `platform→kind`, `owner_remote_id→account_detail`,
+  drop `name`/`credentials`/`connected_at`/`disconnected_at`/`version`, `owner_id`
+  TEXT→uuid. (Renaming the query columns without editing the reference migration that
+  still `CREATE`s `platform`/`version` would break the `channels` projection repo test;
+  dropping columns cascades into `projections.Channel` + its projector = logic.)
+- **`shared.events` / `shared.outbox` (§D.2–D.3):** converge onto uuid `id`,
+  `occurred_at`/`source`/`last_error`, drop `time`/`version`. These are **co-owned** with
+  the TS/Drizzle side. **Observed hazard:** the codedm DB's `shared.*` tables already
+  exist in the contracts shape (no `time`); a first `go test` against that DB fails
+  (`column "time" does not exist`) because the Go layer/reference-migration still expect
+  `time` — exactly the "both cannot own one physical table with different DDL" problem.
+  The dedicated-throwaway-DB test convention (§G.2) sidesteps it; the real convergence of
+  the Go sqlc layer onto the contracts columns belongs to the handoff phase.
+- **3 divergent enums (§C, backlog items 4–6):** `ChannelStatus` (value-set; off-wire —
+  projection column only, so no wire-retarget benefit), `Platform→ChannelKind`
+  (`INTERNAL` absent from `ChannelKind` + live in `message_projector`; `Platform` also
+  carries an `IsValid()` method, which blocks a cross-package type alias),
+  `RemoteType→ContactKind` (`USER`→`CONTACT` is a runtime **value** change asserted by
+  ~40 tests + a raw-string gateway path — a value harmonization, not a name swap).
+- **Event payload shapes (§A.1 / backlog item 7):** collapse the medscall nested
+  `Content`/`PlatformData` unions to the contracts flattened scalar+enum event structs.
+  The generated wire event structs are structurally different from medscall's
+  `IntegrationEvent[Payload]` envelopes, so swapping them is a handler rewrite, not a
+  sed-grade edit — deferred with the shapes.
