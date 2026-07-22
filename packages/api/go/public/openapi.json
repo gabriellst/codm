@@ -6,32 +6,30 @@
     "version": "v1"
   },
   "paths": {
-    "/activity/entries": {
-      "get": {
-        "operationId": "ListActivity",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer"
+    "/channel/connect": {
+      "post": {
+        "operationId": "ConnectChannel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "ownerId": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
             }
           },
-          {
-            "in": "query",
-            "name": "before",
-            "schema": {
-              "example": "2026-07-01T12:00:00Z",
-              "type": "string"
-            }
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListActivityOutput"
+                  "$ref": "#/components/schemas/ConnectChannelOutput"
                 }
               }
             },
@@ -48,52 +46,153 @@
             "description": "Error"
           }
         },
-        "summary": "List the owner-scoped activity feed, newest first",
+        "summary": "Start or resume a WhatsApp channel session (QR pairing or reconnect)",
         "tags": [
-          "Activity"
+          "Channel"
+        ]
+      }
+    },
+    "/channel/list": {
+      "get": {
+        "operationId": "ListChannels",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ownerId",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListChannelsOutput"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List the operator's channel sessions",
+        "tags": [
+          "Channel"
+        ]
+      }
+    },
+    "/channel/send": {
+      "post": {
+        "operationId": "SendMessage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "channelId": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "channelId",
+                  "to",
+                  "text"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendMessageOutput"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Send a plain-text message on a connected channel",
+        "tags": [
+          "Channel"
+        ]
+      }
+    },
+    "/channel/{id}/logout": {
+      "post": {
+        "operationId": "LogoutChannel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutChannelOutput"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Log out and remove a channel session",
+        "tags": [
+          "Channel"
         ]
       }
     }
   },
   "components": {
     "schemas": {
-      "ActivityEntryDTO": {
-        "properties": {
-          "entityId": {
-            "example": "0f8fad5b-d9cb-469f-a165-70867728950e",
-            "type": "string"
-          },
-          "eventName": {
-            "example": "integration.billing.subscription_changed",
-            "type": "string"
-          },
-          "firstOccurredAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "id": {
-            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-            "type": "string"
-          },
-          "lastOccurredAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "occurrenceCount": {
-            "example": "1",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "eventName",
-          "entityId",
-          "firstOccurredAt",
-          "lastOccurredAt",
-          "occurrenceCount"
-        ],
-        "type": "object"
-      },
       "ArtifactKind": {
         "enum": [
           "IMAGE",
@@ -159,6 +258,39 @@
           "ChannelStatusCONNECTED"
         ]
       },
+      "ChannelView": {
+        "properties": {
+          "accountDetail": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "accountDetail",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "ClassificationMethod": {
         "enum": [
           "REPLY_QUOTE",
@@ -172,6 +304,34 @@
           "ClassificationMethodCONTEXT_MATCH",
           "ClassificationMethodNEW_ISSUE",
           "ClassificationMethodCLARIFIED"
+        ]
+      },
+      "ConnectChannelOutput": {
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ConnectionStatus": {
+        "enum": [
+          "CONNECTED",
+          "DISCONNECTED",
+          "CONNECTING"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ConnectionStatusConnected",
+          "ConnectionStatusDisconnected",
+          "ConnectionStatusConnecting"
         ]
       },
       "ContactKind": {
@@ -442,17 +602,32 @@
           "LanguageEN_US"
         ]
       },
-      "ListActivityOutput": {
+      "ListChannelsOutput": {
         "properties": {
-          "entries": {
+          "channels": {
             "items": {
-              "$ref": "#/components/schemas/ActivityEntryDTO"
+              "$ref": "#/components/schemas/ChannelView"
             },
             "type": "array"
           }
         },
         "required": [
-          "entries"
+          "channels"
+        ],
+        "type": "object"
+      },
+      "LogoutChannelOutput": {
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "status"
         ],
         "type": "object"
       },
@@ -503,6 +678,17 @@
           "RoleADMIN",
           "RoleMEMBER"
         ]
+      },
+      "SendMessageOutput": {
+        "properties": {
+          "messageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageId"
+        ],
+        "type": "object"
       },
       "SenderIdentity": {
         "enum": [

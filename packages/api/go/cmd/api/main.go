@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"template/api-go/internal/activity"
+	"template/api-go/internal/channel"
 	shared "template/core-go"
 
 	"go.uber.org/fx"
@@ -28,7 +28,7 @@ func main() {
 		shared.Module,
 
 		// Bounded contexts.
-		activity.Module,
+		channel.Module,
 
 		// Start the HTTP server.
 		fx.Invoke(shared.StartHTTPServer),

@@ -27,6 +27,18 @@ type Config struct {
 	TypescriptAPIURL string `validate:"required"`
 
 	AllowedOrigins []string
+
+	// ── Channel gateway (BC1) ──────────────────────────────────────────────
+	// GatewayAPIKey guards the gateway HTTP surface (service-to-service). When
+	// empty, the api-key middleware allows all requests (local single-operator).
+	GatewayAPIKey string
+	// WhatsmeowDatabaseURL is the DB URL for the whatsmeow session store. Empty
+	// falls back to DatabaseURL (the whatsmeow-owned tables live in their own
+	// schema). File-backed SQLite under DataDir is a follow-up (needs a
+	// pure-Go sqlite driver dependency).
+	WhatsmeowDatabaseURL string
+	// DataDir is the root for file-backed gateway state on the local daemon.
+	DataDir string
 }
 
 func Load() (*Config, error) {
@@ -49,6 +61,10 @@ func Load() (*Config, error) {
 		TypescriptAPIURL:   getEnvOrDefault("API_URL", "http://localhost:3030"),
 
 		AllowedOrigins: parseOrigins(os.Getenv("CORS_ALLOWED_ORIGINS")),
+
+		GatewayAPIKey:        getEnvOrDefault("CODEDM_GATEWAY_API_KEY", ""),
+		WhatsmeowDatabaseURL: getEnvOrDefault("CODEDM_GATEWAY_WHATSMEOW_URL", ""),
+		DataDir:              getEnvOrDefault("CODEDM_DATA_DIR", ""),
 	}
 
 	validate := validator.New()
