@@ -1,5 +1,5 @@
 {
-	"name": "@template/core-typescript",
+	"name": "@codedm/core-typescript",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
@@ -28,7 +28,7 @@
 		"@opentelemetry/sdk-logs": "^0.218.0",
 		"@opentelemetry/sdk-node": "^0.218.0",
 		"@opentelemetry/sdk-trace-node": "^2.7.1",
-		"@template/contracts": "workspace:*",
+		"@codedm/contracts": "workspace:*",
 		"bullmq": "^5.78.0",
 		"dotenv": "^16.4.7",
 		"drizzle-kit": "^0.31.8",

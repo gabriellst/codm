@@ -1,5 +1,5 @@
 {
-	"name": "@template/app-expo",
+	"name": "@codedm/app-expo",
 	"version": "1.0.0",
 	"private": true,
 	"main": "expo-router/entry",
@@ -23,7 +23,7 @@
 		"@shopify/react-native-skia": "2.4.18",
 		"@tanstack/react-form": "^1.29.1",
 		"@tanstack/react-query": "^5.90.3",
-		"@template/client-typescript": "workspace:*",
+		"@codedm/client-typescript": "workspace:*",
 		"better-auth": "^1.6.9",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

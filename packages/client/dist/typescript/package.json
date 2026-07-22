@@ -1,5 +1,5 @@
 {
-	"name": "@template/client-typescript",
+	"name": "@codedm/client-typescript",
 	"description": "TypeScript SDK auto-generated from each discovered api service's OpenAPI spec. Subpath-per-service exports.",
 	"version": "0.0.1",
 	"private": true,

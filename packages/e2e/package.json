@@ -1,5 +1,5 @@
 {
-	"name": "@template/e2e",
+	"name": "@codedm/e2e",
 	"private": true,
 	"type": "module",
 	"scripts": {

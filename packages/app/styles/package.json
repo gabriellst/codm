@@ -1,5 +1,5 @@
 {
-	"name": "@template/app-styles",
+	"name": "@codedm/app-styles",
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
