@@ -21,56 +21,85 @@ import (
 
 // Defines values for ApiErrors.
 const (
-	CANNOTCONVERTINPUT         ApiErrors = "CANNOT_CONVERT_INPUT"
-	CLASSIFICATIONFAILED       ApiErrors = "CLASSIFICATION_FAILED"
-	COMMANDHANDLERNOTFOUND     ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
-	COMMANDQUEUENOTFOUND       ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
-	CREDENTIALDECRYPTFAILED    ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
-	EMAILALREADYREGISTERED     ApiErrors = "EMAIL_ALREADY_REGISTERED"
-	ENTITYNOTFOUNDWHILESAVING  ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
-	FORBIDDEN                  ApiErrors = "FORBIDDEN"
-	HANDLERNOTBOUND            ApiErrors = "HANDLER_NOT_BOUND"
-	INVALIDATEDAUTHTOKEN       ApiErrors = "INVALIDATED_AUTH_TOKEN"
-	INVALIDAUTHTOKEN           ApiErrors = "INVALID_AUTH_TOKEN"
-	INVALIDCONTROLLEREXAMPLES  ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
-	INVALIDEMAIL               ApiErrors = "INVALID_EMAIL"
-	INVALIDEMAILFORMAT         ApiErrors = "INVALID_EMAIL_FORMAT"
-	INVALIDENTITY              ApiErrors = "INVALID_ENTITY"
-	INVALIDID                  ApiErrors = "INVALID_ID"
-	INVALIDIDVALUESLENGTH      ApiErrors = "INVALID_ID_VALUES_LENGTH"
-	INVALIDLANGUAGE            ApiErrors = "INVALID_LANGUAGE"
-	INVALIDOUTBOXPAYLOAD       ApiErrors = "INVALID_OUTBOX_PAYLOAD"
-	INVALIDPHONE               ApiErrors = "INVALID_PHONE"
-	INVALIDPICTUREURL          ApiErrors = "INVALID_PICTURE_URL"
-	INVALIDRANGE               ApiErrors = "INVALID_RANGE"
-	INVALIDREQUEST             ApiErrors = "INVALID_REQUEST"
-	INVALIDTIMEZONE            ApiErrors = "INVALID_TIMEZONE"
-	MISSINGENVIRONMENTVARIABLE ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
-	MISSINGLOGCONTENT          ApiErrors = "MISSING_LOG_CONTENT"
-	NOTFOUND                   ApiErrors = "NOT_FOUND"
-	NOTIMPLEMENTED             ApiErrors = "NOT_IMPLEMENTED"
-	OPTIMISTICLOCKCONFLICT     ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
-	OWNERALREADYDISABLED       ApiErrors = "OWNER_ALREADY_DISABLED"
-	OWNERNOTDISABLED           ApiErrors = "OWNER_NOT_DISABLED"
-	OWNERNOTFOUND              ApiErrors = "OWNER_NOT_FOUND"
-	PASSWORDSDONTMATCH         ApiErrors = "PASSWORDS_DONT_MATCH"
-	PASSWORDTOOWEAK            ApiErrors = "PASSWORD_TOO_WEAK"
-	PROVIDERNOTDETECTED        ApiErrors = "PROVIDER_NOT_DETECTED"
-	RATELIMITED                ApiErrors = "RATE_LIMITED"
-	SESSIONALREADYSTREAMING    ApiErrors = "SESSION_ALREADY_STREAMING"
-	TERMINALALREADYRUNNING     ApiErrors = "TERMINAL_ALREADY_RUNNING"
-	TERMINALSPAWNFAILED        ApiErrors = "TERMINAL_SPAWN_FAILED"
-	TOOMANYTERMINALSTREAMS     ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
-	UNAUTHORIZED               ApiErrors = "UNAUTHORIZED"
-	USERNOTFOUND               ApiErrors = "USER_NOT_FOUND"
-	VALIDATIONERROR            ApiErrors = "VALIDATION_ERROR"
-	WEAKPASSWORD               ApiErrors = "WEAK_PASSWORD"
+	CANNOTCONVERTINPUT          ApiErrors = "CANNOT_CONVERT_INPUT"
+	CHANNELNOTCONNECTED         ApiErrors = "CHANNEL_NOT_CONNECTED"
+	CLARIFICATIONALREADYPENDING ApiErrors = "CLARIFICATION_ALREADY_PENDING"
+	CLASSIFICATIONFAILED        ApiErrors = "CLASSIFICATION_FAILED"
+	COMMANDHANDLERNOTFOUND      ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
+	COMMANDQUEUENOTFOUND        ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
+	CREDENTIALDECRYPTFAILED     ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
+	EMAILALREADYREGISTERED      ApiErrors = "EMAIL_ALREADY_REGISTERED"
+	ENTITYNOTFOUNDWHILESAVING   ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
+	ENTRYNOTFOUND               ApiErrors = "ENTRY_NOT_FOUND"
+	ENTRYNOTINVOCABLE           ApiErrors = "ENTRY_NOT_INVOCABLE"
+	FORBIDDEN                   ApiErrors = "FORBIDDEN"
+	HANDLERNOTBOUND             ApiErrors = "HANDLER_NOT_BOUND"
+	INVALIDATEDAUTHTOKEN        ApiErrors = "INVALIDATED_AUTH_TOKEN"
+	INVALIDAUTHTOKEN            ApiErrors = "INVALID_AUTH_TOKEN"
+	INVALIDCONTROLLEREXAMPLES   ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
+	INVALIDEMAIL                ApiErrors = "INVALID_EMAIL"
+	INVALIDEMAILFORMAT          ApiErrors = "INVALID_EMAIL_FORMAT"
+	INVALIDENTITY               ApiErrors = "INVALID_ENTITY"
+	INVALIDID                   ApiErrors = "INVALID_ID"
+	INVALIDIDVALUESLENGTH       ApiErrors = "INVALID_ID_VALUES_LENGTH"
+	INVALIDLANGUAGE             ApiErrors = "INVALID_LANGUAGE"
+	INVALIDOUTBOXPAYLOAD        ApiErrors = "INVALID_OUTBOX_PAYLOAD"
+	INVALIDPHONE                ApiErrors = "INVALID_PHONE"
+	INVALIDPICTUREURL           ApiErrors = "INVALID_PICTURE_URL"
+	INVALIDRANGE                ApiErrors = "INVALID_RANGE"
+	INVALIDREQUEST              ApiErrors = "INVALID_REQUEST"
+	INVALIDTIMEZONE             ApiErrors = "INVALID_TIMEZONE"
+	ISSUEALREADYARCHIVED        ApiErrors = "ISSUE_ALREADY_ARCHIVED"
+	ISSUEALREADYCOMPLETED       ApiErrors = "ISSUE_ALREADY_COMPLETED"
+	ISSUEARCHIVED               ApiErrors = "ISSUE_ARCHIVED"
+	ISSUENOTARCHIVED            ApiErrors = "ISSUE_NOT_ARCHIVED"
+	ISSUENOTFOUND               ApiErrors = "ISSUE_NOT_FOUND"
+	LASTINVOKER                 ApiErrors = "LAST_INVOKER"
+	MISSINGENVIRONMENTVARIABLE  ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
+	MISSINGLOGCONTENT           ApiErrors = "MISSING_LOG_CONTENT"
+	NOCHANNELCONNECTED          ApiErrors = "NO_CHANNEL_CONNECTED"
+	NOPROVIDERSELECTED          ApiErrors = "NO_PROVIDER_SELECTED"
+	NOTFOUND                    ApiErrors = "NOT_FOUND"
+	NOTIMPLEMENTED              ApiErrors = "NOT_IMPLEMENTED"
+	OPTIMISTICLOCKCONFLICT      ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
+	OWNERALREADYDISABLED        ApiErrors = "OWNER_ALREADY_DISABLED"
+	OWNERNOTDISABLED            ApiErrors = "OWNER_NOT_DISABLED"
+	OWNERNOTFOUND               ApiErrors = "OWNER_NOT_FOUND"
+	PARTICIPANTNOTFOUND         ApiErrors = "PARTICIPANT_NOT_FOUND"
+	PASSWORDSDONTMATCH          ApiErrors = "PASSWORDS_DONT_MATCH"
+	PASSWORDTOOWEAK             ApiErrors = "PASSWORD_TOO_WEAK"
+	PATHNOTADIRECTORY           ApiErrors = "PATH_NOT_A_DIRECTORY"
+	PATHNOTFOUND                ApiErrors = "PATH_NOT_FOUND"
+	PROVIDERNOTDETECTED         ApiErrors = "PROVIDER_NOT_DETECTED"
+	RATELIMITED                 ApiErrors = "RATE_LIMITED"
+	RESOLUTIONNOTAPPLICABLE     ApiErrors = "RESOLUTION_NOT_APPLICABLE"
+	SESSIONALREADYSTREAMING     ApiErrors = "SESSION_ALREADY_STREAMING"
+	STOPCRITERIONDISABLED       ApiErrors = "STOP_CRITERION_DISABLED"
+	STOPNOTFOUND                ApiErrors = "STOP_NOT_FOUND"
+	TERMINALALREADYRUNNING      ApiErrors = "TERMINAL_ALREADY_RUNNING"
+	TERMINALSPAWNFAILED         ApiErrors = "TERMINAL_SPAWN_FAILED"
+	THREADALREADYATTACHED       ApiErrors = "THREAD_ALREADY_ATTACHED"
+	THREADNOTFOUND              ApiErrors = "THREAD_NOT_FOUND"
+	THREADNOTPAUSED             ApiErrors = "THREAD_NOT_PAUSED"
+	THREADPAUSED                ApiErrors = "THREAD_PAUSED"
+	TOOMANYTERMINALSTREAMS      ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
+	UNAUTHORIZED                ApiErrors = "UNAUTHORIZED"
+	USERNOTFOUND                ApiErrors = "USER_NOT_FOUND"
+	VALIDATIONERROR             ApiErrors = "VALIDATION_ERROR"
+	WEAKPASSWORD                ApiErrors = "WEAK_PASSWORD"
+	WORKSPACEALREADYREGISTERED  ApiErrors = "WORKSPACE_ALREADY_REGISTERED"
+	WORKSPACEINUSE              ApiErrors = "WORKSPACE_IN_USE"
+	WORKSPACENOTFOUND           ApiErrors = "WORKSPACE_NOT_FOUND"
 )
 
 // Valid indicates whether the value is a known member of the ApiErrors enum.
 func (e ApiErrors) Valid() bool {
 	switch e {
 	case CANNOTCONVERTINPUT:
+		return true
+	case CHANNELNOTCONNECTED:
+		return true
+	case CLARIFICATIONALREADYPENDING:
 		return true
 	case CLASSIFICATIONFAILED:
 		return true
@@ -83,6 +112,10 @@ func (e ApiErrors) Valid() bool {
 	case EMAILALREADYREGISTERED:
 		return true
 	case ENTITYNOTFOUNDWHILESAVING:
+		return true
+	case ENTRYNOTFOUND:
+		return true
+	case ENTRYNOTINVOCABLE:
 		return true
 	case FORBIDDEN:
 		return true
@@ -118,9 +151,25 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case INVALIDTIMEZONE:
 		return true
+	case ISSUEALREADYARCHIVED:
+		return true
+	case ISSUEALREADYCOMPLETED:
+		return true
+	case ISSUEARCHIVED:
+		return true
+	case ISSUENOTARCHIVED:
+		return true
+	case ISSUENOTFOUND:
+		return true
+	case LASTINVOKER:
+		return true
 	case MISSINGENVIRONMENTVARIABLE:
 		return true
 	case MISSINGLOGCONTENT:
+		return true
+	case NOCHANNELCONNECTED:
+		return true
+	case NOPROVIDERSELECTED:
 		return true
 	case NOTFOUND:
 		return true
@@ -134,19 +183,39 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OWNERNOTFOUND:
 		return true
+	case PARTICIPANTNOTFOUND:
+		return true
 	case PASSWORDSDONTMATCH:
 		return true
 	case PASSWORDTOOWEAK:
+		return true
+	case PATHNOTADIRECTORY:
+		return true
+	case PATHNOTFOUND:
 		return true
 	case PROVIDERNOTDETECTED:
 		return true
 	case RATELIMITED:
 		return true
+	case RESOLUTIONNOTAPPLICABLE:
+		return true
 	case SESSIONALREADYSTREAMING:
+		return true
+	case STOPCRITERIONDISABLED:
+		return true
+	case STOPNOTFOUND:
 		return true
 	case TERMINALALREADYRUNNING:
 		return true
 	case TERMINALSPAWNFAILED:
+		return true
+	case THREADALREADYATTACHED:
+		return true
+	case THREADNOTFOUND:
+		return true
+	case THREADNOTPAUSED:
+		return true
+	case THREADPAUSED:
 		return true
 	case TOOMANYTERMINALSTREAMS:
 		return true
@@ -157,6 +226,141 @@ func (e ApiErrors) Valid() bool {
 	case VALIDATIONERROR:
 		return true
 	case WEAKPASSWORD:
+		return true
+	case WORKSPACEALREADYREGISTERED:
+		return true
+	case WORKSPACEINUSE:
+		return true
+	case WORKSPACENOTFOUND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArtifactKind.
+const (
+	FILE  ArtifactKind = "FILE"
+	IMAGE ArtifactKind = "IMAGE"
+	LINK  ArtifactKind = "LINK"
+)
+
+// Valid indicates whether the value is a known member of the ArtifactKind enum.
+func (e ArtifactKind) Valid() bool {
+	switch e {
+	case FILE:
+		return true
+	case IMAGE:
+		return true
+	case LINK:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BufferSize.
+const (
+	N100 BufferSize = "100"
+	N200 BufferSize = "200"
+	N25  BufferSize = "25"
+	N50  BufferSize = "50"
+)
+
+// Valid indicates whether the value is a known member of the BufferSize enum.
+func (e BufferSize) Valid() bool {
+	switch e {
+	case N100:
+		return true
+	case N200:
+		return true
+	case N25:
+		return true
+	case N50:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelKind.
+const (
+	INSTAGRAMDM ChannelKind = "INSTAGRAM_DM"
+	TELEGRAM    ChannelKind = "TELEGRAM"
+	WHATSAPP    ChannelKind = "WHATSAPP"
+)
+
+// Valid indicates whether the value is a known member of the ChannelKind enum.
+func (e ChannelKind) Valid() bool {
+	switch e {
+	case INSTAGRAMDM:
+		return true
+	case TELEGRAM:
+		return true
+	case WHATSAPP:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelStatus.
+const (
+	CONNECTED    ChannelStatus = "CONNECTED"
+	DISCONNECTED ChannelStatus = "DISCONNECTED"
+	PAIRING      ChannelStatus = "PAIRING"
+)
+
+// Valid indicates whether the value is a known member of the ChannelStatus enum.
+func (e ChannelStatus) Valid() bool {
+	switch e {
+	case CONNECTED:
+		return true
+	case DISCONNECTED:
+		return true
+	case PAIRING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClassificationMethod.
+const (
+	CLARIFIED    ClassificationMethod = "CLARIFIED"
+	CONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
+	NEWISSUE     ClassificationMethod = "NEW_ISSUE"
+	REPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+)
+
+// Valid indicates whether the value is a known member of the ClassificationMethod enum.
+func (e ClassificationMethod) Valid() bool {
+	switch e {
+	case CLARIFIED:
+		return true
+	case CONTEXTMATCH:
+		return true
+	case NEWISSUE:
+		return true
+	case REPLYQUOTE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactKind.
+const (
+	ContactKindCONTACT ContactKind = "CONTACT"
+	ContactKindGROUP   ContactKind = "GROUP"
+)
+
+// Valid indicates whether the value is a known member of the ContactKind enum.
+func (e ContactKind) Valid() bool {
+	switch e {
+	case ContactKindCONTACT:
+		return true
+	case ContactKindGROUP:
 		return true
 	default:
 		return false
@@ -415,6 +619,27 @@ func (e CurrencyCode) Valid() bool {
 	}
 }
 
+// Defines values for IssueStatus.
+const (
+	COMPLETED  IssueStatus = "COMPLETED"
+	NEEDSINPUT IssueStatus = "NEEDS_INPUT"
+	WORKING    IssueStatus = "WORKING"
+)
+
+// Valid indicates whether the value is a known member of the IssueStatus enum.
+func (e IssueStatus) Valid() bool {
+	switch e {
+	case COMPLETED:
+		return true
+	case NEEDSINPUT:
+		return true
+	case WORKING:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Language.
 const (
 	EnUS Language = "en-US"
@@ -532,6 +757,51 @@ func (e StopKind) Valid() bool {
 	}
 }
 
+// Defines values for StopResolution.
+const (
+	APPROVE       StopResolution = "APPROVE"
+	DENY          StopResolution = "DENY"
+	RETRY         StopResolution = "RETRY"
+	REVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
+	TAKEOVER      StopResolution = "TAKE_OVER"
+)
+
+// Valid indicates whether the value is a known member of the StopResolution enum.
+func (e StopResolution) Valid() bool {
+	switch e {
+	case APPROVE:
+		return true
+	case DENY:
+		return true
+	case RETRY:
+		return true
+	case REVIEWANDSEND:
+		return true
+	case TAKEOVER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ThreadMode.
+const (
+	DIRECT ThreadMode = "DIRECT"
+	STEER  ThreadMode = "STEER"
+)
+
+// Valid indicates whether the value is a known member of the ThreadMode enum.
+func (e ThreadMode) Valid() bool {
+	switch e {
+	case DIRECT:
+		return true
+	case STEER:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ThreadStatus.
 const (
 	IDLE           ThreadStatus = "IDLE"
@@ -556,11 +826,77 @@ func (e ThreadStatus) Valid() bool {
 	}
 }
 
+// Defines values for TranscriptKind.
+const (
+	TranscriptKindACTION         TranscriptKind = "ACTION"
+	TranscriptKindAGENT          TranscriptKind = "AGENT"
+	TranscriptKindCONTACT        TranscriptKind = "CONTACT"
+	TranscriptKindOPERATORDIRECT TranscriptKind = "OPERATOR_DIRECT"
+	TranscriptKindWHISPER        TranscriptKind = "WHISPER"
+)
+
+// Valid indicates whether the value is a known member of the TranscriptKind enum.
+func (e TranscriptKind) Valid() bool {
+	switch e {
+	case TranscriptKindACTION:
+		return true
+	case TranscriptKindAGENT:
+		return true
+	case TranscriptKindCONTACT:
+		return true
+	case TranscriptKindOPERATORDIRECT:
+		return true
+	case TranscriptKindWHISPER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceBadge.
+const (
+	CLAUDEPROJECT WorkspaceBadge = "CLAUDE_PROJECT"
+	GIT           WorkspaceBadge = "GIT"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceBadge enum.
+func (e WorkspaceBadge) Valid() bool {
+	switch e {
+	case CLAUDEPROJECT:
+		return true
+	case GIT:
+		return true
+	default:
+		return false
+	}
+}
+
 // ApiErrors All possible error codes
 type ApiErrors string
 
+// ArtifactKind defines model for ArtifactKind.
+type ArtifactKind string
+
+// BufferSize defines model for BufferSize.
+type BufferSize string
+
+// ChannelKind defines model for ChannelKind.
+type ChannelKind string
+
+// ChannelStatus defines model for ChannelStatus.
+type ChannelStatus string
+
+// ClassificationMethod defines model for ClassificationMethod.
+type ClassificationMethod string
+
+// ContactKind defines model for ContactKind.
+type ContactKind string
+
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
+
+// IssueStatus defines model for IssueStatus.
+type IssueStatus string
 
 // Language defines model for Language.
 type Language string
@@ -580,8 +916,30 @@ type Refresh string
 // StopKind defines model for StopKind.
 type StopKind string
 
+// StopResolution defines model for StopResolution.
+type StopResolution string
+
+// ThreadMode defines model for ThreadMode.
+type ThreadMode string
+
 // ThreadStatus defines model for ThreadStatus.
 type ThreadStatus string
+
+// TranscriptKind defines model for TranscriptKind.
+type TranscriptKind string
+
+// WorkspaceBadge defines model for WorkspaceBadge.
+type WorkspaceBadge string
+
+// GetIssuesOverviewParams defines parameters for GetIssuesOverview.
+type GetIssuesOverviewParams struct {
+	IncludeArchived *bool `form:"includeArchived,omitempty" json:"includeArchived,omitempty"`
+}
+
+// SteerIssueJSONBody defines parameters for SteerIssue.
+type SteerIssueJSONBody struct {
+	Text string `json:"text"`
+}
 
 // CreateOwnerJSONBody defines parameters for CreateOwner.
 type CreateOwnerJSONBody struct {
@@ -603,10 +961,127 @@ type UpdateOwnerSettingsJSONBody struct {
 	Timezone   *string                   `json:"timezone,omitempty"`
 }
 
+// UpdateStopCriteriaJSONBody defines parameters for UpdateStopCriteria.
+type UpdateStopCriteriaJSONBody struct {
+	StopCriteria struct {
+		ApprovalNeeded          bool `json:"approvalNeeded"`
+		BlockedByClassification bool `json:"blockedByClassification"`
+		HumanRequested          bool `json:"humanRequested"`
+		ServerErrors            bool `json:"serverErrors"`
+	} `json:"stopCriteria"`
+}
+
+// ResolveStopJSONBody defines parameters for ResolveStop.
+type ResolveStopJSONBody struct {
+	Resolution StopResolution `json:"resolution"`
+}
+
 // DetectProvidersParams defines parameters for DetectProviders.
 type DetectProvidersParams struct {
 	Refresh *Refresh `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
+
+// AttachThreadJSONBody defines parameters for AttachThread.
+type AttachThreadJSONBody struct {
+	ContactRef struct {
+		ChannelId   openapi_types.UUID `json:"channelId"`
+		DisplayName string             `json:"displayName"`
+		ExternalId  string             `json:"externalId"`
+		Kind        ContactKind        `json:"kind"`
+	} `json:"contactRef"`
+	Providers   []ProviderKind     `json:"providers"`
+	WorkspaceId openapi_types.UUID `json:"workspaceId"`
+}
+
+// RecordArtifactJSONBody defines parameters for RecordArtifact.
+type RecordArtifactJSONBody struct {
+	IssueId *openapi_types.UUID `json:"issueId,omitempty"`
+	Kind    ArtifactKind        `json:"kind"`
+	Meta    string              `json:"meta"`
+	Name    string              `json:"name"`
+	Ref     string              `json:"ref"`
+}
+
+// ConfigureContextBufferJSONBody defines parameters for ConfigureContextBuffer.
+type ConfigureContextBufferJSONBody struct {
+	BufferSize BufferSize `json:"bufferSize"`
+}
+
+// GetSessionChat200JSONResponseBodyMentionGate0 defines parameters for GetSessionChat.
+type GetSessionChat200JSONResponseBodyMentionGate0 struct {
+	Enabled bool `json:"enabled"`
+}
+
+// GetSessionChat200JSONResponseBodyMentionGate1 defines parameters for GetSessionChat.
+type GetSessionChat200JSONResponseBodyMentionGate1 struct {
+	Enabled bool   `json:"enabled"`
+	Tag     string `json:"tag"`
+}
+
+// GetSessionChat200JSONResponseBody_MentionGate defines parameters for GetSessionChat.
+type GetSessionChat200JSONResponseBody_MentionGate struct {
+	union json.RawMessage
+}
+
+// SendDirectMessageJSONBody defines parameters for SendDirectMessage.
+type SendDirectMessageJSONBody struct {
+	Text string `json:"text"`
+}
+
+// ConfigureMentionGateJSONBody defines parameters for ConfigureMentionGate.
+type ConfigureMentionGateJSONBody struct {
+	MentionGate ConfigureMentionGateJSONBody_MentionGate `json:"mentionGate"`
+}
+
+// ConfigureMentionGateJSONBodyMentionGate0 defines parameters for ConfigureMentionGate.
+type ConfigureMentionGateJSONBodyMentionGate0 struct {
+	Enabled bool `json:"enabled"`
+}
+
+// ConfigureMentionGateJSONBodyMentionGate1 defines parameters for ConfigureMentionGate.
+type ConfigureMentionGateJSONBodyMentionGate1 struct {
+	Enabled bool   `json:"enabled"`
+	Tag     string `json:"tag"`
+}
+
+// ConfigureMentionGateJSONBody_MentionGate defines parameters for ConfigureMentionGate.
+type ConfigureMentionGateJSONBody_MentionGate struct {
+	union json.RawMessage
+}
+
+// SetParticipantInvocationJSONBody defines parameters for SetParticipantInvocation.
+type SetParticipantInvocationJSONBody struct {
+	CanInvoke bool `json:"canInvoke"`
+}
+
+// GetThreadSettings200JSONResponseBodyMentionGate0 defines parameters for GetThreadSettings.
+type GetThreadSettings200JSONResponseBodyMentionGate0 struct {
+	Enabled bool `json:"enabled"`
+}
+
+// GetThreadSettings200JSONResponseBodyMentionGate1 defines parameters for GetThreadSettings.
+type GetThreadSettings200JSONResponseBodyMentionGate1 struct {
+	Enabled bool   `json:"enabled"`
+	Tag     string `json:"tag"`
+}
+
+// GetThreadSettings200JSONResponseBody_MentionGate defines parameters for GetThreadSettings.
+type GetThreadSettings200JSONResponseBody_MentionGate struct {
+	union json.RawMessage
+}
+
+// SteerThreadJSONBody defines parameters for SteerThread.
+type SteerThreadJSONBody struct {
+	Text string `json:"text"`
+}
+
+// AddWorkspaceJSONBody defines parameters for AddWorkspace.
+type AddWorkspaceJSONBody struct {
+	Path string `json:"path"`
+}
+
+// SteerIssueJSONRequestBody defines body for SteerIssue for application/json ContentType.
+type SteerIssueJSONRequestBody SteerIssueJSONBody
 
 // CreateOwnerJSONRequestBody defines body for CreateOwner for application/json ContentType.
 type CreateOwnerJSONRequestBody CreateOwnerJSONBody
@@ -616,6 +1091,222 @@ type DisableOwnerJSONRequestBody DisableOwnerJSONBody
 
 // UpdateOwnerSettingsJSONRequestBody defines body for UpdateOwnerSettings for application/json ContentType.
 type UpdateOwnerSettingsJSONRequestBody UpdateOwnerSettingsJSONBody
+
+// UpdateStopCriteriaJSONRequestBody defines body for UpdateStopCriteria for application/json ContentType.
+type UpdateStopCriteriaJSONRequestBody UpdateStopCriteriaJSONBody
+
+// ResolveStopJSONRequestBody defines body for ResolveStop for application/json ContentType.
+type ResolveStopJSONRequestBody ResolveStopJSONBody
+
+// AttachThreadJSONRequestBody defines body for AttachThread for application/json ContentType.
+type AttachThreadJSONRequestBody AttachThreadJSONBody
+
+// RecordArtifactJSONRequestBody defines body for RecordArtifact for application/json ContentType.
+type RecordArtifactJSONRequestBody RecordArtifactJSONBody
+
+// ConfigureContextBufferJSONRequestBody defines body for ConfigureContextBuffer for application/json ContentType.
+type ConfigureContextBufferJSONRequestBody ConfigureContextBufferJSONBody
+
+// SendDirectMessageJSONRequestBody defines body for SendDirectMessage for application/json ContentType.
+type SendDirectMessageJSONRequestBody SendDirectMessageJSONBody
+
+// ConfigureMentionGateJSONRequestBody defines body for ConfigureMentionGate for application/json ContentType.
+type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
+
+// SetParticipantInvocationJSONRequestBody defines body for SetParticipantInvocation for application/json ContentType.
+type SetParticipantInvocationJSONRequestBody SetParticipantInvocationJSONBody
+
+// SteerThreadJSONRequestBody defines body for SteerThread for application/json ContentType.
+type SteerThreadJSONRequestBody SteerThreadJSONBody
+
+// AddWorkspaceJSONRequestBody defines body for AddWorkspace for application/json ContentType.
+type AddWorkspaceJSONRequestBody AddWorkspaceJSONBody
+
+// AsGetSessionChat200JSONResponseBodyMentionGate0 returns the union data inside the GetSessionChat200JSONResponseBody_MentionGate as a GetSessionChat200JSONResponseBodyMentionGate0
+func (t GetSessionChat200JSONResponseBody_MentionGate) AsGetSessionChat200JSONResponseBodyMentionGate0() (GetSessionChat200JSONResponseBodyMentionGate0, error) {
+	var body GetSessionChat200JSONResponseBodyMentionGate0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetSessionChat200JSONResponseBodyMentionGate0 overwrites any union data inside the GetSessionChat200JSONResponseBody_MentionGate as the provided GetSessionChat200JSONResponseBodyMentionGate0
+func (t *GetSessionChat200JSONResponseBody_MentionGate) FromGetSessionChat200JSONResponseBodyMentionGate0(v GetSessionChat200JSONResponseBodyMentionGate0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetSessionChat200JSONResponseBodyMentionGate0 performs a merge with any union data inside the GetSessionChat200JSONResponseBody_MentionGate, using the provided GetSessionChat200JSONResponseBodyMentionGate0
+func (t *GetSessionChat200JSONResponseBody_MentionGate) MergeGetSessionChat200JSONResponseBodyMentionGate0(v GetSessionChat200JSONResponseBodyMentionGate0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetSessionChat200JSONResponseBodyMentionGate1 returns the union data inside the GetSessionChat200JSONResponseBody_MentionGate as a GetSessionChat200JSONResponseBodyMentionGate1
+func (t GetSessionChat200JSONResponseBody_MentionGate) AsGetSessionChat200JSONResponseBodyMentionGate1() (GetSessionChat200JSONResponseBodyMentionGate1, error) {
+	var body GetSessionChat200JSONResponseBodyMentionGate1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetSessionChat200JSONResponseBodyMentionGate1 overwrites any union data inside the GetSessionChat200JSONResponseBody_MentionGate as the provided GetSessionChat200JSONResponseBodyMentionGate1
+func (t *GetSessionChat200JSONResponseBody_MentionGate) FromGetSessionChat200JSONResponseBodyMentionGate1(v GetSessionChat200JSONResponseBodyMentionGate1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetSessionChat200JSONResponseBodyMentionGate1 performs a merge with any union data inside the GetSessionChat200JSONResponseBody_MentionGate, using the provided GetSessionChat200JSONResponseBodyMentionGate1
+func (t *GetSessionChat200JSONResponseBody_MentionGate) MergeGetSessionChat200JSONResponseBodyMentionGate1(v GetSessionChat200JSONResponseBodyMentionGate1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetSessionChat200JSONResponseBody_MentionGate) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetSessionChat200JSONResponseBody_MentionGate) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsConfigureMentionGateJSONBodyMentionGate0 returns the union data inside the ConfigureMentionGateJSONBody_MentionGate as a ConfigureMentionGateJSONBodyMentionGate0
+func (t ConfigureMentionGateJSONBody_MentionGate) AsConfigureMentionGateJSONBodyMentionGate0() (ConfigureMentionGateJSONBodyMentionGate0, error) {
+	var body ConfigureMentionGateJSONBodyMentionGate0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromConfigureMentionGateJSONBodyMentionGate0 overwrites any union data inside the ConfigureMentionGateJSONBody_MentionGate as the provided ConfigureMentionGateJSONBodyMentionGate0
+func (t *ConfigureMentionGateJSONBody_MentionGate) FromConfigureMentionGateJSONBodyMentionGate0(v ConfigureMentionGateJSONBodyMentionGate0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeConfigureMentionGateJSONBodyMentionGate0 performs a merge with any union data inside the ConfigureMentionGateJSONBody_MentionGate, using the provided ConfigureMentionGateJSONBodyMentionGate0
+func (t *ConfigureMentionGateJSONBody_MentionGate) MergeConfigureMentionGateJSONBodyMentionGate0(v ConfigureMentionGateJSONBodyMentionGate0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsConfigureMentionGateJSONBodyMentionGate1 returns the union data inside the ConfigureMentionGateJSONBody_MentionGate as a ConfigureMentionGateJSONBodyMentionGate1
+func (t ConfigureMentionGateJSONBody_MentionGate) AsConfigureMentionGateJSONBodyMentionGate1() (ConfigureMentionGateJSONBodyMentionGate1, error) {
+	var body ConfigureMentionGateJSONBodyMentionGate1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromConfigureMentionGateJSONBodyMentionGate1 overwrites any union data inside the ConfigureMentionGateJSONBody_MentionGate as the provided ConfigureMentionGateJSONBodyMentionGate1
+func (t *ConfigureMentionGateJSONBody_MentionGate) FromConfigureMentionGateJSONBodyMentionGate1(v ConfigureMentionGateJSONBodyMentionGate1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeConfigureMentionGateJSONBodyMentionGate1 performs a merge with any union data inside the ConfigureMentionGateJSONBody_MentionGate, using the provided ConfigureMentionGateJSONBodyMentionGate1
+func (t *ConfigureMentionGateJSONBody_MentionGate) MergeConfigureMentionGateJSONBodyMentionGate1(v ConfigureMentionGateJSONBodyMentionGate1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ConfigureMentionGateJSONBody_MentionGate) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ConfigureMentionGateJSONBody_MentionGate) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetThreadSettings200JSONResponseBodyMentionGate0 returns the union data inside the GetThreadSettings200JSONResponseBody_MentionGate as a GetThreadSettings200JSONResponseBodyMentionGate0
+func (t GetThreadSettings200JSONResponseBody_MentionGate) AsGetThreadSettings200JSONResponseBodyMentionGate0() (GetThreadSettings200JSONResponseBodyMentionGate0, error) {
+	var body GetThreadSettings200JSONResponseBodyMentionGate0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetThreadSettings200JSONResponseBodyMentionGate0 overwrites any union data inside the GetThreadSettings200JSONResponseBody_MentionGate as the provided GetThreadSettings200JSONResponseBodyMentionGate0
+func (t *GetThreadSettings200JSONResponseBody_MentionGate) FromGetThreadSettings200JSONResponseBodyMentionGate0(v GetThreadSettings200JSONResponseBodyMentionGate0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetThreadSettings200JSONResponseBodyMentionGate0 performs a merge with any union data inside the GetThreadSettings200JSONResponseBody_MentionGate, using the provided GetThreadSettings200JSONResponseBodyMentionGate0
+func (t *GetThreadSettings200JSONResponseBody_MentionGate) MergeGetThreadSettings200JSONResponseBodyMentionGate0(v GetThreadSettings200JSONResponseBodyMentionGate0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetThreadSettings200JSONResponseBodyMentionGate1 returns the union data inside the GetThreadSettings200JSONResponseBody_MentionGate as a GetThreadSettings200JSONResponseBodyMentionGate1
+func (t GetThreadSettings200JSONResponseBody_MentionGate) AsGetThreadSettings200JSONResponseBodyMentionGate1() (GetThreadSettings200JSONResponseBodyMentionGate1, error) {
+	var body GetThreadSettings200JSONResponseBodyMentionGate1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetThreadSettings200JSONResponseBodyMentionGate1 overwrites any union data inside the GetThreadSettings200JSONResponseBody_MentionGate as the provided GetThreadSettings200JSONResponseBodyMentionGate1
+func (t *GetThreadSettings200JSONResponseBody_MentionGate) FromGetThreadSettings200JSONResponseBodyMentionGate1(v GetThreadSettings200JSONResponseBodyMentionGate1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetThreadSettings200JSONResponseBodyMentionGate1 performs a merge with any union data inside the GetThreadSettings200JSONResponseBody_MentionGate, using the provided GetThreadSettings200JSONResponseBodyMentionGate1
+func (t *GetThreadSettings200JSONResponseBody_MentionGate) MergeGetThreadSettings200JSONResponseBodyMentionGate1(v GetThreadSettings200JSONResponseBodyMentionGate1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetThreadSettings200JSONResponseBody_MentionGate) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetThreadSettings200JSONResponseBody_MentionGate) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -693,6 +1384,23 @@ type ClientInterface interface {
 	// UploadAvatar request
 	UploadAvatar(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetIssuesOverview request
+	GetIssuesOverview(ctx context.Context, params *GetIssuesOverviewParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetIssueDetail request
+	GetIssueDetail(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ArchiveIssue request
+	ArchiveIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RestoreIssue request
+	RestoreIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SteerIssueWithBody request with any body
+	SteerIssueWithBody(ctx context.Context, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SteerIssue(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateOwnerWithBody request with any body
 	CreateOwnerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -717,11 +1425,77 @@ type ClientInterface interface {
 	// GetSession request
 	GetSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// UpdateStopCriteriaWithBody request with any body
+	UpdateStopCriteriaWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateStopCriteria(ctx context.Context, body UpdateStopCriteriaJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResolveStopWithBody request with any body
+	ResolveStopWithBody(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ResolveStop(ctx context.Context, stopId string, body ResolveStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DetectProviders request
 	DetectProviders(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// StreamTerminalSession request
 	StreamTerminalSession(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AttachThreadWithBody request with any body
+	AttachThreadWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AttachThread(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListArtifacts request
+	ListArtifacts(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RecordArtifactWithBody request with any body
+	RecordArtifactWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RecordArtifact(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureContextBufferWithBody request with any body
+	ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureContextBuffer(ctx context.Context, threadId string, body ConfigureContextBufferJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSessionChat request
+	GetSessionChat(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendDirectMessageWithBody request with any body
+	SendDirectMessageWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendDirectMessage(ctx context.Context, threadId string, body SendDirectMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSessionIssues request
+	GetSessionIssues(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureMentionGateWithBody request with any body
+	ConfigureMentionGateWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureMentionGate(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetNeedsYouPanel request
+	GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetParticipantInvocationWithBody request with any body
+	SetParticipantInvocationWithBody(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetParticipantInvocation(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PauseThread request
+	PauseThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResumeThread request
+	ResumeThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetThreadSettings request
+	GetThreadSettings(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SteerThreadWithBody request with any body
+	SteerThreadWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SteerThread(ctx context.Context, threadId string, body SteerThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetMyAccount request
 	GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -729,12 +1503,98 @@ type ClientInterface interface {
 	// ListenEvents request
 	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetHomeDashboard request
+	GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetUserInfo request
 	GetUserInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListWorkspaces request
+	ListWorkspaces(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AddWorkspaceWithBody request with any body
+	AddWorkspaceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AddWorkspace(ctx context.Context, body AddWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemoveWorkspace request
+	RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) UploadAvatar(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUploadAvatarRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetIssuesOverview(ctx context.Context, params *GetIssuesOverviewParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetIssuesOverviewRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetIssueDetail(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetIssueDetailRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ArchiveIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewArchiveIssueRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RestoreIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRestoreIssueRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SteerIssueWithBody(ctx context.Context, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSteerIssueRequestWithBody(c.Server, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SteerIssue(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSteerIssueRequest(c.Server, issueId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -853,6 +1713,54 @@ func (c *Client) GetSession(ctx context.Context, reqEditors ...RequestEditorFn) 
 	return c.Client.Do(req)
 }
 
+func (c *Client) UpdateStopCriteriaWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateStopCriteriaRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateStopCriteria(ctx context.Context, body UpdateStopCriteriaJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateStopCriteriaRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResolveStopWithBody(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResolveStopRequestWithBody(c.Server, stopId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResolveStop(ctx context.Context, stopId string, body ResolveStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResolveStopRequest(c.Server, stopId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) DetectProviders(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDetectProvidersRequest(c.Server, params)
 	if err != nil {
@@ -867,6 +1775,258 @@ func (c *Client) DetectProviders(ctx context.Context, params *DetectProvidersPar
 
 func (c *Client) StreamTerminalSession(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewStreamTerminalSessionRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AttachThreadWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAttachThreadRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AttachThread(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAttachThreadRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListArtifacts(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListArtifactsRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RecordArtifactWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRecordArtifactRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RecordArtifact(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRecordArtifactRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureContextBufferRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureContextBuffer(ctx context.Context, threadId string, body ConfigureContextBufferJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureContextBufferRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetSessionChat(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSessionChatRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendDirectMessageWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendDirectMessageRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendDirectMessage(ctx context.Context, threadId string, body SendDirectMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendDirectMessageRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetSessionIssues(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSessionIssuesRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureMentionGateWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureMentionGateRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureMentionGate(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureMentionGateRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetNeedsYouPanelRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetParticipantInvocationWithBody(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetParticipantInvocationRequestWithBody(c.Server, threadId, participantId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetParticipantInvocation(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetParticipantInvocationRequest(c.Server, threadId, participantId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PauseThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPauseThreadRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResumeThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResumeThreadRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetThreadSettings(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetThreadSettingsRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SteerThreadWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSteerThreadRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SteerThread(ctx context.Context, threadId string, body SteerThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSteerThreadRequest(c.Server, threadId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -901,8 +2061,68 @@ func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetHomeDashboardRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetUserInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetUserInfoRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListWorkspaces(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListWorkspacesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AddWorkspaceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddWorkspaceRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AddWorkspace(ctx context.Context, body AddWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddWorkspaceRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveWorkspaceRequest(c.Server, workspaceId)
 	if err != nil {
 		return nil, err
 	}
@@ -936,6 +2156,209 @@ func NewUploadAvatarRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewGetIssuesOverviewRequest generates requests for GetIssuesOverview
+func NewGetIssuesOverviewRequest(server string, params *GetIssuesOverviewParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/issues")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.IncludeArchived != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "includeArchived", *params.IncludeArchived, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetIssueDetailRequest generates requests for GetIssueDetail
+func NewGetIssueDetailRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/issues/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewArchiveIssueRequest generates requests for ArchiveIssue
+func NewArchiveIssueRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/issues/%s/archive", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRestoreIssueRequest generates requests for RestoreIssue
+func NewRestoreIssueRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/issues/%s/restore", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSteerIssueRequest calls the generic SteerIssue builder with application/json body
+func NewSteerIssueRequest(server string, issueId string, body SteerIssueJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSteerIssueRequestWithBody(server, issueId, "application/json", bodyReader)
+}
+
+// NewSteerIssueRequestWithBody generates requests for SteerIssue with any type of body
+func NewSteerIssueRequestWithBody(server string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/issues/%s/steer", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -1148,6 +2571,93 @@ func NewGetSessionRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewUpdateStopCriteriaRequest calls the generic UpdateStopCriteria builder with application/json body
+func NewUpdateStopCriteriaRequest(server string, body UpdateStopCriteriaJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateStopCriteriaRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateStopCriteriaRequestWithBody generates requests for UpdateStopCriteria with any type of body
+func NewUpdateStopCriteriaRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/settings/stop-criteria")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewResolveStopRequest calls the generic ResolveStop builder with application/json body
+func NewResolveStopRequest(server string, stopId string, body ResolveStopJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewResolveStopRequestWithBody(server, stopId, "application/json", bodyReader)
+}
+
+// NewResolveStopRequestWithBody generates requests for ResolveStop with any type of body
+func NewResolveStopRequestWithBody(server string, stopId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "stopId", stopId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/stops/%s/resolve", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewDetectProvidersRequest generates requests for DetectProviders
 func NewDetectProvidersRequest(server string, params *DetectProvidersParams) (*http.Request, error) {
 	var err error
@@ -1236,6 +2746,573 @@ func NewStreamTerminalSessionRequest(server string, issueId string) (*http.Reque
 	return req, nil
 }
 
+// NewAttachThreadRequest calls the generic AttachThread builder with application/json body
+func NewAttachThreadRequest(server string, body AttachThreadJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAttachThreadRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAttachThreadRequestWithBody generates requests for AttachThread with any type of body
+func NewAttachThreadRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListArtifactsRequest generates requests for ListArtifacts
+func NewListArtifactsRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRecordArtifactRequest calls the generic RecordArtifact builder with application/json body
+func NewRecordArtifactRequest(server string, threadId string, body RecordArtifactJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRecordArtifactRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewRecordArtifactRequestWithBody generates requests for RecordArtifact with any type of body
+func NewRecordArtifactRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewConfigureContextBufferRequest calls the generic ConfigureContextBuffer builder with application/json body
+func NewConfigureContextBufferRequest(server string, threadId string, body ConfigureContextBufferJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureContextBufferRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigureContextBufferRequestWithBody generates requests for ConfigureContextBuffer with any type of body
+func NewConfigureContextBufferRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/buffer", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSessionChatRequest generates requests for GetSessionChat
+func NewGetSessionChatRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/chat", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSendDirectMessageRequest calls the generic SendDirectMessage builder with application/json body
+func NewSendDirectMessageRequest(server string, threadId string, body SendDirectMessageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendDirectMessageRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewSendDirectMessageRequestWithBody generates requests for SendDirectMessage with any type of body
+func NewSendDirectMessageRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/direct", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSessionIssuesRequest generates requests for GetSessionIssues
+func NewGetSessionIssuesRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewConfigureMentionGateRequest calls the generic ConfigureMentionGate builder with application/json body
+func NewConfigureMentionGateRequest(server string, threadId string, body ConfigureMentionGateJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureMentionGateRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigureMentionGateRequestWithBody generates requests for ConfigureMentionGate with any type of body
+func NewConfigureMentionGateRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/mention-gate", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetNeedsYouPanelRequest generates requests for GetNeedsYouPanel
+func NewGetNeedsYouPanelRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/needs-you", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetParticipantInvocationRequest calls the generic SetParticipantInvocation builder with application/json body
+func NewSetParticipantInvocationRequest(server string, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetParticipantInvocationRequestWithBody(server, threadId, participantId, "application/json", bodyReader)
+}
+
+// NewSetParticipantInvocationRequestWithBody generates requests for SetParticipantInvocation with any type of body
+func NewSetParticipantInvocationRequestWithBody(server string, threadId string, participantId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "participantId", participantId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/participants/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewPauseThreadRequest generates requests for PauseThread
+func NewPauseThreadRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/pause", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewResumeThreadRequest generates requests for ResumeThread
+func NewResumeThreadRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/resume", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetThreadSettingsRequest generates requests for GetThreadSettings
+func NewGetThreadSettingsRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/settings", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSteerThreadRequest calls the generic SteerThread builder with application/json body
+func NewSteerThreadRequest(server string, threadId string, body SteerThreadJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSteerThreadRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewSteerThreadRequestWithBody generates requests for SteerThread with any type of body
+func NewSteerThreadRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/steer", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetMyAccountRequest generates requests for GetMyAccount
 func NewGetMyAccountRequest(server string) (*http.Request, error) {
 	var err error
@@ -1290,6 +3367,33 @@ func NewListenEventsRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetHomeDashboardRequest generates requests for GetHomeDashboard
+func NewGetHomeDashboardRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/home")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetUserInfoRequest generates requests for GetUserInfo
 func NewGetUserInfoRequest(server string) (*http.Request, error) {
 	var err error
@@ -1310,6 +3414,107 @@ func NewGetUserInfoRequest(server string) (*http.Request, error) {
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListWorkspacesRequest generates requests for ListWorkspaces
+func NewListWorkspacesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/workspaces")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAddWorkspaceRequest calls the generic AddWorkspace builder with application/json body
+func NewAddWorkspaceRequest(server string, body AddWorkspaceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAddWorkspaceRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAddWorkspaceRequestWithBody generates requests for AddWorkspace with any type of body
+func NewAddWorkspaceRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/workspaces")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRemoveWorkspaceRequest generates requests for RemoveWorkspace
+func NewRemoveWorkspaceRequest(server string, workspaceId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "workspaceId", workspaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/workspaces/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1363,6 +3568,23 @@ type ClientWithResponsesInterface interface {
 	// UploadAvatarWithResponse request
 	UploadAvatarWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error)
 
+	// GetIssuesOverviewWithResponse request
+	GetIssuesOverviewWithResponse(ctx context.Context, params *GetIssuesOverviewParams, reqEditors ...RequestEditorFn) (*GetIssuesOverviewResponse, error)
+
+	// GetIssueDetailWithResponse request
+	GetIssueDetailWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*GetIssueDetailResponse, error)
+
+	// ArchiveIssueWithResponse request
+	ArchiveIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*ArchiveIssueResponse, error)
+
+	// RestoreIssueWithResponse request
+	RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error)
+
+	// SteerIssueWithBodyWithResponse request with any body
+	SteerIssueWithBodyWithResponse(ctx context.Context, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error)
+
+	SteerIssueWithResponse(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error)
+
 	// CreateOwnerWithBodyWithResponse request with any body
 	CreateOwnerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOwnerResponse, error)
 
@@ -1387,11 +3609,77 @@ type ClientWithResponsesInterface interface {
 	// GetSessionWithResponse request
 	GetSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSessionResponse, error)
 
+	// UpdateStopCriteriaWithBodyWithResponse request with any body
+	UpdateStopCriteriaWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateStopCriteriaResponse, error)
+
+	UpdateStopCriteriaWithResponse(ctx context.Context, body UpdateStopCriteriaJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateStopCriteriaResponse, error)
+
+	// ResolveStopWithBodyWithResponse request with any body
+	ResolveStopWithBodyWithResponse(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResolveStopResponse, error)
+
+	ResolveStopWithResponse(ctx context.Context, stopId string, body ResolveStopJSONRequestBody, reqEditors ...RequestEditorFn) (*ResolveStopResponse, error)
+
 	// DetectProvidersWithResponse request
 	DetectProvidersWithResponse(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*DetectProvidersResponse, error)
 
 	// StreamTerminalSessionWithResponse request
 	StreamTerminalSessionWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*StreamTerminalSessionResponse, error)
+
+	// AttachThreadWithBodyWithResponse request with any body
+	AttachThreadWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AttachThreadResponse, error)
+
+	AttachThreadWithResponse(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*AttachThreadResponse, error)
+
+	// ListArtifactsWithResponse request
+	ListArtifactsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListArtifactsResponse, error)
+
+	// RecordArtifactWithBodyWithResponse request with any body
+	RecordArtifactWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecordArtifactResponse, error)
+
+	RecordArtifactWithResponse(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordArtifactResponse, error)
+
+	// ConfigureContextBufferWithBodyWithResponse request with any body
+	ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error)
+
+	ConfigureContextBufferWithResponse(ctx context.Context, threadId string, body ConfigureContextBufferJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error)
+
+	// GetSessionChatWithResponse request
+	GetSessionChatWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetSessionChatResponse, error)
+
+	// SendDirectMessageWithBodyWithResponse request with any body
+	SendDirectMessageWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendDirectMessageResponse, error)
+
+	SendDirectMessageWithResponse(ctx context.Context, threadId string, body SendDirectMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendDirectMessageResponse, error)
+
+	// GetSessionIssuesWithResponse request
+	GetSessionIssuesWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetSessionIssuesResponse, error)
+
+	// ConfigureMentionGateWithBodyWithResponse request with any body
+	ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
+
+	ConfigureMentionGateWithResponse(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
+
+	// GetNeedsYouPanelWithResponse request
+	GetNeedsYouPanelWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetNeedsYouPanelResponse, error)
+
+	// SetParticipantInvocationWithBodyWithResponse request with any body
+	SetParticipantInvocationWithBodyWithResponse(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error)
+
+	SetParticipantInvocationWithResponse(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error)
+
+	// PauseThreadWithResponse request
+	PauseThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*PauseThreadResponse, error)
+
+	// ResumeThreadWithResponse request
+	ResumeThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ResumeThreadResponse, error)
+
+	// GetThreadSettingsWithResponse request
+	GetThreadSettingsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetThreadSettingsResponse, error)
+
+	// SteerThreadWithBodyWithResponse request with any body
+	SteerThreadWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerThreadResponse, error)
+
+	SteerThreadWithResponse(ctx context.Context, threadId string, body SteerThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerThreadResponse, error)
 
 	// GetMyAccountWithResponse request
 	GetMyAccountWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyAccountResponse, error)
@@ -1399,8 +3687,22 @@ type ClientWithResponsesInterface interface {
 	// ListenEventsWithResponse request
 	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
 
+	// GetHomeDashboardWithResponse request
+	GetHomeDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHomeDashboardResponse, error)
+
 	// GetUserInfoWithResponse request
 	GetUserInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUserInfoResponse, error)
+
+	// ListWorkspacesWithResponse request
+	ListWorkspacesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListWorkspacesResponse, error)
+
+	// AddWorkspaceWithBodyWithResponse request with any body
+	AddWorkspaceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddWorkspaceResponse, error)
+
+	AddWorkspaceWithResponse(ctx context.Context, body AddWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*AddWorkspaceResponse, error)
+
+	// RemoveWorkspaceWithResponse request
+	RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error)
 }
 
 type UploadAvatarResponse struct {
@@ -1429,6 +3731,216 @@ func (r UploadAvatarResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r UploadAvatarResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetIssuesOverviewResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Archived []struct {
+			Archived          bool               `json:"archived"`
+			IssueId           openapi_types.UUID `json:"issueId"`
+			Key               string             `json:"key"`
+			Meta              *string            `json:"meta,omitempty"`
+			Status            IssueStatus        `json:"status"`
+			ThreadDisplayName string             `json:"threadDisplayName"`
+			ThreadId          openapi_types.UUID `json:"threadId"`
+			Title             string             `json:"title"`
+		} `json:"archived"`
+		Groups []struct {
+			Items []struct {
+				Archived          bool               `json:"archived"`
+				IssueId           openapi_types.UUID `json:"issueId"`
+				Key               string             `json:"key"`
+				Meta              *string            `json:"meta,omitempty"`
+				Status            IssueStatus        `json:"status"`
+				ThreadDisplayName string             `json:"threadDisplayName"`
+				ThreadId          openapi_types.UUID `json:"threadId"`
+				Title             string             `json:"title"`
+			} `json:"items"`
+			Status IssueStatus `json:"status"`
+		} `json:"groups"`
+		StatsLine struct {
+			Archived      int `json:"archived"`
+			AwaitingInput int `json:"awaitingInput"`
+			Completed     int `json:"completed"`
+			Working       int `json:"working"`
+		} `json:"statsLine"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetIssuesOverviewResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetIssuesOverviewResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetIssuesOverviewResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetIssueDetailResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Issue struct {
+			Archived bool               `json:"archived"`
+			IssueId  openapi_types.UUID `json:"issueId"`
+			Key      string             `json:"key"`
+			Meta     *string            `json:"meta,omitempty"`
+			Status   IssueStatus        `json:"status"`
+			Title    string             `json:"title"`
+		} `json:"issue"`
+		Provider       ProviderKind `json:"provider"`
+		RoutedMessages []struct {
+			At             string                `json:"at"`
+			Classification *ClassificationMethod `json:"classification,omitempty"`
+			EntryId        openapi_types.UUID    `json:"entryId"`
+			Kind           TranscriptKind        `json:"kind"`
+			Text           string                `json:"text"`
+		} `json:"routedMessages"`
+		Stops []struct {
+			Detail   string             `json:"detail"`
+			Kind     StopKind           `json:"kind"`
+			RaisedAt string             `json:"raisedAt"`
+			StopId   openapi_types.UUID `json:"stopId"`
+			Title    string             `json:"title"`
+		} `json:"stops"`
+		TerminalLog []struct {
+			At   string `json:"at"`
+			Line string `json:"line"`
+		} `json:"terminalLog"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetIssueDetailResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetIssueDetailResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetIssueDetailResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ArchiveIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ArchiveIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ArchiveIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ArchiveIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RestoreIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RestoreIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RestoreIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RestoreIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SteerIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		EntryId openapi_types.UUID `json:"entryId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SteerIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SteerIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SteerIssueResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -1638,6 +4150,66 @@ func (r GetSessionResponse) ContentType() string {
 	return ""
 }
 
+type UpdateStopCriteriaResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateStopCriteriaResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateStopCriteriaResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateStopCriteriaResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResolveStopResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ResolveStopResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResolveStopResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResolveStopResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DetectProvidersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1698,6 +4270,521 @@ func (r StreamTerminalSessionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r StreamTerminalSessionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AttachThreadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ThreadId openapi_types.UUID `json:"threadId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r AttachThreadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AttachThreadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AttachThreadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListArtifactsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Artifacts []struct {
+			ArtifactId openapi_types.UUID  `json:"artifactId"`
+			IssueId    *openapi_types.UUID `json:"issueId,omitempty"`
+			Kind       ArtifactKind        `json:"kind"`
+			Meta       string              `json:"meta"`
+			Name       string              `json:"name"`
+			RecordedAt string              `json:"recordedAt"`
+		} `json:"artifacts"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ListArtifactsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListArtifactsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListArtifactsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RecordArtifactResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ArtifactId openapi_types.UUID `json:"artifactId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r RecordArtifactResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RecordArtifactResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RecordArtifactResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConfigureContextBufferResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureContextBufferResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureContextBufferResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigureContextBufferResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSessionChatResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ActiveStops []struct {
+			Detail   string             `json:"detail"`
+			Kind     StopKind           `json:"kind"`
+			RaisedAt string             `json:"raisedAt"`
+			StopId   openapi_types.UUID `json:"stopId"`
+			Title    string             `json:"title"`
+		} `json:"activeStops"`
+		AutonomyCaption string                                        `json:"autonomyCaption"`
+		ComposerMode    ThreadMode                                    `json:"composerMode"`
+		MentionGate     GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
+		Paused          bool                                          `json:"paused"`
+		Thread          struct {
+			ChannelKind   ChannelKind        `json:"channelKind"`
+			DisplayName   string             `json:"displayName"`
+			LastActivity  string             `json:"lastActivity"`
+			Providers     []ProviderKind     `json:"providers"`
+			Status        ThreadStatus       `json:"status"`
+			ThreadId      openapi_types.UUID `json:"threadId"`
+			WorkspacePath string             `json:"workspacePath"`
+		} `json:"thread"`
+		Transcript []struct {
+			At             string                `json:"at"`
+			Classification *ClassificationMethod `json:"classification,omitempty"`
+			EntryId        openapi_types.UUID    `json:"entryId"`
+			IssueId        *openapi_types.UUID   `json:"issueId,omitempty"`
+			Kind           TranscriptKind        `json:"kind"`
+			Provider       *ProviderKind         `json:"provider,omitempty"`
+			QuotedEntryId  *string               `json:"quotedEntryId,omitempty"`
+			Text           string                `json:"text"`
+		} `json:"transcript"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSessionChatResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSessionChatResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSessionChatResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SendDirectMessageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		EntryId openapi_types.UUID `json:"entryId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SendDirectMessageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendDirectMessageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SendDirectMessageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSessionIssuesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Archived []struct {
+			Archived bool               `json:"archived"`
+			IssueId  openapi_types.UUID `json:"issueId"`
+			Key      string             `json:"key"`
+			Meta     *string            `json:"meta,omitempty"`
+			Status   IssueStatus        `json:"status"`
+			Title    string             `json:"title"`
+		} `json:"archived"`
+		AutoArchiveNote string `json:"autoArchiveNote"`
+		Groups          []struct {
+			Items []struct {
+				Archived bool               `json:"archived"`
+				IssueId  openapi_types.UUID `json:"issueId"`
+				Key      string             `json:"key"`
+				Meta     *string            `json:"meta,omitempty"`
+				Status   IssueStatus        `json:"status"`
+				Title    string             `json:"title"`
+			} `json:"items"`
+			Status IssueStatus `json:"status"`
+		} `json:"groups"`
+		StatsLine struct {
+			AwaitingInput int `json:"awaitingInput"`
+			Completed     int `json:"completed"`
+			Working       int `json:"working"`
+		} `json:"statsLine"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSessionIssuesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSessionIssuesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSessionIssuesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConfigureMentionGateResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureMentionGateResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureMentionGateResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigureMentionGateResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetNeedsYouPanelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Stops []struct {
+			AvailableResolutions []StopResolution   `json:"availableResolutions"`
+			Detail               string             `json:"detail"`
+			IssueId              openapi_types.UUID `json:"issueId"`
+			IssueKey             string             `json:"issueKey"`
+			Kind                 StopKind           `json:"kind"`
+			RaisedAt             string             `json:"raisedAt"`
+			StopId               openapi_types.UUID `json:"stopId"`
+			Title                string             `json:"title"`
+		} `json:"stops"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetNeedsYouPanelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetNeedsYouPanelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetNeedsYouPanelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetParticipantInvocationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r SetParticipantInvocationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetParticipantInvocationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetParticipantInvocationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PauseThreadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r PauseThreadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PauseThreadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PauseThreadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResumeThreadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ResumeThreadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResumeThreadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResumeThreadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetThreadSettingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		BufferSize   BufferSize                                       `json:"bufferSize"`
+		InvokerCount int                                              `json:"invokerCount"`
+		MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+		Participants []struct {
+			CanInvoke     bool   `json:"canInvoke"`
+			Name          string `json:"name"`
+			ParticipantId string `json:"participantId"`
+			Source        string `json:"source"`
+		} `json:"participants"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetThreadSettingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetThreadSettingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetThreadSettingsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SteerThreadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		EntryId openapi_types.UUID `json:"entryId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SteerThreadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SteerThreadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SteerThreadResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -1781,6 +4868,67 @@ func (r ListenEventsResponse) ContentType() string {
 	return ""
 }
 
+type GetHomeDashboardResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ActiveSessions []struct {
+			ChannelKind   ChannelKind        `json:"channelKind"`
+			DisplayName   string             `json:"displayName"`
+			LastActivity  string             `json:"lastActivity"`
+			Providers     []ProviderKind     `json:"providers"`
+			Status        ThreadStatus       `json:"status"`
+			ThreadId      openapi_types.UUID `json:"threadId"`
+			WorkspacePath string             `json:"workspacePath"`
+		} `json:"activeSessions"`
+		AgentsRunningNow int `json:"agentsRunningNow"`
+		Channels         []struct {
+			Kind   ChannelKind   `json:"kind"`
+			Status ChannelStatus `json:"status"`
+		} `json:"channels"`
+		LatestActivity []struct {
+			At       string             `json:"at"`
+			Subtitle string             `json:"subtitle"`
+			ThreadId openapi_types.UUID `json:"threadId"`
+			Title    string             `json:"title"`
+		} `json:"latestActivity"`
+		NeedsYou *struct {
+			StopKinds         []StopKind         `json:"stopKinds"`
+			ThreadDisplayName string             `json:"threadDisplayName"`
+			ThreadId          openapi_types.UUID `json:"threadId"`
+		} `json:"needsYou,omitempty"`
+		Today struct {
+			IssuesClosed          int     `json:"issuesClosed"`
+			IssuesOpened          int     `json:"issuesOpened"`
+			MedianResponseSeconds float32 `json:"medianResponseSeconds"`
+		} `json:"today"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetHomeDashboardResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetHomeDashboardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetHomeDashboardResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetUserInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1826,6 +4974,107 @@ func (r GetUserInfoResponse) ContentType() string {
 	return ""
 }
 
+type ListWorkspacesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Workspaces []struct {
+			AddedAt     time.Time          `json:"addedAt"`
+			Badges      []WorkspaceBadge   `json:"badges"`
+			Path        string             `json:"path"`
+			ThreadCount int                `json:"threadCount"`
+			WorkspaceId openapi_types.UUID `json:"workspaceId"`
+		} `json:"workspaces"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ListWorkspacesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListWorkspacesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListWorkspacesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AddWorkspaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Badges      []WorkspaceBadge   `json:"badges"`
+		WorkspaceId openapi_types.UUID `json:"workspaceId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r AddWorkspaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddWorkspaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AddWorkspaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RemoveWorkspaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveWorkspaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveWorkspaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveWorkspaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // UploadAvatarWithResponse request returning *UploadAvatarResponse
 func (c *ClientWithResponses) UploadAvatarWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error) {
 	rsp, err := c.UploadAvatar(ctx, reqEditors...)
@@ -1833,6 +5082,59 @@ func (c *ClientWithResponses) UploadAvatarWithResponse(ctx context.Context, reqE
 		return nil, err
 	}
 	return ParseUploadAvatarResponse(rsp)
+}
+
+// GetIssuesOverviewWithResponse request returning *GetIssuesOverviewResponse
+func (c *ClientWithResponses) GetIssuesOverviewWithResponse(ctx context.Context, params *GetIssuesOverviewParams, reqEditors ...RequestEditorFn) (*GetIssuesOverviewResponse, error) {
+	rsp, err := c.GetIssuesOverview(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetIssuesOverviewResponse(rsp)
+}
+
+// GetIssueDetailWithResponse request returning *GetIssueDetailResponse
+func (c *ClientWithResponses) GetIssueDetailWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*GetIssueDetailResponse, error) {
+	rsp, err := c.GetIssueDetail(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetIssueDetailResponse(rsp)
+}
+
+// ArchiveIssueWithResponse request returning *ArchiveIssueResponse
+func (c *ClientWithResponses) ArchiveIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*ArchiveIssueResponse, error) {
+	rsp, err := c.ArchiveIssue(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseArchiveIssueResponse(rsp)
+}
+
+// RestoreIssueWithResponse request returning *RestoreIssueResponse
+func (c *ClientWithResponses) RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error) {
+	rsp, err := c.RestoreIssue(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRestoreIssueResponse(rsp)
+}
+
+// SteerIssueWithBodyWithResponse request with arbitrary body returning *SteerIssueResponse
+func (c *ClientWithResponses) SteerIssueWithBodyWithResponse(ctx context.Context, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error) {
+	rsp, err := c.SteerIssueWithBody(ctx, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSteerIssueResponse(rsp)
+}
+
+func (c *ClientWithResponses) SteerIssueWithResponse(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error) {
+	rsp, err := c.SteerIssue(ctx, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSteerIssueResponse(rsp)
 }
 
 // CreateOwnerWithBodyWithResponse request with arbitrary body returning *CreateOwnerResponse
@@ -1913,6 +5215,40 @@ func (c *ClientWithResponses) GetSessionWithResponse(ctx context.Context, reqEdi
 	return ParseGetSessionResponse(rsp)
 }
 
+// UpdateStopCriteriaWithBodyWithResponse request with arbitrary body returning *UpdateStopCriteriaResponse
+func (c *ClientWithResponses) UpdateStopCriteriaWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateStopCriteriaResponse, error) {
+	rsp, err := c.UpdateStopCriteriaWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateStopCriteriaResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateStopCriteriaWithResponse(ctx context.Context, body UpdateStopCriteriaJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateStopCriteriaResponse, error) {
+	rsp, err := c.UpdateStopCriteria(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateStopCriteriaResponse(rsp)
+}
+
+// ResolveStopWithBodyWithResponse request with arbitrary body returning *ResolveStopResponse
+func (c *ClientWithResponses) ResolveStopWithBodyWithResponse(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResolveStopResponse, error) {
+	rsp, err := c.ResolveStopWithBody(ctx, stopId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResolveStopResponse(rsp)
+}
+
+func (c *ClientWithResponses) ResolveStopWithResponse(ctx context.Context, stopId string, body ResolveStopJSONRequestBody, reqEditors ...RequestEditorFn) (*ResolveStopResponse, error) {
+	rsp, err := c.ResolveStop(ctx, stopId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResolveStopResponse(rsp)
+}
+
 // DetectProvidersWithResponse request returning *DetectProvidersResponse
 func (c *ClientWithResponses) DetectProvidersWithResponse(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*DetectProvidersResponse, error) {
 	rsp, err := c.DetectProviders(ctx, params, reqEditors...)
@@ -1929,6 +5265,188 @@ func (c *ClientWithResponses) StreamTerminalSessionWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseStreamTerminalSessionResponse(rsp)
+}
+
+// AttachThreadWithBodyWithResponse request with arbitrary body returning *AttachThreadResponse
+func (c *ClientWithResponses) AttachThreadWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AttachThreadResponse, error) {
+	rsp, err := c.AttachThreadWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAttachThreadResponse(rsp)
+}
+
+func (c *ClientWithResponses) AttachThreadWithResponse(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*AttachThreadResponse, error) {
+	rsp, err := c.AttachThread(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAttachThreadResponse(rsp)
+}
+
+// ListArtifactsWithResponse request returning *ListArtifactsResponse
+func (c *ClientWithResponses) ListArtifactsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListArtifactsResponse, error) {
+	rsp, err := c.ListArtifacts(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListArtifactsResponse(rsp)
+}
+
+// RecordArtifactWithBodyWithResponse request with arbitrary body returning *RecordArtifactResponse
+func (c *ClientWithResponses) RecordArtifactWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecordArtifactResponse, error) {
+	rsp, err := c.RecordArtifactWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRecordArtifactResponse(rsp)
+}
+
+func (c *ClientWithResponses) RecordArtifactWithResponse(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordArtifactResponse, error) {
+	rsp, err := c.RecordArtifact(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRecordArtifactResponse(rsp)
+}
+
+// ConfigureContextBufferWithBodyWithResponse request with arbitrary body returning *ConfigureContextBufferResponse
+func (c *ClientWithResponses) ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error) {
+	rsp, err := c.ConfigureContextBufferWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureContextBufferResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureContextBufferWithResponse(ctx context.Context, threadId string, body ConfigureContextBufferJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error) {
+	rsp, err := c.ConfigureContextBuffer(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureContextBufferResponse(rsp)
+}
+
+// GetSessionChatWithResponse request returning *GetSessionChatResponse
+func (c *ClientWithResponses) GetSessionChatWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetSessionChatResponse, error) {
+	rsp, err := c.GetSessionChat(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSessionChatResponse(rsp)
+}
+
+// SendDirectMessageWithBodyWithResponse request with arbitrary body returning *SendDirectMessageResponse
+func (c *ClientWithResponses) SendDirectMessageWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendDirectMessageResponse, error) {
+	rsp, err := c.SendDirectMessageWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendDirectMessageResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendDirectMessageWithResponse(ctx context.Context, threadId string, body SendDirectMessageJSONRequestBody, reqEditors ...RequestEditorFn) (*SendDirectMessageResponse, error) {
+	rsp, err := c.SendDirectMessage(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendDirectMessageResponse(rsp)
+}
+
+// GetSessionIssuesWithResponse request returning *GetSessionIssuesResponse
+func (c *ClientWithResponses) GetSessionIssuesWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetSessionIssuesResponse, error) {
+	rsp, err := c.GetSessionIssues(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSessionIssuesResponse(rsp)
+}
+
+// ConfigureMentionGateWithBodyWithResponse request with arbitrary body returning *ConfigureMentionGateResponse
+func (c *ClientWithResponses) ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error) {
+	rsp, err := c.ConfigureMentionGateWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureMentionGateResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureMentionGateWithResponse(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error) {
+	rsp, err := c.ConfigureMentionGate(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureMentionGateResponse(rsp)
+}
+
+// GetNeedsYouPanelWithResponse request returning *GetNeedsYouPanelResponse
+func (c *ClientWithResponses) GetNeedsYouPanelWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetNeedsYouPanelResponse, error) {
+	rsp, err := c.GetNeedsYouPanel(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetNeedsYouPanelResponse(rsp)
+}
+
+// SetParticipantInvocationWithBodyWithResponse request with arbitrary body returning *SetParticipantInvocationResponse
+func (c *ClientWithResponses) SetParticipantInvocationWithBodyWithResponse(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error) {
+	rsp, err := c.SetParticipantInvocationWithBody(ctx, threadId, participantId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetParticipantInvocationResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetParticipantInvocationWithResponse(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error) {
+	rsp, err := c.SetParticipantInvocation(ctx, threadId, participantId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetParticipantInvocationResponse(rsp)
+}
+
+// PauseThreadWithResponse request returning *PauseThreadResponse
+func (c *ClientWithResponses) PauseThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*PauseThreadResponse, error) {
+	rsp, err := c.PauseThread(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseThreadResponse(rsp)
+}
+
+// ResumeThreadWithResponse request returning *ResumeThreadResponse
+func (c *ClientWithResponses) ResumeThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ResumeThreadResponse, error) {
+	rsp, err := c.ResumeThread(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeThreadResponse(rsp)
+}
+
+// GetThreadSettingsWithResponse request returning *GetThreadSettingsResponse
+func (c *ClientWithResponses) GetThreadSettingsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetThreadSettingsResponse, error) {
+	rsp, err := c.GetThreadSettings(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetThreadSettingsResponse(rsp)
+}
+
+// SteerThreadWithBodyWithResponse request with arbitrary body returning *SteerThreadResponse
+func (c *ClientWithResponses) SteerThreadWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerThreadResponse, error) {
+	rsp, err := c.SteerThreadWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSteerThreadResponse(rsp)
+}
+
+func (c *ClientWithResponses) SteerThreadWithResponse(ctx context.Context, threadId string, body SteerThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerThreadResponse, error) {
+	rsp, err := c.SteerThread(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSteerThreadResponse(rsp)
 }
 
 // GetMyAccountWithResponse request returning *GetMyAccountResponse
@@ -1949,6 +5467,15 @@ func (c *ClientWithResponses) ListenEventsWithResponse(ctx context.Context, reqE
 	return ParseListenEventsResponse(rsp)
 }
 
+// GetHomeDashboardWithResponse request returning *GetHomeDashboardResponse
+func (c *ClientWithResponses) GetHomeDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHomeDashboardResponse, error) {
+	rsp, err := c.GetHomeDashboard(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetHomeDashboardResponse(rsp)
+}
+
 // GetUserInfoWithResponse request returning *GetUserInfoResponse
 func (c *ClientWithResponses) GetUserInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUserInfoResponse, error) {
 	rsp, err := c.GetUserInfo(ctx, reqEditors...)
@@ -1956,6 +5483,41 @@ func (c *ClientWithResponses) GetUserInfoWithResponse(ctx context.Context, reqEd
 		return nil, err
 	}
 	return ParseGetUserInfoResponse(rsp)
+}
+
+// ListWorkspacesWithResponse request returning *ListWorkspacesResponse
+func (c *ClientWithResponses) ListWorkspacesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListWorkspacesResponse, error) {
+	rsp, err := c.ListWorkspaces(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListWorkspacesResponse(rsp)
+}
+
+// AddWorkspaceWithBodyWithResponse request with arbitrary body returning *AddWorkspaceResponse
+func (c *ClientWithResponses) AddWorkspaceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddWorkspaceResponse, error) {
+	rsp, err := c.AddWorkspaceWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddWorkspaceResponse(rsp)
+}
+
+func (c *ClientWithResponses) AddWorkspaceWithResponse(ctx context.Context, body AddWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*AddWorkspaceResponse, error) {
+	rsp, err := c.AddWorkspace(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddWorkspaceResponse(rsp)
+}
+
+// RemoveWorkspaceWithResponse request returning *RemoveWorkspaceResponse
+func (c *ClientWithResponses) RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error) {
+	rsp, err := c.RemoveWorkspace(ctx, workspaceId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveWorkspaceResponse(rsp)
 }
 
 // ParseUploadAvatarResponse parses an HTTP response from a UploadAvatarWithResponse call
@@ -1975,6 +5537,196 @@ func ParseUploadAvatarResponse(rsp *http.Response) (*UploadAvatarResponse, error
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			PictureUrl string `json:"pictureUrl"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetIssuesOverviewResponse parses an HTTP response from a GetIssuesOverviewWithResponse call
+func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetIssuesOverviewResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Archived []struct {
+				Archived          bool               `json:"archived"`
+				IssueId           openapi_types.UUID `json:"issueId"`
+				Key               string             `json:"key"`
+				Meta              *string            `json:"meta,omitempty"`
+				Status            IssueStatus        `json:"status"`
+				ThreadDisplayName string             `json:"threadDisplayName"`
+				ThreadId          openapi_types.UUID `json:"threadId"`
+				Title             string             `json:"title"`
+			} `json:"archived"`
+			Groups []struct {
+				Items []struct {
+					Archived          bool               `json:"archived"`
+					IssueId           openapi_types.UUID `json:"issueId"`
+					Key               string             `json:"key"`
+					Meta              *string            `json:"meta,omitempty"`
+					Status            IssueStatus        `json:"status"`
+					ThreadDisplayName string             `json:"threadDisplayName"`
+					ThreadId          openapi_types.UUID `json:"threadId"`
+					Title             string             `json:"title"`
+				} `json:"items"`
+				Status IssueStatus `json:"status"`
+			} `json:"groups"`
+			StatsLine struct {
+				Archived      int `json:"archived"`
+				AwaitingInput int `json:"awaitingInput"`
+				Completed     int `json:"completed"`
+				Working       int `json:"working"`
+			} `json:"statsLine"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetIssueDetailResponse parses an HTTP response from a GetIssueDetailWithResponse call
+func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetIssueDetailResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Issue struct {
+				Archived bool               `json:"archived"`
+				IssueId  openapi_types.UUID `json:"issueId"`
+				Key      string             `json:"key"`
+				Meta     *string            `json:"meta,omitempty"`
+				Status   IssueStatus        `json:"status"`
+				Title    string             `json:"title"`
+			} `json:"issue"`
+			Provider       ProviderKind `json:"provider"`
+			RoutedMessages []struct {
+				At             string                `json:"at"`
+				Classification *ClassificationMethod `json:"classification,omitempty"`
+				EntryId        openapi_types.UUID    `json:"entryId"`
+				Kind           TranscriptKind        `json:"kind"`
+				Text           string                `json:"text"`
+			} `json:"routedMessages"`
+			Stops []struct {
+				Detail   string             `json:"detail"`
+				Kind     StopKind           `json:"kind"`
+				RaisedAt string             `json:"raisedAt"`
+				StopId   openapi_types.UUID `json:"stopId"`
+				Title    string             `json:"title"`
+			} `json:"stops"`
+			TerminalLog []struct {
+				At   string `json:"at"`
+				Line string `json:"line"`
+			} `json:"terminalLog"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseArchiveIssueResponse parses an HTTP response from a ArchiveIssueWithResponse call
+func ParseArchiveIssueResponse(rsp *http.Response) (*ArchiveIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ArchiveIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRestoreIssueResponse parses an HTTP response from a RestoreIssueWithResponse call
+func ParseRestoreIssueResponse(rsp *http.Response) (*RestoreIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RestoreIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSteerIssueResponse parses an HTTP response from a SteerIssueWithResponse call
+func ParseSteerIssueResponse(rsp *http.Response) (*SteerIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SteerIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			EntryId openapi_types.UUID `json:"entryId"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -2165,6 +5917,58 @@ func ParseGetSessionResponse(rsp *http.Response) (*GetSessionResponse, error) {
 	return response, nil
 }
 
+// ParseUpdateStopCriteriaResponse parses an HTTP response from a UpdateStopCriteriaWithResponse call
+func ParseUpdateStopCriteriaResponse(rsp *http.Response) (*UpdateStopCriteriaResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateStopCriteriaResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResolveStopResponse parses an HTTP response from a ResolveStopWithResponse call
+func ParseResolveStopResponse(rsp *http.Response) (*ResolveStopResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResolveStopResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDetectProvidersResponse parses an HTTP response from a DetectProvidersWithResponse call
 func ParseDetectProvidersResponse(rsp *http.Response) (*DetectProvidersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2209,6 +6013,465 @@ func ParseStreamTerminalSessionResponse(rsp *http.Response) (*StreamTerminalSess
 	response := &StreamTerminalSessionResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseAttachThreadResponse parses an HTTP response from a AttachThreadWithResponse call
+func ParseAttachThreadResponse(rsp *http.Response) (*AttachThreadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AttachThreadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ThreadId openapi_types.UUID `json:"threadId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListArtifactsResponse parses an HTTP response from a ListArtifactsWithResponse call
+func ParseListArtifactsResponse(rsp *http.Response) (*ListArtifactsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListArtifactsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Artifacts []struct {
+				ArtifactId openapi_types.UUID  `json:"artifactId"`
+				IssueId    *openapi_types.UUID `json:"issueId,omitempty"`
+				Kind       ArtifactKind        `json:"kind"`
+				Meta       string              `json:"meta"`
+				Name       string              `json:"name"`
+				RecordedAt string              `json:"recordedAt"`
+			} `json:"artifacts"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRecordArtifactResponse parses an HTTP response from a RecordArtifactWithResponse call
+func ParseRecordArtifactResponse(rsp *http.Response) (*RecordArtifactResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RecordArtifactResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ArtifactId openapi_types.UUID `json:"artifactId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfigureContextBufferResponse parses an HTTP response from a ConfigureContextBufferWithResponse call
+func ParseConfigureContextBufferResponse(rsp *http.Response) (*ConfigureContextBufferResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureContextBufferResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSessionChatResponse parses an HTTP response from a GetSessionChatWithResponse call
+func ParseGetSessionChatResponse(rsp *http.Response) (*GetSessionChatResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSessionChatResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ActiveStops []struct {
+				Detail   string             `json:"detail"`
+				Kind     StopKind           `json:"kind"`
+				RaisedAt string             `json:"raisedAt"`
+				StopId   openapi_types.UUID `json:"stopId"`
+				Title    string             `json:"title"`
+			} `json:"activeStops"`
+			AutonomyCaption string                                        `json:"autonomyCaption"`
+			ComposerMode    ThreadMode                                    `json:"composerMode"`
+			MentionGate     GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
+			Paused          bool                                          `json:"paused"`
+			Thread          struct {
+				ChannelKind   ChannelKind        `json:"channelKind"`
+				DisplayName   string             `json:"displayName"`
+				LastActivity  string             `json:"lastActivity"`
+				Providers     []ProviderKind     `json:"providers"`
+				Status        ThreadStatus       `json:"status"`
+				ThreadId      openapi_types.UUID `json:"threadId"`
+				WorkspacePath string             `json:"workspacePath"`
+			} `json:"thread"`
+			Transcript []struct {
+				At             string                `json:"at"`
+				Classification *ClassificationMethod `json:"classification,omitempty"`
+				EntryId        openapi_types.UUID    `json:"entryId"`
+				IssueId        *openapi_types.UUID   `json:"issueId,omitempty"`
+				Kind           TranscriptKind        `json:"kind"`
+				Provider       *ProviderKind         `json:"provider,omitempty"`
+				QuotedEntryId  *string               `json:"quotedEntryId,omitempty"`
+				Text           string                `json:"text"`
+			} `json:"transcript"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSendDirectMessageResponse parses an HTTP response from a SendDirectMessageWithResponse call
+func ParseSendDirectMessageResponse(rsp *http.Response) (*SendDirectMessageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendDirectMessageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			EntryId openapi_types.UUID `json:"entryId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSessionIssuesResponse parses an HTTP response from a GetSessionIssuesWithResponse call
+func ParseGetSessionIssuesResponse(rsp *http.Response) (*GetSessionIssuesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSessionIssuesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Archived []struct {
+				Archived bool               `json:"archived"`
+				IssueId  openapi_types.UUID `json:"issueId"`
+				Key      string             `json:"key"`
+				Meta     *string            `json:"meta,omitempty"`
+				Status   IssueStatus        `json:"status"`
+				Title    string             `json:"title"`
+			} `json:"archived"`
+			AutoArchiveNote string `json:"autoArchiveNote"`
+			Groups          []struct {
+				Items []struct {
+					Archived bool               `json:"archived"`
+					IssueId  openapi_types.UUID `json:"issueId"`
+					Key      string             `json:"key"`
+					Meta     *string            `json:"meta,omitempty"`
+					Status   IssueStatus        `json:"status"`
+					Title    string             `json:"title"`
+				} `json:"items"`
+				Status IssueStatus `json:"status"`
+			} `json:"groups"`
+			StatsLine struct {
+				AwaitingInput int `json:"awaitingInput"`
+				Completed     int `json:"completed"`
+				Working       int `json:"working"`
+			} `json:"statsLine"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfigureMentionGateResponse parses an HTTP response from a ConfigureMentionGateWithResponse call
+func ParseConfigureMentionGateResponse(rsp *http.Response) (*ConfigureMentionGateResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureMentionGateResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetNeedsYouPanelResponse parses an HTTP response from a GetNeedsYouPanelWithResponse call
+func ParseGetNeedsYouPanelResponse(rsp *http.Response) (*GetNeedsYouPanelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetNeedsYouPanelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Stops []struct {
+				AvailableResolutions []StopResolution   `json:"availableResolutions"`
+				Detail               string             `json:"detail"`
+				IssueId              openapi_types.UUID `json:"issueId"`
+				IssueKey             string             `json:"issueKey"`
+				Kind                 StopKind           `json:"kind"`
+				RaisedAt             string             `json:"raisedAt"`
+				StopId               openapi_types.UUID `json:"stopId"`
+				Title                string             `json:"title"`
+			} `json:"stops"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetParticipantInvocationResponse parses an HTTP response from a SetParticipantInvocationWithResponse call
+func ParseSetParticipantInvocationResponse(rsp *http.Response) (*SetParticipantInvocationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetParticipantInvocationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePauseThreadResponse parses an HTTP response from a PauseThreadWithResponse call
+func ParsePauseThreadResponse(rsp *http.Response) (*PauseThreadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PauseThreadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResumeThreadResponse parses an HTTP response from a ResumeThreadWithResponse call
+func ParseResumeThreadResponse(rsp *http.Response) (*ResumeThreadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResumeThreadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetThreadSettingsResponse parses an HTTP response from a GetThreadSettingsWithResponse call
+func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetThreadSettingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			BufferSize   BufferSize                                       `json:"bufferSize"`
+			InvokerCount int                                              `json:"invokerCount"`
+			MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+			Participants []struct {
+				CanInvoke     bool   `json:"canInvoke"`
+				Name          string `json:"name"`
+				ParticipantId string `json:"participantId"`
+				Source        string `json:"source"`
+			} `json:"participants"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSteerThreadResponse parses an HTTP response from a SteerThreadWithResponse call
+func ParseSteerThreadResponse(rsp *http.Response) (*SteerThreadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SteerThreadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			EntryId openapi_types.UUID `json:"entryId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -2274,6 +6537,63 @@ func ParseListenEventsResponse(rsp *http.Response) (*ListenEventsResponse, error
 	return response, nil
 }
 
+// ParseGetHomeDashboardResponse parses an HTTP response from a GetHomeDashboardWithResponse call
+func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetHomeDashboardResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ActiveSessions []struct {
+				ChannelKind   ChannelKind        `json:"channelKind"`
+				DisplayName   string             `json:"displayName"`
+				LastActivity  string             `json:"lastActivity"`
+				Providers     []ProviderKind     `json:"providers"`
+				Status        ThreadStatus       `json:"status"`
+				ThreadId      openapi_types.UUID `json:"threadId"`
+				WorkspacePath string             `json:"workspacePath"`
+			} `json:"activeSessions"`
+			AgentsRunningNow int `json:"agentsRunningNow"`
+			Channels         []struct {
+				Kind   ChannelKind   `json:"kind"`
+				Status ChannelStatus `json:"status"`
+			} `json:"channels"`
+			LatestActivity []struct {
+				At       string             `json:"at"`
+				Subtitle string             `json:"subtitle"`
+				ThreadId openapi_types.UUID `json:"threadId"`
+				Title    string             `json:"title"`
+			} `json:"latestActivity"`
+			NeedsYou *struct {
+				StopKinds         []StopKind         `json:"stopKinds"`
+				ThreadDisplayName string             `json:"threadDisplayName"`
+				ThreadId          openapi_types.UUID `json:"threadId"`
+			} `json:"needsYou,omitempty"`
+			Today struct {
+				IssuesClosed          int     `json:"issuesClosed"`
+				IssuesOpened          int     `json:"issuesOpened"`
+				MedianResponseSeconds float32 `json:"medianResponseSeconds"`
+			} `json:"today"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetUserInfoResponse parses an HTTP response from a GetUserInfoWithResponse call
 func ParseGetUserInfoResponse(rsp *http.Response) (*GetUserInfoResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2305,6 +6625,95 @@ func ParseGetUserInfoResponse(rsp *http.Response) (*GetUserInfoResponse, error) 
 				Name      string                    `json:"name"`
 			} `json:"user"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListWorkspacesResponse parses an HTTP response from a ListWorkspacesWithResponse call
+func ParseListWorkspacesResponse(rsp *http.Response) (*ListWorkspacesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListWorkspacesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Workspaces []struct {
+				AddedAt     time.Time          `json:"addedAt"`
+				Badges      []WorkspaceBadge   `json:"badges"`
+				Path        string             `json:"path"`
+				ThreadCount int                `json:"threadCount"`
+				WorkspaceId openapi_types.UUID `json:"workspaceId"`
+			} `json:"workspaces"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAddWorkspaceResponse parses an HTTP response from a AddWorkspaceWithResponse call
+func ParseAddWorkspaceResponse(rsp *http.Response) (*AddWorkspaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Badges      []WorkspaceBadge   `json:"badges"`
+			WorkspaceId openapi_types.UUID `json:"workspaceId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRemoveWorkspaceResponse parses an HTTP response from a RemoveWorkspaceWithResponse call
+func ParseRemoveWorkspaceResponse(rsp *http.Response) (*RemoveWorkspaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveWorkspaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

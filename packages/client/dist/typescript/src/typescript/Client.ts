@@ -1,16 +1,41 @@
 // AUTO-GENERATED — do not edit.
 import {
+	addWorkspace,
+	archiveIssue,
+	attachThread,
+	configureContextBuffer,
+	configureMentionGate,
 	createOwner,
 	detectProviders,
 	disableOwner,
 	enableOwner,
+	getHomeDashboard,
+	getIssueDetail,
+	getIssuesOverview,
 	getMyAccount,
+	getNeedsYouPanel,
 	getSession,
+	getSessionChat,
+	getSessionIssues,
+	getThreadSettings,
 	getUserInfo,
+	listArtifacts,
+	listWorkspaces,
 	listenEvents,
+	pauseThread,
+	recordArtifact,
+	removeWorkspace,
+	resolveStop,
+	restoreIssue,
+	resumeThread,
+	sendDirectMessage,
 	setActiveOwner,
+	setParticipantInvocation,
+	steerIssue,
+	steerThread,
 	streamTerminalSession,
 	updateOwnerSettings,
+	updateStopCriteria,
 	uploadAvatar,
 } from './client/index.ts'
 
@@ -24,6 +49,26 @@ export class TypescriptClient {
 
 	static create(config: TypescriptClientConfig): TypescriptClient {
 		return new TypescriptClient(config)
+	}
+
+	addWorkspace(...args: Parameters<typeof addWorkspace>): ReturnType<typeof addWorkspace> {
+		return (addWorkspace as (...a: any[]) => ReturnType<typeof addWorkspace>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	archiveIssue(...args: Parameters<typeof archiveIssue>): ReturnType<typeof archiveIssue> {
+		return (archiveIssue as (...a: any[]) => ReturnType<typeof archiveIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	attachThread(...args: Parameters<typeof attachThread>): ReturnType<typeof attachThread> {
+		return (attachThread as (...a: any[]) => ReturnType<typeof attachThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	configureContextBuffer(...args: Parameters<typeof configureContextBuffer>): ReturnType<typeof configureContextBuffer> {
+		return (configureContextBuffer as (...a: any[]) => ReturnType<typeof configureContextBuffer>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	configureMentionGate(...args: Parameters<typeof configureMentionGate>): ReturnType<typeof configureMentionGate> {
+		return (configureMentionGate as (...a: any[]) => ReturnType<typeof configureMentionGate>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	createOwner(...args: Parameters<typeof createOwner>): ReturnType<typeof createOwner> {
@@ -42,24 +87,100 @@ export class TypescriptClient {
 		return (enableOwner as (...a: any[]) => ReturnType<typeof enableOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getHomeDashboard(...args: Parameters<typeof getHomeDashboard>): ReturnType<typeof getHomeDashboard> {
+		return (getHomeDashboard as (...a: any[]) => ReturnType<typeof getHomeDashboard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getIssueDetail(...args: Parameters<typeof getIssueDetail>): ReturnType<typeof getIssueDetail> {
+		return (getIssueDetail as (...a: any[]) => ReturnType<typeof getIssueDetail>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getIssuesOverview(...args: Parameters<typeof getIssuesOverview>): ReturnType<typeof getIssuesOverview> {
+		return (getIssuesOverview as (...a: any[]) => ReturnType<typeof getIssuesOverview>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getMyAccount(...args: Parameters<typeof getMyAccount>): ReturnType<typeof getMyAccount> {
 		return (getMyAccount as (...a: any[]) => ReturnType<typeof getMyAccount>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getNeedsYouPanel(...args: Parameters<typeof getNeedsYouPanel>): ReturnType<typeof getNeedsYouPanel> {
+		return (getNeedsYouPanel as (...a: any[]) => ReturnType<typeof getNeedsYouPanel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getSession(...args: Parameters<typeof getSession>): ReturnType<typeof getSession> {
 		return (getSession as (...a: any[]) => ReturnType<typeof getSession>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getSessionChat(...args: Parameters<typeof getSessionChat>): ReturnType<typeof getSessionChat> {
+		return (getSessionChat as (...a: any[]) => ReturnType<typeof getSessionChat>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getSessionIssues(...args: Parameters<typeof getSessionIssues>): ReturnType<typeof getSessionIssues> {
+		return (getSessionIssues as (...a: any[]) => ReturnType<typeof getSessionIssues>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getThreadSettings(...args: Parameters<typeof getThreadSettings>): ReturnType<typeof getThreadSettings> {
+		return (getThreadSettings as (...a: any[]) => ReturnType<typeof getThreadSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getUserInfo(...args: Parameters<typeof getUserInfo>): ReturnType<typeof getUserInfo> {
 		return (getUserInfo as (...a: any[]) => ReturnType<typeof getUserInfo>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	listArtifacts(...args: Parameters<typeof listArtifacts>): ReturnType<typeof listArtifacts> {
+		return (listArtifacts as (...a: any[]) => ReturnType<typeof listArtifacts>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	listWorkspaces(...args: Parameters<typeof listWorkspaces>): ReturnType<typeof listWorkspaces> {
+		return (listWorkspaces as (...a: any[]) => ReturnType<typeof listWorkspaces>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	listenEvents(...args: Parameters<typeof listenEvents>): ReturnType<typeof listenEvents> {
 		return (listenEvents as (...a: any[]) => ReturnType<typeof listenEvents>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	pauseThread(...args: Parameters<typeof pauseThread>): ReturnType<typeof pauseThread> {
+		return (pauseThread as (...a: any[]) => ReturnType<typeof pauseThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	recordArtifact(...args: Parameters<typeof recordArtifact>): ReturnType<typeof recordArtifact> {
+		return (recordArtifact as (...a: any[]) => ReturnType<typeof recordArtifact>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	removeWorkspace(...args: Parameters<typeof removeWorkspace>): ReturnType<typeof removeWorkspace> {
+		return (removeWorkspace as (...a: any[]) => ReturnType<typeof removeWorkspace>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	resolveStop(...args: Parameters<typeof resolveStop>): ReturnType<typeof resolveStop> {
+		return (resolveStop as (...a: any[]) => ReturnType<typeof resolveStop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	restoreIssue(...args: Parameters<typeof restoreIssue>): ReturnType<typeof restoreIssue> {
+		return (restoreIssue as (...a: any[]) => ReturnType<typeof restoreIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	resumeThread(...args: Parameters<typeof resumeThread>): ReturnType<typeof resumeThread> {
+		return (resumeThread as (...a: any[]) => ReturnType<typeof resumeThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	sendDirectMessage(...args: Parameters<typeof sendDirectMessage>): ReturnType<typeof sendDirectMessage> {
+		return (sendDirectMessage as (...a: any[]) => ReturnType<typeof sendDirectMessage>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	setActiveOwner(...args: Parameters<typeof setActiveOwner>): ReturnType<typeof setActiveOwner> {
 		return (setActiveOwner as (...a: any[]) => ReturnType<typeof setActiveOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	setParticipantInvocation(...args: Parameters<typeof setParticipantInvocation>): ReturnType<typeof setParticipantInvocation> {
+		return (setParticipantInvocation as (...a: any[]) => ReturnType<typeof setParticipantInvocation>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	steerIssue(...args: Parameters<typeof steerIssue>): ReturnType<typeof steerIssue> {
+		return (steerIssue as (...a: any[]) => ReturnType<typeof steerIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	steerThread(...args: Parameters<typeof steerThread>): ReturnType<typeof steerThread> {
+		return (steerThread as (...a: any[]) => ReturnType<typeof steerThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	streamTerminalSession(...args: Parameters<typeof streamTerminalSession>): ReturnType<typeof streamTerminalSession> {
@@ -68,6 +189,10 @@ export class TypescriptClient {
 
 	updateOwnerSettings(...args: Parameters<typeof updateOwnerSettings>): ReturnType<typeof updateOwnerSettings> {
 		return (updateOwnerSettings as (...a: any[]) => ReturnType<typeof updateOwnerSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	updateStopCriteria(...args: Parameters<typeof updateStopCriteria>): ReturnType<typeof updateStopCriteria> {
+		return (updateStopCriteria as (...a: any[]) => ReturnType<typeof updateStopCriteria>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	uploadAvatar(...args: Parameters<typeof uploadAvatar>): ReturnType<typeof uploadAvatar> {
