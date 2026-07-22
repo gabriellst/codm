@@ -116,6 +116,10 @@
 			"buffer de contexto 25–200"
 		]
 	},
+	"pricing": {
+		"free": "Grátis",
+		"perMonth": "/mês"
+	},
 	"closingCta": {
 		"titleBold": "Entregue de qualquer lugar",
 		"titleLight": "onde dê pra mandar mensagem",

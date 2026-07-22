@@ -1,21 +1,22 @@
 ---
 import { getCollection } from 'astro:content'
+import type { CollectionEntry } from 'astro:content'
 import type { Locale } from '~/i18n'
 
 interface Props {
 	locale: Locale
+	t: CollectionEntry<'landing'>['data']['pricing']
 }
 
 // Built per D8 but NOT mounted on the landing yet (founder page has no pricing).
-// Mounting is a one-line addition in Landing.astro when product says go.
-const { locale } = Astro.props
+// Mounting is a one-line addition in Landing.astro when product says go:
+// <PricingSection locale={locale} t={t.pricing} />
+const { locale, t } = Astro.props
 const plans = (await getCollection('plans')).sort((a, b) => a.data.order - b.data.order)
 
 const priceLabel = (monthly: number, currency: string) =>
 	monthly === 0
-		? locale === 'pt'
-			? 'Grátis'
-			: 'Free'
+		? t.free
 		: new Intl.NumberFormat(locale === 'pt' ? 'pt-BR' : 'en-US', {
 				style: 'currency',
 				currency,
@@ -40,7 +41,7 @@ const priceLabel = (monthly: number, currency: string) =>
 						<div class="text-3xl font-extrabold tracking-[-0.8px]">
 							{priceLabel(plan.data.price.monthly, plan.data.price.currency)}
 							{plan.data.price.monthly > 0 && (
-								<span class="text-sm font-medium text-[var(--muted-foreground)]">/{locale === 'pt' ? 'mês' : 'mo'}</span>
+								<span class="text-sm font-medium text-[var(--muted-foreground)]">{t.perMonth}</span>
 							)}
 						</div>
 						<p class="m-0 text-pretty text-[13px] leading-[1.6] text-[var(--muted-foreground)]">{copy.blurb}</p>

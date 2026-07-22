@@ -7,15 +7,40 @@
         "nav": {
           "type": "object",
           "properties": {
-            "docs": {
-              "type": "string"
+            "links": {
+              "type": "object",
+              "properties": {
+                "demo": {
+                  "type": "string"
+                },
+                "router": {
+                  "type": "string"
+                },
+                "features": {
+                  "type": "string"
+                },
+                "github": {
+                  "type": "string"
+                },
+                "blog": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "demo",
+                "router",
+                "features",
+                "github",
+                "blog"
+              ],
+              "additionalProperties": false
             },
             "download": {
               "type": "string"
             }
           },
           "required": [
-            "docs",
+            "links",
             "download"
           ],
           "additionalProperties": false
@@ -23,10 +48,13 @@
         "hero": {
           "type": "object",
           "properties": {
-            "eyebrow": {
+            "badge": {
               "type": "string"
             },
-            "title": {
+            "titleBold": {
+              "type": "string"
+            },
+            "titleLight": {
               "type": "string"
             },
             "subtitle": {
@@ -37,23 +65,117 @@
             },
             "secondaryCta": {
               "type": "string"
+            }
+          },
+          "required": [
+            "badge",
+            "titleBold",
+            "titleLight",
+            "subtitle",
+            "primaryCta",
+            "secondaryCta"
+          ],
+          "additionalProperties": false
+        },
+        "marquee": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 4
+            }
+          },
+          "required": [
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        "demo": {
+          "type": "object",
+          "properties": {
+            "eyebrow": {
+              "type": "string"
             },
-            "flow": {
-              "type": "object",
-              "properties": {
-                "channels": {
-                  "type": "array",
-                  "items": {
+            "title": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
                     "type": "string"
                   }
                 },
-                "target": {
+                "required": [
+                  "title",
+                  "body"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "chat": {
+              "type": "object",
+              "properties": {
+                "initials": {
                   "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "meta": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "in",
+                          "out",
+                          "system"
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 4
                 }
               },
               "required": [
-                "channels",
-                "target"
+                "initials",
+                "name",
+                "meta",
+                "status",
+                "messages"
               ],
               "additionalProperties": false
             }
@@ -61,60 +183,178 @@
           "required": [
             "eyebrow",
             "title",
-            "subtitle",
-            "primaryCta",
-            "secondaryCta",
-            "flow"
+            "body",
+            "steps",
+            "chat"
           ],
           "additionalProperties": false
         },
-        "featuresHeading": {
-          "type": "string"
-        },
-        "features": {
+        "router": {
           "type": "object",
           "properties": {
-            "channels": {
+            "eyebrow": {
+              "type": "string"
+            },
+            "titleBold": {
+              "type": "string"
+            },
+            "titleLight": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "text"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "terminal": {
               "type": "object",
               "properties": {
-                "title": {
+                "header": {
                   "type": "string"
                 },
-                "description": {
-                  "type": "string"
+                "lines": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "tone": {
+                        "type": "string",
+                        "enum": [
+                          "dim",
+                          "mid",
+                          "faint"
+                        ]
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "tone",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 6
                 }
               },
               "required": [
-                "title",
-                "description"
+                "header",
+                "lines"
               ],
               "additionalProperties": false
-            },
-            "issues": {
-              "$ref": "#/definitions/landing/properties/features/properties/channels"
-            },
-            "human": {
-              "$ref": "#/definitions/landing/properties/features/properties/channels"
-            },
-            "local": {
-              "$ref": "#/definitions/landing/properties/features/properties/channels"
             }
           },
           "required": [
-            "channels",
-            "issues",
-            "human",
-            "local"
+            "eyebrow",
+            "titleBold",
+            "titleLight",
+            "body",
+            "rows",
+            "terminal"
           ],
           "additionalProperties": false
         },
-        "cta": {
+        "features": {
           "type": "object",
           "properties": {
             "title": {
               "type": "string"
             },
-            "subtitle": {
+            "intro": {
+              "type": "string"
+            },
+            "cards": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kicker": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kicker",
+                  "title",
+                  "body"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 6,
+              "maxItems": 6
+            },
+            "controls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 6,
+              "maxItems": 6
+            }
+          },
+          "required": [
+            "title",
+            "intro",
+            "cards",
+            "controls"
+          ],
+          "additionalProperties": false
+        },
+        "pricing": {
+          "type": "object",
+          "properties": {
+            "free": {
+              "type": "string"
+            },
+            "perMonth": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "free",
+            "perMonth"
+          ],
+          "additionalProperties": false
+        },
+        "closingCta": {
+          "type": "object",
+          "properties": {
+            "titleBold": {
+              "type": "string"
+            },
+            "titleLight": {
+              "type": "string"
+            },
+            "note": {
               "type": "string"
             },
             "primary": {
@@ -122,17 +362,14 @@
             },
             "secondary": {
               "type": "string"
-            },
-            "note": {
-              "type": "string"
             }
           },
           "required": [
-            "title",
-            "subtitle",
+            "titleBold",
+            "titleLight",
+            "note",
             "primary",
-            "secondary",
-            "note"
+            "secondary"
           ],
           "additionalProperties": false
         },
@@ -141,10 +378,32 @@
           "properties": {
             "copyright": {
               "type": "string"
+            },
+            "links": {
+              "type": "object",
+              "properties": {
+                "github": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "docs": {
+                  "type": "string"
+                },
+                "changelog": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "github",
+                "docs",
+                "changelog"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
-            "copyright"
+            "copyright",
+            "links"
           ],
           "additionalProperties": false
         },
@@ -155,9 +414,12 @@
       "required": [
         "nav",
         "hero",
-        "featuresHeading",
+        "marquee",
+        "demo",
+        "router",
         "features",
-        "cta",
+        "pricing",
+        "closingCta",
         "footer"
       ],
       "additionalProperties": false

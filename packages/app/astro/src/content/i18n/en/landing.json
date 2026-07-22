@@ -116,6 +116,10 @@
 			"context buffer 25–200"
 		]
 	},
+	"pricing": {
+		"free": "Free",
+		"perMonth": "/mo"
+	},
 	"closingCta": {
 		"titleBold": "Ship from anywhere",
 		"titleLight": "you can text",

@@ -78,6 +78,7 @@ const landing = defineCollection({
 			cards: z.array(featureCard).length(6), // ISSUES/LABELS/WHISPERS/STOPS/ARTIFACTS/LOCAL
 			controls: z.array(z.string()).length(6), // outlined mono chips
 		}),
+		pricing: z.object({ free: z.string(), perMonth: z.string() }), // consumed by PricingSection (built, not mounted — D8)
 		closingCta: z.object({
 			titleBold: z.string(),
 			titleLight: z.string(),
