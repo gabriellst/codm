@@ -43,12 +43,11 @@ import { OperatorMiddleware } from '@auth/middlewares'
  * owner-scoped outbox broadcaster, so it is intentionally NOT part of this endpoint's SSE union:
  *   - browser.terminal_output_appended { issueId: string; line: string; at: string }
  *
- * WIRING NOTE (finalized in the gateway/terminal phase): the broadcaster below filters each
- * client by an `ownerId` read from the event *payload*, whereas the CodeDM lock carries `ownerId`
- * on the envelope only and collapses tenancy to a single constant operator. Populating the union
- * declares the browser-subscribable surface; activating delivery is a one-line reconciliation of
- * that filter (envelope ownerId / constant operator) done when the gateway lands — deliberately
- * NOT changed here to keep the contract lock free of product runtime logic.
+ * WIRING NOTE: the broadcaster below filters each client by the ENVELOPE `ownerId`
+ * (`browserDeliveryOwnerId`) — the CodeDM lock carries `ownerId` on the envelope only, which is also
+ * what each emitted frame carries — so generic `integration.*` frames are delivered to their owner's
+ * connected clients today. The two enriched `browser.*` frames remain schema-only until the
+ * gateway-phase enricher lands (see the FROZEN SSE FRAMES note above).
  */
 const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	// Human-in-the-loop control plane (T03 Home callout / T14 Needs-You / dock badge)
@@ -69,6 +68,19 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 ]
 
 const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))
+
+/**
+ * The owner an integration event should fan out to on the browser SSE surface — or `undefined` when
+ * the event is not part of that surface. Tenancy is the ENVELOPE `ownerId` (what the emitted frame
+ * carries via `event.ownerId`), matching every `integration.*` event: the bridge handlers set
+ * `ownerId` on the envelope, never inside the payload. Extracted as a pure predicate so the
+ * broadcaster's filtering (BROWSER_EVENT_NAMES + owner match) is unit-testable without the SSE
+ * transport.
+ */
+export function browserDeliveryOwnerId(event: BaseIntegrationEvent): string | undefined {
+	if (!BROWSER_EVENT_NAMES.has(event.name)) return undefined
+	return event.ownerId || undefined
+}
 
 /**
  * Frozen `browser.*` SSE frames (Phase-0 contract lock) — the enriched, denormalized views the
@@ -150,19 +162,19 @@ export class ListenEventsController extends Controller<
 	}
 
 	/**
-	 * One mediator callback per process, fanned out to every connected client. Tenancy
-	 * filter: an event reaches a client ONLY when its payload ownerId matches the client's
-	 * session owner — events without an ownerId never pass the BROWSER_EVENT_NAMES check.
+	 * One mediator callback per process, fanned out to every connected client. Tenancy filter: an
+	 * event reaches a client ONLY when it is on the browser surface (BROWSER_EVENT_NAMES) and its
+	 * ENVELOPE ownerId matches the client's session owner (see `browserDeliveryOwnerId`).
 	 */
 	private ensureBroadcaster(): void {
 		if (this.broadcasterRegistered) return
 		this.broadcasterRegistered = true
 		this.externalMediator.registerCallback(event => {
-			if (!(event instanceof BaseIntegrationEvent) || !BROWSER_EVENT_NAMES.has(event.name)) return
-			const tenancy = z.object({ ownerId: z.uuid() }).loose().safeParse(event.payload)
-			if (!tenancy.success) return
+			if (!(event instanceof BaseIntegrationEvent)) return
+			const targetOwnerId = browserDeliveryOwnerId(event)
+			if (!targetOwnerId) return
 			for (const client of this.clients) {
-				if (client.ownerId === tenancy.data.ownerId) client.send(event)
+				if (client.ownerId === targetOwnerId) client.send(event)
 			}
 		})
 	}

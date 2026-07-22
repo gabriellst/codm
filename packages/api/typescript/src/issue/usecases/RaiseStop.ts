@@ -5,7 +5,7 @@ import { StopKind } from '@template/contracts-typescript/wire/enums'
 import { IssueRepository } from '../repositories/IssueRepository'
 import { StopRepository } from '../repositories/StopRepository'
 import { StopPolicyConfigRepository, type StopPolicy } from '../repositories/StopPolicyConfigRepository'
-import type { ApplicationErrors, DomainErrors } from '../errors'
+import type { ApplicationErrors } from '../errors'
 
 export const RaiseStopInputSchema = z.object({
 	stopId: z.uuid(),
@@ -46,7 +46,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const issue = await this.issues.findById(input.issueId)
 		if (!issue) throw new BaseError<ApplicationErrors>('ISSUE_NOT_FOUND', `no issue ${input.issueId}`)
-		if (issue.archived) throw new BaseError<DomainErrors>('ISSUE_ARCHIVED')
+		issue.assertNotArchived()
 
 		const policy = await this.policy.get(issue.ownerId)
 		if (!policy[POLICY_KEY[input.kind]]) {
