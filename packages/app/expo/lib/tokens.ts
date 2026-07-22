@@ -73,18 +73,6 @@ export const accent = {
 	successBorder: 'rgba(22,163,74,0.4)',
 } as const
 
-// ── Colors: gradient stops (used as arrays for expo-linear-gradient) ──
-export const gradients = {
-	chrome: ['#FFFFFF', '#E8E8EA'] as const,
-	chromeDark: ['#232328', '#0E0E10'] as const,
-	heroBg: ['#2A2A30', '#0A0A0B'] as const,
-	heroFade: ['rgba(10,10,11,0)', 'rgba(10,10,11,1)'] as const,
-	heroVignette: ['rgba(10,10,11,0)', 'rgba(10,10,11,0.85)'] as const,
-	workoutBg: ['#131316', '#0A0A0B', '#08080A'] as const,
-	// Login top-glow: subtle white gradient fading to transparent.
-	loginGlow: ['rgba(255,255,255,0.08)', 'rgba(0,0,0,0)'] as const,
-} as const
-
 // ── Type: families (must match the names registered in expo-font) ──
 export const font = {
 	display: 'Anton_400Regular',

@@ -42,7 +42,7 @@ const featureKeys = ['channels', 'issues', 'human', 'local'] as const
 			</span>
 		</div>
 
-		<h1 class="text-5xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-7xl">
+		<h1 class="font-display text-5xl uppercase leading-[0.95] tracking-tight md:text-7xl">
 			{t.hero.title}
 		</h1>
 		<p class="max-w-[620px] text-base leading-relaxed text-[var(--muted-foreground)] md:text-lg">
@@ -79,7 +79,7 @@ const featureKeys = ['channels', 'issues', 'human', 'local'] as const
 						<span class="font-mono text-sm font-medium text-[var(--muted-foreground)]">
 							{String(i + 1).padStart(2, '0')}
 						</span>
-						<h3 class="text-xl font-bold uppercase tracking-tight">{t.features[key].title}</h3>
+						<h3 class="font-display text-xl uppercase tracking-tight">{t.features[key].title}</h3>
 						<p class="text-sm leading-relaxed text-[var(--muted-foreground)]">{t.features[key].description}</p>
 					</article>
 				))
@@ -93,7 +93,7 @@ const featureKeys = ['channels', 'issues', 'human', 'local'] as const
 	<div
 		class="mx-auto flex max-w-[1120px] flex-col items-center gap-6 rounded-[calc(var(--radius)*1.5)] bg-[var(--primary)] px-6 py-20 text-center text-[var(--primary-foreground)]"
 	>
-		<h2 class="max-w-[680px] text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl">
+		<h2 class="max-w-[680px] font-display text-4xl uppercase leading-[0.95] tracking-tight md:text-6xl">
 			{t.cta.title}
 		</h2>
 		<p class="max-w-[540px] text-base leading-relaxed opacity-80">{t.cta.subtitle}</p>

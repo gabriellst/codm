@@ -1,11 +1,8 @@
 import { forwardRef } from 'react'
-import { Animated, Platform, Pressable, type PressableProps, StyleSheet, Text, View } from 'react-native'
-import { BlurView } from 'expo-blur'
+import { Animated, Pressable, type PressableProps, Text, View } from 'react-native'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { LinearGradient } from 'expo-linear-gradient'
 import { Haptics } from 'react-native-nitro-haptics'
 import { cn } from '@/lib/utils'
-import { gradients } from '@/lib/tokens'
 import { useAnimatedPress } from '@/lib/use-animated-press'
 
 // `Animated.createAnimatedComponent` keeps Pressable as the outermost
@@ -14,46 +11,27 @@ import { useAnimatedPress } from '@/lib/use-animated-press'
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 /**
- * Button — single primitive for the whole button family.
+ * Button — single primitive for the whole button family, on the CodeDM
+ * monochrome-light console language (mirrors `components/console/ConsoleButton`).
  *
  * Variants (use the `variant` prop):
- * - `chrome` (default): white→#E8E8EA gradient pill with dark text + chrome shadow.
- * - `ghost`: transparent + white border, white text — secondary CTAs.
- * - `destructive`: transparent + red text — irreversible actions.
- * - `link`: text-only — inline tertiary actions ("Criar exercício personalizado").
+ * - `primary` (default): solid black pill (`bg-primary`) with white label — the
+ *   sole strong action.
+ * - `outline`: hairline-bordered (`border-border`) secondary on the canvas.
+ * - `ghost`: text-only tertiary action.
  *
  * Sizes:
- * - `sm`: h-10, smaller text.
+ * - `sm`: h-10.
  * - `md` (default): h-12, primary CTA size.
  * - `lg`: h-14, hero CTAs.
- *
- * Platform behavior:
- * - iOS: `ghost` / `destructive` / `link` variants without `leading`/`trailing`
- *   icon nodes render as `@expo/ui/swift-ui` `Button` for native press feedback +
- *   accessibility. Everything else (chrome variant, or any variant with icons)
- *   uses the cross-platform Pressable + className path.
- * - Android: always Pressable + className.
  */
 
 const buttonVariants = cva('flex-row items-center justify-center gap-2 rounded-pill', {
 	variants: {
 		variant: {
-			// chrome shadow is applied via inline RN-style props in the component below
-			// (RN shadows are single-layer; Tailwind v4's composite shadow can't be serialized by Uniwind)
-			//
-			// No `active:opacity-*` here anymore — press feedback is handled by the
-			// shared scale + opacity animation below so every variant feels uniform.
-			chrome: '',
-			// `success` and `destructive` follow the design system's tinted-pill
-			// style (see `Pill` success / warning variants): 10% accent fill,
-			// 40% accent border, accent-colored label. The branded outline reads
-			// as a clearly-identified action against the dark theme without the
-			// flatness of a solid fill.
-			success: 'bg-success/10 border border-success/40',
-			destructive: 'bg-destructive/10 border border-destructive/40',
-			ghost: 'border border-white/[0.16] bg-transparent',
-			'soft-destructive': 'bg-transparent',
-			link: 'bg-transparent rounded-none',
+			primary: 'bg-primary',
+			outline: 'border border-border bg-background',
+			ghost: 'bg-transparent rounded-none',
 		},
 		size: {
 			sm: 'h-10 px-5',
@@ -65,30 +43,23 @@ const buttonVariants = cva('flex-row items-center justify-center gap-2 rounded-p
 			false: '',
 		},
 	},
-	defaultVariants: { variant: 'chrome', size: 'md', fullWidth: false },
+	defaultVariants: { variant: 'primary', size: 'md', fullWidth: false },
 })
 
-const labelVariants = cva('font-sans-bold uppercase', {
+const labelVariants = cva('font-sans-semi', {
 	variants: {
 		variant: {
-			chrome: 'text-background',
-			// Tinted accent buttons — label color matches the accent so the action
-			// reads as the right kind of branded.
-			success: 'text-success',
+			primary: 'text-primary-foreground',
+			outline: 'text-foreground',
 			ghost: 'text-foreground',
-			destructive: 'text-destructive',
-			// Borderless, accent-loss text, semi-bold weight — quiet "end this" action,
-			// distinct from the prominent tinted `destructive` CTA above.
-			'soft-destructive': 'text-loss font-sans-semi',
-			link: 'text-foreground normal-case',
 		},
 		size: {
-			sm: 'text-[11px] tracking-[0.96px]',
-			md: 'text-[13px] tracking-[1.04px]',
-			lg: 'text-[14px] tracking-[1.12px]',
+			sm: 'text-sm',
+			md: 'text-sm',
+			lg: 'text-base',
 		},
 	},
-	defaultVariants: { variant: 'chrome', size: 'md' },
+	defaultVariants: { variant: 'primary', size: 'md' },
 })
 
 interface ButtonProps
@@ -117,61 +88,19 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
 		onPress?.(e)
 	}
 
-	// Chrome variant draws the white→#E8E8EA gradient pill — native Button can't
-	// express that, so always use the Pressable + LinearGradient path.
-	const isChrome = variant === 'chrome' || variant == null
-	// `link` is text-only and `soft-destructive` is intentionally borderless,
-	// so a blur underlay would bleed past their edges. Chrome's solid
-	// gradient covers any blur, so skip it there too. Everything else
-	// (ghost / success / destructive) gets a frosted-glass underlay that
-	// lets the surface beneath show through softly.
-	const wantsBlur = !isChrome && variant !== 'link' && variant !== 'soft-destructive'
-
-	if (Platform.OS === 'ios' && !isChrome && !leading && !trailing) {
-		// We could swap to @expo/ui/swift-ui Button here for native press feedback +
-		// accessibility, but the cross-platform Pressable + className path covers
-		// every variant the design uses today and avoids a typing branch.
-	}
-
 	return (
 		<AnimatedPressable
 			ref={ref}
+			accessibilityRole="button"
 			onPress={handlePress}
 			onPressIn={onPressIn}
 			onPressOut={onPressOut}
 			disabled={disabled}
 			data-slot="button"
-			className={cn(buttonVariants({ variant, size, fullWidth }), wantsBlur && 'overflow-hidden', disabled && 'opacity-40', className)}
-			style={[
-				isChrome
-					? {
-							shadowColor: '#000',
-							shadowOpacity: 0.4,
-							shadowRadius: 24,
-							shadowOffset: { width: 0, height: 8 },
-							elevation: 6,
-						}
-					: null,
-				animatedStyle,
-			]}
+			className={cn(buttonVariants({ variant, size, fullWidth }), disabled && 'opacity-40', className)}
+			style={animatedStyle}
 			{...props}
 		>
-			{wantsBlur ? <BlurView intensity={24} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" /> : null}
-			{isChrome ? (
-				<LinearGradient
-					colors={gradients.chrome}
-					start={{ x: 0.5, y: 0 }}
-					end={{ x: 0.5, y: 1 }}
-					style={{
-						position: 'absolute',
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0,
-						borderRadius: 9999,
-					}}
-				/>
-			) : null}
 			{leading}
 			{label ? <Text className={cn(labelVariants({ variant, size }))}>{label}</Text> : null}
 			{trailing}

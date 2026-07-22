@@ -48,6 +48,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 					<Pressable
 						key={m.value}
 						onPress={() => setMode(m.value)}
+						hitSlop={8}
 						className={cn('rounded-pill px-3 py-1', mode === m.value ? 'bg-card' : 'bg-transparent')}
 					>
 						<Text className={cn('font-sans-medium text-sm', mode === m.value ? 'text-foreground' : 'text-muted-foreground')}>
@@ -71,6 +72,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 					accessibilityLabel={t('session.send')}
 					disabled={!canSend}
 					onPress={send}
+					hitSlop={8}
 					className={cn('h-9 w-9 items-center justify-center rounded-pill', canSend ? 'bg-primary' : 'bg-muted')}
 				>
 					<ArrowUp size={18} color={canSend ? action.onPrimary : fg.fg3} strokeWidth={2.5} />

@@ -2,6 +2,16 @@
 @import "@codedm/app-styles/tokens.css";
 @import "@codedm/app-styles/web-utilities.css";
 
+/*
+ * Anton is the condensed display face that carries the "DM YOUR CODEBASE"
+ * masthead voice across the console + expo surfaces (expo `font-display` →
+ * Anton_400Regular). Registering it here as `--font-display` generates a
+ * Tailwind `font-display` utility so the web hero speaks the same family.
+ */
+@theme {
+	--font-display: "Anton", "Poppins", system-ui, sans-serif;
+}
+
 body {
 	background-color: var(--background);
 	color: var(--foreground);

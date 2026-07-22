@@ -4,22 +4,18 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 /**
- * Pill — small chip for meta info (exercise count, duration, status).
- * Replaces the legacy MetaPill with CVA variants.
+ * Pill — small chip for meta info (status, counts, labels), on the CodeDM
+ * monochrome-light console language (mirrors `components/console/Chip`).
  *
  * Variants:
- * - `default`: surface-1 + subtle border (sits on cards / lists).
- * - `translucent`: white/8% bg + strong border (sits on hero gradients).
- * - `success`: success-tinted bg + label.
- * - `warning`: warning-tinted bg + label (e.g. dropset badges).
+ * - `default`: soft `bg-secondary` fill, no border — sits on cards / lists.
+ * - `outline`: hairline `border-border` on the canvas.
  */
-const pillVariants = cva('flex-row items-center self-start rounded-pill border', {
+const pillVariants = cva('flex-row items-center self-start rounded-pill', {
 	variants: {
 		variant: {
-			default: 'bg-card border-white/[0.08]',
-			translucent: 'bg-white/[0.08] border-white/[0.16]',
-			success: 'bg-success/10 border-success/30',
-			warning: 'bg-warning/10 border-warning/30',
+			default: 'bg-secondary',
+			outline: 'border border-border bg-background',
 		},
 		size: {
 			sm: 'px-2 py-1 gap-1',
@@ -29,20 +25,14 @@ const pillVariants = cva('flex-row items-center self-start rounded-pill border',
 	defaultVariants: { variant: 'default', size: 'md' },
 })
 
-const pillLabelVariants = cva('font-sans-semi tracking-pill', {
+const pillLabelVariants = cva('font-sans-semi text-foreground', {
 	variants: {
-		variant: {
-			default: 'text-foreground',
-			translucent: 'text-foreground',
-			success: 'text-success',
-			warning: 'text-warning',
-		},
 		size: {
 			sm: 'text-[10px] uppercase',
 			md: 'text-xs',
 		},
 	},
-	defaultVariants: { variant: 'default', size: 'md' },
+	defaultVariants: { size: 'md' },
 })
 
 export interface PillProps extends Omit<PressableProps, 'children' | 'style'>, VariantProps<typeof pillVariants> {
@@ -66,7 +56,7 @@ export const Pill = forwardRef<View, PillProps>(function Pill(
 			{...(props as PressableProps)}
 		>
 			{leading}
-			<Text className={cn(pillLabelVariants({ variant, size }), labelClassName)}>{label}</Text>
+			<Text className={cn(pillLabelVariants({ size }), labelClassName)}>{label}</Text>
 		</Wrapper>
 	)
 })

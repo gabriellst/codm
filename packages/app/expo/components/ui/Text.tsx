@@ -11,8 +11,6 @@ const textVariants = cva('text-foreground', {
 			body: 'text-base leading-relaxed',
 			label: 'text-sm',
 			caption: 'text-xs text-foreground-subtle',
-			amount: 'font-mono text-base font-sans-medium tabular-nums',
-			'amount-hero': 'font-display text-5xl leading-none tabular-nums',
 		},
 	},
 	defaultVariants: { variant: 'body' },

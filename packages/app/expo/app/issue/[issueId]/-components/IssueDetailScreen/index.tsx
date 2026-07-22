@@ -184,6 +184,7 @@ function IssueSteerComposer({ issueId }: { issueId: string }) {
 					accessibilityLabel={t('session.steer')}
 					disabled={!canSend}
 					onPress={send}
+					hitSlop={8}
 					className={canSend ? 'h-9 w-9 items-center justify-center rounded-pill bg-primary' : 'h-9 w-9 items-center justify-center rounded-pill bg-muted'}
 				>
 					<ArrowUp size={18} color={canSend ? action.onPrimary : fg.fg3} strokeWidth={2.5} />
