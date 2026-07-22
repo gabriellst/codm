@@ -5,7 +5,7 @@
 		"version": "1.0.0",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
-		"userInterfaceStyle": "dark",
+		"userInterfaceStyle": "light",
 		"newArchEnabled": true,
 		"ios": {
 			"supportsTablet": false,
@@ -27,7 +27,7 @@
 		"android": {
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/adaptive-icon.png",
-				"backgroundColor": "#0A0A0B"
+				"backgroundColor": "#F6F6F6"
 			},
 			"package": "com.medscall.monorepo.expo"
 		},
@@ -39,11 +39,11 @@
 			[
 				"expo-notifications",
 				{
-					"color": "#0A0A0B",
+					"color": "#111111",
 					"defaultChannel": "default"
 				}
 			],
-			["expo-system-ui", { "backgroundColor": "#0A0A0B" }],
+			["expo-system-ui", { "backgroundColor": "#F6F6F6" }],
 			[
 				"expo-camera",
 				{

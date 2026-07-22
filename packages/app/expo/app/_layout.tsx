@@ -14,6 +14,7 @@ import {
 	useFonts as useMontserratFonts,
 } from '@expo-google-fonts/montserrat'
 import { initApiClient } from '@/lib/api'
+import { applyStoredDaemonUrl } from '@/lib/daemon'
 import { handleApiError } from '@/lib'
 import { fg, surfaces } from '@/lib/tokens'
 import '@/lib/i18n'
@@ -56,42 +57,31 @@ export default function RootLayout() {
 		}
 	}, [antonLoaded, montserratLoaded])
 
+	// Re-point the SDK client at the operator's stored daemon URL (SecureStore) once the
+	// async read resolves; the synchronous default in initApiClient() covers the first frame.
+	useEffect(() => {
+		void applyStoredDaemonUrl()
+	}, [])
+
 	if (!antonLoaded || !montserratLoaded) return null
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<StatusBar style="light" />
+			<StatusBar style="dark" />
 			<Stack
 				screenOptions={{
+					headerShown: false,
 					headerStyle: { backgroundColor: 'transparent' },
 					headerTintColor: fg.fg0,
 					contentStyle: { backgroundColor: surfaces.bg0 },
 					animation: 'default',
 				}}
 			>
-				<Stack.Screen name="index" options={{ headerShown: false }} />
-				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-				<Stack.Screen
-					name="(sheets)/edit-profile"
-					options={{
-						presentation: 'fullScreenModal',
-						headerShown: false,
-						contentStyle: { backgroundColor: surfaces.surface1 },
-						animation: 'slide_from_right',
-					}}
-				/>
-				<Stack.Screen
-					name="(sheets)/devices"
-					options={{
-						presentation: 'pageSheet',
-						headerShown: false,
-						sheetGrabberVisible: true,
-						sheetAllowedDetents: [0.5, 0.95],
-						sheetCornerRadius: 24,
-						sheetExpandsWhenScrolledToEdge: false,
-						contentStyle: { backgroundColor: surfaces.surface1 },
-					}}
-				/>
+				<Stack.Screen name="index" />
+				<Stack.Screen name="onboarding" />
+				<Stack.Screen name="(tabs)" />
+				<Stack.Screen name="thread/[threadId]" />
+				<Stack.Screen name="issue/[issueId]" />
 			</Stack>
 		</QueryClientProvider>
 	)

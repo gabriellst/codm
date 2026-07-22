@@ -1,21 +1,16 @@
-import Constants from 'expo-constants'
 import { configureClient } from '@codedm/client-typescript/http'
+import { resolveDefaultDaemonUrl } from './daemon'
 
 /**
- * Resolves the base URL for the SDK from (in order):
- *   - `Constants.expoConfig.extra.apiUrl` (set per environment in `app.json`),
- *   - `EXPO_PUBLIC_API_URL` (CI / .env override),
- *   - `http://localhost:3030` (Simulator dev fallback).
+ * Synchronously points every SDK service (TS reads + Go channel worker) at the
+ * default local-daemon origin so the very first render can fire requests.
+ * `applyStoredDaemonUrl()` (called from the root layout on mount) then re-points
+ * the client at the operator's SecureStore override, if any.
  *
- * Authentication cookies are persisted by `@better-auth/expo` in
- * `expo-secure-store`. The expo client patches the global `fetch` so the
- * session cookie ships with every request to the API origin — that means
- * the SDK's `ky`-based client picks it up automatically without explicit
- * header injection.
+ * CodeDM has no account — there is no session cookie to inject; the daemon is
+ * trusted on the local network.
  */
 export function initApiClient() {
-	const baseUrl: string =
-		(Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3030'
-
-	configureClient({ typescript: baseUrl, rust: baseUrl, go: baseUrl })
+	const baseUrl = resolveDefaultDaemonUrl()
+	configureClient({ typescript: baseUrl, go: baseUrl })
 }

@@ -1,40 +1,56 @@
 /**
  * App — Design Tokens (single source of truth)
  *
- * Mirrors `colors_and_type.css` from the visual prototype. Use these
- * values everywhere — never approximate hex codes inline.
+ * The CodeDM monochrome-light language, mirrored from `global.css` for the
+ * native chrome (headers, tab bar, status bar, spinners) that can't read
+ * Tailwind classes. Near-white canvas, white surfaces, near-black text, BLACK
+ * as the sole action color; status is small colored dots only. Never
+ * approximate hex codes inline — reference these.
  */
 
 // ── Colors: surfaces ────────────────────────────────────────────
 export const surfaces = {
-	bg0: '#0A0A0B', // page background
-	bg1: '#111113', // alternate panel
-	surface1: '#16161A', // card
-	surface2: '#1B1B1F', // card hover / raised
-	surface3: '#232328', // selected / pressed
-	overlay: 'rgba(10,10,11,0.72)',
-	overlayMedium: 'rgba(0,0,0,0.5)', // camera/sheet half-veil
-	overlayDark: 'rgba(0,0,0,0.6)', // sheet backdrop
+	bg0: '#F6F6F6', // page background (light-gray canvas)
+	bg1: '#FFFFFF', // alternate panel
+	surface1: '#FFFFFF', // card
+	surface2: '#F2F2F2', // card hover / raised
+	surface3: '#ECECEC', // selected / pressed
+	overlay: 'rgba(0,0,0,0.4)',
+	overlayMedium: 'rgba(0,0,0,0.4)', // camera/sheet half-veil
+	overlayDark: 'rgba(0,0,0,0.5)', // sheet backdrop
+	// The one dark surface in the app — the terminal-session panel.
+	terminal: '#141414',
+	terminalText: '#E5E5E5',
+	terminalDim: '#8A8A8A',
 } as const
 
 // ── Colors: foreground ──────────────────────────────────────────
 export const fg = {
-	fg0: '#FFFFFF', // primary text / headlines
-	fg1: '#B9B9BE', // body
-	fg2: '#6F6F76', // meta / legal
-	fg3: '#44444A', // disabled / strikethrough
+	fg0: '#1A1A1A', // primary text / headlines (near-black)
+	fg1: '#525252', // body
+	fg2: '#7D7D7D', // meta / legal
+	fg3: '#B3B3B3', // disabled / strikethrough
 } as const
 
 // ── Colors: borders ─────────────────────────────────────────────
 export const border = {
-	borderMinimal: 'rgba(255,255,255,0.04)', // hairline
-	borderSubtle: 'rgba(255,255,255,0.06)', // dim card edge
-	border: 'rgba(255,255,255,0.08)', // standard
-	borderStrong: 'rgba(255,255,255,0.16)', // pronounced
-	borderLight: 'rgba(255,255,255,0.20)', // gradient stops, accents
-	borderMedium: 'rgba(255,255,255,0.22)', // empty-state dotted
-	borderHeavy: 'rgba(255,255,255,0.40)', // dashed draft row
-	borderFocus: 'rgba(255,255,255,0.85)',
+	borderMinimal: 'rgba(0,0,0,0.04)', // hairline
+	borderSubtle: 'rgba(0,0,0,0.06)', // dim card edge
+	border: '#E5E5E5', // standard
+	borderStrong: 'rgba(0,0,0,0.16)', // pronounced
+	borderLight: 'rgba(0,0,0,0.10)', // gradient stops, accents
+	borderMedium: 'rgba(0,0,0,0.12)', // empty-state dotted
+	borderHeavy: 'rgba(0,0,0,0.30)', // dashed draft row
+	borderFocus: 'rgba(26,26,26,0.85)',
+} as const
+
+// ── Colors: action (the ONE color) ──────────────────────────────
+// Black is the sole action color; white sits on top of it. Used for
+// lucide glyphs rendered inside black chips/badges/buttons (React Native
+// SVG icons take a color prop, not a Tailwind class).
+export const action = {
+	primary: '#111111',
+	onPrimary: '#FFFFFF',
 } as const
 
 // ── Colors: accents ─────────────────────────────────────────────
@@ -43,17 +59,18 @@ export const accent = {
 	cashbackBg: 'rgba(22,163,74,0.12)',
 	promo: '#F4F4F5',
 	danger: '#DC2626',
-	// Used in screens for status colors
-	success: '#4ADE80',
-	successBg: 'rgba(74,222,128,0.12)',
-	warning: '#F59E0B',
-	warningBg: 'rgba(245,158,11,0.12)',
-	warningBorder: 'rgba(245,158,11,0.4)',
-	alert: '#FBBF24',
-	loss: '#E0716C',
-	pulse: '#EF4444',
-	iosRed: '#FF453A', // iOS system destructive red (sign-out, badges)
-	successBorder: 'rgba(74,222,128,0.45)', // mirror warningBorder
+	// Used in screens for status colors (small dots)
+	success: '#16A34A',
+	successBg: 'rgba(22,163,74,0.12)',
+	warning: '#D97706',
+	warningBg: 'rgba(217,119,6,0.12)',
+	warningBorder: 'rgba(217,119,6,0.4)',
+	info: '#2563EB',
+	alert: '#D97706',
+	loss: '#DC2626',
+	pulse: '#DC2626',
+	iosRed: '#FF3B30', // iOS system destructive red (sign-out, badges)
+	successBorder: 'rgba(22,163,74,0.4)',
 } as const
 
 // ── Colors: gradient stops (used as arrays for expo-linear-gradient) ──

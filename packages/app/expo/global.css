@@ -12,89 +12,92 @@
 @source "./lib/**/*.{tsx,ts,jsx,js}";
 
 /*
- * ── Token harmonization (FU3) ─────────────────────────────────────────────
- * Token NAMES match the shadcn-style convention used in
- * @codedm/app-styles/tokens.css (background/foreground/card/popover/
- * secondary/muted/border/ring/success/warning/destructive). Token VALUES
- * remain the project's dark-only "Berzerk" aesthetic — nearly-black neutrals
- * with vivid accent colors. This means:
+ * ── CodeDM monochrome language (mobile) ───────────────────────────────────
+ * Token NAMES match the shadcn-style convention shared with
+ * @codedm/app-styles/tokens.css and consumed by @codedm/app-react. Token
+ * VALUES are the CodeDM identity: near-white canvas, white surfaces, near-black
+ * text, and BLACK as the single action color. Status is expressed only through
+ * small colored dots (success / warning / info / destructive). Hairline
+ * borders, pill radii, heavy uppercase display type (Anton), generous
+ * whitespace, subtle/no shadows.
  *
- *   - Tailwind utilities are identical across react/astro/expo
- *     (`bg-background`, `text-foreground`, `bg-success`, `text-destructive`).
- *   - Designers can swap expo to the shared light/dark palette later by
- *     replacing this `@theme` block with `@import "@codedm/app-styles/tokens.css"`
- *     plus an `@theme inline` bridge — one file change, no consumer churn.
+ * Expo keeps its own global.css per the template convention (React Native can't
+ * consume oklch tokens), so the light palette is transcribed to hex/rgba here.
+ * The one dark surface in the whole app is the terminal-session panel in the
+ * issue detail — it hard-codes its own near-black background inline.
  *
- * Extension tokens (no shadcn equivalent — kept for Berzerk granularity):
+ * Extension tokens (no shadcn equivalent):
  *   --color-foreground-subtle, --color-foreground-disabled,
- *   --color-border-subtle, --color-border-strong, --color-border-focus,
- *   --color-success-bg, --color-warning-bg, --color-loss, --color-alert,
- *   --color-pulse, --color-cashback, --color-cashback-bg, --color-ios-red,
- *   --color-surface-overlay (and -medium, -dark variants).
+ *   --color-border-subtle/strong/…, --color-info, --color-success-bg,
+ *   --color-warning-bg, --color-loss, --color-alert, --color-pulse,
+ *   --color-ios-red, --color-surface-overlay (and -medium, -dark variants).
  */
 
 @theme {
 	/* ── Backgrounds & surfaces (shadcn-named) ──────────────────── */
-	--color-background: #0a0a0b; /* page bg            (was --color-bg-0) */
-	--color-card: #16161a; /* card / panel       (was --color-surface-1) */
-	--color-popover: #1b1b1f; /* elevated overlay   (was --color-surface-2) */
-	--color-secondary: #1b1b1f; /* alt surface chip   (was --color-surface-2) */
-	--color-muted: #232328; /* tertiary surface   (was --color-surface-3) */
-	--color-input: #16161a; /* form field bg                            */
-	--color-route-background: #111113; /* route shell bg     (was --color-bg-1)    */
+	--color-background: #ffffff; /* white surfaces / cards */
+	--color-card: #ffffff; /* card / panel */
+	--color-popover: #ffffff; /* elevated overlay */
+	--color-secondary: #ececec; /* soft chip / active nav pill */
+	--color-muted: #f2f2f2; /* soft badge bg / hover */
+	--color-input: #ffffff; /* form field bg */
+	--color-route-background: #f6f6f6; /* light-gray page canvas */
 
-	/* Berzerk surface extensions (no shadcn equivalent) */
-	--color-surface-overlay: rgba(10, 10, 11, 0.72);
-	--color-surface-overlay-medium: rgba(0, 0, 0, 0.5);
-	--color-surface-overlay-dark: rgba(0, 0, 0, 0.6);
+	/* Surface overlays (sheet / camera veils) */
+	--color-surface-overlay: rgba(0, 0, 0, 0.4);
+	--color-surface-overlay-medium: rgba(0, 0, 0, 0.4);
+	--color-surface-overlay-dark: rgba(0, 0, 0, 0.5);
 
 	/* ── Foreground (shadcn-named) ─────────────────────────────── */
-	--color-foreground: #ffffff; /* primary text    (was --color-fg-0) */
-	--color-card-foreground: #ffffff;
-	--color-popover-foreground: #ffffff;
-	--color-secondary-foreground: #ffffff;
-	--color-muted-foreground: #b9b9be; /* secondary text  (was --color-fg-1) */
+	--color-foreground: #1a1a1a; /* near-black primary text */
+	--color-card-foreground: #1a1a1a;
+	--color-popover-foreground: #1a1a1a;
+	--color-secondary-foreground: #1a1a1a;
+	--color-muted-foreground: #7d7d7d; /* secondary text */
 
-	/* Berzerk foreground extensions */
-	--color-foreground-subtle: #6f6f76; /* (was --color-fg-2) */
-	--color-foreground-disabled: #44444a; /* (was --color-fg-3) */
+	/* Foreground extensions */
+	--color-foreground-subtle: #7d7d7d;
+	--color-foreground-disabled: #b3b3b3;
 
 	/* ── Borders & focus (shadcn-named) ────────────────────────── */
-	--color-border: rgba(255, 255, 255, 0.08);
-	--color-ring: rgba(255, 255, 255, 0.85); /* focus ring (was --color-border-focus) */
+	--color-border: #e5e5e5; /* hairline */
+	--color-ring: rgba(26, 26, 26, 0.35); /* focus ring */
 
-	/* Berzerk border extensions */
-	--color-border-minimal: rgba(255, 255, 255, 0.04);
-	--color-border-subtle: rgba(255, 255, 255, 0.06);
-	--color-border-strong: rgba(255, 255, 255, 0.16);
-	--color-border-light: rgba(255, 255, 255, 0.2);
-	--color-border-medium: rgba(255, 255, 255, 0.22);
-	--color-border-heavy: rgba(255, 255, 255, 0.4);
+	/* Border extensions */
+	--color-border-minimal: rgba(0, 0, 0, 0.04);
+	--color-border-subtle: rgba(0, 0, 0, 0.06);
+	--color-border-strong: rgba(0, 0, 0, 0.16);
+	--color-border-light: rgba(0, 0, 0, 0.1);
+	--color-border-medium: rgba(0, 0, 0, 0.12);
+	--color-border-heavy: rgba(0, 0, 0, 0.3);
 
-	/* ── Brand & accents (shadcn-named) ────────────────────────── */
-	--color-primary: #4ade80; /* brand action    (matched to success in Berzerk) */
-	--color-primary-foreground: #0a0a0b;
-	--color-accent: #f59e0b; /* secondary accent */
-	--color-accent-foreground: #0a0a0b;
+	/* ── Action (the ONE color) & status accents ───────────────── */
+	--color-primary: #111111; /* black pills — sole action color */
+	--color-primary-foreground: #ffffff;
+	--color-accent: #f3f3f3;
+	--color-accent-foreground: #1a1a1a;
 
-	--color-success: #4ade80; /* (was --color-accent-success) */
-	--color-success-foreground: #0a0a0b;
-	--color-warning: #f59e0b; /* (was --color-accent-warning) */
-	--color-warning-foreground: #0a0a0b;
-	--color-destructive: #dc2626; /* (was --color-accent-danger) */
+	/* Status hues — used ONLY as small dots / deltas */
+	--color-success: #16a34a;
+	--color-success-foreground: #ffffff;
+	--color-warning: #d97706;
+	--color-warning-foreground: #ffffff;
+	--color-destructive: #dc2626;
 	--color-destructive-foreground: #ffffff;
+	--color-info: #2563eb;
+	--color-info-foreground: #ffffff;
 
-	/* Berzerk accent extensions (alpha tints, niche semantics) */
-	--color-success-bg: rgba(74, 222, 128, 0.12);
-	--color-success-border: rgba(74, 222, 128, 0.45);
-	--color-warning-bg: rgba(245, 158, 11, 0.12);
-	--color-warning-border: rgba(245, 158, 11, 0.4);
-	--color-loss: #e0716c; /* (was --color-accent-loss) */
-	--color-alert: #fbbf24; /* (was --color-accent-alert) */
-	--color-pulse: #ef4444; /* (was --color-accent-pulse) */
-	--color-cashback: #16a34a; /* (was --color-accent-cashback) */
+	/* Accent extensions (alpha tints, niche semantics) */
+	--color-success-bg: rgba(22, 163, 74, 0.12);
+	--color-success-border: rgba(22, 163, 74, 0.4);
+	--color-warning-bg: rgba(217, 119, 6, 0.12);
+	--color-warning-border: rgba(217, 119, 6, 0.4);
+	--color-loss: #dc2626;
+	--color-alert: #d97706;
+	--color-pulse: #dc2626;
+	--color-cashback: #16a34a;
 	--color-cashback-bg: rgba(22, 163, 74, 0.12);
-	--color-ios-red: #ff453a; /* (was --color-accent-ios-red) */
+	--color-ios-red: #ff3b30;
 
 	/* ── Fonts (single name; must match useFonts() registrations) ─ */
 	--font-display: "Anton_400Regular";

@@ -125,6 +125,10 @@
 	},
 	"tabs": {
 		"home": "Início",
+		"threads": "Threads",
+		"issues": "Issues",
+		"channels": "Canais",
+		"settings": "Ajustes",
 		"games": "Jogos",
 		"profile": "Perfil"
 	},
@@ -192,7 +196,9 @@
 	},
 	"home": {
 		"eyebrow": "✦ INÍCIO",
-		"welcome": "Bem-vindo",
+		"welcome": "Bem-vindo ao CodeDM",
+		"welcomeSubtitle": "Três passos rápidos e seus contatos já colocam agentes de código para trabalhar neste Mac.",
+		"replayIntro": "Rever intro",
 		"placeholder": "Esta é uma tela de exemplo. Construa sua experiência de início aqui."
 	},
 	"profile": {
@@ -220,5 +226,182 @@
 	},
 	"sheet": {
 		"closeAriaLabel": "Fechar"
+	},
+	"console": {
+		"agentsRunning_one": "{{count}} agente rodando",
+		"agentsRunning_other": "{{count}} agentes rodando",
+		"threads": "Threads",
+		"noThreadsYet": "Nenhuma thread ainda",
+		"footerLocal": "Código aberto · roda localmente",
+		"footerNoAccount": "Sem conta necessária",
+		"back": "Voltar",
+		"send": "Enviar"
+	},
+	"dashboard": {
+		"noAgents": "Nenhum agente trabalhando agora",
+		"oneAgent": "1 agente trabalhando agora",
+		"manyAgents": "{{count}} agentes trabalhando agora",
+		"activeSessions": "Sessões ativas",
+		"noActiveSessions": "Nenhuma sessão ativa.",
+		"latestActivity": "Atividade recente",
+		"needsYouName": "{{name}} precisa de você",
+		"openSession": "Abrir sessão",
+		"today": "Hoje",
+		"issuesOpened": "Issues abertas",
+		"issuesClosed": "Issues fechadas",
+		"medianResponse": "Resposta mediana",
+		"channels": "Canais"
+	},
+	"threadsList": {
+		"title": "Threads",
+		"subtitle": "Contatos e grupos com agentes conectados.",
+		"emptyTitle": "Nenhuma thread ainda",
+		"emptyBody": "Conecte um contato ou grupo a um workspace no seu Mac para colocar um agente para trabalhar."
+	},
+	"issues": {
+		"title": "Issues",
+		"stats": "{{awaiting}} aguardando · {{working}} em andamento · {{completed}} concluídas · {{archived}} arquivadas",
+		"showArchived": "Ver arquivadas",
+		"hideArchived": "Ocultar arquivadas",
+		"archived": "Arquivadas",
+		"emptyTitle": "Nenhuma issue ainda",
+		"emptyBody": "As issues aparecem aqui quando seus agentes começam a trabalhar em mensagens roteadas."
+	},
+	"channels": {
+		"title": "Canais",
+		"yourChannels": "Seus canais",
+		"connected": "Conectado",
+		"notConnected": "Não conectado",
+		"pairingHint": "O pareamento acontece no console do desktop — escaneie o QR lá para conectar um canal.",
+		"routedNote": "Mensagens em canais conectados são roteadas para seus agentes."
+	},
+	"settings": {
+		"title": "Ajustes",
+		"agentProviders": "Provedores de agentes",
+		"stopCriteria": "Critérios de parada",
+		"stopCriteriaDescription": "Quando qualquer um destes acontece, o agente para, a thread é marcada como \"Precisa de você\" e a parada aparece na sessão até você resolver.",
+		"general": "Geral",
+		"operatorName": "Operador",
+		"timezone": "Fuso horário",
+		"dataDir": "Diretório de dados",
+		"appVersion": "Versão do app",
+		"connection": "Conexão com o daemon",
+		"connectionHint": "O daemon do CodeDM rodando no seu Mac. Aponte o app para o endereço dele na sua rede local.",
+		"daemonUrlPlaceholder": "http://localhost:3030",
+		"saveConnection": "Salvar",
+		"resetConnection": "Restaurar padrão",
+		"connectionSaved": "Conexão atualizada",
+		"replayOnboarding": "Rever intro",
+		"criteria": {
+			"serverErrors": "Erros do servidor",
+			"serverErrorsHint": "O CLI do provedor falha (429s, crashes, timeouts).",
+			"blockedByClassification": "Bloqueado por classificação",
+			"blockedByClassificationHint": "Uma resposta rascunhada é sinalizada antes de ser enviada.",
+			"humanRequested": "Humano solicitado",
+			"humanRequestedHint": "O contato pede explicitamente por uma pessoa.",
+			"approvalNeeded": "Aprovação necessária",
+			"approvalNeededHint": "O agente quer rodar um comando que precisa de aprovação."
+		}
+	},
+	"session": {
+		"needsYou": "Precisa de você",
+		"agentStopped": "O agente parou e está aguardando",
+		"chatEmptyTitle": "Nenhuma mensagem ainda",
+		"chatEmptyBody": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
+		"pause": "Pausar",
+		"resume": "Retomar",
+		"whisper": "Sussurro",
+		"direct": "Direto",
+		"whisperPlaceholder": "Sussurre uma orientação aos agentes…",
+		"directPlaceholder": "Responder no canal…",
+		"whisperHint": "Sussurros chegam só aos agentes — nunca enviados ao canal.",
+		"directHint": "Respostas diretas são enviadas ao canal como você.",
+		"send": "Enviar",
+		"whisperCaption": "Sussurro",
+		"youCaption": "Você",
+		"agentCaption": "Agente",
+		"issueRef": "issue",
+		"terminalSession": "Sessão de terminal",
+		"waitingTerminal": "Aguardando saída do terminal…",
+		"messagesRoutedHere": "Mensagens roteadas aqui",
+		"allIssues": "Todas as issues",
+		"archive": "Arquivar",
+		"steerPlaceholder": "Oriente esta issue…",
+		"steerHint": "Orientações chegam só ao agente que trabalha nesta issue.",
+		"steer": "Orientar"
+	},
+	"onboarding": {
+		"skip": "Pular",
+		"back": "Voltar",
+		"next": "Próximo",
+		"getStarted": "Começar",
+		"slide1Title": "DM no seu código",
+		"slide1Body": "O CodeDM conecta WhatsApp, Instagram e Telegram a agentes de código rodando neste Mac — mande DM para o seu código como em qualquer plataforma de mensagens. Código aberto, sem conta, tudo local.",
+		"slide2Title": "Como funciona",
+		"step1Title": "Conecte um canal",
+		"step1Body": "Pareie WhatsApp, Instagram ou Telegram via QR code",
+		"step2Title": "Adicione um workspace",
+		"step2Body": "Aponte para uma pasta de projeto — projetos Claude são detectados",
+		"step3Title": "Conecte uma thread",
+		"step3Body": "Vincule um contato ou grupo a uma pasta e escolha os agentes",
+		"slide3Title": "Você mantém o controle",
+		"slide3Body": "Os agentes pausam em erros de servidor, respostas bloqueadas ou quando alguém pede um humano. Você revisa, orienta com um sussurro ou assume — nada é enviado sem o seu aval."
+	},
+	"setup": {
+		"title": "Bem-vindo ao CodeDM",
+		"subtitle": "Três passos rápidos e seus contatos já colocam agentes de código para trabalhar neste Mac.",
+		"step1Title": "Conecte um canal",
+		"step1Body": "WhatsApp, Instagram ou Telegram",
+		"step2Title": "Adicione um workspace",
+		"step2Body": "Aponte para uma pasta de projeto neste Mac",
+		"step3Title": "Conecte sua primeira thread",
+		"step3Body": "Contato + pasta + agente",
+		"done": "Pronto",
+		"setUp": "Configurar no desktop"
+	},
+	"enums": {
+		"channelKind": {
+			"WHATSAPP": "WhatsApp",
+			"INSTAGRAM_DM": "Instagram DM",
+			"TELEGRAM": "Telegram"
+		},
+		"channelStatus": {
+			"CONNECTED": "Conectado",
+			"PAIRING": "Pareando…",
+			"DISCONNECTED": "Não conectado"
+		},
+		"providerKind": {
+			"CLAUDE_CODE": "Claude Code",
+			"CODEX": "Codex",
+			"OPENCODE": "OpenCode"
+		},
+		"providerStatus": {
+			"DETECTED": "Detectado",
+			"NOT_INSTALLED": "Não instalado"
+		},
+		"threadStatus": {
+			"RUNNING": "Rodando",
+			"IDLE": "Ocioso",
+			"NEEDS_ATTENTION": "Precisa de atenção",
+			"PAUSED": "Pausado"
+		},
+		"issueStatus": {
+			"NEEDS_INPUT": "Precisa de resposta",
+			"WORKING": "Em andamento",
+			"COMPLETED": "Concluída"
+		},
+		"stopKind": {
+			"SERVER_ERROR": "Erro do servidor",
+			"BLOCKED_BY_CLASSIFICATION": "Bloqueado",
+			"HUMAN_REQUESTED": "Humano solicitado",
+			"APPROVAL_NEEDED": "Aprovação necessária"
+		},
+		"stopResolution": {
+			"RETRY": "Tentar de novo",
+			"REVIEW_AND_SEND": "Revisar e enviar",
+			"TAKE_OVER": "Assumir",
+			"APPROVE": "Aprovar",
+			"DENY": "Negar"
+		}
 	}
 }
