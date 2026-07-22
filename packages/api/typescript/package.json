@@ -5,7 +5,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "bun build --target=node --outfile='./dist/server.js' ./src/index.ts",
+		"build": "bun run scripts/build.ts",
+		"smoke:node": "bun run scripts/smoke-node-boot.ts",
 		"dev": "bun run --watch ./src",
 		"tsc": "bun x tsc --noEmit",
 		"test": "bun test"

@@ -1,3 +1,5 @@
+import { spawn as spawnChild, type ChildProcessByStdio } from 'node:child_process'
+import type { Readable } from 'node:stream'
 import { injectable } from 'tsyringe-neo'
 import type { z, ZodType } from 'zod'
 import { BaseError } from '@codedm/core-typescript'
@@ -7,16 +9,19 @@ import type { AgentGenerateRequest, AgentStreamRequest, TerminalRuntimeEvent } f
 import type { TerminalApplicationErrors } from '../../../errors'
 
 /**
- * Real `AgentRunner` — drives a provider CLI as a child process via `Bun.spawn`. Registered in the
- * `real` DI env only; tests bind `StubAgentRunner` instead so no provider binary is ever invoked.
+ * Real `AgentRunner` — drives a provider CLI as a child process via `node:child_process`. Registered
+ * in the `real` DI env only; tests bind `StubAgentRunner` instead so no provider binary is ever
+ * invoked. Runtime is pure Node (no `Bun.*`) because the daemon is BUILT with Bun but RUNS under Node
+ * (`node dist/server.js`); a `Bun.spawn` here threw `Bun is not defined` on the first real session.
  *
  * ── PTY vs pipes (documented choice) ────────────────────────────────────────────────────────────
- * CodeDM prefers ZERO new native dependencies. `Bun.spawn` gives piped stdio, not a real TTY. The
- * provider CLIs are driven NON-INTERACTIVELY (a prompt argument + a print/exec flag), so a pseudo-
- * terminal buys nothing here — line-buffered stdout/stderr pipes carry the full session. A real PTY
- * (`node-pty`, a native build) would only matter for CLIs that gate features on `isatty`; that seam
- * is deferred. Because everything routes through this `AgentRunner` interface, swapping a
- * `NodePtyAgentRunner` in later is a one-binding change in `terminal/registry.ts` — no caller moves.
+ * CodeDM prefers ZERO new native dependencies. `child_process.spawn` with piped stdio gives pipes,
+ * not a real TTY. The provider CLIs are driven NON-INTERACTIVELY (a prompt argument + a print/exec
+ * flag), so a pseudo-terminal buys nothing here — line-buffered stdout/stderr pipes carry the full
+ * session. A real PTY (`node-pty`, a native build) would only matter for CLIs that gate features on
+ * `isatty`; that seam is deferred to the whatscode engine extraction. Because everything routes
+ * through this `AgentRunner` interface, swapping a `NodePtyAgentRunner` in later is a one-binding
+ * change in `terminal/registry.ts` — no caller moves.
  *
  * ── generate() ─────────────────────────────────────────────────────────────────────────────────
  * One-shot structured call: spawns the CLI in print mode (e.g. `claude -p <prompt> --output-format
@@ -33,8 +38,7 @@ export class CliAgentRunner extends AgentRunner {
 		const { cmd } = buildCommand(request.provider, request.binaryPath, 'generate', request.prompt, request.systemPrompt)
 
 		const proc = this.spawn(cmd, request.cwd)
-		const stdout = await new Response(proc.stdout).text()
-		const code = await proc.exited
+		const [stdout, code] = await Promise.all([collectStream(proc.stdout), waitExit(proc, cmd)])
 		if (code !== 0) {
 			throw new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `${request.provider} generate exited with code ${code}`)
 		}
@@ -57,7 +61,7 @@ export class CliAgentRunner extends AgentRunner {
 			for await (const line of mergeLineStreams(proc.stdout, proc.stderr)) {
 				yield { type: 'output', line: { at: new Date().toISOString(), line: line.text, stream: line.stream } }
 			}
-			const code = await proc.exited
+			const code = await waitExit(proc, cmd)
 			yield { type: 'exit', code }
 		} finally {
 			request.signal?.removeEventListener('abort', onAbort)
@@ -66,13 +70,37 @@ export class CliAgentRunner extends AgentRunner {
 		}
 	}
 
-	private spawn(cmd: string[], cwd?: string): Bun.Subprocess<'ignore', 'pipe', 'pipe'> {
+	private spawn(cmd: string[], cwd?: string): ChildProcessByStdio<null, Readable, Readable> {
+		// Node reports spawn failures (ENOENT) ASYNCHRONOUSLY on the 'error' event, not by throwing
+		// here — `waitExit` surfaces that as TERMINAL_SPAWN_FAILED. The `once` no-op below guarantees
+		// an 'error' is never unhandled (which would crash the daemon) even before `waitExit` attaches.
 		try {
-			return Bun.spawn(cmd, { cwd, stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' })
+			const [bin, ...args] = cmd
+			const child = spawnChild(bin as string, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+			child.once('error', () => {})
+			return child
 		} catch (cause) {
 			throw new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${cmd[0]}: ${String(cause)}`)
 		}
 	}
+}
+
+/** Resolve the process exit code, translating a Node spawn 'error' (e.g. ENOENT) into a domain error. */
+function waitExit(proc: ChildProcessByStdio<null, Readable, Readable>, cmd: string[]): Promise<number> {
+	return new Promise((resolve, reject) => {
+		if (proc.exitCode !== null) return resolve(proc.exitCode)
+		proc.once('error', cause =>
+			reject(new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${cmd[0]}: ${String(cause)}`)),
+		)
+		proc.once('close', code => resolve(code ?? 0))
+	})
+}
+
+/** Drain a Node Readable to a UTF-8 string. */
+async function collectStream(stream: Readable): Promise<string> {
+	const chunks: Buffer[] = []
+	for await (const chunk of stream) chunks.push(Buffer.from(chunk as Buffer))
+	return Buffer.concat(chunks).toString('utf-8')
 }
 
 type StreamName = 'stdout' | 'stderr'
@@ -156,10 +184,7 @@ function extractJson(stdout: string): unknown {
  * their completed lines pushed into a shared queue; the async iterator drains the queue until both
  * readers finish. Trailing partial lines (no final newline) are flushed on close.
  */
-async function* mergeLineStreams(
-	stdout: ReadableStream<Uint8Array>,
-	stderr: ReadableStream<Uint8Array>,
-): AsyncGenerator<OrderedLine> {
+async function* mergeLineStreams(stdout: Readable, stderr: Readable): AsyncGenerator<OrderedLine> {
 	const queue: OrderedLine[] = []
 	let notify: (() => void) | undefined
 	const wake = () => {
@@ -167,14 +192,11 @@ async function* mergeLineStreams(
 		notify = undefined
 	}
 
-	const pump = async (stream: ReadableStream<Uint8Array>, name: StreamName): Promise<void> => {
-		const reader = stream.getReader()
+	const pump = async (stream: Readable, name: StreamName): Promise<void> => {
 		const decoder = new TextDecoder()
 		let buffer = ''
-		for (;;) {
-			const { done, value } = await reader.read()
-			if (done) break
-			buffer += decoder.decode(value, { stream: true })
+		for await (const chunk of stream) {
+			buffer += decoder.decode(chunk as Buffer, { stream: true })
 			let newlineIndex = buffer.indexOf('\n')
 			while (newlineIndex !== -1) {
 				queue.push({ stream: name, text: buffer.slice(0, newlineIndex).replace(/\r$/, '') })

@@ -68,7 +68,12 @@ WORKDIR /app
 
 # The bundle keeps native/runtime deps (pg, OpenTelemetry, BullMQ) external, so
 # the installed node_modules travels with it for runtime resolution.
-COPY --from=builder /app/packages/api/typescript/dist/server.js ./server.js
+#
+# Ship the WHOLE dist/ (not just server.js): the node build stages assets the bundle cannot inline —
+# dist/migrations (the Drizzle output the rewritten import.meta.url resolves to) and
+# dist/node_modules/@electric-sql/pglite (the external embedded-DB package + its WASM/.data assets).
+# Node's walk-up from /app/server.js finds dist/node_modules first, then /app/node_modules.
+COPY --from=builder /app/packages/api/typescript/dist ./
 COPY --from=builder /app/node_modules ./node_modules
 
 ENV NODE_ENV=production

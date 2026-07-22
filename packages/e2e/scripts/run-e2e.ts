@@ -1,11 +1,30 @@
 #!/usr/bin/env bun
 import { spawn } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const E2E_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const API_TS_ROOT = resolve(E2E_ROOT, '../api/typescript')
+
+/**
+ * Resolve a Node binary to boot the daemon the RUN-UNDER-NODE way (the daemon is built with Bun but
+ * runs under Node). Node is nvm-only on the build host (absent from the bare non-interactive PATH),
+ * so resolve explicitly: honor `CODEDM_NODE_BIN`, else the newest `~/.nvm/versions/node/<v>/bin/node`,
+ * else PATH `node`.
+ */
+function resolveNodeBin(): string {
+	if (process.env.CODEDM_NODE_BIN) return process.env.CODEDM_NODE_BIN
+	const nvmRoot = join(process.env.HOME ?? '', '.nvm/versions/node')
+	if (existsSync(nvmRoot)) {
+		for (const v of readdirSync(nvmRoot).sort().reverse()) {
+			const candidate = join(nvmRoot, v, 'bin/node')
+			if (existsSync(candidate)) return candidate
+		}
+	}
+	return 'node'
+}
 
 /**
  * CodeDM e2e runner. Boots the REAL stack the harness can stand up on its own — the TS daemon in
@@ -41,6 +60,21 @@ async function main() {
 
 	const apiPort = process.env.API_PORT ?? '3030'
 	const vitePort = process.env.VITE_PORT ?? '5173'
+	const nodeBin = resolveNodeBin()
+
+	// Build the daemon as a Node bundle BEFORE Playwright boots it (the webServer runs
+	// `node dist/server.js`). This is the ONLY thing that gives the e2e suite evidence for the
+	// run-under-Node path — booting from Bun source would validate a runtime we don't ship.
+	console.log(`[e2e] building api node bundle (node=${nodeBin})…`)
+	const build = Bun.spawnSync(['bun', 'run', 'scripts/build.ts'], {
+		cwd: API_TS_ROOT,
+		stdout: 'inherit',
+		stderr: 'inherit',
+	})
+	if (build.exitCode !== 0) {
+		console.error('[e2e] api node build failed')
+		process.exit(build.exitCode ?? 1)
+	}
 
 	const childEnv: NodeJS.ProcessEnv = {
 		...process.env,
@@ -52,6 +86,8 @@ async function main() {
 		API_PORT: apiPort,
 		PORT: apiPort,
 		VITE_PORT: vitePort,
+		// The node binary the playwright webServer uses to boot `dist/server.js` (nvm-resolved).
+		CODEDM_NODE_BIN: nodeBin,
 		// One host runs the whole suite — per-IP auth windows would 429 legitimate specs.
 		RATE_LIMIT_DISABLED: 'true',
 	}
@@ -60,7 +96,9 @@ async function main() {
 	// THIS run's scratch data dir, so a leftover listener from a previous run (watch-mode orphan
 	// pointing at a dropped dir) is always wrong — kill it, never reuse it.
 	for (const port of [apiPort, vitePort]) {
-		const found = Bun.spawnSync(['lsof', '-ti', `:${port}`]).stdout.toString().trim()
+		const found = Bun.spawnSync(['lsof', '-ti', `:${port}`])
+			.stdout.toString()
+			.trim()
 		if (found) {
 			console.log(`[e2e] killing stale listener(s) on :${port} (${found.split('\n').join(', ')})`)
 			for (const pid of found.split('\n')) Bun.spawnSync(['kill', '-9', pid])

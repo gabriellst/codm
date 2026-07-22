@@ -21,10 +21,11 @@ export default defineConfig({
 	// servers boot in seconds standalone).
 	webServer: [
 		{
-			// Real-mode daemon over embedded PGlite (no --watch: a file-change reload mid-run would
-			// drop the data-dir lock and restart the daemon under the suite). CODEDM_E2E + the scratch
-			// CODEDM_DATA_DIR are exported by scripts/run-e2e.ts.
-			command: 'bun run ./src/index.ts',
+			// Real-mode daemon over embedded PGlite, booted the RUN-UNDER-NODE way: `node dist/server.js`
+			// (the artifact we ship), NOT `bun run ./src` (a runtime we don't). scripts/run-e2e.ts builds
+			// the node bundle first and exports CODEDM_NODE_BIN (nvm-resolved), CODEDM_E2E + the scratch
+			// CODEDM_DATA_DIR. A bare `bun x playwright` (no runner) falls back to PATH `node`.
+			command: `${process.env.CODEDM_NODE_BIN ?? 'node'} --enable-source-maps ./dist/server.js`,
 			// url (not port): the raw port poll resolves localhost to ::1 first on macOS while the
 			// servers bind IPv4 — both were READY and the poll still timed out. An HTTP probe against
 			// 127.0.0.1 accepts any response, but 404 does NOT prove the daemon is up (a stale listener

@@ -36,7 +36,7 @@
 			"inputs": ["production", "{projectRoot}/tsconfig.build.json", "sharedGlobals"],
 			"outputs": ["{projectRoot}/dist"],
 			"options": {
-				"command": "bun build --compile --smol --outfile=./dist/server ./src/index.ts",
+				"command": "bun run scripts/build.ts",
 				"cwd": "packages/api/typescript"
 			}
 		},
