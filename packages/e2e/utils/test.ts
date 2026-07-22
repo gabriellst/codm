@@ -20,12 +20,10 @@ function resolveRoute(route: string, params?: Record<string, string>): string {
 	return Object.entries(params).reduce((path, [key, value]) => path.replace(`$${key}`, value), route)
 }
 
-type DropFirst<T extends (...args: any[]) => any> = T extends (first: any, ...rest: infer R) => infer Ret ? (...args: R) => Ret : never
-
 export const test = base.extend<{
 	goto: <T extends AppRoute>(...args: GotoArgs<T>) => Promise<any>
 	given: {
-		freshUser: DropFirst<typeof givenFreshUser>
+		freshUser: typeof givenFreshUser
 	}
 	network: ReturnType<typeof createNetworkLogger>
 }>({
@@ -46,10 +44,11 @@ export const test = base.extend<{
 		})
 	},
 
-	given: async ({ context }, use) => {
-		await use({
-			freshUser: params => givenFreshUser(context, params),
-		})
+	// Browser-free: the operator session is API-only (no cookie to inject), so `given` depends on no
+	// browser fixture — API-flow specs never launch chromium. `goto`/`network` still exist for any UI
+	// spec that opts into `page`.
+	given: async ({}, use) => {
+		await use({ freshUser: givenFreshUser })
 	},
 })
 

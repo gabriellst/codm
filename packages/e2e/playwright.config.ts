@@ -21,18 +21,31 @@ export default defineConfig({
 	// servers boot in seconds standalone).
 	webServer: [
 		{
-			command: 'bun run --watch ./src',
+			// Real-mode daemon over embedded PGlite (no --watch: a file-change reload mid-run would
+			// drop the data-dir lock and restart the daemon under the suite). CODEDM_E2E + the scratch
+			// CODEDM_DATA_DIR are exported by scripts/run-e2e.ts.
+			command: 'bun run ./src/index.ts',
 			// url (not port): the raw port poll resolves localhost to ::1 first on macOS while the
-			// servers bind IPv4 — both were READY and the poll still timed out. An HTTP probe
-			// against 127.0.0.1 accepts any response (404 counts as up).
-			url: `http://127.0.0.1:${Number(process.env.API_PORT ?? 3030)}/v1/authentication/ok`,
+			// servers bind IPv4 — both were READY and the poll still timed out. An HTTP probe against
+			// 127.0.0.1 accepts any response, but 404 does NOT prove the daemon is up (a stale listener
+			// 404s too), so probe a route that returns 200 only once the daemon is serving: the operator
+			// session echo (/v1/session), which needs no seeded state.
+			url: `http://127.0.0.1:${Number(process.env.API_PORT ?? 3030)}/v1/session`,
 			reuseExistingServer: false,
 			timeout: 120_000,
 			cwd: '../api/typescript',
 			stdout: 'pipe',
-			// PORT is honored by BOTH stacks (fastify api AND nitro/vite) — pin it per server or
-			// they collide on whichever value the runner exported.
-			env: { PORT: String(process.env.API_PORT ?? 3030) },
+			// PORT is honored by BOTH stacks (fastify api AND nitro/vite) — pin it per server or they
+			// collide on whichever value the runner exported. CODEDM_DATA_DIR/CODEDM_E2E come from the
+			// runner's env (inherited); pinned here so a bare `bun x playwright` invocation still boots
+			// hermetically.
+			env: {
+				PORT: String(process.env.API_PORT ?? 3030),
+				API_PORT: String(process.env.API_PORT ?? 3030),
+				CODEDM_E2E: process.env.CODEDM_E2E ?? 'true',
+				...(process.env.CODEDM_DATA_DIR ? { CODEDM_DATA_DIR: process.env.CODEDM_DATA_DIR } : {}),
+				RATE_LIMIT_DISABLED: 'true',
+			},
 		},
 		{
 			command: 'bun x vite --host',
