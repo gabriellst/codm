@@ -1,12 +1,30 @@
 ---
 import { getEntry } from 'astro:content'
-import BaseLayout from '~/layouts/BaseLayout.astro'
 import Landing from '~/components/Landing.astro'
+import BaseLayout from '~/layouts/BaseLayout.astro'
 
 const entry = await getEntry('landing', 'pt/landing')
 const t = entry!.data
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'SoftwareApplication',
+	name: 'CodeDM',
+	applicationCategory: 'DeveloperApplication',
+	operatingSystem: 'macOS, Windows, Linux',
+	offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+	license: 'https://opensource.org/licenses/MIT',
+	description: t.hero.subtitle,
+	url: Astro.site?.href,
+}
+const ogImage = new URL('/og/og-pt.png', Astro.site).href
 ---
 
-<BaseLayout title={`CodeDM — ${t.hero.title}`} description={t.hero.subtitle}>
+<BaseLayout
+	title={`CodeDM — ${t.hero.titleBold} ${t.hero.titleLight}`}
+	description={t.hero.subtitle}
+	ogImage={ogImage}
+	jsonLd={jsonLd}
+>
 	<Landing locale="pt" />
 </BaseLayout>

@@ -5,14 +5,30 @@ import { getLocale } from '~/i18n'
 const locale = getLocale(Astro.url)
 const entry = await getEntry('landing', `${locale}/landing`)
 const t = entry!.data
+
+// Footer GitHub label = nav label minus the external-arrow glyph (single copy source).
+const githubLabel = t.nav.links.github.replace(/\s*↗\s*$/, '')
+const links = [
+	{ href: t.footer.links.github, label: githubLabel },
+	{ href: '/docs', label: t.footer.links.docs },
+	{ href: '/changelog', label: t.footer.links.changelog },
+]
 ---
 
 <footer
-	class="flex flex-col items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--background)] px-6 py-8 sm:flex-row md:px-20"
+	class="mx-auto flex max-w-[1160px] flex-wrap items-center gap-5 px-11 pb-[30px] pt-[26px] text-[12.5px] text-[var(--muted-foreground)]/80"
 >
-	<span class="flex items-center gap-1 text-sm font-extrabold tracking-tight" aria-label="CodeDM">
-		<span>Code</span>
-		<span class="rounded-md bg-[var(--primary)] px-1.5 py-0.5 text-[var(--primary-foreground)]">DM</span>
+	<span class="flex items-center text-sm font-extrabold tracking-tight text-[var(--foreground)]" aria-label="CodeDM">
+		Code<span class="ml-0.5 rounded-[5px] bg-[var(--primary)] px-[5px] text-[var(--primary-foreground)]">DM</span>
 	</span>
-	<span class="text-xs uppercase tracking-[0.12em] text-[var(--muted-foreground)]">{t.footer.copyright}</span>
+	<span>{t.footer.copyright}</span>
+	<div class="ml-auto flex gap-5 font-semibold">
+		{
+			links.map(link => (
+				<a href={link.href} class="text-[var(--muted-foreground)]/80 transition-colors hover:text-[var(--foreground)]">
+					{link.label}
+				</a>
+			))
+		}
+	</div>
 </footer>

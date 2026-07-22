@@ -47,3 +47,11 @@ resolver no design:
 - Emendas de contrato: StopKind += AUTH_REQUIRED (rec sim); idle_evicted domínio-only;
   action_detected só frame SSE.
 - Transporte desktop: HTTP-local vs SQLite-WAL (acima).
+
+## Union types de provider no contrato — DESIGN RATIFICADO (founder, 22-jul noite)
+Declaração única no contrato, forma com o dono, união em codegen:
+- TypeSpec: @unionSlot(campo, discriminadores) + @variant(valores..., nomeDoTipo, { owner: <id da tabela WORKSPACES> }) — owner validado contra o manifest (inexistente = erro de compilação do contrato).
+- Contracts codegen ESTAMPA os comentários @union/@variant no struct Go GERADO → o scanner AST verbatim (pkg/openapi) resolve os nomes nos pacotes do workspace DONO e builda oneOf+discriminator → Kubb → uniões tipadas na SDK.
+- Formas das variantes vivem SEMPRE no serviço dono (hoje: apiGo/adapter WhatsApp); consumidores importam o binding gerado, nunca redeclaram.
+- RAIL union-parity: resolver por linguagem (v1: Go via scanner; TS via schema zod exportado; futuros = 1 resolver/linguagem, padrão detectLang) — nome não resolvido no dono = gate vermelho; import direto de forma alheia fora do binding = violação.
+- Implementação: FILA imediatamente após pairing-conclude + astro-landing aterrissarem.
