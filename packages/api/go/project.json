@@ -28,8 +28,8 @@
 		"emit-openapi": {
 			"executor": "nx:run-commands",
 			"cache": false,
-			"outputs": ["{workspaceRoot}/packages/api/go/public/openapi.json"],
-			"options": { "command": "go run ./cmd/emit-openapi", "cwd": "packages/api/go" }
+			"outputs": ["{workspaceRoot}/packages/api/go/public/docs/openapi.json"],
+			"options": { "command": "go run ./cmd/openapi", "cwd": "packages/api/go" }
 		}
 	}
 }
