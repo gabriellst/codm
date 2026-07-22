@@ -21,8 +21,104 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 		return nil, err
 	}
 	switch discriminator.Name {
+	case "integration.agent.reply_drafted":
+		var v AgentReplyDraftedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.artifact.recorded":
+		var v ArtifactRecordedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.connected":
+		var v ChannelConnectedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.delivery_requested":
+		var v ChannelDeliveryRequestedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.disconnected":
+		var v ChannelDisconnectedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_message.received":
+		var v ChannelMessageReceivedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.outbound_delivered":
+		var v ChannelOutboundDeliveredEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.pairing_qr_updated":
+		var v ChannelPairingQrUpdatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.issue.archived":
+		var v IssueArchivedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.issue.completed":
+		var v IssueCompletedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.issue.opened":
+		var v IssueOpenedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.issue.stop_raised":
+		var v IssueStopRaisedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.issue.stop_resolved":
+		var v IssueStopResolvedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.message.classified":
+		var v MessageClassifiedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
 	case "integration.billing.subscription_changed":
 		var v SubscriptionChangedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.thread.attached":
+		var v ThreadAttachedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.workspace.removed":
+		var v WorkspaceRemovedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}

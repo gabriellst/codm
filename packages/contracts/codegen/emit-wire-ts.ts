@@ -74,6 +74,21 @@ export function emitTsUnions(unions: ParsedUnion[]): Record<string, string> {
 
 const ENVELOPE_FIELDS = new Set(['name', 'entityId', 'ownerId', 'occurredAt'])
 
+// Enum/union refs can be nested inside array items (e.g. `providers: ProviderKind[]`), so the
+// import collector must descend into `array` element types — a top-level-only filter would emit
+// `z.array(z.enum(ProviderKind))` without importing ProviderKind. Mirrors zodExpr's recursion.
+function collectEnumRefs(t: FieldType): string[] {
+	if (t.kind === 'enum-ref') return [t.ref]
+	if (t.kind === 'array') return collectEnumRefs(t.items)
+	return []
+}
+
+function collectUnionRefs(t: FieldType): string[] {
+	if (t.kind === 'union-ref') return [t.ref]
+	if (t.kind === 'array') return collectUnionRefs(t.items)
+	return []
+}
+
 function zodExpr(t: FieldType): string {
 	switch (t.kind) {
 		case 'string':
@@ -110,7 +125,7 @@ export function emitTsEvents(events: ParsedEvent[]): Record<string, string> {
 	for (const ev of events) {
 		const payloadFields = ev.fields.filter(f => !ENVELOPE_FIELDS.has(f.name))
 
-		const enumRefs = payloadFields.filter(f => f.type.kind === 'enum-ref').map(f => (f.type as { ref: string }).ref)
+		const enumRefs = payloadFields.flatMap(f => collectEnumRefs(f.type))
 		const enumImports = [...new Set(enumRefs)].sort()
 		const importLines = [
 			`import { z } from '${REPO.corePackage}/schema'`,
@@ -120,7 +135,7 @@ export function emitTsEvents(events: ParsedEvent[]): Record<string, string> {
 			const names = enumImports.join(', ')
 			importLines.push(`import { ${names} } from '../enums'`)
 		}
-		const unionRefs = payloadFields.filter(f => f.type.kind === 'union-ref').map(f => (f.type as { ref: string }).ref)
+		const unionRefs = payloadFields.flatMap(f => collectUnionRefs(f.type))
 		const unionImports = [...new Set(unionRefs)].sort()
 		if (unionImports.length > 0) {
 			importLines.push(`import { ${unionImports.map(r => `${r}Schema`).join(', ')} } from '../unions'`)

@@ -12,17 +12,44 @@ import { BaseIntegrationEvent } from '@template/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 
 /**
- * The curated browser-facing event union. ONLY integration events whose payload carries a
- * direct `ownerId` belong here — the broadcaster filters each client by the session's owner,
- * so an event without `ownerId` can never be tenancy-scoped and must NOT be added (events
- * keyed by an external integration id need a resolver first — see the realtime section
- * of docs/BACKEND.md before extending this list).
+ * The curated browser-facing event union — the dashboard operator-scoped SSE surface.
  *
- * This boilerplate ships with an EMPTY union — the generic SaaS infra defines no
- * domain events yet. A new app adds its `ownerId`-bearing integration events here (and
- * runs `bun sdk`) to make them subscribable from the frontend `useServerEvents` hook.
+ * These are the CodeDM integration events (frozen in the Phase-0 contract lock,
+ * `packages/contracts/wire/events/*.tsp`) that drive the live operator console: the Needs-You
+ * callout + dock badge, live issue lists, transcript action lines + chat bubbles, and channel
+ * health / live QR. They subsume the modeling's `browser.*` frames:
+ *   - `browser.stop_raised`            ← integration.issue.stop_raised
+ *   - `browser.thread_status_changed`  ← derived from the issue lifecycle events below
+ *   - `browser.terminal_output_appended` is the two-stream TRANSPORT frame (not an outbox fact)
+ *     and is delivered by the terminal-session stream, NOT this owner-scoped broadcaster.
+ *
+ * Names are the frozen wire discriminators (the codegen gates every one to the `integration.`
+ * prefix), so they are listed as string literals — the contract, not a runtime import.
+ *
+ * WIRING NOTE (finalized in the gateway/terminal phase): the broadcaster below filters each
+ * client by an `ownerId` read from the event *payload*, whereas the CodeDM lock carries `ownerId`
+ * on the envelope only and collapses tenancy to a single constant operator. Populating the union
+ * declares the browser-subscribable surface; activating delivery is a one-line reconciliation of
+ * that filter (envelope ownerId / constant operator) done when the gateway lands — deliberately
+ * NOT changed here to keep the contract lock free of product runtime logic.
  */
-const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = []
+const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
+	// Human-in-the-loop control plane (T03 Home callout / T14 Needs-You / dock badge)
+	{ name: 'integration.issue.stop_raised' },
+	{ name: 'integration.issue.stop_resolved' },
+	// Issue lifecycle → live issue lists + thread status (T04 / T11 / T03)
+	{ name: 'integration.issue.opened' },
+	{ name: 'integration.issue.completed' },
+	{ name: 'integration.issue.archived' },
+	// Routing + agent output → live transcript (T09)
+	{ name: 'integration.message.classified' },
+	{ name: 'integration.agent.reply_drafted' },
+	// Thread + channel health (T03 / T05 / T06 live QR)
+	{ name: 'integration.thread.attached' },
+	{ name: 'integration.channel.connected' },
+	{ name: 'integration.channel.disconnected' },
+	{ name: 'integration.channel.pairing_qr_updated' },
+]
 
 const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))
 

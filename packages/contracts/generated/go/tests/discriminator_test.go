@@ -6,38 +6,72 @@ import (
 	wire "template/contracts-go/wire"
 )
 
-func TestParseOwnerMemberInvitedVariant(t *testing.T) {
+func TestParseChannelMessageReceivedVariant(t *testing.T) {
 	raw := []byte(`{
-		"name": "integration.shared.owner.member_invited",
-		"entityId": "o_1",
+		"name": "integration.channel_message.received",
+		"entityId": "ch_1",
 		"ownerId": "tenant-1",
 		"occurredAt": "2024-01-01T00:00:00Z",
-		"email": "invitee@example.com",
-		"role": "MEMBER",
-		"token": "tok_1",
-		"expiresAt": "2024-01-08T00:00:00Z",
-		"invitedByUserId": "u_1"
+		"channelId": "ch_1",
+		"messageId": "wamid_1",
+		"contactExternalId": "5511999990000",
+		"contactDisplayName": "Ada",
+		"contactKind": "CONTACT",
+		"senderExternalId": "5511999990000",
+		"isGroup": false,
+		"text": "fix the coupon flow",
+		"platform": "WHATSAPP",
+		"receivedAt": "2024-01-01T00:00:00Z"
 	}`)
 	parsed, err := wire.ParseIntegrationEvent(raw)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	event, ok := parsed.(wire.OwnerMemberInvitedEvent)
+	event, ok := parsed.(wire.ChannelMessageReceivedEvent)
 	if !ok {
-		t.Fatalf("expected OwnerMemberInvitedEvent, got %T", parsed)
+		t.Fatalf("expected ChannelMessageReceivedEvent, got %T", parsed)
 	}
-	if event.Name != wire.OwnerMemberInvitedEventName {
-		t.Fatalf("expected Name=%q, got %q", wire.OwnerMemberInvitedEventName, event.Name)
+	if event.Name != wire.ChannelMessageReceivedEventName {
+		t.Fatalf("expected Name=%q, got %q", wire.ChannelMessageReceivedEventName, event.Name)
 	}
-	if event.OwnerID != "tenant-1" {
-		t.Fatalf("expected OwnerID=%q, got %q", "tenant-1", event.OwnerID)
+	// ChannelKind + ContactKind are generated wire enums; confirm they unmarshal verbatim.
+	if event.Platform != wire.ChannelKindWHATSAPP {
+		t.Fatalf("expected Platform=%q, got %q", wire.ChannelKindWHATSAPP, event.Platform)
 	}
-	if event.Email != "invitee@example.com" {
-		t.Fatalf("expected Email=%q, got %q", "invitee@example.com", event.Email)
+	if event.ContactKind != wire.ContactKindCONTACT {
+		t.Fatalf("expected ContactKind=%q, got %q", wire.ContactKindCONTACT, event.ContactKind)
 	}
-	// Role is the generated cross-cutting enum; confirm it unmarshals verbatim.
-	if event.Role != wire.RoleMEMBER {
-		t.Fatalf("expected Role=%q, got %q", wire.RoleMEMBER, event.Role)
+	// Absent optional (quotedEntryId) stays a nil pointer.
+	if event.QuotedEntryID != nil {
+		t.Fatalf("expected QuotedEntryID=nil, got %v", *event.QuotedEntryID)
+	}
+}
+
+func TestParseThreadAttachedArrayOfEnum(t *testing.T) {
+	raw := []byte(`{
+		"name": "integration.thread.attached",
+		"entityId": "th_1",
+		"ownerId": "tenant-1",
+		"occurredAt": "2024-01-01T00:00:00Z",
+		"threadId": "th_1",
+		"channelId": "ch_1",
+		"contactExternalId": "5511999990000",
+		"contactDisplayName": "Ada",
+		"contactKind": "CONTACT",
+		"workspaceId": "ws_1",
+		"providers": ["CLAUDE_CODE", "CODEX"]
+	}`)
+	parsed, err := wire.ParseIntegrationEvent(raw)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	event, ok := parsed.(wire.ThreadAttachedEvent)
+	if !ok {
+		t.Fatalf("expected ThreadAttachedEvent, got %T", parsed)
+	}
+	// []ProviderKind — the array-of-enum wire shape decodes verbatim.
+	if len(event.Providers) != 2 || event.Providers[0] != wire.ProviderKindCLAUDE_CODE || event.Providers[1] != wire.ProviderKindCODEX {
+		t.Fatalf("expected [CLAUDE_CODE CODEX], got %v", event.Providers)
 	}
 }
 

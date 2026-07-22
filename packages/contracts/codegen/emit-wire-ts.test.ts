@@ -117,6 +117,21 @@ describe('emitTsEvents', () => {
 		expect(f).toContain('affectedMonitorIds: z.array(z.string()),')
 	})
 
+	test('an array-of-enum field imports the element enum (recursion into array items)', () => {
+		// Regression: a top-level-only import filter would emit z.array(z.enum(ProviderKind))
+		// without importing ProviderKind. The collector descends into array element types.
+		const ev = {
+			...sample,
+			fields: [
+				...sample.fields,
+				{ name: 'providers', type: { kind: 'array' as const, items: { kind: 'enum-ref' as const, ref: 'ProviderKind' } }, required: true },
+			],
+		}
+		const f = emitTsEvents([ev])['video-uploaded.ts']!
+		expect(f).toContain('providers: z.array(z.enum(ProviderKind)),')
+		expect(f).toContain(`import { ProviderKind, VideoStatus } from '../enums'`)
+	})
+
 	test('a union-ref field uses <Name>Schema imported from ../unions', () => {
 		const ev = {
 			...sample,

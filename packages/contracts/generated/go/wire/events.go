@@ -6,6 +6,273 @@ import (
 	"time"
 )
 
+// AgentReplyDraftedEventName is the wire discriminator for AgentReplyDraftedEvent.
+const AgentReplyDraftedEventName = "integration.agent.reply_drafted"
+
+// AgentReplyDraftedEvent — wire shape of integration.agent.reply_drafted.
+// BC5 Issue Execution -> BC4 Thread & Routing -> BC1 Channel Gateway. An agent drafted a reply for an issue; carries the issue label so the gateway can prefix it on delivery. Descends whatscode ChatMessageEvent. The IssueLabel VO is flattened to labelIssueKey/labelThreadId (both required here — every agent reply is labeled).
+type AgentReplyDraftedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	LabelIssueKey string `json:"labelIssueKey"`
+	LabelThreadID string `json:"labelThreadId"`
+	Text string `json:"text"`
+}
+
+func (e AgentReplyDraftedEvent) EventName() string { return AgentReplyDraftedEventName }
+
+// ArtifactRecordedEventName is the wire discriminator for ArtifactRecordedEvent.
+const ArtifactRecordedEventName = "integration.artifact.recorded"
+
+// ArtifactRecordedEvent — wire shape of integration.artifact.recorded.
+// BC5 Issue Execution -> BC6 Artifact Registry. A non-code output (image/file/link) was produced by an agent. The draft's payload field `name` is renamed `artifactName` to avoid colliding with the envelope `name` discriminator.
+type ArtifactRecordedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ArtifactID string `json:"artifactId"`
+	ThreadID string `json:"threadId"`
+	IssueID *string `json:"issueId,omitempty"`
+	Kind ArtifactKind `json:"kind"`
+	ArtifactName string `json:"artifactName"`
+}
+
+func (e ArtifactRecordedEvent) EventName() string { return ArtifactRecordedEventName }
+
+// ChannelConnectedEventName is the wire discriminator for ChannelConnectedEvent.
+const ChannelConnectedEventName = "integration.channel.connected"
+
+// ChannelConnectedEvent — wire shape of integration.channel.connected.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A channel finished pairing and is reachable. Descends medscall integration.channel.connected.
+type ChannelConnectedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	Kind ChannelKind `json:"kind"`
+	AccountDetail string `json:"accountDetail"`
+	PairedAt time.Time `json:"pairedAt"`
+}
+
+func (e ChannelConnectedEvent) EventName() string { return ChannelConnectedEventName }
+
+// ChannelDeliveryRequestedEventName is the wire discriminator for ChannelDeliveryRequestedEvent.
+const ChannelDeliveryRequestedEventName = "integration.channel.delivery_requested"
+
+// ChannelDeliveryRequestedEvent — wire shape of integration.channel.delivery_requested.
+// BC4 Thread & Routing -> BC1 Channel Gateway (command-event). Orders the gateway to deliver an outbound message. In medscall this is an HTTP send call; modeled here as an integration event so it rides the same outbox/transport as the rest of the lock. The label prefix is applied by the gateway on agent replies (senderIdentity=AGENT). ownerId travels on the envelope.
+type ChannelDeliveryRequestedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	ContactExternalID string `json:"contactExternalId"`
+	ContactDisplayName string `json:"contactDisplayName"`
+	ContactKind ContactKind `json:"contactKind"`
+	Text string `json:"text"`
+	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
+	LabelThreadID *string `json:"labelThreadId,omitempty"`
+	SenderIdentity SenderIdentity `json:"senderIdentity"`
+}
+
+func (e ChannelDeliveryRequestedEvent) EventName() string { return ChannelDeliveryRequestedEventName }
+
+// ChannelDisconnectedEventName is the wire discriminator for ChannelDisconnectedEvent.
+const ChannelDisconnectedEventName = "integration.channel.disconnected"
+
+// ChannelDisconnectedEvent — wire shape of integration.channel.disconnected.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A channel session was torn down; the core parks the affected threads. Descends medscall integration.channel.disconnected.
+type ChannelDisconnectedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	Kind ChannelKind `json:"kind"`
+	AffectedThreadIds []string `json:"affectedThreadIds"`
+}
+
+func (e ChannelDisconnectedEvent) EventName() string { return ChannelDisconnectedEventName }
+
+// ChannelMessageReceivedEventName is the wire discriminator for ChannelMessageReceivedEvent.
+const ChannelMessageReceivedEventName = "integration.channel_message.received"
+
+// ChannelMessageReceivedEvent — wire shape of integration.channel_message.received.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A normalized inbound message on a connected channel. Descends medscall integration.channel_message.received. The ContactRef VO is flattened to scalar contact* fields (the wire codegen carries scalars + enums, not nested models); the core reassembles it. `receivedAt` is when the platform says the message was sent. ownerId travels on the envelope.
+type ChannelMessageReceivedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	MessageID string `json:"messageId"`
+	ContactExternalID string `json:"contactExternalId"`
+	ContactDisplayName string `json:"contactDisplayName"`
+	ContactKind ContactKind `json:"contactKind"`
+	SenderExternalID string `json:"senderExternalId"`
+	IsGroup bool `json:"isGroup"`
+	Text string `json:"text"`
+	QuotedEntryID *string `json:"quotedEntryId,omitempty"`
+	Platform ChannelKind `json:"platform"`
+	ReceivedAt time.Time `json:"receivedAt"`
+}
+
+func (e ChannelMessageReceivedEvent) EventName() string { return ChannelMessageReceivedEventName }
+
+// ChannelOutboundDeliveredEventName is the wire discriminator for ChannelOutboundDeliveredEvent.
+const ChannelOutboundDeliveredEventName = "integration.channel.outbound_delivered"
+
+// ChannelOutboundDeliveredEvent — wire shape of integration.channel.outbound_delivered.
+// BC1 Channel Gateway -> BC4 Thread & Routing. An outbound message was delivered to the channel (optimistic emit). Descends medscall channel.message_sent. The ContactRef and the optional IssueLabel are flattened to scalar fields; label* is present only on agent replies.
+type ChannelOutboundDeliveredEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	ContactExternalID string `json:"contactExternalId"`
+	ContactDisplayName string `json:"contactDisplayName"`
+	ContactKind ContactKind `json:"contactKind"`
+	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
+	LabelThreadID *string `json:"labelThreadId,omitempty"`
+	SenderIdentity SenderIdentity `json:"senderIdentity"`
+	DeliveredAt time.Time `json:"deliveredAt"`
+}
+
+func (e ChannelOutboundDeliveredEvent) EventName() string { return ChannelOutboundDeliveredEventName }
+
+// ChannelPairingQrUpdatedEventName is the wire discriminator for ChannelPairingQrUpdatedEvent.
+const ChannelPairingQrUpdatedEventName = "integration.channel.pairing_qr_updated"
+
+// ChannelPairingQrUpdatedEvent — wire shape of integration.channel.pairing_qr_updated.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A fresh pairing QR/token was produced (rotates ~every 30s). Descends medscall WhatsAppQRCodeUpdated; drives the T06 live QR over SSE.
+type ChannelPairingQrUpdatedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	Kind ChannelKind `json:"kind"`
+	QrPayload string `json:"qrPayload"`
+	QrExpiresAt time.Time `json:"qrExpiresAt"`
+}
+
+func (e ChannelPairingQrUpdatedEvent) EventName() string { return ChannelPairingQrUpdatedEventName }
+
+// IssueArchivedEventName is the wire discriminator for IssueArchivedEvent.
+const IssueArchivedEventName = "integration.issue.archived"
+
+// IssueArchivedEvent — wire shape of integration.issue.archived.
+// BC5 Issue Execution -> BC4 Thread & Routing. An issue was archived (manually, by the 24h sweep, or because the thread was detached); updates the issue-list projections.
+type IssueArchivedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	Reason IssueArchiveReason `json:"reason"`
+}
+
+func (e IssueArchivedEvent) EventName() string { return IssueArchivedEventName }
+
+// IssueCompletedEventName is the wire discriminator for IssueCompletedEvent.
+const IssueCompletedEventName = "integration.issue.completed"
+
+// IssueCompletedEvent — wire shape of integration.issue.completed.
+// BC5 Issue Execution -> BC4 Thread & Routing. An issue completed; starts the 24h auto-archive clock and updates status/metrics.
+type IssueCompletedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	Key string `json:"key"`
+	CompletedAt time.Time `json:"completedAt"`
+}
+
+func (e IssueCompletedEvent) EventName() string { return IssueCompletedEventName }
+
+// IssueOpenedEventName is the wire discriminator for IssueOpenedEvent.
+const IssueOpenedEventName = "integration.issue.opened"
+
+// IssueOpenedEvent — wire shape of integration.issue.opened.
+// BC5 Issue Execution -> BC4 Thread & Routing. A new issue was opened (unique key per thread); triggers the terminal session spawn and a transcript/status update.
+type IssueOpenedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	Key string `json:"key"`
+	Title string `json:"title"`
+	Provider ProviderKind `json:"provider"`
+}
+
+func (e IssueOpenedEvent) EventName() string { return IssueOpenedEventName }
+
+// IssueStopRaisedEventName is the wire discriminator for IssueStopRaisedEvent.
+const IssueStopRaisedEventName = "integration.issue.stop_raised"
+
+// IssueStopRaisedEvent — wire shape of integration.issue.stop_raised.
+// BC5 Issue Execution -> BC4 Thread & Routing. An agent stopped and needs the human; flips the thread to NEEDS_ATTENTION, lights the dock badge and the Home callout.
+type IssueStopRaisedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	StopID string `json:"stopId"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	Kind StopKind `json:"kind"`
+}
+
+func (e IssueStopRaisedEvent) EventName() string { return IssueStopRaisedEventName }
+
+// IssueStopResolvedEventName is the wire discriminator for IssueStopResolvedEvent.
+const IssueStopResolvedEventName = "integration.issue.stop_resolved"
+
+// IssueStopResolvedEvent — wire shape of integration.issue.stop_resolved.
+// BC5 Issue Execution -> BC4 Thread & Routing. A stop was resolved by the operator. TAKE_OVER additionally pauses the thread (the consumer looks up issue -> thread). Payload kept exactly as the frozen draft: stopId, issueId, resolution.
+type IssueStopResolvedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	StopID string `json:"stopId"`
+	IssueID string `json:"issueId"`
+	Resolution StopResolution `json:"resolution"`
+}
+
+func (e IssueStopResolvedEvent) EventName() string { return IssueStopResolvedEventName }
+
+// MessageClassifiedEventName is the wire discriminator for MessageClassifiedEvent.
+const MessageClassifiedEventName = "integration.message.classified"
+
+// MessageClassifiedEvent — wire shape of integration.message.classified.
+// BC4 Thread & Routing -> BC5 Issue Execution. A single-stream inbound message was demultiplexed into an issue (or fell through to clarification). issueId is absent only when the method resolved to a clarification.
+type MessageClassifiedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ThreadID string `json:"threadId"`
+	EntryID string `json:"entryId"`
+	Method ClassificationMethod `json:"method"`
+	IssueID *string `json:"issueId,omitempty"`
+}
+
+func (e MessageClassifiedEvent) EventName() string { return MessageClassifiedEventName }
+
 // SubscriptionChangedEventName is the wire discriminator for SubscriptionChangedEvent.
 const SubscriptionChangedEventName = "integration.billing.subscription_changed"
 
@@ -19,3 +286,40 @@ type SubscriptionChangedEvent struct {
 }
 
 func (e SubscriptionChangedEvent) EventName() string { return SubscriptionChangedEventName }
+
+// ThreadAttachedEventName is the wire discriminator for ThreadAttachedEvent.
+const ThreadAttachedEventName = "integration.thread.attached"
+
+// ThreadAttachedEvent — wire shape of integration.thread.attached.
+// BC4 Thread & Routing -> BC5 Issue Execution. A conversation was bound to a workspace + providers; warms up workspace indexing. The ContactRef VO is flattened to scalar contact* fields.
+type ThreadAttachedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ThreadID string `json:"threadId"`
+	ChannelID string `json:"channelId"`
+	ContactExternalID string `json:"contactExternalId"`
+	ContactDisplayName string `json:"contactDisplayName"`
+	ContactKind ContactKind `json:"contactKind"`
+	WorkspaceID string `json:"workspaceId"`
+	Providers []ProviderKind `json:"providers"`
+}
+
+func (e ThreadAttachedEvent) EventName() string { return ThreadAttachedEventName }
+
+// WorkspaceRemovedEventName is the wire discriminator for WorkspaceRemovedEvent.
+const WorkspaceRemovedEventName = "integration.workspace.removed"
+
+// WorkspaceRemovedEvent — wire shape of integration.workspace.removed.
+// BC2 Workspace Registry -> BC4 Thread & Routing / BC5 Issue Execution. A workspace folder was removed; downstream contexts invalidate references to it.
+type WorkspaceRemovedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	WorkspaceID string `json:"workspaceId"`
+	Path string `json:"path"`
+}
+
+func (e WorkspaceRemovedEvent) EventName() string { return WorkspaceRemovedEventName }

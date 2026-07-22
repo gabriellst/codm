@@ -2,12 +2,60 @@
 import { z } from '@template/core-typescript/schema'
 import Z from 'zod'
 import {
+	AgentReplyDraftedEventSchema,
+	ArtifactRecordedEventSchema,
+	ChannelConnectedEventSchema,
+	ChannelDeliveryRequestedEventSchema,
+	ChannelDisconnectedEventSchema,
+	ChannelMessageReceivedEventSchema,
+	ChannelOutboundDeliveredEventSchema,
+	ChannelPairingQrUpdatedEventSchema,
+	IssueArchivedEventSchema,
+	IssueCompletedEventSchema,
+	IssueOpenedEventSchema,
+	IssueStopRaisedEventSchema,
+	IssueStopResolvedEventSchema,
+	MessageClassifiedEventSchema,
 	SubscriptionChangedEventSchema,
+	ThreadAttachedEventSchema,
+	WorkspaceRemovedEventSchema,
 } from './_imports'
 
+export * from './agent-reply-drafted'
+export * from './artifact-recorded'
+export * from './channel-connected'
+export * from './channel-delivery-requested'
+export * from './channel-disconnected'
+export * from './channel-message-received'
+export * from './channel-outbound-delivered'
+export * from './channel-pairing-qr-updated'
+export * from './issue-archived'
+export * from './issue-completed'
+export * from './issue-opened'
+export * from './issue-stop-raised'
+export * from './issue-stop-resolved'
+export * from './message-classified'
 export * from './subscription-changed'
+export * from './thread-attached'
+export * from './workspace-removed'
 
 export const IntegrationEventSchema = z.discriminatedUnion('name', [
+	AgentReplyDraftedEventSchema,
+	ArtifactRecordedEventSchema,
+	ChannelConnectedEventSchema,
+	ChannelDeliveryRequestedEventSchema,
+	ChannelDisconnectedEventSchema,
+	ChannelMessageReceivedEventSchema,
+	ChannelOutboundDeliveredEventSchema,
+	ChannelPairingQrUpdatedEventSchema,
+	IssueArchivedEventSchema,
+	IssueCompletedEventSchema,
+	IssueOpenedEventSchema,
+	IssueStopRaisedEventSchema,
+	IssueStopResolvedEventSchema,
+	MessageClassifiedEventSchema,
 	SubscriptionChangedEventSchema,
+	ThreadAttachedEventSchema,
+	WorkspaceRemovedEventSchema,
 ])
 export type IntegrationEvent = Z.infer<typeof IntegrationEventSchema>
