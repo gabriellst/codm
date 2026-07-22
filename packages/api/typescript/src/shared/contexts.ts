@@ -26,6 +26,8 @@ export const CONTEXTS = {
 	// are the frozen `integration.issue.*` events on the shared outbox), so pgSchema is null like ui.
 	// The BC5 Issue AGGREGATE + its `issue` schema (still in PENDING_PGSCHEMAS) land in a later phase.
 	terminal: { pgSchema: null },
+	// BC2 Workspace Registry (TS-owned) — the `workspace` schema, promoted out of PENDING_PGSCHEMAS.
+	workspace: { pgSchema: 'workspace' },
 	ui: { pgSchema: null },
 } as const satisfies Record<string, ContextDecl>
 
@@ -54,7 +56,7 @@ export const FOREIGN_PGSCHEMAS: readonly string[] = ['gateway']
  * CONTEXTS. When a context lands, move its schema OUT of this list and INTO CONTEXTS.pgSchema.
  * (CodeDM new contexts: workspace / thread / issue / artifact.)
  */
-export const PENDING_PGSCHEMAS: readonly string[] = ['workspace', 'thread', 'issue', 'artifact']
+export const PENDING_PGSCHEMAS: readonly string[] = ['thread', 'issue', 'artifact']
 
 /** Folder/import identity — matches `src/<module>/` exactly (e.g. keys used by `@<module>/*` path aliases). */
 export type ContextModule = keyof typeof CONTEXTS
