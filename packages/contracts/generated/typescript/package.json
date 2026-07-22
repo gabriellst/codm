@@ -11,6 +11,7 @@
 		"./wire/events": "./src/wire/events/index.ts"
 	},
 	"dependencies": {
+		"@codedm/core-typescript": "workspace:*",
 		"zod": "^4.0.0"
 	}
 }
