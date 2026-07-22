@@ -11,6 +11,8 @@
 
 | 4 GATEWAY | 3 + fix pós-grade | ✅ VERDE com deferrals | Transplante whatsmeow completo (QR/reconexão/history-sync/outbox UUIDv5/Redis egress/apikey), retargetado no contrato congelado; SDK ganhou client do gateway. Reds mecânicos corrigidos (env:generate re-emitido; schema activity órfão removido + FOREIGN_PGSCHEMAS). Gates re-verificados: contracts/test/tooling/tsc = 0. |
 
+| 5 TERMINAL | 1 | ✅ VERDE (92) | Contexto terminal: AgentRunner (LlmRunner seam), TerminalSessionRegistry (invariantes portadas + guard single-active), split dois-streams, SSE controller, CliAgentRunner (Bun.spawn, node-pty deferido atrás do seam), ProviderDetector, IssueClassifier (reply-quote determinístico antes do LLM). 88/88 testes determinísticos; flake pré-existente PostgresCommandQueue anotado. SDK regen. |
+
 ## Decisões da noite
 - (fase 1) manter FCM-token e eventos auth como stubs compiláveis em vez de cirurgia profunda — remoção definitiva fica pro contract lock da fase 3, que redefine a superfície.
 - (fase 2 / grader iteration 1) O binding `real` é um `useFactory` per-resolve e o tsyringe-neo NÃO memoiza factories → cada `resolve` mintava um `new PGlite(dataDir)` divergente (instâncias vivas sobre o mesmo dir não compartilham estado), matando o write-side event-driven. Fix: memoizar a instância única do driver + `db` via `registerInstance` no boot (`shared/index.ts`, espelha `TestBed.ts:92-93`). Segundo fix: guarda single-instance por lockfile PID **sibling** (`<dataDir>.lock`, fora do pgdata pra não quebrar o initdb do PGlite) — segunda daemon no mesmo dir falha alto com `DataDirLockedError`.
