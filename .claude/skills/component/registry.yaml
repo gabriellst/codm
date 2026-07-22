@@ -1,0 +1,671 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: [sdk, primitive]
+  depended_by: []
+  context_reads: [route]
+
+  patterns:
+    # --- Always patterns ---
+
+    - id: CMP-01
+      name: "Named export function"
+      when: always
+      rule: "export function X() or export function X({ prop }: XProps)"
+      wrong: "export default or anonymous component"
+
+    - id: CMP-02
+      name: "Tabler icons only"
+      when: always
+      rule: "import { IconX } from '@tabler/icons-react'"
+      wrong: "import from lucide-react"
+
+    - id: CMP-03
+      name: "Route API for search params"
+      when: always
+      rule: |
+        import { getRouteApi } from '@tanstack/react-router'
+        const routeApi = getRouteApi('/(app)/products/')
+        // then: routeApi.useSearch(), routeApi.useNavigate()
+      wrong: |
+        // Receiving search/onSearchParamsChange as props
+        interface Props { search: SearchParams; onSearchParamsChange: (u: Partial<SearchParams>) => void }
+
+    # --- Conditional patterns ---
+
+    - id: CMP-C01
+      name: "Inline skeleton for loading"
+      when: "component queries data that can be undefined"
+      rule: "if (!data) return <SkeletonRows /> — local function, never exported"
+      wrong: "export function XSkeleton"
+
+    - id: CMP-C02
+      name: "Empty state"
+      when: "list can be empty"
+      rule: "data.items.length === 0 && <Empty><EmptyHeader><EmptyTitle>...</EmptyTitle></EmptyHeader></Empty>"
+
+    - id: CMP-C03
+      name: "Enum badge"
+      when: "displays status enum"
+      rule: "<Badge variant={statusVariantMap[status]}>{statusLabels[status]}</Badge>"
+
+    - id: CMP-C04
+      name: "Pagination controls"
+      when: "paginated list"
+      rule: "navigate({ search: prev => ({ ...prev, page }) }) — component navigates directly"
+      wrong: "onSearchParamsChange({ page }) prop callback"
+
+    # --- Data ownership patterns ---
+
+    - id: CMP-P01
+      name: "Component owns its data query"
+      when: "component renders server data"
+      reason: "Each component fetches what it needs via React Query SDK hooks. The route does NOT fetch and pass data as props. React Query deduplicates — multiple components calling the same query share one request."
+      rule: |
+        export function ProductList() {
+          const { page, search } = routeApi.useSearch()
+          const { data } = useListProducts({ params: { page, search } })
+          // render based on data
+        }
+      wrong: |
+        // Route fetches and passes data down
+        const { data } = useListProducts(...)
+        <ProductList data={data} search={search} onSearchParamsChange={update} />
+
+    - id: CMP-P02
+      name: "Local skeleton function — never exported"
+      when: "component has loading state for data-dependent areas"
+      reason: "Skeletons are private to the component. They mimic the loaded layout shape using Skeleton primitives."
+      rule: |
+        function SkeletonRows() {
+          return (
+            <div className="flex flex-col">
+              {[1, 2, 3, 4, 5].map(key => (
+                <div key={key} className="flex items-center gap-4 px-4 py-3">
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        }
+
+    - id: CMP-P03
+      name: "Ternary data flow: skeleton → empty → list"
+      when: "component renders a list from queried data"
+      reason: "Static UI (search, buttons) stays outside the ternary. Only data-dependent areas use the ternary."
+      rule: |
+        {/* Static UI always visible */}
+        <SearchInput />
+
+        {/* Data-dependent area */}
+        {data ? (
+          data.items.length === 0 ? (
+            <Empty><EmptyHeader><EmptyTitle>Nenhum item encontrado</EmptyTitle></EmptyHeader></Empty>
+          ) : (
+            data.items.map(item => <ItemRow key={item.id} item={item} />)
+          )
+        ) : (
+          <SkeletonRows />
+        )}
+
+    - id: CMP-P04
+      name: "Pagination with routeApi.useNavigate()"
+      when: "component has paginated data"
+      rule: |
+        const navigate = routeApi.useNavigate()
+
+        {data && data.totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <span className="text-xs text-muted-foreground">
+              Página {currentPage} de {data.totalPages} ({data.total} itens)
+            </span>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon-sm" disabled={currentPage <= 1}
+                onClick={() => navigate({ search: prev => ({ ...prev, page: currentPage - 1 }) })}>
+                <IconChevronLeft className="size-4" />
+              </Button>
+              <Button variant="outline" size="icon-sm" disabled={currentPage >= data.totalPages}
+                onClick={() => navigate({ search: prev => ({ ...prev, page: currentPage + 1 }) })}>
+                <IconChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+    - id: CMP-P05
+      name: "Leaf component receives single item as prop"
+      when: "component is rendered N times in a .map() (cards, rows, stat cards, badges)"
+      reason: "Ask: 'Am I rendered N times in a .map()?' If yes → receive item as prop. The parent owns the list query and maps items. The leaf renders one item — it doesn't re-query. Leaf components CAN own mutations (delete, toggle) but should NOT re-fetch the item they already received."
+      rule: |
+        // Parent owns list query, maps items to leaves
+        export function ProductList() {
+          const { data } = useListProducts(...)
+          return data?.items.map(p => <ProductCard key={p.id} product={p} />)
+        }
+
+        // Leaf receives single item — reusable, testable
+        interface ProductCardProps {
+          product: ProductItem
+          onDelete?: (id: string) => void
+        }
+
+        export function ProductCard({ product, onDelete }: ProductCardProps) {
+          return <Card>{product.name}</Card>
+        }
+      wrong: |
+        // Leaf re-fetches the item it was already given
+        export function ProductCard({ productId }: { productId: string }) {
+          const { data } = useGetProduct({ id: productId })  // unnecessary!
+        }
+
+    - id: CMP-P06
+      name: "Search with useDebouncedSearch + navigate"
+      when: "component has text search input"
+      reason: "useDebouncedSearch from @/hooks debounces URL updates. The component navigates directly — no callback prop."
+      rule: |
+        import { useDebouncedSearch } from '@/hooks'
+
+        const navigate = routeApi.useNavigate()
+
+        const { inputValue, handleSearchChange } = useDebouncedSearch({
+          initialValue: search?.search ?? '',
+          onSearch: value => navigate({ search: prev => ({ ...prev, search: value || undefined, page: 1 }) }),
+        })
+
+        <Input placeholder="Buscar..." value={inputValue}
+          onChange={e => handleSearchChange(e.target.value)} />
+
+    - id: CMP-P07
+      name: "Enum options derived at module level — labels via i18n, never a lib map"
+      when: "component renders select/filter with SDK enum values"
+      rule: |
+        import { SpecialtyEnum } from '@template/client-typescript/typescript'
+
+        const SPECIALTIES = Object.values(SpecialtyEnum)
+        // Labels NEVER come from a @/lib map (lib/labels.ts is dead — see enum skill).
+        // Enum-driven primitives take i18nPrefix: <Select enum={SpecialtyEnum} i18nPrefix="enums.Specialty" />
+        // Free-standing text uses t(`enums.Specialty.${value}`).
+
+    - id: CMP-P08
+      name: "Status badge: color map from @/lib, label from i18n"
+      when: "component displays a status enum as badge"
+      rule: |
+        import { useTranslation } from 'react-i18next'
+        import { Badge } from '@/components/ui/badge'
+        // Color/variant maps STAY in @/lib (Record<Enum, …> — a className can't live in i18n);
+        // the human-readable label comes from the i18n enums.* subtree.
+        import { colorPerAppointmentStatus } from '@/lib'
+
+        export function StatusBadge({ status }: { status: AppointmentStatusEnum }) {
+          const { t } = useTranslation()
+          const colors = colorPerAppointmentStatus[status]
+          return <Badge variant="outline" className={cn(colors?.badge)}>{t(`enums.AppointmentStatus.${status}`)}</Badge>
+        }
+
+    - id: CMP-P09
+      name: "ComponentProps<'div'> spread for layout flexibility"
+      when: "component is used in different layout contexts"
+      rule: |
+        export function ProductList({ className, ...props }: ComponentProps<'div'>) {
+          return <div className={cn('grid gap-4', className)} {...props}>...</div>
+        }
+
+    - id: CMP-P10
+      name: "Mutation handler: mutateAsync + toast + invalidate"
+      when: "component has CRUD actions"
+      reason: "Components handle mutations internally. No handler prop drilling from parent."
+      rule: |
+        const deleteItem = useDeleteItem()
+        const queryClient = useQueryClient()
+
+        const handleDelete = async (id: string) => {
+          await deleteItem.mutateAsync(
+            { id },
+            {
+              onSuccess: () => toast.success('Item excluído'),
+              onSettled: () => queryClient.invalidateQueries({ queryKey: listItemsQueryKey() }),
+            },
+          )
+        }
+
+    - id: CMP-P11
+      name: "Store for shared IDs and UI state"
+      when: "multiple components need the same runtime-resolved ID or shared UI state"
+      reason: "IDs resolved at runtime (e.g., channelId from API) live in Zustand. Components read from store and use the ID in their own queries."
+      rule: |
+        const channelId = useChatStore(s => s.channelId)
+        const { data } = useGetMessages({ params: { channelId } })
+
+    - id: CMP-P12
+      name: "Detail component with field-level skeleton"
+      when: "component shows entity detail fields that may be undefined"
+      rule: |
+        function DisplayField({ label, value }: { label: string; value: string | undefined }) {
+          return (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground uppercase">{label}</span>
+              {value !== undefined ? (
+                <div className="bg-muted rounded-lg px-3 py-2 text-sm">{value}</div>
+              ) : (
+                <Skeleton className="h-9 w-full rounded-lg" />
+              )}
+            </div>
+          )
+        }
+
+    - id: CMP-P13
+      name: "Dialog state: global useDialogStore (never local useState + open props)"
+      when: "component opens a dialog"
+      rule: |
+        // Global — trigger from any component:
+        import { useDialogStore } from '@/stores/useDialogStore'
+        const { show, hide, confirm } = useDialogStore()
+        show(<DialogContent>...</DialogContent>)
+
+        // Inline confirmation:
+        const confirmed = await confirm({ title: 'Excluir?', variant: 'destructive' })
+
+    - id: CMP-P14
+      name: "Conditional dialog trigger gated on data"
+      when: "dialog needs entity data that may be undefined"
+      rule: |
+        // Gate the TRIGGER on the entity; dialog receives it via props — no open/onOpenChange (see form FRM-P36)
+        {patient && (
+          <Button onClick={() => show(<UpdatePatientDialog patient={patient} />)}>Editar</Button>
+        )}
+
+    - id: CMP-P15
+      name: "Empty state with Empty primitive compound"
+      when: "list or detail has no data to show"
+      rule: |
+        import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+
+        <Empty className="py-12">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><IconUsers /></EmptyMedia>
+            <EmptyTitle>Nenhum item encontrado</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+
+    - id: CMP-P16
+      name: "Enum types in interfaces — no as EnumType casts"
+      when: "component uses SDK enum fields"
+      rule: |
+        // CORRECT: interface field typed with enum
+        export interface CalendarAppointment {
+          appointmentStatus: AppointmentStatusEnum   // not string
+          specialty: SpecialtyEnum                   // not string
+        }
+
+        // CORRECT: Select with generic
+        <Select<SpecialtyEnum> onValueChange={val => field.handleChange(val)} />
+      wrong: |
+        specialtyLabels[appointment.specialty as SpecialtyEnum]
+
+    - id: CMP-P17
+      name: "ARIA labels and form field IDs"
+      when: always
+      reason: "Components must be accessible and testable. Use inline strings — no shared constants file."
+      rule: |
+        // Icon-only buttons — aria-label with inline string
+        <Button aria-label="Send message"><IconSend /></Button>
+
+        // Form fields — id connects to FieldLabel (no aria-label needed)
+        <FieldLabel htmlFor={field.name}>Cidade</FieldLabel>
+        <Input id={field.name} ... />
+
+        // Compound inputs must forward id
+        <FieldLabel htmlFor={field.name}>Estado</FieldLabel>
+        <ComboboxInput id={field.name} placeholder="UF" />
+
+        // Lists
+        <div role="list" aria-label="Conversation list">
+          {items.map(item => (
+            <div key={item.id} role="listitem" aria-label={`Select conversation ${item.name}`}>
+              ...
+            </div>
+          ))}
+        </div>
+
+        // Sections/regions
+        <section aria-label="Chat panel">...</section>
+      wrong: |
+        // Icon button without aria-label
+        <Button><IconSend /></Button>
+
+        // Importing from shared constants file
+        import { CHAT } from '@/lib/aria-labels'
+        <Button aria-label={CHAT.sendMessage}><IconSend /></Button>
+
+        // ComboboxInput missing id (FieldLabel won't connect)
+        <FieldLabel htmlFor={field.name}>Estado</FieldLabel>
+        <ComboboxInput placeholder="UF" />
+
+  canonical_snippet: |
+    import { getRouteApi } from '@tanstack/react-router'
+    import { ComponentProps } from 'react'
+    import { useQueryClient } from '@tanstack/react-query'
+    import { toast } from 'sonner'
+    import { cn } from '@/lib/utils'
+    import { useListProducts, useDeleteProduct, listProductsQueryKey } from '@template/client-typescript/typescript'
+    import { Skeleton } from '@/components/ui/skeleton'
+    import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
+
+    const routeApi = getRouteApi('/(app)/products/')
+
+    function SkeletonRows() {
+      return (
+        <div className="grid gap-4">
+          {[1, 2, 3].map(key => (
+            <Skeleton key={key} className="h-20 w-full" />
+          ))}
+        </div>
+      )
+    }
+
+    export function ProductList({ className, ...props }: ComponentProps<'div'>) {
+      const { page, search } = routeApi.useSearch()
+      const navigate = routeApi.useNavigate()
+      const { data } = useListProducts({ params: { page, search } })
+
+      return (
+        <div className={cn('grid gap-4', className)} {...props}>
+          {data ? (
+            data.items.length === 0
+              ? <Empty><EmptyHeader><EmptyTitle>Nenhum produto</EmptyTitle></EmptyHeader></Empty>
+              : data.items.map(p => <ProductCard key={p.id} product={p} />)
+          ) : <SkeletonRows />}
+
+          {data && data.totalPages > 1 && (
+            <Pagination currentPage={page ?? 1} totalPages={data.totalPages}
+              onPageChange={p => navigate({ search: prev => ({ ...prev, page: p }) })} />
+          )}
+        </div>
+      )
+    }
+
+  scaffold: "bun cli component <route> <name> [--recipe=<plain|section|card|empty-state>] [--sdk=<Identifier>] [--state=<csv>] [--store=<StoreName>] [--variants=<spec>] [--i18n=<prefix>]"
+
+  bad_practices:
+    - id: bp-01
+      name: "Passing query response as prop instead of letting component fetch"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'onSearchParamsChange='
+      wrong: |
+        // Route fetches and passes data down
+        const { data } = useListProducts({ params: search })
+        <ProductList data={data} search={search} onSearchParamsChange={update} />
+      right: |
+        // Route renders component, component fetches its own data
+        <ProductList />
+
+        // Component:
+        export function ProductList() {
+          const { page } = routeApi.useSearch()
+          const { data } = useListProducts({ params: { page } })
+        }
+
+    - id: bp-02
+      name: "Component doesn't handle its own loading state"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Route gates on isLoading — skeleton outside component
+        if (isLoading) return <ProductsSkeleton />
+        return <ProductList data={data} />
+      right: |
+        // Component handles loading internally
+        export function ProductList() {
+          const { data } = useListProducts(...)
+          return data ? <List items={data.items} /> : <SkeletonRows />
+        }
+
+    - id: bp-03
+      name: "Mixing icon libraries"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'lucide-react'
+      wrong: |
+        import { Search } from 'lucide-react'
+      right: |
+        import { IconSearch } from '@tabler/icons-react'
+
+    - id: bp-04
+      name: "Using index as key in lists"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'key=\{index\}'
+        - 'key=\{idx\}'
+        - 'key=\{i\}'
+      wrong: |
+        {items.map((item, index) => <ItemCard key={index} item={item} />)}
+      right: |
+        {items.map(item => <ItemCard key={item.id} item={item} />)}
+
+    - id: bp-05
+      name: "Custom spinner instead of standard component"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'animate-spin[^"]*border'
+      wrong: |
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      right: |
+        import { Spinner } from '@/components/ui/spinner'
+        <Spinner className="size-8" />
+
+    - id: bp-05b
+      name: "useState mirroring mutation/query state instead of using the hook's own flags"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\[is(Loading|Submitting|Saving|Deleting|Exporting|Pending|Processing|Mutating)\w*,\s*set\w+\]\s*=\s*useState'
+      wrong: |
+        const [isExporting, setIsExporting] = useState(false)
+        const exportMutation = useExportAppointments()
+
+        const handleExport = async () => {
+          setIsExporting(true)
+          await exportMutation.mutateAsync(params, {
+            onSettled: () => setIsExporting(false),
+          })
+        }
+
+        <Button disabled={isExporting}>...</Button>
+      right: |
+        const exportMutation = useExportAppointments()
+
+        const handleExport = async () => {
+          // onSuccess only — NO onError: the global MutationCache handles errors (form bp-29)
+          await exportMutation.mutateAsync(params, { onSuccess })
+        }
+
+        <Button disabled={exportMutation.isPending}>...</Button>
+      note: >
+        TanStack Query mutations and queries already expose `isPending`,
+        `isError`, `isSuccess`, and `data` — mirroring them into local
+        `useState` duplicates state, opens a desync window between the
+        hook's state machine and your boolean, and forces an `onSettled`
+        callback just to flip the flag. Read directly from the hook.
+
+    - id: bp-06
+      name: "Hardcoded colors instead of design tokens"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '\b(bg|text|border|ring|fill|stroke|from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|[1-9]00)\b'
+        - '#[0-9a-fA-F]{6}\b'
+      wrong: |
+        <div className="bg-blue-500 text-white">Active</div>
+      right: |
+        <Badge variant="default">Active</Badge>
+      note: >
+        ONLY flag Tailwind color scale classes (blue-500, red-600) and hex values.
+        NEVER flag spacing, sizing, typography, or layout utilities.
+
+    - id: bp-07
+      name: "Duplicating near-identical components across files"
+      severity: moderate
+      mechanical: false
+
+    - id: bp-08
+      name: "Component without its own folder and index.tsx"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // File: -components/ProductCard.tsx
+      right: |
+        // Folder: -components/ProductCard/index.tsx
+
+    - id: bp-09
+      name: "Iterating enum inline in JSX instead of extracting constant"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'Object\.values\([A-Za-z]\w*\)\.map\('
+      wrong: |
+        {Object.values(SpecialtyEnum).map(s => <option key={s}>{s}</option>)}
+      right: |
+        // Enum-driven primitive renders options + i18n labels itself — no manual .map(), no native <option>
+        <Select enum={SpecialtyEnum} i18nPrefix="enums.Specialty" value={value} onValueChange={onChange} />
+
+    - id: bp-10
+      name: "Creating centralized enums folder in frontend"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // packages/app/react/src/enums/appointmentStatus.ts
+      right: |
+        import { AppointmentStatusEnum } from '@template/client-typescript/typescript'
+
+    - id: bp-11
+      name: "Using native HTML elements when project primitives exist"
+      severity: critical
+      mechanical: true
+      detect:
+        - '<select[\s>]'
+        - '<option[\s>]'
+        - '<input[^>]*type=[''"]date'
+      wrong: |
+        <select><option>...</option></select>
+      right: |
+        import { Select } from '@/components/ui/select'
+
+    - id: bp-12
+      name: "Receiving search params as props instead of reading from route"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'onSearchParamsChange\s*:'
+        - '\bsearch\s*:\s*\w*SearchParams'
+      wrong: |
+        interface Props {
+          search: ProductsSearchParams
+          onSearchParamsChange: (updates: Partial<ProductsSearchParams>) => void
+        }
+      right: |
+        const routeApi = getRouteApi('/(app)/products/')
+        export function ProductList() {
+          const search = routeApi.useSearch()
+          const navigate = routeApi.useNavigate()
+        }
+
+    - id: bp-13
+      name: "Using inline literal arrays in z.enum() instead of TypeScript enum"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'z\.enum\(\['
+      wrong: |
+        z.enum(['active', 'inactive'])
+      right: |
+        export enum Status { Active = 'active', Inactive = 'inactive' }
+        z.enum(Status)
+      note: "z.nativeEnum() was used in Zod 3; in Zod 4 the pattern is z.enum(EnumObject)"
+
+    - id: bp-14
+      name: "Literal string comparison instead of enum constant"
+      severity: critical
+      mechanical: true
+      detect:
+        - '===\s*["''][A-Z][A-Z0-9_]*["'']'
+        - '["''][A-Z][A-Z0-9_]*["'']\s*==='
+      wrong: |
+        if (status === 'PENDING') { ... }
+      right: |
+        if (status === AppointmentStatusEnum.PENDING) { ... }
+
+    - id: bp-15
+      name: "Date-format wrapper function or hardcoded locale"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'function\s+formatDate\b'
+        - 'const\s+formatDate\s*='
+        - 'locale:\s*ptBR'
+      wrong: |
+        function formatDate(date: Date): string { return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR }) }   // wrapper + hardcoded locale
+      right: |
+        const locale = useLocale()
+        <span>{new Date(date).toLocaleDateString(locale)}</span>
+
+    - id: bp-16
+      name: "Casting with as EnumType instead of fixing the root type"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\bas\s+\w*Enum\b'
+      wrong: |
+        specialtyLabels[appointment.specialty as SpecialtyEnum]
+      right: |
+        // Fix the interface: specialty: SpecialtyEnum (not string)
+
+    - id: bp-17
+      name: "Icon-only button without aria-label"
+      severity: critical
+      mechanical: true
+      detect:
+        - '<Button(?:(?!aria-label)[^>])*>\s*<Icon\w+[^>]*/>\s*</Button>'
+      wrong: |
+        <Button><IconSend /></Button>
+        <Button size="icon"><IconTrash /></Button>
+      right: |
+        <Button aria-label="Send message"><IconSend /></Button>
+        <Button aria-label="Delete item" size="icon"><IconTrash /></Button>
+
+    - id: bp-18
+      name: "Importing aria-label strings from a shared constants file"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '@/lib/aria-labels'
+        - 'aria-label=\{\w+\.\w+\}'
+      wrong: |
+        import { CHAT } from '@/lib/aria-labels'
+        <Button aria-label={CHAT.sendMessage}><IconSend /></Button>
+      right: |
+        <Button aria-label="Enviar mensagem"><IconSend /></Button>
+      note: >
+        Use inline strings for aria-labels. No shared constants file.
+        The E2E test references the same visible string directly — the test IS the contract.
+
+    - id: bp-19
+      name: "Form compound input (Combobox, Select) missing id for label connection"
+      severity: critical
+      mechanical: true
+      detect:
+        - '<ComboboxInput(?:(?!id=)[^>])*/>'
+      wrong: |
+        <FieldLabel htmlFor={field.name}>Estado</FieldLabel>
+        <ComboboxInput placeholder="UF" />
+      right: |
+        <FieldLabel htmlFor={field.name}>Estado</FieldLabel>
+        <ComboboxInput id={field.name} placeholder="UF" />

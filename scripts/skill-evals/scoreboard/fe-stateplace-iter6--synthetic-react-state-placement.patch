@@ -1,0 +1,1091 @@
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..13f6a44dc 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -546,7 +546,61 @@
+ 		"emptyTitle": "No results",
+ 		"itemsPerPage": "items per page"
+ 	},
++	"reports": {
++		"revenueTrend": {
++			"title": "Revenue Trend",
++			"frequency": "Granularity",
++			"legend": {
++				"revenue": "Revenue",
++				"profit": "Profit"
++			},
++			"loadError": "Failed to load chart.",
++			"empty": "No data for the selected period."
++		},
++		"topProducts": {
++			"title": "Top Products",
++			"listAria": "Top-selling products list",
++			"compareToggle": "Compare {{name}}",
++			"loadError": "Failed to load products.",
++			"empty": "No products in the selected period.",
++			"columns": {
++				"rank": "#",
++				"name": "Product",
++				"sales": "Sales",
++				"revenue": "Revenue"
++			},
++			"comparisonPanel": {
++				"title": "Comparison",
++				"clearAria": "Clear comparison"
++			}
++		},
++		"toolbar": {
++			"comparisonCount": "{{count}} comparing",
++			"clearComparison": "Clear"
++		},
++		"periodTarget": {
++			"title": "Period Target",
++			"loadError": "Failed to load goal.",
++			"saveSuccess": "Goal saved successfully.",
++			"form": {
++				"type": "Goal type",
++				"targetAmount": "Target amount",
++				"from": "From",
++				"to": "To",
++				"dailyRate": "Required daily run-rate",
++				"submit": "Save goal",
++				"unsavedChanges": "Unsaved changes"
++			}
++		}
++	},
+ 	"enums": {
++		"AnalyticsFrequency": {
++			"HOURLY": "Hourly",
++			"DAILY": "Daily",
++			"WEEKLY": "Weekly",
++			"MONTHLY": "Monthly",
++			"YEARLY": "Yearly"
++		},
+ 		"CheckoutPlatform": {
+ 			"ADOOREI": "Adoorei",
+ 			"CART_PANDA": "Cart Panda",
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..2ab83e8d2 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -546,7 +546,61 @@
+ 		"emptyTitle": "Nenhum resultado",
+ 		"itemsPerPage": "itens por página"
+ 	},
++	"reports": {
++		"revenueTrend": {
++			"title": "Tendência de Receita",
++			"frequency": "Granularidade",
++			"legend": {
++				"revenue": "Receita",
++				"profit": "Lucro"
++			},
++			"loadError": "Erro ao carregar o gráfico.",
++			"empty": "Nenhum dado para o período selecionado."
++		},
++		"topProducts": {
++			"title": "Top Produtos",
++			"listAria": "Lista de produtos mais vendidos",
++			"compareToggle": "Comparar {{name}}",
++			"loadError": "Erro ao carregar os produtos.",
++			"empty": "Nenhum produto no período selecionado.",
++			"columns": {
++				"rank": "#",
++				"name": "Produto",
++				"sales": "Vendas",
++				"revenue": "Receita"
++			},
++			"comparisonPanel": {
++				"title": "Comparação",
++				"clearAria": "Limpar comparação"
++			}
++		},
++		"toolbar": {
++			"comparisonCount": "{{count}} comparando",
++			"clearComparison": "Limpar"
++		},
++		"periodTarget": {
++			"title": "Meta do Período",
++			"loadError": "Erro ao carregar a meta.",
++			"saveSuccess": "Meta salva com sucesso.",
++			"form": {
++				"type": "Tipo de meta",
++				"targetAmount": "Valor alvo",
++				"from": "De",
++				"to": "Até",
++				"dailyRate": "Ritmo diário necessário",
++				"submit": "Salvar meta",
++				"unsavedChanges": "Alterações não salvas"
++			}
++		}
++	},
+ 	"enums": {
++		"AnalyticsFrequency": {
++			"HOURLY": "Por hora",
++			"DAILY": "Diário",
++			"WEEKLY": "Semanal",
++			"MONTHLY": "Mensal",
++			"YEARLY": "Anual"
++		},
+ 		"CheckoutPlatform": {
+ 			"ADOOREI": "Adoorei",
+ 			"CART_PANDA": "Cart Panda",
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..b3f672508 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -15,6 +15,7 @@ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
++import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+ import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+@@ -58,6 +59,11 @@ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   path: '/suggestions/',
+   getParentRoute: () => appRouteRoute,
+ } as any)
++const appReportsIndexRoute = appReportsIndexRouteImport.update({
++  id: '/reports/',
++  path: '/reports/',
++  getParentRoute: () => appRouteRoute,
++} as any)
+ const appProductsIndexRoute = appProductsIndexRouteImport.update({
+   id: '/products/',
+   path: '/products/',
+@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
+   '/dashboard/': typeof appDashboardIndexRoute
+   '/orders/': typeof appOrdersIndexRoute
+   '/products/': typeof appProductsIndexRoute
++  '/reports/': typeof appReportsIndexRoute
+   '/suggestions/': typeof appSuggestionsIndexRoute
+   '/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
+   '/dashboard': typeof appDashboardIndexRoute
+   '/orders': typeof appOrdersIndexRoute
+   '/products': typeof appProductsIndexRoute
++  '/reports': typeof appReportsIndexRoute
+   '/suggestions': typeof appSuggestionsIndexRoute
+   '/finance/costs': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic': typeof appMarketingTrafficIndexRoute
+@@ -179,6 +187,7 @@ export interface FileRoutesById {
+   '/(app)/dashboard/': typeof appDashboardIndexRoute
+   '/(app)/orders/': typeof appOrdersIndexRoute
+   '/(app)/products/': typeof appProductsIndexRoute
++  '/(app)/reports/': typeof appReportsIndexRoute
+   '/(app)/suggestions/': typeof appSuggestionsIndexRoute
+   '/(app)/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/(app)/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -201,6 +210,7 @@ export interface FileRouteTypes {
+     | '/dashboard/'
+     | '/orders/'
+     | '/products/'
++    | '/reports/'
+     | '/suggestions/'
+     | '/finance/costs/'
+     | '/marketing/traffic/'
+@@ -221,6 +231,7 @@ export interface FileRouteTypes {
+     | '/dashboard'
+     | '/orders'
+     | '/products'
++    | '/reports'
+     | '/suggestions'
+     | '/finance/costs'
+     | '/marketing/traffic'
+@@ -242,6 +253,7 @@ export interface FileRouteTypes {
+     | '/(app)/dashboard/'
+     | '/(app)/orders/'
+     | '/(app)/products/'
++    | '/(app)/reports/'
+     | '/(app)/suggestions/'
+     | '/(app)/finance/costs/'
+     | '/(app)/marketing/traffic/'
+@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof appSuggestionsIndexRouteImport
+       parentRoute: typeof appRouteRoute
+     }
++    '/(app)/reports/': {
++      id: '/(app)/reports/'
++      path: '/reports'
++      fullPath: '/reports/'
++      preLoaderRoute: typeof appReportsIndexRouteImport
++      parentRoute: typeof appRouteRoute
++    }
+     '/(app)/products/': {
+       id: '/(app)/products/'
+       path: '/products'
+@@ -405,6 +424,7 @@ interface appRouteRouteChildren {
+   appDashboardIndexRoute: typeof appDashboardIndexRoute
+   appOrdersIndexRoute: typeof appOrdersIndexRoute
+   appProductsIndexRoute: typeof appProductsIndexRoute
++  appReportsIndexRoute: typeof appReportsIndexRoute
+   appSuggestionsIndexRoute: typeof appSuggestionsIndexRoute
+   appFinanceCostsIndexRoute: typeof appFinanceCostsIndexRoute
+   appMarketingTrafficIndexRoute: typeof appMarketingTrafficIndexRoute
+@@ -422,6 +442,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
+   appDashboardIndexRoute: appDashboardIndexRoute,
+   appOrdersIndexRoute: appOrdersIndexRoute,
+   appProductsIndexRoute: appProductsIndexRoute,
++  appReportsIndexRoute: appReportsIndexRoute,
+   appSuggestionsIndexRoute: appSuggestionsIndexRoute,
+   appFinanceCostsIndexRoute: appFinanceCostsIndexRoute,
+   appMarketingTrafficIndexRoute: appMarketingTrafficIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/PeriodTargetCard/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/PeriodTargetCard/index.tsx
+new file mode 100644
+index 000000000..9f676415d
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/PeriodTargetCard/index.tsx
+@@ -0,0 +1,299 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { useForm } from '@tanstack/react-form'
++import { useQueryClient } from '@tanstack/react-query'
++import { toast } from 'sonner'
++import {
++	useGetGoal,
++	useCreateGoal,
++	getGoalQueryKey,
++	createGoalMutationRequestSchema,
++	GoalTypeEnum,
++	type CurrencyCodeEnumKey,
++	type GetGoalQueryResponse,
++	type CreateGoalMutationRequest,
++} from '@template/client-typescript/typescript'
++
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Button } from '@/components/ui/button'
++import { Spinner } from '@/components/ui/spinner'
++import { Select } from '@/components/ui/select'
++import { CurrencyInput } from '@/components/ui/currency-input'
++import { DatePicker } from '@/components/ui/date-picker'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { StarIcon } from '@/components/ui/icons'
++import { FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
++import { cn } from '@/lib/utils'
++import { type DeepPartial } from '@/lib'
++import { useMoney } from '@/hooks'
++
++type GoalData = NonNullable<GetGoalQueryResponse['goal']>
++
++function normDateStr(iso: string | undefined): string {
++	if (!iso) return ''
++	try {
++		return new Date(iso).toISOString().slice(0, 10)
++	} catch {
++		return iso
++	}
++}
++
++function daysBetween(from: string | undefined, to: string | undefined): number {
++	if (!from || !to) return 1
++	try {
++		const diff = new Date(to).getTime() - new Date(from).getTime()
++		return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)))
++	} catch {
++		return 1
++	}
++}
++
++// ─── Skeleton ────────────────────────────────────────────────────────────────
++
++function GoalFormSkeleton() {
++	return (
++		<div className="flex flex-col gap-4">
++			<Skeleton className="h-4 w-32" />
++			<Skeleton className="h-9 w-full" />
++			<Skeleton className="h-9 w-full" />
++			<div className="grid grid-cols-2 gap-3">
++				<Skeleton className="h-9" />
++				<Skeleton className="h-9" />
++			</div>
++			<Skeleton className="h-9 w-full" />
++		</div>
++	)
++}
++
++// ─── Inner form (only mounts after goal data resolves) ────────────────────────
++
++interface GoalFormProps {
++	goal: GoalData | null
++}
++
++function GoalForm({ goal }: GoalFormProps) {
++	const { t } = useTranslation()
++	const queryClient = useQueryClient()
++	const formatMoney = useMoney()
++
++	const invalidateGoal = () => {
++		queryClient.invalidateQueries({ queryKey: getGoalQueryKey() })
++	}
++
++	const createGoal = useCreateGoal({
++		mutation: {
++			onSuccess: () => {
++				toast.success(t('reports.periodTarget.saveSuccess'))
++				invalidateGoal()
++			},
++		},
++	})
++
++	const defaultValues: DeepPartial<CreateGoalMutationRequest> = goal
++		? {
++				type: goal.type,
++				targetAmount: {
++					amountCents: goal.targetAmount.amountCents,
++					currency: goal.targetAmount.currency,
++				},
++				from: goal.from,
++				to: goal.to,
++			}
++		: {}
++
++	const form = useForm({
++		defaultValues,
++		validators: {
++			onChange: createGoalMutationRequestSchema,
++		},
++		onSubmit: async form => {
++			const result = createGoalMutationRequestSchema.safeParse(form.value)
++			if (!result.success) return
++			await createGoal.mutateAsync({ data: result.data })
++		},
++	})
++
++	return (
++		<form
++			className="flex flex-col gap-4"
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++		>
++			{/* Unsaved changes banner — reactive via Subscribe */}
++			<form.Subscribe
++				selector={state => ({
++					from: state.values.from,
++					to: state.values.to,
++					type: state.values.type,
++					amountCents: state.values.targetAmount?.amountCents,
++					currency: state.values.targetAmount?.currency,
++				})}
++			>
++				{values => {
++					const hasChanges = goal
++						? values.type !== goal.type ||
++							(values.amountCents ?? 0) !== goal.targetAmount.amountCents ||
++							values.currency !== goal.targetAmount.currency ||
++							normDateStr(values.from) !== normDateStr(goal.from) ||
++							normDateStr(values.to) !== normDateStr(goal.to)
++						: !!(values.type || (values.amountCents ?? 0) > 0 || values.from || values.to)
++
++					return hasChanges ? (
++						<div
++							className="rounded-md border px-3 py-2 text-xs font-medium"
++							style={{
++								background: 'color-mix(in oklch, var(--destructive) 8%, transparent)',
++								borderColor: 'color-mix(in oklch, var(--destructive) 25%, transparent)',
++								color: 'var(--destructive)',
++							}}
++						>
++							{t('reports.periodTarget.form.unsavedChanges')}
++						</div>
++					) : null
++				}}
++			</form.Subscribe>
++
++			{/* Type selector */}
++			<form.Field name="type">
++				{field => {
++					const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++					return (
++						<FieldGroup>
++							<FieldLabel htmlFor={field.name}>{t('reports.periodTarget.form.type')}</FieldLabel>
++							<Select
++								enum={GoalTypeEnum}
++								i18nPrefix="enums.GoalType"
++								value={field.state.value}
++								onValueChange={field.handleChange}
++								id={field.name}
++								aria-invalid={isInvalid}
++							/>
++							{isInvalid && <FieldError errors={field.state.meta.errors} />}
++						</FieldGroup>
++					)
++				}}
++			</form.Field>
++
++			{/* Target amount (currency + cents) */}
++			<form.Field name="targetAmount">
++				{field => (
++					<FieldGroup>
++						<FieldLabel>{t('reports.periodTarget.form.targetAmount')}</FieldLabel>
++						<CurrencyInput
++							amountCents={field.state.value?.amountCents ?? 0}
++							currency={(field.state.value?.currency as CurrencyCodeEnumKey) || ('BRL' as CurrencyCodeEnumKey)}
++							onAmountChange={cents =>
++								field.handleChange({ ...field.state.value, amountCents: cents } as CreateGoalMutationRequest['targetAmount'])
++							}
++							onCurrencyChange={c =>
++								field.handleChange({ ...field.state.value, currency: c } as CreateGoalMutationRequest['targetAmount'])
++							}
++						/>
++						{field.state.meta.isTouched && !field.state.meta.isValid && (
++							<FieldError errors={field.state.meta.errors} />
++						)}
++					</FieldGroup>
++				)}
++			</form.Field>
++
++			{/* Date range */}
++			<div className="grid grid-cols-2 gap-3">
++				<form.Field name="from">
++					{field => (
++						<FieldGroup>
++							<FieldLabel>{t('reports.periodTarget.form.from')}</FieldLabel>
++							<DatePicker
++								date={field.state.value ? new Date(field.state.value as string) : undefined}
++								onDateChange={date => field.handleChange(date ? date.toISOString() : ('' as string))}
++								size="sm"
++							/>
++						</FieldGroup>
++					)}
++				</form.Field>
++
++				<form.Field name="to">
++					{field => (
++						<FieldGroup>
++							<FieldLabel>{t('reports.periodTarget.form.to')}</FieldLabel>
++							<DatePicker
++								date={field.state.value ? new Date(field.state.value as string) : undefined}
++								onDateChange={date => field.handleChange(date ? date.toISOString() : ('' as string))}
++								size="sm"
++							/>
++						</FieldGroup>
++					)}
++				</form.Field>
++			</div>
++
++			{/* Live daily run-rate preview */}
++			<form.Subscribe
++				selector={state => ({
++					from: state.values.from as string | undefined,
++					to: state.values.to as string | undefined,
++					amountCents: state.values.targetAmount?.amountCents,
++					currency: state.values.targetAmount?.currency,
++				})}
++			>
++				{({ from, to, amountCents, currency }) => {
++					if (!from || !to || !amountCents || !currency) return null
++					const days = daysBetween(from, to)
++					const dailyRate = Math.round(amountCents / days)
++					return (
++						<div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
++							<span className="text-muted-foreground">{t('reports.periodTarget.form.dailyRate')}</span>
++							<span className="font-semibold tabular-nums text-foreground">
++								{formatMoney({ amountCents: dailyRate, currency: currency as CurrencyCodeEnumKey })}
++							</span>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++
++			{/* Submit button */}
++			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting, values: state.values })}>
++				{({ canSubmit, isSubmitting, values }) => {
++					const isPending = isSubmitting || createGoal.isPending
++					const isDisabled = !canSubmit || isPending || !createGoalMutationRequestSchema.safeParse(values).success
++					return (
++						<Button type="submit" disabled={isDisabled} className="w-full">
++							{isPending && <Spinner className="mr-2" />}
++							{t('reports.periodTarget.form.submit')}
++						</Button>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++// ─── Public card wrapper ──────────────────────────────────────────────────────
++
++export function PeriodTargetCard({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { data: goalData, isPending, isError } = useGetGoal()
++
++	const goal = goalData?.goal ?? null
++
++	return (
++		<Card className={cn('flex flex-col gap-4 p-6', className)} {...props}>
++			<div className="flex items-center gap-4">
++				<GradientIconBadge icon={StarIcon} />
++				<span className="text-muted-foreground text-lg font-medium">{t('reports.periodTarget.title')}</span>
++			</div>
++
++			<div className="border-t border-border/60" />
++
++			{isPending ? (
++				<GoalFormSkeleton />
++			) : isError ? (
++				<p className="text-sm text-muted-foreground">{t('reports.periodTarget.loadError')}</p>
++			) : (
++				<GoalForm key={goal?.id ?? 'new'} goal={goal} />
++			)}
++		</Card>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/index.tsx
+new file mode 100644
+index 000000000..a0f925a4c
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/index.tsx
+@@ -0,0 +1,241 @@
++import { useMemo } from 'react'
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { ParentSize } from '@visx/responsive'
++import { Group } from '@visx/group'
++import { Bar, LinePath } from '@visx/shape'
++import { scaleBand, scaleLinear } from '@visx/scale'
++import { AxisBottom, AxisLeft } from '@visx/axis'
++import { GridRows } from '@visx/grid'
++import { curveMonotoneX } from '@visx/curve'
++
++import {
++	useGetChart,
++	AnalyticsFrequencyEnum,
++	type AnalyticsFrequency,
++} from '@template/client-typescript/typescript'
++import type { SignedMoney } from '@template/client-typescript/typescript'
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Select } from '@/components/ui/select'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { BarGraphIcon } from '@/components/ui/icons'
++import { cn } from '@/lib/utils'
++import { useTenancyStore } from '@/stores'
++import { useMoney, useLocale } from '@/hooks'
++import { type Locale, DEFAULT_LOCALE } from '@/lib/locale'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++const COLOR_REVENUE = 'var(--primary)'
++const COLOR_PROFIT = 'var(--success)'
++const COLOR_DESTRUCTIVE = 'var(--destructive)'
++const COLOR_AXIS = 'color-mix(in oklch, var(--muted-foreground) 60%, transparent)'
++const COLOR_GRID = 'color-mix(in oklch, var(--border) 60%, transparent)'
++const MARGIN = { top: 16, right: 8, bottom: 40, left: 64 }
++
++interface IncomeBucket {
++	label: string
++	revenue: SignedMoney
++	profit: SignedMoney
++}
++
++function centsToMajor(amountCents: number): number {
++	return amountCents / 100
++}
++
++function bucketLabel(timestamp: string, locale: Locale = DEFAULT_LOCALE): string {
++	try {
++		return new Date(timestamp).toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })
++	} catch {
++		return timestamp
++	}
++}
++
++interface TrendCanvasProps {
++	buckets: IncomeBucket[]
++}
++
++function TrendCanvas({ buckets }: TrendCanvasProps) {
++	return (
++		<div className="relative h-64 w-full">
++			<ParentSize>
++				{({ width, height }) => {
++					if (width === 0 || height === 0 || buckets.length === 0) return null
++
++					const innerWidth = width - MARGIN.left - MARGIN.right
++					const innerHeight = height - MARGIN.top - MARGIN.bottom
++
++					const xScale = scaleBand<string>({
++						domain: buckets.map(b => b.label),
++						range: [0, innerWidth],
++						padding: 0.3,
++					})
++
++					const maxRevenue = Math.max(1, ...buckets.map(b => centsToMajor(b.revenue.amountCents)))
++					const minProfit = Math.min(0, ...buckets.map(b => centsToMajor(b.profit.amountCents)))
++					const maxProfit = Math.max(0, ...buckets.map(b => centsToMajor(b.profit.amountCents)))
++					const yMax = Math.max(maxRevenue, maxProfit) * 1.15
++					const yMin = Math.min(0, minProfit * 1.15)
++
++					const yScale = scaleLinear<number>({
++						domain: [yMin, yMax],
++						range: [innerHeight, 0],
++						nice: true,
++					})
++
++					const barWidth = xScale.bandwidth()
++					const halfBar = barWidth / 2
++
++					return (
++						<svg width={width} height={height} role="img">
++							<Group top={MARGIN.top} left={MARGIN.left}>
++								<GridRows scale={yScale} width={innerWidth} stroke={COLOR_GRID} strokeWidth={1} numTicks={5} strokeDasharray="4 4" />
++
++								{buckets.map(bucket => {
++									const x0 = xScale(bucket.label) ?? 0
++									const revValue = centsToMajor(bucket.revenue.amountCents)
++									const profitValue = centsToMajor(bucket.profit.amountCents)
++
++									const revY = yScale(Math.max(revValue, 0))
++									const revH = Math.abs(yScale(0) - yScale(revValue))
++
++									const profitY = profitValue >= 0 ? yScale(profitValue) : yScale(0)
++									const profitH = Math.abs(yScale(0) - yScale(profitValue))
++
++									const profW = halfBar * 0.85
++
++									return (
++										<Group key={bucket.label}>
++											<Bar x={x0} y={revY} width={halfBar} height={revH} fill={COLOR_REVENUE} rx={3} />
++											<Bar
++												x={x0 + halfBar * 1.1}
++												y={profitY}
++												width={profW}
++												height={profitH}
++												fill={profitValue >= 0 ? COLOR_PROFIT : COLOR_DESTRUCTIVE}
++												rx={3}
++											/>
++										</Group>
++									)
++								})}
++
++								{/* Revenue trend line overlay */}
++								<LinePath<IncomeBucket>
++									data={buckets}
++									x={b => (xScale(b.label) ?? 0) + halfBar / 2}
++									y={b => yScale(centsToMajor(b.revenue.amountCents))}
++									stroke={COLOR_REVENUE}
++									strokeWidth={1.5}
++									strokeOpacity={0.4}
++									curve={curveMonotoneX}
++								/>
++
++								<AxisBottom
++									top={innerHeight}
++									scale={xScale}
++									stroke={COLOR_AXIS}
++									tickStroke={COLOR_AXIS}
++									tickLabelProps={() => ({ fill: COLOR_AXIS, fontSize: 11, textAnchor: 'middle' })}
++									tickLength={3}
++									numTicks={Math.min(buckets.length, 8)}
++								/>
++
++								<AxisLeft
++									scale={yScale}
++									stroke={COLOR_AXIS}
++									tickStroke={COLOR_AXIS}
++									tickLabelProps={() => ({ fill: COLOR_AXIS, fontSize: 11, textAnchor: 'end', dx: '-0.25em', dy: '0.3em' })}
++									tickLength={3}
++									numTicks={5}
++									tickFormat={v => {
++										const n = Number(v)
++										if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(0)}k`
++										return String(n.toFixed(0))
++									}}
++								/>
++							</Group>
++						</svg>
++					)
++				}}
++			</ParentSize>
++		</div>
++	)
++}
++
++export function RevenueTrendSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const navigate = routeApi.useNavigate()
++	const { startDate, endDate, frequency } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++	const locale = useLocale()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: 'income',
++		tenancyScope,
++		frequency: (frequency ?? AnalyticsFrequencyEnum.DAILY) as AnalyticsFrequency,
++		startDate,
++		endDate,
++	})
++
++	const buckets = useMemo((): IncomeBucket[] => {
++		if (!data || data.kind !== 'income') return []
++		return data.buckets.map(b => ({
++			label: bucketLabel(b.timestamp, locale),
++			revenue: b.revenue,
++			profit: b.profit,
++		}))
++	}, [data, locale])
++
++	function handleFrequencyChange(v: AnalyticsFrequency) {
++		navigate({ search: prev => ({ ...prev, frequency: v }) })
++	}
++
++	return (
++		<Card className={cn('flex flex-col gap-4 p-6', className)} {...props}>
++			<div className="flex items-center gap-3">
++				<GradientIconBadge icon={BarGraphIcon} />
++				<span className="flex-1 text-lg font-medium text-muted-foreground">{t('reports.revenueTrend.title')}</span>
++				<Select
++					enum={AnalyticsFrequencyEnum}
++					i18nPrefix="enums.AnalyticsFrequency"
++					value={(frequency ?? AnalyticsFrequencyEnum.DAILY) as AnalyticsFrequency}
++					onValueChange={handleFrequencyChange}
++					aria-label={t('reports.revenueTrend.frequency')}
++				/>
++			</div>
++
++			<div className="min-h-[16rem]">
++				{isPending ? (
++					<Skeleton className="h-64 w-full rounded-lg" />
++				) : isError || buckets.length === 0 ? (
++					<div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
++						{isError ? t('reports.revenueTrend.loadError') : t('reports.revenueTrend.empty')}
++					</div>
++				) : (
++					<TrendCanvas buckets={buckets} />
++				)}
++			</div>
++
++			{!isPending && !isError && buckets.length > 0 && (
++				<div className="flex items-center gap-4 text-xs text-muted-foreground">
++					<span className="flex items-center gap-1.5">
++						<span className="inline-block size-2.5 rounded-sm bg-[var(--primary)]" />
++						{t('reports.revenueTrend.legend.revenue')}
++					</span>
++					<span className="flex items-center gap-1.5">
++						<span className="inline-block size-2.5 rounded-sm bg-[var(--success)]" />
++						{t('reports.revenueTrend.legend.profit')}
++					</span>
++					{data && data.kind === 'income' && (
++						<span className="ml-auto text-xs">
++							{formatMoney({ amountCents: buckets.reduce((s, b) => s + b.revenue.amountCents, 0), currency: data.currency })}
++						</span>
++					)}
++				</div>
++			)}
++		</Card>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/TopProductsSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/TopProductsSection/index.tsx
+new file mode 100644
+index 000000000..3e3b0cd51
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/TopProductsSection/index.tsx
+@@ -0,0 +1,202 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useListQuickProductRanking, type ListQuickProductRankingQueryResponse } from '@template/client-typescript/typescript'
++
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Button } from '@/components/ui/button'
++import { Checkbox } from '@/components/ui/checkbox'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { StarIcon } from '@/components/ui/icons'
++import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
++import { Badge } from '@/components/ui/badge'
++import { cn } from '@/lib/utils'
++import { useTenancyStore } from '@/stores'
++import { useMoney } from '@/hooks'
++
++import { useReportsStore } from '../../-stores/useReportsStore'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++export type ProductItem = ListQuickProductRankingQueryResponse['items'][number]
++
++const SKELETON_COUNT = 5
++
++function SkeletonRows() {
++	return (
++		<>
++			{Array.from({ length: SKELETON_COUNT }).map((_, i) => (
++				<TableRow key={`skeleton-${i}`}>
++					<TableCell><Skeleton className="h-4 w-4" /></TableCell>
++					<TableCell><Skeleton className="h-4 w-6" /></TableCell>
++					<TableCell><Skeleton className="h-4 w-40" /></TableCell>
++					<TableCell><Skeleton className="h-4 w-16" /></TableCell>
++					<TableCell><Skeleton className="h-4 w-20" /></TableCell>
++				</TableRow>
++			))}
++		</>
++	)
++}
++
++interface ProductRowProps {
++	rank: number
++	item: ProductItem
++	isCompared: boolean
++	onToggleCompare: (productId: string) => void
++}
++
++function ProductRow({ rank, item, isCompared, onToggleCompare }: ProductRowProps) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++
++	return (
++		<TableRow role="listitem" aria-label={item.name} data-compared={isCompared}>
++			<TableCell>
++				<Checkbox
++					checked={isCompared}
++					onCheckedChange={() => onToggleCompare(item.productId)}
++					aria-label={t('reports.topProducts.compareToggle', { name: item.name })}
++				/>
++			</TableCell>
++			<TableCell className="font-medium text-muted-foreground text-sm">{rank}</TableCell>
++			<TableCell className="font-medium">{item.name}</TableCell>
++			<TableCell className="text-right tabular-nums">{item.sales.count.value}</TableCell>
++			<TableCell className="text-right tabular-nums">
++				{formatMoney({ amountCents: item.sales.value.value.amountCents, currency: item.sales.value.value.currency })}
++			</TableCell>
++		</TableRow>
++	)
++}
++
++interface ComparisonPanelProps {
++	items: ProductItem[]
++	onClear: () => void
++}
++
++function ComparisonPanel({ items, onClear }: ComparisonPanelProps) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++
++	return (
++		<div className="rounded-lg border border-border bg-muted/30 p-4 flex flex-col gap-3">
++			<div className="flex items-center justify-between">
++				<span className="text-sm font-medium text-foreground">{t('reports.topProducts.comparisonPanel.title')}</span>
++				<Button
++					variant="ghost"
++					size="sm"
++					onClick={onClear}
++					aria-label={t('reports.topProducts.comparisonPanel.clearAria')}
++				>
++					{t('reports.toolbar.clearComparison')}
++				</Button>
++			</div>
++
++			<div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 3)}, 1fr)` }}>
++				{items.map(item => (
++					<div key={item.productId} className="rounded-md border border-border bg-card p-3 flex flex-col gap-2">
++						<span className="text-sm font-medium truncate">{item.name}</span>
++						<div className="flex flex-col gap-1 text-xs text-muted-foreground">
++							<div className="flex justify-between">
++								<span>{t('reports.topProducts.columns.sales')}</span>
++								<span className="font-medium text-foreground tabular-nums">{item.sales.count.value}</span>
++							</div>
++							<div className="flex justify-between">
++								<span>{t('reports.topProducts.columns.revenue')}</span>
++								<span className="font-medium text-foreground tabular-nums">
++									{formatMoney({ amountCents: item.sales.value.value.amountCents, currency: item.sales.value.value.currency })}
++								</span>
++							</div>
++						</div>
++					</div>
++				))}
++			</div>
++		</div>
++	)
++}
++
++export function TopProductsSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const { comparisonBasket, toggleCompare, clearBasket } = useReportsStore()
++
++	const { data, isPending, isError } = useListQuickProductRanking({
++		tenancyScope,
++		startDate,
++		endDate,
++	})
++
++	const comparedItems = data?.items.filter(item => comparisonBasket.includes(item.productId)) ?? []
++
++	return (
++		<Card className={cn('flex flex-col gap-4 p-6', className)} {...props}>
++			<div className="flex items-center gap-4">
++				<GradientIconBadge icon={StarIcon} />
++				<div className="flex min-w-0 flex-1 flex-col gap-1">
++					<span className="text-muted-foreground text-lg font-medium">{t('reports.topProducts.title')}</span>
++					{!isPending && data && (
++						<span className="text-sm text-muted-foreground">
++							{t('dashboard.ranking.totalProducts', { count: data.totalProducts })}
++						</span>
++					)}
++				</div>
++				{comparisonBasket.length > 0 && (
++					<div className="flex items-center gap-2 shrink-0">
++						<Badge variant="secondary">
++							{t('reports.toolbar.comparisonCount', { count: comparisonBasket.length })}
++						</Badge>
++						<Button variant="ghost" size="sm" onClick={clearBasket} aria-label={t('reports.topProducts.comparisonPanel.clearAria')}>
++							{t('reports.toolbar.clearComparison')}
++						</Button>
++					</div>
++				)}
++			</div>
++
++			<div className="border-t border-border/60" />
++
++			<Table>
++				<TableHeader>
++					<TableRow>
++						<TableHead className="w-10" />
++						<TableHead className="w-10">{t('reports.topProducts.columns.rank')}</TableHead>
++						<TableHead>{t('reports.topProducts.columns.name')}</TableHead>
++						<TableHead className="text-right">{t('reports.topProducts.columns.sales')}</TableHead>
++						<TableHead className="text-right">{t('reports.topProducts.columns.revenue')}</TableHead>
++					</TableRow>
++				</TableHeader>
++				<TableBody role="list" aria-label={t('reports.topProducts.listAria')}>
++					{isPending ? (
++						<SkeletonRows />
++					) : isError || !data ? (
++						<TableRow>
++							<TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
++								{t('reports.topProducts.loadError')}
++							</TableCell>
++						</TableRow>
++					) : data.items.length === 0 ? (
++						<TableRow>
++							<TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
++								{t('reports.topProducts.empty')}
++							</TableCell>
++						</TableRow>
++					) : (
++						data.items.map((item, index) => (
++							<ProductRow
++								key={item.productId}
++								rank={index + 1}
++								item={item}
++								isCompared={comparisonBasket.includes(item.productId)}
++								onToggleCompare={toggleCompare}
++							/>
++						))
++					)}
++				</TableBody>
++			</Table>
++
++			{comparedItems.length > 0 && (
++				<ComparisonPanel items={comparedItems} onClear={clearBasket} />
++			)}
++		</Card>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-stores/useReportsStore.ts b/packages/app/react/src/routes/(app)/reports/-stores/useReportsStore.ts
+new file mode 100644
+index 000000000..393a05ada
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-stores/useReportsStore.ts
+@@ -0,0 +1,26 @@
++import { create } from 'zustand'
++
++interface ReportsState {
++	/** productIds selected for the comparison panel — client-only, never in URL */
++	comparisonBasket: string[]
++}
++
++interface ReportsActions {
++	toggleCompare: (productId: string) => void
++	clearBasket: () => void
++}
++
++type ReportsStore = ReportsState & ReportsActions
++
++export const useReportsStore = create<ReportsStore>(set => ({
++	comparisonBasket: [],
++
++	toggleCompare: productId =>
++		set(state => ({
++			comparisonBasket: state.comparisonBasket.includes(productId)
++				? state.comparisonBasket.filter(id => id !== productId)
++				: [...state.comparisonBasket, productId],
++		})),
++
++	clearBasket: () => set({ comparisonBasket: [] }),
++}))
+diff --git a/packages/app/react/src/routes/(app)/reports/index.tsx b/packages/app/react/src/routes/(app)/reports/index.tsx
+new file mode 100644
+index 000000000..4966d867d
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/index.tsx
+@@ -0,0 +1,45 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { endOfDay, startOfDay, subDays } from 'date-fns'
++import { z } from 'zod'
++import { analyticsFrequencySchema, AnalyticsFrequencyEnum } from '@template/client-typescript/typescript'
++
++import { zodValidator } from '@/lib/zod-validator'
++import { RouteError } from '@/components/RouteError'
++
++import { RevenueTrendSection } from './-components/RevenueTrendSection'
++import { TopProductsSection } from './-components/TopProductsSection'
++import { PeriodTargetCard } from './-components/PeriodTargetCard'
++
++// Period and granularity are shareable/bookmarkable → URL.
++// tenancyScope is account-level → global Zustand store (useTenancyStore), never in URL.
++// comparisonBasket is client-only → route Zustand store (useReportsStore), never in URL.
++export const reportsSearchSchema = z.object({
++	startDate: z.string().default(() => startOfDay(subDays(new Date(), 29)).toISOString()),
++	endDate: z.string().default(() => endOfDay(new Date()).toISOString()),
++	frequency: analyticsFrequencySchema.default(AnalyticsFrequencyEnum.DAILY),
++})
++
++export type ReportsSearchParams = z.infer<typeof reportsSearchSchema>
++
++export const Route = createFileRoute('/(app)/reports/')({
++	staticData: { breadcrumb: 'Relatórios' },
++	validateSearch: zodValidator(reportsSearchSchema),
++	errorComponent: RouteError,
++	component: RouteComponent,
++})
++
++function RouteComponent() {
++	return (
++		<div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 md:p-8">
++			<div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
++				<div className="flex flex-col gap-6 xl:col-span-2">
++					<RevenueTrendSection />
++					<TopProductsSection />
++				</div>
++				<div>
++					<PeriodTargetCard />
++				</div>
++			</div>
++		</div>
++	)
++}

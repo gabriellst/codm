@@ -1,0 +1,124 @@
+id: synthetic-go-projector-activity
+tier: holdout
+builder: sonnet
+title: Go integration-activity projection + projector over activation events
+  (synthetic — Go PROJECTION-MUTATION canon; NO live Go projector exemplar exists,
+  this probe measures skill-variant transfer)
+sourceSpec: PROBES-BACKLOG.md#P-Go
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template Go worker (packages/api/go), build the integration-activity read model:
+  a per-store, per-integration activity row that the ops dashboard will read (how many
+  times an integration was activated/deactivated and when last). This is a Go-only task —
+  do not touch packages/contracts, packages/api/typescript or any frontend; the events
+  already exist on the wire. READ FIRST: .claude/skills/projection/go/SKILL.md and
+  .claude/skills/projector/go/SKILL.md (they ARE the grading rubric — there is no live Go
+  projector in this repo yet, the skills are the canon), plus docs/BACKEND.md (Projection /
+  Projector sections), the sibling handlers under
+  packages/api/go/internal/sync/handlers/ (event decode + registration idioms), and
+  internal/sync/repositories/syncjob/ (repository + pg idioms). DECISIONS (binding):
+  (1) Projection IntegrationActivityProjection at
+  packages/api/go/internal/sync/projections/integration_activity.go — a plain record
+  struct (no invariants) keyed by storeIntegrationId, fields: storeId, activationCount,
+  deactivationCount, lastChangedAt, active (bool). Per the projection canon it owns its
+  transitions: a constructor for first-creation from an activation event and an
+  ApplyEvent method switching on the event for mutations.
+  (2) Projector IntegrationActivityProjector at
+  packages/api/go/internal/sync/projections/projectors/integration_activity_projector.go —
+  subscribes to wire.IntegrationActivatedIntegrationEvent AND
+  wire.IntegrationDeactivatedIntegrationEvent (decode through the generated contracts
+  bindings, never hand-rolled payload structs), canonical flow find → ApplyEvent → save,
+  insert-if-new on first sight; registered in the sync module's fx wiring next to the
+  sibling handlers. Idempotency note: redelivery must not double-count — use the event id
+  / a conditional write per the projector skill's guidance and document the choice.
+  (3) Repository IntegrationActivityRepository (interface + pg implementation) at
+  packages/api/go/internal/sync/repositories/integrationactivity/ following the syncjob
+  folder shape — hand-written SQL constants over database/sql, FindByIntegration + Save +
+  InsertIfNew; table integration_activity added via a new SQL migration in
+  packages/api/go/core/db/sql/migrations/ (follow the existing numbering).
+  (4) Tests colocated: projection transition test (pure, no DB) and a projector test
+  against the harness the sibling handler tests use.
+  Finish with: cd packages/api/go && go build ./... && go test ./...
+axes:
+  - PROJECTION-MUTATION
+  - ASYNC-INLINE
+  - EVENT-EMISSION
+  - NAME-CONSISTENCY
+graders:
+  - kind: cmd
+    spec: "packages/api/go::go build ./..."
+    id: go#build
+  - kind: cmd
+    spec: "packages/api/go::go test ./..."
+    id: go#test
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/projections/integration_activity.go"
+    id: projection#file
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/projections/projectors/integration_activity_projector.go"
+    id: projector#file
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/projections/integration_activity.go::ApplyEvent"
+    id: projection#apply-event
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/projections/projectors/integration_activity_projector.go::IntegrationActivatedIntegrationEvent"
+    id: projector#subscribes-activated
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/projections/projectors/integration_activity_projector.go::IntegrationDeactivatedIntegrationEvent"
+    id: projector#subscribes-deactivated
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/projections/projectors/integration_activity_projector.go::contracts-go/wire"
+    id: projector#contracts-binding
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/repositories/integrationactivity/*.go::database/sql"
+    id: repository#database-sql
+  - kind: grep-must
+    spec: "packages/api/go/core/db/sql/migrations/*.sql::integration_activity"
+    id: migrate#table
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/module.go::IntegrationActivityProjector"
+    id: projector#fx-wired
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/projections/integration_activity_test.go"
+    id: projection#test
+  - kind: grep-must-not
+    spec: "packages/api/go/internal/sync/projections/**/*.go::json\\.Unmarshal\\(.*map\\[string\\]"
+    id: go#no-handrolled-payload
+  - kind: judge
+    spec: >
+      A Go read-model slice was added under packages/api/go/internal/sync/projections/
+      (IntegrationActivityProjection + IntegrationActivityProjector + repository +
+      migration). Verify against the projection/projector Go skills: (a) the PROJECTION
+      owns its transitions — creation constructor for the first activation event and an
+      ApplyEvent that switches on the event type mutating counts/lastChangedAt/active; no
+      business invariants (it is a free record, not an aggregate). (b) the PROJECTOR's
+      canonical flow is find → ApplyEvent → save with insert-if-new on first sight — NOT a
+      raw UPDATE per field in the handler body; payloads are decoded through the generated
+      contracts bindings; it is registered in the sync module wiring. (c) idempotency on
+      redelivery is handled and the mechanism is documented in a comment (event-id guard,
+      conditional write, or equivalent) — double-counting on redelivery FAILS. (d) the
+      repository follows the syncjob folder shape: interface + pg implementation with
+      hand-written SQL constants over database/sql; the migration creates
+      integration_activity with the keyed columns. (e) NAME-CONSISTENCY: the
+      IntegrationActivity term is used consistently across projection, projector,
+      repository, migration and module wiring. Scope notes: there is NO pre-existing Go
+      projector exemplar — do not fail stylistic deviations from the TS projector that the
+      Go skills do not themselves demand; an atomic counter-increment op on the repository
+      is acceptable ONLY if a written justification cites the projector skill's atomic-op
+      triggers (hot row / bulk / monotonic / conditional), otherwise find→ApplyEvent→save
+      is required; the agent's own names for test helpers are fine.
+    id: judge#go-projection-canon
+notes: >-
+  First Go projector probe. CRITICAL CONDITION: zero live Go projectors exist in this repo
+  (census 2026-06-11: 'projector' matches 0 files) — the carrier is the projection/go +
+  projector/go SKILL.md variants alone, named FIRST in the prompt. This probe therefore
+  measures SKILL-VARIANT transfer without exemplar support — the expo sheet-params lesson
+  says imitation needs exemplars, so a fail here localizes to the carrier gap (the fix
+  would be a live exemplar or scaffold, not louder docs). Free real estate verified:
+  IntegrationActivity token 0 matches repo-wide; projections/ dir absent under
+  internal/sync. Grounded idioms from the live tree: contracts imports are
+  template/contracts-go/wire; repos follow internal/sync/repositories/<name>/{<name>_repository,<name>_pg}.go;
+  fx wiring in internal/sync/module.go; migrations are embedded SQL under
+  packages/api/go/core/db/sql/migrations/. cmd graders green at HEAD (go build/test pass —
+  verified by the go-consumer probe's validation).

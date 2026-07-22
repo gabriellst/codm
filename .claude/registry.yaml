@@ -1,0 +1,806 @@
+# Component Registry — Central manifest for artifact classification, hook routing, and review
+# Every artifact type maps to a skill, file patterns, a layer, and a language.
+# Skill playbooks are split per language:
+#   .claude/skills/<skill>/{typescript,go}/{SKILL.md,registry.yaml}       (backend)
+#   .claude/skills/<skill>/{react,expo,astro}/{SKILL.md,registry.yaml}    (frontend)
+# Language dispatch lives in scripts/lib/repo-model.ts (detectLang): the file's containing
+# workspace (template.config.ts REPO.workspaces) decides the lang; extension is only a fallback
+# outside declared workspaces. A per-lang variant is used iff
+# .claude/skills/<skill>/<lang>/registry.yaml exists on disk (existsSync — no variant lists);
+# the per-component `skill:` here only names the top-level directory under .claude/skills/,
+# never the variant.
+
+version: 1
+
+components:
+  # ─── Backend: Domain Layer ───────────────────────────────────────────
+  e2e:
+    skill: e2e
+    patterns:
+      - "packages/e2e/tests/*.spec.ts"
+      - "packages/e2e/support/**/*.ts"
+
+  entity:
+    skill: entity
+    patterns:
+      - "packages/api/typescript/src/*/entities/*.ts"
+      - "packages/api/go/internal/*/entities/*.go"
+      - "!*/index.ts"
+    layer: domain
+
+  value-object:
+    skill: value-object
+    patterns:
+      - "packages/api/typescript/src/*/objects/*.ts"
+      - "packages/api/go/internal/*/objects/*.go"
+      - "!*/index.ts"
+    layer: domain
+
+  enum:
+    skill: enum
+    patterns:
+      - "packages/api/typescript/src/*/enums/*.ts"
+      - "packages/api/go/internal/*/enums/*.go"
+      - "!*/index.ts"
+    layer: domain
+
+  errors:
+    skill: errors
+    patterns:
+      - "packages/api/typescript/src/*/errors/*.ts"
+      - "packages/api/go/internal/*/errors/*.go"
+    layer: domain
+
+  # ─── Backend: Application Layer ──────────────────────────────────────
+  usecase:
+    skill: usecase
+    patterns:
+      - "packages/api/typescript/src/*/usecases/*.ts"
+      - "packages/api/go/internal/*/usecases/*.go"
+      - "!*/index.ts"
+      - "!packages/api/typescript/src/ui/**"
+    layer: application
+
+  event:
+    skill: event
+    patterns:
+      - "packages/api/typescript/src/*/events/*.ts"
+      - "packages/api/go/internal/*/events/*.go"
+      - "!*/index.ts"
+    layer: application
+
+  handler:
+    skill: handler
+    patterns:
+      - "packages/api/typescript/src/*/handlers/*.ts"
+      - "packages/api/go/internal/*/handlers/*.go"
+      - "!*/index.ts"
+    layer: application
+
+  job:
+    skill: handler
+    patterns:
+      - "packages/api/typescript/src/*/jobs/*.ts"
+      - "packages/api/go/internal/*/jobs/*.go"
+      - "!*/index.ts"
+    layer: application
+    note: "Jobs are handler-shaped (thin sweep orchestrators) — reviewed/hooked with the handler checklist."
+
+  projection:
+    skill: projection
+    patterns:
+      - "packages/api/typescript/src/*/projections/*.ts"
+      - "packages/api/go/internal/*/projections/*.go"
+      - "!*/index.ts"
+      - "!packages/api/typescript/src/*/projections/*ProjectionRepository.ts"
+      - "!packages/api/typescript/src/*/projections/projectors/**"
+      - "!packages/api/go/internal/*/projections/projectors/**"
+    layer: domain
+    note: "Free record — no base class. Lang-specific shapes documented in <skill>/<lang>/SKILL.md."
+
+  projection-repository:
+    skill: projection
+    patterns:
+      - "packages/api/typescript/src/*/projections/*ProjectionRepository.ts"
+    layer: infrastructure
+    note: "TS-only artifact: the Drizzle-backed projection repo. Go folds this into the regular repository convention."
+
+  projector:
+    skill: projector
+    patterns:
+      - "packages/api/typescript/src/*/projections/projectors/*.ts"
+      - "packages/api/go/internal/*/projections/projectors/*.go"
+      - "!*/index.ts"
+    layer: application
+    note: "One per Projection. Canonical find → apply → save; atomic ops are edge cases."
+
+  service:
+    skill: service
+    patterns:
+      - "packages/api/typescript/src/*/services/**/*.ts"
+      - "packages/api/go/internal/*/services/*.go"
+      - "!*/index.ts"
+    layer: application
+
+  # ─── Backend: Infrastructure Layer ───────────────────────────────────
+  repository:
+    skill: repository
+    patterns:
+      - "packages/api/typescript/src/*/repositories/**/*.ts"
+      - "packages/api/go/internal/*/repositories/**/*.go"
+      - "!*/index.ts"
+    layer: infrastructure
+
+  db-schema:
+    skill: db-modelling
+    patterns:
+      - "packages/contracts/db/schema/*.ts"
+      - "!*/index.ts"
+    layer: infrastructure
+    note: "Drizzle schema lives in the contracts package; plain text + jsonb columns, no pgEnum, no $type<>()."
+
+  # ─── Backend: Interface Layer ────────────────────────────────────────
+  controller:
+    skill: controller
+    patterns:
+      - "packages/api/typescript/src/*/controllers/*.ts"
+      - "packages/api/go/internal/*/controllers/*.go"
+      - "!*/index.ts"
+      - "!packages/api/typescript/src/ui/**"
+    layer: interface
+
+  query:
+    skill: query
+    patterns:
+      # BFF query slice is owned by api-typescript only (polyglot.md §3 ownership matrix);
+      # Go reads use the regular `usecase` artifact.
+      - "packages/api/typescript/src/ui/usecases/**/*.ts"
+      - "packages/api/typescript/src/ui/controllers/**/*.ts"
+      - "!*/index.ts"
+    layer: interface
+
+  schema:
+    skill: schema
+    patterns:
+      # TS owns standalone schema files. Go schemas are struct-tagged inputs —
+      # handled in the go variant SKILL.md.
+      - "packages/api/typescript/src/*/schemas/*.ts"
+      - "!*/index.ts"
+    layer: interface
+
+  middleware:
+    skill: middleware
+    patterns:
+      - "packages/api/typescript/src/*/middlewares/*.ts"
+      - "packages/api/typescript/src/shared/middlewares/*.ts"
+      - "packages/api/go/internal/*/middleware/*.go"
+      - "packages/api/go/internal/shared/middleware/*.go"
+      - "!*/index.ts"
+    layer: interface
+    note: "HTTP middleware — single-concern, lang-specific shapes in <skill>/<lang>/SKILL.md."
+
+  # ─── Frontend: Presentation Layer ─────────────────────────────────────
+  # scripts/review.ts routes each match to <skill>/{react,expo,astro}/registry.yaml
+  # based on the matched file's path (packages/app/{react,expo,astro}/) and extension
+  # (.tsx vs .astro). The per-component `skill:` line below names the top-level skill
+  # directory; the variant subfolder is resolved at review time.
+
+  route:
+    skill: route
+    patterns:
+      - "packages/app/react/src/routes/*/index.tsx"
+      - "packages/app/react/src/routes/*/*/index.tsx"
+      - "packages/app/expo/app/**/*.tsx"
+      - "packages/app/astro/src/pages/**/*.astro"
+    layer: presentation
+
+  section:
+    skill: component
+    patterns:
+      - "packages/app/react/src/routes/**/-components/*Section*/index.tsx"
+      - "packages/app/expo/**/-components/*Section*/index.tsx"
+    layer: presentation
+    note: "Sections live in -components/ with Section suffix (react/expo only)."
+
+  component:
+    skill: component
+    patterns:
+      - "packages/app/react/src/routes/**/-components/*/index.tsx"
+      # Non-index helpers/hooks inside a component folder are component-owned too
+      # (so component rules — fetch-ban, enum casts — reach them):
+      - "packages/app/react/src/routes/**/-components/**/*.ts"
+      - "packages/app/react/src/routes/**/-components/**/*.tsx"
+      - "packages/app/expo/**/-components/*/index.tsx"
+      - "packages/app/astro/src/components/*.astro"
+      - "packages/app/astro/src/components/*.tsx"
+      - "!**/stories/*"
+    layer: presentation
+
+  storybook:
+    skill: storybook
+    patterns:
+      - "packages/app/react/src/**/*.stories.tsx"
+      - "packages/app/react/src/storybook/*.ts"
+    layer: presentation
+    note: "Stories + the connected-stories framework (@/storybook). React-only; dumb→args, connected→typed SDK mocks."
+
+  primitive:
+    skill: primitive
+    patterns:
+      - "packages/app/react/src/components/ui/*.tsx"
+      - "packages/app/expo/components/ui/*.tsx"
+      - "packages/app/astro/src/components/ui/*.astro"
+      - "packages/app/astro/src/components/ui/*.tsx"
+    layer: presentation
+    note: "Astro primitives live in src/components/ui/ if the project chooses to formalize them; otherwise alongside route-scoped components."
+
+  form:
+    skill: form
+    patterns:
+      - "packages/app/react/src/routes/**/-components/**/*Form*/index.tsx"
+      - "packages/app/expo/**/-components/**/*Form*/index.tsx"
+    layer: presentation
+    note: "Forms live in -components/ with Form suffix (react/expo only). Astro has no form variant — author a React island and follow the react form variant."
+
+  sheet:
+    skill: sheet
+    patterns:
+      - "packages/app/expo/app/(sheets)/**/*.tsx"
+    layer: presentation
+    note: "Expo-only artifact — modal sheets implemented as routes under (sheets)/."
+
+  store:
+    skill: store
+    patterns:
+      - "packages/app/react/src/**/-stores/*.ts"
+      - "packages/app/react/src/stores/*.ts"
+      - "packages/app/expo/**/-stores/*.ts"
+      - "packages/app/expo/stores/*.ts"
+    layer: presentation
+    note: "Single-flavor skill — same Zustand patterns on react and expo. Not applicable to astro."
+
+  # ─── Backend: Cross-Cutting ──────────────────────────────────────────
+  bounded-context:
+    skill: bounded-context
+    patterns:
+      - "packages/api/typescript/src/*/registry.ts"
+      - "packages/api/typescript/src/*/index.ts"
+      - "packages/api/go/internal/*/module.go"
+    layer: infrastructure
+    note: "Each bounded context has a registry/module entry binding repositories, controllers, handlers, projectors."
+
+# Cross-cutting bad practices — apply to ALL components (checked by every review)
+cross_cutting_bad_practices:
+  - id: cc-bp-01
+    scope: backend
+    name: "Inconsistent field names between endpoints"
+    severity: critical
+    wrong: |
+      // Same entity, different field names across endpoints
+      // ListPatients returns: { patientName, patientPhone, patientCpf }
+      // ListPatientDetails returns: { fullName, phone, cpf }
+    right: |
+      // Consistent naming across all endpoints
+      // Both return: { fullName, phone, cpf }
+
+  - id: cc-bp-02
+    scope: frontend
+    name: "Hook naming does not reflect operation"
+    severity: moderate
+    wrong: |
+      // "List" implies multiple, but returns one
+      useListPatientDetails({ id: patientId })
+    right: |
+      // Name reflects operation
+      useGetPatientDetails({ id: patientId })  // "Get" for singular
+      useListPatients({ params })              // "List" for multiple
+
+  - id: cc-bp-03
+    scope: all
+    name: "Consultation vs Appointment naming confusion"
+    severity: critical
+    wrong: |
+      // Backend stores as Consultation with Portuguese status
+      // SDK exposes as Appointment with English status
+      // Mixing both names and status languages
+    right: |
+      // Pick one name and stick with it
+      // Use English status: PENDING, SCHEDULED, COMPLETED, CANCELLED
+      // Remove duplicate mappings
+
+  - id: cc-bp-04
+    scope: backend
+    name: "Type casting (as / as any) to bypass type issues"
+    severity: critical
+    # Universal mechanical set — the classify-edit hook flags these on EVERY in-scope
+    # edit regardless of skill routing (.claude/hooks/classify-edit-core.ts loadUniversalRules).
+    mechanical: true
+    detect:
+      - '\bas\s+any\b'
+      - '\bas\s+never\b'
+      - '\bas\s+unknown\b'
+      - '@ts-ignore'
+      - '@ts-expect-error'
+      - 'eslint-disable'
+    # No detect_skip on purpose: sanctioned casts (`as const`, `as XxxErrors`) never match the
+    # detect regexes above, and a whole-text skip would suppress real `as any` hits whenever a
+    # sanctioned cast appears anywhere in the same edit/file.
+    always_flag_when: >
+      Code contains `as any`, `as unknown`, `as this["output"]`, `as this["input"]`,
+      or any `as Type` cast that hides a fixable type mismatch. `as any` is ALWAYS FLAGGED
+      with no exceptions — it completely disables type checking and masks real bugs.
+      For other `as` casts, verify whether the type mismatch can be fixed at the source
+      (schema, column definition, return type). Types should flow naturally from contracts.
+    exceptions: |
+      - `as const` (narrowing, not casting)
+      - `as DomainErrors` / `as ApplicationErrors` / `as BaseDomainErrors` / `as InterfaceErrors` (error code typing)
+      - DI container registration: `container.registerSingleton(RepoInterface as any, DrizzleRepoImpl)` (tsyringe limitation)
+    wrong: |
+      // as any — completely disables type safety, NEVER acceptable
+      const data = result as any
+      items.map((item: any) => item.name)
+      (response as any).data
+
+      // as Type — hides a fixable mismatch
+      status: row.status as AppointmentStatus,
+      data: result as PatientData,
+    right: |
+      // Fix types at the source — schemas, column definitions, return types
+      // Types should flow naturally from contracts without casting
+      // For DB columns: use pgEnum() or .$type<z.infer<>>() so types match
+      // For API responses: use proper output schemas so types are inferred
+
+  - id: cc-bp-05
+    scope: frontend
+    name: "Using date-fns for business logic in frontend"
+    severity: critical
+    wrong: |
+      // Business logic with date-fns in frontend
+      import { isSameDay } from 'date-fns'
+      const todayList = appointments.filter(apt => isSameDay(new Date(apt.startDate), today))
+    right: |
+      // Backend returns pre-filtered data
+      const { data } = useListPatientsDashboard({ params: { startDate, endDate } })
+      // date-fns OK for display formatting only:
+      // format(appointment.startDate, 'dd/MM/yyyy')
+
+  - id: cc-bp-06
+    scope: frontend
+    name: "Duplicate status mapping across files"
+    severity: critical
+    wrong: |
+      // Same mapping in different files
+      // PatientsAppointmentsList.tsx
+      const statusLabels = { PENDING: '...', SCHEDULED: '...' }
+      // PatientConsultationHistory.tsx
+      const STATUS_LABELS = { Aguardando: '...', Agendado: '...' }
+    right: |
+      // Centralize in @/lib/labels.ts
+      export const appointmentStatusLabels: Record<AppointmentStatusEnum, string> = { ... }
+
+  - id: cc-bp-07
+    scope: frontend
+    name: "Duplicate utility functions"
+    severity: critical
+    wrong: |
+      // Same function in multiple files
+      // PatientCard.tsx
+      function getAge(birthDate: string): number | null { ... }
+      // PatientEditPage.tsx
+      function getAge(birthDate: string): number | null { ... }  // Duplicated!
+    right: |
+      // Centralize in @/lib
+      export function getAge(birthDate: string): number | null { ... }
+
+  - id: cc-bp-08
+    scope: frontend
+    name: "Confusing date-fns usage for UI vs business"
+    severity: critical
+    wrong: |
+      // Filtering data in frontend (business logic)
+      appointments.filter(apt => isSameDay(apt.date, today))
+      appointments.filter(...).length  // Computing statistics
+    right: |
+      // date-fns for display formatting: format(date, 'dd/MM/yyyy') ✅
+      // date-fns for UI range calc: startOfWeek(date) ✅
+      // If it affects WHICH data is displayed, it belongs in backend
+
+  - id: cc-bp-09
+    scope: backend
+    name: "Using SDK inside the API itself"
+    severity: critical
+    wrong: |
+      // Inside api/ code:
+      import { something } from '@template/client-typescript/typescript'
+      import { something } from '@template/client-typescript/typescript'
+    right: |
+      // Inside api: compose contexts via use cases and/or events
+      // SDK is for external consumers and frontend only
+      // Exception: channel types (enums, schemas, events) may be imported
+      // from '@template/client-typescript/typescript' using direct sub-paths (see cc-bp-14)
+
+  - id: cc-bp-14
+    scope: all
+    name: "Importing from SDK barrel instead of direct sub-paths"
+    severity: critical
+    wrong: |
+      // Barrel import pulls in ALL 375+ exports with 122 circular .d.ts chains
+      // This makes the TypeScript LSP extremely slow (spins for seconds on every change)
+      import { PlatformEnum } from '@template/client-typescript/typescript'
+      import { MessageTypeEnum } from '@template/client-typescript/typescript'
+    right: |
+      // Direct sub-path import — loads only the specific .d.ts file, no barrel cycles
+      import { PlatformEnum } from '@template/client-typescript/typescript'
+      import { MessageTypeEnum } from '@template/client-typescript/typescript'
+      import { ServerEventName } from '@template/client-typescript/typescript'
+      // For zod schemas that internally reference the barrel (import("../index.ts")),
+      // the barrel is loaded anyway — use the barrel import for those:
+      import { channelMessageReceivedEventSchema } from '@template/client-typescript/typescript'
+      // Rule: if the type has zero dependencies (enums, simple types), use direct sub-path.
+      // If the type's .d.ts references the barrel internally, use the barrel import.
+
+  - id: cc-bp-10
+    scope: backend
+    name: "Implementing domain/usecase before closing controller contract"
+    severity: moderate
+    wrong: |
+      // Building full domain + usecase before defining the API contract
+      // Frontend stays blocked and contract changes late
+    right: |
+      // Close input/output contract in controller first
+      // Generate SDK, then evolve internal implementation
+
+  - id: cc-bp-11
+    scope: backend
+    name: "Using export default in domain/application modules"
+    severity: low
+    wrong: |
+      export default class Product { ... }
+    right: |
+      // Named exports for discoverability, refactoring, and barrel consistency
+      export class Product { ... }
+
+  - id: cc-bp-12
+    scope: backend
+    name: "Switch/case instead of Record<Enum, ...>"
+    severity: critical
+    wrong: |
+      // Switch/case on enum or string values
+      switch (status) {
+        case AppointmentStatusEnum.PENDING: return 'orange'
+        case AppointmentStatusEnum.CONFIRMED: return 'green'
+        default: return 'gray'
+      }
+      // Runtime type guard with Object.values().includes()
+      const isStatus = (v: string): v is Status => Object.values(StatusEnum).includes(v as Status)
+    right: |
+      // Record lookup — exhaustive at compile time (Open-Closed Principle)
+      const colorPerStatus: Record<AppointmentStatusEnum, string> = {
+        [AppointmentStatusEnum.PENDING]: 'orange',
+        [AppointmentStatusEnum.CONFIRMED]: 'green',
+      }
+      // Works for functions too
+      const navigate: Record<CalendarView, (d: Date) => Date> = {
+        [CalendarView.DAY]: d => addDays(d, 1),
+        [CalendarView.WEEK]: d => addWeeks(d, 1),
+      }
+      // If a switch uses raw strings, create an enum first
+
+  - id: cc-bp-13
+    scope: backend
+    name: "Registering enums in each context index.ts instead of shared/index.ts"
+    severity: critical
+    wrong: |
+      // In packages/api/src/patient/index.ts:
+      openapi.registerEnums()  // Wrong: enum registered too late
+    right: |
+      // Register ALL enums centrally in packages/api/src/shared/index.ts
+      // BEFORE registerEvents() call
+      // Never call openapi.registerEnums() in individual context index.ts
+
+  - id: cc-bp-15
+    scope: frontend
+    name: "Smart logic in a -components/ file (should be in -sections/)"
+    severity: critical
+    wrong: |
+      // -components/ChatListItem/index.tsx uses store (lives in -components/ = dumb)
+      const { selectedChatId } = useChatStore()
+    right: |
+      // -sections/ChatSidebarSection/index.tsx reads store (lives in -sections/ = smart), passes as prop to -components/ChatListItem
+      const { chatId } = useSearch(...)
+      <ChatListItem isSelected={chatId === item.remoteId} />
+
+  - id: cc-bp-16
+    scope: backend
+    name: "Closed-set field not using a domain enum"
+    severity: critical
+    # Only the unambiguous token is mechanical — z.string()/literal-union/as-const variants need
+    # the exceptions below, which a regex can't judge; those stay LLM-review territory.
+    mechanical: true
+    detect:
+      - 'z\.nativeEnum\('
+    always_flag_when: >
+      A field that holds a finite set of values (status, type, kind, platform, role,
+      currency, mode, category, gateway) is typed as `z.string()`, `z.string().min(1)`,
+      an inline `z.enum(['a','b'])` literal union, `z.nativeEnum(Enum)` (Zod-3 idiom —
+      always `z.enum(Enum)`), or an `as const` array — when a named
+      enum already exists (or should) in `<ctx>/enums/` or the contracts/wire enums.
+      Applies to entity schemas, event payloads, use-case I/O, controllers, query DTOs,
+      and Go structs (`Platform string` with no `oneof` constraint).
+    exceptions: |
+      - Field-name metadata string unions (camelCase property names), not domain values
+      - Genuinely open-ended free text (titles, descriptions, search terms)
+    wrong: |
+      // string where a closed set exists
+      type: z.string()
+      platform: z.string().min(1)
+      transition: z.enum(['created', 'paid', 'cancelled'] as const)   // inline literal union
+      status: z.nativeEnum(OrderStatus)                                // Zod-3 idiom — use z.enum(OrderStatus)
+      const SORT = ['asc', 'desc'] as const                            // as const array
+      // Go
+      Platform string `json:"platform"`                                // no oneof
+    right: |
+      // Reference the named enum everywhere
+      type: z.enum(ProductCostType)
+      platform: z.enum(SalesPlatform)
+      transition: z.enum(SubscriptionTransition)   // extracted to billing/enums/
+      // record keys that are closed sets:
+      ratePerPlatform: z.record(z.enum(MarketingPlatform), z.number())
+      // Go
+      Platform wire.SalesPlatform `json:"platform" validate:"required,oneof=SHOPIFY ..."`
+
+  - id: cc-bp-17
+    scope: backend
+    name: "Entity/VO identifier or nested member not using z.instance"
+    severity: critical
+    always_flag_when: >
+      In an ENTITY schema or VALUE-OBJECT schema, an internal aggregate id field (own id or
+      FK id that maps to an `Id` value object) is typed `z.string()` / `z.uuid()` instead of
+      `z.instance(Id)`; OR a nested entity/value-object member is declared as an inline
+      `z.object({...})` instead of `z.instance(NestedClass)`. The `z.instance` transform
+      hydrates from the primitive string, so this is NOT a breaking cascade — repo hydration
+      and call sites stay unchanged.
+    exceptions: |
+      - LAYER BOUNDARY (do NOT flag): events, use-case Input/Output, controllers, query DTOs,
+        and any wire/serialized payload — these intentionally keep `z.uuid()`/`z.string()`.
+      - External ids owned by another system (better-auth ids, externalId, Go-JSONB) stay string.
+    wrong: |
+      // OrderOverride ENTITY schema
+      const OrderOverrideSchema = z.object({
+        storeId: z.string(),        // FK id → should be z.instance(Id)
+        orderId: z.uuid(),          // own/related id → should be z.instance(Id)
+        shipping: z.object({ amountCents: z.number(), currency: z.string() }),  // VO inlined
+      })
+    right: |
+      const OrderOverrideSchema = z.object({
+        storeId: z.instance(Id),
+        orderId: z.instance(Id),
+        shipping: z.instance(MonetaryAmount),   // nested VO referenced as instance
+      })
+
+  - id: cc-bp-18
+    scope: backend
+    name: "Embedding an entity/VO schema without .input()"
+    severity: critical
+    always_flag_when: >
+      A controller, event, or DTO schema embeds an entity schema or a value-object schema
+      (which contain `z.instance(Id)`/`z.instance(VO)`) directly instead of via `.input()`.
+      Without `.input()` the wire type carries `Id`/VO instances, which break JSON/outbox
+      serialization and produce `toJSON()` vs `z.infer<Schema>` type mismatches.
+    wrong: |
+      // event embeds the entity schema raw
+      export const GoalUpdatedEventSchema = z.domainEvent({ goal: GoalSchema })
+      // controller declares a VO field inline
+      address: z.object({ street: z.string(), city: z.string() })
+    right: |
+      // .input() serializes z.instance(Id) -> string and applies VO transforms
+      export const GoalUpdatedEventSchema = z.domainEvent({ goal: GoalSchema.input() })
+      address: AddressSchema.input()
+      // (email is the one exception - use z.email(), not EmailSchema.input())
+
+  - id: cc-bp-19
+    scope: backend
+    name: "Controller reads scoping from params/query instead of ctx"
+    severity: critical
+    always_flag_when: >
+      A controller sources caller/tenant scope (storeId, userId, actorId, ownerId, session)
+      from a URL path param, query param, or an inline better-auth lookup — when that value
+      is stamped on `request.ctx` by a middleware (AuthAccountMiddleware -> ctx.user/ctx.session;
+      RequireStoreMember -> ctx.membership.storeId). Also flags a store-scoped controller whose
+      middlewares array omits RequireStoreMember (silent membership-check gap).
+    exceptions: |
+      - Genuine resource path ids that are NOT the caller's scope (e.g. /orders/:orderId
+        where orderId identifies the target resource, not the tenant)
+    wrong: |
+      // storeId as a path param on a store-scoped read
+      readonly path = '/stores/:storeId/orders'
+      params: z.object({ storeId: z.uuid() })
+      // querying better-auth inline for the current user
+      const user = await this.betterAuth.api.getSession(...)
+    right: |
+      readonly path = '/orders'
+      // storeId stamped by RequireStoreMember; user by AuthAccountMiddleware
+      ctx: z.object({ membership: z.object({ storeId: z.string() }), user: z.object({ id: z.string() }) })
+      override middlewares = [RequireStoreMember]
+      async handle(request: this['input']) {
+        const { storeId } = request.ctx.membership
+        const userId = request.ctx.user.id
+      }
+
+  - id: cc-bp-20
+    scope: backend
+    name: "DrizzleClient leaked above the infrastructure layer"
+    severity: critical
+    mechanical: true
+    detect:
+      - 'tx\??:\s*DrizzleClient'
+      - '\)\s*as\s+DrizzleClient'
+    # Drizzle impl files legitimately redeclare tx?: DrizzleClient — the class decl skips them.
+    detect_skip:
+      - 'class\s+Drizzle\w+'
+    always_flag_when: >
+      A repository PORT interface, a Mock repository, a use case (outside the ui BFF), a query
+      service, or any domain/application-layer signature names `DrizzleClient` (typically as
+      `tx?: DrizzleClient`). Drizzle is an infrastructure concern: ports and mocks type the
+      transaction as the infra-agnostic `Transaction`; ONLY the concrete Drizzle implementation
+      names `DrizzleClient` — by REDECLARING the optional param as `tx?: DrizzleClient` and
+      narrowing with `tx ?? this.db`. No cast, anywhere — there is no `client(tx)` helper.
+    exceptions: |
+      - The concrete `Drizzle<X>Repository` implementation redeclares `tx?: DrizzleClient` in its
+        method signatures and uses `tx ?? this.db` — that is the canon, not a violation.
+      - ui BFF query use cases inject `db: DrizzleClient` directly (query skill QRY-02) — sanctioned.
+      - NOTE: an earlier convention briefly used `tx?: DrizzleClient` everywhere on ports and was
+        reversed; `tx?: Transaction` on ports is the current truth (supersedes the old guidance).
+    wrong: |
+      // PORT interface leaks Drizzle
+      interface OrderRepository {
+        findById(id: string, tx?: DrizzleClient): Promise<Order | null>
+      }
+      // Mock + use case repeating the infra type
+      class MockOrderRepository { findById(id: string, tx?: DrizzleClient) { ... } }
+      // Casting instead of redeclaring the param type
+      const db = (tx ?? this.db) as DrizzleClient
+    right: |
+      // PORT + Mock: infra-agnostic Transaction
+      interface OrderRepository {
+        findById(id: string, tx?: Transaction): Promise<Order | null>
+      }
+      // ONLY the Drizzle impl names DrizzleClient — param redeclared, no cast
+      class DrizzleOrderRepository implements OrderRepository {
+        async findById(id: string, tx?: DrizzleClient) { const db = tx ?? this.db; /* ... */ }
+      }
+
+  - id: cc-bp-21
+    scope: backend
+    name: "Ubiquitous-language naming drift (legacy coupling names)"
+    severity: critical
+    # Only the unambiguous tokens are mechanical; `provider` stays LLM-judged (better-auth
+    # legitimately has auth providers — only the sales-channel sense is banned).
+    mechanical: true
+    detect:
+      - '\w+LookupService\b'
+      - '\bexternalStatus\b'
+    always_flag_when: >
+      Code introduces a name the ubiquitous language has already settled differently:
+      `provider`/`providerId` for a sales/marketing platform (canon: `platform`),
+      `XLookupService` (canon: `XQueryService`), `externalStatus` (canon: `status` — the
+      projection IS the external view), a bare external id field not suffixed `*ExternalId`,
+      or a connection-mode value outside ConnectionMode { OAUTH, CREDENTIALS, MANUAL }.
+      One concept = one name, everywhere — mismatched spellings across modules cause
+      silent misrouting (see CLAUDE.md "naming-harmonization pass").
+    exceptions: |
+      - better-auth's own `provider` vocabulary (OAuth providers) — that's the auth domain's term.
+      - Wire/external API field names mirrored verbatim inside platform-mapper boundary code.
+
+  - id: cc-bp-22
+    scope: frontend
+    name: "Legacy Berzerk token utility (silent no-op since FU3 shadcn harmonization)"
+    severity: critical
+    mechanical: true
+    detect:
+      - '\b(?:bg|text|border|from|via|to)-(?:bg-[01]|surface-[1-3]|fg-[0-3])\b'
+      - '\b(?:bg|text|border)-accent-(?:danger|success|warning|cashback|promo)\b'
+    always_flag_when: >
+      A className references pre-harmonization Berzerk token names (bg-bg-0, bg-surface-1,
+      text-fg-2, text-accent-danger, …). global.css (expo) and tokens.css (web) define only the
+      shadcn-harmonized set — the old utilities compile to NOTHING and the style silently
+      disappears. Map: bg-0→background, bg-1→route-background, surface-1→card,
+      surface-2→popover/secondary, surface-3→muted, fg-0→foreground, fg-1→muted-foreground,
+      fg-2→foreground-subtle, fg-3→foreground-disabled, accent-danger→destructive,
+      accent-success→success, accent-warning→warning.
+    exceptions: |
+      - JS token consts from @/lib/tokens (surfaces.surface1, fg.fg2) — a different channel (RN props,
+        LinearGradient, navigator options), not className utilities; the regexes do not match them.
+    wrong: |
+      <View className="bg-surface-1/60 border-border" />
+      <Text className="text-fg-2" />
+      <Text className="text-accent-danger">{error}</Text>
+    right: |
+      <View className="bg-card/60 border-border" />
+      <Text className="text-foreground-subtle" />
+      <Text className="text-destructive">{error}</Text>
+
+  - id: cc-bp-24
+    scope: backend
+    name: "Write inside withTransaction without threading the tx (dual-write / phantom atomicity)"
+    severity: critical
+    # Also mechanically enforced by packages/api/typescript/tests/architecture/tx-discipline.test.ts (detect rung) —
+    # this entry is the review-time articulation of the same invariant.
+    mechanical: true
+    always_flag_when: >
+      Inside a `withTransaction(tx, async (t) => { ... })` callback, ANY awaited call to a
+      repository, `domainEventRepository`, `idempotencyGuard`, `commandQueue`, or a tx-aware
+      service does not receive the callback's transaction parameter. The four things that must
+      commit-or-rollback TOGETHER are: aggregate state, the idempotency claim that dedups the
+      effect, the domain/integration event that announces it, and the scheduled-command
+      enqueue/cancel. A write that silently runs on its own connection commits even when the
+      surrounding unit rolls back — a claim without its effect (redelivery skips real work), an
+      event without its state (phantom announcement), or state without its alarm.
+    exceptions: |
+      - External-I/O calls (payment provider, mail) deliberately OUTSIDE the tx — the sanctioned
+        shape is claim-before-call + call-after-commit (SubscriptionCharger / ChargeSettler's
+        collect-flag-inside-tx, fire-after pattern). Flag the OPPOSITE: provider/SMTP calls INSIDE
+        a withTransaction callback (lock held during external I/O).
+      - Pure/synchronous helpers (calculators, classifiers, clock math) — no I/O, nothing to thread.
+    wrong: |
+      await this.withTransaction(undefined, async (tx: Transaction) => {
+        const claimed = await this.idempotencyGuard.claim(scope, key, tx)
+        if (!claimed) return
+        await this.chargeRepository.save(charge)          // ← own connection: commits even on rollback
+        await this.domainEventRepository.save(event)      // ← event can outlive a rolled-back state
+      })
+    right: |
+      await this.withTransaction(undefined, async (tx: Transaction) => {
+        const claimed = await this.idempotencyGuard.claim(scope, key, tx)
+        if (!claimed) return
+        await this.chargeRepository.save(charge, tx)
+        await this.domainEventRepository.save(event, tx)
+      })
+
+  - id: cc-bp-25
+    scope: backend
+    name: "Event handler without an idempotency strategy (at-least-once delivery duplicates the effect)"
+    severity: critical
+    always_flag_when: >
+      An `EventHandler` performs a non-convergent side-effect (creates a row, sends an email,
+      publishes an integration event, moves money/state through a NON-absorbing transition) with
+      NONE of the three sanctioned idempotency forms. The outbox delivers at-least-once — every
+      handler WILL eventually run twice for the same event; a handler with no strategy duplicates
+      its effect on redelivery. The three sanctioned forms:
+      (1) an explicit `idempotencyGuard.claim(scope, key, tx)` in the SAME tx as the effect;
+      (2) delegation to a service that claims internally (e.g. ChargeSettler's INVOICE_SETTLED /
+          failCharge's INVOICE_CHARGE slot — the settle/failed webhook handlers are thin relays);
+      (3) naturally convergent writes — re-running produces the same end state (absorbing terminal
+          transitions, set-to-value updates, re-derive-and-enforce like the quota governor).
+      When relying on (2) or (3), the handler must SAY SO in a comment naming the mechanism —
+      unexplained absence of a claim is a violation even if the handler happens to be safe today.
+    exceptions: |
+      - Pure projectors/read-model maintenance whose writes are upsert/set-to-value (form 3) —
+        still requires the comment naming convergence as the strategy.
+    wrong: |
+      export class InvoicePaidHandler extends EventHandler<typeof InvoicePaidEvent> {
+        async handle(event: this['input']): Promise<void> {
+          await this.withTransaction(undefined, async (tx) => {
+            // no claim, no delegation, and sendMail is not convergent:
+            await this.mailSender.sendMail(owner.email, new PaidEmail(...))   // duplicated on redelivery
+          })
+        }
+      }
+    right: |
+      export class InvoicePaidHandler extends EventHandler<typeof InvoicePaidEvent> {
+        async handle(event: this['input']): Promise<void> {
+          await this.withTransaction(undefined, async (tx) => {
+            // Outbox delivers at-least-once — claim on the event id gates the effect exactly once.
+            if (!(await this.idempotencyGuard.claim(IdempotencyScope.INVOICE_EVENT, event.id, tx))) return
+            await this.mailSender.sendMail(owner.email, new PaidEmail(...))
+          })
+        }
+      }
+      // OR (form 2): a thin relay whose service claims internally —
+      //   "Idempotency lives in ChargeSettler.settleCharge (INVOICE_SETTLED claim)."
+      // OR (form 3): convergent re-derivation —
+      //   "Naturally idempotent: re-enforcing limits re-derives the same lock set."
+
+# Implementation order — follow top-to-bottom when building a feature
+backend_sequence: [controller, schema, sdk, entity, value-object, enum, errors, db-schema, repository-interface, repository-impl, service-interface, service-impl, usecase, handler, query, sdk]
+frontend_sequence: [route, section, component, form, store]

@@ -1,0 +1,1 @@
+{"ts":"2026-06-11T01:55:42.917Z","task":"synthetic-be-projection-digest","mode":"agent","pass":false,"failedGraders":["projection#PRJ-02","projection#PRJ-03","projector#PRJTR-09","projector#PRJTR-13","test#unit-overloads","detect:slice-closure"],"docTreeHash":"01c433f326ae","model":"sonnet"}

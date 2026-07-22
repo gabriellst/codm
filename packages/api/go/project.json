@@ -1,0 +1,35 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "api-go",
+	"sourceRoot": "packages/api/go",
+	"projectType": "application",
+	"targets": {
+		"dev": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": { "command": "go run ./cmd/api", "cwd": "packages/api/go" }
+		},
+		"build": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": { "command": "go build ./...", "cwd": "packages/api/go" }
+		},
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": { "command": "go vet ./...", "cwd": "packages/api/go" }
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["{projectRoot}/**/*.go", "{projectRoot}/go.mod", "{projectRoot}/go.sum", "sharedGlobals"],
+			"options": { "command": "go test ./...", "cwd": "packages/api/go" }
+		},
+		"emit-openapi": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"outputs": ["{workspaceRoot}/packages/api/go/public/openapi.json"],
+			"options": { "command": "go run ./cmd/emit-openapi", "cwd": "packages/api/go" }
+		}
+	}
+}

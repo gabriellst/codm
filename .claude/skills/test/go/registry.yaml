@@ -1,0 +1,218 @@
+registry:
+  type: backend
+  layer: testing
+  depends_on: [entity, value-object, usecase, handler, repository]
+  depended_by: []
+  context_reads: [entity, usecase, handler, repository, event]
+  lang: go
+
+  snippet:
+    skeleton: |
+      package {{snake}}_test
+
+      import (
+      	"testing"
+
+      	// "template/api-go/internal/{{ctx}}/entities"
+      	// "template/api-go/internal/{{ctx}}/usecases"
+      	// "{{snake}}" "template/api-go/internal/{{ctx}}/repositories/{{snake}}"
+      )
+
+      func Test{{Pascal}}(t *testing.T) {
+      	// Arrange
+      	// mock := {{snake}}.NewMock{{Pascal}}Repository()
+
+      	// Act
+      	// result, err := ...
+
+      	// Assert
+      	// if err != nil { t.Fatalf("unexpected error: %v", err) }
+      	// if result == nil { t.Fatal("expected result, got nil") }
+      	t.Skip("TODO: implement test")
+      }
+
+      // Table-driven test template:
+      //
+      // func Test{{Pascal}}Behavior(t *testing.T) {
+      // 	tests := []struct {
+      // 		name    string
+      // 		input   string
+      // 		wantErr bool
+      // 	}{
+      // 		{name: "valid input", input: "valid", wantErr: false},
+      // 		{name: "empty input", input: "",      wantErr: true},
+      // 	}
+      // 	for _, tc := range tests {
+      // 		t.Run(tc.name, func(t *testing.T) {
+      // 			_, err := doSomething(tc.input)
+      // 			if (err != nil) != tc.wantErr {
+      // 				t.Errorf("wantErr=%v, got err=%v", tc.wantErr, err)
+      // 			}
+      // 		})
+      // 	}
+      // }
+
+  patterns:
+    - id: TEST-GO-01
+      when: always
+      rule: >
+        Test files are colocated with the artifact under test as <name>_test.go.
+        No separate tests/ directory for unit or component tests.
+      wrong: |
+        packages/api/go/
+        └── tests/
+            └── entity_test.go        // wrong: isolated test directory
+      right: |
+        internal/transcoding/entities/
+        ├── transcoding_job.go
+        └── transcoding_job_test.go   // colocated
+
+    - id: TEST-GO-02
+      when: always
+      rule: >
+        Use package <name>_test (external test package) for black-box tests.
+        Use package <name> (internal) only when testing unexported internals.
+        Entities, projections, and use cases default to external test packages.
+      right: |
+        package entities_test   // external test package
+
+        import "template/api-go/internal/transcoding/entities"
+
+    - id: TEST-GO-03
+      when: always
+      rule: >
+        Use stdlib testing for entity and projection tests (no external deps).
+        Add testify/require and testify/assert only when it meaningfully reduces
+        boilerplate (e.g. JSON equality, require.NotNil before dereference).
+      right: |
+        // Stdlib only — for entity state machine tests
+        if err == nil {
+            t.Fatal("expected error for empty videoID")
+        }
+
+        // Testify — for projection ApplyX tests with rich assertions
+        require.NotNil(t, m.DeliveredAt)
+        assert.Equal(t, at, *m.DeliveredAt)
+
+    - id: TEST-GO-04
+      when: testing projectors
+      rule: >
+        Projector tests inject a mock repository. The mock is defined in the test
+        file (if small and not reused) or in mock_<name>_repository.go (if reused
+        across test files). Always add a compile-time interface assertion.
+      right: |
+        var _ messagerepo.MessageProjectionRepository = (*mockMessageProjectionRepo)(nil)
+
+        func newMockMessageRepo() *mockMessageProjectionRepo {
+            return &mockMessageProjectionRepo{
+                rowsByPlatformID: make(map[string]*projections.Message),
+                rowsByID:         make(map[string]*projections.Message),
+            }
+        }
+
+    - id: TEST-GO-05
+      when: testing projectors
+      rule: >
+        Assert on the mock's state fields after Handle() — not on return values.
+        Check repo.insertIfNewCalls, repo.saveCalls, repo.rowsByPlatformID, etc.
+      right: |
+        if repo.insertIfNewCalls != 1 {
+            t.Fatalf("expected 1 InsertIfNew call, got %d", repo.insertIfNewCalls)
+        }
+        saved, _ := repo.FindByPlatformID(ctx, channelID.String(), "msg-001")
+        if saved == nil {
+            t.Fatal("expected row to be inserted")
+        }
+
+    - id: TEST-GO-06
+      when: testing entity state machines
+      rule: >
+        Use table-driven tests for state machine coverage where multiple invalid
+        transitions share the same assertion shape.
+      right: |
+        cases := []struct{
+            name    string
+            setup   func(*entities.TranscodingJob)
+            wantErr bool
+        }{
+            {"from pending", func(j *entities.TranscodingJob) {}, true},
+            {"from completed", func(j *entities.TranscodingJob) {
+                _ = j.MarkRunning(); _ = j.MarkCompleted("url")
+            }, true},
+        }
+        for _, tc := range cases {
+            t.Run(tc.name, func(t *testing.T) { ... })
+        }
+
+    - id: TEST-GO-07
+      when: testing handlers
+      rule: >
+        For handlers whose logic fully delegates to a use case covered elsewhere,
+        test only EventName() to verify the subscription contract.
+      right: |
+        func TestEnqueueTranscodingJobHandler_EventName(t *testing.T) {
+            h := handlers.NewEnqueueTranscodingJobHandler(nil)
+            if h.EventName() != "integration.video.uploaded" {
+                t.Errorf("unexpected event name: %s", h.EventName())
+            }
+        }
+
+  bad_practices:
+    - id: TEST-GO-BP-01
+      severity: high
+      description: Test file in a separate tests/ directory instead of colocated
+      mechanical: false
+      wrong: |
+        packages/api/go/tests/transcoding/entity_test.go
+      right: |
+        packages/api/go/internal/transcoding/entities/transcoding_job_test.go
+
+    - id: TEST-GO-BP-02
+      severity: high
+      description: Mock repository defined inline in a projector source file instead of a test or mock file
+      mechanical: false
+      wrong: |
+        // In message_projector.go — source file contains mock
+        type mockRepo struct{ ... }
+      right: |
+        // In message_projector_test.go or mock_message_projection_repository.go
+        type mockMessageProjectionRepo struct{ ... }
+
+    - id: TEST-GO-BP-03
+      severity: high
+      description: Missing compile-time interface assertion on mock types
+      mechanical: false
+      wrong: |
+        type mockMessageRepo struct{ ... }
+        // No interface assertion — drift is silent
+      right: |
+        var _ messagerepo.MessageProjectionRepository = (*mockMessageRepo)(nil)
+
+    - id: TEST-GO-BP-04
+      severity: medium
+      description: Using t.Fatal after a non-fatal assertion (masks subsequent failures)
+      mechanical: true
+      detect:
+        - 'assert\.\w+\([^\n]*\)\s*\n\s*t\.Fatal'
+      wrong: |
+        assert.Equal(t, at, *m.DeliveredAt)
+        t.Fatal("stop")   // wrong: Fatal after assert, not require
+      right: |
+        require.NotNil(t, m.DeliveredAt)   // Fatal-equivalent — stops the test
+        assert.Equal(t, at, *m.DeliveredAt)  // Soft assertion — continues
+
+    - id: TEST-GO-BP-05
+      severity: medium
+      description: Projector test calling use cases or the real DB instead of using a mock repo
+      mechanical: true
+      detect:
+        - 'NewPg\w*Repository\('
+        - 'openTestDB\('
+      wrong: |
+        // projector test starts a real Postgres connection
+        db := openTestDB(t)
+        repo := projections.NewPgMessageProjectionRepository(db)
+        p := NewMessageReceivedProjector(repo)
+      right: |
+        repo := newMockMessageRepo()   // in-memory mock
+        p := NewMessageReceivedProjector(repo)

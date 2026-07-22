@@ -1,0 +1,274 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [event, service]
+  depended_by: []
+  context_reads: [event]
+  lang: go
+  examples:
+    - examples/citizens/go/handler/message_received_handler.go
+    - examples/citizens/go/handler/channel_connected_handler.go
+    - examples/citizens/go/handler/remote_created_integration_handler.go
+
+  snippet:
+    skeleton: |
+      // Package handlers contains event handlers for the {{ctx}} bounded context.
+      package handlers
+
+      import (
+      	"context"
+      	"log/slog"
+
+      	ctxevents "template/api-go/internal/{{ctx}}/events"
+      	"template/core-go/services/mediator"
+      	"template/core-go/types"
+      )
+
+      // {{Pascal}}Handler reacts to {{snake}} domain events.
+      type {{Pascal}}Handler struct{}
+
+      // New{{Pascal}}Handler constructs the handler.
+      func New{{Pascal}}Handler() *{{Pascal}}Handler {
+      	return &{{Pascal}}Handler{}
+      }
+
+      // Compile-time interface check.
+      var _ mediator.DomainEventHandler = (*{{Pascal}}Handler)(nil)
+
+      func (h *{{Pascal}}Handler) EventName() string {
+      	return ctxevents.{{Pascal}}EventName
+      }
+
+      func (h *{{Pascal}}Handler) Handle(ctx context.Context, event types.DomainEventI) error {
+      	typed, err := types.UnmarshalDomainEvent[ctxevents.{{Pascal}}Payload](event)
+      	if err != nil {
+      		return err
+      	}
+
+      	slog.InfoContext(ctx, "{{ctx}}: handling {{snake}} event",
+      		"entityId", typed.EntityID,
+      	)
+      	_ = typed
+
+      	// TODO: implement side effects
+      	// - Publish integration event via externalMediator.Publish(ctx, integrationEvent)
+      	// - Call a use case: _, err = h.useCase.Execute(ctx, input)
+
+      	return nil
+      }
+
+    skeletons:
+      external: |
+        // Package handlers contains event handlers for the {{ctx}} bounded context.
+        package handlers
+
+        import (
+        	"context"
+        	"log/slog"
+
+        	// "template/contracts-go/wire"
+        	fwtypes "template/core-go/types"
+        )
+
+        const {{Pascal}}EventName = "integration.TODO.{{dotSnake}}"
+
+        // {{Pascal}}IntegrationHandler subscribes to the {{snake}} integration event.
+        type {{Pascal}}IntegrationHandler struct {
+        	// useCase *usecases.SomeHandler
+        }
+
+        // New{{Pascal}}IntegrationHandler constructs the handler.
+        func New{{Pascal}}IntegrationHandler(
+        // useCase *usecases.SomeHandler,
+        ) *{{Pascal}}IntegrationHandler {
+        	return &{{Pascal}}IntegrationHandler{
+        		// useCase: useCase,
+        	}
+        }
+
+        func (h *{{Pascal}}IntegrationHandler) EventName() string {
+        	return {{Pascal}}EventName
+        }
+
+        func (h *{{Pascal}}IntegrationHandler) Handle(ctx context.Context, event fwtypes.IntegrationEventI) error {
+        	// Replace wire.SomeEvent with the correct wire type from contracts-go/wire.
+        	// typed, err := fwtypes.UnmarshalIntegrationEvent[wire.SomeEvent](event)
+        	// if err != nil {
+        	// 	return err
+        	// }
+        	// p := typed.Payload
+
+        	slog.InfoContext(ctx, "{{ctx}}: received {{snake}} integration event",
+        		"eventName", event.GetName(),
+        	)
+
+        	// _, err = h.useCase.Execute(ctx, usecases.SomeInput{...})
+        	// return err
+
+        	return nil
+        }
+
+  patterns:
+    - id: HDL-GO-01
+      name: "EventName() returns the event const from the events package"
+      when: always
+      rule: |
+        func (h *TranscodingJobCompletedHandler) EventName() string {
+            return ctxevents.TranscodingJobCompletedEventName
+        }
+
+    - id: HDL-GO-02
+      name: "Compile-time interface check"
+      when: always
+      rule: |
+        // Domain event handler
+        var _ mediator.DomainEventHandler = (*TranscodingJobCompletedHandler)(nil)
+        // Integration event handler
+        var _ mediator.IntegrationEventHandler = (*EnqueueTranscodingJobHandler)(nil)
+
+    - id: HDL-GO-03
+      name: "UnmarshalDomainEvent / UnmarshalIntegrationEvent at top of Handle"
+      when: always
+      rule: |
+        func (h *MyHandler) Handle(ctx context.Context, event types.DomainEventI) error {
+            typed, err := types.UnmarshalDomainEvent[events.MyPayload](event)
+            if err != nil {
+                return err
+            }
+            // use typed.Payload
+        }
+
+    - id: HDL-GO-04
+      name: "Handler registered in module.go via fx.Invoke"
+      when: always
+      rule: |
+        fx.Invoke(func(ext mediator.ExternalMediator, internal mediator.InternalMediator,
+            enqueue *handlers.EnqueueTranscodingJobHandler,
+            completed *handlers.TranscodingJobCompletedHandler,
+        ) {
+            ext.Register(enqueue)        // integration (external) event
+            internal.Register(completed) // domain (internal) event
+        }),
+
+    - id: HDL-GO-05
+      name: "External mediator injected via constructor (not global)"
+      when: "handler publishes integration events"
+      rule: |
+        type MessageReceivedHandler struct {
+            externalMediator mediator.ExternalMediator
+        }
+        func NewMessageReceivedHandler(ext mediator.ExternalMediator) *MessageReceivedHandler {
+            return &MessageReceivedHandler{externalMediator: ext}
+        }
+
+    - id: HDL-GO-06
+      name: "Idempotency guard before state-changing operations"
+      when: "handler creates or updates persistent state"
+      rule: |
+        existing, err := h.repo.Find(ctx, e.Payload.EntityID.String())
+        if err != nil {
+            return err
+        }
+        if existing != nil {
+            return nil // already processed — idempotent skip
+        }
+
+    - id: HDL-GO-07
+      name: "Non-critical handlers swallow errors with structured log"
+      when: "handler performs notifications, logging, or best-effort side effects"
+      rule: |
+        if err := h.notify(ctx, event); err != nil {
+            slog.ErrorContext(ctx, "notification failed", "error", err)
+            // intentionally return nil
+        }
+        return nil
+
+  bad_practices:
+    - id: bp-GO-HDL-01
+      name: "EventName returns a string literal instead of the const"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'return\s+"[\w]+\.[\w.]+"'
+      wrong: |
+        func (h *MyHandler) EventName() string {
+            return "transcoding.transcoding_job.completed" // literal — typo risk
+        }
+      right: |
+        func (h *MyHandler) EventName() string {
+            return ctxevents.TranscodingJobCompletedEventName
+        }
+
+    - id: bp-GO-HDL-02
+      name: "Handle does not call UnmarshalDomainEvent — accesses raw interface"
+      severity: critical
+      mechanical: false
+      wrong: |
+        func (h *MyHandler) Handle(ctx context.Context, event types.DomainEventI) error {
+            name := event.GetEventName() // only accesses non-generic interface fields
+            // no type-safe access to payload
+        }
+      right: |
+        typed, err := types.UnmarshalDomainEvent[events.MyPayload](event)
+        if err != nil {
+            return err
+        }
+        _ = typed.Payload.SomeField
+
+    - id: bp-GO-HDL-03
+      name: "Handler not registered in module.go"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Handler constructed but never registered — events are never delivered
+        fx.Provide(handlers.NewMyHandler),
+        // missing: fx.Invoke(registerHandlers)
+      right: |
+        fx.Provide(handlers.NewMyHandler),
+        fx.Invoke(func(internal mediator.InternalMediator, h *handlers.MyHandler) {
+            internal.Register(h)
+        }),
+
+    - id: bp-GO-HDL-04
+      name: "Integration event handler registered with InternalMediator"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // integration.video.uploaded must come from ExternalMediator
+        internal.Register(enqueue) // wrong mediator
+      right: |
+        ext.Register(enqueue) // ExternalMediator for integration events from outside
+
+    - id: bp-GO-HDL-05
+      name: "Use case invokes mediator directly instead of going through outbox"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'internalMediator\.Publish\('
+      wrong: |
+        // In a use case Execute():
+        h.internalMediator.Publish(ctx, someEvent)
+      right: |
+        // Entity appends via AppendDomainEvent; repo.Save calls domainEventRepo.SaveAll
+        // OutboxDispatcher dispatches → InternalMediator.Dispatch → handler.Handle
+
+    - id: bp-GO-HDL-06
+      name: "Handler not idempotent — creates duplicates on retry"
+      severity: critical
+      mechanical: false
+      wrong: |
+        func (h *CreateProfileHandler) Handle(ctx context.Context, event types.IntegrationEventI) error {
+            // No existence check — inserts duplicate on re-delivery
+            profile := entities.NewProfile(e.Payload.UserID)
+            return h.repo.Save(ctx, profile)
+        }
+      right: |
+        existing, err := h.repo.Find(ctx, e.Payload.UserID)
+        if err != nil {
+            return err
+        }
+        if existing != nil {
+            return nil // idempotent skip
+        }
+        profile := entities.NewProfile(e.Payload.UserID)
+        return h.repo.Save(ctx, profile)

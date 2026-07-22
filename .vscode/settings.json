@@ -1,0 +1,47 @@
+{
+	"editor.formatOnSave": true,
+	"[css][graphql][javascript][javascriptreact][json][jsonc][typescript][typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome",
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.organizeImports.biome": "explicit",
+			"source.fixAll.biome": "explicit"
+		}
+	},
+	"[javascript][javascriptreact][typescript][typescriptreact]": {
+		"editor.codeActionsOnSave": {
+			"source.fixAll.eslint": "never"
+		}
+	},
+	"[prisma]": {
+		"editor.defaultFormatter": "Prisma.prisma",
+		"editor.formatOnSave": true
+	},
+	"[toml]": {
+		"editor.defaultFormatter": "tamasfe.even-better-toml",
+		"editor.formatOnSave": true
+	},
+	"biome.enabled": true,
+	"biome.lsp.watcher.kind": "none",
+	"files.watcherExclude": {
+		"**/.astro/**": true,
+		"**/.claude/**": true,
+		"**/.expo/**": true,
+		"**/.git/**": true,
+		"**/.nx/**": true,
+		"**/.output/**": true,
+		"**/dist/**": true,
+		"**/packages/client/src/**": true,
+		"**/packages/client/dist/**": true,
+		"**/packages/client/packages/**": true,
+		"**/packages/client/**/.kubb/**": true,
+		"**/node_modules/**": true,
+		"**/target/**": true
+	},
+	"explorer.sortOrderLexicographicOptions": "upper",
+	"files.insertFinalNewline": true,
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+	"typescript.preferences.preferTypeOnlyAutoImports": false,
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"js/ts.tsdk.path": "node_modules/typescript/lib"
+}

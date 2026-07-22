@@ -1,0 +1,29 @@
+import { injectable } from 'tsyringe-neo'
+import { Handler, z } from '@template/core-typescript'
+import type { Transaction } from '@template/core-typescript'
+
+export const CreateOrderInputSchema = z.object({
+	// Define input schema
+})
+
+export const CreateOrderOutputSchema = z.object({
+	// Define output schema
+})
+
+@injectable()
+export class CreateOrder extends Handler<typeof CreateOrderInputSchema, typeof CreateOrderOutputSchema> {
+	readonly name = 'create_order' as const
+	readonly inputSchema = CreateOrderInputSchema
+	readonly outputSchema = CreateOrderOutputSchema
+
+	// constructor(private repo: SomeRepository) {
+	// 	super()
+	// }
+
+	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		return this.withTransaction(tx, async (tx) => {
+			// Implement business logic
+			return {} as this['output']
+		})
+	}
+}

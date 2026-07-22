@@ -1,0 +1,110 @@
+id: replay-product-cost-values-timeline
+tier: train
+builder: sonnet
+title: ProductCostOption keys-structural (currency,country) values Timeline +
+  Country enum
+sourceSpec: .specs/2026-06-03-product-cost-values-timeline-design.md
+goldRef: 95091935586475464c7f67e1935088718cb13eb7
+baseRef: 53902e7f77eb765c0c6882308d96c53a37facbb2
+prompt: >-
+  In packages/api/typescript (catalog bounded context), restructure
+  `ProductCostOption` from a whole-record time window to the keys-structural
+  shape already used by the Fees/Taxes aggregates. Today
+  `catalog/objects/ProductCostOption.ts` wraps the ENTIRE record — including the
+  identity fields `currency`/`country` — in `z.historical`, `country` is an
+  untyped `z.string().length(2)`, and updates blindly re-append options so the
+  same (currency, country) accumulates duplicate/overlapping slices. The shared
+  `z.historical` window combinator and the `Timeline<T>` interval-paint value
+  object (shared/objects) are already shipped, as is the `Country` wire enum
+  (`@template/contracts-typescript/wire/enums`).
+
+
+  Requirements:
+
+  1. `ProductCostOptionValue = z.historical({ items:
+  z.array(z.instance(ProductCostOptionItem)).min(1) })`; `ProductCostOption =
+  z.object({ id: z.instance(Id), currency: z.enum(CurrencyCode), country:
+  z.enum(Country).optional(), values: z.array(ProductCostOptionValue).min(1)
+  })`. Identity is structural — `z.historical` must NOT wrap currency/country;
+  `country` is the Country enum, not a string. `ProductCostOptionItem`
+  unchanged.
+
+  2. `ProductCost.create`/`update` GROUP submitted input options by (currency,
+  country) and PAINT each `{ items, startDate, endDate }` value onto that key's
+  `values` timeline via `Timeline.place` — submitting two values for the same
+  (currency, country) yields ONE option with a 2-entry timeline (earlier
+  trimmed), never two options. At most one option per (currency, country);
+  per-option values sorted and non-overlapping (Timeline-enforced).
+
+  3. Wire input: `ProductCostOptionInputSchema = { currency:
+  z.enum(CurrencyCode), country?: z.enum(Country), startDate: z.iso.date(),
+  endDate?, items }`; Create/Update controllers reflect the Country enum;
+  regenerate the SDK (`bun sdk`).
+
+  4. `DrizzleProductCostQueryService.findApplicable({ at })` selects, per
+  option, the `values` entry whose window contains `at` (open/current entry when
+  omitted) and emits the UNCHANGED `ApplicableProductCost` output shape — sales
+  (`ProductCostSolver`, `ProductCostApplicationHandler`) must need no changes.
+  Cover active-value selection across two windows with a test.
+
+  5. CSV import processors still parse per-row build inputs `{ currency,
+  country?, startDate, endDate?, items }` (country parsed to the Country enum);
+  the CSV bulk-import use case supersedes via the timeline grouping/painting on
+  update — re-importing the same (currency, country) with a later startDate
+  trims the prior value instead of duplicating the option.
+
+  6. NO DB migration: `catalog.product_costs.options` stays a jsonb column whose
+  contents reshape; only update the table doc-comment in
+  packages/contracts/db/schema/catalog.ts. No backfill (no seed/production
+  data).
+
+  7. Add a `givenProductCost(testBed, overrides?)` helper in
+  `tests/support/given/` (repo-direct, new values-timeline shape), re-exported
+  from `@test/support`.
+
+  8. Existing catalog tests (CreateProductCost, UpdateProductCost, CSV import,
+  query service, list/history reads) adjusted to the new shape and green; `bun
+  tsc` clean.
+axes:
+  - VO-REPR
+  - ENUM-REPR
+  - SCHEMA-DERIVE
+  - CQRS-SIDE
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: grep-must
+    spec: packages/api/typescript/src/catalog/objects/ProductCostOption.ts::z\.enum\(Country\)
+    id: enum#z-enum-closed-set
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/catalog/objects/ProductCostOption.ts::countr\
+      y: z\\.string"
+    id: timeline#ac-1
+  - kind: grep-must
+    spec: packages/api/typescript/src/catalog/objects/ProductCostOption.ts::z\.historical\(
+    id: timeline#ac-1
+  - kind: grep-must
+    spec: packages/api/typescript/src/catalog/entities/ProductCost.ts::Timeline
+    id: timeline#ac-2
+  - kind: grep-must
+    spec: packages/api/typescript/src/catalog/services/ProductCostQueryService/DrizzleProductCostQueryService.ts::activeAt
+    id: timeline#ac-4
+  - kind: file-exists
+    spec: packages/api/typescript/tests/support/given/**/givenProductCost.ts
+    id: timeline#ac-8
+  - kind: test-green
+    spec: packages/api/typescript/src/catalog/services/ProductCostQueryService/DrizzleProductCostQueryService.test.ts
+    id: timeline#ac-4
+notes: "Backend-leaning but the cleanest replay of the batch: Task-gated
+  implementing chain e536ce622 (T1 object/entity/given) -> 463e2fb31 (T2
+  findApplicable activeAt + test) -> 402bc8d6a (T3 CSV supersede + Country) ->
+  950919355 (T4 SDK regen) = goldRef; baseRef = T1's parent 53902e7f7. Base
+  verified: old shape exactly as the spec describes (z.historical wrapping
+  identity, country z.string().length(2)), Timeline + z.historical + Country
+  wire enum all present. Gold verified: keys-structural ProductCostOption with
+  z.enum(Country) + values timeline, entity groups/paints via Timeline.place,
+  query service Timeline(entries).activeAt/current with unchanged
+  ApplicableProductCost, givenProductCost helper at
+  tests/support/given/catalog/. Note the bulk-import use case in-tree is named
+  ImportProductCostsFromCsv (spec calls it BulkImportProductCostsFromCsv) —
+  prompt avoids the name; no grader binds to it."

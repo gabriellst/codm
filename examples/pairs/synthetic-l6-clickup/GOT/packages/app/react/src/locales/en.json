@@ -1,0 +1,1653 @@
+{
+	"account": {
+		"header": {
+			"title": "My Account"
+		},
+		"preferences": {
+			"currency": "Currency (read-only)",
+			"emailNotifications": "Email notifications",
+			"emailNotificationsDescription": "Receive updates and summaries via email",
+			"language": "Language",
+			"languagePlaceholder": "Select a language",
+			"loadError": "Failed to load preferences",
+			"save": "Save preferences",
+			"saveError": "Failed to save preferences",
+			"saveSuccess": "Preferences updated successfully",
+			"sectionDescription": "Configure language, timezone and notifications",
+			"sectionTitle": "Preferences",
+			"timezone": "Timezone"
+		},
+		"profile": {
+			"avatar": {
+				"remove": "Remove photo",
+				"upload": "Upload photo",
+				"uploadAriaLabel": "Choose profile image",
+				"uploadStub": "Avatar upload not yet available"
+			},
+			"company": "Company",
+			"email": "Email",
+			"loadError": "Failed to load profile data",
+			"name": "Name",
+			"phone": "Phone",
+			"save": "Save changes",
+			"saveError": "Failed to save profile",
+			"saveSuccess": "Profile updated successfully",
+			"sectionDescription": "Update your personal information",
+			"sectionTitle": "Profile"
+		},
+		"security": {
+			"changePassword": {
+				"button": "Change password",
+				"cancel": "Cancel",
+				"confirmPassword": "Confirm new password",
+				"currentPassword": "Current password",
+				"description": "Update your login password",
+				"dialogDescription": "Enter your current password and choose a new one",
+				"dialogTitle": "Change password",
+				"label": "Change password",
+				"newPassword": "New password",
+				"stub": "Password change not yet available (SDK pending)",
+				"submit": "Change password"
+			},
+			"deleteAccount": {
+				"button": "Delete account",
+				"confirmAction": "Delete",
+				"confirmCancel": "Cancel",
+				"confirmDescription": "Are you sure you want to delete your account? This action cannot be undone.",
+				"confirmTitle": "Delete account",
+				"description": "This action is irreversible and will delete all your data",
+				"label": "Delete account",
+				"stub": "Account deletion not yet available (SDK pending)"
+			},
+			"lastPasswordChange": "Last password change on {{date}}",
+			"loadError": "Failed to load security settings",
+			"sectionDescription": "Manage your password and account access",
+			"sectionTitle": "Security",
+			"twoFactor": {
+				"disabled": "Two-factor authentication disabled",
+				"enabled": "Two-factor authentication enabled"
+			}
+		}
+	},
+	"auth": {
+		"resetPassword": {
+			"backToSignIn": "Back to sign in",
+			"breadcrumb": "Reset password",
+			"confirmNewPassword": "Confirm password",
+			"confirmPassword": "Confirm password",
+			"confirmPasswordPlaceholder": "Re-enter the password",
+			"email": "Email",
+			"emailPlaceholder": "you@example.com",
+			"fillFieldsTooltip": "Fill in all fields",
+			"newPassword": "New password",
+			"newPasswordPlaceholder": "At least 8 characters",
+			"passwordsDontMatch": "Passwords don't match",
+			"rememberPassword": "Remembered your password?",
+			"requestSubmit": "Send email",
+			"requestSubtitle": "We'll send you an email with instructions",
+			"requestSuccess": "Email sent",
+			"requestSuccessDescription": "Check your inbox",
+			"requestTitle": "Reset password",
+			"resetSubmit": "Save new password",
+			"resetSubtitle": "Choose a new, secure password",
+			"resetSuccess": "Password updated",
+			"resetSuccessDescription": "You can now sign in with the new password",
+			"resetTitle": "Set a new password"
+		},
+		"signIn": {
+			"breadcrumb": "Sign in",
+			"callbackLoginSubtitle": "You'll be redirected after signing in",
+			"callbackLoginTitle": "Sign in to continue",
+			"email": "Email",
+			"emailPlaceholder": "you@example.com",
+			"forgot": "Forgot your password?",
+			"forgotPassword": "Forgot password?",
+			"loginSuccess": "Signed in",
+			"noAccount": "Don't have an account?",
+			"password": "Password",
+			"passwordPlaceholder": "Your password",
+			"signUp": "Sign up",
+			"signUpLink": "Sign up",
+			"submit": "Sign in",
+			"subtitle": "Sign in to continue",
+			"title": "Welcome back"
+		},
+		"signUp": {
+			"and": "and",
+			"breadcrumb": "Sign up",
+			"callbackSubtitle": "You'll be redirected after signing up",
+			"callbackTitle": "Create an account to continue",
+			"confirmPassword": "Confirm password",
+			"confirmPasswordPlaceholder": "Re-enter your password",
+			"email": "Email",
+			"fillFieldsTooltip": "Fill in all fields",
+			"hasAccount": "Already have an account?",
+			"name": "Name",
+			"namePlaceholder": "Your full name",
+			"password": "Password",
+			"passwordPlaceholder": "At least 8 characters",
+			"passwordsMismatch": "Passwords don't match",
+			"phone": "Phone",
+			"privacyLink": "Privacy Policy",
+			"registerSuccess": "Account created",
+			"signIn": "Sign in",
+			"signInLink": "Sign in",
+			"submit": "Create account",
+			"subtitle": "Fill in a few details to get started",
+			"terms": "By continuing you accept the",
+			"termsLink": "Terms of Use",
+			"termsRequired": "You must accept the terms",
+			"title": "Create your account"
+		}
+	},
+	"calculator": {
+		"breakevenTable": {
+			"colMarkup": "Markup",
+			"colMaxCpa": "Max CPA",
+			"colRoas": "Breakeven ROAS",
+			"title": "Ads Breakeven Analysis"
+		},
+		"header": {
+			"subtitle": "Calculate the ideal price for your products and maximize your profits",
+			"title": "Pricing Calculator"
+		},
+		"inputs": {
+			"checkout": "Checkout (R$)",
+			"fixedCostsLabel": "Fixed costs",
+			"gateway": "Gateway (R$)",
+			"iof": "IOF (R$)",
+			"marketingCost": "Marketing cost (R$)",
+			"productCost": "Product cost (R$)",
+			"shipping": "Shipping (R$)",
+			"taxes": "Taxes (R$)",
+			"title": "Costs and Inputs"
+		},
+		"profitTable": {
+			"colMargin": "Margin",
+			"colMarkup": "Markup",
+			"colProfit": "Profit",
+			"colSalePrice": "Sale price",
+			"title": "Profit Estimate by Markup"
+		}
+	},
+	"calendar": {
+		"presets": {
+			"lastMonth": "Last month",
+			"lastWeek": "Last week",
+			"thisMonth": "This month",
+			"thisWeek": "This week",
+			"thisYear": "This year",
+			"today": "Today",
+			"yesterday": "Yesterday"
+		}
+	},
+	"common": {
+		"back": "Back",
+		"cancel": "Cancel",
+		"close": "Close",
+		"confirm": "Confirm",
+		"dataError": {
+			"description": "Please try again in a moment.",
+			"title": "Could not load data"
+		},
+		"delete": "Delete",
+		"edit": "Edit",
+		"errorTitle": "Something went wrong",
+		"help": "Help",
+		"loading": "Loading...",
+		"logout": "Log out",
+		"next": "Next",
+		"privacy": "Privacy",
+		"retry": "Retry",
+		"routeError": {
+			"description": "An error occurred while loading this page.",
+			"title": "Something went wrong"
+		},
+		"save": "Save",
+		"saving": "Saving",
+		"signOut": "Sign out",
+		"success": "Success",
+		"terms": "Terms"
+	},
+	"dashboard": {
+		"additionalCosts": {
+			"addOperationalAriaLabel": "Add operational cost",
+			"addWarrantyAriaLabel": "Add warranty",
+			"discountToggle": "Discount Additional Costs",
+			"listAria": "Additional costs",
+			"loadError": "Couldn't load costs.",
+			"rows": {
+				"chargeback": "Chargeback",
+				"draftOrders": "Draft Orders",
+				"operational": "Operational",
+				"refund": "Refund",
+				"taxes": "Taxes",
+				"warranty": "Warranty"
+			},
+			"title": "Additional Costs",
+			"tooltip": {
+				"ads": "Ads",
+				"count": "Count",
+				"fees": "Fees",
+				"lost": "Lost",
+				"noCosts": "No costs",
+				"open": "Open",
+				"operationalTitle": "Operational Costs",
+				"others": "Others",
+				"total": "Total",
+				"won": "Won"
+			}
+		},
+		"ads": {
+			"addAriaLabel": "Add ad cost",
+			"addAuto": "Automatic Cost",
+			"addManual": "Manual Cost",
+			"breakdownAriaLabel": "Breakdown Aria Label",
+			"cpa": "CPA",
+			"loadError": "Failed to load data.",
+			"roas": "ROAS",
+			"roasAriaLabel": "Roas Aria Label",
+			"roasHint": "Return on ad spend.",
+			"roi": "ROI",
+			"roiAriaLabel": "Roi Aria Label",
+			"roiHint": "Return on investment.",
+			"switchUnitAriaLabel": "Switch display unit",
+			"title": "Ads",
+			"tooltip": {
+				"platform": {
+					"GOOGLE_ADS": "Google",
+					"META": "Meta",
+					"TABOOLA": "Taboola",
+					"TIKTOK": "TikTok"
+				},
+				"platformTitle": "By Platform",
+				"tax": "Tax",
+				"type": {
+					"AUTO": "Auto",
+					"MANUAL": "Manual"
+				},
+				"typeTitle": "By Type"
+			}
+		},
+		"alerts": {
+			"dismissAriaLabel": "Dismiss alert",
+			"reconnectProfile": "Reconnect profile: {{name}}",
+			"resolve": "Resolve",
+			"syncError": "Sync error: {{name}}"
+		},
+		"appDownload": {
+			"android": "Google Play",
+			"androidAriaLabel": "Download on Google Play",
+			"description": "Scan the QR code to download",
+			"ios": "App Store",
+			"iosAriaLabel": "Download on the App Store",
+			"loadError": "Couldn't load the QR code.",
+			"orDownload": "or download directly from the store",
+			"qrAlt": "QR code to install BK Dash",
+			"title": "Scan to install the app"
+		},
+		"breadcrumb": "Dashboard",
+		"costDistribution": {
+			"centreAria": "Total revenue for the period",
+			"centreLabel": "Revenue",
+			"legendAria": "Cost distribution legend",
+			"loadError": "Could not load the cost distribution.",
+			"profitPct": "profit",
+			"subtitle": "Each cost as a share of revenue",
+			"title": "Cost Distribution",
+			"profitLabel": "Profit"
+		},
+		"goal": {
+			"achievedLabel": "Achieved",
+			"createError": "Error creating goal",
+			"createSuccess": "Goal created successfully",
+			"deleteAriaLabel": "Delete goal",
+			"deleteConfirmAction": "Delete",
+			"deleteConfirmDescription": "This action cannot be undone.",
+			"deleteConfirmTitle": "Delete goal?",
+			"deleteError": "Error deleting goal",
+			"deleteSuccess": "Goal deleted successfully",
+			"drawerTitle": "Revenue Goal",
+			"editAriaLabel": "Edit goal",
+			"emptyCta": "Set Goal",
+			"emptyDescription": "Set a goal to track your progress.",
+			"emptyTitle": "No goal set",
+			"form": {
+				"currency": "Currency",
+				"currencyPlaceholder": "Select currency",
+				"delete": "Delete",
+				"endDate": "End date",
+				"startDate": "Start date",
+				"submitCreate": "Create goal",
+				"submitEdit": "Save changes",
+				"type": "Type",
+				"value": "Value (cents)",
+				"valuePlaceholder": "e.g. 150000"
+			},
+			"loadError": "Failed to load data.",
+			"progressAria": "Goal progress",
+			"title": "Revenue Goal",
+			"type": {
+				"PROFIT": "Profit",
+				"REVENUE": "Revenue"
+			},
+			"typeProfit": "Profit",
+			"typeRevenue": "Revenue",
+			"updateError": "Error updating goal",
+			"updateSuccess": "Goal updated successfully"
+		},
+		"operationalCostDrawer": {
+			"category": {
+				"ACCOUNTANT": "Accountant",
+				"APP": "App",
+				"EMPLOYEE": "Employee",
+				"FOOD": "Food",
+				"OTHER": "Other",
+				"REFUND": "Refund",
+				"RENT": "Rent",
+				"SHIPPING": "Shipping",
+				"TAKE_PROFIT": "Take Profit"
+			},
+			"createError": "Error creating operational cost.",
+			"createSuccess": "Operational cost created!",
+			"description": "Record an operational cost for the period.",
+			"flow": {
+				"CREDIT": "Credit",
+				"DEBIT": "Debit"
+			},
+			"form": {
+				"amount": "Amount (cents)",
+				"amountPlaceholder": "E.g. 10000 = $100.00",
+				"category": "Category",
+				"categoryPlaceholder": "Select a category",
+				"currency": "Currency",
+				"currencyPlaceholder": "Select currency",
+				"endDate": "End date",
+				"endDatePlaceholder": "Select date (optional)",
+				"flow": "Flow type",
+				"frequency": "Frequency",
+				"frequencyPlaceholder": "Select frequency",
+				"name": "Name",
+				"namePlaceholder": "E.g. Rent, Salary...",
+				"startDate": "Start date",
+				"startDatePlaceholder": "Select date",
+				"submit": "Add cost"
+			},
+			"frequency": {
+				"BIMESTER": "Bimonthly",
+				"DAILY": "Daily",
+				"MONTHLY": "Monthly",
+				"NONE": "None",
+				"ONCE": "Once",
+				"SEMESTER": "Semiannual",
+				"TRIMESTER": "Quarterly",
+				"WEEKLY": "Weekly",
+				"YEARLY": "Yearly"
+			},
+			"title": "Add Operational Cost",
+			"viewCostsLink": "View Operational Costs"
+		},
+		"ordersSummary": {
+			"allWithCost": "All with Cost",
+			"averageTicket": "Average Ticket",
+			"averageTicketHint": "Total revenue divided by the number of paid orders in the period.",
+			"averageTicketHintLabel": "What is Average Ticket?",
+			"loadError": "Couldn't load orders summary.",
+			"orders": "Orders",
+			"unitsSold": "Units Sold"
+		},
+		"pixelInstall": {
+			"copyButton": "Copy script",
+			"copyError": "Could not copy. Please copy manually.",
+			"copySuccess": "Script copied!",
+			"description": "Copy the script below and paste it into your store theme before the </head> tag.",
+			"loadError": "Failed to load the script. Please try again.",
+			"scriptLabel": "Inline script",
+			"scriptUrlLabel": "Script URL",
+			"stepsLabel": "Installation instructions",
+			"title": "Install BK Dash Pixel"
+		},
+		"pixelInstallCta": {
+			"drawerPlaceholder": "Pixel installation will be available soon.",
+			"label": "Learn how to install the Pixel ->"
+		},
+		"productCost": {
+			"hintLabel": "Product cost details",
+			"hintProduct": "Product",
+			"hintShipping": "Shipping",
+			"label": "Product Cost",
+			"loadError": "Couldn't load product cost.",
+			"viewCosts": "View costs"
+		},
+		"ranking": {
+			"empty": "No products in the period.",
+			"listAria": "Product ranking",
+			"loadError": "Failed to load data.",
+			"productImageAlt": "Product image",
+			"title": "Ranking",
+			"totalProducts": "{{count}} products",
+			"viewAll": "View All",
+			"viewAllAria": "View all products"
+		},
+		"revenueChart": {
+			"chartAria": "Chart Aria",
+			"empty": "No data in the period.",
+			"legend": {
+				"profit": "Profit",
+				"revenue": "Revenue"
+			},
+			"loadError": "Failed to load data.",
+			"mode": {
+				"bar": "Bar",
+				"line": "Line"
+			},
+			"modeToggleAria": "Mode Toggle Aria",
+			"period": {
+				"afternoon": "Afternoon",
+				"evening": "Evening",
+				"morning": "Morning",
+				"night": "Night"
+			},
+			"title": "Revenue",
+			"tooltip": {
+				"fees": "Fees",
+				"marketingCost": "Marketing Cost",
+				"orders": "Orders",
+				"productCost": "Product Cost",
+				"profit": "Profit",
+				"revenue": "Revenue",
+				"taxes": "Taxes"
+			},
+			"type": {
+				"hour": "By Hour",
+				"income": "Revenue",
+				"period": "By Shift",
+				"region": "By Region",
+				"weekday": "By Weekday"
+			},
+			"weekday": {
+				"friday": "Friday",
+				"monday": "Monday",
+				"saturday": "Saturday",
+				"sunday": "Sunday",
+				"thursday": "Thursday",
+				"tuesday": "Tuesday",
+				"wednesday": "Wednesday"
+			}
+		},
+		"sponsorBanner": {
+			"dotAria": "Go to banner {{n}}",
+			"dotsAria": "Banner navigation",
+			"nextAria": "Next banner",
+			"prevAria": "Previous banner",
+			"slideAlt": "Sponsored banner {{index}}"
+		},
+		"statCards": {
+			"costs": {
+				"label": "Total Costs",
+				"tooltip": {
+					"aria": "View cost breakdown",
+					"chargeback": "Chargeback",
+					"fees": "Fees",
+					"marketing": "Marketing",
+					"operational": "Operational",
+					"product": "Product",
+					"refund": "Refund",
+					"shipping": "Shipping",
+					"taxes": "Taxes"
+				}
+			},
+			"fees": {
+				"label": "Fees",
+				"settingsAria": "Configure taxes and fees",
+				"tooltip": {
+					"aria": "View fee breakdown",
+					"chargeback": "Chargeback",
+					"checkout": "Checkout",
+					"gateway": "Gateway"
+				}
+			},
+			"listAria": "Main KPIs",
+			"margin": {
+				"label": "Margin"
+			},
+			"profit": {
+				"label": "Profit"
+			},
+			"revenue": {
+				"label": "Revenue"
+			}
+		},
+		"summary": "Here's a quick summary.",
+		"warranty": {
+			"drawerTitle": "Edit Warranty",
+			"percentage": "Percentage (%)",
+			"percentagePlaceholder": "E.g. 5",
+			"period": {
+				"DAYS_180": "180 days",
+				"DAYS_240": "240 days",
+				"DAYS_30": "30 days",
+				"DAYS_360": "360 days",
+				"DAYS_45": "45 days",
+				"DAYS_60": "60 days",
+				"DAYS_90": "90 days"
+			},
+			"periodPlaceholder": "Select period",
+			"saveError": "Failed to save warranty",
+			"saveSuccess": "Warranty saved successfully",
+			"startDate": "Start Date",
+			"startDatePlaceholder": "Select a date",
+			"submit": "Save Warranty"
+		},
+		"welcome": "Welcome, {{name}}"
+	},
+	"dataTable": {
+		"emptyDescription": "Try adjusting your search filters.",
+		"emptyTitle": "No results",
+		"itemsPerPage": "items per page"
+	},
+	"enums": {
+		"CheckoutPlatform": {
+			"ADOOREI": "Adoorei",
+			"KIRVANO": "Cart Panda",
+			"TICTO": "Ticto",
+			"YEVER": "Yever",
+			"ZEDY": "Zedy"
+		},
+		"CostKind": {
+			"CHARGEBACK": "Chargeback",
+			"FEES": "Fees",
+			"MARKETING": "Marketing",
+			"OPERATIONAL": "Operational",
+			"PRODUCT": "Product",
+			"REFUND": "Refund",
+			"SHIPPING": "Shipping",
+			"TAXES": "Taxes"
+		},
+		"CurrencyCode": {
+			"AED": "UAE Dirham (AED)",
+			"ALL": "Albanian Lek (ALL)",
+			"ARS": "Argentine Peso (ARS)",
+			"AUD": "Australian Dollar (AUD)",
+			"BDT": "Bangladeshi Taka (BDT)",
+			"BGN": "Bulgarian Lev (BGN)",
+			"BHD": "Bahraini Dinar (BHD)",
+			"BIF": "Burundian Franc (BIF)",
+			"BOB": "Bolivian Boliviano (BOB)",
+			"BRL": "Brazilian Real (BRL)",
+			"BWP": "Botswanan Pula (BWP)",
+			"CAD": "Canadian Dollar (CAD)",
+			"CHF": "Swiss Franc (CHF)",
+			"CLP": "Chilean Peso (CLP)",
+			"CNY": "Chinese Yuan (CNY)",
+			"COP": "Colombian Peso (COP)",
+			"CVE": "Cape Verdean Escudo (CVE)",
+			"CZK": "Czech Koruna (CZK)",
+			"DKK": "Danish Krone (DKK)",
+			"DOP": "Dominican Peso (DOP)",
+			"EGP": "Egyptian Pound (EGP)",
+			"ETB": "Ethiopian Birr (ETB)",
+			"EUR": "Euro (EUR)",
+			"FJD": "Fijian Dollar (FJD)",
+			"GBP": "British Pound (GBP)",
+			"GHS": "Ghanaian Cedi (GHS)",
+			"GIP": "Gibraltar Pound (GIP)",
+			"GMD": "Gambian Dalasi (GMD)",
+			"GNF": "Guinean Franc (GNF)",
+			"GTQ": "Guatemalan Quetzal (GTQ)",
+			"HKD": "Hong Kong Dollar (HKD)",
+			"HUF": "Hungarian Forint (HUF)",
+			"IDR": "Indonesian Rupiah (IDR)",
+			"INR": "Indian Rupee (INR)",
+			"ISK": "Icelandic Krona (ISK)",
+			"JOD": "Jordanian Dinar (JOD)",
+			"JPY": "Japanese Yen (JPY)",
+			"KES": "Kenyan Shilling (KES)",
+			"KRW": "South Korean Won (KRW)",
+			"KWD": "Kuwaiti Dinar (KWD)",
+			"LAK": "Laotian Kip (LAK)",
+			"LKR": "Sri Lankan Rupee (LKR)",
+			"MAD": "Moroccan Dirham (MAD)",
+			"MGA": "Malagasy Ariary (MGA)",
+			"MWK": "Malawian Kwacha (MWK)",
+			"MXN": "Mexican Peso (MXN)",
+			"MYR": "Malaysian Ringgit (MYR)",
+			"MZN": "Mozambican Metical (MZN)",
+			"NGN": "Nigerian Naira (NGN)",
+			"NOK": "Norwegian Krone (NOK)",
+			"NPR": "Nepalese Rupee (NPR)",
+			"NZD": "New Zealand Dollar (NZD)",
+			"OMR": "Omani Rial (OMR)",
+			"PEN": "Peruvian Sol (PEN)",
+			"PHP": "Philippine Peso (PHP)",
+			"PKR": "Pakistani Rupee (PKR)",
+			"PLN": "Polish Zloty (PLN)",
+			"PYG": "Paraguayan Guarani (PYG)",
+			"QAR": "Qatari Riyal (QAR)",
+			"RON": "Romanian Leu (RON)",
+			"RUB": "Russian Ruble (RUB)",
+			"RWF": "Rwandan Franc (RWF)",
+			"SAR": "Saudi Riyal (SAR)",
+			"SEK": "Swedish Krona (SEK)",
+			"SGD": "Singapore Dollar (SGD)",
+			"SLE": "Sierra Leonean Leone (SLE)",
+			"SRD": "Surinamese Dollar (SRD)",
+			"THB": "Thai Baht (THB)",
+			"TND": "Tunisian Dinar (TND)",
+			"TRY": "Turkish Lira (TRY)",
+			"TWD": "New Taiwan Dollar (TWD)",
+			"TZS": "Tanzanian Shilling (TZS)",
+			"UGX": "Ugandan Shilling (UGX)",
+			"USD": "US Dollar (USD)",
+			"VND": "Vietnamese Dong (VND)",
+			"XAF": "Central African CFA Franc (XAF)",
+			"XCD": "East Caribbean Dollar (XCD)",
+			"XOF": "West African CFA Franc (XOF)",
+			"ZAR": "South African Rand (ZAR)",
+			"ZMW": "Zambian Kwacha (ZMW)"
+		},
+		"GoalType": {
+			"PROFIT": "Profit",
+			"REVENUE": "Revenue"
+		},
+		"Language": {
+			"en-US": "English (US)",
+			"pt-BR": "Português (Brasil)"
+		},
+		"MarketingPlatform": {
+			"GOOGLE_ADS": "Google Ads",
+			"META": "Meta",
+			"TABOOLA": "Taboola",
+			"TIKTOK": "TikTok"
+		},
+		"OperationalCostCategory": {
+			"ACCOUNTANT": "Accountant",
+			"APP": "App / Software",
+			"EMPLOYEE": "Employee",
+			"FOOD": "Food",
+			"OTHER": "Other",
+			"REFUND": "Refund",
+			"RENT": "Rent",
+			"SHIPPING": "Shipping",
+			"TAKE_PROFIT": "Profit Withdrawal"
+		},
+		"OperationalCostFlow": {
+			"CREDIT": "Income",
+			"DEBIT": "Expense"
+		},
+		"OperationalCostRecurrency": {
+			"BIMESTER": "Bimonthly",
+			"DAILY": "Daily",
+			"MONTHLY": "Monthly",
+			"NONE": "None",
+			"ONCE": "Once",
+			"SEMESTER": "Semianually",
+			"TRIMESTER": "Quarterly",
+			"WEEKLY": "Weekly",
+			"YEARLY": "Yearly"
+		},
+		"PaymentGateway": {
+			"APPMAX": "Appmax",
+			"DEFAULT": "Default",
+			"MERCADOPAGO": "Mercado Pago",
+			"PAGAR_ME": "Pagar.me",
+			"PAYPAL": "PayPal",
+			"SHOPIFY_PAYMENTS": "Shopify Payments",
+			"STRIPE": "Stripe",
+			"UNKNOWN": "Unknown",
+			"YEVER": "Yever"
+		},
+		"PaymentMethod": {
+			"BILLET": "Billet",
+			"CREDIT_CARD": "Credit card",
+			"PIX": "Pix"
+		},
+		"PaymentStatus": {
+			"AUTHORIZED": "Authorized",
+			"PAID": "Paid",
+			"PARTIALLY_PAID": "Partially paid",
+			"PARTIALLY_REFUNDED": "Partially refunded",
+			"PENDING": "Pending",
+			"REFUNDED": "Refunded",
+			"UNPAID": "Unpaid",
+			"VOIDED": "Voided"
+		},
+		"PixelEventType": {
+			"CART_VIEWED": "Cart viewed",
+			"CHECKOUT_COMPLETED": "Purchase",
+			"CHECKOUT_CONTACT_INFO_SUBMITTED": "Checkout contact info submitted",
+			"CHECKOUT_STARTED": "Initiate Checkout",
+			"PAGE_VIEWED": "Page View",
+			"PRODUCT_ADDED_TO_CART": "Add to Cart",
+			"PRODUCT_REMOVED_FROM_CART": "Product removed from cart",
+			"PRODUCT_VIEWED": "View Content"
+		},
+		"ProductStatus": {
+			"ACTIVE": "Active",
+			"ARCHIVED": "Archived",
+			"DRAFT": "Draft"
+		},
+		"ShippingCostMode": {
+			"AVERAGE_PER_SALE": "Average per sale",
+			"BY_PRODUCT_QUANTITY": "By product quantity",
+			"NONE": "None",
+			"PAID_BY_CUSTOMER_AT_CHECKOUT": "Paid by customer at checkout"
+		},
+		"TaxDeductionType": {
+			"NONE": "None",
+			"PRODUCT_COST": "Product cost",
+			"PRODUCT_COST_AND_MARKETING": "Product cost and marketing"
+		},
+		"TaxType": {
+			"NONE": "None",
+			"PRESUMED_PROFIT": "Presumed profit",
+			"REAL_PROFIT": "Real profit"
+		},
+		"WarrantyPeriod": {
+			"DAYS_180": "180 days",
+			"DAYS_240": "240 days",
+			"DAYS_30": "30 days",
+			"DAYS_360": "360 days",
+			"DAYS_45": "45 days",
+			"DAYS_60": "60 days",
+			"DAYS_90": "90 days"
+		},
+		"TaskStatus": {
+			"TODO": "To do",
+			"IN_PROGRESS": "In progress",
+			"IN_REVIEW": "In review",
+			"DONE": "Done"
+		},
+		"TaskPriority": {
+			"LOW": "Low",
+			"NORMAL": "Normal",
+			"HIGH": "High",
+			"URGENT": "Urgent"
+		}
+	},
+	"clickup": {
+		"view": {
+			"list": "List",
+			"board": "Board"
+		},
+		"space": {
+			"heading": "Tasks"
+		},
+		"list": {
+			"empty": "No tasks"
+		},
+		"board": {
+			"empty": "No tasks"
+		},
+		"createTask": {
+			"trigger": "New task",
+			"title": "Create task",
+			"listLabel": "List",
+			"titleLabel": "Title",
+			"titlePlaceholder": "Task title",
+			"priorityLabel": "Priority",
+			"submit": "Create"
+		},
+		"task": {
+			"statusLabel": "Status",
+			"assigneeCount": "assignees",
+			"assignLabel": "Assign to me"
+		}
+	},
+	"errors": {
+		"INVALID_EMAIL": "Invalid email address.",
+		"INVALID_EMAIL_OR_PASSWORD": "Invalid email or password",
+		"INVALID_NAME": "Invalid name.",
+		"NETWORK_ERROR": "Network error",
+		"NOT_FOUND": "Resource not found.",
+		"ONBOARDING_ALREADY_COMPLETED": "Onboarding already completed",
+		"ONBOARDING_NOT_COMPLETED": "Onboarding not completed",
+		"PASSWORDS_DONT_MATCH": "Passwords do not match.",
+		"PASSWORD_TOO_LONG": "Password is too long.",
+		"PASSWORD_TOO_SHORT": "Password is too short (minimum 8 characters).",
+		"RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
+		"SESSION_EXPIRED": "Session expired",
+		"TERMS_REQUIRED": "Please accept the terms to continue.",
+		"UNAUTHORIZED": "Unauthorized",
+		"UNKNOWN_ERROR": "Unknown error",
+		"USER_ALREADY_EXISTS": "User already exists",
+		"VALIDATION_ERROR": "Some fields are invalid."
+	},
+	"integrations": {
+		"actions": {
+			"connect": "Connect",
+			"connectError": "Failed to connect integration.",
+			"connectSuccess": "Integration connected successfully!",
+			"disconnect": "Disconnect",
+			"disconnectError": "Failed to disconnect integration.",
+			"disconnectSuccess": "Integration disconnected.",
+			"reintegrate": "Reintegrate",
+			"reintegrateError": "Failed to reintegrate.",
+			"reintegrateSuccess": "Reintegration triggered."
+		},
+		"categories": {
+			"all": "All",
+			"checkout": "Checkout",
+			"infoproduct": "Infoproduct",
+			"marketingPlatform": "Marketing",
+			"paymentGateway": "Payment Gateway",
+			"salesChannel": "Sales Channel"
+		},
+		"credentials": {
+			"copied": "Copied!",
+			"copy": "Copy",
+			"hide": "Hide",
+			"reveal": "Reveal",
+			"title": "Credentials"
+		},
+		"list": {
+			"emptyDescription": "Try adjusting your filters or search term.",
+			"emptyTitle": "No integrations found",
+			"errorDescription": "Please try again later.",
+			"errorTitle": "Failed to load integrations"
+		},
+		"search": {
+			"ariaLabel": "Search integrations",
+			"placeholder": "Search integrations..."
+		},
+		"sheet": {
+			"accessToken": "Access Token",
+			"alias": "Alias",
+			"clientId": "Client ID",
+			"clientSecret": "Client Secret",
+			"connectError": "Failed to connect integration.",
+			"connectManual": "Confirm Connection",
+			"connectOauth": "Connect with OAuth",
+			"connectSuccess": "Integration connected successfully!",
+			"description": "Enter your credentials to connect this integration.",
+			"keyLabel": "Key / Domain",
+			"manualDescription": "No additional credentials are required. Click below to confirm the connection.",
+			"secretLabel": "Secret / Token",
+			"shopDomain": "Shop Domain",
+			"storeDomain": "Store Domain",
+			"submit": "Connect",
+			"title": "Connect Integration",
+			"titleWith": "Connect {{name}}",
+			"userSecretKey": "User Secret Key",
+			"userToken": "User Token"
+		},
+		"status": {
+			"connected": "Connected",
+			"disconnected": "Disconnected",
+			"error": "Error",
+			"pending": "Pending",
+			"syncing": "Syncing"
+		}
+	},
+	"kits": {
+		"actions": {
+			"delete": "Delete kit",
+			"edit": "Edit kit"
+		},
+		"bulk": {
+			"cancel": "Cancel",
+			"delete": "Delete selected",
+			"selected": "{{count}} selected"
+		},
+		"columns": {
+			"createdAt": "Created at",
+			"currentCost": "Current Cost",
+			"kit": "Kit",
+			"productsCount": "Products",
+			"type": "Type"
+		},
+		"createButton": "Create Kit",
+		"createSuccess": "Kit created successfully",
+		"deleteConfirm": {
+			"action": "Delete",
+			"description": "This action cannot be undone. The selected kits will be permanently removed.",
+			"title": "Delete kit(s)"
+		},
+		"deleteError": "Failed to delete kit(s)",
+		"deleteSuccess": "Kit(s) deleted successfully",
+		"loadError": "Failed to load kits",
+		"searchPlaceholder": "Search kits…",
+		"selectType": {
+			"cancel": "Cancel",
+			"description": "Select how this kit's costs will be calculated.",
+			"multiple": {
+				"hint": "Cost calculated from each product individually.",
+				"label": "Multiple Kit"
+			},
+			"single": {
+				"hint": "A fixed cost for the whole product set.",
+				"label": "Single Kit"
+			},
+			"title": "Choose kit type"
+		},
+		"type": {
+			"multiple": "Multiple",
+			"single": "Single"
+		},
+		"updateSuccess": "Kit updated successfully",
+		"wizard": {
+			"back": "Back",
+			"cancel": "Cancel",
+			"create": "Create kit",
+			"createTitle": "Create new kit",
+			"editTitle": "Edit kit",
+			"nameLabel": "Kit name",
+			"namePlaceholder": "E.g.: Summer Basic Kit",
+			"next": "Next",
+			"noProducts": "No products found",
+			"productSearchPlaceholder": "Search products…",
+			"productsTitle": "Select products",
+			"quantities": "Quantities",
+			"reviewName": "Name",
+			"reviewProductList": "Products",
+			"reviewProducts": "Selected products",
+			"reviewTitle": "Review and confirm",
+			"reviewTotalCost": "Estimated cost",
+			"reviewType": "Type",
+			"save": "Save",
+			"stepOf": "Step {{current}} of {{total}}"
+		}
+	},
+	"landing": {
+		"brand": "App",
+		"features": {
+			"domain": {
+				"description": "Bounded contexts, aggregates, events, and an outbox already wired so you can model business rules cleanly.",
+				"title": "Domain-first"
+			},
+			"fast": {
+				"description": "Bun, Vite, React Query, and Drizzle deliver instant feedback loops from dev to prod.",
+				"title": "Fast by default"
+			},
+			"typesafe": {
+				"description": "Zod schemas drive the API, the database, the SDK, and the frontend forms — one source of truth.",
+				"title": "Type-safe end to end"
+			}
+		},
+		"footer": {
+			"copyright": "Monorepo boilerplate · MIT"
+		},
+		"getStarted": "Get started",
+		"hero": {
+			"getStarted": "Get started",
+			"primaryCta": "Create your account",
+			"secondaryCta": "Sign in",
+			"signIn": "Sign in",
+			"subtitle": "A clean starting point for building SaaS products with Bun, Drizzle, React, TanStack Router, and a generated SDK.",
+			"title": "Fullstack TypeScript monorepo boilerplate"
+		},
+		"nav": {
+			"getStarted": "Get started",
+			"signIn": "Sign in"
+		},
+		"signIn": "Sign in"
+	},
+	"marketingAccounts": {
+		"adAccount": {
+			"spend": "Spend:",
+			"status": {
+				"active": "Active",
+				"disabled": "Disabled",
+				"unknown": "Unknown"
+			},
+			"toggleAria": "Toggle {{name}}",
+			"toggleError": "Failed to update account.",
+			"toggleSuccess": "Account updated."
+		},
+		"connectDialog": {
+			"cancel": "Cancel",
+			"confirm": "Connect",
+			"description": "Connect your {{platform}} account to sync profiles and ad accounts.",
+			"error": "Failed to connect platform.",
+			"success": "Platform connected successfully.",
+			"title": "Connect {{platform}}"
+		},
+		"pageTitle": "Marketing Accounts",
+		"pagination": {
+			"next": "Next",
+			"page": "Page {{page}} of {{totalPages}}",
+			"prev": "Previous",
+			"summary": "{{count}} of {{total}} profiles"
+		},
+		"profile": {
+			"accountsCount": "{{active}}/{{total}} active accounts",
+			"actions": {
+				"disconnect": "Disconnect",
+				"disconnectConfirmDescription": "The profile \"{{name}}\" will be disconnected.",
+				"disconnectConfirmTitle": "Disconnect profile?",
+				"disconnectError": "Failed to disconnect profile.",
+				"disconnectSuccess": "Profile disconnected successfully.",
+				"menu": "Profile actions",
+				"reintegrate": "Reintegrate",
+				"reintegrateError": "Failed to reintegrate.",
+				"reintegrateSuccess": "Reintegration started.",
+				"rename": "Rename"
+			},
+			"adAccountsLabel": "Ad Accounts",
+			"collapse": "Collapse accounts",
+			"expand": "Expand accounts",
+			"status": {
+				"active": "Active",
+				"expired": "Expired"
+			}
+		},
+		"profiles": {
+			"emptyDescription": "Connect a profile to start monitoring your accounts.",
+			"emptyTitle": "No profiles found",
+			"errorDescription": "Could not load marketing profiles.",
+			"errorTitle": "Failed to load"
+		},
+		"renameDialog": {
+			"cancel": "Cancel",
+			"confirm": "Save",
+			"description": "Set a new name for this marketing profile.",
+			"error": "Failed to rename profile.",
+			"nameLabel": "Name",
+			"namePlaceholder": "E.g. Main Store",
+			"success": "Profile renamed successfully.",
+			"title": "Rename profile"
+		},
+		"summary": {
+			"accounts": "Accounts",
+			"activeAccounts": "Active Accounts",
+			"profiles": "Profiles",
+			"totalSpend": "Total Spend"
+		},
+		"toolbar": {
+			"connect": "Connect platform",
+			"searchPlaceholder": "Search profiles..."
+		}
+	},
+	"marketingTraffic": {
+		"dialog": {
+			"description": "Manually record an ad spend that is not automatically integrated.",
+			"title": "Add Manual Ad Spend"
+		},
+		"form": {
+			"cancel": "Cancel",
+			"description": "Description (optional)",
+			"descriptionPlaceholder": "e.g. Black Friday campaign",
+			"endDate": "End date",
+			"platform": "Platform",
+			"platformPlaceholder": "Select platform",
+			"startDate": "Start date",
+			"submit": "Save",
+			"successToast": "Ad spend recorded successfully!",
+			"validationError": "Please check the form fields.",
+			"value": "Value (BRL)",
+			"valuePlaceholder": "e.g. 1500.00"
+		},
+		"metrics": {
+			"conversionValue": "Conversion Value",
+			"cpa": "CPA",
+			"purchases": "Purchases",
+			"roas": "ROAS",
+			"spend": "Spend"
+		},
+		"platform": {
+			"connected": "Connected",
+			"disconnected": "Disconnected",
+			"metricsAria": "{{platform}} metrics"
+		},
+		"sources": {
+			"loadError": "Could not load traffic data.",
+			"totalTitle": "Period Total"
+		},
+		"toolbar": {
+			"incluirAdsManual": "Add Manual Ad Spend",
+			"period": "{{startDate}} — {{endDate}}",
+			"refresh": "Refresh",
+			"refreshAriaLabel": "Refresh traffic data",
+			"title": "Traffic / Ads"
+		}
+	},
+	"nav": {
+		"account": "My Account",
+		"calculator": "Calculator",
+		"comingSoon": "Coming soon",
+		"dashboard": "Dashboard",
+		"email": "Email",
+		"finance": "Finance",
+		"financeDetails": "Financial Details",
+		"home": "Home",
+		"ideas": "Ideas Hub",
+		"integrations": "Integrations",
+		"kits": "Kits",
+		"marketing": "Marketing",
+		"operationalCosts": "Operational Costs",
+		"orders": "Orders",
+		"productCosts": "Product Costs",
+		"products": "Products",
+		"productsList": "Product List",
+		"settings": "Settings",
+		"sms": "SMS",
+		"tasks": "My Tasks",
+		"taxesAndFees": "Taxes & Fees",
+		"teamAccounts": "Team Accounts",
+		"tracking": "Tracking",
+		"whatsapp": "WhatsApp"
+	},
+	"notifications": {
+		"allCaughtUp": "You're all caught up.",
+		"aria": "Notifications",
+		"count_one": "{{count}} notification",
+		"count_other": "{{count}} notifications",
+		"empty": "No notifications",
+		"title": "Notifications",
+		"unreadCount_one": "{{count}} unread",
+		"unreadCount_other": "{{count}} unread",
+		"viewAll": "View all"
+	},
+	"onboarding": {
+		"breadcrumb": "Onboarding",
+		"error": {
+			"description": "We couldn't load onboarding.",
+			"title": "Something went wrong"
+		},
+		"toast": {
+			"success": "All set",
+			"successDescription": "Your account is ready."
+		},
+		"welcome": {
+			"cta": "Get started",
+			"subtitle": "You're all set to start using the app.",
+			"title": "Welcome!"
+		}
+	},
+	"operationalCosts": {
+		"addFabAriaLabel": "Add operational cost",
+		"createError": "Failed to create cost.",
+		"createSuccess": "Cost created successfully.",
+		"deleteConfirm": {
+			"action": "Remove",
+			"cancel": "Cancel",
+			"description": "This action cannot be undone.",
+			"title": "Remove operational cost?"
+		},
+		"deleteError": "Failed to remove cost.",
+		"deleteSuccess": "Cost removed successfully.",
+		"drawer": {
+			"createDescription": "Fill in the fields to add a new cost.",
+			"createTitle": "New Operational Cost",
+			"editDescription": "Update the operational cost details.",
+			"editTitle": "Edit Operational Cost"
+		},
+		"emptyState": "No operational costs found.",
+		"flow": {
+			"CREDIT": "Income",
+			"DEBIT": "Expense"
+		},
+		"form": {
+			"amount": "Amount (cents)",
+			"amountPlaceholder": "E.g.: 10000 = $100.00",
+			"currency": "Currency",
+			"currencyPlaceholder": "Select currency",
+			"endDate": "End date",
+			"endDatePlaceholder": "Select date (optional)",
+			"flow": "Type",
+			"frequency": "Frequency",
+			"frequencyPlaceholder": "Select frequency",
+			"name": "Name",
+			"namePlaceholder": "E.g.: Rent, Server...",
+			"startDate": "Start date",
+			"startDatePlaceholder": "Select date",
+			"submitCreate": "Create Cost",
+			"submitEdit": "Save Changes"
+		},
+		"frequency": {
+			"BIMESTER": "Bimonthly",
+			"DAILY": "Daily",
+			"MONTHLY": "Monthly",
+			"NONE": "No recurrence",
+			"ONCE": "Once",
+			"SEMESTER": "Semiannual",
+			"TRIMESTER": "Quarterly",
+			"WEEKLY": "Weekly",
+			"YEARLY": "Yearly"
+		},
+		"pageTitle": "Operational Costs",
+		"searchPlaceholder": "Search costs...",
+		"table": {
+			"amount": "Amount",
+			"deleteAriaLabel": "Delete cost",
+			"editAriaLabel": "Edit cost",
+			"endDate": "End Date",
+			"flow": "Type",
+			"frequency": "Frequency",
+			"name": "Name",
+			"startDate": "Start Date"
+		},
+		"totalCostLabel": "Total Cost",
+		"updateError": "Failed to update cost.",
+		"updateSuccess": "Cost updated successfully."
+	},
+	"orders": {
+		"batchActions": {
+			"applied": "Status applied to {{count}} order(s).",
+			"applyStatus": "Apply status",
+			"clear": "Clear selection",
+			"selected": "{{count}} order(s) selected"
+		},
+		"columns": {
+			"code": "Order",
+			"date": "Date",
+			"fees": "Fees",
+			"paymentMethod": "Payment",
+			"productCost": "Product Cost",
+			"products": "Products",
+			"profit": "Profit",
+			"revenue": "Revenue",
+			"shipping": "Shipping",
+			"status": "Status",
+			"taxes": "Taxes"
+		},
+		"count_one": "{{count}} order found",
+		"count_other": "{{count}} orders found",
+		"dateButton": "Period",
+		"edit": {
+			"fees": "Fees",
+			"paymentMethod": "Payment Method",
+			"productCost": "Product Cost",
+			"revenue": "Revenue",
+			"save": "Save",
+			"shipping": "Shipping",
+			"status": "Status",
+			"taxes": "Taxes"
+		},
+		"editMoney": {
+			"cancel": "Cancel",
+			"save": "Save",
+			"saved": "Value updated.",
+			"trigger": "Edit {{field}}"
+		},
+		"editPaymentMethod": {
+			"cancel": "Cancel",
+			"save": "Save",
+			"saved": "Payment method updated.",
+			"title": "Change payment",
+			"trigger": "Edit payment method"
+		},
+		"editStatus": {
+			"cancel": "Cancel",
+			"save": "Save",
+			"saved": "Status updated.",
+			"title": "Change status",
+			"trigger": "Edit status"
+		},
+		"empty": "No orders found.",
+		"emptyDescription": "Try adjusting your search filters.",
+		"emptyTitle": "No orders found",
+		"filterButton": "Filters",
+		"loadError": "Failed to load orders.",
+		"loading": "Loading orders…",
+		"reloadButton": "Refresh",
+		"resetEdits": {
+			"done": "Edits reset.",
+			"label": "Reset edits"
+		},
+		"searchPlaceholder": "Search by code or product...",
+		"statusFilter": {
+			"all": "All statuses"
+		},
+		"table": {
+			"code": "Code",
+			"customer": "Customer",
+			"date": "Date",
+			"fees": "Fees",
+			"paymentMethod": "Payment",
+			"productCost": "Product cost",
+			"products": "Products",
+			"profit": "Profit",
+			"revenue": "Revenue",
+			"shipping": "Shipping",
+			"status": "Status",
+			"taxes": "Taxes"
+		},
+		"title": "Orders",
+		"toolbar": {
+			"dateRange": "Date range",
+			"resetFilters": "Reset filters",
+			"search": "Search orders…"
+		}
+	},
+	"pixelFunnel": {
+		"carts": "Carts",
+		"cartsHint": "Total value of abandoned carts in the period.",
+		"conversionRate": "Conversion Rate",
+		"conversionRateHint": "Share of sessions that completed a purchase in the period.",
+		"empty": {
+			"cta": "Connect pixel",
+			"description": "Connect your pixel to track your store's conversion funnel.",
+			"title": "No pixel connected"
+		},
+		"ofBase": "{{value}} of {{base}}",
+		"title": "Conversion funnel"
+	},
+	"productCosts": {
+		"addDialog": {
+			"cancel": "Cancel",
+			"costAmount": "Cost (cents)",
+			"productId": "Product ID (UUID)",
+			"productIdPlaceholder": "E.g. 550e8400-e29b-41d4-a716-...",
+			"shippingAmount": "Shipping (cents)",
+			"startDate": "Start date",
+			"submit": "Add",
+			"subtitle": "Set a unit cost for the selected product.",
+			"successToast": "Cost added successfully",
+			"title": "Add product cost"
+		},
+		"bulk": {
+			"clearSelection": "Clear selection",
+			"delete": "Delete",
+			"deleteConfirm": "Delete",
+			"deleteDescription": "Delete {{count}} selected cost(s)? This action cannot be undone.",
+			"deleteTitle": "Delete costs",
+			"selectedCount": "{{count}} selected"
+		},
+		"costForm": {
+			"allCountries": "All countries",
+			"cost": "Cost (cents)",
+			"costPlaceholder": "E.g. 1500",
+			"country": "Country",
+			"countryPlaceholder": "Select country",
+			"scope": "Apply to",
+			"scopeAll": "All products",
+			"scopeSelected": "Selected ({{count}})",
+			"shipping": "Shipping (cents)",
+			"shippingPlaceholder": "E.g. 800",
+			"submit": "Apply cost",
+			"successToast": "Cost applied successfully",
+			"title": "Apply Cost"
+		},
+		"importDialog": {
+			"cancel": "Cancel",
+			"fileHint": "Supported formats: manual CSV or Shopify export.",
+			"fileLabel": "CSV file",
+			"submit": "Import",
+			"subtitle": "Upload a CSV file with product costs.",
+			"successToast": "Imported: {{createdCount}} created, {{updatedCount}} updated, {{skippedCount}} skipped",
+			"title": "Import costs via CSV"
+		},
+		"table": {
+			"addCost": "Add cost",
+			"cost": "Cost",
+			"emptyDescription": "Add costs to get started.",
+			"emptyTitle": "No products found",
+			"errorDescription": "Could not load product costs.",
+			"errorTitle": "Error loading",
+			"importCsv": "Import CSV",
+			"lastRegistered": "Last registered",
+			"product": "Product",
+			"sales": "Sales",
+			"searchPlaceholder": "Search product...",
+			"selectAll": "Select all",
+			"selectRow": "Select {{name}}",
+			"title": "Product costs",
+			"variants": "Variants"
+		}
+	},
+	"products": {
+		"actions": {
+			"addCost": "Add Cost",
+			"marketingCost": "Marketing Cost"
+		},
+		"columns": {
+			"conversionRate": "Conversion Rate",
+			"cpa": "CPA",
+			"fees": "Fees",
+			"marketingCost": "Marketing Cost",
+			"netProfit": "Net Profit",
+			"product": "Product",
+			"revenue": "Revenue",
+			"sales": "Sales",
+			"taxes": "Taxes"
+		},
+		"costDrawer": {
+			"cancel": "Cancel",
+			"costLabel": "Product Cost (R$)",
+			"error": "Error adding cost",
+			"shippingLabel": "Shipping Cost (R$)",
+			"startDateLabel": "Start Date",
+			"submit": "Save",
+			"success": "Cost added successfully",
+			"title": "Add Product Cost"
+		},
+		"empty": {
+			"title": "No products found"
+		},
+		"filter": {
+			"label": "Filter",
+			"statusLabel": "Status"
+		},
+		"marketingDrawer": {
+			"back": "Back",
+			"campaignsHint": "Select campaigns to bind to this product",
+			"cancel": "Cancel",
+			"confirm": "Confirm",
+			"confirmCampaigns": "Selected campaigns",
+			"confirmHint": "Review and confirm the binding",
+			"confirmProduct": "Product",
+			"error": "Error binding campaign",
+			"next": "Next",
+			"noCampaigns": "No campaigns found for this platform",
+			"platformHint": "Select the ad platform",
+			"selected": "Selected",
+			"step1": "Platform",
+			"step2": "Campaigns",
+			"step3": "Confirmation",
+			"success": "Campaign bound successfully",
+			"title": "Bind Marketing Campaign"
+		},
+		"searchPlaceholder": "Search products..."
+	},
+	"recommendedApps": {
+		"advertiseLink": "Want to advertise your brand here?",
+		"empty": {
+			"description": "No apps available at the moment.",
+			"title": "No apps"
+		},
+		"error": {
+			"description": "Couldn't load the apps. Please try again.",
+			"title": "Error loading"
+		},
+		"showLess": "Show less",
+		"showMore": "Show more ({{count}})",
+		"title": "Recommended Apps",
+		"visitCta": "Visit"
+	},
+	"suggestions": {
+		"advertise": {
+			"cta": "Talk to partners",
+			"ctaAriaLabel": "Send email to become an advertising partner",
+			"description": "Get in touch and reach thousands of merchants on the platform.",
+			"title": "Want to advertise your brand here?"
+		},
+		"calculator": {
+			"description": "Calculate the ideal price and estimate profit by markup",
+			"estimator": {
+				"colMargin": "Margin",
+				"colMarkup": "Markup",
+				"colProfit": "Profit",
+				"colSalePrice": "Sale Price",
+				"title": "Profit Estimate by Markup"
+			},
+			"inputs": {
+				"checkoutFeePct": "Checkout Fee (%)",
+				"desiredMarkupPct": "Desired Markup (x)",
+				"fixedCosts": "Fixed Costs (R$)",
+				"gatewayFeePct": "Gateway Fee (%)",
+				"groupCosts": "Costs",
+				"groupFees": "Fees & Desired Markup",
+				"marketingCost": "Marketing Cost (R$)",
+				"productCost": "Product Cost (R$)",
+				"taxPct": "Tax Rate (%)"
+			},
+			"title": "Sale Price Calculator"
+		},
+		"profitEstimator": {
+			"recommended": "recommended",
+			"rowAria": "Markup row {{markup}}"
+		}
+	},
+	"taxesAndFees": {
+		"checkout": {
+			"description": "Set the checkout platform and its fee rate.",
+			"feePercent": "Fee (%)",
+			"plan": "Plan",
+			"platform": "Platform",
+			"platformPlaceholder": "Select platform",
+			"saveSuccess": "Checkout fee saved successfully.",
+			"title": "Checkout Fee"
+		},
+		"gateway": {
+			"description": "Set the payment gateway, method, and fees.",
+			"fixedCurrency": "Fixed fee currency",
+			"fixedCurrencyPlaceholder": "Select currency",
+			"fixedFee": "Fixed fee (cents)",
+			"paymentMethod": "Payment method",
+			"paymentMethodPlaceholder": "Select method",
+			"platform": "Gateway",
+			"platformPlaceholder": "Select gateway",
+			"saveSuccess": "Gateway fee saved successfully.",
+			"title": "Gateway Fee",
+			"variable": "Variable fee (%)"
+		},
+		"loadError": "Failed to load configuration.",
+		"save": "Save",
+		"shipping": {
+			"averageShippingFee": "Average shipping fee (cents)",
+			"description": "Set how the shipping cost is calculated.",
+			"mode": "Shipping mode",
+			"modePlaceholder": "Select mode",
+			"saveSuccess": "Shipping configuration saved successfully.",
+			"title": "Shipping Cost"
+		},
+		"tabs": {
+			"checkout": "Checkout",
+			"gateway": "Gateway",
+			"shipping": "Shipping",
+			"taxes": "Taxes"
+		},
+		"taxes": {
+			"deductionType": "Deduction type",
+			"deductionTypePlaceholder": "Select deduction type",
+			"description": "Set the tax regime and marketing tax rate.",
+			"marketingPlatform": "Marketing platform",
+			"marketingPlatformPlaceholder": "Select platform",
+			"marketingTaxes": "Marketing tax (%)",
+			"saveSuccess": "Tax configuration saved successfully.",
+			"taxPercent": "Tax rate (%)",
+			"taxType": "Tax type",
+			"taxTypePlaceholder": "Select tax type",
+			"title": "Taxes"
+		}
+	},
+	"variantCosts": {
+		"actions": {
+			"delete": "Delete cost",
+			"edit": "Edit cost",
+			"importCsv": "Import CSV"
+		},
+		"deleteDialog": {
+			"cancel": "Cancel",
+			"confirm": "Delete",
+			"description": "This action cannot be undone. Removed costs will not affect historical analytics.",
+			"pending": "Deleting...",
+			"success": "{{count}} cost(s) deleted.",
+			"title": "Delete {{count}} cost(s)?"
+		},
+		"editDialog": {
+			"cancel": "Cancel",
+			"currency": "Currency",
+			"description": "Update the values for this cost entry.",
+			"endDate": "End date (optional)",
+			"startDate": "Start date",
+			"submit": "Save changes",
+			"success": "Cost updated successfully.",
+			"title": "Edit variant cost",
+			"unitCost": "Unit cost",
+			"unitCostCents": "Unit cost (cents)"
+		},
+		"empty": {
+			"description": "This product has no variants or none match the search.",
+			"title": "No variants found"
+		},
+		"error": {
+			"description": "Could not load variant costs.",
+			"title": "Failed to load"
+		},
+		"form": {
+			"currency": "Currency",
+			"endDate": "End date (optional)",
+			"startDate": "Start date",
+			"submit": "Save cost",
+			"subtitle": "Create a new cost rule for a variant of this product.",
+			"success": "Cost registered successfully.",
+			"title": "Register new cost",
+			"unitCost": "Unit cost",
+			"unitCostCents": "Unit cost (cents)",
+			"variantId": "Variant ID",
+			"variantIdPlaceholder": "Variant UUID"
+		},
+		"history": {
+			"close": "Close history",
+			"empty": {
+				"description": "No costs registered for this variant yet.",
+				"title": "No entries found"
+			},
+			"entry": {
+				"active": "Active",
+				"cost": "Cost:",
+				"noEndDate": "No end date",
+				"shipping": "Shipping:"
+			},
+			"error": {
+				"description": "Could not load cost history.",
+				"title": "Failed to load history"
+			},
+			"listAria": "Variant cost history",
+			"subtitle": "Cost entries registered for this variant",
+			"titleFallback": "Cost history"
+		},
+		"importDialog": {
+			"cancel": "Cancel",
+			"description": "Select a CSV file to batch-import cost rules.",
+			"dropZone": "Click to select a CSV file",
+			"dropZoneHint": "Only .csv files are accepted",
+			"noFile": "No file selected.",
+			"submit": "Import",
+			"success": "{{created}} created, {{updated}} updated, {{skipped}} skipped.",
+			"title": "Import costs via CSV",
+			"withErrors": "{{count}} row(s) with errors."
+		},
+		"pageSubtitle": "Costs per variant for this product",
+		"productFallback": "Product",
+		"table": {
+			"cost": "Cost",
+			"endDate": "End Date",
+			"name": "Variant",
+			"noEndDate": "No end date",
+			"searchPlaceholder": "Search variant...",
+			"shipping": "Shipping",
+			"startDate": "Start Date"
+		}
+	},
+	"zod": {
+		"invalidEmail": "Invalid email",
+		"invalid_date": "Invalid date.",
+		"invalid_enum_value": "Invalid value. Options: {{options}}",
+		"invalid_format_datetime": "Invalid date/time",
+		"invalid_format_email": "Invalid email",
+		"invalid_format_regex": "Invalid format",
+		"invalid_format_url": "Invalid URL",
+		"invalid_format_uuid": "Invalid UUID",
+		"invalid_type": "Invalid type (expected {{expected}}, received {{received}})",
+		"required": "Required",
+		"too_big_array": "Must have at most {{maximum}} item(s)",
+		"too_big_number": "Must be at most {{maximum}}",
+		"too_big_string": "Must be at most {{maximum}} character(s)",
+		"too_small_array": "Must have at least {{minimum}} item(s)",
+		"too_small_number": "Must be at least {{minimum}}",
+		"too_small_string": "Must be at least {{minimum}} character(s)"
+	}
+}

@@ -1,0 +1,22 @@
+import { Text, View } from 'react-native'
+import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/Button'
+import { useOnboardingStore } from './-stores/onboarding-store'
+
+export default function OnboardingStep2() {
+	const { t } = useTranslation()
+	const next = useOnboardingStore(s => s.next)
+	return (
+		<View className="flex-1 px-5 pt-6 pb-6 gap-4">
+			<Text className="text-fg-0 font-sans-bold text-xl">{t('onboarding.step2.title')}</Text>
+			<Button
+				label={t('onboarding.next')}
+				onPress={() => {
+					next()
+					router.push('/(sheets)/onboarding/step-3')
+				}}
+			/>
+		</View>
+	)
+}

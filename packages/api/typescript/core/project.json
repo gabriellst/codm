@@ -1,0 +1,18 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "core-typescript",
+	"sourceRoot": "packages/api/typescript/core/src",
+	"projectType": "library",
+	"targets": {
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": { "command": "bun x tsc --noEmit", "cwd": "packages/api/typescript/core" }
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": { "command": "bun test", "cwd": "packages/api/typescript/core" }
+		}
+	}
+}

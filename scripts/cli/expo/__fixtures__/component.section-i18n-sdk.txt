@@ -1,0 +1,21 @@
+import { View } from 'react-native'
+import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
+import type { User } from '@template/client-typescript/typescript'
+import { Eyebrow } from '@/components/ui/Eyebrow'
+import { DisplayTitle } from '@/components/ui/DisplayTitle'
+
+interface ProfileHeaderProps {
+	className?: string
+}
+
+export function ProfileHeader({ className, ...props }: ProfileHeaderProps) {
+	const { t } = useTranslation()
+	return (
+		<View className={cn('', className)} {...props}>
+			<Eyebrow>{t('profile.eyebrow')}</Eyebrow>
+			<DisplayTitle>{t('profile.title')}</DisplayTitle>
+			{/* Section body */}
+		</View>
+	)
+}

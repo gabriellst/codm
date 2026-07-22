@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 380px; max-height: 500px; overflow-y: auto; font-family: system-ui; background: #1e1e2e; color: #cdd6f4; padding: 16px; }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    h1 span { font-size: 18px; }
+    .empty { text-align: center; color: #6c7086; padding: 32px 0; font-size: 13px; }
+    .domain { margin-bottom: 14px; }
+    .domain-name { font-size: 12px; font-weight: 600; color: #89b4fa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .snap-list { display: flex; flex-direction: column; gap: 4px; }
+    .snap-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #313244; border-radius: 6px; font-size: 12px; }
+    .snap-item:hover { background: #45475a; }
+    .snap-id { font-weight: 600; color: #f5e0dc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .snap-time { color: #6c7086; font-size: 11px; white-space: nowrap; }
+    .snap-actions { display: flex; gap: 4px; }
+    .snap-actions button { border: none; background: none; cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; }
+    .snap-actions button:hover { background: #585b70; }
+    .btn-html { color: #a6e3a1; }
+    .btn-svg { color: #89b4fa; }
+    .btn-json { color: #f9e2af; }
+    .btn-del { color: #f38ba8; }
+  </style>
+</head>
+<body>
+  <h1><span>&#128247;</span> DOM Snapshots</h1>
+  <div id="content"><div class="empty">No snapshots yet.<br>Click the camera button on any page.</div></div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

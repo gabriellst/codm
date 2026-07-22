@@ -1,0 +1,306 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: [event, errors]
+  depended_by: [projector, query]
+  context_reads: [event, ddd-modeling]
+  lang: go
+  examples:
+    - examples/citizens/go/projection/channel.go
+    - examples/citizens/go/projection/message.go
+    - examples/citizens/go/projection/remote.go
+
+  snippet:
+    skeleton: |
+      // Package projections provides the {{Pascal}}Projection read model.
+      package projections
+
+      import "time"
+
+      // {{Pascal}}Projection mirrors the {{ctx}}.{{snake}}s read-model table.
+      // Written by {{Pascal}}Projector; read by query use cases.
+      // No domain logic, no invariants — plain data record.
+      type {{Pascal}}Projection struct {
+      	// TODO: add fields matching the DB columns
+      	// EntityID  string
+      	// OwnerID   string
+      	UpdatedAt time.Time
+      }
+
+    skeletons:
+      repository: |
+        // Package projections — {{Pascal}}ProjectionRepository is the persistence interface
+        // for {{Pascal}}Projection.
+        package projections
+
+        import "context"
+
+        // {{Pascal}}ProjectionRepository is the persistence interface for {{Pascal}}Projection.
+        type {{Pascal}}ProjectionRepository interface {
+        	// Upsert inserts or updates the {{snake}} projection row.
+        	Upsert(ctx context.Context, p *{{Pascal}}Projection) error
+        	// Delete removes the row for the given key.
+        	Delete(ctx context.Context, key string) error
+        }
+
+      repositoryMock: |
+        package projections
+
+        import "context"
+
+        // Mock{{Pascal}}ProjectionRepository is an in-memory implementation for use in unit tests.
+        type Mock{{Pascal}}ProjectionRepository struct {
+        	Rows    map[string]*{{Pascal}}Projection
+        	Upserts int
+        	Deletes int
+        }
+
+        // NewMock{{Pascal}}ProjectionRepository constructs an empty mock repository.
+        func NewMock{{Pascal}}ProjectionRepository() *Mock{{Pascal}}ProjectionRepository {
+        	return &Mock{{Pascal}}ProjectionRepository{
+        		Rows: make(map[string]*{{Pascal}}Projection),
+        	}
+        }
+
+        // Upsert stores the projection row in memory.
+        func (r *Mock{{Pascal}}ProjectionRepository) Upsert(_ context.Context, p *{{Pascal}}Projection) error {
+        	// TODO: use a meaningful key (e.g. p.EntityID)
+        	r.Rows["key"] = p
+        	r.Upserts++
+        	return nil
+        }
+
+        // Delete removes the projection row from memory.
+        func (r *Mock{{Pascal}}ProjectionRepository) Delete(_ context.Context, key string) error {
+        	delete(r.Rows, key)
+        	r.Deletes++
+        	return nil
+        }
+
+        // Reset clears all accumulated state. Test helper.
+        func (r *Mock{{Pascal}}ProjectionRepository) Reset() {
+        	r.Rows = make(map[string]*{{Pascal}}Projection)
+        	r.Upserts = 0
+        	r.Deletes = 0
+        }
+
+      repositoryPg: |
+        package projections
+
+        import (
+        	"context"
+        	"database/sql"
+        	"fmt"
+        )
+
+        // pg{{Pascal}}ProjectionRepository is the Postgres implementation.
+        type pg{{Pascal}}ProjectionRepository struct {
+        	db *sql.DB
+        }
+
+        // NewPg{{Pascal}}ProjectionRepository constructs the Postgres implementation.
+        func NewPg{{Pascal}}ProjectionRepository(db *sql.DB) *pg{{Pascal}}ProjectionRepository {
+        	return &pg{{Pascal}}ProjectionRepository{db: db}
+        }
+
+        // Upsert inserts or updates the {{snake}} projection row.
+        func (r *pg{{Pascal}}ProjectionRepository) Upsert(ctx context.Context, p *{{Pascal}}Projection) error {
+        	_, err := r.db.ExecContext(ctx, `
+        		INSERT INTO {{ctx}}.{{snake}}s
+        		  (TODO_key, updated_at)
+        		VALUES ($1, $2)
+        		ON CONFLICT (TODO_key) DO UPDATE
+        		  SET updated_at = EXCLUDED.updated_at
+        	`,
+        		// p.EntityID,
+        		p.UpdatedAt,
+        	)
+        	if err != nil {
+        		return fmt.Errorf("{{ctx}}.{{snake}}s upsert: %w", err)
+        	}
+        	return nil
+        }
+
+        // Delete removes the row for the given key.
+        func (r *pg{{Pascal}}ProjectionRepository) Delete(ctx context.Context, key string) error {
+        	_, err := r.db.ExecContext(ctx, `
+        		DELETE FROM {{ctx}}.{{snake}}s WHERE TODO_key = $1
+        	`, key)
+        	if err != nil {
+        		return fmt.Errorf("{{ctx}}.{{snake}}s delete: %w", err)
+        	}
+        	return nil
+        }
+
+  patterns:
+    - id: PROJ-GO-01
+      when: always
+      rule: >
+        Projection is a plain Go struct with exported fields. No base class, no
+        AggregateRoot, no domain events. Use `db` struct tags for scanner
+        compatibility where needed.
+      wrong: |
+        type MessageProjection struct {
+            BaseEntity               // wrong: do not embed base classes
+            ID string
+        }
+      right: |
+        type Message struct {
+            ID        string     `db:"id"`
+            ChannelID string     `db:"channel_id"`
+            DeletedAt *time.Time `db:"deleted_at"`
+        }
+
+    - id: PROJ-GO-02
+      when: always
+      rule: >
+        Mutation logic lives in `ApplyX` methods on the projection struct, not in
+        the projector. One method per event transition. Method name mirrors the event
+        (ApplyDelivered ← MessageDeliveredEvent).
+      wrong: |
+        // In projector:
+        row.DeliveredAt = &at   // direct field mutation — logic leaks into projector
+      right: |
+        // On projection:
+        func (m *Message) ApplyDelivered(at time.Time) {
+            if m.DeliveredAt == nil || at.After(*m.DeliveredAt) {
+                m.DeliveredAt = &at
+            }
+        }
+        // In projector:
+        row.ApplyDelivered(deliveredAt)
+
+    - id: PROJ-GO-03
+      when: always
+      rule: >
+        The repository interface declares only the surface the projector needs.
+        No shared base interface. Minimum canonical set: FindByKey, Save, InsertIfNew.
+      wrong: |
+        type MessageRepo interface {
+            BaseProjectionRepository  // wrong: no shared base
+        }
+      right: |
+        type MessageProjectionRepository interface {
+            Find(ctx context.Context, id string) (*Message, error)
+            FindByPlatformID(ctx context.Context, channelID, platformID string) (*Message, error)
+            Save(ctx context.Context, msg *Message) error
+            InsertIfNew(ctx context.Context, msg *Message) (bool, error)
+        }
+
+    - id: PROJ-GO-04
+      when: always
+      rule: >
+        InsertIfNew returns (bool, error). false means a duplicate was detected and
+        the insert was skipped — this is not an error.
+      wrong: |
+        InsertIfNew(ctx context.Context, row *Message) error
+      right: |
+        InsertIfNew(ctx context.Context, row *Message) (bool, error)
+
+    - id: PROJ-GO-05
+      when: always
+      rule: >
+        The Postgres constructor returns the interface type, not the concrete pointer.
+        This allows fx to bind the interface without an fx.As wrapper.
+      wrong: |
+        func NewPgRepo(db *sql.DB) *pgMessageRepo { ... }
+      right: |
+        func NewPgRepo(db *sql.DB) MessageProjectionRepository { ... }
+
+    - id: PROJ-GO-06
+      when: always
+      rule: >
+        The in-memory mock ships alongside the Postgres impl as
+        mock_<name>_projection_repository.go. It implements the full interface,
+        provides exported state fields for assertions, and a Reset() helper.
+        A compile-time assertion enforces interface compliance.
+      right: |
+        var _ MessageProjectionRepository = (*mockMessageRepo)(nil)
+
+        func (r *mockMessageRepo) Reset() {
+            r.rowsByID = make(map[string]*projections.Message)
+            r.rowsByPlatformID = make(map[string]*projections.Message)
+        }
+
+    - id: PROJ-GO-07
+      when: projection has atomic ops
+      rule: >
+        Atomic ops are edge cases. Add one only when a named trigger applies:
+        hot-row contention, bulk update, monotonic constraint, conditional update,
+        or cache-mirror upsert. Document the trigger in a comment on the method.
+      right: |
+        // IncrementViewCountBatch atomically adds count for (videoId, day).
+        // Atomic op justified: hot-row contention — 50+ concurrent view events per hot video.
+        IncrementViewCountBatch(ctx context.Context, videoID, day string, count int) error
+
+  bad_practices:
+    - id: PROJ-GO-BP-01
+      severity: critical
+      description: Embedding a base class in the projection struct
+      mechanical: true
+      detect:
+        - 'entities\.BaseEntity'
+        - '\bBase\w*Entity\b'
+      wrong: |
+        type MessageProjection struct {
+            entities.BaseEntity   // wrong: projections have no base class
+            ID string
+        }
+      right: |
+        type Message struct {
+            ID string `db:"id"`
+        }
+
+    - id: PROJ-GO-BP-02
+      severity: critical
+      description: Mutation logic in the projector instead of an ApplyX method
+      mechanical: false
+      wrong: |
+        row.DeliveredAt = &at   // projector directly mutates fields
+        row.Version++
+        return repo.Save(ctx, row)
+      right: |
+        row.ApplyDelivered(at)
+        return repo.Save(ctx, row)
+
+    - id: PROJ-GO-BP-03
+      severity: high
+      description: InsertIfNew returning error on duplicate instead of (false, nil)
+      mechanical: true
+      detect:
+        - 'InsertIfNew\([^)]*\)\s*error'
+      wrong: |
+        func (r *pgRepo) InsertIfNew(ctx context.Context, row *Message) error {
+            _, err := r.db.Exec(`INSERT INTO ...`)
+            return err   // returns pq.UniqueViolation on duplicate — wrong
+        }
+      right: |
+        func (r *pgRepo) InsertIfNew(ctx context.Context, row *Message) (bool, error) {
+            res, err := r.db.Exec(`INSERT INTO ... ON CONFLICT DO NOTHING`)
+            if err != nil { return false, err }
+            n, _ := res.RowsAffected()
+            return n > 0, nil
+        }
+
+    - id: PROJ-GO-BP-04
+      severity: high
+      description: Adding atomic ops without a comment naming the justifying trigger
+      mechanical: false
+      wrong: |
+        UpdateDelivered(ctx context.Context, id string, at time.Time) error
+      right: |
+        // UpdateDelivered sets delivered_at if at is later than the current value.
+        // Atomic op justified: bulk receipts carry 1–20 IDs; find→save per ID is
+        // acceptable at current scale; annotate if load increases.
+        UpdateDelivered(ctx context.Context, id string, at time.Time) error
+
+    - id: PROJ-GO-BP-05
+      severity: medium
+      description: Postgres constructor returning concrete pointer instead of interface
+      mechanical: true
+      detect:
+        - 'func NewPg\w+\([^)]*\)\s*\*pg\w+'
+      wrong: |
+        func NewPgVideoSearchRepo(db *sql.DB) *pgVideoSearchRepo { ... }
+      right: |
+        func NewPgVideoSearchRepo(db *sql.DB) VideoSearchProjectionRepository { ... }

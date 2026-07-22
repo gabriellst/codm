@@ -1,0 +1,19 @@
+---
+import { getLocale, localizedPath, LOCALES } from '~/i18n'
+
+const current = getLocale(Astro.url)
+---
+
+<div class="flex items-center gap-1 text-xs">
+	{
+		LOCALES.map(loc => (
+			<a
+				href={localizedPath(Astro.url, loc)}
+				class={`rounded px-2 py-1 transition-colors ${loc === current ? 'bg-[var(--muted)] font-semibold' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+				aria-current={loc === current ? 'page' : undefined}
+			>
+				{loc.toUpperCase()}
+			</a>
+		))
+	}
+</div>

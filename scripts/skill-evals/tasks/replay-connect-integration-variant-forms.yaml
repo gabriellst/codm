@@ -1,0 +1,62 @@
+id: replay-connect-integration-variant-forms
+tier: train
+builder: sonnet
+title: Discriminated connect-integration body → per-variant forms dispatched by
+  a map (union introspection helpers)
+sourceSpec: .specs/2026-06-07-schema-export-and-discriminated-union-frontend.md
+goldRef: f3175d4310b8759363accbe5e081723c972c8dc7
+baseRef: 8a25cb7c6b91f036b1d88fe5695e0414f75cbd9a
+prompt: |-
+  In packages/app/react, the settings → integrations Connect-Integration sheet currently violates the project's discriminated-union rule. The SDK contract `connectIntegrationMutationRequestSchema` (from `@template/client-typescript/typescript`) is a union with one member per (platform, connectionMode) tuple — e.g. SHOPIFY:OAUTH, SHOPIFY:CREDENTIALS, META:MANUAL, KIWIFY:CREDENTIALS — each with its own concrete `credentials` sub-shape. But `routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/index.tsx` flattens all of this into ONE generic key/secret form validated by a hand-rolled parallel `credentialsSchema`, and force-fits the payload with `as never` casts. Refactor it so the contract's cases drive the UI:
+
+  1. Generic union introspection helpers in `src/lib/union.ts`, working on any z.union / z.discriminatedUnion (both expose `.options`):
+     - `unionVariantValues(union, discriminant)` → distinct literal values of a discriminant field (selector options).
+     - `pickUnionVariant(union, match)` → the WHOLE matched member schema. Valid only as a `.safeParse(...)` source (it cannot satisfy TanStack's `validators.onChange` — TS2322); for the narrowed type use `Extract<Req, {…}>`.
+     - `pickUnionVariantField(union, match, field)` → the sub-schema of ONE field of the matched member. This IS a valid TanStack `validators.onChange`, the `.safeParse` source for that field's value, and (via z.infer) the form value's type.
+  2. One small, fully-typed form component per (platform, connectionMode) variant, in per-platform folders `ConnectIntegrationSheet/platforms/<platform>/{oauth,credentials,manual}.tsx` — duplication between variants is fine; each variant validates against its OWN member extracted from the SDK union (e.g. `pickUnionVariantField(connectIntegrationMutationRequestSchema, { platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' }, 'credentials')` as the onChange validator, and the whole member's `.safeParse` at submit to build the full envelope).
+  3. A `CONNECT_FORMS` registry in `ConnectIntegrationSheet/platforms/index.ts`, keyed `${platform}:${connectionMode}` → variant form. The sheet looks the active variant up by the selected descriptor's discriminants — dispatch by map, never an if/switch chain. Adding a (platform, mode) = a form folder + a map entry.
+  4. OAuth-mode variants kick off the provider authorize redirect via a small shared `useOauth` hook in the ConnectIntegrationSheet folder.
+  5. Thread non-editable discriminant fields (`type`, `platform`, `connectionMode`) from the selected descriptor into the submitted body — dropping them makes safeParse silently fail.
+  6. Remove the hand-rolled parallel schema and ALL widening casts (`as never` / `as any` / `as unknown`) from the sheet; the SDK union is the single source of truth. All mutations via the SDK `useConnectIntegration` hook — no raw fetch.
+
+  `bun tsc` must stay green.
+axes:
+  - DISC-UNION
+  - SDK-CONSUME
+  - SCHEMA-DERIVE
+graders:
+  - kind: tsc
+    spec: app-react
+  - kind: file-exists
+    spec: packages/app/react/src/lib/union.ts
+  - kind: grep-must
+    spec: packages/app/react/src/lib/union.ts::pickUnionVariantField
+    id: form#FRM-P44
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/platforms/index.ts::CONNECT_FORMS
+    id: component#CMP-P18
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/platforms/**/*::connectIntegrationMutationRequestSchema
+    id: form#FRM-P43
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/**/*::pickUnionVariant
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/**/*::as
+      (never|any|unknown)
+    id: form#bp-31
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/**/*::\bfetch\(
+notes: "Replays Decision 1 (union-as-whole-body, shape b) of the ADR.
+  Implementing commit 4a66d3286 added union.ts + 17 platform folders +
+  CONNECT_FORMS + useOauth and slimmed the sheet; goldRef f3175d431 (next
+  commit, adds the ADR itself). baseRef 8a25cb7c6 verified: sheet exists in the
+  flattened anti-pattern form (hand-rolled credentialsSchema + two `as never`
+  casts) and the SDK already exports connectIntegrationMutationRequestSchema as
+  a z.union — exactly the refactor start state. Gold verified: zero widening
+  casts in ConnectIntegrationSheet/**, CONNECT_FORMS map,
+  pickUnionVariant/pickUnionVariantField used in variant forms, no fetch(.
+  app-react tsc verified green on the current tree, whose app code is identical
+  to f3175d431 (only docs/skills/scripts commits after). All file paths in
+  prompt/graders are named by the ADR itself. Base and gold are 'feat: wip'
+  commits — slightly elevated risk the base tree has unrelated rough edges, but
+  the union refactor slice is cleanly bounded."

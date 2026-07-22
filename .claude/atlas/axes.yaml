@@ -1,0 +1,307 @@
+# Axis routing table — the cross-cutting slice of the pattern system.
+#
+# An AXIS is one decision dimension that multiple artifact types each answer differently
+# (e.g. "how is an enum represented in Zod"). Each axis has exactly ONE canonical owner;
+# every other skill references the owner instead of restating the rule (restatement is how
+# the 2026-06-08 audit's 30 contradictions happened — see .specs/2026-06-08-*.md).
+#
+# `rung` = the strongest enforcement level the axis currently has (correctness ladder,
+# .specs/2026-06-09-correctness-rung-system-design.md):
+#   type      — wrong code does not compile (rung 1)
+#   scaffold  — the CLI writes/wires it (rung 1)
+#   detector  — mechanical detect: regex / walker, in-loop + CI (rung 2)
+#   docs      — judgment rule: owner's SKILL/registry text only (rung 3)
+# Axes should migrate UP this ladder over time; `docs` is the rung of last resort.
+#
+# This file is hand-owned metadata (owner/rung/notes). Rule TEXT lives only in the owner —
+# never copy it here.
+#
+# `scenarios` = the MANDATORY acceptance scenarios a feature touching this axis must be
+# tested against (the feature-loop verifier derives its test matrix from the union of the
+# feature's axes — see scripts/skill-evals/README.md). Coverage is enumerable, not improvised.
+
+version: 1
+
+axes:
+  # ── backend / zod-DDD matrix ──────────────────────────────────────────
+  - id: ID-REPR
+    name: Identity representation in Zod
+    family: backend
+    owner: schema#SCH-C06
+    rung: docs
+    notes: "z.instance(Id) in entity/VO schemas; z.uuid()/z.string() on the wire. Foreign-domain-ref vs external-id discriminator still informal (cc-bp-17 detector is a Phase-3 candidate)."
+  - id: ENUM-REPR
+    name: Enum representation in Zod
+    family: backend
+    owner: enum#typescript
+    rung: type
+    notes: "z.nativeEnum removed from the core z surface (Phase 2); cc-bp-16 detect remains as belt-and-suspenders for direct 'zod' imports."
+  - id: VO-REPR
+    name: Value-object field representation by layer
+    family: backend
+    owner: schema#SCH-C06
+    rung: type
+    notes: ".input() exists only on z.object() schemas since Phase 2 (core InputSchema.ts); entity z.instance(VO) stays docs."
+  - id: SCHEMA-DERIVE
+    name: Schema derivation / composition
+    family: backend
+    owner: schema#SCH-C03
+    rung: docs
+    notes: "Controller = UseCaseInputSchema.omit + refine AFTER omit (CTRL-C16); use-case schemas carry no .refine (usecase bp-07 detect)."
+  - id: ERR-VOCAB
+    name: Error vocabulary by layer
+    family: backend
+    owner: errors#layer-union-table
+    rung: docs
+    notes: "Single source: errors/typescript/SKILL.md 'Layer → Error-Union Table'."
+    scenarios:
+      - "missing entity → typed NOT_FOUND-class code, mapped HTTP status (assert the CODE, never the message)"
+      - "tenant mismatch → same NOT_FOUND (no existence leak)"
+  - id: OPTIONALITY
+    name: Optional/nullable + defaults conventions
+    family: backend
+    owner: entity#ENT-P02
+    rung: docs
+    notes: "Lifecycle defaults in create(), never schema .default() (rehydration hazard); config enums may default in schema (VO PriceRange currency)."
+    scenarios:
+      - "create() yields the initial lifecycle status without the caller passing it"
+      - "rehydrating a NON-default-status row preserves the stored status (the schema must not default it back)"
+  - id: CLASS-BASE
+    name: Class base / inheritance selection
+    family: backend
+    owner: entity#ENT-03
+    rung: docs
+  - id: VALIDATION-PLACEMENT
+    name: Where validation lives
+    family: backend
+    owner: entity#ENT-C04
+    rung: docs
+    notes: "Format → schema; cross-field → .refine; cross-entity → behavior-method if-checks; HTTP shape → controller. Controller envelope is rung TYPE since Phase 2. Go diverges intentionally: validate tags on BOTH controller request struct and use-case Input struct (use cases ingest from non-HTTP paths — webhooks/events/workers)."
+    scenarios:
+      - "each format invariant rejected with its named DomainError (one test per invariant)"
+      - "cross-field rule rejected at construction, not in the use case"
+      - "state-guard violation throws from the behavior method (not pre-checked by callers)"
+  - id: TRANSACTION
+    name: Transaction / UnitOfWork threading
+    family: backend
+    owner: repository#bp-11
+    rung: detector
+    notes: "cc-bp-20 mechanical; port tx?: Transaction, Drizzle impl redeclares, tx ?? this.db, no cast, no client(tx) helper."
+    scenarios:
+      - "a failure after the first write leaves NO partial state (entity + event atomic)"
+  - id: EVENT-EMISSION
+    name: Event birth + outbox boundary
+    family: backend
+    owner: usecase#UC-C05
+    rung: detector
+    notes: "TS = use-case-born (entity hub documents the intentional Go divergence); slice-closure SCW-01 walks orphans; import-direction R4 bans mediator.publish in use cases."
+    scenarios:
+      - "event persisted (events table) on the success path, same tx as the entity save"
+      - "NO event persisted when the transition is rejected / row missing"
+      - "duplicate delivery does not double-apply (idempotent ingest where the slice has one)"
+  - id: CQRS-SIDE
+    name: Read/write side placement
+    family: backend
+    owner: query#QRY-01
+    rung: detector
+    notes: "Decided by PATH (ui/usecases), not base class — usecase bp-01 ↔ query QRY-P01 cross-referenced (Phase 3)."
+  - id: PROJECTION-MUTATION
+    name: Read-model write ownership
+    family: backend
+    owner: projector#PRJTR-07
+    rung: detector
+    notes: "find → applyEvent → save; slice-closure SCW-02; handler SKILL re-framed (read-model upsert in a handler is a projector smell, cache-mirror is the only carve-out)."
+  - id: ASYNC-INLINE
+    name: Async-via-outbox vs inline projection
+    family: backend
+    owner: projector#typescript
+    rung: docs
+    notes: "Rule lives only in the typescript variant; lift to the hub in a future pass."
+  - id: INFRA-LEAK
+    name: Infrastructure named above its layer
+    family: backend
+    owner: registry#cc-bp-20
+    rung: detector
+    notes: "Exemptions encoded: ui BFF query use cases (db: DrizzleClient), auth-bootstrap middleware (middleware bp-08), Drizzle impl redeclaration."
+  - id: WIRE-EXPOSURE
+    name: Wire/SDK exposure boundary
+    family: backend
+    owner: bounded-context#bp-05
+    rung: detector
+  - id: DI-REG
+    name: DI registration channels
+    family: backend
+    owner: bounded-context#registry
+    rung: docs
+    notes: "Channel map (INSTANCE_REGISTRY / BoundedContext slots / middlewares array / routeTree.gen) still implicit — Phase-3 candidate table."
+  - id: TELL-DONT-ASK
+    name: Guard placement (input presence vs entity state)
+    family: backend
+    owner: entity#typescript
+    rung: docs
+  - id: TEST-MODE
+    name: Test layer ↔ DI mode mapping
+    family: backend
+    owner: test#typescript
+    rung: docs
+
+  # ── cross-family ──────────────────────────────────────────────────────
+  - id: NAMING
+    name: Ubiquitous-language naming
+    family: cross
+    owner: registry#cc-bp-21
+    rung: detector
+    notes: "LookupService/externalStatus mechanical; provider stays LLM-judged (auth providers legit)."
+  - id: NAME-CONSISTENCY
+    name: One field name per concept across endpoints
+    family: cross
+    owner: schema#SCH-P05
+    rung: docs
+    notes: "Emerges via shared-schema reuse; no mechanical detector feasible."
+  - id: LAYOUT
+    name: File placement + registration semantics
+    family: cross
+    owner: registry#components
+    rung: detector
+    notes: "slice-closure SCW-03 catches silent-registration failures; scaffolder auto-wiring (Phase 2) removes the cause where the CLI is used."
+    scenarios:
+      - "react: route-private code lives in -components/<Name>/index.tsx (TanStack '-' folders are genuinely router-excluded); new routes registered via bun x tsr generate"
+      - "expo: SAME -components/<Name>/index.tsx shape (registry#components routes it) but NOTHING under app/ is router-excluded — colocated files use named exports ONLY so the phantom route node stays inert (component/expo bp-18); stores in -stores/, never _stores/"
+      - "expo: screens/layouts default-export; a (sheets) route folder and its root Stack.Screen registration land in the same change (NAV-MODAL)"
+  - id: DISC-UNION
+    name: Discriminated-union handling end-to-end
+    family: cross
+    owner: query#QRY-P18
+    rung: docs
+    notes: "Composition-first recipe promoted from user-memory (Phase 3): named section fragments + variant() composer + single z.discriminatedUnion('kind') + Metric/Tally atoms. Frontend reflection: form FRM-P43/P44, component CMP-P18."
+    scenarios:
+      - "one test per union cell: each kind returns exactly its cell's sections (no optional bleed-through)"
+      - "frontend narrows by the discriminant exhaustively (never-default)"
+
+  # ── frontend ──────────────────────────────────────────────────────────
+  - id: FORM-SUBSCRIBE
+    name: Fine-grained form state subscription
+    family: frontend
+    owner: form#FRM-P03
+    rung: docs
+    notes: "form.Subscribe with a NARROW selector is the only reactive read of form state — primitive-returning selectors stop re-renders on unrelated fields (expo list-row 3-mode discriminant); submit button gated by safeParse over selected values (FRM-P03); never raw form.state.values in a render body (not reactive). Reference corpora: medscall onboarding (web), berzerk-club sheets (expo)."
+    scenarios:
+      - "submit button disable is driven by a form.Subscribe selector + schema safeParse — not by reading form.state in the body"
+      - "a subscriber on one field does not re-render when an unrelated field changes (primitive selector)"
+      - "no useState mirror of any form field value"
+  - id: FORM-COMPOSE
+    name: Composable multi-step forms by schema slice + inferred types
+    family: frontend
+    owner: form#FRM-C05
+    rung: docs
+    notes: "Step schema = a SLICE of the generated SDK mutation schema obtained via the @/lib/union helpers — pickUnionVariantField(union, { type: 'X' }, 'section') (a valid TanStack validators.onChange), unionVariantValues(union, 'type') for the selector options, pickUnionVariant(union, match).safeParse for the whole-member submit gate; NEVER raw positional access (.def.options[0].shape.x — silent breakage on member reorder) and never a re-typed parallel schema. StepData inferred from the slice (z.output); the shared form prop typed by function inference (export type XForm = ReturnType<typeof _inferXForm>) — no hand-written aggregate type anywhere; steps render via a dispatch map keyed by the step enum; final payload safeParsed against the FULL discriminated union before the mutation. Helpers exist on BOTH platforms (react + expo lib/union.ts). Scaffold: bun cli onboarding-step --from=<sdk.path>. Reference: medscall onboarding flow (its raw .shape access is the pre-helper spelling — ours supersedes it)."
+    scenarios:
+      - "every step schema comes from pickUnionVariantField / pickUnionVariant on the SDK union — zero hand-rolled field lists, zero positional .def.options[N] access"
+      - "no hand-written aggregate form type: the form/result types are inferred (ReturnType<typeof _inferXForm> / z.output)"
+      - "the final submit validates the assembled payload against the discriminated union (pickUnionVariant(...).safeParse) and sends result.data, not raw values"
+      - "per-discriminant step sequences: switching the discriminant changes the step tuple, not field optionality"
+  - id: UI-COMPOSITION
+    name: Screen decomposition into the 6 citizens
+    family: frontend
+    owner: ui-composition#UIC-01
+    rung: docs
+    notes: "Route Shell (URL contract, never fetches) / Section (orchestrates ≥3 sub-components OR sole data-fetching root) / Component / Leaf (receives item via prop in a .map()) / Dialog (useDialogStore, no open props) / Form (TanStack + SDK schema)."
+    scenarios:
+      - "the route file stays a thin shell (no data fetching, no business JSX)"
+      - "list rows are Leaves receiving the item by prop — the Section owns the query and maps"
+      - "every repeated visual region is decomposed, not inlined into one mega-component"
+  - id: STATE-PLACEMENT
+    name: Where each piece of client state lives
+    family: frontend
+    owner: store#STR-P10
+    rung: docs
+    notes: "The decision tree: server → SDK hooks; bookmarkable → route search; cross-component → store; form fields → TanStack Form; useState ONLY for truly local transient UI. The 'sloppy useState everywhere' failure mode is this axis."
+    scenarios:
+      - "filters/tabs/pagination round-trip through the URL (deep-linkable, survives refresh)"
+      - "react: the search schema composes from the SDK query-params schema — .omit() store-owned fields, .and(z.object({...})) route-local additions, EVERY field .default()-ed (dashboardSearchSchema exemplar); never a hand-rolled parallel field list"
+      - "derived state over form values reads via form.Subscribe narrow selectors — never mirrored into useState/store on onChange (FORM-SUBSCRIBE handshake)"
+      - "zero useState mirroring server data or mutation pending flags"
+      - "state read by 2+ components lives in a store, not lifted useState + prop drilling"
+      - "expo: screen filter/tab/pagination state round-trips through useTypedSearchParams(schema) from @/lib/typed-route with EVERY field .default()-ed — a garbage deep link renders defaults, never crashes (route/expo RTE-03/RTE-04)"
+      - "expo: ephemeral sheet/overlay open state is local useState — the web URL-first canon is intentionally softened on mobile (route/expo bp-09); deep-linkable modals are routes (NAV-MODAL)"
+      - "expo: wizard step/draft state lives in a route-scoped -stores/<flow>-store.ts consumed by ONE route — never a form-mirror store (form/expo bp-13), never one sheet route per step"
+  - id: DATA-OWNERSHIP
+    name: Component data ownership
+    family: frontend
+    owner: component#CMP-P01
+    rung: docs
+  - id: SDK-CONSUME
+    name: SDK-only backend access
+    family: frontend
+    owner: form#FRM-01
+    rung: detector
+    notes: "fetch-ban detects in component bp-21 / route bp-12 / form bp-32 + import-direction R2/R5."
+  - id: LOCALE-MONEY
+    name: Locale & money idioms
+    family: frontend
+    owner: app-react#CLAUDE.md
+    rung: detector
+    notes: "packages/app/react/CLAUDE.md is the prose owner; component bp-15 / route bp-11 detect hardcoded ptBR."
+    scenarios:
+      - "react: every Intl/toLocale* call takes the locale from useLocale(); money renders via useMoney() over SDK Money (cents+currency) — zero pt-BR / en-US / ptBR literals"
+      - "expo: money/dates format via @/lib/format + @/lib/format-date (locale resolved from i18n inside the helper) — useLocale/useMoney DO NOT EXIST on mobile (component/expo CMP-P13); SDK Money is CENTS, lib formatMoney takes UNITS — convert before rendering"
+      - "expo: no per-component format* wrapper functions (component/expo bp-16) and no hardcoded date-fns ptBR — the i18n-driven lib helper is the only formatter"
+  - id: DIALOG-OWNERSHIP
+    name: Dialog state ownership
+    family: frontend
+    owner: form-react#FRM-P35
+    rung: detector
+    notes: "useDialogStore.show()/hide(); legacy open/onOpenChange banned by form react bp-18 detects; hub/flat copies aligned in Phase 0."
+    scenarios:
+      - "web: dialogs open via useDialogStore.show(<Dialog item={…} />) / hide(); drawers/side-panels via the twin useDrawerStore — no open/onOpenChange props, no bespoke open-state stores (form react bp-18)"
+      - "web: the opener passes the subject INTO the shown content as a prop — selected item never mirrored into useState"
+      - "expo: the platform INVERTS this axis — no Dialog primitive and no modal store exists; the modal is a (sheets) route or an ephemeral Sheet primitive (see NAV-MODAL) — porting web code must not carry useDialogStore/useDrawerStore across"
+  - id: CENTRALIZE-MAPS
+    name: Enum → label/color rendering
+    family: frontend
+    owner: enum#typescript
+    rung: docs
+    notes: "Labels via i18n enums.* subtree (lib/labels.ts is dead); color/variant maps stay Record<Enum,…> in @/lib (className can't live in i18n) — component CMP-P07/P08 aligned in Phase 3."
+  - id: MUTATION-IDIOM
+    name: Mutation callbacks & pending state
+    family: frontend
+    owner: form#bp-29
+    rung: docs
+    notes: "No onError (global MutationCache), no try/catch, hook's own isPending — component bp-05b aligned in Phase 3."
+    scenarios:
+      - "success feedback is platform-idiomatic: web toast.success, expo Haptics.notification('success') — a toast import on mobile is a defect (no toast primitive exists)"
+      - "invalidation uses the SDK queryKey helper on settled — never a hand-rolled ['items'] literal key (form/expo bp-07)"
+      - "errors stay with the global MutationCache (web toast handler / expo Alert via lib/errors.ts customErrorHandlers, incl. SESSION_EXPIRED → login redirect) — no try/catch around mutateAsync, no per-mutation onError"
+  - id: PRIMITIVES-A11Y
+    name: Primitive composition + accessibility
+    family: frontend
+    owner: primitive#react
+    rung: docs
+  - id: NAV-MODAL
+    name: Modal surface & lifecycle on mobile (router-as-modal-state)
+    family: frontend
+    owner: sheet#SHT-01
+    rung: detector
+    notes: "Expo inverts web DIALOG-OWNERSHIP: no Dialog primitive, no open/close store (route/expo bp-11) — the router IS the modal state machine. Deep-linkable modal = (sheets)/<name> route + root-_layout Stack.Screen with EXPLICIT presentation (sheet SHT-03); ephemeral in-page overlay = Sheet primitive + local useState. Dialog-import (sheet bp-04), ungrouped push path (sheet bp-07) and fullScreenModal-without-headerLeft (route/expo bp-12) are mechanical; the route↔registration coupling (sheet bp-02) is NOT — slice-closure SCW-04 is the Phase-3 candidate (HEAD has the dangling game-form registration proving both drift directions)."
+    scenarios:
+      - "porting a web dialog/drawer yields a (sheets)/<name>/ route + root Stack.Screen registration with explicit presentation, landed in the SAME change (no folder without registration, no dangling registration)"
+      - "dismissal pairs with presentation: router.back() for pageSheet/formSheet, router.dismiss() for fullScreenModal; sheet-as-form success = Haptics.notification('success') THEN dismiss, invalidateQueries on settled"
+      - "the sheet receives at most ids via typed params and fetches its own data (sheet SHT-P05) — deep-linking straight to /(sheets)/<name>?id=… renders with zero prior in-app navigation"
+      - "ephemeral filter overlay = Sheet primitive + local useState — no URL change, no Zustand open/close store, no Dialog import"
+      - "fullScreenModal ships an inner Stack with an explicit headerLeft back affordance (route/expo bp-12); pageSheet inner layout is at most a bare <Slot />"
+      - "multi-step flow = ONE (sheets)/<flow>/ route with inner Stack sub-routes + -stores/<flow>-store.ts — never N top-level sheet routes stacking modals"
+
+  # ── e2e ───────────────────────────────────────────────────────────────
+  - id: E2E-DISCIPLINE
+    name: Cross-stack E2E authoring discipline
+    family: cross
+    owner: e2e#E2E-01
+    rung: docs
+    notes: "Custom harness (utils/test: typed goto, loginAs, given, network fixture) over raw @playwright/test; given-helpers via session.client SDK (backend imports banned — bp-e2e-01); internal TS endpoints NEVER mocked, channel/SSE ALWAYS mocked (typed mockRoute/mockSSE registered BEFORE goto); role/label selectors (bp-e2e-03/08); fail-fast via network.waitForFailure (bp-e2e-09); ephemeral-DB runner only. HAZARD: the six scaffold specs in packages/e2e/tests/ contradict the canon — exemplars must not be copied. registry-scan does not reach packages/e2e yet (isInScope excludes *.spec.ts; no components-index entry) — detector rung once routed."
+    scenarios:
+      - "spec imports { test, expect } from '../utils/test' and navigates via typed goto('/app/…', params) — never raw @playwright/test + page.goto"
+      - "state setup composes given helpers calling real endpoints via session.client — zero api/src imports, zero direct DB writes, zero UI click-through signup"
+      - "internal /v1 TS endpoints hit the real server; Go/channel + SSE endpoints are mockRoute/mockSSE'd with SDK-typed payloads BEFORE the first goto"
+      - "selectors are getByRole/getByLabel/field()-scoped — no data-testid or getByPlaceholder primaries; a missing label is fixed in the app component, not hacked in the spec"
+      - "every post-action wait races network.waitForFailure(); no page.waitForTimeout; identities come from utils/generators (parallel-safe under workers:2)"
+      - "runs go through bun e2e (ephemeral DB + migrations + DROP in finally) — never npx playwright test against the dev DB; stale e2e_* DBs swept with bun test:e2e:cleanup"

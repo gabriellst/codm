@@ -1,0 +1,26 @@
+{
+	"name": "@template/client",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"main": "./lib/discover.ts",
+	"scripts": {
+		"generate": "bun generators/typescript.ts && bun generators/go.ts && bun generators/error-codes.ts",
+		"check": "bun tsc --noEmit"
+	},
+	"dependencies": {
+		"ky": "^1.14.0"
+	},
+	"peerDependencies": {
+		"zod": "^4.0.0",
+		"@tanstack/react-query": "^5.90.3"
+	},
+	"devDependencies": {
+		"@kubb/core": "^4.37.9",
+		"@kubb/plugin-client": "^4.37.9",
+		"@kubb/plugin-oas": "^4.37.9",
+		"@kubb/plugin-react-query": "^4.37.9",
+		"@kubb/plugin-ts": "^4.37.9",
+		"@kubb/plugin-zod": "^4.37.9"
+	}
+}

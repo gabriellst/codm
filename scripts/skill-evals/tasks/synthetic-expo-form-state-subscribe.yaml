@@ -1,0 +1,402 @@
+id: synthetic-expo-form-state-subscribe
+timeoutMs: 3600000
+seedCommands:
+  - "bun cli sheet kit-form --i18n=kitForm --presentation=formSheet --platform=expo"
+tier: holdout
+builder: sonnet
+title: Mobile kit-builder formSheet with one shared form under list-row pressure
+  (synthetic — probes expo form-subscribe, nav-modal, state placement, disc-union)
+sourceSpec: PROBES-BACKLOG.md#2
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template mobile app (packages/app/expo), build the missing "kit
+  builder" flow. Product wants creating a product kit to happen on the
+  phone as a deep-linkable modal sheet: create the route directory
+  app/(sheets)/kit-form/ (index.tsx, plus -types.ts, -components/ and
+  -stores/ as pinned below) and register it in app/_layout.tsx as a
+  formSheet (the form-heavy sheet presentation), with an opener CTA on
+  the home tab (under app/(tabs)/home/) that pushes the sheet. The
+  backend surface already exists in the SDK: useCreateKit,
+  createKitMutationRequestSchema, listKitsQueryKey,
+  useListProductsForKit, and the ProductCostTypeEnum /
+  QuantityModifierEnum consts (with their zod schemas) from
+  @template/client-typescript/typescript — read
+  packages/app/expo/CLAUDE.md FIRST. SCAFFOLD FIRST (binding): generate the formSheet and
+  form via the expo CLI (`bun cli sheet ...`, `bun cli form ...` — scripts/cli/expo/,
+  golden-tested) before any hand-written logic. Then the generated surface under
+  packages/client/dist/typescript/src/typescript/{hooks,types,zod} for
+  the exact shapes: the create body is { name, type, shipping, cost?,
+  items: [{ productId, quantity, quantityModifier }] }; products to
+  pick from come from useListProductsForKit (each row carries id, name,
+  sku, imageUrl and currentCost as { amountCents, currency }). There is
+  NO single-kit GET endpoint and NO kits list screen on mobile — do not
+  build one; this is a frontend-only task: do not touch the backend and
+  do not regenerate the SDK. The sheet is ONE form: kit name, a
+  kit-type selector (the SDK ProductCostType values with translated
+  labels), shipping cost, an optional extra cost, and the kit items
+  assembled in-sheet — an item editor (pick a product, set a quantity
+  and a quantity-rule from the SDK QuantityModifier values with
+  translated labels) above the list of items added so far. Tapping an
+  added row loads it into the editor to be changed: that row
+  highlights, the other rows dim, and the editor's action switches from
+  adding a new item to saving that row; typing in the editor must NOT
+  re-render the list rows (hard perf requirement). The product picker
+  is an in-page overlay (it does not change the URL), opens from BOTH
+  the editor's product field AND the empty-items call-to-action, shows
+  the first page of products with each product's name and current cost
+  (no search input needed), and its visibility must never survive the
+  sheet unmounting and remounting. A cold deep link carrying
+  type=MULTIPLE opens the sheet with the kit type preselected; a deep
+  link with garbage params renders the defaults, never crashes. The
+  create button stays disabled until the payload is valid on the wire;
+  on success give tactile feedback, dismiss the sheet and keep the SDK
+  caches fresh (the kits list lives on the web app). All copy is
+  localized in both app languages (add the new keys to locales/pt.json
+  and en.json — @types/i18next.d.ts types t() against en.json). Decide
+  where every piece of state lives, how the screen decomposes and how
+  the one form is shared across the editor, the list, its rows and the
+  picker — all per the house mobile architecture: read
+  packages/app/expo/CLAUDE.md (first), docs/FRONTEND.md, the expo form
+  skill INCLUDING its exemplars (.claude/skills/form/expo/ — read all
+  five files in exemplars/workout-set/), the sheet skill
+  (.claude/skills/sheet/), the expo route/component skills
+  (.claude/skills/route/expo/, .claude/skills/component/expo/) and the
+  store skill (.claude/skills/store/) before writing code, and study
+  the existing exemplars (app/_layout.tsx, app/(sheets)/edit-profile/,
+  app/(sheets)/devices/). Where an exemplar and a skill registry
+  disagree, the registry wins. Colocated files live at
+  -components/<Name>/index.tsx (named exports only), the shared form's
+  merged schema + form prop type live in
+  app/(sheets)/kit-form/-types.ts, route-private client state in
+  app/(sheets)/kit-form/-stores/. Finish with a green type-check:
+  cd packages/app/expo && bun x tsc --noEmit.
+axes:
+  - FORM-SUBSCRIBE
+  - NAV-MODAL
+  - STATE-PLACEMENT
+  - DISC-UNION
+  - DATA-OWNERSHIP
+  - MUTATION-IDIOM
+  - LOCALE-MONEY
+  - ENUM-REPR
+  - SDK-CONSUME
+  - LAYOUT
+graders:
+  - kind: tsc
+    spec: app-expo
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/app/expo/app/(sheets)/kit-form/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/expo/app/(sheets)/kit-form/-types.ts"
+  - kind: file-exists
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/*/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/expo/app/(sheets)/kit-form/-stores/*.ts"
+  # ── NAV-MODAL ──────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/expo/app/_layout.tsx::name=\"\\(sheets\\)/kit-form\"[\\s\\S]{0,600}?presentation:\\s*['\"]formSheet['\"]"
+    id: sheet#SHT-03
+  - kind: grep-must
+    spec: "packages/app/expo/app/(tabs)/home/**/*.{ts,tsx}::\\(sheets\\)/kit-form"
+    id: sheet#SHT-P01
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::router\\.back\\(\\)"
+    id: sheet#SHT-P02
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/index.tsx::<Protected>"
+    id: route#bp-05
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::useTypedSearchParams\\("
+    id: route#RTE-03
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::\\.default\\("
+    id: route#RTE-04
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::productCostTypeSchema|z\\.enum\\([\\s\\S]{0,80}?ProductCostType|Object\\.values\\(ProductCostTypeEnum\\)"
+    id: enum#typescript
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::useDialogStore|useDrawerStore"
+    id: atlas#NAV-MODAL
+  # ── FORM-SUBSCRIBE (the shared-form canon, form/expo FRM-P04) ─────
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::validators:\\s*\\{\\s*onChange:"
+    id: form#FRM-02
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::\\.and\\(\\s*z\\.object\\("
+    id: form#FRM-P04
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/-types.ts::ReturnType<typeof _infer"
+    id: form#FRM-P04
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/**/*.tsx::form\\.Subscribe"
+    id: form#FRM-P04
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/**/*.tsx::setFieldValue\\("
+    id: form#FRM-P04
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::createKitMutationRequestSchema\\.safeParse\\("
+    id: form#FRM-06
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::<KeyboardAware"
+    id: form#FRM-04
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::\\buseState\\b"
+    id: store#STR-P10
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::form\\.state\\.values"
+    id: form#bp-05
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::useEffect\\([\\s\\S]{0,200}?setFieldValue"
+    id: form#bp-12
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::create\\s*<\\s*\\w*FormState"
+    id: form#bp-13
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::import\\s*\\{[^}]*\\bTextInput\\b|<TextInput[\\s>]"
+    id: form#bp-01
+  # ── STATE-PLACEMENT (UI-flags-only store, reset on unmount) ───────
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/-stores/*.ts::create<"
+    id: store#STR-01
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/-stores/*.ts::initialState"
+    id: store#STR-P02
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::use\\w+Store\\(\\s*\\(?\\s*\\w+\\s*\\)?\\s*=>"
+    id: store#STR-C02
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::useEffect\\([\\s\\S]{0,200}?\\breset"
+    id: store#STR-C03
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/-stores/*.ts::\\b(items|productId|quantity|values)\\s*[:?]"
+    id: store#bp-03
+  # ── MUTATION-IDIOM ─────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::useCreateKit"
+    id: form#FRM-01
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::Haptics\\.notification\\(\\s*['\"]success['\"]"
+    id: form#FRM-P01
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::onSettled\\s*:"
+    id: component#CMP-P06
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::invalidateQueries\\(\\{\\s*queryKey:\\s*listKitsQueryKey"
+    id: form#bp-07
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::try\\s*\\{"
+    id: form#bp-03
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::onError\\s*:"
+    id: atlas#MUTATION-IDIOM
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::queryKey:\\s*\\[\\s*['\"]"
+    id: form#bp-07
+  # ── DATA-OWNERSHIP ─────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/**/*.tsx::useListProductsForKit"
+    id: component#CMP-P01
+  # ── ENUM-REPR + LOCALE-MONEY ───────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::Object\\.values\\((ProductCostTypeEnum|QuantityModifierEnum)\\)|(productCostTypeSchema|quantityModifierSchema)\\.options"
+    id: component#CMP-P05
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::enums\\.ProductCostType"
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::enums\\.QuantityModifier"
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/expo/locales/en.json::\"ProductCostType\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/expo/locales/pt.json::\"ProductCostType\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/expo/locales/en.json::\"QuantityModifier\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/expo/locales/pt.json::\"QuantityModifier\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.tsx::useTranslation\\("
+    id: atlas#LOCALE-MONEY
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::formatMoney\\("
+    id: component#CMP-P13
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::['\"]pt-BR['\"]|['\"]en-US['\"]|\\bptBR\\b|\\benUS\\b"
+    id: component#CMP-P13
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::useMoney|useLocale"
+    id: component#CMP-P13
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::Intl\\.(NumberFormat|DateTimeFormat)|toLocaleDateString\\(|toLocaleString\\("
+    id: component#CMP-P13
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::function\\s+format[A-Z]\\w*\\s*\\(|const\\s+format[A-Z]\\w*\\s*="
+    id: component#bp-16
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::z\\.enum\\(\\s*\\["
+    id: component#bp-08
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::switch\\s*\\("
+    id: atlas#CENTRALIZE-MAPS
+  # ── LAYOUT (expo colocation truth) ─────────────────────────────────
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/**/*.{ts,tsx}::export\\s+default"
+    id: component#bp-18
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/*.{ts,tsx}::[\\s\\S]*"
+    id: component#bp-06
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/-components/**/_*.{ts,tsx}::[\\s\\S]*"
+    id: route#bp-10
+  # ── SDK-CONSUME ────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::from\\s+['\"]@template/client-typescript/typescript['\"]"
+    id: atlas#SDK-CONSUME
+  - kind: grep-must-not
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
+    id: atlas#SDK-CONSUME
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: route-closure
+  - kind: judge
+    spec: >
+      A mobile "kit builder" formSheet was just added under
+      packages/app/expo/app/(sheets)/kit-form/ with an opener on the home
+      tab. Verify ALL of:
+      (a) NAV-MODAL — the sheet is registered in app/_layout.tsx via
+      Stack.Screen name="(sheets)/kit-form" with EXPLICIT presentation
+      'formSheet' (plus headerShown: false and a contentStyle background);
+      the opener under app/(tabs)/home/ pushes the route via router.push
+      with the typed pathname — no web dialog/store pattern carried over;
+      successful submit pairs Haptics with router.back() (the formSheet
+      dismissal); the sheet self-gates with <Protected> (it sits outside
+      the gated (tabs) group); the kit-type param round-trips through
+      useTypedSearchParams(schema) from @/lib/typed-route with EVERY
+      schema field .default()-ed and the type field typed by the SDK
+      ProductCostType values (a garbage deep link renders defaults, never
+      crashes), and the param seeds the form's defaultValues.
+      (b) FORM-SUBSCRIBE + DISC-UNION — exactly ONE useForm owns the
+      whole draft, created by the sheet screen, with validators
+      { onChange } over a schema derived from
+      createKitMutationRequestSchema with the UI-only editing fields
+      merged via .and(z.object({...})); children (editor, items list,
+      rows, picker) receive the form as a typed prop whose type comes
+      from a never-invoked inference helper in -types.ts
+      (ReturnType<typeof _infer...>) — no React Context, no Zustand
+      mirror of field values, no prop-drilling of values; each added-item
+      ROW subscribes via form.Subscribe with a selector returning a
+      PRIMITIVE 3-mode discriminant (idle / this-row-editing /
+      other-row-editing) so editor keystrokes do not re-render rows;
+      tapping a row enters edit mode through batched form.setFieldValue
+      calls; the editor branches its action between add-new and
+      save-edits off that editing discriminant; the final submit
+      re-parses with the bare createKitMutationRequestSchema (stripping
+      the UI-only fields) and sends result.data; the create button's
+      disabled gate derives from safeParse inside a form.Subscribe.
+      (c) STATE-PLACEMENT — the route-scoped Zustand store under
+      -stores/ holds ONLY UI flags (the product-picker visibility),
+      consumed via selector access, with an initialState-based reset
+      wired to run when the sheet unmounts; no form values, server data,
+      or mutation pending flags in the store; ZERO useState under the new
+      dir; server data only via SDK hooks.
+      (d) MUTATION/SDK/LOCALE/ENUM — submit awaits the SDK mutation with
+      onSuccess Haptics.notification('success') then dismissal, and
+      onSettled invalidation via listKitsQueryKey(); no try/catch and no
+      onError handler (the global MutationCache owns errors); the picker
+      (and/or rows) shows each product's current cost via the lib
+      formatMoney helper converting cents to units (amountCents / 100) —
+      never a hardcoded locale or an Intl call in components; kit-type
+      and quantity-rule labels come from the typed i18n
+      enums.ProductCostType.* / enums.QuantityModifier.* subtrees with
+      keys present in BOTH locales/pt.json and en.json, options iterated
+      from the SDK enum consts — no inline label strings, no hand-rolled
+      z.enum([...]) literal lists.
+      (e) LAYOUT — colocated components live at -components/<Name>/index.tsx
+      with NAMED exports only; the store under -stores/; no flat or
+      _-prefixed colocated files.
+      Scope notes — do NOT fail these expected shapes: the editor and
+      submit-area subscribers may select OBJECTS (e.g. { canSubmit,
+      values }) — the primitive-selector requirement applies to the
+      per-row subscribers only; any primitive encoding of the 3-mode
+      discriminant (0|1|2 as const, string-literal modes) is acceptable —
+      judge the primitivity idiom, not the values or names; the draft kit
+      items legitimately live INSIDE the form values (the form IS the
+      draft) — do not demand a store or server round-trip for them; the
+      merged form schema intentionally diverges from the wire schema (the
+      UI-only editing fields are stripped by the submit-time re-parse) —
+      do not fail it for not being the bare SDK schema; invalidating
+      listKitsQueryKey when no mobile screen lists kits is the expected
+      cache canon; the items list and the picker reading the same
+      useListProductsForKit page is expected (React Query dedupes); the
+      store reset-on-unmount useEffect is the sanctioned reset idiom, not
+      a server-sync effect. Inspect the new files under
+      app/(sheets)/kit-form/, plus app/_layout.tsx, app/(tabs)/home/ and
+      locales/{pt,en}.json. The pre-existing sheets (edit-profile,
+      devices) are out of scope.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — second expo probe,
+  first agent-runnable FORM probe on any platform (FORM-SUBSCRIBE axis,
+  expo spelling per PROBES-BACKLOG.md#2). No gold tree; agent mode only.
+  Free real estate verified at authoring time: zero useForm /
+  form.Subscribe call sites anywhere in packages/app/expo; no kit
+  identifier (useCreateKit, useListProductsForKit, listKitsQueryKey,
+  createKitMutationRequestSchema) referenced by the expo app; no
+  (sheets)/kit-form folder or Stack.Screen registration (the dangling
+  game-form/games registrations noted by the notifications probe are gone
+  from HEAD); locales/{en,pt}.json contain no "ProductCostType" /
+  "QuantityModifier" keys; the home tab is an SDK-free placeholder — so
+  every grep-must is 0 at HEAD and the probe measures only new work. tsc
+  app-expo green at HEAD; registry-scan, import-direction AND
+  route-closure exit 0 at HEAD. Wire grounding: createKit body is
+  { name, type: SINGLE|MULTIPLE, shipping, cost?, items: [{ productId
+  uuid, quantity, quantityModifier EQ|GT|GTE|LT|LTE }] }; updateKit
+  exists but there is NO single-kit GET and ListKits rows omit the items
+  array, so the probe is CREATE-only by design (stated in the prompt so
+  agents don't invent an edit mode they cannot prefill);
+  listProductsForKit rows carry currentCost as signedMoney { amountCents,
+  currency } and @/lib/format formatMoney takes UNITS — the cents→units
+  conversion is a deliberate LOCALE-MONEY pressure point (CMP-P13);
+  ProductCostTypeEnum / QuantityModifierEnum and both zod schemas are
+  exported from the SDK index. Canon-pinned greps (documented spellings,
+  not invented names): ".and(z.object(" pins the FRM-P04 merge idiom (the
+  exemplar + registry spell .and — z.intersection/.extend would fail);
+  "ReturnType<typeof _infer" pins the documented inference-helper naming
+  (_inferXForm in form/expo FRM-P04 + exemplars/workout-set; same grep
+  family the react form-probe sketch in PROBES-BACKLOG.md sanctions);
+  "initialState" pins store STR-P02. The 3-mode selector PRIMITIVITY is
+  judged, not grepped — 0|1|2 as const and string-literal modes are
+  equally canon-true. Tensions accepted deliberately: (1) the dir-wide
+  useState ban is canon here because the brief's only transient flag (the
+  picker visibility) is cross-component (two openers → store STR-P10 case
+  3 / CMP-P07) and the picker has no search input per the brief; if a
+  variant adds a single-opener transient overlay, relax per route/expo
+  bp-09. (2) presentation is hard-pinned to 'formSheet' because the
+  prompt mandates it (form-heavy sheet per the sheet-skill table); the
+  route-closure rider (RC-05) only enforces SOME explicit presentation —
+  registration closure + dismissal + raw useLocalSearchParams are
+  RC-gated (RC-01/02/05/06/07), which is why no useLocalSearchParams
+  must-not is duplicated here. (3) DISC-UNION is the expo spelling from
+  the backlog row: the 3-mode editing-mode discriminant + the editor's
+  add-vs-save variant branch — no wire union exists (createKit body is a
+  flat object), so no @/lib/union greps apply. (4) the useEffect grep for
+  reset-on-unmount is loose ("useEffect( … reset" within 200 chars) so
+  both the getState().reset() and selector-bound-cleanup spellings pass;
+  the judge verifies the cleanup semantics. Glob notes: Bun.Glob treats
+  "(sheets)"/"(tabs)" as literal segments; "**" matches zero segments so
+  "kit-form/**/*.{ts,tsx}" includes index.tsx AND -types.ts AND
+  -stores/*.ts; filename braces work but a "/" inside a brace branch does
+  not. The "-components/*.{ts,tsx}::[\\s\\S]*" and "_*" must-nots assert
+  file ABSENCE (flat or _-prefixed colocated files) — any matching file
+  fails regardless of content. All regexes compile through parseGrepSpec;
+  validated with bun scripts/skill-evals/validate-task.ts (grep-musts +
+  file-exists FAIL at HEAD, must-nots/tsc/detect PASS).

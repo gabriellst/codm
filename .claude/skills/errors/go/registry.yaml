@@ -1,0 +1,192 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: []
+  depended_by: [entity, usecase, controller]
+  context_reads: []
+  lang: go
+  examples:
+    - examples/citizens/go/errors/app_error.go
+    - examples/citizens/go/errors/codes.go
+    - examples/citizens/go/errors/errors.go
+
+  snippet:
+    skeleton: |
+      // Package errors defines error codes for the {{ctx}} bounded context.
+      package errors
+
+      import (
+      	"net/http"
+
+      	"template/core-go/errors"
+      )
+
+      const (
+      	// Domain errors — business rule violations raised by entities.
+      	// Code{{Pascal}}Invalid errors.ErrorCode = "{{scream}}_INVALID"
+
+      	// Application errors — raised by use cases when preconditions fail.
+      	// Code{{Pascal}}NotFound errors.ErrorCode = "{{scream}}_NOT_FOUND"
+      )
+
+      func init() {
+      	errors.RegisterErrorCodes(map[errors.ErrorCode]int{
+      		// Code{{Pascal}}Invalid:   http.StatusBadRequest,
+      		// Code{{Pascal}}NotFound:  http.StatusNotFound,
+      	})
+      	_ = http.StatusOK // prevent unused import if all entries are commented out
+      }
+
+  patterns:
+    - id: ERR-GO-01
+      when: always
+      title: Typed ErrorCode constants
+      rule: >
+        Every error constant must be declared with type `errors.ErrorCode` from
+        `template/core-go/errors`. A bare untyped string constant bypasses
+        compile-time type-checking and will not be recognized by the HTTP mapper.
+      wrong: |
+        const CodeJobNotFound = "JOB_NOT_FOUND"
+      right: |
+        const CodeJobNotFound errors.ErrorCode = "JOB_NOT_FOUND"
+
+    - id: ERR-GO-02
+      when: always
+      title: Register every const in init()
+      rule: >
+        Every declared error code must appear in `errors.RegisterErrorCodes(...)` inside
+        the package-level `init()`. A code that is declared but not registered will return
+        HTTP 500 instead of the intended status.
+      wrong: |
+        const CodeJobNotPending errors.ErrorCode = "JOB_NOT_PENDING"
+        // no init() — will return 500
+      right: |
+        const CodeJobNotPending errors.ErrorCode = "JOB_NOT_PENDING"
+
+        func init() {
+            errors.RegisterErrorCodes(map[errors.ErrorCode]int{
+                CodeJobNotPending: http.StatusConflict,
+            })
+        }
+
+    - id: ERR-GO-03
+      when: always
+      title: Anonymous import in module.go triggers init()
+      rule: >
+        The `init()` in `errors/codes.go` runs only when the package is imported.
+        Add a blank import `_ "template/api-go/internal/<ctx>/errors"` to `module.go`
+        so registration happens at startup. Missing this import silently makes all
+        context errors return 500.
+      wrong: |
+        // module.go — no blank import
+        import "template/api-go/internal/transcoding/usecases"
+      right: |
+        // module.go
+        import (
+            _ "template/api-go/internal/transcoding/errors" // register HTTP statuses via init()
+        )
+
+    - id: ERR-GO-04
+      when: always
+      title: Raise via errors.NewBaseError, not fmt.Errorf
+      rule: >
+        Domain and application errors must be raised with
+        `errors.NewBaseError(ctxerrors.CodeX, "message")` so the HTTP mapper can
+        extract the code and status. A plain `fmt.Errorf` or `errors.New` is invisible
+        to the mapper and will return 500.
+      wrong: |
+        return fmt.Errorf("job not found")
+      right: |
+        return errors.NewBaseError(ctxerrors.CodeJobNotFound, "transcoding job not found")
+
+    - id: ERR-GO-05
+      when: always
+      title: Package alias for context errors
+      rule: >
+        When importing the context's own errors package inside entities or use cases,
+        use the alias `ctxerrors` to avoid shadowing the shared `errors` package.
+      wrong: |
+        import "template/api-go/internal/transcoding/errors"
+        // now "errors" is ambiguous with core errors
+      right: |
+        import (
+            ctxerrors "template/api-go/internal/transcoding/errors"
+            "template/core-go/errors"
+        )
+
+    - id: ERR-GO-C01
+      when: context has multiple aggregate error groups
+      title: Split large error sets across multiple files in the same package
+      rule: >
+        When one context has errors belonging to distinct aggregates (e.g., channel
+        errors vs. messaging errors), split into multiple `.go` files under the same
+        `errors` package. Each file can have its own `init()` — Go runs all of them.
+      right: |
+        // errors/channel_errors.go
+        package errors
+        func init() { errors.RegisterErrorCodes(map[errors.ErrorCode]int{...}) }
+
+        // errors/messaging_errors.go
+        package errors
+        func init() { errors.RegisterErrorCodes(map[errors.ErrorCode]int{...}) }
+
+  bad_practices:
+    - id: bp-01
+      title: Re-declaring core error codes
+      description: >
+        Never re-declare codes that already exist in `template/core-go/errors/codes.go`
+        (e.g., `CodeNotFound`, `CodeUnauthorized`, `CodeDatabaseError`). Import and use
+        them directly. Duplicating codes risks mismatched HTTP statuses if the core mapping
+        changes.
+      wrong: |
+        // In your context errors/codes.go
+        const CodeNotFound errors.ErrorCode = "NOT_FOUND" // already in core!
+      right: |
+        // Use directly
+        return errors.NewBaseError(errors.CodeNotFound, "job not found")
+      mechanical: true
+      detect:
+        - 'const\s+Code(NotFound|Unauthorized|DatabaseError)\s+errors\.ErrorCode'
+
+    - id: bp-02
+      title: Missing blank import — init() never runs
+      description: >
+        Forgetting `_ "template/api-go/internal/<ctx>/errors"` in `module.go` causes all
+        context-specific error codes to map to HTTP 500. This is a silent runtime bug with
+        no compile-time warning.
+      wrong: |
+        // module.go — blank import absent
+        var Module = fx.Module("transcoding", fx.Provide(...))
+      right: |
+        // module.go
+        import _ "template/api-go/internal/transcoding/errors"
+        var Module = fx.Module("transcoding", fx.Provide(...))
+      mechanical: false
+
+    - id: bp-03
+      title: Using fmt.Errorf for business errors
+      description: >
+        `fmt.Errorf` produces an error that `errors.As(err, &appErr)` cannot unwrap.
+        The HTTP mapper will return 500 instead of the intended status code.
+      wrong: |
+        return fmt.Errorf("channel not found")
+      right: |
+        return errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
+      mechanical: true
+      detect:
+        - 'fmt\.Errorf\('
+      detect_skip: '%w'
+
+    - id: bp-04
+      title: Embedding HTTP status in the error message
+      description: >
+        Never put the HTTP status code or "404" / "409" literals in the error message
+        string. The code constant + `init()` registration is the single source of truth
+        for HTTP status mapping.
+      wrong: |
+        return errors.NewBaseError(ctxerrors.CodeJobNotFound, "404 job not found")
+      right: |
+        return errors.NewBaseError(ctxerrors.CodeJobNotFound, "transcoding job not found")
+      mechanical: true
+      detect:
+        - 'NewBaseError\([^,]+,\s*"[45]\d{2}\b'

@@ -1,0 +1,40 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONTEXT-ORIGIN · want→got corpus · examples/pairs/dashboard
+   repo:    template-fullstack
+   branch:  feat/template-polyglot
+   source:  packages/app/styles/web-utilities.css
+   role:    Web-only Tailwind 4 @utility: gradient-box / gradient-bg-* / gradient-border-* (drives button.tsx)
+   Verbatim copy kept as corpus reference — NOT wired into any build.
+   ───────────────────────────────────────────────────────────────────────────── */
+/* Web-only Tailwind 4 utilities — shared by @template/app-react and @template/app-astro.
+   NOT for expo: React Native (uniwind) has no CSS gradients / background-clip / @property.
+   Import AFTER `@import "tailwindcss"` so the @utility directives register with the engine. */
+
+@property --tw-gradient-bg {
+	syntax: "*";
+	inherits: false;
+	initial-value: linear-gradient(transparent, transparent);
+}
+@property --tw-gradient-border {
+	syntax: "*";
+	inherits: false;
+	initial-value: linear-gradient(transparent, transparent);
+}
+
+@utility gradient-box {
+	background-image:
+		var(--tw-gradient-bg, linear-gradient(transparent, transparent)),
+		var(--tw-gradient-border, linear-gradient(transparent, transparent)),
+		var(--tw-gradient-bg, linear-gradient(transparent, transparent));
+	background-origin: border-box;
+	background-clip: padding-box, border-box, border-box;
+	border: 1px double transparent;
+}
+
+@utility gradient-bg-* {
+	--tw-gradient-bg: linear-gradient(--value([*]));
+}
+
+@utility gradient-border-* {
+	--tw-gradient-border: linear-gradient(--value([*]));
+}

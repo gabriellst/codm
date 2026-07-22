@@ -1,0 +1,405 @@
+id: synthetic-l5-handoff-continuity
+tier: holdout
+builder: opus
+title: Finish a half-built Sales coupon slice from a handoff doc alone
+  (synthetic L5 — multi-session continuity; the seeded write-side half + the
+  builder's orchestration half together pass the same gates a full build would, no restart)
+sourceSpec: PROBES-BACKLOG.md#L5
+goldRef: ""
+baseRef: ""
+prompt: >
+  A previous agent (agent A) built the WRITE-SIDE HALF of the Sales coupon
+  slice in the bk-dash backend (packages/api/typescript) and compacted its
+  context into a handoff document at .handoff/coupon-slice.md. You are agent B,
+  a FRESH context. Your job is to FINISH the slice FROM THAT HANDOFF — not to
+  restart it.
+
+
+  READ .handoff/coupon-slice.md FIRST. It is the source of truth for what is
+  already DONE (on disk, compiling, green) and what REMAINS (your orchestration
+  half), with binding decisions R1–R7 and the finishing gates. The full slice's
+  reference spec is .specs/2026-06-10-sales-coupon-aggregate.md — read it for any
+  detail the handoff compresses.
+
+
+  CONTINUE, DO NOT RESTART. The write-side aggregate (Coupon entity), the
+  CouponType/CouponStatus enums, the CouponCreatedEvent/CouponDeactivatedEvent
+  events, and the extended sales errors module are ALREADY in the tree and the
+  entity unit suite at src/sales/entities/Coupon.test.ts is ALREADY green
+  (verify: cd packages/api/typescript && bun test
+  src/sales/entities/Coupon.test.ts). You must REUSE these by import. Do NOT
+  re-declare the Coupon class, do NOT fork a second enums folder, do NOT
+  re-author the SalesDomainErrors union or re-register the coupon error codes,
+  and do NOT modify or duplicate the seeded entity test — re-creating any of the
+  DONE artifacts is a failed handoff, not a build.
+
+
+  Then deliver the orchestration half per the handoff's R1–R7: the CreateCoupon
+  and DeactivateCoupon use cases (each persisting its use-case-born event in the
+  SAME transaction as the entity save), the CouponRepository folder
+  (abstract + Drizzle + Mock, findById / findByCode / save / delete), the two
+  controllers (POST /coupons → 201; POST /coupons/:couponId/deactivate → 204;
+  storeId from ctx.session, never the body), the coupons table in
+  packages/contracts/db/schema/sales.ts plus a generated migration
+  (bun migrate:create), and the DI bindings in src/sales/registry.ts. Mirror the
+  existing OrderOverride slice in src/sales/ for every shape (controllers,
+  repository folder, registry wiring, pgSchema('sales') table, text-validated
+  enum-ish columns — no pgEnum). The CLI scaffolder emits the canonical shapes
+  (bun cli usecase sales CreateCoupon, bun cli controller sales CreateCoupon,
+  bun cli repository sales Coupon — see docs/CLI.md); scaffold then fill in. Run
+  bun sdk after adding the controllers. Read the typescript variants of the
+  usecase, controller, repository, schema, db-modelling, migrate and test skills
+  under .claude/skills/ before writing.
+
+
+  A verifier has placed the acceptance verdict suite for your half at
+  packages/api/typescript/src/sales/usecases/coupon-acceptance.test.ts
+  (AC10–AC13: duplicate-code rejection with no partial state, exactly-one-event
+  per command in one transaction, cross-tenant COUPON_NOT_FOUND with no existence
+  leak, and no event on a rejected transition). It is RED now and must go green
+  WITHOUT you editing it. State setup is repo-direct via @test/support
+  (givenStore, testId) — never via another use case.
+
+
+  FINISHING GATES (all must pass before you are done):
+
+  - cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit
+
+  - cd packages/api/typescript && bun test src/sales/entities/Coupon.test.ts
+    src/sales/usecases/coupon-acceptance.test.ts
+
+  This is a backend-only task: do not touch packages/app/*, and keep the change
+  scoped to the Sales context + the contracts schema/migration the handoff names.
+axes:
+  - HANDOFF-CONTINUITY
+  - COMPOSITION
+  - TRANSACTION
+  - EVENT-EMISSION
+  - ERR-VOCAB
+  - DI-REG
+  - TEST-MODE
+  - LAYOUT
+inject:
+  # ── DONE write-side half (agent A's work) — seeded compiling + green ──────
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/entities/Coupon.ts
+    to: packages/api/typescript/src/sales/entities/Coupon.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/entities/index.ts
+    to: packages/api/typescript/src/sales/entities/index.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/enums/CouponType.ts
+    to: packages/api/typescript/src/sales/enums/CouponType.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/enums/CouponStatus.ts
+    to: packages/api/typescript/src/sales/enums/CouponStatus.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/enums/index.ts
+    to: packages/api/typescript/src/sales/enums/index.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/events/CouponCreatedEvent.ts
+    to: packages/api/typescript/src/sales/events/CouponCreatedEvent.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/events/CouponDeactivatedEvent.ts
+    to: packages/api/typescript/src/sales/events/CouponDeactivatedEvent.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/events/index.ts
+    to: packages/api/typescript/src/sales/events/index.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/errors/index.ts
+    to: packages/api/typescript/src/sales/errors/index.ts
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/entities/Coupon.test.ts
+    to: packages/api/typescript/src/sales/entities/Coupon.test.ts
+  # ── the handoff doc the builder finishes from ─────────────────────────────
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/HANDOFF.md
+    to: .handoff/coupon-slice.md
+  # ── the verifier's RED verdict suite for the builder's half (AC10–AC13) ───
+  - from: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/usecases-coupon-acceptance.test.ts
+    to: packages/api/typescript/src/sales/usecases/coupon-acceptance.test.ts
+graders:
+  # ── the combined-tree oracle: same gates a full build passes ──────────────
+  - kind: tsc
+    spec: backend
+    id: gate#tsc-backend
+  - kind: test-green
+    spec: packages/api/typescript/src/sales/entities/Coupon.test.ts
+    id: seeded-half#entity-unit-stays-green
+  - kind: test-green
+    spec: packages/api/typescript/src/sales/usecases/coupon-acceptance.test.ts
+    id: ac10-ac13#usecase-acceptance-goes-green
+  # ── regression guard: an EXISTING sales suite stays green (not the new work) ─
+  - kind: test-green
+    spec: packages/api/typescript/src/sales/handlers
+    id: regression#sales-handlers-stay-green
+  # ── structure: the builder's orchestration half exists ────────────────────
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/usecases/CreateCoupon.ts"
+    id: struct#create-usecase
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/usecases/DeactivateCoupon.ts"
+    id: struct#deactivate-usecase
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/repositories/CouponRepository/CouponRepository.ts"
+    id: struct#repo-abstract
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/controllers/CreateCoupon.ts"
+    id: struct#create-controller
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/controllers/DeactivateCoupon.ts"
+    id: struct#deactivate-controller
+  - kind: file-exists
+    spec: "packages/contracts/db/migrations/005[2-9]_*.sql"
+    id: struct#migration-generated
+  # ── CONTINUITY: the seeded write-side half is still on disk, untouched in shape ─
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/entities/Coupon.ts"
+    id: continuity#seeded-entity-present
+  - kind: file-exists
+    spec: "packages/api/typescript/src/sales/enums/CouponType.ts"
+    id: continuity#seeded-enum-present
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/entities/Coupon.ts::class Coupon extends AggregateRoot<typeof CouponSchema>"
+    id: continuity#seeded-aggregate-intact
+  # ── COMPOSITION: the builder's half IMPORTS the seeded artifacts (not re-derived) ─
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/usecases/CreateCoupon.ts::from\\s+['\"]\\.\\./entities/Coupon['\"]|from\\s+['\"]\\.\\./entities['\"]"
+    id: compose#create-imports-seeded-entity
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/usecases/CreateCoupon.ts::CouponCreatedEvent"
+    id: compose#create-uses-seeded-event
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/usecases/DeactivateCoupon.ts::CouponDeactivatedEvent"
+    id: compose#deactivate-uses-seeded-event
+  # ── TRANSACTION / EVENT-EMISSION: events persisted in the same tx via the repo ─
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/usecases/CreateCoupon.ts::domainEventRepository\\.save\\("
+    id: ac11#create-persists-event
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/usecases/DeactivateCoupon.ts::domainEventRepository\\.save\\("
+    id: ac12#deactivate-persists-event
+  # ── DB: the migration carries the store-scoped unique index ───────────────
+  - kind: grep-must
+    spec: "packages/contracts/db/schema/sales.ts::coupons_store_id_code_unq"
+    id: ac16#schema-unique-index
+  - kind: grep-must
+    spec: "packages/contracts/db/migrations/*.sql::coupons_store_id_code_unq"
+    id: ac16#migration-carries-unique-index
+  # ── controllers: storeId from ctx.session, the documented status codes ────
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/controllers/CreateCoupon.ts::^(?=[\s\S]*session:\s*z\.object\(\{\s*storeId:\s*z\.uuid\(\))(?=[\s\S]*\.omit\(\{\s*storeId:\s*true)(?=[\s\S]*HttpStatusCode\.CREATED)'
+    id: ac15#create-controller-envelope
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/controllers/DeactivateCoupon.ts::^(?=[\s\S]*params:\s*z\.object\(\{\s*couponId:\s*z\.uuid\(\))(?=[\s\S]*HttpStatusCode\.NO_CONTENT)'
+    id: ac15#deactivate-controller-envelope
+  # ── DI-REG: the repository is bound for all three environments ────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/registry.ts::MockCouponRepository"
+    id: di#registry-mock
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/registry.ts::DrizzleCouponRepository"
+    id: di#registry-drizzle
+  # ── RESTART / DUPLICATE GUARDS — the L5 discriminator ─────────────────────
+  # The seeded write-side OWNER dirs (entities/enums/events/errors) legitimately
+  # declare the aggregate/enums/events/error-codes; a RESTART re-declares them in
+  # the dirs the builder's NEW code lives in. Bun.Glob does NOT honor !(dir) extglob
+  # negation (verified — it silently matches the negated dir too), so the guards are
+  # scoped to a POSITIVE brace-list of the builder's directories, which the verified
+  # `{usecases,repositories,controllers,services,handlers,objects}` brace-glob
+  # correctly excludes the four seeded owner dirs from.
+  # A second `class Coupon extends` in the builder's dirs = a restart of the DONE half.
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/sales/{usecases,repositories,controllers,services,handlers,objects}/**/*.ts::class\\s+Coupon\\s+extends\\b"
+    id: norestart#no-duplicate-coupon-class
+  # No second enums declaration: CouponType/CouponStatus are declared only under enums/.
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/sales/{usecases,repositories,controllers,services,handlers,objects}/**/*.ts::enum\\s+Coupon(Type|Status)\\b"
+    id: norestart#no-duplicate-coupon-enum
+  # No re-authoring of the seeded events (they are imported, not re-declared).
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/sales/{usecases,repositories,controllers,services,handlers,objects}/**/*.ts::class\\s+Coupon(Created|Deactivated)Event\\b"
+    id: norestart#no-duplicate-coupon-event
+  # No parallel errors union: the coupon codes are registered ONCE, in errors/index.ts.
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/sales/{usecases,repositories,controllers,services,handlers,objects}/**/*.ts::registerErrorCodes\\([\\s\\S]*COUPON_"
+    id: norestart#no-parallel-error-registration
+  # The builder does not swap the verifier's seeded entity suite for a weaker one:
+  # its unique helper signature must survive verbatim (test-green proves it still
+  # passes; this proves the file itself wasn't replaced).
+  - kind: grep-must
+    spec: "packages/api/typescript/src/sales/entities/Coupon.test.ts::function expectCouponError\\(fn: \\(\\) => unknown, code: string\\)"
+    id: norestart#seeded-entity-test-intact
+  # No hacky workarounds in the coupon slice.
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/sales/**/*Coupon*.ts::\\bas\\s+any\\b|@ts-(expect-error|ignore)"
+    id: quality#no-suppressions-in-coupon-slice
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/sales/usecases/**/*Coupon*.ts::mediator\\.publish"
+    id: evt#no-mediator-publish-in-usecases
+  # ── detectors ─────────────────────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+    id: detect#registry-scan
+  - kind: detect
+    spec: import-direction
+    id: detect#import-direction
+  # ── the rich judge — handoff continuity + combined-slice composition ──────
+  - kind: judge
+    spec: >
+      A previous agent built the WRITE-SIDE HALF of the Sales coupon slice
+      (packages/api/typescript/src/sales/) and left a handoff at
+      .handoff/coupon-slice.md; the builder under judgment had to FINISH the
+      orchestration half from that handoff without restarting. The DONE half
+      seeded into the tree is: src/sales/entities/Coupon.ts (the Coupon
+      aggregate + CouponSchema), src/sales/enums/{CouponType,CouponStatus}.ts,
+      src/sales/events/{CouponCreatedEvent,CouponDeactivatedEvent}.ts, the
+      extended src/sales/errors/index.ts, and the green unit suite
+      src/sales/entities/Coupon.test.ts. Verify ALL of (a)-(f); each must hold
+      for PASS.
+
+      (a) HANDOFF CONTINUITY (the L5 axis) — the builder CONTINUED rather than
+      RESTARTED. The Coupon aggregate is declared in exactly ONE place
+      (entities/Coupon.ts, the seeded file) and the builder's use cases /
+      repository / controllers IMPORT it (and the seeded enums + events) rather
+      than re-declaring a parallel Coupon class, a second enums folder, or a
+      re-authored CouponCreated/Deactivated event. The seeded errors module is
+      the only place the coupon codes are registered (no second
+      registerErrorCodes for COUPON_* anywhere). The seeded entity test was not
+      modified or duplicated. REJECT if any DONE artifact was re-created,
+      re-scaffolded, or forked into a parallel copy.
+
+      (b) COMMAND SIDE — CreateCoupon and DeactivateCoupon are use cases that run
+      inside withTransaction. CreateCoupon normalizes the code
+      (trim+toUpperCase), rejects a duplicate per store via findByCode with
+      BaseError('COUPON_CODE_ALREADY_EXISTS') BEFORE any write, else
+      Coupon.create(...) → save → construct CouponCreatedEvent (entityId =
+      coupon.id.value, ownerId = coupon.storeId.value, primitive/ISO payload)
+      and persist it via this.domainEventRepository.save(event, tx) with the
+      SAME tx handle as the repository save. DeactivateCoupon looks up by id,
+      treats a missing row OR a row whose storeId !== input.storeId as
+      COUPON_NOT_FOUND (no cross-tenant existence leak), calls
+      coupon.deactivate() (the entity guard owns the rules — the use case does
+      NOT pre-check status/expiry), saves, and persists CouponDeactivatedEvent in
+      the same tx. The event is persisted ONLY on the success path (after the
+      duplicate / lookup / guard checks).
+
+      (c) REPOSITORY + PERSISTENCE — a CouponRepository folder holds one abstract
+      class plus Drizzle and Mock implementations exposing findById, findByCode,
+      save, delete; save calls entity.incrementVersion() then upserts; toDomain
+      rehydrates new Coupon({...row}) passing the STORED status through unchanged
+      (an INACTIVE row stays INACTIVE). The coupons table in
+      packages/contracts/db/schema/sales.ts lives under pgSchema('sales') with
+      text type/status columns (no pgEnum), a (store_id, code) unique index, and
+      a generated migration creates it.
+
+      (d) CONTROLLERS + DI — POST /coupons returns 201 + { couponId } and POST
+      /coupons/:couponId/deactivate returns 204; both carry
+      [AuthAccountMiddleware, RequireStoreMember] and read storeId from
+      ctx.session (the body omits storeId). Both are registered in
+      controllers/index.ts. registry.ts binds CouponRepository for all three
+      environments (Mock for mock, Drizzle for integration and real) and keeps
+      import './errors'.
+
+      (e) ERROR VOCABULARY + NO SUPPRESSIONS — every failure is a typed
+      BaseError code (COUPON_CODE_ALREADY_EXISTS, COUPON_NOT_FOUND, plus the
+      entity's own codes), never a raw throw new Error or a string message
+      assertion; the slice contains no as any / @ts-expect-error / @ts-ignore /
+      parallel schema to dodge a type error.
+
+      (f) COMBINED SLICE COMPOSES — the whole thing is coherent as if one agent
+      built it: tsc is clean, the seeded entity suite is still green, and the
+      verifier's coupon-acceptance.test.ts (AC10–AC13) passes against the
+      builder's command side without that file being edited.
+
+      Scope notes — judge the idiom, not the spelling. The builder MAY add its
+      own colocated CreateCoupon.test.ts / DeactivateCoupon.test.ts beside the
+      use cases (the test skill expects them) — that is NOT a duplicate of the
+      seeded entity suite; do not flag it. Editing the merged barrels
+      (entities/index.ts, events/index.ts, controllers/index.ts) and registry.ts
+      to wire the new files is EXPECTED continuity work, not a restart — only a
+      re-DECLARED Coupon class / enum / event / errors-union is a restart.
+      `as`-casts on raw DB rows inside the Drizzle repository's
+      toDomain/toPersistence mapping are the scaffold's established shape — the
+      suppression ban in (e) concerns dodging type errors, not row mapping. The
+      builder's own naming for the repository's internal helpers, the controller
+      variable names, and the migration filename is its choice. A small private
+      input/output schema per use case is canonical; reusing the use case's
+      InputSchema in the controller via .omit({ storeId: true }) is the expected
+      shape. Do NOT require the builder to touch the seeded write-side files
+      beyond barrel/registry wiring, and do NOT fail a legitimate design choice
+      the handoff left open (e.g. exact column order, index naming) as long as
+      the unique (store_id, code) constraint and the documented status codes are
+      present. Inspect .handoff/coupon-slice.md, the seeded write-side files, the
+      builder's usecases/controllers/repositories, registry.ts,
+      packages/contracts/db/schema/sales.ts and the newest migration under
+      packages/contracts/db/migrations/.
+    id: judge#handoff-continuity-and-composition
+notes: >-
+  First L5 handoff-continuity probe (PROBES-BACKLOG.md#L5: "agent A builds half a
+  slice and writes a handoff; agent B — fresh context — must finish from the handoff
+  alone. Oracle: the composition probe's graders on the COMBINED tree"). Synthetic,
+  agent-only, no gold tree. The slice is the Sales coupon aggregate (the same domain
+  the feature-coupon-aggregate feature-loop probe builds from scratch — proven
+  winnable), but SPLIT at the entity/orchestration seam: the WRITE-SIDE HALF (entity
+  + enums + events + extended errors + the green entity unit suite) is SEEDED via
+  inject, and the builder must FINISH the command side (use cases + repository +
+  controllers + table + migration + DI) from the handoff doc alone.
+
+  SEED BUNDLE: scripts/skill-evals/seeds/synthetic-l5-handoff-continuity/ (see its
+  README). All seeded write-side files were copied into the live sales tree at
+  authoring time (2026-06-13) and verified: bun test
+  src/sales/entities/Coupon.test.ts → 19 pass; bun test src/sales → 87 pass (no
+  regressions from the merged barrels/errors); bun x tsc -p tsconfig.build.json
+  --noEmit → exit 0 (the write-side half is self-contained — it depends only on the
+  seeded files + core + the existing OrderOverride barrels it re-exports);
+  import-direction --all and registry-scan --all → exit 0; sales/handlers → 13 pass
+  (the regression guard). Then reverted — nothing coupon exists in the tree at HEAD,
+  so every agent-half grader measures only the builder's work and every seeded-half
+  grader (file-exists / grep-must on Coupon.ts, the entity test path) measures the
+  injected seed at RUN time.
+
+  The two injected test files are the feature-loop verifier corpus reused verbatim
+  (scripts/skill-evals/features/coupon-aggregate/{Coupon.red.ts,coupon-usecases.red.ts}):
+  Coupon.red.ts is ALREADY green against the seeded entity (it tests the DONE half);
+  coupon-usecases.red.ts (→ usecases/coupon-acceptance.test.ts) is RED until the
+  builder lands the command side. Using the SAME verdict suites a full build would
+  face is exactly the backlog's "composition probe's graders on the COMBINED tree"
+  oracle.
+
+  VALIDATOR NOTE — this probe has baseRef="" (HEAD) but relies on inject, so the
+  free-real-estate validator (validate-task.ts) runs the graders against HEAD
+  WITHOUT the seed applied. That is fine and expected: at HEAD nothing coupon exists,
+  so every file-exists and grep-must grader correctly reports FAIL (the validator's
+  expected outcome for those kinds), every grep-must-not restart-guard passes
+  vacuously (zero coupon files → the !(dir) globs match nothing), the test-green on
+  the two coupon suites correctly reports FAIL (paths absent at HEAD → expected fail),
+  the test-green regression guard on src/sales/handlers PASSES (existing + green at
+  HEAD → expected pass), and tsc/detect gates pass at HEAD. So the validator's
+  free-real-estate check passes on the premise; the seeded-half graders are validated
+  by RUNNING the probe (the seed is only present in the worktree at run time), the
+  same way judge graders are validated by a live run.
+
+  RESTART/DUPLICATE GUARDS are the L5 discriminator. IMPORTANT Bun.Glob fact verified
+  at authoring: Bun.Glob does NOT honor !(dir) extglob negation — a
+  src/sales/!(entities)/**/*.ts glob SILENTLY matches entities/ too, which would make
+  the guards false-fire on the seeded entity's own `class Coupon extends`. So the
+  guards are scoped to a POSITIVE brace-list of the BUILDER's directories
+  ({usecases,repositories,controllers,services,handlers,objects}/**/*.ts, verified to
+  match 29 files and exclude entities/enums/events/errors), where a re-DECLARED Coupon
+  class / CouponType|Status enum / CouponCreated|Deactivated event / second
+  registerErrorCodes(COUPON_*) only appears if the builder RESTARTED instead of
+  importing the seeded artifacts. The canonical IMPORT-and-wire path (and editing the
+  merged barrels entities/index.ts, events/index.ts, controllers/index.ts + registry)
+  stays clean because those declarations live in the seeded owner dirs the brace-list
+  excludes. The judge's axis (a) is the real backstop on continuity; the greps are the
+  cheap mechanical floor. A restart that OVERWRITES the seeded entities/Coupon.ts in
+  place is caught instead by continuity#seeded-aggregate-intact (grep-must the seeded
+  class signature survives) + the seeded entity suite staying green.
+
+  DISCRIMINATING TRAPS: a naive agent that ignores the handoff RESTARTS — re-scaffolds
+  a fresh Coupon entity (duplicate class guard + judge a), forks a parallel enums
+  folder or re-registers the error codes (duplicate enum / parallel-errors guards),
+  or rewrites the seeded entity test; a sloppy agent emits the event from the entity
+  or via mediator.publish (no-mediator guard + judge b), pre-checks the deactivate
+  guard in the use case (judge b), leaks cross-tenant existence by returning a
+  different code for a foreign-store coupon (acceptance AC13 + judge b), reads storeId
+  from the body (controller-envelope grep + judge d), forgets the unique index
+  (schema/migration greps + AC16), or casts its way past tsc (suppression guard +
+  judge e). The combined oracle (tsc + BOTH suites green) plus the continuity guards
+  plus the single rich judge (six axes, scope notes naming the legitimate-exception
+  traps: builder's own colocated command tests, barrel/registry edits, row-mapping
+  casts) carry the grade. Glob notes: Bun.Glob supports {…} brace lists and [..]
+  char classes but NOT !(…) extglob negation (it matches the negated branch anyway —
+  verified), which is why the restart guards use positive brace-list directory
+  scoping instead; the migration glob 005[2-9]_*.sql matches the next generated file
+  (HEAD ends at 0051_*); single-file globs are literal paths.

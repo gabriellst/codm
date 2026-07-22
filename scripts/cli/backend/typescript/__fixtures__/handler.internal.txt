@@ -1,0 +1,12 @@
+import { injectable } from 'tsyringe-neo'
+import { EventHandler } from '@template/core-typescript'
+import { OrderCreatedEvent } from '@sales/events'
+
+@injectable()
+export class OrderCreatedHandler extends EventHandler<typeof OrderCreatedEvent> {
+	readonly event = OrderCreatedEvent
+
+	async handle(_event: this['input']): Promise<void> {
+		// Implement handler logic
+	}
+}

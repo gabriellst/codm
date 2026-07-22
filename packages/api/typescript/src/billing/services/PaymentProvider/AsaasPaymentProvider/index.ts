@@ -1,0 +1,1 @@
+export { AsaasPaymentProvider } from './AsaasPaymentProvider'

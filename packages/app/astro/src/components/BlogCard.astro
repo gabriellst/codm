@@ -1,0 +1,49 @@
+---
+import { Image } from 'astro:assets'
+import type { CollectionEntry } from 'astro:content'
+
+interface Props {
+	post: CollectionEntry<'blog'>
+	href: string
+}
+
+const { post, href } = Astro.props
+const { title, description, publishedAt, coverImage, tags } = post.data
+const dateLabel = publishedAt.toLocaleDateString(undefined, {
+	year: 'numeric',
+	month: 'short',
+	day: 'numeric',
+})
+---
+
+<a
+	href={href}
+	class="group flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] transition-colors hover:bg-[var(--muted)]/40"
+>
+	{
+		coverImage && (
+			<Image
+				src={coverImage}
+				alt={title}
+				widths={[480, 800, 1200]}
+				sizes="(min-width: 1024px) 33vw, 100vw"
+				format="webp"
+				class="aspect-[16/9] w-full object-cover"
+			/>
+		)
+	}
+	<div class="flex flex-col gap-2 p-5">
+		<time class="text-xs text-[var(--muted-foreground)]" datetime={publishedAt.toISOString()}>{dateLabel}</time>
+		<h2 class="text-lg font-semibold leading-tight">{title}</h2>
+		<p class="text-sm text-[var(--muted-foreground)]">{description}</p>
+		{
+			tags.length > 0 && (
+				<div class="mt-2 flex flex-wrap gap-1.5">
+					{tags.map(tag => (
+						<span class="rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">{tag}</span>
+					))}
+				</div>
+			)
+		}
+	</div>
+</a>

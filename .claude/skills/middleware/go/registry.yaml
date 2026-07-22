@@ -1,0 +1,194 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [errors, repository]
+  depended_by: [controller]
+  context_reads: [errors, controller]
+  lang: go
+  examples:
+    - examples/citizens/go/middleware/session.go
+    - examples/citizens/go/middleware/apikey.go
+    - examples/citizens/go/middleware/logging.go
+
+  snippet:
+    skeleton: |
+      // Package middleware contains HTTP middlewares for the {{ctx}} bounded context.
+      package middleware
+
+      import (
+      	"net/http"
+
+      	ctxerrors "template/api-go/internal/{{ctx}}/errors"
+      	"template/core-go/errors"
+      	"template/core-go/pkg/httputil"
+      )
+
+      // {{Pascal}} creates a middleware that enforces {{snake}} before allowing the request through.
+      //
+      // Usage in ControllerMetadata:
+      //
+      //	Middlewares: []types.Middleware{middleware.{{Pascal}}(secret)},
+      func {{Pascal}}(secret string) func(next http.Handler) http.Handler {
+      	return func(next http.Handler) http.Handler {
+      		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+      			// TODO: implement guard logic
+      			val := r.Header.Get("X-{{Pascal}}-Key")
+      			if val == "" || val != secret {
+      				httputil.RespondError(w, errors.NewBaseError(
+      					ctxerrors.Code{{Pascal}}Invalid,
+      					"invalid or missing X-{{Pascal}}-Key header",
+      				))
+      				return
+      			}
+      			next.ServeHTTP(w, r)
+      		})
+      	}
+      }
+
+  patterns:
+    - id: MDW-GO-01
+      when: always
+      rule: >
+        A middleware is a factory function that returns func(next http.Handler) http.Handler.
+        The factory accepts config (secrets, DB clients) as parameters so the returned
+        closure captures them without requiring DI registration.
+      wrong: |
+        type VerifySignatureMiddleware struct{}   // wrong: struct-based middleware
+
+        func (m *VerifySignatureMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) { ... }
+      right: |
+        func VerifyTranscoderSignature(secret string) func(next http.Handler) http.Handler {
+            return func(next http.Handler) http.Handler {
+                return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                    // ...
+                })
+            }
+        }
+
+    - id: MDW-GO-02
+      when: always
+      rule: >
+        On check failure: call httputil.RespondError(w, err) then return.
+        Never call next.ServeHTTP after a rejection.
+      wrong: |
+        if sig != secret {
+            httputil.RespondError(w, errors.NewBaseError(code, "bad sig"))
+            next.ServeHTTP(w, r)   // wrong: next still called
+        }
+      right: |
+        if sig == "" || sig != secret {
+            httputil.RespondError(w, errors.NewBaseError(code, "bad sig"))
+            return   // stop — do not fall through
+        }
+        next.ServeHTTP(w, r)
+
+    - id: MDW-GO-03
+      when: always
+      rule: >
+        Use errors.NewBaseError(errorCode, msg) with a registered error code.
+        Never write raw http.Error strings or hardcode status codes directly.
+      wrong: |
+        http.Error(w, "unauthorized", 401)
+      right: |
+        httputil.RespondError(w, errors.NewBaseError(errors.CodeUnauthorized, "invalid API key"))
+
+    - id: MDW-GO-04
+      when: always
+      rule: >
+        Middlewares are wired via ControllerMetadata.Middlewares (per controller)
+        or at the router level (global / all routes). Never wire middleware inside
+        a use case or entity.
+      right: |
+        func (c *TranscoderCallbackController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                Middlewares: []types.Middleware{
+                    middleware.VerifyTranscoderSignature(c.secret),
+                },
+            }
+        }
+
+    - id: MDW-GO-05
+      when: middleware enriches the request (header injection)
+      rule: >
+        Enriching middlewares (session, tenant) never reject — they enrich and
+        call next unconditionally. The controller reads the injected header.
+        Missing enrichment data is handled downstream, not here.
+      right: |
+        // Session middleware — never rejects; enriches only
+        if ownerID.Valid && ownerID.String != "" {
+            r.Header.Set("X-Owner-Id", ownerID.String)
+        }
+        next.ServeHTTP(w, r)   // always calls next
+
+    - id: MDW-GO-06
+      when: always
+      rule: >
+        Shared middlewares live in internal/shared/middleware/ (cross-context) or
+        core/middleware/ (framework-level). Context-local middlewares live in
+        internal/<ctx>/middleware/. Never put a context-local middleware in shared/.
+      right: |
+        // shared/
+        internal/shared/middleware/apikey.go
+        internal/shared/middleware/session.go
+        internal/shared/middleware/logging.go
+
+        // context-local
+        internal/transcoding/middleware/verify_transcoder_signature.go
+
+  bad_practices:
+    - id: MDW-GO-BP-01
+      severity: critical
+      description: Calling next.ServeHTTP after a rejection
+      mechanical: true
+      detect:
+        - 'RespondError\([\s\S]*?\)\s*next\.ServeHTTP'
+      wrong: |
+        if sig != secret {
+            httputil.RespondError(w, errors.NewBaseError(code, "bad sig"))
+            next.ServeHTTP(w, r)   // WRONG: next called after rejection
+        }
+      right: |
+        if sig != secret {
+            httputil.RespondError(w, errors.NewBaseError(code, "bad sig"))
+            return
+        }
+        next.ServeHTTP(w, r)
+
+    - id: MDW-GO-BP-02
+      severity: critical
+      description: Using raw http.Error or hardcoded status codes instead of errors.NewBaseError
+      mechanical: true
+      detect:
+        - 'http\.Error\('
+        - '\.WriteHeader\(\d'
+        - 'json\.NewEncoder\(w\)\.Encode\('
+      wrong: |
+        http.Error(w, "forbidden", 403)
+        w.WriteHeader(401)
+        json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+      right: |
+        httputil.RespondError(w, errors.NewBaseError(errors.CodeUnauthorized, "invalid API key"))
+
+    - id: MDW-GO-BP-03
+      severity: high
+      description: Business logic inside a middleware (should be in use case or entity)
+      mechanical: false
+      wrong: |
+        // In middleware:
+        job, _ := repo.FindByVideoID(ctx, videoID)
+        if job.Status != "PENDING" {
+            // business rule — belongs in use case
+            httputil.RespondError(...)
+        }
+      right: |
+        // Middleware only enforces cross-cutting concerns.
+        // Business rules go in use cases or entities.
+
+    - id: MDW-GO-BP-04
+      severity: medium
+      description: Context-local middleware placed in shared/middleware/ instead of <ctx>/middleware/
+      mechanical: false
+      wrong: |
+        internal/shared/middleware/verify_transcoder_signature.go  // wrong location
+      right: |
+        internal/transcoding/middleware/verify_transcoder_signature.go

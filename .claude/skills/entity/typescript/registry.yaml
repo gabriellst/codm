@@ -1,0 +1,718 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: [errors, enum, value-object]
+  depended_by: [repository-interface, repository-impl, usecase]
+  context_reads: [schema, ddd-modeling]
+
+  patterns:
+    - id: ENT-01
+      name: "Schema declaration"
+      when: always
+      rule: "const XSchema = z.object({...}) at module level"
+      wrong: "schema inline in class or without const"
+    - id: ENT-02
+      name: "Props type inference (exported)"
+      when: always
+      rule: "export type XProps = Z.infer<typeof XSchema> — a standalone EXPORTED type alias MUST exist at module level, before the class"
+      wrong: "non-exported type (missing export keyword), manually written type, (typeof XSchema)['_output'], OR missing entirely (no type alias at all — using Z.infer only inline in the interface merge is NOT enough)"
+    - id: ENT-03
+      name: "Class extends AggregateRoot or BaseEntity"
+      when: always
+      rule: "Aggregate roots: class X extends AggregateRoot<typeof XSchema>. Child entities (owned by an aggregate, no independent lifecycle): class X extends BaseEntity<typeof XSchema>. Example child entity: ChatSession extends BaseEntity."
+    - id: ENT-04
+      name: "Static schema override"
+      when: always
+      rule: "static override schema = XSchema"
+      wrong: "missing static schema — validation silently skipped"
+    - id: ENT-05
+      name: "Factory method"
+      when: always
+      rule: "static create(data): X { return new X(data) }"
+      wrong: "manual property assignment or if-checks in create()"
+    - id: ENT-06
+      name: "Interface merging"
+      when: always
+      rule: "export interface X extends XProps {} — BELOW the class"
+      wrong: "declaring fields with ! on class body"
+    - id: ENT-07
+      name: "Barrel export"
+      when: always
+      rule: "export { X } from './X' in entities/index.ts"
+    - id: ENT-08
+      name: "DomainErrors only"
+      when: always
+      rule: "{ error: 'CODE' as DomainErrors } in schema refinements"
+      wrong: "{ message: '...' } or ApplicationErrors in entity schema"
+    - id: ENT-C01
+      name: "VO transform in schema"
+      when: "entity has Value Object fields"
+      rule: "z.instance(Email) — works for both primitive and composite VOs"
+      wrong: "z.string().transform(v => new Email(v)), z.instanceof(Email), or z.custom<Email>()"
+    - id: ENT-C03
+      name: "Enum in schema"
+      when: "entity has enum fields"
+      rule: "z.enum(StatusEnum) — always z.enum(), never z.nativeEnum()"
+      wrong: "z.nativeEnum(StatusEnum), z.literal('ACTIVE').or(z.literal('INACTIVE')), z.enum(['ACTIVE', 'INACTIVE'])"
+    - id: ENT-C04
+      name: "Behavior method with this.validate()"
+      when: "entity has methods that change simple field values"
+      rule: "Assign the new value, then call this.validate() — BaseEntity re-runs the static schema, throws BaseError on failure, and applies transforms (e.g. .trim()) back"
+      wrong: "Manual safeParse + BaseError throw per field; inline .parse() that throws ZodError"
+    - id: ENT-C05
+      name: "Simple state toggle"
+      when: "entity has boolean toggle"
+      rule: "activate(): void { this.isActive = true }"
+    - id: ENT-C06
+      name: "Multi-field invariant"
+      when: "entity has rules crossing 2+ fields"
+      rule: ".refine() at schema level with { error: 'CODE' as DomainErrors }"
+      wrong: "manual if-check in create() or constructor"
+    - id: ENT-C07
+      name: "Optional VO field"
+      when: "VO field is optional"
+      rule: "z.instance(Email).optional() — chain .optional() after z.instance()"
+    - id: ENT-C08
+      name: "Explicit validation in behavior methods"
+      when: "method enforces complex business rules that cross-check multiple fields or entities"
+      rule: "Use explicit if-checks with BaseError throws for business invariants that the schema cannot express — e.g., checking another entity's state, comparing dates across fields, or enforcing role-based permissions"
+      wrong: "Using explicit if-checks for simple format validation (min/max, trim, enum membership) that the schema already handles"
+    - id: ENT-C09
+      name: "State machine transitions"
+      when: "entity has status transitions"
+      rule: "VALID_TRANSITIONS map + behavior methods (confirm(), cancel())"
+      wrong: "direct status assignment from outside"
+
+    - id: ENT-C10
+      name: "this.validate() for simple field mutations"
+      when: "behavior method updates one or more simple fields (strings, enums, booleans)"
+      rule: |
+        updateName(newName: string): void {
+          this.name = newName
+          this.validate()
+        }
+      wrong: "Manual safeParse + BaseError throw per field — see bp-11"
+
+    # ── Extracted code patterns ──────────────────────────────────────────
+    - id: ENT-P01
+      name: "String field with trim + min validation"
+      when: "entity has a required string field that needs whitespace handling"
+      reason: "Strings from user input may contain leading/trailing whitespace. Using .trim() strips whitespace before validation, keeping the chain flat and readable."
+      rule: |
+        name: z
+          .string()
+          .trim()
+          .min(1, { error: 'NAME_REQUIRED' as DomainErrors })
+          .max(255, { error: 'INVALID_NAME' as DomainErrors }),
+
+    - id: ENT-P02
+      name: "Default status in create()"
+      when: "entity has a status enum field with a sensible default"
+      reason: "New entities typically start in a known initial state (ACTIVE, PENDING). The default is set in create(), not in the schema, so rehydration from DB preserves the stored status."
+      rule: |
+        static create(data: { name: string; status?: StatusEnum }): Entity {
+          return new Entity({
+            ...data,
+            status: data.status ?? StatusEnum.ACTIVE,
+          })
+        }
+
+    - id: ENT-P03
+      name: "activate() / deactivate() status pair"
+      when: "entity has an active/inactive lifecycle"
+      reason: "Encapsulates status changes behind behavior methods so callers cannot set arbitrary status values."
+      rule: |
+        activate(): void {
+          this.status = StatusEnum.ACTIVE
+        }
+        deactivate(): void {
+          this.status = StatusEnum.INACTIVE
+        }
+        isActive(): boolean {
+          return this.status === StatusEnum.ACTIVE
+        }
+
+    - id: ENT-P04
+      name: "Private transitionTo() for state machine"
+      when: "entity has a finite set of valid status transitions"
+      reason: "A VALID_TRANSITIONS map + private transitionTo() method centralizes transition validation. Public methods (confirm(), cancel()) delegate to it, ensuring invalid transitions always throw."
+      rule: |
+        const VALID_TRANSITIONS: Record<StatusEnum, StatusEnum[]> = {
+          [StatusEnum.PENDING]: [StatusEnum.CONFIRMED, StatusEnum.CANCELLED],
+          [StatusEnum.CONFIRMED]: [StatusEnum.COMPLETED, StatusEnum.CANCELLED],
+          [StatusEnum.COMPLETED]: [],
+          [StatusEnum.CANCELLED]: [],
+        }
+
+        private transitionTo(newStatus: StatusEnum): void {
+          const allowed = VALID_TRANSITIONS[this.status]
+          if (!allowed.includes(newStatus)) {
+            throw new BaseError<DomainErrors>('INVALID_STATUS_TRANSITION')
+          }
+          this.status = newStatus
+        }
+
+    - id: ENT-P05
+      name: "VO mutation via direct construction"
+      when: "entity behavior method updates a Value Object field"
+      reason: "Mutation methods for VO fields create a new VO instance directly (e.g., new Email(value)) rather than going through safeParse. The VO constructor handles its own validation and throws BaseError on invalid input."
+      rule: |
+        updateEmail(newEmail: string): void {
+          this.email = new Email(newEmail)
+        }
+        updateName(fullName: string): void {
+          this.name = new PersonName(fullName)
+        }
+
+    - id: ENT-P06
+      name: "VO fields use z.instance()"
+      when: "entity has a Value Object field (primitive or composite)"
+      reason: "z.instance(VO) reads the VO's static schema and constructor automatically. It handles both primitive VOs (Id, Email, CPF) and composite VOs (Address, CRM, WeeklySchedule). The VO constructor validates internally."
+      rule: |
+        // Primitive VOs
+        userId: z.instance(Id),
+        email: z.instance(Email),
+        name: z.instance(PersonName),
+
+        // Composite VOs
+        address: z.instance(Address),
+        crm: z.instance(CRM),
+        availability: z.instance(WeeklySchedule).optional(),
+
+    - id: ENT-P07
+      name: "Array of VOs in schema"
+      when: "entity has an array field of Value Objects"
+      reason: "Arrays of VOs use z.array(z.instance(VO)). For pre-constructed VOs that don't have a static schema, use z.array(z.instanceof(VO))."
+      rule: |
+        // z.instance for VOs with static schema
+        dateOverrides: z.array(z.instance(DateOverride)),
+        specialties: z.array(z.instance(DoctorSpecialty)).default([]),
+
+        // z.instanceof for pre-constructed VOs without static schema
+        context: z.array(z.instanceof(ChatContext)),
+
+    - id: ENT-P08
+      name: "Optional field with .optional()"
+      when: "entity has truly optional fields"
+      reason: "Optional fields use .optional() at the end of the chain. For VO fields, chain .optional() after z.instance(). For simple fields, .optional() is appended directly."
+      rule: |
+        notes: z.string().max(1000).optional(),
+        description: z.string().max(500).optional(),
+        address: z.instance(Address).optional(),
+        availability: z.instance(WeeklySchedule).optional(),
+
+    - id: ENT-P09
+      name: "Array field with .default([])"
+      when: "entity has a collection field that defaults to empty"
+      reason: "Using .default([]) ensures the array is never undefined on new entities."
+      rule: |
+        specialties: z.array(z.instance(DoctorSpecialty)).default([]),
+        orientations: z.array(z.string().min(1).max(500)).default([]),
+
+    - id: ENT-P10
+      name: "Collection mutation methods (add/update/remove)"
+      when: "entity owns a collection of child VOs or entities"
+      reason: "Aggregate roots manage their collections through dedicated methods. Add creates and pushes, update finds by id and replaces, remove finds by id and splices. All throw DomainErrors when item not found."
+      rule: |
+        addNote(content: string): PatientNote {
+          const note = PatientNote.create(content)
+          this.notes.push(note)
+          return note
+        }
+        updateNote(noteId: string, content: string): void {
+          const index = this.notes.findIndex(n => n.id === noteId)
+          if (index === -1) {
+            throw new BaseError<DomainErrors>('NOTE_NOT_FOUND')
+          }
+          this.notes[index] = this.notes[index]!.withContent(content)
+        }
+        removeNote(noteId: string): void {
+          const index = this.notes.findIndex(n => n.id === noteId)
+          if (index === -1) {
+            throw new BaseError<DomainErrors>('NOTE_NOT_FOUND')
+          }
+          this.notes.splice(index, 1)
+        }
+
+    - id: ENT-P11
+      name: "Bulk update method"
+      when: "entity supports partial updates to multiple fields at once"
+      reason: "A single update() method accepts an object with optional fields, applying only the ones provided. This avoids needing separate updateX() methods for every field."
+      rule: |
+        update(data: {
+          name?: string
+          specialty?: Specialty
+          description?: string | null
+        }): void {
+          if (data.name !== undefined) this.name = data.name
+          if (data.specialty !== undefined) this.specialty = data.specialty
+          if (data.description !== undefined) this.description = data.description ?? undefined
+        }
+
+    - id: ENT-P12
+      name: "Guard-before-transition"
+      when: "entity state transition requires precondition checks"
+      reason: "Behavior methods that change state first validate preconditions (e.g., not expired, correct current status), then apply the change. Each precondition throws a specific DomainError."
+      rule: |
+        accept(): void {
+          if (this.isExpired()) {
+            throw new BaseError<DomainErrors>('INVITATION_EXPIRED')
+          }
+          if (this.status !== InviteStatus.PENDING) {
+            throw new BaseError<DomainErrors>('INVITATION_ALREADY_ACCEPTED')
+          }
+          this.status = InviteStatus.ACCEPTED
+        }
+
+    - id: ENT-P13
+      name: "Multiple factory methods"
+      when: "entity can be created in different configurations"
+      reason: "When entity creation differs by type/role, use multiple named factory methods (createForMember, createForDoctor) instead of a single create() with complex conditionals."
+      rule: |
+        static createForMember(data: { unitId: string; email: string; role: MemberRoleType }): Invite {
+          return new Invite({
+            type: MemberType.MEMBER,
+            email: data.email,
+            role: data.role,
+            ...commonDefaults,
+          })
+        }
+        static createForDoctor(data: { unitId: string; email: string }): Invite {
+          return new Invite({
+            type: MemberType.DOCTOR,
+            email: data.email,
+            ...commonDefaults,
+          })
+        }
+
+    - id: ENT-P14
+      name: "Computed / derived value method"
+      when: "entity exposes a derived value from its fields"
+      reason: "Domain logic that computes values from entity state (e.g., age from birthDate, overlap check) lives as methods on the entity, not in use cases or services."
+      rule: |
+        getAge(): number {
+          return this.birthDate.getAge()
+        }
+        overlaps(startDate: Date, endDate: Date): boolean {
+          return this.startDate < endDate && this.endDate > startDate
+        }
+        isExpired(): boolean {
+          return this.expiresAt < new Date()
+        }
+
+    - id: ENT-P15
+      name: "Imperative state transitions, NOT event sourcing"
+      when: "aggregate changes state (activate, cancel, confirm, markPaid)"
+      reason: >
+        Aggregates use plain imperative methods that mutate state. In TS the entity carries
+        NO event API — the calling use case constructs the domain event after repo.save()
+        and persists it via domainEventRepository.save(event, tx) (see UC-C05). Event
+        sourcing (rebuilding state from an applyEvent(event) dispatcher) is reserved for
+        PROJECTIONS only. Events are logs + downstream triggers, never the aggregate's
+        source of truth. (Go differs intentionally: entity-born AddDomainEvent/PullDomainEvents.)
+      rule: |
+        // Entity: imperative transition only — no event API on the entity (TS)
+        cancel(): void {
+          if (this.status === SubscriptionStatus.CANCELLED) throw new BaseError<DomainErrors>('ALREADY_CANCELLED')
+          this.props.status = SubscriptionStatus.CANCELLED
+        }
+
+        // Use case — builds + persists the event after save, same tx:
+        await this.subscriptionRepository.save(subscription, tx)
+        await this.domainEventRepository.save(new SubscriptionCancelledEvent({ ... }), tx)
+      wrong: |
+        // event-sourced aggregate: state derived by replaying events
+        applyEvent(event: SubscriptionEvent): void {
+          switch (event.name) { case 'paid': this.isActive = true; ... }
+        }
+
+    - id: ENT-P17
+      name: "VO field mutation with business rule"
+      when: "VO update requires domain validation beyond VO constructor"
+      reason: "When updating a VO field has business implications (e.g., cannot demote owner), the behavior method validates the business rule before constructing the new VO."
+      rule: |
+        updateRole(newRole: MemberRoleType): void {
+          if (this.role.isOwner() && newRole !== MemberRoleType.OWNER) {
+            throw new BaseError<DomainErrors>('CANNOT_DEMOTE_OWNER')
+          }
+          this.role = new MemberRole(newRole)
+        }
+
+    - id: ENT-P18
+      name: "Child entity must not be AggregateRoot"
+      when: "entity is owned by an aggregate root and has no independent lifecycle"
+      reason: "Child entities must NOT extend AggregateRoot — they can extend either BaseEntity (when they need identity) or BaseValueObject (when defined purely by attributes). AggregateRoot is reserved for top-level aggregates with their own transactional boundary. When referenced from a parent schema, use z.instance()."
+      rule: |
+        // CORRECT — child entity with identity (has its own id, managed by parent)
+        export class ChatSession extends BaseEntity<typeof ChatSessionSchema> { ... }
+
+        // CORRECT — child as value object (no identity, defined by attributes)
+        export class PatientNote extends BaseValueObject<typeof PatientNoteSchema> { ... }
+
+        // WRONG — child entity must never be an aggregate root
+        export class ChatSession extends AggregateRoot<typeof ChatSessionSchema> { ... }
+
+        // In parent entity schema — use z.instance() for child entities and VOs alike
+        const PatientSchema = z.object({
+          notes: z.array(z.instance(PatientNote)).default([]),
+          sessions: z.array(z.instance(ChatSession)).default([]),
+        })
+
+    - id: ENT-P19
+      name: "Metadata / generic record field"
+      when: "entity stores unstructured metadata"
+      reason: "For free-form metadata, use z.record(z.string(), z.unknown()). Optional metadata uses .optional(), required defaults to empty object."
+      rule: |
+        state: z.record(z.string(), z.unknown()),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+
+    - id: ENT-P20
+      name: "Completion timestamp pattern"
+      when: "entity tracks when an action completed"
+      reason: "An optional Date field combined with a completion method and a boolean helper encapsulates the completion lifecycle."
+      rule: |
+        completedAt: z.instanceof(Date).optional(),
+
+        isCompleted(): boolean {
+          return !!this.completedAt
+        }
+        complete(): void {
+          this.completedAt = new Date()
+          this.currentStep = StepEnum.COMPLETED
+        }
+
+    - id: ENT-P21
+      name: "Tell Don't Ask — encapsulate checks inside entity methods"
+      when: "entity has collection mutation or state-changing methods"
+      reason: "Callers (use cases, handlers) should not query entity state to decide whether to act — the entity method itself should enforce preconditions, deduplication, and invariants internally. This follows the Tell Don't Ask principle."
+      rule: |
+        // Entity method handles deduplication internally
+        addMessage(data: { author: Author; content: string }): void {
+          if (this.messages.some(m => m.content === data.content && m.author === data.author)) return
+          this.messages.push(ChatMessage.create(data))
+        }
+
+        // Entity method guards state transition internally
+        close(): void {
+          if (this.status === SessionStatus.CLOSED) return
+          this.status = SessionStatus.CLOSED
+        }
+      wrong: |
+        // Caller checks entity state before calling — violates Tell Don't Ask
+        if (!session.hasMessage(messageId)) {
+          session.addMessage(data)
+        }
+
+    - id: ENT-P22
+      name: "Use VO Props types instead of redeclaring input shapes"
+      when: "entity method or factory accepts raw input for a Value Object"
+      reason: "Value objects already export a Props type (Z.input<typeof VOSchema>) representing their raw input shape. Entity methods and create() should reference that type instead of redeclaring the structure inline. This ensures a single source of truth — if the VO schema changes, the entity's signatures update automatically."
+      rule: |
+        // Each VO exports its Props type:
+        // export type DoctorSpecialtyProps = Z.input<typeof DoctorSpecialtySchema>
+        // export type CRMProps = Z.input<typeof CRMSchema>
+
+        // Entity references the Props type, never redeclares inline:
+        static create(data: {
+          userId: string
+          specialties?: DoctorSpecialtyProps[]
+        }): Doctor { ... }
+
+        updateProfessionalInfo(
+          specialties?: DoctorSpecialtyProps[],
+          crm?: CRMProps,
+        ): void { ... }
+      wrong: |
+        // Manually redeclaring what the VO schema already defines
+        static create(data: {
+          specialties?: Array<{ specialty: Specialty; rqe?: number | string }>
+        }): Doctor { ... }
+
+        updateProfessionalInfo(
+          crm?: { number: string; state: BrazilianState },
+        ): void { ... }
+
+  bad_practices:
+    - id: bp-01
+      name: "Empty DomainErrors when domain validations exist"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Entity uses VOs that validate (Email, CPF, Phone) but DomainErrors = never
+        type DomainErrors = never
+      right: |
+        // DomainErrors must list all error codes used by entity schemas and VOs
+        type DomainErrors = 'PATIENT_NAME_REQUIRED' | 'INVALID_EMAIL' | ...
+
+    - id: bp-02
+      name: "Rehydrating entity with .create() instead of constructor"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // In repository toDomain()
+        const entity = Entity.create({ ...dbRow })  // WRONG: generates new ID, applies business logic
+      right: |
+        // In repository toDomain()
+        const entity = new Entity({
+          id: dbRow.id,           // string — BaseEntity handles string → Id
+          name: dbRow.name,       // string — schema .transform() creates VOs
+          createdAt: dbRow.createdAt,
+          updatedAt: dbRow.updatedAt,
+          version: dbRow.version,
+        })
+
+    - id: bp-03
+      name: "Using { message: '...' } in .refine() instead of { error: '...' as DomainErrors }"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\{\s*message:\s*[''"]'
+      wrong: |
+        .refine(data => data.startDate < data.endDate, {
+          message: 'Start date must be before end date',
+        })
+      right: |
+        .refine(data => data.startDate < data.endDate, {
+          error: 'INVALID_DATE_RANGE' as DomainErrors,
+        })
+
+    - id: bp-04
+      name: "Using if-checks in create() instead of Zod schema"
+      severity: critical
+      mechanical: false
+      wrong: |
+        static create(data: CreateInput): Entity {
+          if (!data.name || data.name.length === 0) {
+            throw new BaseError<DomainErrors>('NAME_REQUIRED')
+          }
+          const entity = new Entity()
+          entity.name = data.name.trim()
+          return entity
+        }
+      right: |
+        // Schema validates + transforms, constructor populates
+        const EntitySchema = z.object({
+          name: z.string().min(1, { error: 'NAME_REQUIRED' as DomainErrors }),
+        })
+        static create(data: { name: string }): Entity {
+          return new Entity({ name: data.name.trim() })
+        }
+
+    - id: bp-05
+      name: "Using (typeof XSchema)['_output'] instead of Z.infer<typeof XSchema>"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '\[[''"]_output[''"]\]'
+      wrong: |
+        type EntityProps = (typeof EntitySchema)['_output']
+      right: |
+        import Z from 'zod'
+        type EntityProps = Z.infer<typeof EntitySchema>
+
+    - id: bp-06
+      name: "Missing static override schema on entity class"
+      severity: critical
+      mechanical: false
+      wrong: |
+        export class Entity extends AggregateRoot<typeof EntitySchema> {
+          // Missing: static override schema = EntitySchema
+          // Validation is silently skipped!
+        }
+      right: |
+        export class Entity extends AggregateRoot<typeof EntitySchema> {
+          static override schema = EntitySchema
+        }
+
+    - id: bp-07
+      name: "Manual VO transform instead of z.instance()"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\.transform\(\s*\w+\s*=>\s*new\s+\w+'
+        - '\.input\(\)\.transform\('
+      wrong: |
+        const EntitySchema = z.object({
+          clinicId: z.string().transform(v => new Id(v)),
+          crm: CRMSchema.input().transform(v => new CRM(v)),
+          address: AddressSchema.input().transform(v => new Address(v)),
+        })
+      right: |
+        const EntitySchema = z.object({
+          clinicId: z.instance(Id),
+          crm: z.instance(CRM),
+          address: z.instance(Address),
+        })
+
+    - id: bp-08
+      name: "Using z.instanceof(Id) or inline schema when VO exists"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'z\.instanceof\(Id\)'
+        - 'z\.object\([\s\S]*?\)\.transform\('
+      wrong: |
+        clinicId: z.instanceof(Id),  // Requires pre-constructed Id
+        address: z.object({ street: z.string(), city: z.string() }).transform(v => new Address(v)),
+      right: |
+        clinicId: z.instance(Id),
+        address: z.instance(Address),
+
+    - id: bp-09
+      name: "Schema error without DomainErrors cast"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'error:\s*[''"][A-Z0-9_]+[''"](?!\s*as\b)'
+      wrong: |
+        // Error code is an untyped string — not checked against DomainErrors union
+        name: z.string().min(1, { error: 'NAME_REQUIRED' }),
+        .refine(data => data.start < data.end, { error: 'INVALID_RANGE' })
+      right: |
+        // Cast to DomainErrors so the error code is validated against the context's error union
+        import { DomainErrors } from '@context/errors'
+        name: z.string().min(1, { error: 'NAME_REQUIRED' as DomainErrors }),
+        .refine(data => data.start < data.end, { error: 'INVALID_RANGE' as DomainErrors })
+        // For entities in the shared context, use BaseDomainErrors instead:
+        import type { BaseDomainErrors } from '@template/core-typescript'
+        name: z.string().min(1, { error: 'NAME_REQUIRED' as BaseDomainErrors })
+
+    - id: bp-12
+      name: "Raw schemas for composite VOs instead of z.instance(VO)"
+      severity: critical
+      mechanical: true
+      # entity-only: use-case/event/query schemas legitimately use raw VO schemas (wire shapes)
+      scope: self
+      detect:
+        - 'z\.array\(\w+Schema\)'
+        - '\.input\(\)\.transform\('
+      wrong: |
+        // Entity holds raw objects, not real VOs
+        items: z.array(LineItemSchema),  // Raw objects without VO behavior!
+        // Or manual transform when z.instance() exists
+        items: z.array(LineItemSchema.input().transform(v => new LineItem(v))),
+      right: |
+        items: z.array(z.instance(LineItem)),
+
+    - id: bp-10
+      name: "Manual safeParse + BaseError in behavior methods"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '\.safeParse\('
+      wrong: |
+        updateName(newName: string): void {
+          const result = XSchema.shape.name.safeParse(newName.trim())
+          if (!result.success) throw new BaseError<DomainErrors>(result.error.issues[0]!.message as DomainErrors)
+          this.name = result.data
+        }
+      right: |
+        updateName(newName: string): void {
+          this.name = newName
+          this.validate()
+        }
+
+    - id: bp-11
+      name: "Format validation in behavior methods"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // Behavior method re-validates formatting (trim, min, max, enum check) that the schema already handles
+        updateName(newName: string): void {
+          if (newName.trim().length === 0) throw new BaseError<DomainErrors>('NAME_REQUIRED')
+          if (newName.length > 255) throw new BaseError<DomainErrors>('NAME_TOO_LONG')
+          this.name = newName.trim()
+        }
+      right: |
+        // Schema handles formatting — behavior methods only enforce complex business invariants
+        updateName(newName: string): void {
+          this.name = newName
+          this.validate()
+        }
+        // Reserve explicit if-checks for cross-entity or multi-field business rules:
+        updateRole(newRole: MemberRoleType): void {
+          if (this.role.isOwner()) throw new BaseError<DomainErrors>('CANNOT_DEMOTE_OWNER')
+          this.role = new MemberRole(newRole)
+        }
+
+    - id: bp-13
+      name: "Using .input() in entity schemas"
+      severity: critical
+      mechanical: true
+      # entity-only: events/controllers/use cases use .input() BY CANON (wire-safe embedding)
+      scope: self
+      detect:
+        - '\.input\(\)'
+      wrong: |
+        // Entity schemas should NOT use .input() — it strips transforms and degrades types
+        const EntitySchema = z.object({
+          address: AddressSchema.input().transform(v => new Address(v)),
+          phone: PhonePlainSchema.input().transform(v => new Phone(v)),
+          crm: CRMSchema.input().transform(v => new CRM(v)),
+        })
+      right: |
+        // Entity schemas use z.instance() — it handles .input() + transform internally
+        const EntitySchema = z.object({
+          address: z.instance(Address),
+          phone: z.instance(Phone),
+          crm: z.instance(CRM),
+        })
+        // .input() belongs in use case and controller schemas (they accept raw primitives, not VOs)
+
+  snippet:
+    skeleton: |
+      import { {{base}}, z } from '@template/core-typescript'
+      import Z from 'zod'
+      import { DomainErrors } from '../errors'
+
+      export const {{Name}}Schema = z.object({
+      	// Define entity properties
+      	name: z.string().min(1, { error: 'TODO_NAME_REQUIRED' as DomainErrors }),
+      	// Use ids for entity relation:
+      	// ownerId: z.instance(Id),
+      })
+
+      export type {{Name}}Props = Z.infer<typeof {{Name}}Schema>
+
+      export class {{Name}} extends {{base}}<typeof {{Name}}Schema> {
+      	static override schema = {{Name}}Schema
+
+      	static create(data: { name: string }): {{Name}} {
+      		return new {{Name}}({
+      			name: data.name.trim(),
+      		})
+      	}
+
+      	// Mutation methods:
+      	// updateName(name: string): void {
+      	// 	this.name = name; this.validate()
+      	// }
+      }
+
+      // Declaration merging — interface BELOW class
+      export interface {{Name}} extends {{Name}}Props {}
+    exemplar: |
+      const XSchema = z.object({
+        name: z.string().trim().min(1, { error: 'NAME_REQUIRED' as DomainErrors }).max(255, { error: 'INVALID_NAME' as DomainErrors }),
+        email: z.instance(Email),
+        status: z.enum(StatusEnum),
+        ownerId: z.instance(Id),
+      })
+      export type XProps = Z.infer<typeof XSchema>
+
+      export class X extends AggregateRoot<typeof XSchema> {
+        static override schema = XSchema
+        static create(data: { name: string; email: string; ownerId: string }): X {
+          return new X({ ...data, status: StatusEnum.ACTIVE })
+        }
+        updateName(name: string): void {
+          this.name = name
+          this.validate()
+        }
+        activate(): void { this.status = StatusEnum.ACTIVE }
+        deactivate(): void { this.status = StatusEnum.INACTIVE }
+        isActive(): boolean { return this.status === StatusEnum.ACTIVE }
+      }
+      export interface X extends XProps {}
+
+  scaffold: "bun cli entity <context> <name> [--aggregate]"

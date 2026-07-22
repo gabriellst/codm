@@ -1,0 +1,27 @@
+import { Pressable } from 'react-native'
+import { Stack, router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
+import { IconBack } from '@/components/ui/Icons'
+import { fg, surfaces } from '@/lib/tokens'
+import { headerTitleStyle } from '@/lib/screen-styles'
+
+export default function EditProfileLayout() {
+	const { t } = useTranslation()
+	return (
+		<Stack
+			screenOptions={{
+				headerShown: true,
+				headerTitle: t('profile.editProfile.title'),
+				headerStyle: { backgroundColor: surfaces.surface1 },
+				headerTintColor: fg.fg0,
+				headerTitleStyle,
+				headerLeft: () => (
+					<Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={12}>
+						<IconBack size={22} color={fg.fg0} />
+					</Pressable>
+				),
+				contentStyle: { backgroundColor: surfaces.surface1 },
+			}}
+		/>
+	)
+}

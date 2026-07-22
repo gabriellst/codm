@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content'
+import BaseLayout from '~/layouts/BaseLayout.astro'
+import BlogCard from '~/components/BlogCard.astro'
+
+const posts = (await getCollection('blog', ({ id, data }) => id.startsWith('en/') && (import.meta.env.DEV || !data.draft))).sort(
+	(a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime(),
+)
+
+const slugOf = (id: string) => id.replace(/^en\//, '').replace(/\.mdx?$/, '')
+---
+
+<BaseLayout title="Blog" description="Latest news and updates.">
+	<section class="mx-auto flex max-w-[1280px] flex-col gap-10 px-5 py-16 md:px-20">
+		<h1 class="text-4xl font-bold tracking-tight">Blog</h1>
+		{
+			posts.length === 0 ? (
+				<p class="text-[var(--muted-foreground)]">No posts yet.</p>
+			) : (
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					{posts.map(post => (
+						<BlogCard post={post} href={`/en/blog/${slugOf(post.id)}`} />
+					))}
+				</div>
+			)
+		}
+	</section>
+</BaseLayout>

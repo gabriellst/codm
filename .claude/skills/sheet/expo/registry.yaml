@@ -1,0 +1,169 @@
+registry:
+  type: frontend
+  layer: presentation
+  platform: mobile
+  # Sheet is a single-flavor skill (expo-only per CLAUDE.md). The full
+  # patterns + bad_practices live at .claude/skills/sheet/registry.yaml;
+  # this file exists solely to host the canonical snippet read by the
+  # bun cli sheet generator via renderArtifact('sheet', 'expo', …).
+
+  # Canonical sheet shell — what `bun cli sheet <name>` emits across multiple
+  # files (layout + index + optional store). Shape sourced from
+  # berzerk-club/feat/training-collaboration:
+  #   - default skeleton (body-plain): read-only pageSheet body — devices
+  #     pattern (SHT-P03).
+  #   - layout-slot (pageSheet / formSheet): bare `<Slot />` — matches
+  #     berzerk devices/_layout.tsx, notifications/_layout.tsx, etc.
+  #     Presentation options live on the root app/_layout.tsx Stack.Screen,
+  #     never on the inner layout (bp-09).
+  #   - layout-stack (fullScreenModal): inner Stack with back-arrow header —
+  #     matches berzerk edit-profile/_layout.tsx (iOS doesn't render a header
+  #     for fullScreenModal by default).
+  #   - body-form: TanStack-Form wrapped in KeyboardAware + submit Button
+  #     (SHT-C05); dismisses on success via router.back().
+  #   - body-step: one step of a multi-step sheet (SHT-C06); shares a store.
+  #   - store: route-scoped Zustand store for multi-step state (SHT-C07).
+  # Bindings are computed by scripts/cli/expo/artifacts/sheet.ts and passed to
+  # renderArtifact('sheet', 'expo', …).
+  snippet:
+    skeleton: |
+      import { Text, View } from 'react-native'
+      import { useTranslation } from 'react-i18next'
+      import { fs } from '@/lib/tokens'
+
+      export default function {{Pascal}}Sheet() {
+      	const { t } = useTranslation()
+      	return (
+      		<View className="flex-1 px-5 pt-4 pb-6">
+      			<Text
+      				className="text-fg-0 font-sans-bold text-center mb-2"
+      				style={{ fontSize: fs.headerTitle }}
+      			>
+      				{t('{{i18nPrefix}}.title')}
+      			</Text>
+      			{/* Implement {{Pascal}} */}
+      		</View>
+      	)
+      }
+    skeletons:
+      layout-slot: |
+        import { Slot } from 'expo-router'
+
+        export default function {{Pascal}}Layout() {
+        	return <Slot />
+        }
+      layout-stack: |
+        import { Pressable } from 'react-native'
+        import { Stack, router } from 'expo-router'
+        import { useTranslation } from 'react-i18next'
+        import { IconBack } from '@/components/ui/Icons'
+        import { fg, surfaces } from '@/lib/tokens'
+        import { headerTitleStyle } from '@/lib/screen-styles'
+
+        export default function {{Pascal}}Layout() {
+        	const { t } = useTranslation()
+        	return (
+        		<Stack
+        			screenOptions={{
+        				headerShown: true,
+        				headerTitle: t('{{i18nPrefix}}.title'),
+        				headerStyle: { backgroundColor: surfaces.surface1 },
+        				headerTintColor: fg.fg0,
+        				headerTitleStyle,
+        				headerLeft: () => (
+        					<Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={12}>
+        						<IconBack size={22} color={fg.fg0} />
+        					</Pressable>
+        				),
+        				contentStyle: { backgroundColor: surfaces.surface1 },
+        			}}
+        		/>
+        	)
+        }
+      body-form: |
+        import { Text, View } from 'react-native'
+        import { router } from 'expo-router'
+        import { useForm } from '@tanstack/react-form'
+        import { useTranslation } from 'react-i18next'
+        import { KeyboardAware } from '@/components/ui/KeyboardAware'
+        import { Button } from '@/components/ui/Button'{{sdkImportLine}}
+
+        type {{Pascal}}Input = {{inputType}}
+
+        export default function {{Pascal}}Sheet() {
+        	const { t } = useTranslation()
+
+        	const form = useForm({
+        		defaultValues: {} as DeepPartial<{{Pascal}}Input>,
+        		validators: { onChange: {{validator}} },
+        		onSubmit: async ({ value }) => {
+        			{{safeParseBlock}}
+        			// TODO: call SDK mutation and on success dismiss the sheet.
+        			router.back()
+        		},
+        	})
+
+        	return (
+        		<KeyboardAware className="flex-1">
+        			<View className="flex-1 px-5 pt-4 pb-6 gap-4">
+        				<Text className="text-fg-0 font-sans-bold text-xl">{t('{{i18nPrefix}}.title')}</Text>
+        				{/* TODO: render <form.Field> entries here. */}
+        			</View>
+
+        			<form.Subscribe selector={s => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
+        				{({ canSubmit, isSubmitting }) => (
+        					<View className="px-5 pb-6">
+        						<Button
+        							fullWidth
+        							label={t('{{i18nPrefix}}.submit')}
+        							onPress={() => void form.handleSubmit()}
+        							disabled={!canSubmit || isSubmitting}
+        						/>
+        					</View>
+        				)}
+        			</form.Subscribe>
+        		</KeyboardAware>
+        	)
+        }
+      body-step: |
+        import { Text, View } from 'react-native'
+        import { router } from 'expo-router'
+        import { useTranslation } from 'react-i18next'
+        import { Button } from '@/components/ui/Button'
+        import { use{{Pascal}}Store } from './-stores/{{kebab}}-store'
+
+        export default function {{Pascal}}Step{{step}}() {
+        	const { t } = useTranslation()
+        	const next = use{{Pascal}}Store(s => s.next)
+        	return (
+        		<View className="flex-1 px-5 pt-6 pb-6 gap-4">
+        			<Text className="text-fg-0 font-sans-bold text-xl">{t('{{i18nPrefix}}.step{{step}}.title')}</Text>
+        			<Button
+        				label={t('{{i18nPrefix}}.next')}
+        				onPress={() => {
+        					next()
+        					router.push('/(sheets)/{{kebab}}/step-{{nextStep}}')
+        				}}
+        			/>
+        		</View>
+        	)
+        }
+      store: |
+        import { create } from 'zustand'
+
+        interface {{Pascal}}State {
+        	step: number
+        }
+
+        interface {{Pascal}}Actions {
+        	next: () => void
+        	reset: () => void
+        }
+
+        type {{Pascal}}Store = {{Pascal}}State & {{Pascal}}Actions
+
+        export const use{{Pascal}}Store = create<{{Pascal}}Store>(set => ({
+        	step: 0,
+        	next: () => set(s => ({ step: s.step + 1 })),
+        	reset: () => set({ step: 0 }),
+        }))

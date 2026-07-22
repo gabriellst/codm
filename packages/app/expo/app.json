@@ -1,0 +1,65 @@
+{
+	"expo": {
+		"name": "Monorepo Expo",
+		"slug": "monorepo-expo",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/icon.png",
+		"userInterfaceStyle": "dark",
+		"newArchEnabled": true,
+		"ios": {
+			"supportsTablet": false,
+			"bundleIdentifier": "com.medscall.monorepo.expo",
+			"usesAppleSignIn": true,
+			"entitlements": {
+				"aps-environment": "development"
+			},
+			"infoPlist": {
+				"NSFaceIDUsageDescription": "Use Face ID to quickly sign in.",
+				"NSLocalNetworkUsageDescription": "Connects to the development backend running on your Mac to sync data.",
+				"NSBonjourServices": ["_http._tcp"],
+				"NSAppTransportSecurity": {
+					"NSAllowsLocalNetworking": true,
+					"NSAllowsArbitraryLoads": true
+				}
+			}
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#0A0A0B"
+			},
+			"package": "com.medscall.monorepo.expo"
+		},
+		"plugins": [
+			"expo-router",
+			"expo-font",
+			"expo-apple-authentication",
+			"expo-local-authentication",
+			[
+				"expo-notifications",
+				{
+					"color": "#0A0A0B",
+					"defaultChannel": "default"
+				}
+			],
+			["expo-system-ui", { "backgroundColor": "#0A0A0B" }],
+			[
+				"expo-camera",
+				{
+					"cameraPermission": "Allow the app to access your camera."
+				}
+			],
+			[
+				"expo-image-picker",
+				{
+					"photosPermission": "Allow the app to access your photos."
+				}
+			]
+		],
+		"experiments": {
+			"typedRoutes": true
+		},
+		"scheme": "monorepo"
+	}
+}

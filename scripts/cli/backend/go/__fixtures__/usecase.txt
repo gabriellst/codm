@@ -1,0 +1,79 @@
+// Package usecases contains application use cases for the sales bounded context.
+package usecases
+
+import (
+	"context"
+
+	// ctxerrors "template/api-go/internal/sales/errors"
+	// "template/api-go/internal/sales/repositories/<entity>"
+	// "template/core-go/errors"
+	"template/core-go/repositories"
+	"template/core-go/services/unitofwork"
+)
+
+// CreateCouponInput holds the validated input for create_coupon.
+type CreateCouponInput struct {
+	// TODO: add fields with validate tags
+	// OwnerID string `validate:"required"`
+}
+
+// CreateCouponOutput is the response returned after a successful create_coupon.
+type CreateCouponOutput struct {
+	// TODO: add output fields with json tags
+	// ID string `json:"id"`
+}
+
+// CreateCouponHandler implements Handler[CreateCouponInput, CreateCouponOutput].
+type CreateCouponHandler struct {
+	uow             unitofwork.UnitOfWork
+	domainEventRepo repositories.DomainEventRepository
+	// repo SomeRepository
+}
+
+// NewCreateCouponHandler constructs the CreateCouponHandler.
+func NewCreateCouponHandler(
+	uow unitofwork.UnitOfWork,
+	domainEventRepo repositories.DomainEventRepository,
+	// repo SomeRepository,
+) *CreateCouponHandler {
+	return &CreateCouponHandler{
+		uow:             uow,
+		domainEventRepo: domainEventRepo,
+		// repo: repo,
+	}
+}
+
+func (h *CreateCouponHandler) Name() string { return "create_coupon" }
+
+// Execute orchestrates the create_coupon operation.
+// All DB mutations run inside h.uow.Execute; external I/O runs after.
+func (h *CreateCouponHandler) Execute(ctx context.Context, input CreateCouponInput) (CreateCouponOutput, error) {
+	err := h.uow.Execute(ctx, func(txCtx context.Context) error {
+		// 1. Load entity via repository (pass txCtx so the query joins the transaction)
+		// entity, err := h.repo.Find(txCtx, input.ID)
+		// if err != nil { return err }
+		// if entity == nil {
+		// 	return errors.NewBaseError(ctxerrors.CodeCreateCouponNotFound, "create_coupon not found")
+		// }
+
+		// 2. Apply business logic (entity validates invariants)
+		// if err := entity.SomeBehavior(); err != nil { return err }
+
+		// 3. Persist entity
+		// if err := h.repo.Save(txCtx, entity); err != nil { return err }
+
+		// 4. Persist domain events in the SAME transaction (outbox)
+		// for _, e := range entity.PullDomainEvents() {
+		// 	if err := h.domainEventRepo.Save(txCtx, e); err != nil { return err }
+		// }
+
+		return nil
+	})
+	if err != nil {
+		return CreateCouponOutput{}, err
+	}
+
+	// 5. External I/O (service calls, HTTP) AFTER the transaction commits.
+
+	return CreateCouponOutput{}, nil
+}

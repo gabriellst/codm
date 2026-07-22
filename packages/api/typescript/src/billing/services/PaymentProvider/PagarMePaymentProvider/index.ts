@@ -1,0 +1,1 @@
+export { PagarMePaymentProvider } from './PagarMePaymentProvider'

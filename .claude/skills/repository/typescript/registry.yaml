@@ -1,0 +1,778 @@
+registry:
+  type: backend
+  layer: infrastructure
+  depends_on: [entity, db-schema]
+  depended_by: [usecase]
+  context_reads: [entity, db-schema]
+
+  patterns:
+    # ── Structural patterns (abstract class) ──
+    - id: REPO-01
+      name: "Abstract class extends Repository"
+      when: always
+      rule: "export abstract class XRepository extends Repository<X>"
+    - id: REPO-02
+      name: "findById abstract method"
+      when: always
+      rule: "abstract findById(id: string, tx?: Transaction): Promise<X | undefined>"
+    - id: REPO-04
+      name: "Barrel export"
+      when: always
+      rule: "export { XRepository } in repositories/index.ts"
+
+    # ── Structural patterns (Drizzle implementation) ──
+    - id: REPOI-01
+      name: "@injectable() DrizzleXRepository"
+      when: always
+      rule: "@injectable() class DrizzleXRepository extends XRepository"
+    - id: REPOI-02
+      name: "DrizzleClient injection"
+      when: always
+      rule: "constructor(private db: DrizzleClient) { super() }"
+    - id: REPOI-03
+      name: "toDomain method"
+      when: always
+      rule: "private toDomain(row): X { return new X({...row}) }"
+      wrong: "using Entity.create() for rehydration, OR no toDomain method at all (raw row passed directly to callers)"
+    - id: REPOI-04
+      name: "toPersistence method"
+      when: always
+      rule: "private toPersistence(entity): Insert { return { id: entity.id.value, ... } }"
+      wrong: "no toPersistence method at all — entity fields spread directly into insert/update calls without explicit mapping"
+    - id: REPOI-05
+      name: "save with upsert + incrementVersion"
+      when: always
+      rule: "entity.incrementVersion(); insert().values(data).onConflictDoUpdate({...})"
+      wrong: "save() without incrementVersion() call, OR save() using plain insert without onConflictDoUpdate — both break optimistic concurrency"
+    - id: REPOI-06
+      name: "Transaction parameter"
+      when: always
+      rule: "PORT/Mock: tx?: Transaction (from @template/core-typescript). Drizzle impl: tx?: DrizzleClient (sanctioned narrowing override). Body: const dbClient = tx ?? this.db"
+
+    # ── Conditional patterns ──
+    - id: REPO-C03
+      name: "Filtered query"
+      when: "repository supports filtered listing"
+      rule: "where(and(...conditions)) with dynamic condition building"
+
+    # ── Extracted code patterns ──
+    - id: REPO-P01
+      name: "Id value extraction"
+      when: "implementation method receives Id value object"
+      reason: "The Id value object wraps a string; the implementation must extract .value for Drizzle queries."
+      rule: |
+        const idValue = id.value
+
+    - id: REPO-P02
+      name: "tryCatchAsync single-row query"
+      when: "findById or any query returning a single entity"
+      reason: "Wraps the Drizzle query in tryCatchAsync for consistent error handling and returns undefined when no row is found."
+      rule: |
+        const result = await tryCatchAsync(async () => {
+          const rows = await dbClient
+            .select()
+            .from(table)
+            .where(eq(table.id, idValue))
+            .limit(1)
+          return rows[0]
+        })
+
+        if (!result.success || !result.data) {
+          return undefined
+        }
+
+        return this.toDomain(result.data)
+
+    - id: REPO-P03
+      name: "tryCatchAsync multi-row query"
+      when: "findAll/findBy methods returning arrays"
+      reason: "Wraps array queries in tryCatchAsync and maps rows to domain entities. Returns empty array on failure."
+      rule: |
+        const result = await tryCatchAsync(async () => {
+          const rows = await dbClient
+            .select()
+            .from(table)
+            .where(eq(table.foreignKey, value))
+          return rows.map(row => this.toDomain(row))
+        })
+
+        if (!result.success) return []
+
+        return result.data
+
+    - id: REPO-P04
+      name: "save upsert with sql excluded references"
+      when: "upsert needs to set multiple columns on conflict"
+      reason: "Using sql`excluded.column_name` references the row being inserted, which avoids repeating data values and handles snake_case column names correctly."
+      rule: |
+        async save(entity: Entity, tx?: DrizzleClient): Promise<Entity> {
+          entity.incrementVersion()
+
+          const result = await tryCatchAsync(async () => {
+            const data = this.toPersistence(entity)
+            const dbClient = tx ?? this.db
+
+            await dbClient
+              .insert(table)
+              .values(data)
+              .onConflictDoUpdate({
+                target: table.id,
+                set: {
+                  name: sql`excluded.name`,
+                  status: sql`excluded.status`,
+                  updatedAt: sql`excluded.updated_at`,
+                  version: sql`excluded.version`,
+                },
+              })
+
+            return entity
+          })
+
+          if (!result.success) throw result.error
+
+          return result.data
+        }
+
+    - id: REPO-P05
+      name: "save upsert with direct data references"
+      when: "upsert needs to set columns on conflict using persistence data"
+      reason: "Alternative to sql`excluded.*` — uses the toPersistence() data object directly. Works well when column names match camelCase JS property names."
+      rule: |
+        async save(entity: Entity, tx?: DrizzleClient): Promise<Entity> {
+          entity.incrementVersion()
+
+          const dbClient = tx ?? this.db
+          const data = this.toPersistence(entity)
+
+          await tryCatchAsync(async () => {
+            await dbClient
+              .insert(table)
+              .values(data)
+              .onConflictDoUpdate({
+                target: table.id,
+                set: {
+                  fullName: data.fullName,
+                  email: data.email,
+                  updatedAt: new Date(),
+                  version: (entity.version ?? 1) + 1,
+                },
+              })
+          })
+
+          return entity
+        }
+
+    - id: REPO-P06
+      name: "Compound unique key upsert"
+      when: "table has a composite unique constraint instead of single-column PK"
+      reason: "Some tables use composite unique keys (e.g., unitId + userId). The onConflictDoUpdate target must be an array of columns."
+      rule: |
+        await dbClient
+          .insert(table)
+          .values(data)
+          .onConflictDoUpdate({
+            target: [table.unitId, table.userId],
+            set: {
+              role: sql`excluded.role`,
+              status: sql`excluded.status`,
+              updatedAt: sql`excluded.updated_at`,
+              version: sql`excluded.version`,
+            },
+          })
+
+    - id: REPO-P07
+      name: "delete with transaction"
+      when: always
+      reason: "Delete uses the same transaction-or-default pattern as save and throws on failure."
+      rule: |
+        async delete(id: string, tx?: DrizzleClient): Promise<void> {
+          const result = await tryCatchAsync(async () => {
+            const dbClient = tx ?? this.db
+            await dbClient.delete(table).where(eq(table.id, id))
+          })
+
+          if (!result.success) throw result.error
+        }
+
+    - id: REPO-P08
+      name: "toDomain with nullable-to-undefined mapping"
+      when: "database columns are nullable but entity expects undefined"
+      reason: "Database returns null for empty columns, but domain entities use undefined. The ?? undefined coercion keeps the domain model clean."
+      rule: |
+        private toDomain(row: typeof table.$inferSelect): Entity {
+          return new Entity({
+            id: row.id,
+            role: row.role ?? undefined,
+            notes: row.notes ?? undefined,
+            completedAt: row.completedAt ?? undefined,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            version: row.version,
+          })
+        }
+
+    - id: REPO-P09
+      name: "toPersistence with optional-to-null mapping"
+      when: "entity has optional fields that map to nullable DB columns"
+      reason: "Domain entities use undefined for absent values, but databases need null. The ?? null coercion ensures correct SQL insert values."
+      always_flag_when: >
+        toPersistence() maps an entity field that could be undefined WITHOUT appending ?? null.
+        Every optional/nullable field MUST have ?? null to ensure correct SQL NULL insertion.
+      rule: |
+        private toPersistence(entity: Entity): typeof table.$inferInsert {
+          return {
+            id: entity.id.value,
+            description: entity.description ?? null,
+            addressStreet: entity.address?.street ?? null,
+            addressComplement: entity.address?.complement ?? null,
+          }
+        }
+
+    - id: REPO-P10
+      name: "toPersistence with VO .toJSON() serialization"
+      when: "entity contains value objects that map to JSON columns"
+      reason: "Complex value objects (availability, operating hours) need to be serialized to JSON for database storage via their toJSON() method."
+      rule: |
+        private toPersistence(entity: Entity): typeof table.$inferInsert {
+          return {
+            id: entity.id.value,
+            availability: entity.availability?.toJSON() ?? null,
+            dateOverrides: entity.dateOverrides.map(o => o.toJSON()),
+            notes: entity.notes.map(n => n.toJSON()),
+          }
+        }
+
+    - id: REPO-P11
+      name: "toDomain with correctly typed JSON columns (no casting)"
+      when: "toDomain() reads from a table whose Drizzle schema has jsonb() or json() columns. Check the table import in the file — if any column uses jsonb()/json() with .$type<>(), the row type is already correct and no `as` casting should be needed in toDomain."
+      reason: "When the Drizzle schema uses $type<z.infer<typeof voSchema>>(), the inferred row type already matches the domain shape — no `as` casting needed in toDomain."
+      rule: |
+        // Schema: jsonb('specialties').$type<Array<z.infer<typeof specialtySchema>>>().default([])
+        // Schema: jsonb('price_range').$type<z.infer<typeof priceRangeSchema>>()
+        private toDomain(row: typeof table.$inferSelect): Entity {
+          // No casting needed — row.specialties and row.priceRange are already typed
+          return new Entity({ id: row.id, specialties: row.specialties ?? [], priceRange: row.priceRange, ... })
+        }
+
+    - id: REPO-P12
+      name: "toDomain with flattened columns to nested object"
+      when: "entity has an embedded value object stored as multiple flattened columns"
+      reason: "Addresses, phones, and other compound VOs are stored as separate columns (addressStreet, addressCity) but must be reconstructed as a nested object for the entity constructor."
+      rule: |
+        private toDomain(row: typeof table.$inferSelect): Entity {
+          const hasAddress = row.addressStreet && row.addressNumber && row.addressCity
+
+          return new Entity({
+            id: row.id,
+            ...(hasAddress ? {
+              address: {
+                street: row.addressStreet!,
+                number: row.addressNumber!,
+                complement: row.addressComplement ?? undefined,
+                city: row.addressCity!,
+                state: row.addressState!,
+                zipCode: row.addressZipCode!,
+              },
+            } : {}),
+          })
+        }
+
+    - id: REPO-P13
+      name: "findByIds batch query with inArray"
+      when: "need to load multiple entities by a list of IDs"
+      reason: "Batch loading avoids N+1 queries. Uses Drizzle's inArray operator and guards against empty array (which would produce invalid SQL)."
+      rule: |
+        async findByIds(ids: string[], tx?: DrizzleClient): Promise<Entity[]> {
+          if (ids.length === 0) return []
+          const dbClient = tx ?? this.db
+
+          const result = await tryCatchAsync(async () => {
+            const rows = await dbClient
+              .select()
+              .from(table)
+              .where(inArray(table.id, ids))
+            return rows.map(row => this.toDomain(row))
+          })
+
+          if (!result.success) return []
+
+          return result.data
+        }
+
+    - id: REPO-P14
+      name: "findByCompoundCondition with and()"
+      when: "query requires multiple equality conditions"
+      reason: "Compound lookups (e.g., findByUnitAndDoctor) combine multiple eq() calls with and(). Each Id param extracts .value for Drizzle queries."
+      rule: |
+        async findByUnitAndDoctor(unitId: Id, doctorId: Id, tx?: DrizzleClient): Promise<Entity | undefined> {
+          const dbClient = tx ?? this.db
+
+          const result = await tryCatchAsync(async () => {
+            const rows = await dbClient
+              .select()
+              .from(table)
+              .where(and(eq(table.unitId, unitId.value), eq(table.doctorId, doctorId.value)))
+              .limit(1)
+            return rows[0]
+          })
+
+          if (!result.success || !result.data) return undefined
+
+          return this.toDomain(result.data)
+        }
+
+    - id: REPO-P15
+      name: "findByDateRange with gte/lte"
+      when: "query filters by a date range"
+      reason: "Date range queries use gte/lte operators on the date column. Combined with other conditions using and()."
+      rule: |
+        async findByDoctorAndDateRange(
+          doctorId: Id,
+          startDate: Date,
+          endDate: Date,
+          tx?: DrizzleClient,
+        ): Promise<Entity[]> {
+          const dbClient = tx ?? this.db
+
+          const result = await tryCatchAsync(async () => {
+            const rows = await dbClient
+              .select()
+              .from(table)
+              .where(and(
+                eq(table.doctorId, doctorId.value),
+                gte(table.startDate, startDate),
+                lte(table.startDate, endDate),
+              ))
+            return rows.map(row => this.toDomain(row))
+          })
+
+          if (!result.success) throw result.error
+
+          return result.data
+        }
+
+    - id: REPO-P16
+      name: "Mock repository with in-memory Map"
+      when: "creating a mock repository for testing"
+      reason: "Mock repositories use a Map<string, Entity> for in-memory storage. They implement the same interface as the Drizzle implementation but without database dependencies."
+      rule: |
+        @injectable()
+        export class MockEntityRepository extends EntityRepository {
+          private entities = new Map<string, Entity>()
+
+          async findById(id: Id, _tx?: Transaction): Promise<Entity | undefined> {
+            return this.entities.get(id.value) || undefined
+          }
+
+          async save(entity: Entity, _tx?: Transaction): Promise<Entity> {
+            entity.incrementVersion()
+            this.entities.set(entity.id.value, entity)
+            return entity
+          }
+
+          async delete(id: string, _tx?: Transaction): Promise<void> {
+            this.entities.delete(id)
+          }
+
+          clear(): void {
+            this.entities.clear()
+          }
+        }
+
+    - id: REPO-P17
+      name: "toDomain with VO helper method"
+      when: "a column stores a VO in a format that needs a parsing helper"
+      reason: "Some VOs like CRM are stored as a formatted string in the DB and need a static parsing method to reconstruct the primitive components."
+      rule: |
+        private toDomain(row: typeof table.$inferSelect): Entity {
+          const crm = CRM.fromString(row.crm)
+
+          return new Entity({
+            id: row.id,
+            crm: { number: crm.number, state: crm.state },
+            ...
+          })
+        }
+    - id: REPO-P18
+      name: "Mock plus concrete repository pair"
+      when: always
+      reason: "Every repository participating in DI must be available in mock and concrete environments. The registry system expects explicit bindings for each environment."
+      rule: "Create both `MockXRepository` and a concrete implementation such as `DrizzleXRepository`, then declare `{ token: XRepository, mock: MockXRepository, real: DrizzleXRepository }` in the context's `expandBindings([...])` — `integration` omitted mirrors `real`."
+    - id: REPO-P19
+      name: "Registry-based repository binding"
+      when: always
+      reason: "Context repositories are declared in `packages/api/typescript/src/<context>/registry.ts`, while shared repositories are declared in `packages/api/typescript/src/shared/registry.ts`. `packages/api/typescript/src/shared/registry.ts` composes every context registry through `CONTEXT_REGISTRIES` (compile-checked against the CONTEXTS manifest) and mechanically merges them into `ALL_REGISTRIES`."
+      rule: "Register context repositories in `packages/api/typescript/src/<context>/registry.ts`. Register only shared repositories in `packages/api/typescript/src/shared/registry.ts`."
+    - id: REPO-P20
+      name: "Integration test for every Drizzle repository"
+      when: always
+      reason: "Every DrizzleXRepository must have a colocated integration test (DrizzleXRepository.test.ts) that validates save/findById/delete plus all query methods against real PGlite."
+      rule: |
+        // Colocated: packages/api/typescript/src/<context>/repositories/XRepository/DrizzleXRepository.test.ts
+        // Uses TestBed.create('integration', ...) with beforeAll/beforeEach(reset)/afterAll(destroy)
+        // Uses given helpers for FK dependencies (e.g., givenUser() before creating Account)
+        // Tests: save + retrieve, update on re-save, delete, and every query method (positive + negative)
+        // See test skill TST-09 for canonical pattern
+
+  bad_practices:
+    - id: bp-01
+      name: "Redefining save()/delete() in abstract class"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'abstract\s+save\s*\('
+        - 'abstract\s+delete\s*\('
+      wrong: |
+        // These methods already exist in Repository<T> base class
+        export abstract class CustomerRepository extends Repository<Customer> {
+          abstract save(entity: Customer, transaction?: any): Promise<Customer>
+          abstract delete(id: string, transaction?: any): Promise<void>
+        }
+      right: |
+        // Only add context-specific finder methods
+        export abstract class CustomerRepository extends Repository<Customer> {
+          abstract findById(id: Id): Promise<Customer | undefined>
+          abstract findByCpfAndUnitId(cpf: string, unitId: string): Promise<Customer | undefined>
+        }
+
+    - id: bp-02
+      name: "Rehydrating with .create() instead of constructor"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'return\s+[A-Z]\w*\.create\('
+      wrong: |
+        // .create() is for NEW entities — triggers business logic, generates new ID
+        private toDomain(data: typeof table.$inferSelect): Customer {
+          return Customer.create({
+            fullName: data.fullName,
+            cpf: data.cpf,
+          })
+        }
+      right: |
+        // Pass RAW PRIMITIVES — entity schema .transform() creates VOs
+        private toDomain(data: typeof table.$inferSelect): Customer {
+          return new Customer({
+            id: data.id,
+            name: data.fullName,
+            cpf: data.cpf,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            version: data.version,
+          })
+        }
+
+    - id: bp-03
+      name: "Repository returning Record instead of domain entity"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'abstract\s+class\s+\w+Repository\s*\{'
+        - 'Promise<\w*Record\b'
+      wrong: |
+        // Exposes raw data, not a domain entity — skips VO/constructor logic
+        export interface UserRecord { id: string; name: string; email: string }
+        export abstract class UserRepository {
+          abstract findById(userId: string): Promise<UserRecord | undefined>
+        }
+      right: |
+        // Returns domain entity with proper toDomain()/toPersistence() mapping
+        export abstract class UserRepository extends Repository<User> {
+          abstract findById(id: Id): Promise<User | undefined>
+        }
+
+    - id: bp-04
+      name: "Listing/pagination methods in domain repository"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'page:\s*number'
+        - 'abstract\s+getAll\b'
+      wrong: |
+        // Domain repository leaks UI/read concerns with filters, pagination, search
+        export abstract class AgentRepository extends Repository<Agent> {
+          abstract listAgents(params: { page: number; limit: number; search?: string }): Promise<{ agents: Agent[]; total: number }>
+          abstract getAll(): Promise<Agent[]>
+        }
+      right: |
+        // Domain repo only for write-side lookups
+        export abstract class AgentRepository extends Repository<Agent> {
+          abstract findById(id: Id): Promise<Agent | undefined>
+          abstract findBySlug(slug: string): Promise<Agent | undefined>
+          // findAllByTeamId is OK — used by a use case to enforce a business rule
+          abstract findAllByTeamId(teamId: string): Promise<Agent[]>
+        }
+        // Listing for the frontend → ui context via /query (direct Drizzle, returns DTOs)
+
+    - id: bp-05
+      name: "Business logic in repository"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Repository decides business logic — should be in entity
+        async deactivateTool(id: Id): Promise<void> {
+          await this.db.update(toolTable)
+            .set({ status: 'INACTIVE', deactivatedAt: new Date() })
+            .where(eq(toolTable.id, id.value))
+        }
+      right: |
+        // Entity encapsulates the logic, repo only persists
+        // In entity: tool.deactivate()
+        // In use case: await this.toolRepo.save(tool)
+
+    - id: bp-06
+      name: "Manually creating VOs in toDomain"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'new\s+Id\s*\('
+        - ':\s*new\s+(?!Date\b)[A-Z]\w*\('
+      wrong: |
+        // Old pattern — VOs should be created by entity schema .transform()
+        private toDomain(data: typeof table.$inferSelect): Customer {
+          return new Customer({
+            id: new Id(data.id),
+            name: new PersonName(data.fullName),
+            cpf: new CPF(data.cpf),
+          })
+        }
+      right: |
+        // Pass raw primitives — BaseEntity + schema .transform() handle VO creation
+        private toDomain(data: typeof table.$inferSelect): Customer {
+          return new Customer({
+            id: data.id,
+            name: data.fullName,
+            cpf: data.cpf,
+          })
+        }
+
+    - id: bp-07
+      name: "Importing db as global instead of injecting"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'import\s*\{[^}]*\bdb\b[^}]*\}\s*from\s*.@template/core-typescript.'
+        - 'await\s+db\.'
+      wrong: |
+        // Global import couples the class to a specific db instance
+        import { db } from '@template/core-typescript'  // WRONG: should be injected via constructor
+
+        @injectable()
+        export class DrizzleCustomerRepository extends CustomerRepository {
+          async findById(id: Id): Promise<Customer | undefined> {
+            const result = await db.select()...
+          }
+        }
+      right: |
+        // Injected via constructor — supports testing and transactions
+        @injectable()
+        export class DrizzleCustomerRepository extends CustomerRepository {
+          constructor(private db: DrizzleClient) { super() }
+
+          async findById(id: Id): Promise<Customer | undefined> {
+            const result = await this.db.select()...
+          }
+        }
+
+    - id: bp-08
+      name: "Returning null instead of undefined"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '\|\s*null>'
+        - 'return\s+null\b'
+      wrong: |
+        // null is not the project convention for absent values
+        async findById(id: Id): Promise<Customer | null> {
+          ...
+          return null
+        }
+      right: |
+        // undefined is the project convention
+        async findById(id: Id): Promise<Customer | undefined> {
+          ...
+          return undefined  // or just: return
+        }
+
+    - id: bp-09
+      name: "Querying junction table directly instead of through aggregate root"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Repo queries junction table for membership check
+        async isToolAssignedToAgent(toolId: string, agentId: string): Promise<boolean> {
+          const [row] = await this.db.select().from(agentTools)
+            .where(and(eq(agentTools.toolId, toolId), eq(agentTools.agentId, agentId)))
+          return !!row
+        }
+      right: |
+        // Agent is the aggregate root, it knows its tools
+        // In entity Agent:
+        hasSkill(skillId: string): boolean {
+          return this.skillIds.includes(skillId)
+        }
+        // In use case:
+        const agent = await this.agentRepo.findByIdWithSkills(agentId)
+        if (!agent.hasSkill(skillId)) throw ...
+
+    - id: bp-10
+      name: "Repository registered outside the registry system"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'registerSingleton\([^)]*Repository'
+        - 'mock:\s*\[\s*\]'
+      wrong: |
+        // Registering repository inline in the context bootstrap
+        // packages/api/typescript/src/catalog/index.ts
+        container.registerSingleton(ProductRepository as any, DrizzleProductRepository)
+
+        // Or hand-writing the raw 3-env literal with the mock binding skipped
+        // packages/api/typescript/src/catalog/registry.ts
+        export const INSTANCE_REGISTRY = {
+          mock: [],
+          integration: [{ token: ProductRepository, instance: DrizzleProductRepository }],
+          real: [{ token: ProductRepository, instance: DrizzleProductRepository }],
+        }
+      right: |
+        // Context repository -> context registry, one expandBindings declaration per token
+        // packages/api/typescript/src/catalog/registry.ts
+        export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
+          { token: ProductRepository, mock: MockProductRepository, real: DrizzleProductRepository },
+        ])
+
+        // Shared repository -> shared registry (CORE_REGISTRY in packages/api/typescript/src/shared/registry.ts)
+        // `mock: null` is a DECLARED absence — flow tests wire their own binding via TestBed
+        { token: DomainEventRepository, mock: null, real: DrizzleDomainEventRepository },
+
+    - id: bp-11
+      name: "Repository port (or Mock) typing tx as DrizzleClient — leaks infra into the contract"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'abstract\s+\w+\s*\([^)]*:\s*DrizzleClient'
+        - '_tx\??:\s*DrizzleClient'
+      wrong: |
+        // PORT names a Drizzle type — the abstraction now depends on infra
+        export abstract class SubscriptionRepository extends Repository<Subscription> {
+          abstract findByPlatformAndExternalId(platform: BillingPlatform, externalId: string, tx?: DrizzleClient): Promise<Subscription | undefined>
+        }
+        // Mock also leaks it
+        async findByPlatformAndExternalId(p, e, _tx?: DrizzleClient) { ... }
+      right: |
+        // PORT speaks Transaction (persistence-agnostic handle from the UnitOfWork)
+        import type { Transaction } from '@template/core-typescript'
+        export abstract class SubscriptionRepository extends Repository<Subscription> {
+          abstract findByPlatformAndExternalId(platform: BillingPlatform, externalId: string, tx?: Transaction): Promise<Subscription | undefined>
+        }
+        // Mock: Transaction, ignored, never casts
+        async findByPlatformAndExternalId(p, e, _tx?: Transaction) { ... }
+
+        // ONLY the Drizzle impl is allowed to name DrizzleClient: declare the param
+        // as DrizzleClient directly (the narrowing override of the port's Transaction
+        // is the sanctioned "cast" — no helper, no `as` needed) and use it directly.
+        async findByPlatformAndExternalId(p, e, tx?: DrizzleClient) {
+          const dbc = tx ?? this.db
+          // ...
+        }
+        // (Query/BFF use cases that query Drizzle directly may also use DrizzleClient.)
+
+  snippet:
+    skeleton: |
+      import { Repository } from '@template/core-typescript'
+      import type { Transaction } from '@template/core-typescript'
+      import { {{Name}} } from '@{{contextName}}/entities'
+
+      export abstract class {{Name}}Repository extends Repository<{{Name}}> {
+      	abstract findById(id: string, tx?: Transaction): Promise<{{Name}} | undefined>
+      }
+    skeletons:
+      drizzle: |
+        import { injectable } from 'tsyringe-neo'
+        import { eq } from 'drizzle-orm'
+        import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+        import { {{Name}}Repository } from './{{Name}}Repository'
+        import { {{Name}} } from '@{{contextName}}/entities'
+        // import { {{camelName}} } from '@template/contracts/db'
+
+        @injectable()
+        export class Drizzle{{Name}}Repository extends {{Name}}Repository {
+        	constructor(private db: DrizzleClient) {
+        		super()
+        	}
+
+        	async findById(id: string, tx?: DrizzleClient): Promise<{{Name}} | undefined> {
+        		const dbClient = tx ?? this.db
+
+        		const result = await tryCatchAsync(async () => {
+        			// const rows = await dbClient.select().from({{camelName}}).where(eq({{camelName}}.id, id)).limit(1)
+        			// return rows[0]
+        			return undefined as any
+        		})
+
+        		if (!result.success || !result.data) return undefined
+        		return this.toDomain(result.data)
+        	}
+
+        	async save(entity: {{Name}}, tx?: DrizzleClient): Promise<{{Name}}> {
+        		const dbClient = tx ?? this.db
+        		entity.incrementVersion()
+        		const data = this.toPersistence(entity)
+
+        		// await dbClient
+        		// 	.insert({{camelName}})
+        		// 	.values(data)
+        		// 	.onConflictDoUpdate({
+        		// 		target: {{camelName}}.id,
+        		// 		set: { ...data, id: undefined },
+        		// 	})
+
+        		return entity
+        	}
+
+        	async delete(id: string, tx?: DrizzleClient): Promise<void> {
+        		const dbClient = tx ?? this.db
+        		// await dbClient.delete({{camelName}}).where(eq({{camelName}}.id, id))
+        	}
+
+        	private toDomain(row: unknown): {{Name}} {
+        		return {{Name}}.schema.parse(row) as unknown as {{Name}}
+        	}
+
+        	private toPersistence(entity: {{Name}}): unknown {
+        		return {
+        			id: entity.id.value,
+        			// Map entity props to columns
+        			createdAt: entity.createdAt,
+        			updatedAt: entity.updatedAt,
+        			version: entity.version,
+        		}
+        	}
+        }
+    exemplar: |
+      // PORT (abstract class) — tx is Transaction (infra-agnostic)
+      import { Repository } from '@template/core-typescript'
+      import type { Transaction } from '@template/core-typescript'
+
+      export abstract class ProductRepository extends Repository<Product> {
+        abstract findById(id: string, tx?: Transaction): Promise<Product | undefined>
+      }
+
+      // Drizzle impl — narrows tx to DrizzleClient (sanctioned override; no `as` cast needed)
+      import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+
+      @injectable()
+      export class DrizzleProductRepository extends ProductRepository {
+        constructor(private db: DrizzleClient) { super() }
+        async findById(id: string, tx?: DrizzleClient): Promise<Product | undefined> {
+          const dbClient = tx ?? this.db
+          const result = await tryCatchAsync(async () => {
+            const rows = await dbClient.select().from(products).where(eq(products.id, id)).limit(1)
+            return rows[0]
+          })
+          if (!result.success || !result.data) return undefined
+          return this.toDomain(result.data)
+        }
+      }
+
+  scaffold: "bun cli repository <context> <name>"

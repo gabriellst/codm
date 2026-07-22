@@ -1,0 +1,165 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": [
+			"*.json",
+			"*.jsonc",
+			"*.js",
+			"*.jsx",
+			"*.ts",
+			"*.tsx",
+			".vscode/**/*.json",
+			"packages/**/package.json",
+			"packages/**/project.json",
+			"packages/**/tsconfig.json",
+			"packages/**/tsconfig.*.json",
+			"packages/api/typescript/src/**",
+			"packages/api/typescript/core/src/**",
+			"packages/api/typescript/tests/**",
+			"packages/api/typescript/scripts/**",
+			"packages/app/astro/src/**",
+			"!!packages/app/astro/src/**/*.astro",
+			"packages/app/expo/@types/**",
+			"packages/app/expo/app/**",
+			"packages/app/expo/components/**",
+			"packages/app/expo/lib/**",
+			"packages/app/expo/*.css",
+			"packages/app/expo/*.js",
+			"packages/app/expo/*.json",
+			"packages/app/expo/*.ts",
+			"packages/app/react/src/**",
+			"packages/app/react/.storybook/**",
+			"packages/client/generators/**",
+			"packages/client/lib/**",
+			"packages/contracts/codegen/**",
+			"packages/contracts/db/schema/**",
+			"packages/contracts/wire/**",
+			"packages/e2e/extension/**",
+			"packages/e2e/lib/**",
+			"packages/e2e/scripts/**",
+			"packages/e2e/tests/**",
+			"packages/e2e/utils/**",
+			"scripts/**",
+			"!!**/node_modules",
+			"!!**/dist",
+			"!!**/.git",
+			"!!**/.nx",
+			"!!**/.claude",
+			"!!**/.output",
+			"!!**/.expo",
+			"!!**/.astro",
+			"!!**/.vite",
+			"!!**/coverage",
+			"!!**/build",
+			"!!**/.next",
+			"!!**/.nuxt",
+			"!!**/storybook-static",
+			"!!**/playwright-report",
+			"!!**/test-results",
+			"!!**/recordings",
+			"!!**/*.min.js",
+			"!!**/*.tsbuildinfo",
+			"!!**/routeTree.gen.ts",
+			"!!packages/client/src",
+			"!!packages/client/dist",
+			"!!packages/client/packages",
+			"!!packages/client/**/.kubb",
+			"!!packages/api/typescript/public/app",
+			"!!packages/api/typescript/public/docs",
+			"!!packages/api/go/public/openapi.json",
+			"!!packages/api/go/public/docs",
+			"!!packages/contracts/db/migrations/meta",
+			"!!api/public/app",
+			"!!channel/public/app"
+		]
+	},
+	"formatter": {
+		"lineWidth": 110,
+		"useEditorconfig": true
+	},
+	"javascript": {
+		"formatter": {
+			"arrowParentheses": "asNeeded",
+			"lineWidth": 140,
+			"quoteStyle": "single",
+			"semicolons": "asNeeded",
+			"trailingCommas": "all"
+		},
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
+		}
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "off"
+			}
+		}
+	},
+	"linter": {
+		"rules": {
+			"a11y": {
+				"useAnchorContent": "off",
+				"noLabelWithoutControl": "off",
+				"useSemanticElements": "off",
+				"useIframeTitle": "warn",
+				"noRedundantAlt": "off",
+				"noSvgWithoutTitle": "warn",
+				"useAltText": "warn",
+				"useButtonType": "warn",
+				"useHtmlLang": "warn",
+				"useKeyWithClickEvents": "off"
+			},
+			"complexity": {
+				"noImportantStyles": "off",
+				"noBannedTypes": "warn",
+				"noForEach": "off",
+				"noStaticOnlyClass": "off"
+			},
+			"correctness": {
+				"noUnusedPrivateClassMembers": "warn",
+				"noUnreachableSuper": "off",
+				"noUnusedImports": "error",
+				"noChildrenProp": "off",
+				"noUnusedVariables": "off"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "warn"
+			},
+			"style": {
+				"useEnumInitializers": "off",
+				"noNonNullAssertion": "off",
+				"noDoneCallback": "error",
+				"noInferrableTypes": "error",
+				"noParameterAssign": "warn",
+				"useConsistentArrayType": "error",
+				"useConst": "warn",
+				"useImportType": "off",
+				"useSingleVarDeclarator": "off",
+				"useTemplate": "warn"
+			},
+			"suspicious": {
+				"noEmptyInterface": "off",
+				"noArrayIndexKey": "warn",
+				"noExplicitAny": "warn",
+				"noMisplacedAssertion": "error",
+				"noMisleadingCharacterClass": "warn",
+				"noShadowRestrictedNames": "warn",
+				"noSkippedTests": "error",
+				"noThenProperty": "off",
+				"noUnsafeDeclarationMerging": "off"
+			}
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
+}

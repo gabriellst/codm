@@ -1,0 +1,103 @@
+id: replay-pixel-funnel-section
+tier: train
+builder: sonnet
+title: Pixel conversion funnel section on the dashboard (data-owning Section,
+  one Card)
+sourceSpec: .specs/2026-06-03-pixel-funnel-section.md
+goldRef: dd2cc54b3b87165f4e90cf4a1625105c39d291ad
+baseRef: 70d9b242f25b8bd798b6b4fee56a8453a31cc9ba
+prompt: >-
+  In packages/app/react, build the dashboard's pixel conversion funnel — a
+  SINGLE integrated card: a row of 5 funnel stage columns (Page View → Purchase)
+  separated by vertical dividers, plus a right-hand summary rail (conversion
+  rate + abandoned-cart value) split by a horizontal divider, over a faint
+  background grid. The backend contract is frozen and already in the SDK:
+  `useGetPixelFunnel` from `@template/client-typescript/typescript`, input `{
+  tenancyScope, startDate, endDate, productIds? }` (store IDs are injected
+  server-side — never sent by the FE), output `{ hasPixel: boolean; base:
+  Metric; steps: Record<PixelEventType, Metric>; conversionRate: Metric; carts:
+  { count: Metric; value: MoneyMetric } }` where Metric = { value, deltaPct:
+  number | null }.
+
+
+  Requirements:
+
+  - `PixelFunnelSection` (route-local at
+  `routes/(app)/dashboard/-components/PixelFunnelSection/index.tsx`) is the SOLE
+  data root: it owns the `useGetPixelFunnel` query, reads `tenancyScope` from
+  the existing global `useTenancyStore`, and reads `startDate`/`endDate` from
+  the dashboard route's existing search params via the route API. The route
+  passes no data props.
+
+  - Curated 5-stage ordered subset derived from a typed `FUNNEL_STAGES` constant
+  + i18n labels (no hardcoded option list in JSX): PAGE_VIEWED, PRODUCT_VIEWED,
+  PRODUCT_ADDED_TO_CART, CHECKOUT_STARTED, CHECKOUT_COMPLETED (the other 3
+  response keys are not displayed).
+
+  - One `Card`, columns are surfaceless divs (`FunnelStageColumn` leaf ×5, props
+  only): label, % relative to `base` (value/base, guard divide-by-zero), "X de
+  Y" subtitle + sessions icon, and a descending area `<svg><polygon>` whose edge
+  heights are LOG-attenuated (e.g. `Math.log1p(pct*k)/Math.log1p(k)`, clamped to
+  [0,1]) sloping from this stage's % to the next stage's % (last stage slopes to
+  0). Vertical `Separator`s between consecutive columns and one before the rail;
+  horizontal `Separator` between the two rail stats. No nested cards.
+
+  - Rail: a route-local `FunnelSummaryStat` leaf (NOT StatCard — different
+  layout) composing the shared atoms GradientIconBadge + InfoHint + MetricDelta.
+  Conversion rate formatted as a locale-aware percent; carts value is a Money
+  object rendered via the `useMoney()` hook (never a hardcoded locale/currency).
+  `MetricDelta` renders only when `deltaPct !== null` (map null → undefined).
+
+  - Faint background grid layer behind the card content at separator opacity
+  (--border token), absolute, aria-hidden, pointer-events-none.
+
+  - `hasPixel === false` → `Empty` state with a connect-pixel CTA; `data ===
+  undefined` → inline skeletons; the card surface + grid stay visible in both.
+
+  - All user-facing strings under a new `pixelFunnel` i18n namespace in both
+  `src/locales/en.json` and `src/locales/pt.json`.
+
+
+  `bun tsc` must stay green; leaves never fetch; no raw fetch() — SDK hooks
+  only.
+axes:
+  - DATA-OWNERSHIP
+  - SDK-CONSUME
+  - LOCALE-MONEY
+  - ENUM-REPR
+  - LAYOUT
+graders:
+  - kind: tsc
+    spec: app-react
+  - kind: file-exists
+    spec: packages/app/react/src/routes/(app)/dashboard/-components/PixelFunnelSection/index.tsx
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/dashboard/-components/PixelFunnelSection/index.tsx::useGetPixelFunnel
+    id: pixelfunnel#ac-1
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/dashboard/-components/PixelFunnelSection/index.tsx::useTenancyStore
+    id: pixelfunnel#d9
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/dashboard/-components/**/*::FUNNEL_STAGES
+    id: pixelfunnel#ac-2
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/dashboard/-components/**/*::Math\.log
+    id: pixelfunnel#ac-4
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/dashboard/-components/PixelFunnelSection/index.tsx::useMoney
+    id: pixelfunnel#d10
+  - kind: grep-must
+    spec: packages/app/react/src/locales/pt.json::pixelFunnel
+    id: pixelfunnel#ac-8
+notes: "Single clean implementing commit dd2cc54b3 ('feat(app): pixel funnel
+  section on the dashboard'); baseRef = its parent 70d9b242f. Verified at base:
+  useGetPixelFunnel SDK hook + carts MoneyMetric exist, useTenancyStore exists,
+  useMoney hook exists, dashboard route already declares startDate/endDate
+  search params with last-30-day defaults (prompt adjusted: AC-9 becomes 'read
+  the existing search params'); formatPercent does NOT exist at base (gold added
+  it to @/lib/format). Gold verified: FUNNEL_STAGES satisfies-typed constant +
+  Math.log1p attenuate in funnel.ts, hasPixel Empty branch,
+  GradientIconBadge/InfoHint/MetricDelta reuse, pixelFunnel keys in en+pt,
+  formatMoney(data.carts.value.value), no fetch(. Deliberately NO grep-must-not
+  'pt-BR' grader: gold's FunnelStageColumn still had toLocaleString('pt-BR')
+  (fixed later in 4a66d3286), so that grader would fail gold."

@@ -1,0 +1,1107 @@
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..184e88e88 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -646,6 +646,11 @@
+ 			"ZAR": "South African Rand (ZAR)",
+ 			"ZMW": "Zambian Kwacha (ZMW)"
+ 		},
++		"ConnectionMode": {
++			"CREDENTIALS": "Credentials",
++			"MANUAL": "Manual",
++			"OAUTH": "OAuth"
++		},
+ 		"GoalType": {
+ 			"PROFIT": "Profit",
+ 			"REVENUE": "Revenue"
+@@ -1099,10 +1104,46 @@
+ 	},
+ 	"onboarding": {
+ 		"breadcrumb": "Onboarding",
++		"connectionMode": {
++			"title": "How do you want to connect?",
++			"subtitle": "Choose the connection method for your first integration.",
++			"credentialsDescription": "Connect using your platform API keys.",
++			"manualDescription": "Record sales manually or via spreadsheet."
++		},
++		"credentials": {
++			"title": "Enter your credentials",
++			"subtitle": "Fill in the platform access details.",
++			"alias": "Alias",
++			"clientId": "Client ID",
++			"clientSecret": "Client Secret",
++			"shopDomain": "Store domain",
++			"userSecretKey": "User Secret Key",
++			"userToken": "User Token"
++		},
+ 		"error": {
+ 			"description": "We couldn't load onboarding.",
+ 			"title": "Something went wrong"
+ 		},
++		"nav": {
++			"back": "Back",
++			"connect": "Connect",
++			"next": "Next"
++		},
++		"review": {
++			"title": "Review and connect",
++			"subtitle": "Confirm the details before connecting.",
++			"mode": "Connection mode",
++			"platform": "Platform",
++			"type": "Integration type"
++		},
++		"target": {
++			"title": "Which platform to connect?",
++			"subtitle": "Select the platform you use.",
++			"MERCADOPAGO": "Mercado Pago",
++			"META": "Meta",
++			"SHOPIFY": "Shopify",
++			"YAMPI": "Yampi"
++		},
+ 		"toast": {
+ 			"success": "All set",
+ 			"successDescription": "Your account is ready."
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..4a39652c9 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -646,6 +646,11 @@
+ 			"ZAR": "Rand sul-africano (ZAR)",
+ 			"ZMW": "Kwacha zambiano (ZMW)"
+ 		},
++		"ConnectionMode": {
++			"CREDENTIALS": "Credenciais",
++			"MANUAL": "Manual",
++			"OAUTH": "OAuth"
++		},
+ 		"GoalType": {
+ 			"PROFIT": "Lucro",
+ 			"REVENUE": "Receita"
+@@ -1099,10 +1104,46 @@
+ 	},
+ 	"onboarding": {
+ 		"breadcrumb": "Onboarding",
++		"connectionMode": {
++			"title": "Como deseja conectar?",
++			"subtitle": "Escolha o método de conexão da sua primeira integração.",
++			"credentialsDescription": "Conecte usando suas chaves de API da plataforma.",
++			"manualDescription": "Registre as vendas manualmente ou por planilha."
++		},
++		"credentials": {
++			"title": "Insira suas credenciais",
++			"subtitle": "Preencha os dados de acesso da plataforma.",
++			"alias": "Alias",
++			"clientId": "Client ID",
++			"clientSecret": "Client Secret",
++			"shopDomain": "Domínio da loja",
++			"userSecretKey": "User Secret Key",
++			"userToken": "User Token"
++		},
+ 		"error": {
+ 			"description": "Não conseguimos carregar o onboarding.",
+ 			"title": "Algo deu errado"
+ 		},
++		"nav": {
++			"back": "Voltar",
++			"connect": "Conectar",
++			"next": "Próximo"
++		},
++		"review": {
++			"title": "Revise e conecte",
++			"subtitle": "Confirme as informações antes de conectar.",
++			"mode": "Modo de conexão",
++			"platform": "Plataforma",
++			"type": "Tipo de integração"
++		},
++		"target": {
++			"title": "Qual plataforma conectar?",
++			"subtitle": "Selecione a plataforma que você usa.",
++			"MERCADOPAGO": "Mercado Pago",
++			"META": "Meta",
++			"SHOPIFY": "Shopify",
++			"YAMPI": "Yampi"
++		},
+ 		"toast": {
+ 			"success": "Tudo pronto",
+ 			"successDescription": "Sua conta está pronta para uso."
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..5c004e66c 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
+ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
++import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+@@ -53,6 +54,11 @@ const ResetPasswordIndexRoute = ResetPasswordIndexRouteImport.update({
+   path: '/reset-password/',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
++  id: '/onboarding/',
++  path: '/onboarding/',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   id: '/suggestions/',
+   path: '/suggestions/',
+@@ -131,6 +137,7 @@ const appMarketingAccountsPlatformIndexRoute =
+ 
+ export interface FileRoutesByFullPath {
+   '/': typeof IndexRoute
++  '/onboarding/': typeof OnboardingIndexRoute
+   '/reset-password/': typeof ResetPasswordIndexRoute
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+@@ -151,6 +158,7 @@ export interface FileRoutesByFullPath {
+ }
+ export interface FileRoutesByTo {
+   '/': typeof IndexRoute
++  '/onboarding': typeof OnboardingIndexRoute
+   '/reset-password': typeof ResetPasswordIndexRoute
+   '/sign-in': typeof SignInIndexRoute
+   '/sign-up': typeof SignUpIndexRoute
+@@ -173,6 +181,7 @@ export interface FileRoutesById {
+   __root__: typeof rootRouteImport
+   '/': typeof IndexRoute
+   '/(app)': typeof appRouteRouteWithChildren
++  '/onboarding/': typeof OnboardingIndexRoute
+   '/reset-password/': typeof ResetPasswordIndexRoute
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+@@ -195,6 +204,7 @@ export interface FileRouteTypes {
+   fileRoutesByFullPath: FileRoutesByFullPath
+   fullPaths:
+     | '/'
++    | '/onboarding/'
+     | '/reset-password/'
+     | '/sign-in/'
+     | '/sign-up/'
+@@ -215,6 +225,7 @@ export interface FileRouteTypes {
+   fileRoutesByTo: FileRoutesByTo
+   to:
+     | '/'
++    | '/onboarding'
+     | '/reset-password'
+     | '/sign-in'
+     | '/sign-up'
+@@ -236,6 +247,7 @@ export interface FileRouteTypes {
+     | '__root__'
+     | '/'
+     | '/(app)'
++    | '/onboarding/'
+     | '/reset-password/'
+     | '/sign-in/'
+     | '/sign-up/'
+@@ -258,6 +270,7 @@ export interface FileRouteTypes {
+ export interface RootRouteChildren {
+   IndexRoute: typeof IndexRoute
+   appRouteRoute: typeof appRouteRouteWithChildren
++  OnboardingIndexRoute: typeof OnboardingIndexRoute
+   ResetPasswordIndexRoute: typeof ResetPasswordIndexRoute
+   SignInIndexRoute: typeof SignInIndexRoute
+   SignUpIndexRoute: typeof SignUpIndexRoute
+@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof ResetPasswordIndexRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/onboarding/': {
++      id: '/onboarding/'
++      path: '/onboarding'
++      fullPath: '/onboarding/'
++      preLoaderRoute: typeof OnboardingIndexRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/(app)/suggestions/': {
+       id: '/(app)/suggestions/'
+       path: '/suggestions'
+@@ -443,6 +463,7 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
+ const rootRouteChildren: RootRouteChildren = {
+   IndexRoute: IndexRoute,
+   appRouteRoute: appRouteRouteWithChildren,
++  OnboardingIndexRoute: OnboardingIndexRoute,
+   ResetPasswordIndexRoute: ResetPasswordIndexRoute,
+   SignInIndexRoute: SignInIndexRoute,
+   SignUpIndexRoute: SignUpIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx
+new file mode 100644
+index 000000000..19c4a1f92
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx
+@@ -0,0 +1,78 @@
++import { type ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { ConnectionModeEnum } from '@template/client-typescript/typescript'
++import { cn } from '@/lib/utils'
++import { Button } from '@/components/ui/button'
++import { type OnboardingConnectionMode } from '../../-stores/useOnboardingStore'
++
++interface ModeCardProps {
++	mode: OnboardingConnectionMode
++	label: string
++	description: string
++	selected: boolean
++	onSelect: (mode: OnboardingConnectionMode) => void
++}
++
++function ModeCard({ mode, label, description, selected, onSelect }: ModeCardProps) {
++	return (
++		<button
++			type="button"
++			onClick={() => onSelect(mode)}
++			aria-pressed={selected}
++			className={cn(
++				'flex flex-col gap-1 rounded-xl border-2 p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
++				selected ? 'border-primary bg-primary/5' : 'border-border bg-card',
++			)}
++		>
++			<span className="font-semibold text-foreground">{label}</span>
++			<span className="text-sm text-muted-foreground">{description}</span>
++		</button>
++	)
++}
++
++interface ConnectionModeStepProps extends ComponentProps<'div'> {
++	selectedMode: OnboardingConnectionMode | undefined
++	onModeSelect: (mode: OnboardingConnectionMode) => void
++	onNext: () => void
++}
++
++export function ConnectionModeStep({ selectedMode, onModeSelect, onNext, className, ...props }: ConnectionModeStepProps) {
++	const { t } = useTranslation()
++
++	return (
++		<div className={cn('flex flex-col gap-8', className)} {...props}>
++			<div className="flex flex-col gap-2">
++				<h2 className="text-2xl font-semibold text-foreground">{t('onboarding.welcome.title')}</h2>
++				<p className="text-muted-foreground">{t('onboarding.welcome.subtitle')}</p>
++			</div>
++
++			<div className="flex flex-col gap-4">
++				<p className="text-lg font-medium text-foreground">{t('onboarding.connectionMode.title')}</p>
++				<p className="text-sm text-muted-foreground">{t('onboarding.connectionMode.subtitle')}</p>
++
++				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
++					<ModeCard
++						mode={ConnectionModeEnum.CREDENTIALS}
++						label={t('enums.ConnectionMode.CREDENTIALS')}
++						description={t('onboarding.connectionMode.credentialsDescription')}
++						selected={selectedMode === ConnectionModeEnum.CREDENTIALS}
++						onSelect={onModeSelect}
++					/>
++					<ModeCard
++						mode={ConnectionModeEnum.MANUAL}
++						label={t('enums.ConnectionMode.MANUAL')}
++						description={t('onboarding.connectionMode.manualDescription')}
++						selected={selectedMode === ConnectionModeEnum.MANUAL}
++						onSelect={onModeSelect}
++					/>
++				</div>
++			</div>
++
++			<div className="flex justify-end">
++				<Button type="button" disabled={!selectedMode} onClick={onNext}>
++					{t('onboarding.nav.next')}
++				</Button>
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/CredentialsStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/CredentialsStep/index.tsx
+new file mode 100644
+index 000000000..6872305be
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/CredentialsStep/index.tsx
+@@ -0,0 +1,311 @@
++import { type ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { useForm } from '@tanstack/react-form'
++import type { z } from 'zod/v4'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import { pickUnionVariantField } from '@/lib'
++import { cn } from '@/lib/utils'
++import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field'
++import { Input } from '@/components/ui/input'
++import { Button } from '@/components/ui/button'
++import { Spinner } from '@/components/ui/spinner'
++import { type OnboardingTarget, type ShopifyCredentials, type YampiCredentials } from '../../-stores/useOnboardingStore'
++
++// ---------------------------------------------------------------------------
++// Shared props contract — both credential forms share this interface so the
++// dispatch map is uniformly typed without casts.
++// ---------------------------------------------------------------------------
++
++interface CredentialsFormProps {
++	onCredentials: (creds: ShopifyCredentials | YampiCredentials) => void
++	onBack: () => void
++}
++
++// ---------------------------------------------------------------------------
++// Shopify credentials form
++// ---------------------------------------------------------------------------
++
++const shopifyCredentialsSchema = pickUnionVariantField(
++	connectIntegrationMutationRequestSchema,
++	{ platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' },
++	'credentials',
++)
++
++export const ShopifyCredentialsStepSchema = shopifyCredentialsSchema
++export type ShopifyCredentialsStepData = z.infer<typeof shopifyCredentialsSchema>
++
++function ShopifyCredentialsForm({ onCredentials, onBack }: CredentialsFormProps) {
++	const { t } = useTranslation()
++
++	const defaultValues: ShopifyCredentials = { shopDomain: '', clientId: '', clientSecret: '' }
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: shopifyCredentialsSchema },
++		onSubmit: async ({ value }) => {
++			const result = shopifyCredentialsSchema.safeParse(value)
++			if (!result.success) return
++			onCredentials(result.data)
++		},
++	})
++
++	return (
++		<form
++			className="flex flex-col gap-6"
++			noValidate
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++		>
++			<FieldGroup>
++				<form.Field name="shopDomain">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('onboarding.credentials.shopDomain')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="clientId">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('onboarding.credentials.clientId')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="clientSecret">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('onboarding.credentials.clientSecret')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="password"
++									autoComplete="new-password"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={s => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting, values: s.values })}>
++				{({ canSubmit, isSubmitting, values }) => {
++					const isDisabled = !canSubmit || isSubmitting || !shopifyCredentialsSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++								{t('onboarding.nav.back')}
++							</Button>
++							<Button type="submit" disabled={isDisabled}>
++								{isSubmitting && <Spinner className="mr-2" />}
++								{t('onboarding.nav.next')}
++							</Button>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Yampi credentials form
++// ---------------------------------------------------------------------------
++
++const yampiCredentialsSchema = pickUnionVariantField(
++	connectIntegrationMutationRequestSchema,
++	{ platform: 'YAMPI', connectionMode: 'CREDENTIALS' },
++	'credentials',
++)
++
++export const YampiCredentialsStepSchema = yampiCredentialsSchema
++export type YampiCredentialsStepData = z.infer<typeof yampiCredentialsSchema>
++
++function YampiCredentialsForm({ onCredentials, onBack }: CredentialsFormProps) {
++	const { t } = useTranslation()
++
++	const defaultValues: YampiCredentials = { alias: '', userToken: '', userSecretKey: '' }
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: yampiCredentialsSchema },
++		onSubmit: async ({ value }) => {
++			const result = yampiCredentialsSchema.safeParse(value)
++			if (!result.success) return
++			onCredentials(result.data)
++		},
++	})
++
++	return (
++		<form
++			className="flex flex-col gap-6"
++			noValidate
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++		>
++			<FieldGroup>
++				<form.Field name="alias">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('onboarding.credentials.alias')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="userToken">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('onboarding.credentials.userToken')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="userSecretKey">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('onboarding.credentials.userSecretKey')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="password"
++									autoComplete="new-password"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={s => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting, values: s.values })}>
++				{({ canSubmit, isSubmitting, values }) => {
++					const isDisabled = !canSubmit || isSubmitting || !yampiCredentialsSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++								{t('onboarding.nav.back')}
++							</Button>
++							<Button type="submit" disabled={isDisabled}>
++								{isSubmitting && <Spinner className="mr-2" />}
++								{t('onboarding.nav.next')}
++							</Button>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Dispatch map — one entry per CREDENTIALS-mode platform (FRM-P43 b).
++// Keyed by platform literal so lookup is O(1) with no if/switch chains.
++// ---------------------------------------------------------------------------
++
++const CREDENTIAL_FORMS = {
++	SHOPIFY: ShopifyCredentialsForm,
++	YAMPI: YampiCredentialsForm,
++} satisfies Record<string, (props: CredentialsFormProps) => React.ReactElement>
++
++type CredentialsPlatform = keyof typeof CREDENTIAL_FORMS
++
++function isCredentialsPlatform(p: OnboardingTarget['platform']): p is CredentialsPlatform {
++	return p in CREDENTIAL_FORMS
++}
++
++// ---------------------------------------------------------------------------
++// CredentialsStep orchestrator
++// ---------------------------------------------------------------------------
++
++interface CredentialsStepProps extends ComponentProps<'div'> {
++	target: OnboardingTarget
++	onCredentials: (creds: ShopifyCredentials | YampiCredentials) => void
++	onBack: () => void
++}
++
++export function CredentialsStep({ target, onCredentials, onBack, className, ...props }: CredentialsStepProps) {
++	const { t } = useTranslation()
++
++	if (!isCredentialsPlatform(target.platform)) return null
++
++	const VariantForm = CREDENTIAL_FORMS[target.platform]
++
++	return (
++		<div className={cn('flex flex-col gap-8', className)} {...props}>
++			<div className="flex flex-col gap-2">
++				<h2 className="text-2xl font-semibold text-foreground">{t('onboarding.credentials.title')}</h2>
++				<p className="text-muted-foreground">{t('onboarding.credentials.subtitle')}</p>
++			</div>
++
++			<VariantForm onCredentials={onCredentials} onBack={onBack} />
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/OnboardingWizard/index.tsx b/packages/app/react/src/routes/onboarding/-components/OnboardingWizard/index.tsx
+new file mode 100644
+index 000000000..a38b8ec62
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/OnboardingWizard/index.tsx
+@@ -0,0 +1,119 @@
++import { type ComponentProps, useEffect } from 'react'
++import { cn } from '@/lib/utils'
++import {
++	useOnboardingStore,
++	MODE_STEPS,
++	ONBOARDING_STEP,
++	type OnboardingConnectionMode,
++	type OnboardingTarget,
++	type ShopifyCredentials,
++	type YampiCredentials,
++} from '../../-stores/useOnboardingStore'
++import { ConnectionModeStep } from '../ConnectionModeStep'
++import { TargetStep } from '../TargetStep'
++import { CredentialsStep } from '../CredentialsStep'
++import { ReviewStep } from '../ReviewStep'
++
++// Resolve step sequence once a mode is known; defaults to CREDENTIALS for initial render.
++const DEFAULT_STEPS = MODE_STEPS.CREDENTIALS
++
++export function OnboardingWizard({ className, ...props }: ComponentProps<'div'>) {
++	const {
++		currentStepIndex,
++		selectedMode,
++		selectedTarget,
++		credentials,
++		setCurrentStepIndex,
++		setSelectedMode,
++		setSelectedTarget,
++		setCredentials,
++		reset,
++	} = useOnboardingStore()
++
++	// Reset ephemeral wizard state when the user leaves this route.
++	useEffect(() => {
++		return () => { reset() }
++	}, [reset])
++
++	const steps = selectedMode ? MODE_STEPS[selectedMode] : DEFAULT_STEPS
++	const totalSteps = steps.length
++	const currentStep = steps[currentStepIndex] ?? ONBOARDING_STEP.CONNECTION_MODE
++
++	const goNext = () => {
++		setCurrentStepIndex(Math.min(currentStepIndex + 1, totalSteps - 1))
++	}
++
++	const goBack = () => {
++		setCurrentStepIndex(Math.max(currentStepIndex - 1, 0))
++	}
++
++	const handleModeSelect = (mode: OnboardingConnectionMode) => {
++		// Reset dependent selections whenever the mode changes.
++		if (mode !== selectedMode) {
++			setSelectedTarget(undefined)
++			setCredentials(undefined)
++		}
++		setSelectedMode(mode)
++	}
++
++	const handleTargetSelect = (target: OnboardingTarget) => {
++		setSelectedTarget(target)
++	}
++
++	const handleCredentials = (creds: ShopifyCredentials | YampiCredentials) => {
++		setCredentials(creds)
++		goNext()
++	}
++
++	return (
++		<div className={cn('flex flex-col gap-6 w-full', className)} {...props}>
++			{/* Step progress indicator */}
++			<div className="flex gap-1.5" role="progressbar" aria-valuenow={currentStepIndex + 1} aria-valuemax={totalSteps}>
++				{steps.map((step, index) => (
++					<div
++						key={step}
++						className={cn(
++							'h-1 flex-1 rounded-full transition-colors',
++							index <= currentStepIndex ? 'bg-primary' : 'bg-border',
++						)}
++					/>
++				))}
++			</div>
++
++			{/* Step dispatcher — enum constants for comparisons (bp-14), one branch per step */}
++			{currentStep === ONBOARDING_STEP.CONNECTION_MODE && (
++				<ConnectionModeStep
++					selectedMode={selectedMode}
++					onModeSelect={handleModeSelect}
++					onNext={goNext}
++				/>
++			)}
++
++			{currentStep === ONBOARDING_STEP.TARGET && selectedMode !== undefined && (
++				<TargetStep
++					mode={selectedMode}
++					selectedTarget={selectedTarget}
++					onTargetSelect={handleTargetSelect}
++					onNext={goNext}
++					onBack={goBack}
++				/>
++			)}
++
++			{currentStep === ONBOARDING_STEP.CREDENTIALS && selectedTarget !== undefined && (
++				<CredentialsStep
++					target={selectedTarget}
++					onCredentials={handleCredentials}
++					onBack={goBack}
++				/>
++			)}
++
++			{currentStep === ONBOARDING_STEP.REVIEW && selectedTarget !== undefined && (
++				<ReviewStep
++					target={selectedTarget}
++					credentials={credentials ?? {}}
++					onBack={goBack}
++				/>
++			)}
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx
+new file mode 100644
+index 000000000..c58d19515
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx
+@@ -0,0 +1,117 @@
++import { type ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { useNavigate } from '@tanstack/react-router'
++import { useQueryClient } from '@tanstack/react-query'
++import { toast } from 'sonner'
++import {
++	ConnectionModeEnum,
++	useConnectIntegration,
++	connectIntegrationMutationRequestSchema,
++	listPlatformDescriptorsQueryKey,
++} from '@template/client-typescript/typescript'
++import { cn } from '@/lib/utils'
++import { Button } from '@/components/ui/button'
++import { Spinner } from '@/components/ui/spinner'
++import {
++	type OnboardingConnectionMode,
++	type OnboardingTarget,
++	type OnboardingCredentials,
++} from '../../-stores/useOnboardingStore'
++
++// Literal-key label map for connection modes — enum catalog (enums.ConnectionMode.*).
++const buildModeLabels = (t: (key: string) => string): Record<OnboardingConnectionMode, string> => ({
++	[ConnectionModeEnum.CREDENTIALS]: t('enums.ConnectionMode.CREDENTIALS'),
++	[ConnectionModeEnum.MANUAL]: t('enums.ConnectionMode.MANUAL'),
++})
++
++// Literal-key label map for the four onboarding platforms.
++const buildPlatformLabels = (t: (key: string) => string): Record<OnboardingTarget['platform'], string> => ({
++	SHOPIFY: t('onboarding.target.SHOPIFY'),
++	YAMPI: t('onboarding.target.YAMPI'),
++	META: t('onboarding.target.META'),
++	MERCADOPAGO: t('onboarding.target.MERCADOPAGO'),
++})
++
++interface SummaryRowProps {
++	label: string
++	value: string
++}
++
++function SummaryRow({ label, value }: SummaryRowProps) {
++	return (
++		<div className="flex justify-between gap-4 py-3 border-b border-border last:border-0">
++			<dt className="text-sm text-muted-foreground">{label}</dt>
++			<dd className="text-sm font-medium text-foreground text-right">{value}</dd>
++		</div>
++	)
++}
++
++interface ReviewStepProps extends ComponentProps<'div'> {
++	target: OnboardingTarget
++	credentials: OnboardingCredentials
++	onBack: () => void
++}
++
++export function ReviewStep({ target, credentials, onBack, className, ...props }: ReviewStepProps) {
++	const { t } = useTranslation()
++	const navigate = useNavigate()
++	const queryClient = useQueryClient()
++
++	const connect = useConnectIntegration({
++		mutation: {
++			onSuccess: () => {
++				toast.success(t('onboarding.toast.success'))
++				queryClient.invalidateQueries({ queryKey: listPlatformDescriptorsQueryKey() })
++				void navigate({ to: '/' })
++			},
++		},
++	})
++
++	// Build and validate the full connect body — the button is only enabled when the matched
++	// union member accepts the assembled payload (pickUnionVariant + safeParse).
++	const body = {
++		connectionMode: target.connectionMode,
++		type: target.type,
++		platform: target.platform,
++		credentials,
++	}
++
++	const bodyResult = connectIntegrationMutationRequestSchema.safeParse(body)
++
++	const handleConnect = async () => {
++		if (!bodyResult.success) return
++		await connect.mutateAsync({ data: bodyResult.data })
++	}
++
++	const modeLabels = buildModeLabels(t)
++	const platformLabels = buildPlatformLabels(t)
++
++	return (
++		<div className={cn('flex flex-col gap-8', className)} {...props}>
++			<div className="flex flex-col gap-2">
++				<h2 className="text-2xl font-semibold text-foreground">{t('onboarding.review.title')}</h2>
++				<p className="text-muted-foreground">{t('onboarding.review.subtitle')}</p>
++			</div>
++
++			<dl className="rounded-xl border border-border bg-card px-4">
++				<SummaryRow label={t('onboarding.review.mode')} value={modeLabels[target.connectionMode]} />
++				<SummaryRow label={t('onboarding.review.platform')} value={platformLabels[target.platform]} />
++				<SummaryRow label={t('onboarding.review.type')} value={target.type.replace(/_/g, ' ')} />
++			</dl>
++
++			<div className="flex justify-between">
++				<Button type="button" variant="outline" onClick={onBack} disabled={connect.isPending}>
++					{t('onboarding.nav.back')}
++				</Button>
++				<Button
++					type="button"
++					disabled={!bodyResult.success || connect.isPending}
++					onClick={handleConnect}
++				>
++					{connect.isPending && <Spinner className="mr-2" />}
++					{t('onboarding.nav.connect')}
++				</Button>
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/TargetStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/TargetStep/index.tsx
+new file mode 100644
+index 000000000..d9296c0f5
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/TargetStep/index.tsx
+@@ -0,0 +1,86 @@
++import { type ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import { Button } from '@/components/ui/button'
++import {
++	ONBOARDING_TARGETS,
++	type OnboardingConnectionMode,
++	type OnboardingTarget,
++} from '../../-stores/useOnboardingStore'
++
++interface TargetCardProps {
++	target: OnboardingTarget
++	label: string
++	selected: boolean
++	onSelect: (target: OnboardingTarget) => void
++}
++
++function TargetCard({ target, label, selected, onSelect }: TargetCardProps) {
++	return (
++		<button
++			type="button"
++			onClick={() => onSelect(target)}
++			aria-pressed={selected}
++			className={cn(
++				'flex flex-col gap-1 rounded-xl border-2 p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
++				selected ? 'border-primary bg-primary/5' : 'border-border bg-card',
++			)}
++		>
++			<span className="font-semibold text-foreground">{label}</span>
++			<span className="text-xs text-muted-foreground uppercase tracking-wide">{target.type.replace(/_/g, ' ')}</span>
++		</button>
++	)
++}
++
++interface TargetStepProps extends ComponentProps<'div'> {
++	mode: OnboardingConnectionMode
++	selectedTarget: OnboardingTarget | undefined
++	onTargetSelect: (target: OnboardingTarget) => void
++	onNext: () => void
++	onBack: () => void
++}
++
++export function TargetStep({ mode, selectedTarget, onTargetSelect, onNext, onBack, className, ...props }: TargetStepProps) {
++	const { t } = useTranslation()
++
++	// Literal-key label map — one entry per onboarding platform, no template literals (bp-25).
++	const platformLabels: Record<OnboardingTarget['platform'], string> = {
++		SHOPIFY: t('onboarding.target.SHOPIFY'),
++		YAMPI: t('onboarding.target.YAMPI'),
++		META: t('onboarding.target.META'),
++		MERCADOPAGO: t('onboarding.target.MERCADOPAGO'),
++	}
++
++	const targets = ONBOARDING_TARGETS[mode]
++
++	return (
++		<div className={cn('flex flex-col gap-8', className)} {...props}>
++			<div className="flex flex-col gap-2">
++				<h2 className="text-2xl font-semibold text-foreground">{t('onboarding.target.title')}</h2>
++				<p className="text-muted-foreground">{t('onboarding.target.subtitle')}</p>
++			</div>
++
++			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list" aria-label={t('onboarding.target.title')}>
++				{targets.map(target => (
++					<div key={target.platform} role="listitem">
++						<TargetCard
++							target={target}
++							label={platformLabels[target.platform]}
++							selected={selectedTarget?.platform === target.platform}
++							onSelect={onTargetSelect}
++						/>
++					</div>
++				))}
++			</div>
++
++			<div className="flex justify-between">
++				<Button type="button" variant="outline" onClick={onBack}>
++					{t('onboarding.nav.back')}
++				</Button>
++				<Button type="button" disabled={!selectedTarget} onClick={onNext}>
++					{t('onboarding.nav.next')}
++				</Button>
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-stores/useOnboardingStore.ts b/packages/app/react/src/routes/onboarding/-stores/useOnboardingStore.ts
+new file mode 100644
+index 000000000..0d392c397
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-stores/useOnboardingStore.ts
+@@ -0,0 +1,91 @@
++import { create } from 'zustand'
++import type { ConnectIntegrationMutationRequest } from '@template/client-typescript/typescript'
++
++// SDK-derived discriminant type for the two modes used by onboarding targets
++export type OnboardingConnectionMode = 'CREDENTIALS' | 'MANUAL'
++
++// One entry per onboarding target: the three discriminants required to match a union member.
++export interface OnboardingTarget {
++	platform: 'SHOPIFY' | 'YAMPI' | 'META' | 'MERCADOPAGO'
++	type: 'SALES_CHANNEL' | 'CHECKOUT' | 'MARKETING_PLATFORM' | 'PAYMENT_GATEWAY'
++	connectionMode: OnboardingConnectionMode
++}
++
++// SDK-derived credential types — one per CREDENTIALS-mode target.
++export type ShopifyCredentials = Extract<
++	ConnectIntegrationMutationRequest,
++	{ platform: 'SHOPIFY'; connectionMode: 'CREDENTIALS' }
++>['credentials']
++
++export type YampiCredentials = Extract<
++	ConnectIntegrationMutationRequest,
++	{ platform: 'YAMPI'; connectionMode: 'CREDENTIALS' }
++>['credentials']
++
++// MANUAL targets have empty credential objects.
++export type ManualCredentials = Record<string, never>
++
++export type OnboardingCredentials = ShopifyCredentials | YampiCredentials | ManualCredentials
++
++// Step sequences per connection mode — const-asserted tuples keyed by SDK ConnectionMode.
++export type OnboardingStep = 'CONNECTION_MODE' | 'TARGET' | 'CREDENTIALS' | 'REVIEW'
++
++// Enum object for OnboardingStep — use these constants for comparisons (bp-14).
++export const ONBOARDING_STEP = {
++	CONNECTION_MODE: 'CONNECTION_MODE',
++	TARGET: 'TARGET',
++	CREDENTIALS: 'CREDENTIALS',
++	REVIEW: 'REVIEW',
++} as const satisfies Record<OnboardingStep, OnboardingStep>
++
++export const MODE_STEPS = {
++	CREDENTIALS: ['CONNECTION_MODE', 'TARGET', 'CREDENTIALS', 'REVIEW'] as const,
++	MANUAL: ['CONNECTION_MODE', 'TARGET', 'REVIEW'] as const,
++} satisfies Record<OnboardingConnectionMode, readonly OnboardingStep[]>
++
++// The four onboarding targets — one per (platform, type, connectionMode) tuple.
++export const ONBOARDING_TARGETS: Record<OnboardingConnectionMode, readonly OnboardingTarget[]> = {
++	CREDENTIALS: [
++		{ platform: 'SHOPIFY', type: 'SALES_CHANNEL', connectionMode: 'CREDENTIALS' },
++		{ platform: 'YAMPI', type: 'CHECKOUT', connectionMode: 'CREDENTIALS' },
++	],
++	MANUAL: [
++		{ platform: 'META', type: 'MARKETING_PLATFORM', connectionMode: 'MANUAL' },
++		{ platform: 'MERCADOPAGO', type: 'PAYMENT_GATEWAY', connectionMode: 'MANUAL' },
++	],
++}
++
++interface OnboardingState {
++	currentStepIndex: number
++	direction: 1 | -1
++	selectedMode: OnboardingConnectionMode | undefined
++	selectedTarget: OnboardingTarget | undefined
++	credentials: OnboardingCredentials | undefined
++}
++
++interface OnboardingActions {
++	setCurrentStepIndex: (index: number) => void
++	setDirection: (direction: 1 | -1) => void
++	setSelectedMode: (mode: OnboardingConnectionMode | undefined) => void
++	setSelectedTarget: (target: OnboardingTarget | undefined) => void
++	setCredentials: (credentials: OnboardingCredentials | undefined) => void
++	reset: () => void
++}
++
++const initialState: OnboardingState = {
++	currentStepIndex: 0,
++	direction: 1,
++	selectedMode: undefined,
++	selectedTarget: undefined,
++	credentials: undefined,
++}
++
++export const useOnboardingStore = create<OnboardingState & OnboardingActions>(set => ({
++	...initialState,
++	setCurrentStepIndex: currentStepIndex => set({ currentStepIndex }),
++	setDirection: direction => set({ direction }),
++	setSelectedMode: selectedMode => set({ selectedMode }),
++	setSelectedTarget: selectedTarget => set({ selectedTarget }),
++	setCredentials: credentials => set({ credentials }),
++	reset: () => set(initialState),
++}))
+diff --git a/packages/app/react/src/routes/onboarding/index.tsx b/packages/app/react/src/routes/onboarding/index.tsx
+new file mode 100644
+index 000000000..16b1d4cf5
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/index.tsx
+@@ -0,0 +1,21 @@
++import { createFileRoute } from '@tanstack/react-router'
++import i18n from '@/lib/i18n'
++import { RouteError } from '@/components/RouteError'
++import { OnboardingWizard } from './-components/OnboardingWizard'
++
++export const Route = createFileRoute('/onboarding/')({
++	ssr: true,
++	staticData: { breadcrumb: i18n.t('onboarding.breadcrumb') },
++	component: RouteComponent,
++	errorComponent: RouteError,
++})
++
++function RouteComponent() {
++	return (
++		<main className="w-full min-h-screen flex items-center justify-center bg-background py-12 px-4">
++			<div className="w-full max-w-lg">
++				<OnboardingWizard />
++			</div>
++		</main>
++	)
++}

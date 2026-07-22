@@ -1,0 +1,910 @@
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..5a9046b36 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -751,6 +751,13 @@
+ 			"DAYS_45": "45 days",
+ 			"DAYS_60": "60 days",
+ 			"DAYS_90": "90 days"
++		},
++		"ChartType": {
++			"income": "Income over time",
++			"weekday": "By day of week",
++			"hour": "By hour of day",
++			"period": "By day part",
++			"region": "By region"
+ 		}
+ 	},
+ 	"errors": {
+@@ -1414,6 +1421,42 @@
+ 		"title": "Recommended Apps",
+ 		"visitCta": "Visit"
+ 	},
++	"reports": {
++		"breadcrumb": "Sales Reports",
++		"title": "Sales Reports",
++		"recorte": {
++			"label": "View"
++		},
++		"dateRange": "Date range",
++		"empty": "No data for this period.",
++		"loadError": "Failed to load chart data.",
++		"table": {
++			"date": "Date",
++			"day": "Day",
++			"hour": "Hour",
++			"shift": "Shift",
++			"region": "Region",
++			"revenue": "Revenue",
++			"profit": "Profit",
++			"total": "Total",
++			"orders": "Orders"
++		},
++		"weekday": {
++			"monday": "Monday",
++			"tuesday": "Tuesday",
++			"wednesday": "Wednesday",
++			"thursday": "Thursday",
++			"friday": "Friday",
++			"saturday": "Saturday",
++			"sunday": "Sunday"
++		},
++		"period": {
++			"morning": "Morning",
++			"afternoon": "Afternoon",
++			"evening": "Evening",
++			"night": "Night"
++		}
++	},
+ 	"suggestions": {
+ 		"advertise": {
+ 			"cta": "Talk to partners",
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..08315b41b 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -751,6 +751,13 @@
+ 			"DAYS_45": "45 dias",
+ 			"DAYS_60": "60 dias",
+ 			"DAYS_90": "90 dias"
++		},
++		"ChartType": {
++			"income": "Receita ao longo do tempo",
++			"weekday": "Por dia da semana",
++			"hour": "Por hora do dia",
++			"period": "Por período do dia",
++			"region": "Por região"
+ 		}
+ 	},
+ 	"errors": {
+@@ -1414,6 +1421,42 @@
+ 		"title": "Aplicativos Recomendados",
+ 		"visitCta": "Visitar"
+ 	},
++	"reports": {
++		"breadcrumb": "Relatórios de Vendas",
++		"title": "Relatórios de Vendas",
++		"recorte": {
++			"label": "Visão"
++		},
++		"dateRange": "Período",
++		"empty": "Nenhum dado para este período.",
++		"loadError": "Erro ao carregar dados do gráfico.",
++		"table": {
++			"date": "Data",
++			"day": "Dia",
++			"hour": "Hora",
++			"shift": "Turno",
++			"region": "Região",
++			"revenue": "Receita",
++			"profit": "Lucro",
++			"total": "Total",
++			"orders": "Pedidos"
++		},
++		"weekday": {
++			"monday": "Segunda-feira",
++			"tuesday": "Terça-feira",
++			"wednesday": "Quarta-feira",
++			"thursday": "Quinta-feira",
++			"friday": "Sexta-feira",
++			"saturday": "Sábado",
++			"sunday": "Domingo"
++		},
++		"period": {
++			"morning": "Manhã",
++			"afternoon": "Tarde",
++			"evening": "Noite",
++			"night": "Madrugada"
++		}
++	},
+ 	"suggestions": {
+ 		"advertise": {
+ 			"cta": "Falar com parceiros",
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..b3f672508 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -15,6 +15,7 @@ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
++import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+ import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+@@ -58,6 +59,11 @@ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   path: '/suggestions/',
+   getParentRoute: () => appRouteRoute,
+ } as any)
++const appReportsIndexRoute = appReportsIndexRouteImport.update({
++  id: '/reports/',
++  path: '/reports/',
++  getParentRoute: () => appRouteRoute,
++} as any)
+ const appProductsIndexRoute = appProductsIndexRouteImport.update({
+   id: '/products/',
+   path: '/products/',
+@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
+   '/dashboard/': typeof appDashboardIndexRoute
+   '/orders/': typeof appOrdersIndexRoute
+   '/products/': typeof appProductsIndexRoute
++  '/reports/': typeof appReportsIndexRoute
+   '/suggestions/': typeof appSuggestionsIndexRoute
+   '/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
+   '/dashboard': typeof appDashboardIndexRoute
+   '/orders': typeof appOrdersIndexRoute
+   '/products': typeof appProductsIndexRoute
++  '/reports': typeof appReportsIndexRoute
+   '/suggestions': typeof appSuggestionsIndexRoute
+   '/finance/costs': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic': typeof appMarketingTrafficIndexRoute
+@@ -179,6 +187,7 @@ export interface FileRoutesById {
+   '/(app)/dashboard/': typeof appDashboardIndexRoute
+   '/(app)/orders/': typeof appOrdersIndexRoute
+   '/(app)/products/': typeof appProductsIndexRoute
++  '/(app)/reports/': typeof appReportsIndexRoute
+   '/(app)/suggestions/': typeof appSuggestionsIndexRoute
+   '/(app)/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/(app)/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -201,6 +210,7 @@ export interface FileRouteTypes {
+     | '/dashboard/'
+     | '/orders/'
+     | '/products/'
++    | '/reports/'
+     | '/suggestions/'
+     | '/finance/costs/'
+     | '/marketing/traffic/'
+@@ -221,6 +231,7 @@ export interface FileRouteTypes {
+     | '/dashboard'
+     | '/orders'
+     | '/products'
++    | '/reports'
+     | '/suggestions'
+     | '/finance/costs'
+     | '/marketing/traffic'
+@@ -242,6 +253,7 @@ export interface FileRouteTypes {
+     | '/(app)/dashboard/'
+     | '/(app)/orders/'
+     | '/(app)/products/'
++    | '/(app)/reports/'
+     | '/(app)/suggestions/'
+     | '/(app)/finance/costs/'
+     | '/(app)/marketing/traffic/'
+@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof appSuggestionsIndexRouteImport
+       parentRoute: typeof appRouteRoute
+     }
++    '/(app)/reports/': {
++      id: '/(app)/reports/'
++      path: '/reports'
++      fullPath: '/reports/'
++      preLoaderRoute: typeof appReportsIndexRouteImport
++      parentRoute: typeof appRouteRoute
++    }
+     '/(app)/products/': {
+       id: '/(app)/products/'
+       path: '/products'
+@@ -405,6 +424,7 @@ interface appRouteRouteChildren {
+   appDashboardIndexRoute: typeof appDashboardIndexRoute
+   appOrdersIndexRoute: typeof appOrdersIndexRoute
+   appProductsIndexRoute: typeof appProductsIndexRoute
++  appReportsIndexRoute: typeof appReportsIndexRoute
+   appSuggestionsIndexRoute: typeof appSuggestionsIndexRoute
+   appFinanceCostsIndexRoute: typeof appFinanceCostsIndexRoute
+   appMarketingTrafficIndexRoute: typeof appMarketingTrafficIndexRoute
+@@ -422,6 +442,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
+   appDashboardIndexRoute: appDashboardIndexRoute,
+   appOrdersIndexRoute: appOrdersIndexRoute,
+   appProductsIndexRoute: appProductsIndexRoute,
++  appReportsIndexRoute: appReportsIndexRoute,
+   appSuggestionsIndexRoute: appSuggestionsIndexRoute,
+   appFinanceCostsIndexRoute: appFinanceCostsIndexRoute,
+   appMarketingTrafficIndexRoute: appMarketingTrafficIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/HourVariant.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/HourVariant.tsx
+new file mode 100644
+index 000000000..b0f809eba
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/HourVariant.tsx
+@@ -0,0 +1,75 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import {
++	AnalyticsFrequencyEnum,
++	ChartTypeEnum,
++	useGetChart,
++} from '@template/client-typescript/typescript'
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { cn } from '@/lib/utils'
++import { ReportTable } from './ReportTable'
++import type { ReportRow } from './ReportTable'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++function LoadingSkeleton({ className, ...props }: ComponentProps<'div'>) {
++	return (
++		<div className={cn('flex flex-col gap-2', className)} aria-hidden {...props}>
++			{Array.from({ length: 8 }).map((_, i) => (
++				<Skeleton key={`sk-${i}`} className="h-10 w-full rounded-md" />
++			))}
++		</div>
++	)
++}
++
++export function HourVariant({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++	const { tenancyScope } = useTenancyStore()
++	const { startDate, endDate } = routeApi.useSearch()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.hour,
++		tenancyScope,
++		frequency: AnalyticsFrequencyEnum.DAILY,
++		startDate,
++		endDate,
++	})
++
++	if (isPending) return <LoadingSkeleton className={className} {...props} />
++	if (isError || !data || data.kind !== 'hour') {
++		return (
++			<div className={cn('py-4', className)} {...props}>
++				<p className="text-sm text-muted-foreground">{t('reports.loadError')}</p>
++			</div>
++		)
++	}
++
++	const rows: ReportRow[] = Object.entries(data.segments)
++		.sort(([a], [b]) => Number(a) - Number(b))
++		.map(([hour, seg]) => ({
++			label: `${hour}h`,
++			revenue: seg.revenue,
++			profit: seg.profit,
++			orders: seg.orders,
++		}))
++
++	return (
++		<ReportTable
++			rows={rows}
++			formatMoney={formatMoney}
++			headers={{
++				label: t('reports.table.hour'),
++				revenue: t('reports.table.revenue'),
++				profit: t('reports.table.profit'),
++				orders: t('reports.table.orders'),
++			}}
++			emptyMessage={t('reports.empty')}
++			className={className}
++			{...props}
++		/>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/IncomeVariant.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/IncomeVariant.tsx
+new file mode 100644
+index 000000000..8fca4158b
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/IncomeVariant.tsx
+@@ -0,0 +1,74 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import {
++	AnalyticsFrequencyEnum,
++	ChartTypeEnum,
++	useGetChart,
++} from '@template/client-typescript/typescript'
++import { useMoney, useLocale } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { cn } from '@/lib/utils'
++import { ReportTable } from './ReportTable'
++import type { ReportRow } from './ReportTable'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++function LoadingSkeleton({ className, ...props }: ComponentProps<'div'>) {
++	return (
++		<div className={cn('flex flex-col gap-2', className)} aria-hidden {...props}>
++			{Array.from({ length: 8 }).map((_, i) => (
++				<Skeleton key={`sk-${i}`} className="h-10 w-full rounded-md" />
++			))}
++		</div>
++	)
++}
++
++export function IncomeVariant({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const locale = useLocale()
++	const formatMoney = useMoney()
++	const { tenancyScope } = useTenancyStore()
++	const { startDate, endDate } = routeApi.useSearch()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.income,
++		tenancyScope,
++		frequency: AnalyticsFrequencyEnum.DAILY,
++		startDate,
++		endDate,
++	})
++
++	if (isPending) return <LoadingSkeleton className={className} {...props} />
++	if (isError || !data || data.kind !== 'income') {
++		return (
++			<div className={cn('py-4', className)} {...props}>
++				<p className="text-sm text-muted-foreground">{t('reports.loadError')}</p>
++			</div>
++		)
++	}
++
++	const rows: ReportRow[] = data.buckets.map(b => ({
++		label: new Date(b.timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
++		revenue: b.revenue,
++		profit: b.profit,
++		orders: b.orders,
++	}))
++
++	return (
++		<ReportTable
++			rows={rows}
++			formatMoney={formatMoney}
++			headers={{
++				label: t('reports.table.date'),
++				revenue: t('reports.table.revenue'),
++				profit: t('reports.table.profit'),
++				orders: t('reports.table.orders'),
++			}}
++			emptyMessage={t('reports.empty')}
++			className={className}
++			{...props}
++		/>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/PeriodVariant.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/PeriodVariant.tsx
+new file mode 100644
+index 000000000..a5d7503cb
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/PeriodVariant.tsx
+@@ -0,0 +1,86 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import {
++	AnalyticsFrequencyEnum,
++	ChartTypeEnum,
++	useGetChart,
++} from '@template/client-typescript/typescript'
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { cn } from '@/lib/utils'
++import { ReportTable } from './ReportTable'
++import type { ReportRow } from './ReportTable'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++const PERIOD_ORDER = ['MORNING', 'AFTERNOON', 'EVENING', 'NIGHT'] as const
++
++function LoadingSkeleton({ className, ...props }: ComponentProps<'div'>) {
++	return (
++		<div className={cn('flex flex-col gap-2', className)} aria-hidden {...props}>
++			{Array.from({ length: 8 }).map((_, i) => (
++				<Skeleton key={`sk-${i}`} className="h-10 w-full rounded-md" />
++			))}
++		</div>
++	)
++}
++
++export function PeriodVariant({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++	const { tenancyScope } = useTenancyStore()
++	const { startDate, endDate } = routeApi.useSearch()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.period,
++		tenancyScope,
++		frequency: AnalyticsFrequencyEnum.DAILY,
++		startDate,
++		endDate,
++	})
++
++	if (isPending) return <LoadingSkeleton className={className} {...props} />
++	if (isError || !data || data.kind !== 'period') {
++		return (
++			<div className={cn('py-4', className)} {...props}>
++				<p className="text-sm text-muted-foreground">{t('reports.loadError')}</p>
++			</div>
++		)
++	}
++
++	// Literal t() keys — type-checked; each key must exist in both locale files
++	const PERIOD_LABELS: Record<(typeof PERIOD_ORDER)[number], string> = {
++		MORNING: t('reports.period.morning'),
++		AFTERNOON: t('reports.period.afternoon'),
++		EVENING: t('reports.period.evening'),
++		NIGHT: t('reports.period.night'),
++	}
++
++	const rows: ReportRow[] = PERIOD_ORDER.map(key => {
++		const seg = data.segments[key]
++		return {
++			label: PERIOD_LABELS[key],
++			revenue: seg.revenue,
++			profit: seg.profit,
++			orders: seg.orders,
++		}
++	})
++
++	return (
++		<ReportTable
++			rows={rows}
++			formatMoney={formatMoney}
++			headers={{
++				label: t('reports.table.shift'),
++				revenue: t('reports.table.revenue'),
++				profit: t('reports.table.profit'),
++				orders: t('reports.table.orders'),
++			}}
++			emptyMessage={t('reports.empty')}
++			className={className}
++			{...props}
++		/>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/RegionVariant.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/RegionVariant.tsx
+new file mode 100644
+index 000000000..ca3c95367
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/RegionVariant.tsx
+@@ -0,0 +1,75 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import {
++	AnalyticsFrequencyEnum,
++	ChartTypeEnum,
++	useGetChart,
++} from '@template/client-typescript/typescript'
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { cn } from '@/lib/utils'
++import { ReportTable } from './ReportTable'
++import type { ReportRow } from './ReportTable'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++function LoadingSkeleton({ className, ...props }: ComponentProps<'div'>) {
++	return (
++		<div className={cn('flex flex-col gap-2', className)} aria-hidden {...props}>
++			{Array.from({ length: 8 }).map((_, i) => (
++				<Skeleton key={`sk-${i}`} className="h-10 w-full rounded-md" />
++			))}
++		</div>
++	)
++}
++
++export function RegionVariant({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++	const { tenancyScope } = useTenancyStore()
++	const { startDate, endDate } = routeApi.useSearch()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.region,
++		tenancyScope,
++		frequency: AnalyticsFrequencyEnum.DAILY,
++		startDate,
++		endDate,
++	})
++
++	if (isPending) return <LoadingSkeleton className={className} {...props} />
++	if (isError || !data || data.kind !== 'region') {
++		return (
++			<div className={cn('py-4', className)} {...props}>
++				<p className="text-sm text-muted-foreground">{t('reports.loadError')}</p>
++			</div>
++		)
++	}
++
++	const rows: ReportRow[] = Object.entries(data.regions)
++		.sort(([, a], [, b]) => b.total.amountCents - a.total.amountCents)
++		.map(([key, region]) => ({
++			label: region.state || key,
++			revenue: region.total,
++			profit: null,
++			orders: region.orders,
++		}))
++
++	return (
++		<ReportTable
++			rows={rows}
++			formatMoney={formatMoney}
++			headers={{
++				label: t('reports.table.region'),
++				revenue: t('reports.table.total'),
++				profit: null,
++				orders: t('reports.table.orders'),
++			}}
++			emptyMessage={t('reports.empty')}
++			className={className}
++			{...props}
++		/>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/ReportTable.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/ReportTable.tsx
+new file mode 100644
+index 000000000..dc63de911
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/ReportTable.tsx
+@@ -0,0 +1,95 @@
++import type { ComponentProps } from 'react'
++import type { Money, SignedMoney } from '@template/client-typescript/typescript'
++import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++
++export interface ReportRow {
++	label: string
++	revenue: SignedMoney
++	profit: SignedMoney | null
++	orders: number
++}
++
++/** SignedMoney is structurally identical to Money but Kubb emits separate types; convert explicitly. */
++export function toMoney(s: SignedMoney): Money {
++	return { amountCents: s.amountCents, currency: s.currency }
++}
++
++interface DataRowProps {
++	row: ReportRow
++	maxRevenueCents: number
++	formatMoney: (m: Money) => string
++	showProfit: boolean
++}
++
++function DataRow({ row, maxRevenueCents, formatMoney, showProfit }: DataRowProps) {
++	const barPct = maxRevenueCents > 0 ? Math.max(0, row.revenue.amountCents) / maxRevenueCents : 0
++
++	return (
++		<div role="listitem" aria-label={row.label} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
++			<span className="w-28 shrink-0 text-sm text-foreground truncate">{row.label}</span>
++			<div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden>
++				<div className="h-full rounded-full bg-primary/80 transition-all duration-300" style={{ width: `${barPct * 100}%` }} />
++			</div>
++			<span className="w-28 shrink-0 text-right text-sm text-foreground tabular-nums">{formatMoney(toMoney(row.revenue))}</span>
++			{showProfit ? (
++				<span
++					className={cn(
++						'w-24 shrink-0 text-right text-sm tabular-nums',
++						row.profit !== null ? (row.profit.amountCents >= 0 ? 'text-success' : 'text-destructive') : 'text-muted-foreground',
++					)}
++				>
++					{row.profit !== null ? formatMoney(toMoney(row.profit)) : '—'}
++				</span>
++			) : null}
++			<span className="w-14 shrink-0 text-right text-sm text-muted-foreground tabular-nums">{row.orders}</span>
++		</div>
++	)
++}
++
++export interface ReportTableHeaders {
++	label: string
++	revenue: string
++	profit: string | null
++	orders: string
++}
++
++interface ReportTableProps extends ComponentProps<'div'> {
++	rows: ReportRow[]
++	formatMoney: (m: Money) => string
++	headers: ReportTableHeaders
++	emptyMessage: string
++}
++
++export function ReportTable({ rows, formatMoney, headers, emptyMessage, className, ...props }: ReportTableProps) {
++	const showProfit = headers.profit !== null
++	const maxRevenueCents = Math.max(...rows.map(r => r.revenue.amountCents), 0)
++
++	if (rows.length === 0) {
++		return (
++			<Empty>
++				<EmptyHeader>
++					<EmptyTitle>{emptyMessage}</EmptyTitle>
++				</EmptyHeader>
++			</Empty>
++		)
++	}
++
++	return (
++		<div className={cn('flex flex-col', className)} {...props}>
++			<div className="flex items-center gap-3 pb-2 border-b border-border text-xs font-medium text-muted-foreground">
++				<span className="w-28 shrink-0">{headers.label}</span>
++				<span className="flex-1" />
++				<span className="w-28 shrink-0 text-right">{headers.revenue}</span>
++				{showProfit ? <span className="w-24 shrink-0 text-right">{headers.profit}</span> : null}
++				<span className="w-14 shrink-0 text-right">{headers.orders}</span>
++			</div>
++			<div role="list" aria-label="report rows">
++				{rows.map((row, i) => (
++					<DataRow key={`${row.label}-${i}`} row={row} maxRevenueCents={maxRevenueCents} formatMoney={formatMoney} showProfit={showProfit} />
++				))}
++			</div>
++		</div>
++	)
++}
++
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/WeekdayVariant.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/WeekdayVariant.tsx
+new file mode 100644
+index 000000000..5cafca6de
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/WeekdayVariant.tsx
+@@ -0,0 +1,89 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import {
++	AnalyticsFrequencyEnum,
++	ChartTypeEnum,
++	useGetChart,
++} from '@template/client-typescript/typescript'
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { cn } from '@/lib/utils'
++import { ReportTable } from './ReportTable'
++import type { ReportRow } from './ReportTable'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++const WEEKDAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'] as const
++
++function LoadingSkeleton({ className, ...props }: ComponentProps<'div'>) {
++	return (
++		<div className={cn('flex flex-col gap-2', className)} aria-hidden {...props}>
++			{Array.from({ length: 8 }).map((_, i) => (
++				<Skeleton key={`sk-${i}`} className="h-10 w-full rounded-md" />
++			))}
++		</div>
++	)
++}
++
++export function WeekdayVariant({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++	const { tenancyScope } = useTenancyStore()
++	const { startDate, endDate } = routeApi.useSearch()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.weekday,
++		tenancyScope,
++		frequency: AnalyticsFrequencyEnum.DAILY,
++		startDate,
++		endDate,
++	})
++
++	if (isPending) return <LoadingSkeleton className={className} {...props} />
++	if (isError || !data || data.kind !== 'weekday') {
++		return (
++			<div className={cn('py-4', className)} {...props}>
++				<p className="text-sm text-muted-foreground">{t('reports.loadError')}</p>
++			</div>
++		)
++	}
++
++	// Literal t() keys — type-checked; each key must exist in both locale files
++	const WEEKDAY_LABELS: Record<(typeof WEEKDAY_ORDER)[number], string> = {
++		MONDAY: t('reports.weekday.monday'),
++		TUESDAY: t('reports.weekday.tuesday'),
++		WEDNESDAY: t('reports.weekday.wednesday'),
++		THURSDAY: t('reports.weekday.thursday'),
++		FRIDAY: t('reports.weekday.friday'),
++		SATURDAY: t('reports.weekday.saturday'),
++		SUNDAY: t('reports.weekday.sunday'),
++	}
++
++	const rows: ReportRow[] = WEEKDAY_ORDER.map(key => {
++		const seg = data.segments[key]
++		return {
++			label: WEEKDAY_LABELS[key],
++			revenue: seg.revenue,
++			profit: seg.profit,
++			orders: seg.orders,
++		}
++	})
++
++	return (
++		<ReportTable
++			rows={rows}
++			formatMoney={formatMoney}
++			headers={{
++				label: t('reports.table.day'),
++				revenue: t('reports.table.revenue'),
++				profit: t('reports.table.profit'),
++				orders: t('reports.table.orders'),
++			}}
++			emptyMessage={t('reports.empty')}
++			className={className}
++			{...props}
++		/>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/index.tsx
+new file mode 100644
+index 000000000..2703f111e
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartReportSection/index.tsx
+@@ -0,0 +1,97 @@
++import type { ComponentProps, ComponentType } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { ChartTypeEnum, type ChartType } from '@template/client-typescript/typescript'
++
++import { Card } from '@/components/ui/card'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { BarGraphIcon } from '@/components/ui/icons'
++import { Select } from '@/components/ui/select'
++import { DatePicker } from '@/components/ui/date-picker'
++import { cn } from '@/lib/utils'
++
++import { IncomeVariant } from './IncomeVariant'
++import { WeekdayVariant } from './WeekdayVariant'
++import { HourVariant } from './HourVariant'
++import { PeriodVariant } from './PeriodVariant'
++import { RegionVariant } from './RegionVariant'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++// ─── Variant dispatch map (CMP-P18) ─────────────────────────────────────────
++// Each variant owns its own useGetChart query — no data passed as props (bp-02).
++const VARIANT_MAP: Record<ChartType, ComponentType> = {
++	[ChartTypeEnum.income]: IncomeVariant,
++	[ChartTypeEnum.weekday]: WeekdayVariant,
++	[ChartTypeEnum.hour]: HourVariant,
++	[ChartTypeEnum.period]: PeriodVariant,
++	[ChartTypeEnum.region]: RegionVariant,
++}
++
++// ─── Section ─────────────────────────────────────────────────────────────────
++
++export function ChartReportSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const navigate = routeApi.useNavigate()
++	const { chartType, startDate, endDate } = routeApi.useSearch()
++
++	function handleChartTypeChange(v: ChartType) {
++		void navigate({ search: prev => ({ ...prev, chartType: v }) })
++	}
++
++	function handleDateRangeChange(range: { from?: Date; to?: Date } | undefined) {
++		void navigate({
++			search: prev => ({
++				...prev,
++				startDate: range?.from ? range.from.toISOString() : prev.startDate,
++				endDate: range?.to ? range.to.toISOString() : prev.endDate,
++			}),
++		})
++	}
++
++	const VariantComponent = VARIANT_MAP[chartType]
++
++	return (
++		<Card className={cn('flex flex-col gap-6 p-6', className)} {...props}>
++			{/* Header — always visible */}
++			<div className="flex flex-wrap items-center gap-3">
++				<GradientIconBadge icon={BarGraphIcon} />
++				<h1 className="flex-1 text-xl font-semibold text-foreground">{t('reports.title')}</h1>
++			</div>
++
++			{/* Controls — always visible while data loads */}
++			<div className="flex flex-wrap items-center gap-3">
++				<div className="flex items-center gap-2">
++					<span className="text-sm text-muted-foreground">{t('reports.recorte.label')}</span>
++					{/* enum mode: derives options + labels from ChartTypeEnum + i18nPrefix (bp-09, bp-23) */}
++					<Select
++						enum={ChartTypeEnum}
++						i18nPrefix="enums.ChartType"
++						value={chartType}
++						onValueChange={handleChartTypeChange}
++						className="w-44"
++					/>
++				</div>
++
++				<DatePicker
++					mode="range"
++					range={
++						startDate || endDate
++							? {
++									from: startDate ? new Date(startDate) : undefined,
++									to: endDate ? new Date(endDate) : undefined,
++								}
++							: undefined
++					}
++					onRangeChange={handleDateRangeChange}
++					placeholder={t('reports.dateRange')}
++					size="sm"
++					variant="outline"
++				/>
++			</div>
++
++			{/* Data-dependent area — each variant owns its query + loading state */}
++			<VariantComponent />
++		</Card>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/index.tsx b/packages/app/react/src/routes/(app)/reports/index.tsx
+new file mode 100644
+index 000000000..158fd4ff5
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/index.tsx
+@@ -0,0 +1,33 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { endOfDay, startOfDay, subDays } from 'date-fns'
++import { z } from 'zod'
++import { chartTypeSchema } from '@template/client-typescript/typescript'
++
++import { zodValidator } from '@/lib/zod-validator'
++
++import { ChartReportSection } from './-components/ChartReportSection'
++
++// chartType, startDate, endDate are bookmarkable — they live in the URL.
++// tenancyScope is an account-level global store (not URL state).
++// frequency is fixed at DAILY for v1.
++export const reportsSearchSchema = z.object({
++	chartType: chartTypeSchema.default('income'),
++	startDate: z.string().default(() => startOfDay(subDays(new Date(), 29)).toISOString()),
++	endDate: z.string().default(() => endOfDay(new Date()).toISOString()),
++})
++
++export type ReportsSearch = z.infer<typeof reportsSearchSchema>
++
++export const Route = createFileRoute('/(app)/reports/')({
++	staticData: { breadcrumb: 'Relatórios de Vendas' },
++	validateSearch: zodValidator(reportsSearchSchema),
++	component: RouteComponent,
++})
++
++function RouteComponent() {
++	return (
++		<div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 md:p-8">
++			<ChartReportSection />
++		</div>
++	)
++}

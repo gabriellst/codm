@@ -1,0 +1,1 @@
+{"ts":"2026-06-11T22:09:41.043Z","task":"synthetic-react-state-placement","mode":"agent","pass":false,"failedGraders":["enum#typescript","mutation#no-try-catch"],"docTreeHash":"ac3703e45efa","model":"sonnet"}

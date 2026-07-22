@@ -1,0 +1,490 @@
+registry:
+  type: frontend
+  layer: presentation
+  platform: mobile
+  depends_on: [sdk]
+  depended_by: [component]
+  context_reads: [component]
+
+  patterns:
+    - id: RTE-01
+      name: "Default-exported screen component"
+      when: always
+      rule: "export default function ScreenName() { ... } — Expo Router uses the default export as the screen component"
+
+    - id: RTE-02
+      name: "Path/dynamic segments via filename"
+      when: "screen has dynamic segments"
+      rule: |
+        // File: app/active-exercise/[id].tsx
+        import { useLocalSearchParams } from 'expo-router'
+        const { id } = useLocalSearchParams<{ id: string }>()
+      examples: ["active-exercise/[id].tsx", "workout/[id].tsx"]
+
+    - id: RTE-03
+      name: "Typed search params via Zod schema"
+      when: "screen has query params"
+      rule: |
+        import { z } from 'zod'
+        import { useTypedSearchParams } from '@/lib/typed-route'
+
+        const schema = z.object({
+          tab: z.enum(['workouts', 'prs']).default('workouts'),
+          page: z.coerce.number().int().min(1).default(1),
+        })
+
+        const [{ tab, page }, setParams] = useTypedSearchParams(schema)
+      reason: "expo-router's typedRoutes types pathnames but not query params. The project helper at packages/app/expo/lib/typed-route.ts mirrors TanStack's validateSearch by parsing with Zod and falling back to schema.parse({}) on invalid input."
+
+    - id: RTE-04
+      name: "Default values on every schema field"
+      when: "using useTypedSearchParams"
+      rule: "Every field must have .default(...) so schema.parse({}) succeeds on invalid input."
+      wrong: "tab: z.enum(['a', 'b']) — no default, screen crashes on deep-link with garbage params"
+
+    # --- Conditional Rules ---
+
+    - id: RTE-C01
+      name: "Screen is thin shell — no data fetching for child components"
+      when: "screen renders one or more data-dependent components"
+      rule: "Screen renders components without data/params props. Components fetch their own data via SDK hooks."
+      wrong: |
+        const { data } = useListWorkouts(...)
+        return <WorkoutList data={data} />
+
+    - id: RTE-C02
+      name: "Auth gating via <Protected>"
+      when: "screen is private / requires authenticated session"
+      rule: |
+        import { Protected } from '@/components/Protected'
+        export default function PrivateScreen() {
+          return <Protected><ScreenBody /></Protected>
+        }
+      reason: "Defends against mid-session expiry, deep links bypassing the index redirect."
+
+    - id: RTE-C03
+      name: "Detail screen reads dynamic segment via useLocalSearchParams"
+      when: "screen is a [id].tsx detail screen"
+      rule: |
+        import { useLocalSearchParams } from 'expo-router'
+        const { id } = useLocalSearchParams<{ id: string }>()
+
+    - id: RTE-C04
+      name: "Navigation via useRouter with typed pathname"
+      when: "screen pushes / replaces routes"
+      rule: |
+        import { useRouter } from 'expo-router'
+        const router = useRouter()
+        router.push({ pathname: '/active-exercise/[id]', params: { id } })
+        router.push('/(tabs)/home')
+      reason: "experiments.typedRoutes: true in app.json catches pathname typos at compile time."
+
+    - id: RTE-C05
+      name: "Sheet route registered with presentation: 'pageSheet'"
+      when: "screen is a modal sheet"
+      rule: |
+        // In app/_layout.tsx:
+        <Stack.Screen
+          name="(sheets)/my-sheet"
+          options={{
+            presentation: 'pageSheet',
+            headerShown: false,
+            sheetGrabberVisible: true,
+            sheetAllowedDetents: [0.6, 0.95],
+            sheetCornerRadius: 24,
+            sheetExpandsWhenScrolledToEdge: false,
+            contentStyle: { backgroundColor: surfaces.surface1 },
+          }}
+        />
+      reason: "Use the iOS UISheetPresentationController — native grabber, detents, corner radius. Never call this a 'dialog' on mobile."
+
+    - id: RTE-C06
+      name: "Full-screen modal route"
+      when: "screen is a takeover flow (edit-profile, onboarding)"
+      rule: |
+        <Stack.Screen
+          name="(sheets)/edit-profile"
+          options={{
+            presentation: 'fullScreenModal',
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: surfaces.surface1 },
+          }}
+        />
+
+    - id: RTE-C07
+      name: "All route-private code in -components / -stores / -hooks"
+      when: "route renders private components, stores, or hooks"
+      rule: |
+        progress/
+          ├── -components/PeriodPicker/index.tsx
+          ├── -stores/period-store.ts
+          └── -hooks/usePeriodSync.ts
+      wrong: "Using _stores (deprecated — was removed from the repo)"
+
+    # --- Extracted patterns ---
+
+    - id: RTE-P01
+      name: "Auth-redirect entry at app/index.tsx"
+      when: "creating the initial entry redirect"
+      rule: |
+        // packages/app/expo/app/index.tsx
+        import { Redirect } from 'expo-router'
+        import { ActivityIndicator, View } from 'react-native'
+        import { useSession } from '@/lib/auth'
+        import { fg } from '@/lib/tokens'
+
+        export default function Index() {
+          const { isLoading, isAuthenticated } = useSession()
+          if (isLoading) {
+            return (
+              <View className="flex-1 items-center justify-center bg-bg-0">
+                <ActivityIndicator color={fg.fg0} />
+              </View>
+            )
+          }
+          return <Redirect href={isAuthenticated ? '/(tabs)/home' : '/(auth)/login'} />
+        }
+      source: "packages/app/expo/app/index.tsx"
+
+    - id: RTE-P02
+      name: "<Protected> declarative session gate"
+      when: "screen requires authenticated session"
+      rule: |
+        // packages/app/expo/components/Protected.tsx — read it once and use as is
+        export default function ProfileScreen() {
+          return (
+            <Protected>
+              <ProfileContent />
+            </Protected>
+          )
+        }
+      source: "packages/app/expo/components/Protected.tsx"
+
+    - id: RTE-P03
+      name: "Tab layout with NativeTabs + SF Symbols"
+      when: "creating the bottom tab layout"
+      rule: |
+        import { NativeTabs } from 'expo-router/unstable-native-tabs'
+        import { fg, font, fs } from '@/lib/tokens'
+
+        export default function TabLayout() {
+          return (
+            <NativeTabs
+              blurEffect="systemUltraThinMaterialDark"
+              backgroundColor="rgba(10,10,11,0.55)"
+              tintColor={fg.fg0}
+              labelStyle={{ fontFamily: font.sansBold, fontSize: fs.micro }}
+            >
+              <NativeTabs.Trigger name="home">
+                <NativeTabs.Trigger.Label>Início</NativeTabs.Trigger.Label>
+                <NativeTabs.Trigger.Icon sf="house.fill" />
+              </NativeTabs.Trigger>
+              {/* ... */}
+            </NativeTabs>
+          )
+        }
+      source: "packages/app/expo/app/(tabs)/_layout.tsx"
+
+    - id: RTE-P04
+      name: "Per-tab Stack — Pattern A (large title)"
+      when: "tab uses the iOS large-title nav that collapses on scroll (progress, history, profile)"
+      rule: |
+        export default function ProgressTabLayout() {
+          return (
+            <Stack
+              screenOptions={{
+                headerTransparent: true,
+                headerStyle: { backgroundColor: 'transparent' },
+                headerLargeStyle: { backgroundColor: 'transparent' },
+                headerTintColor: fg.fg0,
+                headerTitleStyle,
+                headerLargeTitleStyle,
+                contentStyle: { backgroundColor: surfaces.bg0 },
+              }}
+            >
+              <Stack.Screen
+                name="index"
+                options={{
+                  headerShown: true,
+                  headerLargeTitle: true,
+                  headerTitle: 'Progresso',
+                  headerLeft: () => <LogoMark />,
+                }}
+              />
+            </Stack>
+          )
+        }
+      source: "packages/app/expo/app/(tabs)/progress/_layout.tsx"
+
+    - id: RTE-P05
+      name: "Per-tab Stack — Pattern B (transparent nav, custom items)"
+      when: "tab has a hero in-scroll and needs custom headerLeft / headerRight (home, workout)"
+      rule: |
+        // headerLargeTitle: false, headerTitle: ''
+        // headerLeft: () => <LogoMark />
+        // For native UIKit bar buttons:
+        // unstable_headerRightItems: () => [
+        //   { type: 'button', icon: { type: 'sfSymbol', name: 'plus.circle.fill' }, onPress, label: 'Add', accessibilityLabel: 'Add' }
+        // ]
+
+    - id: RTE-P06
+      name: "Sheet route opening from any component"
+      when: "component triggers a sheet"
+      rule: |
+        import { useRouter } from 'expo-router'
+        const router = useRouter()
+        router.push('/(sheets)/start-session')
+
+    - id: RTE-P07
+      name: "Detail screen header config from root Stack"
+      when: "registering a [id].tsx detail screen in app/_layout.tsx"
+      rule: |
+        <Stack.Screen
+          name="active-exercise/[id]"
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTitle: '',
+            headerBackTitle: 'Voltar',
+          }}
+        />
+
+    - id: RTE-P08
+      name: "Compose SDK schema with frontend-only fields via .merge()"
+      when: "screen needs query params that combine SDK + UI fields"
+      rule: |
+        import { listWorkoutsQueryParamsSchema } from '@template/client-typescript/typescript'
+        const schema = listWorkoutsQueryParamsSchema.merge(
+          z.object({ selectedId: z.string().optional().default('') }),
+        )
+
+  canonical_snippet: |
+    // packages/app/expo/app/(tabs)/<tab>/index.tsx
+    import { ScrollView, View } from 'react-native'
+    import { useGetSomething } from '@template/client-typescript/typescript'
+    import { ScreenError } from '@/components/ui/ScreenError'
+    import { SomeFilters } from './-components/SomeFilters'
+    import { SomeList } from './-components/SomeList'
+
+    export default function SomeTab() {
+      const { error, refetch } = useGetSomething()
+
+      if (error) return <ScreenError onRetry={() => void refetch()} />
+
+      return (
+        <View className="flex-1 bg-bg-0">
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 110 }}
+            contentInsetAdjustmentBehavior="automatic"
+            showsVerticalScrollIndicator={false}
+            className="flex-1"
+          >
+            <SomeFilters />
+            <SomeList />
+          </ScrollView>
+        </View>
+      )
+    }
+
+  scaffold: "bun cli route <path> --i18n=<prefix> [--detail] [--sdk=<SchemaName>] [--search=<spec> | --search-file=<path>] [--in-sheets] [--layout=<plain|stack>]"
+
+  bad_practices:
+    - id: bp-01
+      name: "Screen fetches data and passes it as props to child components"
+      severity: critical
+      wrong: |
+        const { data } = useListWorkouts({ params: { period } })
+        return <WorkoutList data={data} />
+      right: |
+        return <WorkoutList />
+        // and inside WorkoutList:
+        const period = usePeriodStore(s => s.period)
+        const { data } = useListWorkouts({ params: { period } })
+      mechanical: false
+
+    - id: bp-02
+      name: "Using useState for state that should be in query params"
+      severity: critical
+      wrong: |
+        const [page, setPage] = useState(1)
+      right: |
+        const [{ page }, setParams] = useTypedSearchParams(schema)
+        setParams({ page: page + 1 })
+      mechanical: false
+
+    - id: bp-03
+      name: "Calling the modal a 'dialog' or building a DOM-style modal"
+      severity: critical
+      wrong: |
+        import { Dialog } from '@/components/ui/Dialog'  // doesn't exist on mobile
+      right: |
+        // Native iOS sheet route:
+        router.push('/(sheets)/my-sheet')
+        // Or in-page Sheet primitive:
+        <Sheet open={open} onClose={() => setOpen(false)}>...</Sheet>
+      mechanical: true
+      detect:
+        - '@/components/ui/Dialog'
+
+    - id: bp-04
+      name: "Storing private files under _stores instead of -stores"
+      severity: critical
+      wrong: |
+        progress/_stores/period-store.ts
+      right: |
+        progress/-stores/period-store.ts
+      note: "The _stores variant was deleted from the repo. Mobile convention now mirrors web: dash prefix marks files as route-private."
+      mechanical: true
+      detect:
+        - '_stores/'
+
+    - id: bp-05
+      name: "Private route outside the gated group without <Protected>"
+      severity: critical
+      wrong: |
+        // A private route OUTSIDE app/(tabs)/ relying only on the app/index.tsx redirect:
+        export default function WorkoutDetailScreen() {
+          return <WorkoutDetail />   // deep link / mid-session expiry bypasses the redirect
+        }
+      right: |
+        // (tabs) screens are ALREADY gated once at app/(tabs)/_layout.tsx:
+        //   <Protected><BiometricGate>…</BiometricGate></Protected>
+        // — do NOT double-wrap tab screens.
+        // Any private route OUTSIDE that group ((sheets)/*, detail stacks) gates itself:
+        export default function WorkoutDetailScreen() {
+          return <Protected><WorkoutDetail /></Protected>
+        }
+      note: "The auth gate is LAYOUT-level: app/(tabs)/_layout.tsx wraps <Protected> (session redirect) + <BiometricGate> (FaceID/TouchID on cold start and background return — never remove it when restructuring the tabs layout). Per-screen <Protected> is only for private routes a gated layout does not cover."
+      mechanical: false
+
+    - id: bp-06
+      name: "useTypedSearchParams schema without defaults"
+      severity: critical
+      wrong: |
+        const schema = z.object({ tab: z.enum(['a', 'b']) })  // no default
+      right: |
+        const schema = z.object({ tab: z.enum(['a', 'b']).default('a') })
+      note: "The hook falls back to schema.parse({}) on invalid input — every field MUST have a default for that to succeed."
+      mechanical: false
+
+    - id: bp-07
+      name: "Inventing query keys / types instead of importing from the SDK"
+      severity: critical
+      wrong: |
+        const QUERY_KEY = ['workouts', period]
+        const { data } = useQuery({ queryKey: QUERY_KEY, ... })
+      right: |
+        import { useListWorkouts } from '@template/client-typescript/typescript'
+        const { data } = useListWorkouts({ params: { period } })
+      mechanical: true
+      detect:
+        - 'QUERY_KEY\s*=\s*\['
+        - 'useQuery\(\s*\{\s*queryKey'
+
+    - id: bp-08
+      name: "Bypassing typed routes with hand-rolled href strings"
+      severity: moderate
+      wrong: |
+        router.push('/activie-exercise/123')   // typo passes through as a plain string
+      right: |
+        router.push({ pathname: '/active-exercise/[id]', params: { id: '123' } })
+      note: "experiments.typedRoutes catches typos in the pathname property at compile time."
+      mechanical: false
+
+    - id: bp-09
+      name: "Putting an in-page sheet's open/close state on the URL when no deep link is needed"
+      severity: moderate
+      wrong: |
+        // Adding ?sheetOpen=true to the URL just to toggle a one-off filter sheet
+      right: |
+        // Use the Sheet primitive with local state:
+        const [open, setOpen] = useState(false)
+        <Sheet open={open} onClose={() => setOpen(false)} />
+      note: "URL state is for shareable / deep-linkable concepts. Sheet route ((sheets)/*) for nav-stack sheets; primitive Sheet for one-off in-page sheets."
+      mechanical: false
+
+    - id: bp-10
+      name: "Believing a filename prefix excludes colocated files from routing"
+      severity: critical
+      wrong: |
+        app/(tabs)/home/-components/_HeroSection.tsx   // `_` does NOT exclude — phantom route `_HeroSection`
+        export default function HeroSection() { … }     // a default export turns ANY colocated file into a navigable screen
+      right: |
+        app/(tabs)/home/-components/HeroSection/index.tsx
+        export function HeroSection() { … }              // named export — phantom route stays inert
+      note: "expo-router 55: every .tsx under app/ enters the route context (only +api/+html/+middleware are excluded). Colocation is safe ONLY because colocated files never default-export. Mirrors component/expo bp-18."
+      mechanical: false
+
+    - id: bp-11
+      name: "Sheet/modal state managed via Zustand store instead of the router"
+      severity: critical
+      wrong: |
+        const useExpenseSheet = create<{ open: boolean; setOpen: (v: boolean) => void }>(set => ({
+          open: false, setOpen: open => set({ open }),
+        }))
+        // <ExpenseSheet open={open} onClose={() => setOpen(false)} />
+      right: |
+        // Register as (sheets)/* route with presentation: 'pageSheet'
+        // Open via router.push('/(sheets)/add-expense')
+        // Dismiss via router.back()
+      note: "V-2 rule: the router IS the sheet/modal state machine. Build a (sheets) route group; don't build a Zustand open/close store for modal navigation."
+      mechanical: false
+
+    - id: bp-12
+      name: "fullScreenModal without explicit headerLeft back button"
+      severity: critical
+      wrong: |
+        options={{ presentation: 'fullScreenModal', headerShown: false }}
+        // iOS renders no auto back arrow for fullScreenModal → user is stranded
+      right: |
+        // In the sheet's inner _layout.tsx:
+        headerLeft: () => (
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={12}>
+            <IconBack size={22} color={fg.fg0} />
+          </Pressable>
+        )
+      note: "V-2 rule: iOS fullScreenModal has no auto back arrow. Configure an explicit headerLeft → router.back()."
+      mechanical: true
+      detect:
+        - 'presentation:\s*.fullScreenModal'
+      detect_skip: 'headerLeft'
+
+    - id: bp-13
+      name: "Controller path contains double context prefix"
+      severity: critical
+      wrong: |
+        // BC is 'social', controller path is '/social/profile/me'
+        // → resolves to /v1/social/social/profile/me (double prefix)
+      right: |
+        // Controller paths are RELATIVE within a BC — BoundedContext prepends the context name
+        // If BC = 'social', use path '/profile/me' → resolves to /v1/social/profile/me
+      mechanical: false
+
+  # Canonical route shell — what `bun cli route <segment>` emits on mobile.
+  # Shape matches berzerk-club/feat/training-collaboration's real expo screens:
+  # default-exported function, `useTranslation` hook, single combined
+  # `expo-router` import line when both Stack and useLocalSearchParams are
+  # needed, optional inline `useTypedSearchParams(schema)` block, optional
+  # `<Stack.Screen options={{ title }} />` for `--layout=stack`. Bindings are
+  # computed by scripts/cli/expo/artifacts/route.ts and passed to
+  # renderArtifact('route', 'expo', …).
+  #
+  # Whitespace note: `detailParamLine`, `stackScreenBlock`, and
+  # `searchDeclsBlock` carry their own leading/trailing `\n` so the YAML literal
+  # block's per-line `\n` composes the correct blank lines. Reshape both sides
+  # together if you change one.
+  snippet:
+    skeleton: |
+      {{imports}}
+      {{searchDeclsBlock}}
+      export default function {{componentName}}() {
+      {{hooksBlock}}
+      {{detailParamLine}}
+      	return (
+      		<View className="flex-1 bg-bg-0 px-5 pt-6">
+      {{stackScreenBlock}}			{/* Implement {{componentName}} */}
+      		</View>
+      	)
+      }

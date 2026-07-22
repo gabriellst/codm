@@ -1,0 +1,52 @@
+import { z } from '@template/core-typescript'
+// import type { TODOEvent } from '@sales/events'
+
+export const MessageProjectionSchema = z.object({
+	// Flat schema — no .transform(), no nested VO wrapping.
+	// channelId: z.string(),
+	// remoteId: z.string(),
+	// createdAt: z.date(),
+})
+
+export type MessageProjectionProps = z.infer<typeof MessageProjectionSchema>
+
+/** Source of truth: every event that affects this projection. */
+export type MessageProjectionEvent =
+	// | TODOEventA
+	// | TODOEventB
+	never
+
+/**
+ * Free record projection — no base class, no invariants.
+ * Constructor takes the full props. Overloaded `create` builds from a creating event.
+ * Overloaded `applyEvent` mutates state from a mutating event.
+ */
+export class MessageProjection {
+	constructor(public props: MessageProjectionProps) {}
+
+	// ── Creation: typed overloads, one signature per creating event ──────
+	// Add a signature per event that semantically creates the row.
+	//
+	// static create(event: TODOCreatingEvent): MessageProjection
+	// static create(event: TODOCreatingEvent | TODOAnotherCreatingEvent): MessageProjection {
+	//   switch (event.name) {
+	//     case '<context>.<creating_event>':
+	//       return new MessageProjection({
+	//         // direct from event payload
+	//       })
+	//   }
+	// }
+
+	// ── Mutation: typed overloads, one signature per Path-A event ────────
+	// Add a signature per event that mutates an existing row via find → applyEvent → save.
+	// Atomic-bulk events do NOT appear here — they go directly to the repository.
+	//
+	// applyEvent(event: TODOMutatingEvent): void
+	// applyEvent(event: TODOMutatingEvent): void {
+	//   switch (event.name) {
+	//     case '<context>.<mutating_event>':
+	//       this.props.someField = event.payload.someField
+	//       return
+	//   }
+	// }
+}

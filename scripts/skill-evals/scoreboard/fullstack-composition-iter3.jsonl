@@ -1,0 +1,1 @@
+{"ts":"2026-06-12T19:04:28.964Z","task":"synthetic-fullstack-crud-realtime","mode":"agent","pass":false,"failedGraders":["ts#new-suite-green","go#handler","go#handler-test","go#contracts-binding","e2e#spec","e2e#api-setup","judge#backend-composition","judge#frontend-e2e"],"docTreeHash":"46468161d9ca","model":"sonnet"}

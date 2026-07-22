@@ -1,0 +1,7 @@
+{"ts":"2026-06-10T03:48:24.969Z","task":"replay-connect-integration-variant-forms","mode":"gold","pass":true,"failedGraders":[],"docTreeHash":"888b88dac868"}
+{"ts":"2026-06-10T03:48:33.065Z","task":"replay-fees-taxes-timeline-model","mode":"gold","pass":true,"failedGraders":[],"docTreeHash":"888b88dac868"}
+{"ts":"2026-06-10T03:48:39.328Z","task":"replay-integration-webhook-register","mode":"gold","pass":false,"failedGraders":["tsc:backend"],"docTreeHash":"888b88dac868"}
+{"ts":"2026-06-10T03:48:45.087Z","task":"replay-internal-subscriptions-store-link","mode":"gold","pass":false,"failedGraders":["tsc:backend"],"docTreeHash":"888b88dac868"}
+{"ts":"2026-06-10T03:48:51.144Z","task":"replay-pixel-funnel-section","mode":"gold","pass":true,"failedGraders":[],"docTreeHash":"888b88dac868"}
+{"ts":"2026-06-10T03:48:59.463Z","task":"replay-product-cost-values-timeline","mode":"gold","pass":true,"failedGraders":[],"docTreeHash":"888b88dac868"}
+{"ts":"2026-06-10T03:49:07.054Z","task":"replay-statcard-shared-component","mode":"gold","pass":true,"failedGraders":[],"docTreeHash":"888b88dac868"}

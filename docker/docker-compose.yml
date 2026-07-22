@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ${PROJECT}-${SERVICE}-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${PROJECT}
+      PGDATA: /data/postgres
+    volumes:
+      - postgres_data:/data/postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - default
+
+  lgtm:
+    build:
+      context: .
+      dockerfile: Dockerfile.lgtm
+    container_name: ${PROJECT}-${SERVICE}-lgtm
+    ports:
+      - "3000:3000"   # Grafana
+      - "3100:3100"   # Loki
+      - "3200:3200"   # Tempo
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8126:8126"   # Datadog APM
+      - "9009:9009"   # Mimir
+    volumes:
+      - lgtm_tempo:/var/tempo
+      - lgtm_loki:/var/loki
+      - lgtm_mimir:/var/mimir
+      - lgtm_grafana:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - default
+
+  redis:
+    image: redis:alpine
+    container_name: ${PROJECT}-${SERVICE}-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - default
+
+volumes:
+  postgres_data:
+  redis_data:
+  lgtm_tempo:
+  lgtm_loki:
+  lgtm_mimir:
+  lgtm_grafana:

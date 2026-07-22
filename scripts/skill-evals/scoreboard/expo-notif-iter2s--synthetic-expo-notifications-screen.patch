@@ -1,0 +1,698 @@
+diff --git a/packages/app/expo/app/(sheets)/notification-detail/_layout.tsx b/packages/app/expo/app/(sheets)/notification-detail/_layout.tsx
+new file mode 100644
+index 000000000..cd7fd4023
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/notification-detail/_layout.tsx
+@@ -0,0 +1,5 @@
++import { Slot } from 'expo-router'
++
++export default function NotificationDetailLayout() {
++	return <Slot />
++}
+diff --git a/packages/app/expo/app/(sheets)/notification-detail/index.tsx b/packages/app/expo/app/(sheets)/notification-detail/index.tsx
+new file mode 100644
+index 000000000..69710c674
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/notification-detail/index.tsx
+@@ -0,0 +1,155 @@
++import { Pressable, ScrollView, View } from 'react-native'
++import { router } from 'expo-router'
++import { useTranslation } from 'react-i18next'
++import { useQueryClient } from '@tanstack/react-query'
++import { z } from 'zod'
++import { Haptics } from 'react-native-nitro-haptics'
++import {
++	listNotificationsQueryKey,
++	useListNotifications,
++	useMarkNotificationRead,
++} from '@template/client-typescript/typescript'
++import { Protected } from '@/components/Protected'
++import { Text } from '@/components/ui/Text'
++import { IconClose, IconCheck } from '@/components/ui/Icons'
++import { fg, fs } from '@/lib/tokens'
++import { formatRelativeHistoryDate } from '@/lib/format-date'
++import { useTypedSearchParams } from '@/lib/typed-route'
++
++// Garbage or missing id → empty string → not-found state, never crashes.
++const detailParamsSchema = z.object({
++	id: z.string().default(''),
++})
++
++export default function NotificationDetailSheet() {
++	const { t, i18n } = useTranslation()
++	const queryClient = useQueryClient()
++	const [{ id }] = useTypedSearchParams(detailParamsSchema)
++
++	// No single-GET endpoint exists; fetch the list and find by id.
++	// React Query caches the result so warm navigations are instant;
++	// cold deep links trigger a real fetch and find the item once loaded.
++	const { data } = useListNotifications({ limit: 100 })
++	const notification = data?.items.find(n => n.id === id) ?? null
++
++	const markRead = useMarkNotificationRead()
++
++	const handleMarkRead = async () => {
++		if (!notification || notification.read) return
++		await markRead.mutateAsync(
++			{ data: { notificationDeliveryIds: [notification.id] } },
++			{
++				onSuccess: () => Haptics.notification('success'),
++				onSettled: () =>
++					queryClient.invalidateQueries({ queryKey: listNotificationsQueryKey() }),
++			},
++		)
++	}
++
++	const dateLabel =
++		notification
++			? formatRelativeHistoryDate({
++					isoDate: notification.createdAt,
++					t,
++					language: i18n.language,
++				})
++			: null
++
++	return (
++		<Protected>
++			<View className="flex-1 px-5 pt-4 pb-6">
++				{/* Header */}
++				<View className="flex-row items-center justify-between mb-4">
++					<View className="w-6" />
++					<Text
++						className="text-foreground font-sans-bold text-center flex-1"
++						style={{ fontSize: fs.headerTitle }}
++					>
++						{t('notificationDetail.title')}
++					</Text>
++					<Pressable
++						onPress={() => router.back()}
++						accessibilityRole="button"
++						accessibilityLabel={t('common.close')}
++						hitSlop={12}
++					>
++						<IconClose size={20} color={fg.fg1} />
++					</Pressable>
++				</View>
++
++				{/* Body */}
++				{!data ? (
++					// Still loading — show skeleton placeholder
++					<View className="flex-col gap-3">
++						{[1, 2, 3].map(k => (
++							<View key={k} className="h-6 rounded-lg bg-card/50" />
++						))}
++					</View>
++				) : !notification ? (
++					<View className="flex-1 items-center justify-center">
++						<Text className="text-foreground-subtle font-sans text-sm text-center">
++							{t('notificationDetail.notFound')}
++						</Text>
++					</View>
++				) : (
++					<ScrollView
++						showsVerticalScrollIndicator={false}
++						contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
++					>
++						{/* Title */}
++						<Text className="text-foreground font-sans-bold text-base">
++							{notification.title}
++						</Text>
++
++						{/* Full message */}
++						<Text className="text-muted-foreground font-sans text-sm leading-relaxed">
++							{notification.message}
++						</Text>
++
++						{/* Metadata rows */}
++						<View className="bg-card rounded-xl overflow-hidden">
++							<MetaRow
++								label={t('notificationDetail.category')}
++								value={t(`enums.notificationCategory.${notification.category}`)}
++							/>
++							<View className="h-px bg-border mx-4" />
++							<MetaRow
++								label={t('notificationDetail.createdAt')}
++								value={dateLabel ?? ''}
++							/>
++							<View className="h-px bg-border mx-4" />
++							<MetaRow
++								label={t('notificationDetail.read')}
++								value={notification.read ? '✓' : '—'}
++							/>
++						</View>
++
++						{/* Mark as read */}
++						{!notification.read && (
++							<Pressable
++								onPress={() => void handleMarkRead()}
++								accessibilityRole="button"
++								disabled={markRead.isPending}
++								className="flex-row items-center justify-center gap-2 rounded-xl py-3 bg-success/10 border border-success/30"
++							>
++								<IconCheck size={16} color="#4ade80" />
++								<Text className="text-success font-sans-semi text-sm">
++									{t('notificationDetail.markAsRead')}
++								</Text>
++							</Pressable>
++						)}
++					</ScrollView>
++				)}
++			</View>
++		</Protected>
++	)
++}
++
++function MetaRow({ label, value }: { label: string; value: string }) {
++	return (
++		<View className="flex-row items-center justify-between px-4 py-3">
++			<Text className="text-foreground-subtle font-sans text-sm">{label}</Text>
++			<Text className="text-foreground font-sans-semi text-sm">{value}</Text>
++		</View>
++	)
++}
+diff --git a/packages/app/expo/app/(tabs)/_layout.tsx b/packages/app/expo/app/(tabs)/_layout.tsx
+index cf7e47302..47a8c2ea2 100644
+--- a/packages/app/expo/app/(tabs)/_layout.tsx
++++ b/packages/app/expo/app/(tabs)/_layout.tsx
+@@ -28,6 +28,10 @@ export default function TabLayout() {
+ 						<NativeTabs.Trigger.Label>{t('tabs.home')}</NativeTabs.Trigger.Label>
+ 						<NativeTabs.Trigger.Icon sf="house.fill" />
+ 					</NativeTabs.Trigger>
++					<NativeTabs.Trigger name="notifications">
++						<NativeTabs.Trigger.Label>{t('tabs.notifications')}</NativeTabs.Trigger.Label>
++						<NativeTabs.Trigger.Icon sf="bell.fill" />
++					</NativeTabs.Trigger>
+ 					<NativeTabs.Trigger name="profile">
+ 						<NativeTabs.Trigger.Label>{t('tabs.profile')}</NativeTabs.Trigger.Label>
+ 						<NativeTabs.Trigger.Icon sf="person.fill" />
+diff --git a/packages/app/expo/app/(tabs)/notifications/-components/NotificationListSection/index.tsx b/packages/app/expo/app/(tabs)/notifications/-components/NotificationListSection/index.tsx
+new file mode 100644
+index 000000000..60472c73a
+--- /dev/null
++++ b/packages/app/expo/app/(tabs)/notifications/-components/NotificationListSection/index.tsx
+@@ -0,0 +1,147 @@
++import { useMemo } from 'react'
++import { Pressable, ScrollView, View } from 'react-native'
++import { useTranslation } from 'react-i18next'
++import { z } from 'zod'
++import {
++	NotificationCategoryEnum,
++	useListNotifications,
++	type ListNotifications200,
++	type NotificationCategory,
++} from '@template/client-typescript/typescript'
++import { Text } from '@/components/ui/Text'
++import { EmptyState } from '@/components/ui/EmptyState'
++import { ScreenError } from '@/components/ui/ScreenError'
++import { ToggleRow } from '@/components/ui/ToggleRow'
++import { cn } from '@/lib/utils'
++import { useTypedSearchParams } from '@/lib/typed-route'
++import { NotificationRow } from '../NotificationRow'
++
++export type NotificationItem = ListNotifications200['items'][number]
++
++// URL-validated filter schema. Every field has a safe fallback so garbage
++// deep-link params render defaults, never crash.
++export const notificationsSearchSchema = z.object({
++	category: z
++		.enum(Object.values(NotificationCategoryEnum) as [NotificationCategory, ...NotificationCategory[]])
++		.optional(),
++	// URL params arrive as strings; coerce "true"/"false" explicitly.
++	unreadOnly: z
++		.string()
++		.optional()
++		.transform(v => v === 'true'),
++})
++
++export type NotificationsSearchParams = z.infer<typeof notificationsSearchSchema>
++
++function SkeletonRows() {
++	return (
++		<View className="flex-col gap-3 px-5">
++			{[1, 2, 3, 4, 5].map(key => (
++				<View key={key} className="h-20 rounded-xl bg-card/50" />
++			))}
++		</View>
++	)
++}
++
++export function NotificationListSection() {
++	const { t } = useTranslation()
++	const [{ category, unreadOnly }, setParams] = useTypedSearchParams(notificationsSearchSchema)
++
++	const { data, error, refetch } = useListNotifications(
++		unreadOnly ? { unreadOnly: true } : undefined,
++	)
++
++	const filtered = useMemo<NotificationItem[] | undefined>(() => {
++		if (!data) return undefined
++		if (!category) return data.items
++		return data.items.filter(n => n.category === category)
++	}, [data, category])
++
++	const categories = Object.values(NotificationCategoryEnum) as NotificationCategory[]
++
++	if (error) return <ScreenError onRetry={() => void refetch()} />
++
++	return (
++		<ScrollView
++			contentContainerStyle={{ paddingBottom: 110, paddingTop: 8 }}
++			contentInsetAdjustmentBehavior="automatic"
++			showsVerticalScrollIndicator={false}
++			className="flex-1"
++		>
++			{/* Category filter chips */}
++			<ScrollView
++				horizontal
++				showsHorizontalScrollIndicator={false}
++				contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}
++				className="flex-grow-0"
++			>
++				<Pressable
++					onPress={() => setParams({ category: undefined })}
++					accessibilityRole="button"
++					accessibilityLabel={t('notifications.filterAll')}
++					className={cn(
++						'rounded-full px-4 py-1.5 border',
++						!category ? 'bg-foreground border-foreground' : 'bg-transparent border-border-strong',
++					)}
++				>
++					<Text
++						className={cn(
++							'font-sans-semi text-xs',
++							!category ? 'text-background' : 'text-muted-foreground',
++						)}
++					>
++						{t('notifications.filterAll')}
++					</Text>
++				</Pressable>
++				{categories.map(cat => (
++					<Pressable
++						key={cat}
++						onPress={() => setParams({ category: category === cat ? undefined : cat })}
++						accessibilityRole="button"
++						accessibilityLabel={t(`enums.notificationCategory.${cat}`)}
++						className={cn(
++							'rounded-full px-4 py-1.5 border',
++							category === cat
++								? 'bg-foreground border-foreground'
++								: 'bg-transparent border-border-strong',
++						)}
++					>
++						<Text
++							className={cn(
++								'font-sans-semi text-xs',
++								category === cat ? 'text-background' : 'text-muted-foreground',
++							)}
++						>
++							{t(`enums.notificationCategory.${cat}`)}
++						</Text>
++					</Pressable>
++				))}
++			</ScrollView>
++
++			{/* Unread-only toggle */}
++			<View className="mx-5 mb-4">
++				<ToggleRow
++					label={t('notifications.unreadOnly')}
++					value={unreadOnly}
++					onChange={v => setParams({ unreadOnly: v })}
++				/>
++			</View>
++
++			{/* List */}
++			{filtered === undefined ? (
++				<SkeletonRows />
++			) : filtered.length === 0 ? (
++				<EmptyState
++					title={t('notifications.empty.title')}
++					body={t('notifications.empty.body')}
++				/>
++			) : (
++				<View className="flex-col gap-2 px-5">
++					{filtered.map(notification => (
++						<NotificationRow key={notification.id} notification={notification} />
++					))}
++				</View>
++			)}
++		</ScrollView>
++	)
++}
+diff --git a/packages/app/expo/app/(tabs)/notifications/-components/NotificationRow/index.tsx b/packages/app/expo/app/(tabs)/notifications/-components/NotificationRow/index.tsx
+new file mode 100644
+index 000000000..e0e844f11
+--- /dev/null
++++ b/packages/app/expo/app/(tabs)/notifications/-components/NotificationRow/index.tsx
+@@ -0,0 +1,171 @@
++import { Pressable, View } from 'react-native'
++import { useRouter } from 'expo-router'
++import { useTranslation } from 'react-i18next'
++import { useQueryClient } from '@tanstack/react-query'
++import { Haptics } from 'react-native-nitro-haptics'
++import {
++	NotificationCategoryEnum,
++	listNotificationsQueryKey,
++	useMarkNotificationRead,
++	type NotificationCategory,
++} from '@template/client-typescript/typescript'
++import { Text } from '@/components/ui/Text'
++import { IconCheck, IconTrophy, IconClose, IconBolt, IconCalendar, IconUser, IconChart, IconTrend, type IconProps } from '@/components/ui/Icons'
++import { cn } from '@/lib/utils'
++import { formatRelativeHistoryDate } from '@/lib/format-date'
++import type { NotificationItem } from '../NotificationListSection'
++
++interface CategoryStyle {
++	Icon: React.FC<IconProps>
++	color: string
++	bgColor: string
++}
++
++// Module-level, exhaustive, no ?? fallback — one entry per enum value.
++const categoryStyles: Record<NotificationCategory, CategoryStyle> = {
++	[NotificationCategoryEnum.ORDER_RECEIVED]: {
++		Icon: IconTrophy,
++		color: '#4ade80',
++		bgColor: 'rgba(74,222,128,0.12)',
++	},
++	[NotificationCategoryEnum.SYNC_ERROR]: {
++		Icon: IconClose,
++		color: '#ff453a',
++		bgColor: 'rgba(255,69,58,0.12)',
++	},
++	[NotificationCategoryEnum.FEATURE_ANNOUNCEMENT]: {
++		Icon: IconBolt,
++		color: '#3b82f6',
++		bgColor: 'rgba(59,130,246,0.12)',
++	},
++	[NotificationCategoryEnum.DAILY_DIGEST]: {
++		Icon: IconCalendar,
++		color: '#f59e0b',
++		bgColor: 'rgba(245,158,11,0.12)',
++	},
++	[NotificationCategoryEnum.INTEGRATION_DISCONNECTED]: {
++		Icon: IconTrend,
++		color: '#dc2626',
++		bgColor: 'rgba(220,38,38,0.12)',
++	},
++	[NotificationCategoryEnum.INVITATION]: {
++		Icon: IconUser,
++		color: '#a855f7',
++		bgColor: 'rgba(168,85,247,0.12)',
++	},
++	[NotificationCategoryEnum.OTHER]: {
++		Icon: IconChart,
++		color: '#6f6f76',
++		bgColor: 'rgba(111,111,118,0.12)',
++	},
++} as const
++
++interface NotificationRowProps {
++	notification: NotificationItem
++}
++
++export function NotificationRow({ notification }: NotificationRowProps) {
++	const { t, i18n } = useTranslation()
++	const router = useRouter()
++	const queryClient = useQueryClient()
++	const markRead = useMarkNotificationRead()
++
++	const { Icon, color, bgColor } = categoryStyles[notification.category]
++
++	const handleMarkRead = async () => {
++		if (notification.read) return
++		await markRead.mutateAsync(
++			{ data: { notificationDeliveryIds: [notification.id] } },
++			{
++				onSuccess: () => Haptics.notification('success'),
++				onSettled: () =>
++					queryClient.invalidateQueries({ queryKey: listNotificationsQueryKey() }),
++			},
++		)
++	}
++
++	const handleRowPress = () => {
++		router.push({
++			pathname: '/(sheets)/notification-detail',
++			params: { id: notification.id },
++		})
++	}
++
++	const dateLabel = formatRelativeHistoryDate({
++		isoDate: notification.createdAt,
++		t,
++		language: i18n.language,
++	})
++
++	return (
++		<Pressable
++			onPress={handleRowPress}
++			accessibilityRole="button"
++			accessibilityLabel={notification.title}
++			className={cn(
++				'flex-row items-start gap-3 rounded-xl p-4',
++				notification.read ? 'bg-card' : 'bg-card border border-border-strong',
++			)}
++		>
++			{/* Unread indicator dot */}
++			{!notification.read && (
++				<View className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary" />
++			)}
++
++			{/* Category icon */}
++			<View
++				className="w-9 h-9 rounded-lg items-center justify-center flex-shrink-0"
++				style={{ backgroundColor: bgColor }}
++			>
++				<Icon size={18} color={color} />
++			</View>
++
++			{/* Content */}
++			<View className="flex-1 gap-0.5">
++				<View className="flex-row items-center justify-between">
++					<Text
++						className={cn(
++							'font-sans-semi text-sm flex-1 mr-2',
++							notification.read ? 'text-muted-foreground' : 'text-foreground',
++						)}
++						numberOfLines={1}
++					>
++						{notification.title}
++					</Text>
++					<Text className="text-foreground-subtle font-sans text-xs flex-shrink-0">
++						{dateLabel}
++					</Text>
++				</View>
++
++				<Text
++					className="text-muted-foreground font-sans text-xs"
++					numberOfLines={2}
++				>
++					{notification.message}
++				</Text>
++
++				{/* Category label */}
++				<Text className="text-foreground-subtle font-sans-semi text-xs mt-1">
++					{t(`enums.notificationCategory.${notification.category}`)}
++				</Text>
++			</View>
++
++			{/* Mark-as-read button */}
++			{!notification.read && (
++				<Pressable
++					onPress={e => {
++						e.stopPropagation?.()
++						void handleMarkRead()
++					}}
++					accessibilityRole="button"
++					accessibilityLabel={t('notifications.markAsRead')}
++					hitSlop={8}
++					disabled={markRead.isPending}
++					className="flex-shrink-0 mt-0.5"
++				>
++					<IconCheck size={18} color={markRead.isPending ? '#44444a' : '#4ade80'} />
++				</Pressable>
++			)}
++		</Pressable>
++	)
++}
+diff --git a/packages/app/expo/app/(tabs)/notifications/_layout.tsx b/packages/app/expo/app/(tabs)/notifications/_layout.tsx
+new file mode 100644
+index 000000000..acc0fe8a9
+--- /dev/null
++++ b/packages/app/expo/app/(tabs)/notifications/_layout.tsx
+@@ -0,0 +1,32 @@
++import { Stack } from 'expo-router'
++import { useTranslation } from 'react-i18next'
++import { LogoMark } from '@/components/ui/LogoMark'
++import { fg, surfaces } from '@/lib/tokens'
++import { headerLargeTitleStyle, headerTitleStyle } from '@/lib/screen-styles'
++
++export default function NotificationsTabLayout() {
++	const { t } = useTranslation()
++	return (
++		<Stack
++			screenOptions={{
++				headerTransparent: true,
++				headerStyle: { backgroundColor: 'transparent' },
++				headerLargeStyle: { backgroundColor: 'transparent' },
++				headerTintColor: fg.fg0,
++				headerTitleStyle,
++				headerLargeTitleStyle,
++				contentStyle: { backgroundColor: surfaces.bg0 },
++			}}
++		>
++			<Stack.Screen
++				name="index"
++				options={{
++					headerShown: true,
++					headerLargeTitle: true,
++					headerTitle: t('notifications.navTitleLarge'),
++					headerLeft: () => <LogoMark />,
++				}}
++			/>
++		</Stack>
++	)
++}
+diff --git a/packages/app/expo/app/(tabs)/notifications/index.tsx b/packages/app/expo/app/(tabs)/notifications/index.tsx
+new file mode 100644
+index 000000000..e4801a48e
+--- /dev/null
++++ b/packages/app/expo/app/(tabs)/notifications/index.tsx
+@@ -0,0 +1,10 @@
++import { View } from 'react-native'
++import { NotificationListSection } from './-components/NotificationListSection'
++
++export default function NotificationsTab() {
++	return (
++		<View className="flex-1 bg-background">
++			<NotificationListSection />
++		</View>
++	)
++}
+diff --git a/packages/app/expo/app/_layout.tsx b/packages/app/expo/app/_layout.tsx
+index 1d3408aca..ef57ef3de 100644
+--- a/packages/app/expo/app/_layout.tsx
++++ b/packages/app/expo/app/_layout.tsx
+@@ -94,6 +94,18 @@ export default function RootLayout() {
+ 						contentStyle: { backgroundColor: surfaces.surface1 },
+ 					}}
+ 				/>
++				<Stack.Screen
++					name="(sheets)/notification-detail"
++					options={{
++						presentation: 'pageSheet',
++						headerShown: false,
++						sheetGrabberVisible: true,
++						sheetAllowedDetents: [0.75, 0.95],
++						sheetCornerRadius: 24,
++						sheetExpandsWhenScrolledToEdge: true,
++						contentStyle: { backgroundColor: surfaces.surface1 },
++					}}
++				/>
+ 			</Stack>
+ 		</QueryClientProvider>
+ 	)
+diff --git a/packages/app/expo/locales/en.json b/packages/app/expo/locales/en.json
+index 3f789551f..f03e92181 100644
+--- a/packages/app/expo/locales/en.json
++++ b/packages/app/expo/locales/en.json
+@@ -25,6 +25,7 @@
+ 	"tabs": {
+ 		"home": "Home",
+ 		"games": "Games",
++		"notifications": "Notifications",
+ 		"profile": "Profile"
+ 	},
+ 	"biometricGate": {
+@@ -117,6 +118,39 @@
+ 		"rowDevices": "Devices",
+ 		"rowSignOut": "Sign out"
+ 	},
++	"notifications": {
++		"navTitle": "Notifications",
++		"navTitleLarge": "Notifications",
++		"eyebrow": "✦ NOTIFICATIONS",
++		"title": "Notifications",
++		"unreadOnly": "Unread only",
++		"filterAll": "All",
++		"markAsRead": "Mark as read",
++		"empty": {
++			"title": "All caught up",
++			"body": "No notifications to show."
++		}
++	},
++	"notificationDetail": {
++		"title": "Notification",
++		"category": "Category",
++		"origin": "Origin",
++		"createdAt": "Date",
++		"markAsRead": "Mark as read",
++		"read": "Read",
++		"notFound": "Notification not found."
++	},
++	"enums": {
++		"notificationCategory": {
++			"ORDER_RECEIVED": "Order received",
++			"SYNC_ERROR": "Sync error",
++			"FEATURE_ANNOUNCEMENT": "Feature announcement",
++			"DAILY_DIGEST": "Daily digest",
++			"INTEGRATION_DISCONNECTED": "Integration disconnected",
++			"INVITATION": "Invitation",
++			"OTHER": "Other"
++		}
++	},
+ 	"sheet": {
+ 		"closeAriaLabel": "Close"
+ 	}
+diff --git a/packages/app/expo/locales/pt.json b/packages/app/expo/locales/pt.json
+index 06b674663..300350c67 100644
+--- a/packages/app/expo/locales/pt.json
++++ b/packages/app/expo/locales/pt.json
+@@ -25,6 +25,7 @@
+ 	"tabs": {
+ 		"home": "Início",
+ 		"games": "Jogos",
++		"notifications": "Notificações",
+ 		"profile": "Perfil"
+ 	},
+ 	"biometricGate": {
+@@ -117,6 +118,39 @@
+ 		"rowDevices": "Dispositivos",
+ 		"rowSignOut": "Sair"
+ 	},
++	"notifications": {
++		"navTitle": "Notificações",
++		"navTitleLarge": "Notificações",
++		"eyebrow": "✦ NOTIFICAÇÕES",
++		"title": "Notificações",
++		"unreadOnly": "Apenas não lidas",
++		"filterAll": "Todas",
++		"markAsRead": "Marcar como lida",
++		"empty": {
++			"title": "Tudo em dia",
++			"body": "Nenhuma notificação para exibir."
++		}
++	},
++	"notificationDetail": {
++		"title": "Notificação",
++		"category": "Categoria",
++		"origin": "Origem",
++		"createdAt": "Data",
++		"markAsRead": "Marcar como lida",
++		"read": "Lida",
++		"notFound": "Notificação não encontrada."
++	},
++	"enums": {
++		"notificationCategory": {
++			"ORDER_RECEIVED": "Pedido recebido",
++			"SYNC_ERROR": "Erro de sincronização",
++			"FEATURE_ANNOUNCEMENT": "Novidade",
++			"DAILY_DIGEST": "Resumo diário",
++			"INTEGRATION_DISCONNECTED": "Integração desconectada",
++			"INVITATION": "Convite",
++			"OTHER": "Outros"
++		}
++	},
+ 	"sheet": {
+ 		"closeAriaLabel": "Fechar"
+ 	}

@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>template — Application Flow</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-soft: #131a24;
+    --panel: #161d28;
+    --panel-2: #1c2531;
+    --border: #2a3441;
+    --text: #d6dee8;
+    --text-dim: #8b97a6;
+    --text-faint: #5d6b7a;
+    --accent: #5aa6ff;
+    --accent-2: #7c5cff;
+    --green: #3fb950;
+    --amber: #d2a23a;
+    --pink: #f778ba;
+    --cyan: #39c5cf;
+    --red: #f0626a;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; max-width: 1500px; margin: 0 auto; }
+
+  /* Sidebar */
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 28px 18px 60px; border-right: 1px solid var(--border); background: var(--bg-soft);
+  }
+  nav.toc .brand { font-weight: 800; font-size: 18px; letter-spacing: .5px; margin-bottom: 2px; }
+  nav.toc .brand b { color: var(--accent); }
+  nav.toc .sub { color: var(--text-dim); font-size: 12px; margin-bottom: 22px; }
+  nav.toc a { display: block; color: var(--text-dim); font-size: 13.5px; padding: 5px 10px; border-radius: 6px; border-left: 2px solid transparent; }
+  nav.toc a:hover { color: var(--text); background: var(--panel); text-decoration: none; }
+  nav.toc a.active { color: var(--accent); background: var(--panel); border-left-color: var(--accent); }
+  nav.toc .group { color: var(--text-faint); text-transform: uppercase; font-size: 10.5px; letter-spacing: 1px; margin: 18px 10px 6px; }
+
+  /* Main */
+  main { padding: 40px 52px 120px; min-width: 0; }
+  header.hero { border-bottom: 1px solid var(--border); padding-bottom: 26px; margin-bottom: 12px; }
+  header.hero h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: -.5px; }
+  header.hero h1 b { color: var(--accent); }
+  header.hero p.lead { color: var(--text-dim); font-size: 16px; margin: 8px 0 0; max-width: 880px; }
+  .pills { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { font-size: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; color: var(--text-dim); }
+  .pill b { color: var(--text); font-weight: 600; }
+
+  section { padding-top: 46px; }
+  section > h2 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.3px; display: flex; align-items: center; gap: 10px; }
+  section > h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 7px; padding: 2px 9px; }
+  section > .tagline { color: var(--text-dim); margin: 0 0 20px; font-size: 15px; }
+  h3 { font-size: 17px; margin: 30px 0 10px; color: var(--text); }
+  h4 { font-size: 14px; margin: 20px 0 8px; color: var(--cyan); text-transform: uppercase; letter-spacing: .6px; }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+
+  code, .path { font-family: var(--mono); font-size: 12.5px; }
+  code:not(.block) { background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: #e6c07b; }
+  .path { background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--cyan); font-size: 12px; }
+
+  pre { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: #c9d4e0; }
+  pre .k { color: var(--pink); } pre .s { color: #98c379; } pre .c { color: var(--text-faint); } pre .f { color: var(--cyan); } pre .n { color: #e6c07b; }
+
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 18px 0; border: 1px solid var(--border); background: var(--panel); position: relative; }
+  .callout .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
+  .callout.rule { border-left: 3px solid var(--accent-2); } .callout.rule .lbl { color: var(--accent-2); }
+  .callout.note { border-left: 3px solid var(--accent); } .callout.note .lbl { color: var(--accent); }
+  .callout.warn { border-left: 3px solid var(--amber); } .callout.warn .lbl { color: var(--amber); }
+
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--panel-2); color: var(--text); font-weight: 600; }
+  td { background: var(--panel); color: var(--text-dim); }
+  td b, td strong { color: var(--text); }
+
+  /* Flow diagrams */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; margin: 22px 0; }
+  .node { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 130px; max-width: 215px; flex: 0 1 auto; }
+  .node .t { font-weight: 700; font-size: 13px; color: var(--text); }
+  .node .d { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; }
+  .node .tag { font-size: 10px; font-family: var(--mono); color: var(--accent); display: block; margin-top: 5px; }
+  .node.go { border-top: 2px solid var(--cyan); } .node.ts { border-top: 2px solid var(--accent); }
+  .node.fe { border-top: 2px solid var(--pink); } .node.ext { border-top: 2px solid var(--amber); }
+  .node.db { border-top: 2px solid var(--green); }
+  .arrow { display: flex; align-items: center; color: var(--text-faint); font-size: 20px; padding: 0 8px; flex: 0 0 auto; }
+  .arrow.down { width: 100%; justify-content: center; padding: 4px 0; }
+
+  /* Sequence (numbered vertical) */
+  ol.seq { list-style: none; padding: 0; margin: 18px 0; counter-reset: step; }
+  ol.seq > li { position: relative; padding: 12px 0 12px 52px; border-left: 2px solid var(--border); margin-left: 16px; counter-increment: step; }
+  ol.seq > li::before { content: counter(step); position: absolute; left: -16px; top: 10px; width: 30px; height: 30px; background: var(--panel-2); border: 1px solid var(--border); color: var(--accent); border-radius: 50%; display: grid; place-items: center; font-family: var(--mono); font-size: 13px; font-weight: 700; }
+  ol.seq > li b { color: var(--text); }
+  ol.seq > li .meta { font-size: 12px; color: var(--text-faint); font-family: var(--mono); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .card h4 { margin-top: 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 14px 0 4px; font-size: 12.5px; color: var(--text-dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  .tablabels { font-size: 11px; font-family: var(--mono); padding: 2px 7px; border-radius: 5px; font-weight: 700; }
+  .lbl-ts { background: rgba(90,166,255,.14); color: var(--accent); }
+  .lbl-go { background: rgba(57,197,207,.14); color: var(--cyan); }
+  .lbl-fe { background: rgba(247,120,186,.14); color: var(--pink); }
+  .lbl-db { background: rgba(63,185,80,.14); color: var(--green); }
+  .lbl-ct { background: rgba(124,92,255,.16); color: var(--accent-2); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  footer { color: var(--text-faint); font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 20px; margin-top: 50px; }
+
+  @media (max-width: 950px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 30px 22px 80px; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand"><b>bk</b>-dash</div>
+  <div class="sub">Application Flow — end to end</div>
+  <div class="group">Foundations</div>
+  <a href="#overview">Overview &amp; topology</a>
+  <a href="#principles">Architecture principles</a>
+  <a href="#citizens">The building blocks</a>
+  <div class="group">Request lifecycle</div>
+  <a href="#auth">1 · Auth &amp; login</a>
+  <a href="#tenancy">2 · Tenancy &amp; store context</a>
+  <a href="#integration">3 · Connecting a platform</a>
+  <div class="group">Background machinery</div>
+  <a href="#sync">4 · Background sync (Go)</a>
+  <a href="#events">5 · Event architecture</a>
+  <a href="#canonical">6 · Aggregates vs read-models</a>
+  <a href="#pixel">7 · Pixel tracking</a>
+  <a href="#marketing">8 · Marketing pipelines</a>
+  <div class="group">Reads &amp; UI</div>
+  <a href="#queries">9 · Queries (BFF) &amp; SDK</a>
+  <a href="#frontend">10 · Frontend composition</a>
+  <div class="group">Reference</div>
+  <a href="#entities">Entities by context</a>
+  <a href="#testing">Testing &amp; quality</a>
+  <a href="#glossary">Glossary</a>
+</nav>
+
+<main>
+<header class="hero">
+  <h1><b>template</b> — How the whole thing flows</h1>
+  <p class="lead">A polyglot e-commerce analytics platform built across <b>TypeScript&nbsp;(Bun)</b> and <b>Go</b>,
+  fronted by React, Astro and Expo, backed by one Postgres. This document traces a request from the
+  login screen, through connecting an external store, into the Go workers that ingest provider data in
+  the background, and back out to the dashboards — naming the real files and mechanisms at each step.</p>
+  <div class="pills">
+    <span class="pill"><b>DDD</b> + Clean Architecture</span>
+    <span class="pill"><b>CQRS</b> command/query split</span>
+    <span class="pill"><b>Event-driven</b> via transactional outbox</span>
+    <span class="pill">Contracts-first (<b>TypeSpec</b> → SDKs)</span>
+    <span class="pill">Single Postgres, <b>Drizzle</b> migrations</span>
+  </div>
+</header>
+
+<!-- ============================== OVERVIEW ============================== -->
+<section id="overview">
+  <h2><span class="num">00</span> Overview &amp; topology</h2>
+  <p class="tagline">Five workspaces, two backends, three frontends, one database — glued by a generated SDK and a shared event log.</p>
+
+  <p>The platform's job is to connect a merchant's external systems (Shopify, Nuvemshop, Meta/Google/TikTok
+  ads, payment checkouts) and turn the data into dashboards: sales, catalog cost, marketing spend, and a
+  visitor <em>funnel</em>. The two backends divide labour by <strong>workload shape</strong>, not by feature:</p>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--accent)"></i> TypeScript / Bun — synchronous edge</span>
+    <span><i class="dot" style="background:var(--cyan)"></i> Go — async workers</span>
+    <span><i class="dot" style="background:var(--pink)"></i> Frontends</span>
+    <span><i class="dot" style="background:var(--green)"></i> Postgres</span>
+    <span><i class="dot" style="background:var(--amber)"></i> External providers</span>
+  </div>
+
+  <div class="flow">
+    <div class="node fe"><div class="t">React app</div><div class="d">Dashboards, mutations, auth UI. Served under <code>/app</code>.</div><span class="tag">TanStack Start</span></div>
+    <div class="arrow">→</div>
+    <div class="node ts"><div class="t">api-ts <span class="tablabels lbl-ts">:3030</span></div><div class="d">Auth, reads/BFF, projections, writes that need an instant answer.</div><span class="tag">Bun · tsyringe · Drizzle</span></div>
+    <div class="arrow">→</div>
+    <div class="node db"><div class="t">Postgres</div><div class="d">One DB, schema-per-context. Also holds the <code>shared.outbox</code> event log.</div><span class="tag">Drizzle migrations</span></div>
+    <div class="arrow">←</div>
+    <div class="node go"><div class="t">api-go <span class="tablabels lbl-go">:3032</span></div><div class="d">Webhook ingest, provider sync pipelines, high-volume upserts.</div><span class="tag">Go · fx · sqlc/pgx</span></div>
+    <div class="arrow">←</div>
+    <div class="node ext"><div class="t">Providers</div><div class="d">Shopify, Meta, Google Ads, TikTok, checkouts. OAuth + webhooks.</div><span class="tag">REST + HMAC</span></div>
+  </div>
+
+  <table>
+    <tr><th>Workspace</th><th>Stack</th><th>Role</th></tr>
+    <tr><td><span class="path">packages/contracts</span></td><td>TypeSpec + Drizzle</td><td><b>Source of truth.</b> Cross-boundary enums, integration (wire) events, DB schema. Generates per-language bindings.</td></tr>
+    <tr><td><span class="path">packages/api/typescript</span></td><td>Bun · Drizzle · tsyringe</td><td>Auth, reads, projections, BFF queries, instant writes.</td></tr>
+    <tr><td><span class="path">packages/api/go</span></td><td>Go · fx · net/http · pgx</td><td>Workers, webhook ingest, indexers, schedulers, canonical upserts.</td></tr>
+    <tr><td><span class="path">packages/app/react</span></td><td>React · Vite · TanStack</td><td>The app (<code>/app/…</code>): auth, dashboards, mutations.</td></tr>
+    <tr><td><span class="path">packages/app/astro</span></td><td>Astro 5 · MDX · Tailwind</td><td>Landing + blog + SEO (served at <code>/</code>).</td></tr>
+    <tr><td><span class="path">packages/app/expo</span></td><td>React Native · Expo</td><td>Native mobile (iOS + Android).</td></tr>
+    <tr><td><span class="path">packages/client</span></td><td>Kubb / oapi-codegen</td><td>The generated SDK each frontend &amp; service consumes.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== PRINCIPLES ============================== -->
+<section id="principles">
+  <h2><span class="num">01</span> Architecture principles</h2>
+  <p class="tagline">Every rule exists to keep bounded contexts independent so the system evolves without rewrites.</p>
+
+  <div class="grid2">
+    <div class="card"><h4>DDD — bounded contexts</h4><p>Each business slice (<code>sales</code>, <code>catalog</code>, <code>marketing</code>, <code>tenancy</code>…) is a folder that owns its entities, use cases, controllers and DI wiring. Contexts never import each other's internals — they talk through <b>events</b> or each other's <b>Repository</b>.</p></div>
+    <div class="card"><h4>Clean Architecture — dependency direction</h4><p>HTTP controllers are thin (validate → call a use case → return). Use cases orchestrate domain entities + repositories inside a transaction. Entities hold the invariants. Nothing in the domain knows about HTTP or Drizzle.</p></div>
+    <div class="card"><h4>CQRS — writes ≠ reads</h4><p><b>Commands</b> (use cases) load aggregates, enforce rules, and persist + emit events transactionally. <b>Queries</b> (the BFF) skip the domain and read straight from Drizzle into the exact DTO a screen needs.</p></div>
+    <div class="card"><h4>Event-driven — the outbox</h4><p>An aggregate change and its event are saved in <b>one transaction</b> to a <code>shared.outbox</code> table. A dispatcher later re-emits each event to in-process handlers, projectors, and (cross-service) the other runtime.</p></div>
+  </div>
+
+  <div class="callout note">
+    <div class="lbl">Why two languages share one database</div>
+    The outbox/event log lives in Postgres, which <em>both</em> runtimes connect to. That shared, durable log — not a message broker — is the backbone that lets a Go worker's ingest trigger a TypeScript projection, and vice-versa, without either service calling the other's HTTP API directly.
+  </div>
+</section>
+
+<!-- ============================== CITIZENS ============================== -->
+<section id="citizens">
+  <h2><span class="num">02</span> The building blocks</h2>
+  <p class="tagline">The same cast of "first-class citizens" appears in every context. Knowing them makes every flow below readable.</p>
+
+  <table>
+    <tr><th>Citizen</th><th>Responsibility</th><th>Example</th></tr>
+    <tr><td><b>Bounded Context</b></td><td>A business slice with its own folder &amp; DI registry.</td><td><code>sales</code>, <code>marketing</code></td></tr>
+    <tr><td><b>Entity / Aggregate</b></td><td>The thing with identity + invariants. Decides if a change is valid; raises domain events.</td><td><code>Store</code>, <code>StoreIntegration</code>, <code>Order</code> (Go)</td></tr>
+    <tr><td><b>Value Object</b></td><td>A concept defined by its value, self-validating, no identity.</td><td><code>Money</code>, <code>Email</code>, <code>SerializedRequest</code></td></tr>
+    <tr><td><b>Schema (Zod)</b></td><td>Runtime shape shared by entities, use cases, controllers, and frontend forms.</td><td><code>StoreIntegrationMarketingAccessSchema</code></td></tr>
+    <tr><td><b>Use Case</b></td><td>One business operation. Orchestrates a transaction (UnitOfWork).</td><td><code>ConnectIntegration</code></td></tr>
+    <tr><td><b>Query Use Case</b></td><td>A read shaped for one screen (BFF). Talks straight to Drizzle.</td><td><code>GetPixelFunnel</code></td></tr>
+    <tr><td><b>Controller</b></td><td>The thin HTTP door. Validates, calls a use case, returns. Never touches a repo.</td><td><code>AuthorizeIntegrationController</code></td></tr>
+    <tr><td><b>Repository</b></td><td>Bridge between entity and DB. <code>findById</code>/<code>save</code>/<code>delete</code> + finders.</td><td><code>StoreIntegrationRepository</code></td></tr>
+    <tr><td><b>Domain Event</b></td><td>A fact inside one context. Handled in-process.</td><td><code>IntegrationActivatedEvent</code></td></tr>
+    <tr><td><b>Integration (wire) Event</b></td><td>A fact that crosses contexts or services (Go ↔ TS). Defined in <code>contracts</code>.</td><td><code>OrderUpdatedEvent</code></td></tr>
+    <tr><td><b>Handler</b></td><td>Reacts to events on the <em>write</em> side: side-effects, or publishing integration events.</td><td><code>IntegrationActivatedHandler</code></td></tr>
+    <tr><td><b>Projector</b></td><td>Reacts to events on the <em>read</em> side: writes a projection table.</td><td>pixel funnel, marketing access</td></tr>
+    <tr><td><b>Outbox / Dispatcher / Mediator</b></td><td>The infra that persists events with the aggregate and fans them out.</td><td><code>OutboxDispatcher</code></td></tr>
+  </table>
+</section>
+
+<hr>
+
+<!-- ============================== AUTH ============================== -->
+<section id="auth">
+  <h2><span class="num">1</span> Auth &amp; login</h2>
+  <p class="tagline">Identity is delegated to <b>better-auth</b>; the domain reacts to it. Sessions carry the active store.</p>
+
+  <p>Login is owned by the <span class="lbl-ts tablabels">auth</span> context. <span class="path">auth/services/Authentication/BetterAuth.ts</span> configures
+  <a href="https://www.better-auth.com" target="_blank" rel="noopener">better-auth</a> with a Drizzle adapter over the
+  <code>users</code>, <code>sessions</code>, <code>accounts</code> and <code>verificationTokens</code> tables. It is mounted under
+  <code>/v1/authentication</code>, uses UUIDv7 ids (so rows can carry domain events), and a <code>customSession</code> plugin adds an
+  <code>activeStoreId</code> field — that is how a single login operates against a chosen store.</p>
+
+  <ol class="seq">
+    <li><b>The form submits.</b> <span class="path">app/react/src/routes/sign-in/-components/SignInForm</span> validates <code>{ email, password }</code> with a Zod schema and calls <code>auth.signIn.email(...)</code> from the better-auth React client (<span class="path">app/react/src/lib/auth.ts</span>, baseURL <code>/v1/authentication</code>). <span class="meta">FE</span></li>
+    <li><b>better-auth verifies &amp; issues a session.</b> Credentials are checked, a <code>sessions</code> row is created (with <code>activeStoreId</code>), and a session cookie is set on the browser. <span class="meta">api-ts · auth</span></li>
+    <li><b>The domain reacts.</b> <code>databaseHooks</code> wired to <code>IdentityAuthHooks</code> fire on user create/update, letting the <span class="lbl-ts tablabels">identity</span> context build its own <code>UserProfile</code> / <code>UserPreferences</code> — keeping auth concerns and profile concerns separate. <span class="meta">api-ts · identity</span></li>
+    <li><b>Every later request is gated.</b> <code>AuthAccountMiddleware</code> (<span class="path">auth/middlewares/AuthAccountMiddleware.ts</span>) calls <code>betterAuth.auth.api.getSession()</code>, validates it, and attaches <code>ctx.user</code> + <code>ctx.session</code> to the request — or throws <code>UNAUTHORIZED</code>. <span class="meta">api-ts · middleware</span></li>
+    <li><b>Store access is enforced.</b> <code>RequireStoreMember</code> checks the user owns a <code>StoreMembership</code> for the target store before a controller runs. <span class="meta">api-ts · middleware</span></li>
+  </ol>
+
+  <div class="callout rule">
+    <div class="lbl">auth vs identity</div>
+    <b>auth</b> is the HTTP/credential surface (sign-in, sign-up, sessions) driven by better-auth. <b>identity</b> is the domain side — <code>UserProfile</code>, <code>UserPreferences</code>, FCM tokens — that <em>reacts</em> to auth lifecycle hooks. Tokens, password resets and sessions are owned by better-auth and are never re-modelled as domain aggregates.
+  </div>
+</section>
+
+<!-- ============================== TENANCY ============================== -->
+<section id="tenancy">
+  <h2><span class="num">2</span> Tenancy &amp; store context</h2>
+  <p class="tagline">A user belongs to one or more stores; nearly everything downstream is scoped by <code>storeId</code>.</p>
+
+  <p>The <span class="lbl-ts tablabels">tenancy</span> context owns <code>Store</code>, <code>StoreMembership</code> and <code>StoreInvitation</code>
+  (<span class="path">tenancy/entities/</span>). A <code>Store</code> carries a reporting currency and an IANA <code>timezone</code> — the timezone matters
+  because analytics day-boundaries and notification timing depend on it (and it is auto-enriched from Shopify on integration, see §3).</p>
+
+  <ul>
+    <li>The session's <code>activeStoreId</code> selects which store the dashboards read. Switching store is a session-level change, not a re-login.</li>
+    <li>Membership roles (owner / invitee) gate writes. Test fixtures mirror this with <code>givenStoreWithOwner</code> → <code>givenUserWithAccount</code> + <code>givenStore</code> + <code>givenStoreMembership</code>.</li>
+    <li>Cross-context reads inside the backend go through the other context's <b>Repository</b> — never the HTTP SDK (that would create a cycle).</li>
+  </ul>
+</section>
+
+<!-- ============================== INTEGRATION ============================== -->
+<section id="integration">
+  <h2><span class="num">3</span> Connecting an external platform</h2>
+  <p class="tagline">OAuth, credentials, or manual — all funnel into one activation chain that wakes the Go worker.</p>
+
+  <p>This is the hinge of the whole product: a merchant authorizes Shopify (or Meta/Google/TikTok/a checkout), the
+  backend seals the secret, marks the integration active, and that fact crosses into Go to start the background sync.
+  The shape of every platform lives in one typed registry, <span class="path">core/src/schemas/platform.ts</span>
+  (<code>PLATFORM_REGISTRY</code> / <code>PlatformDescriptor</code>), keyed by <code>(type, platform)</code> with a
+  <code>ConnectionMode</code> of <code>OAUTH</code>, <code>CREDENTIALS</code>, or <code>MANUAL</code>.</p>
+
+  <h3>3a · The OAuth flow</h3>
+  <ol class="seq">
+    <li><b>Ask for an authorize URL.</b> The app POSTs to <code>AuthorizeIntegrationController</code> (<span class="path">integration/controllers/AuthorizeIntegrationController.ts</span>) with <code>{ type, platform, identifier? }</code>. The <code>AuthorizeIntegration</code> use case resolves a per-platform <code>AuthorizeUrlBuilder</code> via a factory and returns <code>{ authorizeUrl, state }</code> — <code>state</code> is a signed envelope (userId, storeId, platform). <span class="meta">api-ts · integration</span></li>
+    <li><b>Redirect to the provider.</b> The browser sends the merchant to the provider's consent screen. <span class="meta">FE → provider</span></li>
+    <li><b>Provider calls back.</b> <code>IntegrationOAuthCallbackController</code> (GET <code>/integrations/oauth/callback/:platform</code>) is public — the signed <code>state</code> <em>is</em> the credential. It verifies state, then calls <code>ConnectIntegration</code> with the provider's <code>code</code>. <span class="meta">provider → api-ts</span></li>
+    <li><b>Exchange + seal + persist.</b> <code>ConnectIntegration</code> (<span class="path">integration/usecases/ConnectIntegration.ts</span>) runs a per-platform <code>OAuthCodeExchanger</code> to get tokens, verifies them through a <code>HandshakeService</code> (e.g. <code>ShopifyHandshaker</code>), seals them with <code>AesCredentialVault</code> (<span class="path">core/src/services/CredentialVault/AesCredentialVault.ts</span>, AES-256-GCM), and saves a <code>StoreIntegration</code> + <code>IntegrationCredentialSecret</code> row in one transaction. <span class="meta">api-ts · integration</span></li>
+    <li><b>Activation raises an event.</b> Persisting emits the domain event <code>IntegrationActivatedEvent</code>. <span class="meta">domain event</span></li>
+    <li><b>Redirect back to the SPA.</b> The callback returns a 302 with <code>?status=ok</code> (never a JSON 4xx) so the browser lands cleanly. <span class="meta">api-ts → FE</span></li>
+  </ol>
+
+  <p><code>CREDENTIALS</code> platforms skip steps 1–3 (the merchant types an API key, handled by a <code>CredentialsExchanger</code>); <code>MANUAL</code> platforms carry no secret at all. All three converge on the same <code>StoreIntegration</code> + <code>IntegrationActivatedEvent</code>.</p>
+
+  <h3>3b · What activation triggers</h3>
+  <div class="flow">
+    <div class="node ts"><div class="t">IntegrationActivatedEvent</div><div class="d">Raised when the integration row is saved.</div><span class="tag">domain event</span></div>
+    <div class="arrow">→</div>
+    <div class="node ts"><div class="t">IntegrationActivatedHandler</div><div class="d">Mints an ephemeral credential handle (Redis) and publishes the cross-service event.</div><span class="tag">handler</span></div>
+    <div class="arrow">→</div>
+    <div class="node ct"><div class="t">integration.shared.<br>integration.activated</div><div class="d">Wire event — the contract Go listens for.</div><span class="tag">integration event</span></div>
+    <div class="arrow">→</div>
+    <div class="node go"><div class="t">Go sync worker</div><div class="d">Begins polling, accepts webhooks, backfills history for this store.</div><span class="tag">api-go · sync</span></div>
+  </div>
+
+  <p>In parallel, on the TS side a per-platform <b>AdditionalPlatformHandler</b> runs post-activation work. For Shopify,
+  <code>ShopifyAdditionalPlatformHandler</code> (under <span class="path">integration/services/shopify/</span>)
+  registers the storefront webhooks <em>and</em> fetches the store timezone from Shopify's <code>shop.json</code>, writing it
+  straight through tenancy's <code>StoreRepository</code> so analytics day-boundaries are correct from minute one.</p>
+
+  <div class="callout note">
+    <div class="lbl">Credential safety</div>
+    Raw provider tokens are AES-sealed at rest in <code>IntegrationCredentialSecret</code>. To hand them to the Go worker, the handler issues a short-lived <b>credential handle</b> via a Redis-backed <code>CredentialHandleStore</code> rather than putting secrets on the wire event.
+  </div>
+</section>
+
+<hr>
+
+<!-- ============================== SYNC ============================== -->
+<section id="sync">
+  <h2><span class="num">4</span> Background sync (Go)</h2>
+  <p class="tagline">Two ways data arrives — pushed webhooks and pulled pipelines — both land in the same drain-and-upsert machine.</p>
+
+  <p>The Go service exists for one reason: ingest a lot of provider data, fast, and write it idempotently. Everything is wired
+  with <a href="https://github.com/uber-go/fx" target="_blank" rel="noopener">fx</a> modules
+  (<span class="path">internal/sync/module.go</span>, <span class="path">internal/webhooks/module.go</span>) and persisted with
+  <code>pgx</code>. Each entity type owns a <b>storage drain</b> goroutine that boots at startup.</p>
+
+  <h3>4a · Webhook ingest (push)</h3>
+  <ol class="seq">
+    <li><b>Provider POSTs a webhook.</b> <code>POST /webhooks?platform&amp;event&amp;integrationId&amp;storeId</code> hits <span class="path">webhooks/controllers/webhook.go</span>. The HMAC signature is verified (per-platform <code>WebhookVerifierFactory</code>), the body is deduped by <code>IDFromSeed("webhook", platform, sha256(body))</code>, a <code>WebhookReceivedEvent</code> is written to the outbox, and the endpoint returns <b>202</b> immediately. <span class="meta">api-go · webhooks</span></li>
+    <li><b>The receiver maps the body.</b> Off the outbox, <code>webhook_received_handler.go</code> resolves <code>mappers.Factory.Get(platform, event)</code> (<span class="path">webhooks/mappers/factory.go</span>) and turns the raw payload into one or more normalized <code>sync.ExternalXUpdatedEvent</code>s (e.g. <code>ExternalOrderUpdatedEvent</code> carrying an <code>OrderInput</code>). <span class="meta">api-go · webhooks</span></li>
+    <li><b>The entity handler rebuilds the aggregate.</b> <code>order_updated_handler.go</code> calls <code>entities.NewOrderFromProviderPayload(input)</code> (which validates + computes a deterministic <code>Id.fromSeed</code> primary key) and enqueues it on the storage's buffered <code>InputChannel()</code> — decoupling HTTP intake from the DB write. <span class="meta">api-go · sync</span></li>
+    <li><b>The drain batches &amp; upserts atomically.</b> <code>storage/order/order_pg.go</code>'s <code>Start()</code> loop accumulates via <code>Accumulator[*Order]</code> (<span class="path">core/types/accumulator.go</span>, batch 1000 / flush 1s) and, on flush, runs <b>one UnitOfWork transaction</b>: bulk <code>INSERT … ON CONFLICT (id) DO UPDATE</code> for every row <em>and</em> writes the wire integration event (e.g. <code>OrderUpdatedEvent</code>) to the outbox — all-or-nothing. <span class="meta">api-go · sync</span></li>
+  </ol>
+
+  <div class="callout rule">
+    <div class="lbl">The drain pattern (memorize this — it repeats for every entity)</div>
+    <code>ExternalXUpdatedEvent → handler rebuilds aggregate → storage.InputChannel() → Accumulator → bulk UPSERT + outbox event in one tx</code>.
+    Orders, products, variants, transactions and pixel events all follow it. The buffered channel is what lets the HTTP layer answer <code>202</code> in milliseconds while the heavy write happens behind it.
+  </div>
+
+  <h3>4b · Sync pipelines (pull)</h3>
+  <p>For data providers don't push, pipelines fetch it. Each implements the <code>Pipeline</code> interface
+  (<span class="path">sync/services/pipelines/pipeline.go</span>): <code>Platform()</code>, <code>Pipeline()</code>, and
+  <code>Run(ctx, RunInput, publisher)</code>. <code>RunInput</code> carries <code>StoreID</code>, <code>StoreIntegrationID</code>,
+  the unsealed <code>Credentials</code>, a <code>WindowDays</code> for backfills, a <code>JobID</code>, and a <code>Mediator</code>.
+  A pipeline <b>fetches → normalizes → publishes <code>ExternalXUpdatedEvent</code>s</b> — it never writes the DB itself; the same
+  handler+drain from §4a does the persistence. A <code>SyncJob</code> tracks state (running/completed/failed) and is run on demand
+  (e.g. <code>POST /sync/jobs</code>) — the TS side can kick one via the SDK <code>Client.go.sync(...)</code>.</p>
+
+  <table>
+    <tr><th>Platform</th><th>Pipelines</th><th>Status</th></tr>
+    <tr><td>Shopify</td><td>Orders, Products, Transactions</td><td><span style="color:var(--green)">live</span></td></tr>
+    <tr><td>Nuvemshop</td><td>Orders, Products</td><td><span style="color:var(--green)">live</span></td></tr>
+    <tr><td>Meta / Google Ads / TikTok</td><td>BusinessAccounts, AdAccounts, Campaigns, MarketingMetrics</td><td><span style="color:var(--green)">live</span> (see §8)</td></tr>
+    <tr><td>CartPanda · Yampi · Kiwify</td><td>—</td><td><span style="color:var(--amber)">pending stubs</span></td></tr>
+  </table>
+</section>
+
+<!-- ============================== EVENTS ============================== -->
+<section id="events">
+  <h2><span class="num">5</span> Event architecture</h2>
+  <p class="tagline">Two kinds of events, one durable log, a dispatcher that fans out — the seam that keeps contexts and languages decoupled.</p>
+
+  <div class="grid2">
+    <div class="card"><h4>Domain event</h4><p>A fact <b>inside one context</b>. Raised by an entity, handled in-process by that context's handlers/projectors via the <b>InternalMediator</b>. Never crosses a service. e.g. <code>IntegrationActivatedEvent</code>, <code>WebhookReceivedEvent</code>.</p></div>
+    <div class="card"><h4>Integration (wire) event</h4><p>A fact that <b>crosses contexts or services</b>. Its schema is defined once in <span class="path">contracts/wire/events/*.tsp</span> (TypeSpec) and code-generated into Go + TS bindings. Published only by handlers. e.g. <code>OrderUpdatedEvent</code>, <code>PixelEventRecordedEvent</code>.</p></div>
+  </div>
+
+  <h3>The transactional outbox</h3>
+  <p>The core trick: a write and its events are committed together. The use case (or Go storage drain) saves the aggregate row
+  <em>and</em> an event row into <code>shared.outbox</code> in the <b>same transaction</b>. There is no window where the data
+  changed but the event was lost. An <code>OutboxDispatcher</code> then runs independently on each side
+  (<span class="path">go: core/services/outbox/outbox_dispatcher.go</span>; <span class="path">ts: DrizzleOutboxDispatcher</span>),
+  polling the table in batches with adaptive backoff, grouping by <code>owner_id</code>, and re-emitting each event through the
+  mediator so subscribers react as if it were in-memory.</p>
+
+  <div class="flow">
+    <div class="node db"><div class="t">aggregate row</div><div class="d">e.g. an order</div></div>
+    <div class="arrow">+</div>
+    <div class="node db"><div class="t">shared.outbox row</div><div class="d">the event, same tx</div></div>
+    <div class="arrow">→</div>
+    <div class="node ts"><div class="t">OutboxDispatcher</div><div class="d">polls, claims a batch, groups by owner</div></div>
+    <div class="arrow">→</div>
+    <div class="node ts"><div class="t">Mediator</div><div class="d">fan-out to every subscriber</div></div>
+    <div class="arrow">→</div>
+    <div class="node go"><div class="t">Handlers + Projectors</div><div class="d">side-effects &amp; read-models</div></div>
+  </div>
+
+  <div class="callout note">
+    <div class="lbl">How Go and TS hear each other</div>
+    Both runtimes connect to the same Postgres, so the durable <code>shared.outbox</code> is the cross-service backbone — a Go drain's <code>OrderUpdatedEvent</code> becomes visible to TS handlers, and a TS handler's <code>integration.activated</code> reaches the Go worker. In production the external/integration channel is additionally fronted by Redis (<code>RedisExternalMediator</code> + BullMQ) for low-latency fan-out; in tests it is an in-memory <code>SpyMediator</code>. The outbox is always the source of truth.
+  </div>
+
+  <h4>Three wire events you'll meet again</h4>
+  <table>
+    <tr><th>Event</th><th>Published by</th><th>Consumed by</th></tr>
+    <tr><td><code>OrderUpdatedEvent</code></td><td>Go, after an order UPSERT (carries <code>isNew</code>, totals, optional <code>cartToken</code>, full entity)</td><td>TS sales (read-model), catalog (cost reconciliation), notifications</td></tr>
+    <tr><td><code>PixelEventRecordedEvent</code></td><td>Go, after pixel ingest</td><td>TS tracking (funnel), TS sales (<code>CHECKOUT_COMPLETED</code> → Cart→Order link)</td></tr>
+    <tr><td><code>MarketingAdAccountDiscoveredEvent</code></td><td>Go, during a marketing handshake</td><td>TS marketing (upserts the access link table — §8)</td></tr>
+  </table>
+</section>
+
+<!-- ============================== CANONICAL ============================== -->
+<section id="canonical">
+  <h2><span class="num">6</span> Canonical aggregates vs read-models</h2>
+  <p class="tagline">Provider data is owned (written) by Go; the dashboards read TypeScript-side projections derived from the wire event.</p>
+
+  <p>This is the most important consequence of the split. For provider-synced entities like <b>Order</b>, <b>Product</b> and
+  <b>Variant</b>, the <em>write authority</em> is the Go <code>sync</code> context — its aggregates are the single source of
+  truth, upserted idempotently by deterministic <code>Id.fromSeed(platform, externalId, …)</code> keys. The wire event
+  (<code>OrderUpdatedEvent</code>) is the <b>contract</b>. TypeScript does not re-derive these from a shared schema; it
+  <b>subscribes</b> to the event and maintains its own read-model, plus any <em>local</em> concerns it owns outright.</p>
+
+  <div class="flow">
+    <div class="node go"><div class="t">Go: Order aggregate</div><div class="d">canonical write, owns the truth</div><span class="tag">sync.orders</span></div>
+    <div class="arrow">→</div>
+    <div class="node ct"><div class="t">OrderUpdatedEvent</div><div class="d">the contract crossing the boundary</div><span class="tag">wire event</span></div>
+    <div class="arrow">→</div>
+    <div class="node ts"><div class="t">TS: read-model + overrides</div><div class="d">projection for dashboards; <code>OrderOverride</code> for user edits</div><span class="tag">sales / catalog</span></div>
+  </div>
+
+  <p>So TypeScript's <code>sales</code> holds <code>OrderOverride</code> (user adjustments), <code>catalog</code> holds
+  <code>ProductCost</code> / <code>ProductOverride</code> — the bits the merchant edits — while the canonical order/product rows
+  are Go's. A read shape that is just a join becomes a <b>QueryService</b>; only genuine denormalization or cross-context
+  aggregation becomes a <b>projection</b>.</p>
+
+  <div class="callout rule">
+    <div class="lbl">No event sourcing for domain entities</div>
+    Aggregates use plain imperative methods (<code>activate()</code>, <code>cancel()</code>). Events are for logs and for triggering downstream handlers — <em>not</em> for rebuilding entity state. Event sourcing only ever applies to <b>projections</b>, via the canonical <code>find → applyEvent → save</code> flow.
+  </div>
+</section>
+
+<!-- ============================== PIXEL ============================== -->
+<section id="pixel">
+  <h2><span class="num">7</span> Pixel tracking (the funnel)</h2>
+  <p class="tagline">Browser-origin, unsigned, high-volume — with a Redis throttle and a 24h backfill to keep the funnel honest.</p>
+
+  <p>The storefront pixel posts visitor events (page view → product view → add-to-cart → checkout → completed). Unlike provider
+  webhooks these are <b>unsigned</b> and browser-origin, so they take a dedicated branch and extra safety.</p>
+
+  <ol class="seq">
+    <li><b>Unsigned intake.</b> The same <code>/webhooks</code> endpoint takes a <code>type=PIXEL_EVENT</code> branch (<span class="path">webhooks/controllers/webhook.go</span>): no HMAC, the client asserts only <code>platform</code> + <code>storeIntegrationId</code>, and the <code>storeId</code> is resolved server-side — never trusted from the client. <span class="meta">api-go</span></li>
+    <li><b>Resolve the store (cached).</b> A <code>saleschannel.Resolver</code> (<span class="path">sync/services/saleschannel/resolver.go</span>) maps the immutable <code>storeIntegrationId</code> → <code>(storeId, externalId)</code> from <code>integration.store_integrations</code>, cached in memory. <span class="meta">api-go</span></li>
+    <li><b>Throttle per visitor.</b> A Redis <code>SETNX</code> throttle (<span class="path">sync/services/pixelthrottle/throttle.go</span>) drops duplicate noise per <code>(eventType, visitorKey, storeIntegrationId)</code> with per-type TTLs (page view 60s, product view 5m, cart events 30m). <code>CHECKOUT_COMPLETED</code> is <b>never</b> throttled. <span class="meta">api-go · Redis</span></li>
+    <li><b>Backfill missing stages.</b> Pixels only emit the stage that <em>just</em> happened, so a visitor who lands straight on checkout would undercount the top of the funnel. The handler reads the visitor's last-24h stages (<code>DistinctStagesForVisitor</code>) and <code>SynthesizeMissingStages</code> fabricates the earlier steps so the funnel adds up. <span class="meta">api-go · pixelbackfill</span></li>
+    <li><b>Drain + publish.</b> Real + synthetic events go through the standard drain (§4a) into <code>tracking.pixel_events</code>, and a <code>PixelEventRecordedEvent</code> is published. <span class="meta">api-go → outbox</span></li>
+    <li><b>Read + link.</b> TS <code>tracking</code> projects the funnel for the dashboard (<code>GetPixelFunnel</code>); TS <code>sales</code> reacts to <code>CHECKOUT_COMPLETED</code> to link the visitor's <b>Cart → Order</b>. <span class="meta">api-ts</span></li>
+  </ol>
+</section>
+
+<!-- ============================== MARKETING ============================== -->
+<section id="marketing">
+  <h2><span class="num">8</span> Marketing pipelines</h2>
+  <p class="tagline">A hierarchy (BM → ad account → campaign → ad set → ad + spend) synced concurrently, with a polymorphic access link on the TS side.</p>
+
+  <p>Each ad platform (Meta, Google Ads, TikTok) ships four pipelines: <b>BUSINESS_ACCOUNTS</b>, <b>AD_ACCOUNTS</b>,
+  <b>CAMPAIGNS</b> (one pipeline walks the campaign→ad-set→ad tree), and <b>MARKETING_METRICS</b>. The hierarchy is written as
+  six Go canonical aggregates (<code>business_account</code>, <code>ad_account</code>, <code>campaign</code>, <code>ad_set</code>,
+  <code>ad</code>, <code>ad_spend</code>) via the §4 drain pattern.</p>
+
+  <h4>Concurrency runtime</h4>
+  <p>Metrics backfills span many days, so <span class="path">sync/services/runtime/</span> provides shared primitives:
+  <b>DayWorkerPool</b> (workers consume days from a buffered channel, first-error-wins), <b>ProgressPublisher</b>
+  (atomic counter + 5%-step gate that emits a progress wire event), and a <b>RateLimiter</b> port (header-adaptive for Meta).</p>
+
+  <h4>The TS access link</h4>
+  <p>When a pipeline discovers a business account or ad account, Go publishes
+  <code>MarketingBusinessAccountDiscoveredEvent</code> / <code>MarketingAdAccountDiscoveredEvent</code>. Two TS handlers
+  (<span class="path">marketing/handlers/external.ts</span>) upsert a polymorphic row in
+  <code>marketing.store_integration_marketing_access</code> — bridging a <code>StoreIntegration</code> to the assets it can
+  see, with <code>active</code> / <code>validFrom</code> / <code>validTo</code> per row. The composite key
+  <code>(storeIntegrationId, accessType, platform, externalId)</code> makes re-discovery an idempotent UPSERT, never a duplicate.</p>
+
+  <div class="callout note">
+    <div class="lbl">Manual vs automatic spend</div>
+    Automatic ad-spend lives in Go's <code>sync.ad_spend</code>. The TypeScript side keeps only the <b>manual</b> spend the merchant types in, as the <code>AdSpendManual</code> aggregate — the name makes the scope unambiguous. Campaign <em>reads</em> route to Go via the SDK; the only TS-local campaign concept is <code>CampaignProductBinding</code> (a manual user mapping keyed by the provider's <code>campaignExternalId</code>).
+  </div>
+</section>
+
+<hr>
+
+<!-- ============================== QUERIES ============================== -->
+<section id="queries">
+  <h2><span class="num">9</span> Queries (BFF) &amp; the SDK</h2>
+  <p class="tagline">Reads skip the domain and shape Drizzle straight into the screen's DTO. The contract is a generated, typed SDK.</p>
+
+  <p>A read is a <b>Query Use Case</b>: it does not load aggregates, it queries Drizzle and returns exactly what one view needs.
+  Take the funnel dashboard:</p>
+
+  <ol class="seq">
+    <li><b>The component calls a hook.</b> A funnel section calls the generated hook (<code>useGetPixelFunnel(...)</code>) — a React Query wrapper with a stable query key. <span class="meta">FE</span></li>
+    <li><b>The hook hits a GET controller.</b> <code>GetPixelFunnelController</code> validates query params <code>{ storeIds, from, to }</code> (behind <code>AuthAccountMiddleware</code>) and calls the use case. <span class="meta">api-ts · tracking</span></li>
+    <li><b>The use case reads Drizzle.</b> <code>GetPixelFunnel</code> (<span class="path">tracking/usecases/GetPixelFunnel.ts</span>) aggregates <code>tracking.pixel_events</code> into stages — counts, unique sessions, drop-off % — and returns a typed <code>OutputSchema</code>. <span class="meta">api-ts</span></li>
+    <li><b>The shape round-trips type-safe.</b> Because the controller's Zod schemas drive the OpenAPI spec, the hook's response type already matches the use case's output. <span class="meta">contract</span></li>
+  </ol>
+
+  <h3>The SDK pipeline — why parallel work doesn't collide</h3>
+  <div class="flow">
+    <div class="node ts"><div class="t">Controller (Zod)</div><div class="d">expressive request/response schemas</div></div>
+    <div class="arrow">→</div>
+    <div class="node ts"><div class="t">openapi.json</div><div class="d">emitted from the controllers</div><span class="tag">bun emit-openapi</span></div>
+    <div class="arrow">→</div>
+    <div class="node ct"><div class="t">Kubb</div><div class="d">generates hooks, schemas, types, query keys</div><span class="tag">bun sdk</span></div>
+    <div class="arrow">→</div>
+    <div class="node fe"><div class="t">@template SDK</div><div class="d">the only way the frontend talks to the backend</div></div>
+  </div>
+
+  <div class="callout rule">
+    <div class="lbl">Hard rules</div>
+    The frontend <b>only</b> reads backend data through the SDK — never a raw <code>fetch</code>. Inside <code>api</code>, never use the SDK HTTP client (it would create a cycle) — read another context through its <b>Repository</b>; reach another <em>service</em> (Go) through the <code>Client</code> singleton (<code>client.go.sync(...)</code>). Touch a controller/schema → run <code>bun sdk</code>.
+  </div>
+</section>
+
+<!-- ============================== FRONTEND ============================== -->
+<section id="frontend">
+  <h2><span class="num">10</span> Frontend composition</h2>
+  <p class="tagline">Routes are thin shells; components own their own data; forms reuse the backend's Zod.</p>
+
+  <ul>
+    <li><b>Route</b> — a URL shell (<span class="path">app/react/src/routes/(app)/…</span>). Declares the path/search-param contract, breadcrumb and layout, and decides <em>which</em> components appear. It does <b>not</b> fetch data to pass down.</li>
+    <li><b>Component / Section</b> — each owns its own data: reads search params via the route API, reads client state from a Zustand <b>store</b>, and fires its own SDK query/mutation hooks. While loading it renders a skeleton inline; static UI stays visible. Container sections use the <code>Section</code> name suffix as convention.</li>
+    <li><b>Leaf</b> — pure presentational pieces rendered in a <code>.map()</code> (cards, rows, badges) receive their item by prop.</li>
+    <li><b>Form</b> — TanStack Form validated by the <b>same Zod schema</b> the controller uses (from the SDK) — zero manual sync between client and server validation.</li>
+    <li><b>Primitive</b> — design-system atoms (<code>Button</code>, <code>Dialog</code>) over Base UI + CVA, sharing tokens from <span class="path">packages/app/styles</span>.</li>
+  </ul>
+</section>
+
+<hr>
+
+<!-- ============================== ENTITIES ============================== -->
+<section id="entities">
+  <h2><span class="num">★</span> Entities by bounded context</h2>
+  <p class="tagline">Where the truth lives. Provider-synced aggregates (Order/Product/…) are Go-owned; TS holds local concerns + read-models.</p>
+
+  <table>
+    <tr><th>Context</th><th>Runtime</th><th>Aggregates / key tables</th></tr>
+    <tr><td><b>auth</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>User</code>, <code>Account</code>, <code>VerificationToken</code> (better-auth backed)</td></tr>
+    <tr><td><b>identity</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>UserProfile</code>, <code>UserPreferences</code>, <code>FcmRegistrationToken</code></td></tr>
+    <tr><td><b>tenancy</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>Store</code>, <code>StoreMembership</code>, <code>StoreInvitation</code></td></tr>
+    <tr><td><b>integration</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>StoreIntegration</code>, <code>IntegrationCredentialSecret</code></td></tr>
+    <tr><td><b>billing</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>Subscription</code> (plan = code enum + quotas)</td></tr>
+    <tr><td><b>sales</b></td><td><span class="tablabels lbl-go">Go canonical</span> + <span class="tablabels lbl-ts">TS</span></td><td>Go: <code>Order</code>, <code>Cart</code>. TS: <code>OrderOverride</code> + read-models</td></tr>
+    <tr><td><b>catalog</b></td><td><span class="tablabels lbl-go">Go canonical</span> + <span class="tablabels lbl-ts">TS</span></td><td>Go: <code>Product</code>, <code>ProductVariant</code>. TS: <code>ProductCost</code>, <code>ProductOverride</code></td></tr>
+    <tr><td><b>finance</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>Taxes</code>, <code>FeesConfiguration</code>, <code>FxRate</code>, <code>OperationalCost</code>, <code>WarrantyReserve</code></td></tr>
+    <tr><td><b>marketing</b></td><td><span class="tablabels lbl-go">Go canonical</span> + <span class="tablabels lbl-ts">TS</span></td><td>Go: <code>BusinessAccount</code>, <code>AdAccount</code>, <code>Campaign</code>, <code>AdSet</code>, <code>Ad</code>, <code>AdSpend</code>. TS: <code>StoreIntegrationMarketingAccess</code>, <code>CampaignProductBinding</code>, <code>AdSpendManual</code></td></tr>
+    <tr><td><b>tracking</b></td><td><span class="tablabels lbl-go">Go write</span> + <span class="tablabels lbl-ts">TS read</span></td><td>Go writes <code>tracking.pixel_events</code>; TS projects the funnel (no aggregate)</td></tr>
+    <tr><td><b>notifications</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>Notification</code>, <code>NotificationDelivery</code></td></tr>
+    <tr><td><b>analytics</b></td><td><span class="tablabels lbl-ts">TS</span></td><td><code>Goal</code></td></tr>
+    <tr><td><b>sync · webhooks · integrations</b></td><td><span class="tablabels lbl-go">Go</span></td><td>The ingest/pipeline machinery + <code>SyncJob</code></td></tr>
+  </table>
+</section>
+
+<!-- ============================== TESTING ============================== -->
+<section id="testing">
+  <h2><span class="num">✓</span> Testing &amp; quality</h2>
+  <p class="tagline">Tests are the living documentation. Red/green, colocated, real DB in-process.</p>
+
+  <table>
+    <tr><th>Layer</th><th>Where</th><th>Harness</th></tr>
+    <tr><td>Unit (entities, VOs)</td><td><code>src/**/Entity.test.ts</code></td><td>direct instantiation — no DI</td></tr>
+    <tr><td>Repository</td><td><code>src/**/Drizzle*Repository.test.ts</code></td><td>integration — PGlite</td></tr>
+    <tr><td>Use case / Handler</td><td>colocated <code>*.test.ts</code></td><td>integration — real outbox + mediators</td></tr>
+    <tr><td>Flow (sagas)</td><td><code>packages/api/typescript/tests/flows/</code></td><td>mock mode — choreography</td></tr>
+  </table>
+
+  <p>TypeScript tests boot a <code>TestBed</code> over an <b>in-process Postgres</b> (PGlite) running the real production
+  migrations — so what passes in a test passes on real Postgres. State is set up via <code>given*</code> helpers that call
+  repositories directly (never use cases), and events are asserted through <code>testBed.spy</code> or
+  <code>DomainEventRepository.findByType(EventClass)</code> — never by hand-querying Drizzle. Go uses the standard
+  <code>go test</code> suite (with <code>*_pg_test.go</code> against a migrated DB).</p>
+
+  <p>Before a PR: <code>bun lint</code> · <code>bun tsc</code> · <code>bun run test</code> (the last also runs the Go suite). A
+  pre-commit hook runs lint-staged automatically; in CI the <code>nx affected</code> graph keeps it fast.</p>
+</section>
+
+<!-- ============================== GLOSSARY ============================== -->
+<section id="glossary">
+  <h2><span class="num">§</span> Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><b>Bounded context</b></td><td>An independent business slice with its own folder, entities and DI registry.</td></tr>
+    <tr><td><b>Aggregate root</b></td><td>The entity that owns a cluster of data + its invariants; the unit a repository loads/saves.</td></tr>
+    <tr><td><b>Wire / integration event</b></td><td>A contract event (defined in TypeSpec) crossing a context or service boundary.</td></tr>
+    <tr><td><b>Outbox</b></td><td><code>shared.outbox</code> — events written in the same tx as the data, then dispatched.</td></tr>
+    <tr><td><b>Projector / Projection</b></td><td>A read-side handler that maintains a denormalized read-model table from events.</td></tr>
+    <tr><td><b>BFF / Query Use Case</b></td><td>A read shaped for one screen, querying Drizzle directly (CQRS read side).</td></tr>
+    <tr><td><b>Drain</b></td><td>A Go storage goroutine that batches aggregates off a channel and bulk-upserts them.</td></tr>
+    <tr><td><b><code>Id.fromSeed</code></b></td><td>Deterministic UUIDv5 from <code>(platform, externalId, …)</code> — makes re-ingest an idempotent UPSERT.</td></tr>
+    <tr><td><b>ConnectionMode</b></td><td><code>OAUTH</code> / <code>CREDENTIALS</code> / <code>MANUAL</code> — how an integration authenticates.</td></tr>
+    <tr><td><b>SDK</b></td><td>The Kubb-generated typed client (hooks + schemas + types) — the only frontend↔backend channel.</td></tr>
+  </table>
+</section>
+
+<footer>
+  <p>template — Application Flow reference. Generated 2026-05-29. Mechanisms and file paths reflect the
+  <code>feat/template-polyglot</code> branch; for deeper detail see <span class="path">docs/BACKEND.md</span>,
+  <span class="path">docs/FRONTEND.md</span>, the per-artifact playbooks in <span class="path">.claude/skills/</span>,
+  and the design specs in <span class="path">.specs/</span>.</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  // Active-section highlighting in the sidebar.
+  const links = Array.from(document.querySelectorAll('nav.toc a'));
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = map.get(e.target.id);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+  document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

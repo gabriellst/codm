@@ -1,0 +1,251 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [projection, event, repository]
+  depended_by: []
+  context_reads: [event, handler, projection]
+  lang: go
+  examples:
+    - examples/citizens/go/projector/message_projector.go
+    - examples/citizens/go/projector/remote_projector.go
+
+  snippet:
+    skeleton: |
+      // Package projectors provides {{Pascal}}Projector.
+      // Canonical flow: repo.Upsert / repo.Delete (or find→applyEvent→save when read-before-write needed).
+      package projectors
+
+      import (
+      	"context"
+      	"log/slog"
+
+      	"template/api-go/internal/{{ctx}}/projections"
+      	// ctxevents "template/api-go/internal/{{ctx}}/events"
+      	fwtypes "template/core-go/types"
+      )
+
+      const {{Pascal}}EventName = "integration.TODO.{{dotSnake}}"
+
+      // {{Pascal}}Projector handles events that affect {{Pascal}}Projection.
+      type {{Pascal}}Projector struct {
+      	repo projections.{{Pascal}}ProjectionRepository
+      }
+
+      // New{{Pascal}}Projector constructs the projector.
+      func New{{Pascal}}Projector(repo projections.{{Pascal}}ProjectionRepository) *{{Pascal}}Projector {
+      	return &{{Pascal}}Projector{repo: repo}
+      }
+
+      func (p *{{Pascal}}Projector) EventName() string { return {{Pascal}}EventName }
+
+      // Handle processes an event and updates the {{Pascal}}Projection.
+      func (p *{{Pascal}}Projector) Handle(ctx context.Context, event fwtypes.IntegrationEventI) error {
+      	// typed, err := fwtypes.UnmarshalIntegrationEvent[wire.SomeEvent](event)
+      	// if err != nil {
+      	// 	return err
+      	// }
+
+      	proj := &projections.{{Pascal}}Projection{
+      		// TODO: populate from event payload
+      	}
+
+      	if err := p.repo.Upsert(ctx, proj); err != nil {
+      		slog.Error("{{ctx}}: failed to upsert {{snake}} projection", "error", err)
+      		return err
+      	}
+
+      	slog.Info("{{ctx}}: upserted {{snake}} projection")
+      	return nil
+      }
+
+  patterns:
+    - id: PRJR-GO-01
+      when: always
+      rule: >
+        Each projector is a concrete struct with exactly one field: its
+        ProjectionRepository (accepted as interface type). No base class, no
+        generic supertype.
+      wrong: |
+        type MessageProjector struct {
+            Projector[MessageProjectionEvent]  // wrong: no generic base in Go
+            repo messagerepo.MessageProjectionRepository
+        }
+      right: |
+        type MessageEditedProjector struct {
+            repo messagerepo.MessageProjectionRepository
+        }
+
+        func NewMessageEditedProjector(repo messagerepo.MessageProjectionRepository) *MessageEditedProjector {
+            return &MessageEditedProjector{repo: repo}
+        }
+
+    - id: PRJR-GO-02
+      when: always
+      rule: >
+        EventName() returns a named constant, not a magic string literal.
+        The constant lives alongside the event definition in the events package.
+      wrong: |
+        func (p *MessageEditedProjector) EventName() string {
+            return "channel.message_edited"   // magic string
+        }
+      right: |
+        func (p *MessageEditedProjector) EventName() string {
+            return ctxevents.MessageEditedEventName   // named constant
+        }
+
+    - id: PRJR-GO-03
+      when: always
+      rule: >
+        Canonical mutation flow is find → projection.ApplyX → save.
+        If FindByKey returns nil, log slog.Warn and return nil (non-fatal).
+      right: |
+        row, err := p.repo.FindByPlatformID(ctx, pl.ChannelID.String(), pl.MessageID)
+        if err != nil { return err }
+        if row == nil {
+            slog.Warn("message not found for edit projection",
+                "channelId", pl.ChannelID, "messageId", pl.MessageID)
+            return nil
+        }
+        editedAt := time.Unix(pl.Timestamp, 0).UTC()
+        row.ApplyEdited(pl.Content, editedAt)
+        return p.repo.Save(ctx, row)
+
+    - id: PRJR-GO-04
+      when: always
+      rule: >
+        Creation path uses InsertIfNew. A duplicate (false, nil) is logged at
+        Debug level, not treated as an error.
+      right: |
+        inserted, err := p.repo.InsertIfNew(ctx, msg)
+        if err != nil { return err }
+        if !inserted {
+            slog.Debug("already projected (duplicate)", "messageId", pl.MessageID)
+        }
+        return nil
+
+    - id: PRJR-GO-05
+      when: always
+      rule: >
+        Projectors register with the correct mediator inside the module's
+        registerHandlers func: InternalMediator for domain events,
+        ExternalMediator for integration events.
+      right: |
+        func registerHandlers(
+            ext mediator.ExternalMediator,
+            internal mediator.InternalMediator,
+            search *handlers.IndexVideoHandler,
+            completed *handlers.TranscodingJobCompletedHandler,
+        ) {
+            ext.Register(search)
+            internal.Register(completed)
+        }
+
+    - id: PRJR-GO-06
+      when: projector uses integration events
+      rule: >
+        Call types.UnmarshalIntegrationEvent[PayloadT](event) to get a typed event.
+        Call types.UnmarshalDomainEvent[PayloadT](event) for domain events.
+      right: |
+        // Integration event projector
+        func (p *VideoSearchProjector) Handle(ctx context.Context, event fwtypes.IntegrationEventI) error {
+            typed, err := fwtypes.UnmarshalIntegrationEvent[wire.VideoPublishedEvent](event)
+            if err != nil { return err }
+            // typed.Payload is VideoPublishedEvent
+        }
+
+        // Domain event projector
+        func (p *MessageEditedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+            e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageEditedPayload](event)
+            if err != nil { return err }
+            pl := e.Payload
+        }
+
+    - id: PRJR-GO-07
+      when: atomic ops needed
+      rule: >
+        Use atomic repo ops only when the canonical find→ApplyX→save path would
+        cause hot-row contention, N+1 bulk ops, monotonic violation, or
+        conditional conflict. Document the trigger inline.
+      right: |
+        // Justified: bulk receipt events (1–20 IDs per event); find→save per ID acceptable
+        // at current scale but documented for future batching.
+        if err := p.repo.UpdateDelivered(ctx, row.ID, deliveredAt); err != nil {
+            return err
+        }
+
+  bad_practices:
+    - id: PRJR-GO-BP-01
+      severity: critical
+      description: >
+        Projector calls use cases or publishes integration events — those are
+        handler responsibilities.
+      wrong: |
+        func (p *MessageEditedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+            // wrong: projectors only write projections, never call use cases
+            _, err := p.updateMessageUseCase.Execute(ctx, ...)
+            return err
+        }
+      right: |
+        // Projector only mutates the projection via ApplyX + save.
+        row.ApplyEdited(pl.Content, editedAt)
+        return p.repo.Save(ctx, row)
+      mechanical: true
+      detect:
+        - 'UseCase\.Execute\('
+
+    - id: PRJR-GO-BP-02
+      severity: critical
+      description: >
+        Projector injects multiple repositories or services beyond the one
+        projection repository it serves.
+      wrong: |
+        type MessageEditedProjector struct {
+            repo    messagerepo.MessageProjectionRepository
+            authRepo authrepo.AuthRepository   // wrong: second dependency
+        }
+      right: |
+        type MessageEditedProjector struct {
+            repo messagerepo.MessageProjectionRepository
+        }
+      mechanical: false
+
+    - id: PRJR-GO-BP-03
+      severity: high
+      description: >
+        Missing row treated as error instead of a non-fatal Warn + nil return.
+      wrong: |
+        if row == nil {
+            return fmt.Errorf("message %s not found", pl.MessageID)  // wrong: stalls mediator
+        }
+      right: |
+        if row == nil {
+            slog.Warn("message not found for edit projection",
+                "channelId", pl.ChannelID, "messageId", pl.MessageID)
+            return nil
+        }
+      mechanical: true
+      detect:
+        - 'row\s*==\s*nil\s*\{\s*return\s+fmt\.Errorf'
+
+    - id: PRJR-GO-BP-04
+      severity: high
+      description: Magic string in EventName() instead of a named constant.
+      wrong: |
+        func (p *MessageEditedProjector) EventName() string { return "channel.message_edited" }
+      right: |
+        func (p *MessageEditedProjector) EventName() string { return ctxevents.MessageEditedEventName }
+      mechanical: true
+      detect:
+        - 'EventName\(\)\s*string\s*\{\s*return\s+"'
+
+    - id: PRJR-GO-BP-05
+      severity: medium
+      description: >
+        Constructor accepts concrete *pg repository pointer instead of interface.
+      wrong: |
+        func NewMessageEditedProjector(repo *messagerepo.PgMessageProjectionRepository) *MessageEditedProjector
+      right: |
+        func NewMessageEditedProjector(repo messagerepo.MessageProjectionRepository) *MessageEditedProjector
+      mechanical: true
+      detect:
+        - 'func New\w+Projector\(repo\s+\*'

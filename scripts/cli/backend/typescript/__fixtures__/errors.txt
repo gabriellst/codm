@@ -1,0 +1,25 @@
+import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+
+// Domain Errors
+export type SalesDomainErrors = never
+export type DomainErrors = BaseDomainErrors | SalesDomainErrors
+
+// Application Errors
+export type SalesApplicationErrors = never
+export type ApplicationErrors = BaseApplicationErrors | SalesApplicationErrors
+
+// Interface Errors
+export type SalesInterfaceErrors = never
+export type InterfaceErrors = BaseInterfaceErrors | SalesInterfaceErrors
+
+// Infrastructure Errors
+export type SalesInfrastructureErrors = never
+export type InfrastructureErrors = BaseInfrastructureErrors | SalesInfrastructureErrors
+
+export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
+
+registerErrorCodes({
+	// Add context-specific error codes here:
+	// SOME_ERROR: HttpStatusCode.BAD_REQUEST,
+})

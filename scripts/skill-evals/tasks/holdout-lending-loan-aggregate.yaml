@@ -1,0 +1,159 @@
+id: holdout-lending-loan-aggregate
+tier: holdout
+builder: opus
+title: H1 backend slice — lending bounded context with Loan aggregate
+  (checkout/return/overdue)
+sourceSpec: hand-authored
+goldRef: ""
+baseRef: ""
+prompt: >-
+  # Add a `lending` bounded context (Loan aggregate, checkout/return/overdue)
+
+
+  ## Context
+
+  The platform is being extended with a public-library vertical. A tenant (the
+  `storeId` carried in the authenticated session) represents a library branch.
+  Library staff check physical books out to members and register returns. Books
+  and members are managed elsewhere — in this slice they are referenced by id
+  only (`bookId`, `memberId` as uuids); do NOT model Book or Member aggregates.
+  A member presents a physical library card whose number is recorded on the
+  loan.
+
+
+  Build a new `lending` bounded context at
+  `packages/api/typescript/src/lending`, following the house bounded-context
+  layout and wiring
+  (entities/enums/errors/events/usecases/controllers/repositories folders,
+  `registry.ts` with mock/integration/real bindings, barrel exports,
+  registration alongside the existing contexts) exactly like the existing
+  bounded contexts.
+
+
+  ## Domain model
+
+  1. **`LoanStatus` enum** — closed set: `ACTIVE`, `RETURNED`, `OVERDUE`. Use
+  the house enum idiom everywhere the status appears (entity schema validation,
+  any use-case/controller schema that mentions it, DB column pairing).
+
+  2. **`Loan` aggregate root** with a schema-derived shape per house canon.
+  Props: id, storeId, bookId, memberId, libraryCardNumber, status, checkedOutAt,
+  dueAt, returnedAt (null until returned).
+     - `libraryCardNumber` format is `LC-` followed by 8 digits — validate it in the entity schema; an invalid card number must surface as a named domain error using the house entity-schema error idiom, never a loose message string.
+     - `static create(...)` (checkout): builds an ACTIVE loan; `dueAt` must be strictly in the future at checkout — otherwise raise a named domain error.
+     - `return()`: only an ACTIVE or OVERDUE loan can be returned; returning an already-returned loan raises a named domain error. Sets `returnedAt` and transitions to RETURNED.
+     - `markOverdue()`: only ACTIVE → OVERDUE; any other starting state raises a named domain error.
+     Every violable invariant is a **named DomainError** registered with an HTTP status in the context errors module — never `throw new Error(...)`.
+  3. **Domain events per house canon** — declare `BookCheckedOutEvent` and
+  `BookReturnedEvent` with the house domain-event schema helper and
+  dot-namespaced names under `lending.`. Events are persisted through the outbox
+  in the SAME transaction as the entity save, emitted by the use case (the
+  established pattern in the existing use cases).
+
+
+  ## Application layer
+
+  4. **`CheckoutBook` use case** — input: storeId, bookId, memberId,
+  libraryCardNumber, dueAt (primitives only). Creates the Loan, saves it via the
+  LoanRepository, and persists `BookCheckedOutEvent` — all inside the
+  unit-of-work transaction.
+
+  5. **`ReturnBook` use case** — input: storeId, loanId. Loads the loan; missing
+  (or belonging to another store) → a named **application error** (e.g. loan not
+  found). Calls the entity transition, saves, persists `BookReturnedEvent` in
+  the same transaction.
+
+  6. **Controllers** — `POST /loans/checkout` and `POST /loans/return`, shaped
+  like the existing mutating controllers: auth + store-member middlewares;
+  `storeId` comes from the session ctx and NEVER travels in the request body;
+  the controller body schema is **derived from the use-case input schema**
+  (compose/omit the tenant field — do not redeclare a parallel schema).
+
+
+  ## Persistence
+
+  7. A `loans` table in `packages/contracts/db/schema` (new lending schema file)
+  with a pgEnum paired to LoanStatus; `LoanRepository` (interface + Drizzle +
+  Mock implementations) with at least findById/save, bound in `registry.ts` for
+  mock/integration/real.
+
+
+  ## Acceptance criteria
+
+  - `bun tsc` green end-to-end (backend included); the context wiring matches
+  how every other context registers itself.
+
+  - The status set is defined exactly once (the enum) and every schema that
+  mentions it validates against the enum, not redeclared string literals.
+
+  - House schema layer-boundary rules hold: rich id instances only in
+  entity/value-object schemas; use-case and controller schemas accept primitives
+  (uuid/string) only.
+
+  - Invariant violations surface as named domain error codes raised by the
+  entity; lookup/orchestration failures surface as named application error codes
+  raised by the use cases.
+
+  - Both events are written through the outbox in the same transaction as the
+  state change; use cases do NOT publish through any mediator (handlers own
+  propagation).
+
+  - Follow the relevant skills (`bounded-context`, `entity`, `enum`, `errors`,
+  `event`, `usecase`, `controller`, `repository`) and their bad-practices lists.
+axes:
+  - ENUM-REPR
+  - ID-REPR
+  - SCHEMA-DERIVE
+  - ERR-VOCAB
+  - EVENT-EMISSION
+  - TRANSACTION
+  - NAMING
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: slice-closure
+  - kind: grep-must
+    spec: packages/api/typescript/src/lending/**/*.ts::z\.enum\(LoanStatus\)
+    id: enum#z-enum
+  - kind: grep-must
+    spec: packages/api/typescript/src/lending/entities/**/*.ts::as
+      \w*DomainErrors|BaseError<\w*DomainErrors>
+    id: entity#named-domain-errors
+  - kind: grep-must
+    spec: packages/api/typescript/src/lending/usecases/**/*.ts::BaseError<\w*ApplicationErrors>
+    id: usecase#named-application-errors
+  - kind: grep-must
+    spec: packages/api/typescript/src/lending/usecases/**/*.ts::domainEventRepository\.save\(
+    id: event#outbox-same-tx
+  - kind: grep-must
+    spec: packages/api/typescript/src/lending/controllers/**/*.ts::\w*InputSchema\.(omit|pick)\(
+    id: controller#derive-body-from-usecase-schema
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/lending/**/*.ts::nativeEnum
+    id: enum#no-nativeenum
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/lending/usecases/**/*.ts::[Mm]ediator\.publish\(
+    id: usecase#no-mediator-publish
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/lending/usecases/**/*.ts::z\.instance\(
+    id: schema#layer-boundary-usecase
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/lending/controllers/**/*.ts::z\.instance\(
+    id: schema#layer-boundary-controller
+notes: "Hand-authored holdout in a foreign domain (library lending); no gold
+  tree. Grader calibration against house idioms: entity error grader accepts
+  BOTH cast forms ({ error: 'X' as DomainErrors } per tenancy/Store.ts AND
+  BaseError<LendingDomainErrors> per sales/OrderOverride.ts).
+  domainEventRepository.save is canon-safe — core AggregateRoot has no
+  event-raising mechanism, so use-case emission is the only house path
+  (confirmed in core/src/entities/BaseEntity.ts comments + identity/sales use
+  cases). Controller-body grader accepts .omit or .pick; the Checkout controller
+  necessarily derives its body (storeId from ctx), so the must passes even if
+  ReturnBook uses params. The prompt prescribes the context name `lending` so
+  path-anchored globs are fair. 13 graders — the brief's explicit enumeration
+  overrides the 3-8 default."

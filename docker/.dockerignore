@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (we build inside Docker)
+dist
+**/dist
+# …except the committed SDK output — packages/client/dist/ is generated but
+# checked in (per .specs/2026-05-14-polyglot-client-sdk-design.md Decision 13)
+# and the api image imports @template/client-typescript from it.
+!packages/client/dist
+!packages/client/dist/**
+
+# Development files
+.git
+.gitignore
+.env*
+*.md
+docs
+
+# IDE
+.vscode
+.idea
+.cursor
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+__tests__
+
+# Extension (not needed for API build)
+extension
+
+
+
+
+

@@ -1,0 +1,168 @@
+id: synthetic-l3-debugging
+tier: holdout
+builder: sonnet
+title: Inflated cart totals — debug & fix the sumMoney cause
+  (L3 debugging — symptom-level prompt, seeded bug, hidden regression test, fix-the-cause discipline)
+sourceSpec: PROBES-BACKLOG.md#L3
+goldRef: ""
+# baseRef stays "" so the runner builds from HEAD; the BUG is seeded into the tree at run time
+# via seedCommands (agent-only) over the canonical format.ts, and the HIDDEN regression test is
+# injected. This is a debugging probe, not free real estate — see notes for the validator caveat.
+baseRef: ""
+seedCommands:
+  # Overwrite the canonical money formatter with a version carrying ONE real cause-level bug:
+  # sumMoney seeds its reduce accumulator with the first line's cents, double-counting line 0.
+  # tsc stays green (the bug is purely behavioral); the symptom is wrong runtime totals.
+  - cp packages/app/react/src/lib/.seed-format.buggy.ts packages/app/react/src/lib/format.ts && rm -f packages/app/react/src/lib/.seed-format.buggy.ts
+inject:
+  # The hidden regression test — lands at its FINAL path before the agent runs; it is RED against
+  # the seeded bug and GREEN once the cause is fixed. The agent must not edit or delete it.
+  - from: scripts/skill-evals/seeds/synthetic-l3-debugging/format.sum.regression.test.ts
+    to: packages/app/react/src/lib/format.sum.regression.test.ts
+  # The buggy formatter, staged under a dot-prefixed name the seedCommand copies over format.ts.
+  - from: scripts/skill-evals/seeds/synthetic-l3-debugging/format.buggy.ts
+    to: packages/app/react/src/lib/.seed-format.buggy.ts
+prompt: >
+  BUG REPORT (app-react). Users on the dashboard and cart screens are seeing INFLATED money
+  totals: whenever a total is computed by summing more than one line (an order's line items, a
+  cart's products, a costs breakdown), the displayed amount is too high — overstated by exactly
+  the value of the FIRST line. A two-line cart of R$ 1,00 + R$ 2,50 renders R$ 4,50 instead of
+  R$ 3,50; a single R$ 42,00 item renders R$ 84,00. Single-currency only; per-line currency is
+  correct; the per-line formatting itself looks right — only the SUM is wrong. There is already
+  a failing test in packages/app/react/src/lib/ that reproduces it. Your job: find the CAUSE and
+  fix it at its source. Run `cd packages/app/react && bun test src/lib/format.test.ts
+  src/lib/format.sum.regression.test.ts` to see it red, locate the defect, and repair it so both
+  suites go green. Hard rules (project [[no-hacky-workarounds]]): fix the actual computation —
+  do NOT weaken, skip, delete, or rewrite any test to match the wrong output; do NOT reach for
+  `as any`/`as never`/`as unknown`, `@ts-ignore`/`@ts-expect-error`, or any suppression; do NOT
+  paper over the symptom at a call site (e.g. subtracting the first line back out) — the bug is
+  in ONE shared helper and that is where it must be corrected. Leave the sibling formatters
+  (formatMoney, formatPercent) and their behavior untouched. Keep `bun x tsc --noEmit` green in
+  packages/app/react. Touch only what the fix needs: this is a one-line cause in a single file.
+axes:
+  - DEBUG-FIX-CAUSE
+  - NO-SUPPRESSION
+  - NO-TEST-WEAKENING
+  - REGRESSION-GREEN
+graders:
+  # ── the cause is fixed: both suites green (hidden regression + the reproducing suite) ──
+  - kind: test-green
+    spec: packages/app/react/src/lib/format.sum.regression.test.ts
+    id: debug#hidden-regression-green
+  - kind: test-green
+    spec: packages/app/react/src/lib/format.test.ts
+    id: debug#existing-suite-green
+  # ── tsc stays clean (a behavioral fix never needs a type change here) ──
+  - kind: tsc
+    spec: app-react
+    id: gate#tsc-app-react
+  # ── the fix is in the RIGHT file: the seeded buggy accumulator is gone from format.ts ──
+  # `items[0]!.amountCents` is the bug's distinctive signature; it never appears in the correct
+  # helper (HEAD seeds the reduce with 0 and only reads items[0].currency). If the agent "fixes"
+  # by editing a test or patching a call site, format.ts keeps this signature → this grader fails.
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/format.ts::items\\[0\\]!?\\.amountCents"
+    id: debug#cause-removed-in-format-ts
+  # ── no test-weakening: the reproducing + hidden suites keep real, executing assertions ──
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/format.test.ts::\\.(skip|todo|only)\\b|\\bx(it|describe|test)\\b|it\\.todo|\\bdescribe\\.skip\\b"
+    id: debug#no-skip-existing
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/format.sum.regression.test.ts::\\.(skip|todo|only)\\b|\\bx(it|describe|test)\\b|it\\.todo|\\bdescribe\\.skip\\b"
+    id: debug#no-skip-hidden
+  # the hidden regression test still exists (not deleted to dodge the gate)
+  - kind: file-exists
+    spec: "packages/app/react/src/lib/format.sum.regression.test.ts"
+    id: debug#hidden-test-present
+  # ── no suppression anywhere in the touched formatter + test files ──
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/format.ts::as\\s+(any|never|unknown)\\b|@ts-(ignore|expect-error)"
+    id: atlas#no-hacky-workarounds
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/format.sum.regression.test.ts::as\\s+(any|never|unknown)\\b|@ts-(ignore|expect-error)|mock\\.module\\(|spyOn\\("
+    id: debug#no-suppression-hidden
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/format.test.ts::as\\s+(any|never|unknown)\\b|@ts-(ignore|expect-error)|mock\\.module\\(|spyOn\\("
+    id: debug#no-suppression-existing
+  # ── the staging seed file was consumed (not left lying in the tree as a parallel copy) ──
+  - kind: grep-must-not
+    spec: "packages/app/react/src/lib/.seed-format.buggy.ts::sumMoney"
+    id: debug#no-stray-seed-copy
+  # ── one rich judge: cause-level fix, right file, no symptom-dodge, scope-note traps ──
+  - kind: judge
+    spec: >
+      An app-react money-formatting bug was just fixed. The CANONICAL helper lives at
+      packages/app/react/src/lib/format.ts and exports formatMoney, sumMoney, formatPercent;
+      its tests are packages/app/react/src/lib/format.test.ts (the reproducing suite) and
+      packages/app/react/src/lib/format.sum.regression.test.ts (the hidden regression suite).
+      The reported symptom: sumMoney over MULTIPLE lines overstated the total by exactly the
+      first line's cents. The seeded cause was that sumMoney's reduce accumulator was
+      initialized with items[0].amountCents (double-counting line 0) instead of 0. Verify ALL of:
+      (a) CAUSE FIXED AT SOURCE — sumMoney in format.ts now returns the EXACT sum of every line's
+      amountCents with the accumulator seeded at 0 (or an equivalent correct reduction), carries
+      the shared currency from items[0].currency, and still returns { amountCents: 0, currency:
+      'BRL' } for an empty list. The double-count is gone from the helper itself.
+      (b) RIGHT FILE, NO SYMPTOM-DODGE — the fix is in format.ts's sumMoney, NOT a band-aid at a
+      call site (no caller subtracts the first line back out, no wrapper re-sums), NOT a change to
+      any test's expected values, and NOT a deletion/skip of a test. formatMoney and formatPercent
+      are behaviorally unchanged.
+      (c) NO SUPPRESSION / NO WEAKENING — no as-any/as-never/as-unknown, no @ts-ignore /
+      @ts-expect-error, no it.skip/xit/it.only/describe.skip, no mock.module or spyOn faking the
+      result; both test suites keep real executing assertions that pin the EXACT totals.
+      Scope notes — judge the idiom, not the spelling: the corrected reduction may use any
+      accumulator/parameter names (acc, total, running) and any equivalent form (reduce seeded at
+      0, a for-loop, items.reduce over m.amountCents) — only the BEHAVIOR (exact sum, no
+      first-line double-count) matters; reordering or lightly editing the doc comment on sumMoney
+      is fine; ADDING a new passing assertion to a test is fine (that strengthens, not weakens) —
+      only removing/relaxing/skipping an assertion or changing an expected value to the wrong
+      output is a fail; the empty-list branch returning a hardcoded BRL zero Money is the
+      established contract (the existing + hidden tests both assert it) — do NOT flag it as a
+      hardcoded-locale/currency smell; a staging file named .seed-format.buggy.ts is harness
+      scaffolding — if it is still present and still contains the buggy sumMoney it indicates the
+      seed was not consumed, but its mere ghost (empty/absent) is not a code-quality issue to
+      judge. Inspect packages/app/react/src/lib/format.ts, format.test.ts and
+      format.sum.regression.test.ts.
+notes: >-
+  L3 DEBUGGING probe (PROBES-BACKLOG.md#L3 "debugging/incident probe"): symptom-level prompt,
+  seeded cause, hidden regression test, fix-the-cause discipline. Seed mechanism: the bug is NOT
+  committed to any branch — it is injected + seeded into the throwaway worktree at run time.
+  inject copies two files (run.ts:550, all modes): the hidden regression test to its final path
+  (packages/app/react/src/lib/format.sum.regression.test.ts) and the buggy formatter to a staged
+  dot-name (packages/app/react/src/lib/.seed-format.buggy.ts); seedCommands then (agent mode only,
+  run.ts:551) cp the staged buggy file over the canonical format.ts and rm the stage. So in AGENT
+  mode the tree starts: format.ts buggy, both suites RED, tsc green. The agent must locate and fix
+  the one-line cause in sumMoney.
+  THE BUG, verified empirically: sumMoney's reduce seeds the accumulator with
+  items[0]!.amountCents instead of 0, double-counting the first line — sum([100,250]) → 450 not
+  350, sum([4200]) → 8400 not 4200. tsc app-react is GREEN against the buggy seed (purely
+  behavioral, no type error). Against the buggy seed both suites are RED (5 failing assertions
+  across the two files); restoring the HEAD format.ts turns all 13 green. The pt-BR currency
+  separator is U+00A0 (non-breaking space) — the hidden test's formatMoney assertions use the real
+  NBSP byte, matching the existing format.test.ts idiom, so they pass ONLY on correct output.
+  GRADER DESIGN: the primary cause-fixed gate is test-green on the hidden regression suite +
+  test-green on the reproducing suite. "Fix is in the right file" is enforced NEGATIVELY by a
+  grep-must-not on format.ts for the bug's distinctive signature items[0]!.amountCents — present
+  only in the buggy seed, never in correct code (HEAD reads items[0]!.currency, seeds reduce with
+  0); a test-only or call-site "fix" leaves the signature in format.ts → fail. Anti-weakening:
+  grep-must-not for .skip/.only/.todo/xit/xdescribe in BOTH test files + file-exists on the hidden
+  test (deletion fails it) + test-green (a weakened-to-empty suite still has to assert the exact
+  totals). Anti-suppression: grep-must-not for as any/never/unknown + @ts-ignore/@ts-expect-error
+  in format.ts and both tests, plus mock.module/spyOn bans in the tests. One rich judge confirms
+  the cause-level fix, the right file, no symptom-dodge at a call site, untouched siblings, and
+  names the legitimate-exception traps (any accumulator spelling / for-loop form is fine; adding a
+  passing assertion is fine; the hardcoded-BRL empty-list branch is the contract, not a smell).
+  VALIDATOR CAVEAT (expected, by design): `bun scripts/skill-evals/validate-task.ts
+  synthetic-l3-debugging` runs graders against plain HEAD WITHOUT inject/seedCommands (the
+  validator never seeds). At HEAD: format.ts is the CORRECT version, the hidden test + the staged
+  buggy file are ABSENT. So the free-real-estate expectations line up as follows and the validator
+  passes: test-green on the hidden path → file absent → bun test exits nonzero → validator expects
+  FAIL (path the agent "creates") and gets FAIL ✓; test-green on the existing format.test.ts →
+  exists + green → expects PASS, gets PASS ✓; tsc app-react → green → PASS ✓; every grep-must-not →
+  clean at HEAD (correct format.ts has no items[0]!.amountCents and no suppressions; absent test +
+  absent stage glob to zero files → vacuous pass) → PASS ✓; file-exists on the hidden test → absent
+  → expects FAIL, gets FAIL ✓; judge → skipped by the validator. There are NO grep-must graders
+  (which would be expected-FAIL at HEAD but would actually match the correct format.ts and break
+  validation) — the "fix is in the right file" signal is intentionally a grep-must-NOT on the bug
+  signature, which is the validator-clean direction. The probe is exercised for real by running it
+  in agent mode (`bun scripts/skill-evals/run.ts --mode agent --task synthetic-l3-debugging`),
+  where the seed+inject machinery actually makes the tree red.

@@ -1,0 +1,10 @@
+import { BaseDomainEvent, z } from '@template/core-typescript'
+
+const OrderCreatedEventSchema = z.domainEvent({
+	id: z.string(),
+})
+
+export class OrderCreatedEvent extends BaseDomainEvent<typeof OrderCreatedEventSchema> {
+	static override readonly name = 'sales.orderCreated' as const
+	static readonly schema = OrderCreatedEventSchema
+}

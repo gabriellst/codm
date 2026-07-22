@@ -1,0 +1,33 @@
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useTranslation } from 'react-i18next'
+
+interface ProductHeaderProps extends React.ComponentProps<'section'> {}
+
+export function ProductHeader({ className, ...props }: ProductHeaderProps) {
+	const { t } = useTranslation()
+	if (data === undefined) {
+		return (
+			<div className="flex flex-col gap-2">
+				<Skeleton className="h-8 w-full" />
+				<Skeleton className="h-32 w-full" />
+			</div>
+		)
+	}
+
+	return (
+		<section
+			className={cn('', className)}
+			{...props}
+		>
+			<header className="flex items-center justify-between">
+				<div>
+					<h2 className="text-xl font-semibold">{t('products.title')}</h2>
+					<p className="text-sm text-muted-foreground">{t('products.subtitle')}</p>
+				</div>
+			</header>
+			{/* Implement section */}
+		</section>
+	)
+}

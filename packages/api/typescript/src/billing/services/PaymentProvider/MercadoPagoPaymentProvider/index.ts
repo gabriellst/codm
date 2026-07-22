@@ -1,0 +1,1 @@
+export { MercadoPagoPaymentProvider } from './MercadoPagoPaymentProvider'

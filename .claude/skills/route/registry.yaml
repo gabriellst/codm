@@ -1,0 +1,390 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: [sdk]
+  depended_by: [component]
+  context_reads: [component]
+
+  patterns:
+    - id: RTE-01
+      name: "createFileRoute"
+      when: always
+      rule: "export const Route = createFileRoute('/(app)/path/')({})"
+    - id: RTE-02
+      name: "staticData breadcrumb"
+      when: "page routes (not layout routes)"
+      rule: "Top-level pages: staticData: { breadcrumb: 'Label' }. Nested/detail pages: staticData: { breadcrumbs: [{ label: 'Parent', to: '/parent' }, { label: 'Current' }] }. Layout routes (route.tsx with <Outlet />) should NOT have staticData.breadcrumb."
+    - id: RTE-03
+      name: "RouteComponent function"
+      when: always
+      rule: "component: RouteComponent — function declared below"
+    - id: RTE-04
+      name: "errorComponent"
+      when: always
+      rule: "errorComponent: RouteError — or an inline errorComponent function when the route needs custom error handling (e.g., custom props, context-specific recovery UI)"
+      note: "Some routes use inline errorComponent functions with custom props, which is acceptable as long as error handling is present."
+
+    - id: RTE-C01
+      name: "searchSchema + validateSearch"
+      when: "listing route with pagination/filters"
+      rule: "const searchSchema = sdkSchema.and(z.object({ ... })); validateSearch: zodValidator(searchSchema)"
+      wrong: "useState for pagination state; using .extend() instead of .and()"
+    - id: RTE-C02
+      name: "Route is thin shell — no data fetching for components"
+      when: "route renders components"
+      rule: "Route renders components without data/search/onSearchParamsChange props. Components fetch their own data."
+      wrong: "Route calls useListProducts and passes data={data} search={search} onSearchParamsChange={update} to components"
+    - id: RTE-C03
+      name: "SDK hook for data fetching (in components, not route)"
+      when: "page needs server data"
+      rule: "Components use SDK hooks directly. Route only fetches if it needs data for layout decisions (e.g., connection state)."
+    - id: RTE-C04
+      name: "useDebouncedSearch"
+      when: "route has search input (used in components)"
+      rule: "useDebouncedSearch({ initialValue, onSearch }) + routeApi.useNavigate()"
+    - id: RTE-C05
+      name: "Detail route with params"
+      when: "route is /:id detail page"
+      rule: "Route.useParams() in component via routeApi, or getRouteApi() in child components"
+    - id: RTE-C06
+      name: "Route tree generation"
+      when: "new route file created"
+      rule: "cd packages/app && bun tsr generate"
+    - id: RTE-C07
+      name: "All components in -components/ folder"
+      when: "route renders child components"
+      rule: "All route-specific components live in -components/. Components own their data, can use hooks/stores/mutations."
+
+    # --- Extracted patterns ---
+
+    - id: RTE-P01
+      name: "List page with SDK schema direct usage"
+      when: "listing route with no frontend-only search fields"
+      rule: |
+        const patientsSearchSchema = listMemberPatientsQueryParamsSchema
+
+        export const Route = createFileRoute('/(app)/patients/')({
+          validateSearch: zodValidator(patientsSearchSchema),
+        })
+
+    - id: RTE-P02
+      name: "List page with extended search schema"
+      when: "listing route with frontend-only fields (selectedId, view, tab)"
+      rule: |
+        import { zodValidator } from '@/lib/zod-validator'
+
+        const dashboardSearchSchema = getMemberDashboardQueryParamsSchema.and(
+          z.object({
+            selectedAppointmentId: z.string().optional(),
+            view: z.enum(CalendarView).optional(),
+          }),
+        )
+
+        export const Route = createFileRoute('/(app)/dashboard/')({
+          validateSearch: zodValidator(dashboardSearchSchema),
+        })
+
+    - id: RTE-P03
+      name: "Type exports from SDK response"
+      when: "route has types that components need"
+      rule: |
+        export type PatientItem = ListMemberPatientsQueryResponse['items'][number]
+        export type Appointment = GetMemberDashboardQueryResponse['calendarAppointments']['appointments'][number]
+
+    - id: RTE-P04
+      name: "RouteError component import"
+      when: always
+      rule: |
+        import { RouteError } from '@/components/RouteError'
+        errorComponent: RouteError,
+
+    - id: RTE-P05
+      name: "Dual-mode query pattern (member/doctor)"
+      when: "route serves both member and doctor user types"
+      reason: "Components call two SDK hooks with enabled gated by mode. Avoids conditional hook calls."
+      rule: |
+        const { mode } = useSessionMode()
+        const memberQuery = useListMemberPatients({ params: search }, { query: { enabled: mode === MemberTypeEnum.MEMBER } })
+        const doctorQuery = useListDoctorPatients({ params: search }, { query: { enabled: mode === MemberTypeEnum.DOCTOR } })
+
+    - id: RTE-P06
+      name: "Tab-based route with URL tab state"
+      when: "route has tabs"
+      rule: |
+        export enum SettingsTab { CLINIC = 'clinic', UNITS = 'units' }
+
+        const settingsSearchSchema = z.object({
+          tab: z.enum(SettingsTab).optional(),
+        })
+
+    - id: RTE-P07
+      name: "Auth route with callback search param"
+      when: "sign-in/sign-up route needs redirect after auth"
+      rule: |
+        const searchSchema = z.object({
+          callback: z.string().optional(),
+          email: z.string().optional(),
+        })
+
+    - id: RTE-P08
+      name: "Layout route with Sidebar + Header + Outlet"
+      when: "creating the (app) layout route"
+      rule: |
+        export const Route = createFileRoute('/(app)')({ component: AuthLayout })
+
+        function AuthLayout() {
+          return (
+            <div className="flex h-screen overflow-hidden bg-route-background">
+              <Sidebar />
+              <main className="flex-1 overflow-hidden relative flex flex-col">
+                <Header />
+                <div className="flex-1 overflow-auto"><Outlet /></div>
+              </main>
+            </div>
+          )
+        }
+
+    - id: RTE-P09
+      name: "Route page wrapper classes"
+      when: "any (app)/* route component"
+      rule: |
+        return (
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 flex flex-col gap-6">
+            {/* page content */}
+          </div>
+        )
+
+    - id: RTE-P10
+      name: "Layout route with loader for child context"
+      when: "layout route resolves data that child routes need"
+      reason: "Use queryClient.ensureQueryData in loader to resolve IDs before child routes render. Child routes read via getRouteApi().useLoaderData()."
+      rule: |
+        export const Route = createFileRoute('/(app)/channel')({
+          loader: async ({ context }) => {
+            const resolved = await context.queryClient.ensureQueryData(
+              getChannelChannelsResolveQueryOptions({ params: { platform: PlatformEnum.PlatformWhatsApp } }),
+            )
+            return { channelId: resolved?.id ?? null }
+          },
+          component: RouteComponent,
+        })
+
+    - id: RTE-P11
+      name: "Conditional SDK hook with enabled flag"
+      when: "component has a query that depends on a selected ID"
+      rule: |
+        const { data } = useGetServiceDetails(
+          { id: selectedId! },
+          { query: { enabled: !!selectedId } }
+        )
+
+    - id: RTE-P12
+      name: "Search schema defaults via .optional().default()"
+      when: "search param field has a default value"
+      rule: |
+        // CORRECT — input accepts undefined, output is always concrete
+        page: z.number().optional().default(1)
+        startDate: z.coerce.date().optional().default(() => startOfWeek(new Date()))
+      wrong: |
+        // WRONG — .default().optional() makes output type include undefined
+        page: z.number().default(1).optional()
+
+    - id: RTE-P13
+      name: "Pagination defaults via .and()"
+      when: "listing route with paginated SDK schema"
+      rule: |
+        const searchSchema = listCollaboratorsQueryParamsSchema.and(
+          z.object({
+            page: z.number().optional().default(1),
+            limit: z.number().optional().default(10),
+          }),
+        )
+
+    - id: RTE-P14
+      name: "wrapperClassName override in staticData"
+      when: "route needs non-standard page wrapper (e.g., full-height chat, agent)"
+      rule: |
+        staticData: { breadcrumb: 'WhatsApp', wrapperClassName: 'h-full w-full' }
+        // The app layout reads wrapperClassName and applies it instead of default padding/overflow classes
+      source: "channel/chat, agent routes"
+
+  canonical_snippet: |
+    import { createFileRoute } from '@tanstack/react-router'
+    import { zodValidator } from '@/lib/zod-validator'
+    import { z } from 'zod'
+    import { listResourcesQueryParamsSchema, type ListResourcesQueryResponse } from '@template/client-typescript/typescript'
+    import { RouteError } from '@/components/RouteError'
+    import { ResourceList } from './-components/ResourceList'
+    import { ResourceFilters } from './-components/ResourceFilters'
+
+    export type ResourceItem = ListResourcesQueryResponse['items'][number]
+
+    const searchSchema = listResourcesQueryParamsSchema.and(
+      z.object({ selectedId: z.string().optional() }),
+    )
+    export type ResourceSearchParams = z.infer<typeof searchSchema>
+
+    export const Route = createFileRoute('/(app)/resources/')({
+      staticData: { breadcrumb: 'Resources' },
+      validateSearch: zodValidator(searchSchema),
+      errorComponent: RouteError,
+      component: RouteComponent,
+    })
+
+    function RouteComponent() {
+      return (
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 flex flex-col gap-6">
+          <h1 className="text-2xl font-bold">Resources</h1>
+          <ResourceFilters />
+          <ResourceList />
+        </div>
+      )
+    }
+
+  scaffold: "bun cli route <path> [--detail] [--extend=<SDKSchemaName>] [--sdk=<Identifier>] [--search=<spec> | --search-file=<path>] [--export-item-type[=<TypeName>]] [--import=<spec>] [--layout=<plain|app>] --i18n=<prefix>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Orchestrating multiple API calls in route for a single screen"
+      severity: critical
+      wrong: |
+        // Route makes 3 separate calls to build dashboard
+        const { data: stats } = useGetStats()
+        const { data: appointments } = useListAppointments()
+        const { data: patients } = useListRecentPatients()
+      right: |
+        // Single dedicated BFF endpoint
+        const { data } = useGetDashboard({ params: search })
+      mechanical: false
+
+    - id: bp-02
+      name: "Route fetching data and passing as props to components"
+      severity: critical
+      wrong: |
+        // Route fetches and passes data down
+        const { data } = useListProducts({ params: search })
+        <ProductList data={data} search={search} onSearchParamsChange={update} />
+      right: |
+        // Route is a thin shell, component fetches its own data
+        <ProductList />
+      mechanical: true
+      detect:
+        - 'onSearchParamsChange\s*='
+        - 'search=\{search\}'
+        - 'data=\{data\}'
+
+    - id: bp-03
+      name: "Using useState for state that should be in the URL"
+      severity: critical
+      wrong: |
+        const [page, setPage] = useState(1)
+        const [search, setSearch] = useState('')
+      right: |
+        const search = Route.useSearch()
+        navigate({ search: prev => ({ ...prev, page: 2 }) })
+      mechanical: true
+      detect:
+        - '\buseState\b'
+
+    - id: bp-04
+      name: "Creating searchSchema without composing SDK schema"
+      severity: critical
+      wrong: |
+        // .extend() overwrites SDK field definitions
+        const schema = sdkSchema.extend({ selectedId: z.string().optional() })
+      right: |
+        // .and() preserves SDK constraints
+        const schema = sdkSchema.and(z.object({ selectedId: z.string().optional() }))
+      mechanical: true
+      detect:
+        - '\.extend\('
+
+    - id: bp-05
+      name: "Route without errorComponent"
+      severity: critical
+      wrong: |
+        export const Route = createFileRoute('/(app)/patients/')({
+          validateSearch: zodValidator(schema),
+          component: RouteComponent,
+        })
+      right: |
+        export const Route = createFileRoute('/(app)/patients/')({
+          validateSearch: zodValidator(schema),
+          errorComponent: RouteError,
+          component: RouteComponent,
+        })
+      mechanical: false
+
+    - id: bp-06
+      name: "Using <a> instead of <Link> for internal routes"
+      severity: critical
+      wrong: |
+        <a href="/patients">Pacientes</a>
+      right: |
+        <Link to="/patients">Pacientes</Link>
+      mechanical: true
+      detect:
+        - '<a\s[^>]*href="/'
+
+    - id: bp-07
+      name: "Creating route without regenerating routeTree.gen.ts"
+      severity: critical
+      wrong: |
+        # Created new route file but forgot to regenerate
+      right: |
+        cd packages/app && bun tsr generate
+      mechanical: false
+
+    - id: bp-08
+      name: "Wrong .default().optional() ordering in search params"
+      severity: critical
+      wrong: |
+        page: z.number().default(1).optional()
+      right: |
+        page: z.number().optional().default(1)
+      mechanical: true
+      detect:
+        - '\.default\([^)]*\)\.optional\(\)'
+
+    - id: bp-09
+      name: "Storing bookmarkable state in Zustand instead of URL search params"
+      severity: critical
+      wrong: |
+        // selectedChatId in Zustand — lost on refresh
+        const { selectedChatId } = useChatStore()
+      right: |
+        // selectedChatId in URL — bookmarkable
+        const { chatId } = routeApi.useSearch()
+      mechanical: false
+
+    - id: bp-10
+      name: "Passing onSearchParamsChange as prop to components"
+      severity: critical
+      wrong: |
+        const updateSearchParams = createSearchParamsUpdater(navigate)
+        <FilterBar search={search} onSearchParamsChange={updateSearchParams} />
+      right: |
+        // Component reads search and navigates directly
+        <FilterBar />
+
+        // In FilterBar:
+        const search = routeApi.useSearch()
+        const navigate = routeApi.useNavigate()
+      mechanical: true
+      detect:
+        - 'onSearchParamsChange\s*='
+        - 'createSearchParamsUpdater\('
+
+    - id: bp-11
+      name: "Date-format wrapper function or hardcoded locale"
+      severity: critical
+      wrong: |
+        function formatDate(date: Date): string { return date.toLocaleDateString('pt-BR') }   // wrapper + hardcoded locale
+      right: |
+        const locale = useLocale()
+        <span>{new Date(date).toLocaleDateString(locale)}</span>
+      mechanical: true
+      detect:
+        - 'function\s+formatDate\b'
+        - 'const\s+formatDate\s*='
+        - 'locale:\s*ptBR'

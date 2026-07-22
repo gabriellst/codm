@@ -1,0 +1,168 @@
+// CONTEXT-ORIGIN · APPROVED pair · examples/pairs/synthetic-react-onboarding-composed-form
+// task:        synthetic-react-onboarding-composed-form
+// stamp:       agent-wave1-38ff876
+// docTreeHash: 213519a54e23
+// model:       sonnet
+// graded:      2026-07-21T23:05:55.662Z
+// source:      packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx (archived eval build, applied at HEAD)
+// Verbatim extract of the archived eval build — NOT a live module. Do not import it.
+import type { ComponentProps } from 'react'
+import { useForm } from '@tanstack/react-form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field'
+import { type DeepPartial, pickUnionVariantField } from '@/lib'
+import { cn } from '@/lib/utils'
+import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
+import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
+import { Spinner } from '@/components/ui/spinner'
+import { useTranslation } from 'react-i18next'
+
+// FRM-P44: the field sub-schema of the matched union member — IS a valid validators.onChange
+// (its input type matches the flat form value) AND the .safeParse source AND the value type.
+export const ShopifyCredentialsStepSchema = pickUnionVariantField(
+	connectIntegrationMutationRequestSchema,
+	{ platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' },
+	'credentials',
+)
+
+type ShopifyCredentialsStepData = (typeof ShopifyCredentialsStepSchema)['_zod']['output']
+
+// Omit the native `onSubmit` — the FRM-P17 step contract's `onSubmit(data)` callback (not a
+// form event handler) reuses the name; the component always wires the real DOM handler itself.
+type ShopifyCredentialsStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
+	defaultValues?: DeepPartial<ShopifyCredentialsStepData>
+	onSubmit: (data: ShopifyCredentialsStepData) => void
+	onBack?: () => void
+	isSubmitting?: boolean
+}
+
+export function ShopifyCredentialsStep({
+	defaultValues,
+	onSubmit,
+	onBack,
+	isSubmitting,
+	className,
+	...props
+}: ShopifyCredentialsStepProps) {
+	const { t } = useTranslation()
+
+	const form = useForm({
+		defaultValues,
+		validators: {
+			onChange: ShopifyCredentialsStepSchema,
+		},
+		onSubmit: async form => {
+			const result = ShopifyCredentialsStepSchema.safeParse(form.value)
+			if (!result.success) return
+			onSubmit(result.data)
+		},
+	})
+
+	return (
+		<form
+			className={cn('flex flex-col gap-6 p-2', className)}
+			{...props}
+			onSubmit={e => {
+				e.preventDefault()
+				e.stopPropagation()
+				form.handleSubmit()
+			}}
+		>
+			<div className="text-center">
+				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.shopifyCredentials.title')}</h2>
+				<p className="text-muted-foreground mt-2">{t('onboarding.shopifyCredentials.subtitle')}</p>
+			</div>
+
+			<FieldGroup>
+				<form.Field name="shopDomain">
+					{field => {
+						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+						return (
+							<Field>
+								<FieldLabel htmlFor={field.name}>{t('onboarding.shopifyCredentials.shopDomain')}</FieldLabel>
+								<Input
+									id={field.name}
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									onChange={e => field.handleChange(e.target.value)}
+									placeholder={t('onboarding.shopifyCredentials.shopDomainPlaceholder')}
+									aria-invalid={isInvalid}
+								/>
+								{isInvalid && <FieldError errors={field.state.meta.errors} />}
+							</Field>
+						)
+					}}
+				</form.Field>
+
+				<form.Field name="clientId">
+					{field => {
+						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+						return (
+							<Field>
+								<FieldLabel htmlFor={field.name}>{t('onboarding.shopifyCredentials.clientId')}</FieldLabel>
+								<Input
+									id={field.name}
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									onChange={e => field.handleChange(e.target.value)}
+									placeholder={t('onboarding.shopifyCredentials.clientIdPlaceholder')}
+									aria-invalid={isInvalid}
+								/>
+								{isInvalid && <FieldError errors={field.state.meta.errors} />}
+							</Field>
+						)
+					}}
+				</form.Field>
+
+				<form.Field name="clientSecret">
+					{field => {
+						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+						return (
+							<Field>
+								<FieldLabel htmlFor={field.name}>{t('onboarding.shopifyCredentials.clientSecret')}</FieldLabel>
+								<Input
+									id={field.name}
+									type="password"
+									value={field.state.value ?? ''}
+									onBlur={field.handleBlur}
+									onChange={e => field.handleChange(e.target.value)}
+									placeholder={t('onboarding.shopifyCredentials.clientSecretPlaceholder')}
+									aria-invalid={isInvalid}
+								/>
+								{isInvalid && <FieldError errors={field.state.meta.errors} />}
+							</Field>
+						)
+					}}
+				</form.Field>
+			</FieldGroup>
+
+			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
+				{({ canSubmit, values }) => {
+					const isDisabled = isSubmitting || !canSubmit || !ShopifyCredentialsStepSchema.safeParse(values).success
+					return (
+						<div className="flex justify-between">
+							<div>
+								{onBack && (
+									<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
+										<IconArrowLeft className="mr-1 size-4" />
+										{t('common.back')}
+									</Button>
+								)}
+							</div>
+							<div className="flex gap-2">
+								<Button type="submit" disabled={isDisabled}>
+									{isSubmitting && <Spinner className="mr-2" />}
+									{t('common.next')}
+									<IconArrowRight className="ml-1 size-4" />
+								</Button>
+							</div>
+						</div>
+					)
+				}}
+			</form.Subscribe>
+		</form>
+	)
+}
+
+export type { ShopifyCredentialsStepData }

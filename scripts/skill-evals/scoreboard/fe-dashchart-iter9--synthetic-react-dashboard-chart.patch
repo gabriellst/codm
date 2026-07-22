@@ -1,0 +1,630 @@
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..85631341c 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -547,6 +547,13 @@
+ 		"itemsPerPage": "items per page"
+ 	},
+ 	"enums": {
++		"ChartType": {
++			"hour": "By Hour",
++			"income": "By Date",
++			"period": "By Shift",
++			"region": "By Region",
++			"weekday": "By Weekday"
++		},
+ 		"CheckoutPlatform": {
+ 			"ADOOREI": "Adoorei",
+ 			"CART_PANDA": "Cart Panda",
+@@ -1180,6 +1187,47 @@
+ 		"updateError": "Failed to update cost.",
+ 		"updateSuccess": "Cost updated successfully."
+ 	},
++	"reports": {
++		"breadcrumb": "Reports",
++		"title": "Sales Reports",
++		"recorteLabel": "Breakdown",
++		"dateRange": {
++			"endLabel": "End Date",
++			"startLabel": "Start Date"
++		},
++		"chart": {
++			"ariaLabel": "Sales report by breakdown",
++			"columnLabel": "Segment",
++			"columnOrders": "Orders",
++			"columnProfit": "Profit",
++			"columnRevenue": "Revenue",
++			"columnTotal": "Total",
++			"empty": "No data found for the selected period.",
++			"loadError": "Failed to load data.",
++			"period": {
++				"AFTERNOON": "Afternoon",
++				"EVENING": "Evening",
++				"MORNING": "Morning",
++				"NIGHT": "Late Night"
++			},
++			"weekday": {
++				"FRIDAY": "Friday",
++				"MONDAY": "Monday",
++				"SATURDAY": "Saturday",
++				"SUNDAY": "Sunday",
++				"THURSDAY": "Thursday",
++				"TUESDAY": "Tuesday",
++				"WEDNESDAY": "Wednesday"
++			}
++		},
++		"type": {
++			"hour": "By Hour",
++			"income": "By Date",
++			"period": "By Shift",
++			"region": "By Region",
++			"weekday": "By Weekday"
++		}
++	},
+ 	"orders": {
+ 		"batchActions": {
+ 			"applied": "Status applied to {{count}} order(s).",
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..6af60499a 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -547,6 +547,13 @@
+ 		"itemsPerPage": "itens por página"
+ 	},
+ 	"enums": {
++		"ChartType": {
++			"hour": "Por Hora",
++			"income": "Por Data",
++			"period": "Por Turno",
++			"region": "Por Região",
++			"weekday": "Por Dia da Semana"
++		},
+ 		"CheckoutPlatform": {
+ 			"ADOOREI": "Adoorei",
+ 			"CART_PANDA": "Cart Panda",
+@@ -1180,6 +1187,47 @@
+ 		"updateError": "Erro ao atualizar custo.",
+ 		"updateSuccess": "Custo atualizado com sucesso."
+ 	},
++	"reports": {
++		"breadcrumb": "Relatórios",
++		"title": "Relatórios de Vendas",
++		"recorteLabel": "Recorte",
++		"dateRange": {
++			"endLabel": "Data Final",
++			"startLabel": "Data Inicial"
++		},
++		"chart": {
++			"ariaLabel": "Relatório de vendas por recorte",
++			"columnLabel": "Segmento",
++			"columnOrders": "Pedidos",
++			"columnProfit": "Lucro",
++			"columnRevenue": "Faturamento",
++			"columnTotal": "Total",
++			"empty": "Nenhum dado encontrado para o período selecionado.",
++			"loadError": "Não foi possível carregar os dados.",
++			"period": {
++				"AFTERNOON": "Tarde",
++				"EVENING": "Noite",
++				"MORNING": "Manhã",
++				"NIGHT": "Madrugada"
++			},
++			"weekday": {
++				"FRIDAY": "Sexta-feira",
++				"MONDAY": "Segunda-feira",
++				"SATURDAY": "Sábado",
++				"SUNDAY": "Domingo",
++				"THURSDAY": "Quinta-feira",
++				"TUESDAY": "Terça-feira",
++				"WEDNESDAY": "Quarta-feira"
++			}
++		},
++		"type": {
++			"hour": "Por Hora",
++			"income": "Por Data",
++			"period": "Por Turno",
++			"region": "Por Região",
++			"weekday": "Por Dia da Semana"
++		}
++	},
+ 	"orders": {
+ 		"batchActions": {
+ 			"applied": "Status aplicado a {{count}} pedido(s).",
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..b3f672508 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -15,6 +15,7 @@ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
++import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+ import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+@@ -58,6 +59,11 @@ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   path: '/suggestions/',
+   getParentRoute: () => appRouteRoute,
+ } as any)
++const appReportsIndexRoute = appReportsIndexRouteImport.update({
++  id: '/reports/',
++  path: '/reports/',
++  getParentRoute: () => appRouteRoute,
++} as any)
+ const appProductsIndexRoute = appProductsIndexRouteImport.update({
+   id: '/products/',
+   path: '/products/',
+@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
+   '/dashboard/': typeof appDashboardIndexRoute
+   '/orders/': typeof appOrdersIndexRoute
+   '/products/': typeof appProductsIndexRoute
++  '/reports/': typeof appReportsIndexRoute
+   '/suggestions/': typeof appSuggestionsIndexRoute
+   '/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
+   '/dashboard': typeof appDashboardIndexRoute
+   '/orders': typeof appOrdersIndexRoute
+   '/products': typeof appProductsIndexRoute
++  '/reports': typeof appReportsIndexRoute
+   '/suggestions': typeof appSuggestionsIndexRoute
+   '/finance/costs': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic': typeof appMarketingTrafficIndexRoute
+@@ -179,6 +187,7 @@ export interface FileRoutesById {
+   '/(app)/dashboard/': typeof appDashboardIndexRoute
+   '/(app)/orders/': typeof appOrdersIndexRoute
+   '/(app)/products/': typeof appProductsIndexRoute
++  '/(app)/reports/': typeof appReportsIndexRoute
+   '/(app)/suggestions/': typeof appSuggestionsIndexRoute
+   '/(app)/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/(app)/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -201,6 +210,7 @@ export interface FileRouteTypes {
+     | '/dashboard/'
+     | '/orders/'
+     | '/products/'
++    | '/reports/'
+     | '/suggestions/'
+     | '/finance/costs/'
+     | '/marketing/traffic/'
+@@ -221,6 +231,7 @@ export interface FileRouteTypes {
+     | '/dashboard'
+     | '/orders'
+     | '/products'
++    | '/reports'
+     | '/suggestions'
+     | '/finance/costs'
+     | '/marketing/traffic'
+@@ -242,6 +253,7 @@ export interface FileRouteTypes {
+     | '/(app)/dashboard/'
+     | '/(app)/orders/'
+     | '/(app)/products/'
++    | '/(app)/reports/'
+     | '/(app)/suggestions/'
+     | '/(app)/finance/costs/'
+     | '/(app)/marketing/traffic/'
+@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof appSuggestionsIndexRouteImport
+       parentRoute: typeof appRouteRoute
+     }
++    '/(app)/reports/': {
++      id: '/(app)/reports/'
++      path: '/reports'
++      fullPath: '/reports/'
++      preLoaderRoute: typeof appReportsIndexRouteImport
++      parentRoute: typeof appRouteRoute
++    }
+     '/(app)/products/': {
+       id: '/(app)/products/'
+       path: '/products'
+@@ -405,6 +424,7 @@ interface appRouteRouteChildren {
+   appDashboardIndexRoute: typeof appDashboardIndexRoute
+   appOrdersIndexRoute: typeof appOrdersIndexRoute
+   appProductsIndexRoute: typeof appProductsIndexRoute
++  appReportsIndexRoute: typeof appReportsIndexRoute
+   appSuggestionsIndexRoute: typeof appSuggestionsIndexRoute
+   appFinanceCostsIndexRoute: typeof appFinanceCostsIndexRoute
+   appMarketingTrafficIndexRoute: typeof appMarketingTrafficIndexRoute
+@@ -422,6 +442,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
+   appDashboardIndexRoute: appDashboardIndexRoute,
+   appOrdersIndexRoute: appOrdersIndexRoute,
+   appProductsIndexRoute: appProductsIndexRoute,
++  appReportsIndexRoute: appReportsIndexRoute,
+   appSuggestionsIndexRoute: appSuggestionsIndexRoute,
+   appFinanceCostsIndexRoute: appFinanceCostsIndexRoute,
+   appMarketingTrafficIndexRoute: appMarketingTrafficIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/index.tsx
+new file mode 100644
+index 000000000..ff0f91b62
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/index.tsx
+@@ -0,0 +1,334 @@
++import { useMemo } from 'react'
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { format } from 'date-fns'
++import type { DateRange } from 'react-day-picker'
++import { IconCheck, IconChevronDown } from '@tabler/icons-react'
++import {
++	useGetChart,
++	ChartTypeEnum,
++} from '@template/client-typescript/typescript'
++import type { ChartType, GetChartQueryResponse, Money } from '@template/client-typescript/typescript'
++import type { Locale } from '@/lib/locale'
++
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
++import { DatePicker } from '@/components/ui/date-picker'
++import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++import { useTenancyStore } from '@/stores'
++import { useMoney, useLocale } from '@/hooks'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++// ─── Types ────────────────────────────────────────────────────────────────────
++
++interface ChartRow {
++	key: string
++	label: string
++	revenue: Money
++	profit: Money | undefined
++	orders: number
++}
++
++// ─── Helpers ──────────────────────────────────────────────────────────────────
++
++const CHART_TYPE_OPTIONS = Object.values(ChartTypeEnum)
++
++const WEEKDAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'] as const
++const PERIOD_ORDER = ['MORNING', 'AFTERNOON', 'EVENING', 'NIGHT'] as const
++
++function computeRows(
++	data: GetChartQueryResponse,
++	weekdayLabels: Record<(typeof WEEKDAY_ORDER)[number], string>,
++	periodLabels: Record<(typeof PERIOD_ORDER)[number], string>,
++	locale: Locale,
++): { rows: ChartRow[]; showProfit: boolean } {
++	if (data.kind === 'income') {
++		return {
++			showProfit: true,
++			rows: data.buckets.map(b => ({
++				key: b.timestamp,
++				label: new Date(b.timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
++				revenue: b.revenue,
++				profit: b.profit,
++				orders: b.orders,
++			})),
++		}
++	}
++
++	if (data.kind === 'weekday') {
++		return {
++			showProfit: true,
++			rows: WEEKDAY_ORDER.map(key => ({
++				key,
++				label: weekdayLabels[key],
++				revenue: data.segments[key].revenue,
++				profit: data.segments[key].profit,
++				orders: data.segments[key].orders,
++			})),
++		}
++	}
++
++	if (data.kind === 'hour') {
++		return {
++			showProfit: true,
++			rows: Object.entries(data.segments)
++				.sort(([a], [b]) => Number(a) - Number(b))
++				.map(([hour, seg]) => ({
++					key: hour,
++					label: `${hour}h`,
++					revenue: seg.revenue,
++					profit: seg.profit,
++					orders: seg.orders,
++				})),
++		}
++	}
++
++	if (data.kind === 'period') {
++		return {
++			showProfit: true,
++			rows: PERIOD_ORDER.map(key => ({
++				key,
++				label: periodLabels[key],
++				revenue: data.segments[key].revenue,
++				profit: data.segments[key].profit,
++				orders: data.segments[key].orders,
++			})),
++		}
++	}
++
++	// region — total only, no profit breakdown
++	return {
++		showProfit: false,
++		rows: Object.entries(data.regions).map(([key, region]) => ({
++			key,
++			label: region.state ? `${region.state}, ${region.country}` : region.country,
++			revenue: region.total,
++			profit: undefined,
++			orders: region.orders,
++		})),
++	}
++}
++
++// ─── Sub-components ───────────────────────────────────────────────────────────
++
++function BarRow({
++	row,
++	maxRev,
++	formatMoney,
++	showProfit,
++}: {
++	row: ChartRow
++	maxRev: number
++	formatMoney: (m: Money) => string
++	showProfit: boolean
++}) {
++	const barWidth = maxRev > 0 ? Math.round((Math.abs(row.revenue.amountCents) / maxRev) * 100) : 0
++	return (
++		<div
++			role="row"
++			className={cn(
++				'grid items-center gap-4 py-2.5 border-b border-border/40 last:border-0',
++				showProfit ? 'grid-cols-[1fr_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto]',
++			)}
++		>
++			<div className="min-w-0">
++				<div className="truncate text-sm text-foreground">{row.label}</div>
++				<div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
++					<div className="h-full rounded-full bg-primary/70" style={{ width: `${barWidth}%` }} />
++				</div>
++			</div>
++			<div className="text-right text-sm tabular-nums">{formatMoney(row.revenue)}</div>
++			{showProfit ? (
++				<div className="text-right text-sm tabular-nums text-success">
++					{row.profit ? formatMoney(row.profit) : '—'}
++				</div>
++			) : null}
++			<div className="text-right text-sm tabular-nums text-muted-foreground">{row.orders}</div>
++		</div>
++	)
++}
++
++function SkeletonRows({ showProfit }: { showProfit: boolean }) {
++	return (
++		<div className="flex flex-col gap-3" aria-busy="true">
++			{Array.from({ length: 7 }).map((_, i) => (
++				<div
++					key={i}
++					className={cn(
++						'grid items-center gap-4',
++						showProfit ? 'grid-cols-[1fr_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto]',
++					)}
++				>
++					<div>
++						<Skeleton className="mb-1.5 h-3 w-24" />
++						<Skeleton className="h-1.5 w-full rounded-full" />
++					</div>
++					<Skeleton className="h-3 w-16" />
++					{showProfit ? <Skeleton className="h-3 w-12" /> : null}
++					<Skeleton className="h-3 w-8" />
++				</div>
++			))}
++		</div>
++	)
++}
++
++// ─── Main component ───────────────────────────────────────────────────────────
++
++export function ChartSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const locale = useLocale()
++	const { chartType, startDate, endDate } = routeApi.useSearch()
++	const navigate = routeApi.useNavigate()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++
++	// All t() calls use literal keys; dynamic key lookups are constructed as Record
++	// objects so the actual t() call is always a literal string (gotcha from AdditionalCostsCard).
++	const weekdayLabels = {
++		MONDAY: t('reports.chart.weekday.MONDAY'),
++		TUESDAY: t('reports.chart.weekday.TUESDAY'),
++		WEDNESDAY: t('reports.chart.weekday.WEDNESDAY'),
++		THURSDAY: t('reports.chart.weekday.THURSDAY'),
++		FRIDAY: t('reports.chart.weekday.FRIDAY'),
++		SATURDAY: t('reports.chart.weekday.SATURDAY'),
++		SUNDAY: t('reports.chart.weekday.SUNDAY'),
++	} as const satisfies Record<(typeof WEEKDAY_ORDER)[number], string>
++
++	const periodLabels = {
++		MORNING: t('reports.chart.period.MORNING'),
++		AFTERNOON: t('reports.chart.period.AFTERNOON'),
++		EVENING: t('reports.chart.period.EVENING'),
++		NIGHT: t('reports.chart.period.NIGHT'),
++	} as const satisfies Record<(typeof PERIOD_ORDER)[number], string>
++
++	const typeLabels: Record<ChartType, string> = {
++		income: t('enums.ChartType.income'),
++		weekday: t('enums.ChartType.weekday'),
++		hour: t('enums.ChartType.hour'),
++		period: t('enums.ChartType.period'),
++		region: t('enums.ChartType.region'),
++	}
++
++	const { data, isPending, isError } = useGetChart({
++		chartType,
++		tenancyScope,
++		frequency: 'DAILY',
++		startDate,
++		endDate,
++	})
++
++	const { rows, showProfit } = useMemo((): { rows: ChartRow[]; showProfit: boolean } => {
++		if (!data) return { rows: [], showProfit: chartType !== 'region' }
++		return computeRows(data, weekdayLabels, periodLabels, locale)
++	}, [data, weekdayLabels, periodLabels, locale, chartType])
++
++	const maxRev = useMemo(
++		() => Math.max(...rows.map(r => Math.abs(r.revenue.amountCents)), 1),
++		[rows],
++	)
++
++	const isEmpty = rows.length === 0 && !isPending && !isError
++
++	const range: DateRange = {
++		from: startDate ? new Date(startDate) : undefined,
++		to: endDate ? new Date(endDate) : undefined,
++	}
++
++	function handleRangeChange(r: DateRange | undefined) {
++		navigate({
++			search: prev => ({
++				...prev,
++				startDate: r?.from ? format(r.from, 'yyyy-MM-dd') : prev.startDate,
++				endDate: r?.to ? format(r.to, 'yyyy-MM-dd') : (r?.from ? format(r.from, 'yyyy-MM-dd') : prev.endDate),
++			}),
++		})
++	}
++
++	function handleChartTypeChange(next: ChartType) {
++		navigate({ search: prev => ({ ...prev, chartType: next }) })
++	}
++
++	return (
++		<Card className={cn('flex flex-col gap-6 p-6', className)} {...props}>
++			{/* Header — always visible during load */}
++			<header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
++				<h1 className="text-2xl font-bold text-foreground">{t('reports.title')}</h1>
++				<div className="flex flex-wrap items-center gap-3">
++					<div className="flex items-center gap-2">
++						<span className="text-sm text-muted-foreground">{t('reports.recorteLabel')}:</span>
++						<DropdownMenu>
++							<DropdownMenuTrigger
++								aria-label={t('reports.recorteLabel')}
++								className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
++							>
++								{typeLabels[chartType]}
++								<IconChevronDown size={14} />
++							</DropdownMenuTrigger>
++							<DropdownMenuContent side="bottom" align="end">
++								{CHART_TYPE_OPTIONS.map(opt => (
++									<DropdownMenuItem key={opt} onClick={() => handleChartTypeChange(opt)}>
++										<span className="flex-1">{typeLabels[opt]}</span>
++										{chartType === opt ? <IconCheck size={14} className="text-primary" /> : null}
++									</DropdownMenuItem>
++								))}
++							</DropdownMenuContent>
++						</DropdownMenu>
++					</div>
++					<DatePicker range={range} onRangeChange={handleRangeChange} />
++				</div>
++			</header>
++
++			{/* Column headers — visible when data is ready */}
++			{!isPending && !isError && !isEmpty && (
++				<div
++					className={cn(
++						'grid gap-4 border-b border-border pb-2',
++						showProfit ? 'grid-cols-[1fr_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto]',
++					)}
++				>
++					<span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
++						{t('reports.chart.columnLabel')}
++					</span>
++					<span className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
++						{t('reports.chart.columnRevenue')}
++					</span>
++					{showProfit ? (
++						<span className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
++							{t('reports.chart.columnProfit')}
++						</span>
++					) : null}
++					<span className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
++						{t('reports.chart.columnOrders')}
++					</span>
++				</div>
++			)}
++
++			{/* Data area — loading skeleton, error, empty, or rows */}
++			<div role="table" aria-label={t('reports.chart.ariaLabel')} className="min-h-32">
++				{isPending ? (
++					<SkeletonRows showProfit={showProfit} />
++				) : isError ? (
++					<Empty>
++						<EmptyHeader>
++							<EmptyTitle>{t('reports.chart.loadError')}</EmptyTitle>
++						</EmptyHeader>
++					</Empty>
++				) : isEmpty ? (
++					<Empty>
++						<EmptyHeader>
++							<EmptyTitle>{t('reports.chart.empty')}</EmptyTitle>
++						</EmptyHeader>
++					</Empty>
++				) : (
++					rows.map(row => (
++						<BarRow key={row.key} row={row} maxRev={maxRev} formatMoney={formatMoney} showProfit={showProfit} />
++					))
++				)}
++			</div>
++		</Card>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/index.tsx b/packages/app/react/src/routes/(app)/reports/index.tsx
+new file mode 100644
+index 000000000..952487570
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/index.tsx
+@@ -0,0 +1,36 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { zodValidator } from '@/lib/zod-validator'
++import { z } from 'zod'
++import { format, subDays } from 'date-fns'
++import { chartTypeSchema } from '@template/client-typescript/typescript'
++
++import { ChartSection } from './-components/ChartSection'
++
++// ─── Search schema ────────────────────────────────────────────────────────────
++// chartType and date range are bookmarkable/shareable URL state.
++// tenancyScope comes from the app-global store (never in URL).
++// frequency is fixed at DAILY for v1 (not a user control).
++
++export const reportsSearchSchema = z.object({
++	chartType: chartTypeSchema.default('income'),
++	startDate: z.string().default(() => format(subDays(new Date(), 29), 'yyyy-MM-dd')),
++	endDate: z.string().default(() => format(new Date(), 'yyyy-MM-dd')),
++})
++
++export type ReportsSearch = z.infer<typeof reportsSearchSchema>
++
++// ─── Route ────────────────────────────────────────────────────────────────────
++
++export const Route = createFileRoute('/(app)/reports/')({
++	staticData: { breadcrumb: 'Relatórios' },
++	validateSearch: zodValidator(reportsSearchSchema),
++	component: RouteComponent,
++})
++
++function RouteComponent() {
++	return (
++		<div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 md:p-8">
++			<ChartSection />
++		</div>
++	)
++}

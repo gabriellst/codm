@@ -1,0 +1,32 @@
+{
+	"name": "@template/client-typescript",
+	"description": "TypeScript SDK auto-generated from each discovered api service's OpenAPI spec. Subpath-per-service exports.",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./http": "./src/http/index.ts",
+		"./*/_http": "./src/*/_http.ts",
+		"./*": "./src/*/index.ts"
+	},
+	"scripts": {
+		"tsc": "bun x tsc --noEmit"
+	},
+	"dependencies": {
+		"ky": "^1.14.0"
+	},
+	"peerDependencies": {
+		"zod": "^4.0.0",
+		"@tanstack/react-query": "^5.90.3"
+	},
+	"devDependencies": {
+		"@kubb/core": "^4.8.1",
+		"@kubb/plugin-client": "^4.4.1",
+		"@kubb/plugin-oas": "^4.1.2",
+		"@kubb/plugin-react-query": "^4.1.2",
+		"@kubb/plugin-ts": "^4.1.2",
+		"@kubb/plugin-zod": "^4.1.2"
+	}
+}

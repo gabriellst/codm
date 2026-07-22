@@ -1,0 +1,951 @@
+diff --git a/packages/app/expo/app/(sheets)/kit-form/-components/KitItemEditor/index.tsx b/packages/app/expo/app/(sheets)/kit-form/-components/KitItemEditor/index.tsx
+new file mode 100644
+index 000000000..ebeb7ba6b
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/-components/KitItemEditor/index.tsx
+@@ -0,0 +1,175 @@
++import { Pressable, Text, View } from 'react-native'
++import { useTranslation } from 'react-i18next'
++import {
++	QuantityModifierEnum,
++	type QuantityModifier,
++} from '@template/client-typescript/typescript'
++import { Button } from '@/components/ui/Button'
++import { NumField } from '@/components/ui/NumField'
++import type { KitForm, KitFormData } from '../../-types'
++
++type KitItem = NonNullable<KitFormData['items']>[number]
++
++const MODIFIER_OPTIONS = [
++	QuantityModifierEnum.EQ,
++	QuantityModifierEnum.GT,
++	QuantityModifierEnum.GTE,
++	QuantityModifierEnum.LT,
++	QuantityModifierEnum.LTE,
++] as const
++
++interface KitItemEditorProps {
++	form: KitForm
++	onOpenPicker: () => void
++}
++
++export function KitItemEditor({ form, onOpenPicker }: KitItemEditorProps) {
++	const { t } = useTranslation()
++
++	const handleAction = () => {
++		const values = form.state.values
++		if (!values.draftProductId) return
++		const newItem: KitItem = {
++			productId: values.draftProductId,
++			quantity: values.draftQuantity ?? 1,
++			quantityModifier: (values.draftQuantityModifier ?? QuantityModifierEnum.EQ) as QuantityModifier,
++		}
++		const currentItems = (values.items ?? []) as KitItem[]
++		const idx = values.editingItemIndex
++		if (idx != null) {
++			const updated = [...currentItems]
++			updated[idx] = newItem
++			form.setFieldValue('items', updated)
++			form.setFieldValue('editingItemIndex', null)
++		} else {
++			form.setFieldValue('items', [...currentItems, newItem])
++		}
++		form.setFieldValue('draftProductId', null)
++		form.setFieldValue('draftProductName', null)
++		form.setFieldValue('draftQuantity', 1)
++		form.setFieldValue('draftQuantityModifier', QuantityModifierEnum.EQ)
++	}
++
++	const handleCancel = () => {
++		form.setFieldValue('editingItemIndex', null)
++		form.setFieldValue('draftProductId', null)
++		form.setFieldValue('draftProductName', null)
++		form.setFieldValue('draftQuantity', 1)
++		form.setFieldValue('draftQuantityModifier', QuantityModifierEnum.EQ)
++	}
++
++	return (
++		<View className="mx-5 mt-2 mb-1 border border-white/[0.1] rounded-xl p-4 gap-4">
++			{/* Product selector — tapping opens the in-page picker overlay */}
++			<View className="gap-1.5">
++				<Text className="text-foreground-subtle font-sans-semi text-xs uppercase">
++					{t('kitForm.fields.productId.label')}
++				</Text>
++				<form.Subscribe selector={s => s.values.draftProductName ?? ''}>
++					{productName => (
++						<Pressable
++							onPress={onOpenPicker}
++							accessibilityRole="button"
++							accessibilityLabel={t('kitForm.fields.productId.label')}
++						>
++							<View className="bg-white/[0.08] rounded-[10px] px-4 py-3 flex-row items-center justify-between">
++								<Text
++									className={[
++										'flex-1 font-sans text-base',
++										productName ? 'text-foreground' : 'text-foreground-disabled',
++									].join(' ')}
++									numberOfLines={1}
++								>
++									{productName || t('kitForm.fields.productId.placeholder')}
++								</Text>
++								<Text className="text-foreground-subtle font-sans text-xs ml-2">
++									{t('kitForm.pickProduct')}
++								</Text>
++							</View>
++						</Pressable>
++					)}
++				</form.Subscribe>
++			</View>
++
++			{/* Quantity */}
++			<form.Field name="draftQuantity">
++				{field => (
++					<NumField
++						label={t('kitForm.fields.quantity.label')}
++						value={field.state.value ?? 1}
++						onChange={field.handleChange}
++						step={1}
++						min={1}
++					/>
++				)}
++			</form.Field>
++
++			{/* Quantity-modifier chip row */}
++			<View className="gap-1.5">
++				<Text className="text-foreground-subtle font-sans-semi text-xs uppercase">
++					{t('kitForm.fields.quantityModifier.label')}
++				</Text>
++				<form.Field name="draftQuantityModifier">
++					{field => (
++						<View className="flex-row gap-2 flex-wrap">
++							{MODIFIER_OPTIONS.map(mod => {
++								const active = (field.state.value ?? QuantityModifierEnum.EQ) === mod
++								return (
++									<Pressable
++										key={mod}
++										onPress={() => field.handleChange(mod)}
++										className={[
++											'px-3 py-2 rounded-lg border',
++											active
++												? 'bg-white/[0.15] border-white/[0.4]'
++												: 'bg-white/[0.04] border-white/[0.08]',
++										].join(' ')}
++									>
++										<Text
++											className={[
++												'font-sans-semi text-xs',
++												active ? 'text-foreground' : 'text-foreground-subtle',
++											].join(' ')}
++										>
++											{t(`enums.QuantityModifier.${mod}`)}
++										</Text>
++									</Pressable>
++								)
++							})}
++						</View>
++					)}
++				</form.Field>
++			</View>
++
++			{/* Add / Save + Cancel */}
++			<form.Subscribe
++				selector={s => ({
++					canAdd: s.values.draftProductId != null,
++					isEditing: s.values.editingItemIndex != null,
++					isSubmitting: s.isSubmitting,
++				})}
++			>
++				{({ canAdd, isEditing, isSubmitting }) => (
++					<View className="gap-2">
++						<Button
++							label={isEditing ? t('kitForm.saveItem') : t('kitForm.addItem')}
++							fullWidth
++							variant={isEditing ? 'ghost' : 'chrome'}
++							onPress={handleAction}
++							disabled={!canAdd || isSubmitting}
++						/>
++						{isEditing ? (
++							<Button
++								label={t('kitForm.cancelEdit')}
++								variant="ghost"
++								fullWidth
++								onPress={handleCancel}
++								disabled={isSubmitting}
++							/>
++						) : null}
++					</View>
++				)}
++			</form.Subscribe>
++		</View>
++	)
++}
+diff --git a/packages/app/expo/app/(sheets)/kit-form/-components/KitItemList/index.tsx b/packages/app/expo/app/(sheets)/kit-form/-components/KitItemList/index.tsx
+new file mode 100644
+index 000000000..eabfede14
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/-components/KitItemList/index.tsx
+@@ -0,0 +1,52 @@
++import { Text, View } from 'react-native'
++import { useTranslation } from 'react-i18next'
++import type { CreateKitMutationRequest } from '@template/client-typescript/typescript'
++import { Button } from '@/components/ui/Button'
++import type { KitForm } from '../../-types'
++import { KitItemRow } from '../KitItemRow'
++
++type KitItem = CreateKitMutationRequest['items'][number]
++
++interface KitItemListProps {
++	form: KitForm
++	onOpenPicker: () => void
++}
++
++export function KitItemList({ form, onOpenPicker }: KitItemListProps) {
++	const { t } = useTranslation()
++
++	return (
++		<form.Subscribe selector={s => (s.values.items ?? []) as KitItem[]}>
++			{items => {
++				if (items.length === 0) {
++					return (
++						<View className="mx-5 mt-2 mb-1 items-center py-6 border border-dashed border-white/[0.12] rounded-xl gap-3">
++							<Text className="text-foreground-subtle font-sans text-sm text-center">
++								{t('kitForm.fields.items.empty.title')}
++							</Text>
++							<Button
++								label={t('kitForm.fields.items.empty.cta')}
++								variant="ghost"
++								size="sm"
++								onPress={onOpenPicker}
++							/>
++						</View>
++					)
++				}
++
++				return (
++					<View className="mx-5 mt-2 gap-2">
++						{items.map((item, index) => (
++							<KitItemRow
++								key={`${item.productId}-${index}`}
++								form={form}
++								item={item}
++								index={index}
++							/>
++						))}
++					</View>
++				)
++			}}
++		</form.Subscribe>
++	)
++}
+diff --git a/packages/app/expo/app/(sheets)/kit-form/-components/KitItemRow/index.tsx b/packages/app/expo/app/(sheets)/kit-form/-components/KitItemRow/index.tsx
+new file mode 100644
+index 000000000..572331c76
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/-components/KitItemRow/index.tsx
+@@ -0,0 +1,80 @@
++import { Pressable, Text, View } from 'react-native'
++import { useTranslation } from 'react-i18next'
++import type { CreateKitMutationRequest, QuantityModifier } from '@template/client-typescript/typescript'
++import { useKitFormStore } from '../../-stores/kit-form-store'
++import type { KitForm } from '../../-types'
++
++type KitItem = CreateKitMutationRequest['items'][number]
++
++interface KitItemRowProps {
++	form: KitForm
++	item: KitItem
++	index: number
++}
++
++// 3-mode discriminant selector (FRM-P04 canonical pattern):
++//   0 = idle (no row is being edited)
++//   1 = THIS row is being edited
++//   2 = ANOTHER row is being edited (dim this one)
++// Returns a primitive so TanStack Form's equality check only fires on mode
++// changes — typing in the editor does NOT re-render every row.
++export function KitItemRow({ form, item, index }: KitItemRowProps) {
++	const { t } = useTranslation()
++	const { productNames } = useKitFormStore()
++
++	const handleSelect = () => {
++		form.setFieldValue('editingItemIndex', index)
++		form.setFieldValue('draftProductId', item.productId)
++		form.setFieldValue('draftProductName', productNames[item.productId] ?? null)
++		form.setFieldValue('draftQuantity', item.quantity)
++		form.setFieldValue('draftQuantityModifier', item.quantityModifier as QuantityModifier)
++	}
++
++	return (
++		<form.Subscribe
++			selector={s => {
++				const idx = s.values.editingItemIndex
++				if (idx == null) return 0 as const
++				return idx === index ? (1 as const) : (2 as const)
++			}}
++		>
++			{mode => {
++				const isSelected = mode === 1
++				const isOtherEditing = mode === 2
++				const productName =
++					productNames[item.productId] ?? item.productId.slice(0, 8) + '…'
++
++				return (
++					<Pressable
++						onPress={handleSelect}
++						accessibilityRole="button"
++						accessibilityLabel={t('kitForm.fields.items.editItem')}
++						className={[
++							'flex-row items-center px-4 py-3.5 border rounded-xl gap-3',
++							isOtherEditing ? 'opacity-40' : '',
++							isSelected
++								? 'bg-white/[0.1] border-white/[0.32]'
++								: 'bg-white/[0.04] border-white/[0.08]',
++						].join(' ')}
++					>
++						<View className="flex-1">
++							<Text className="text-foreground font-sans-semi text-sm" numberOfLines={1}>
++								{productName}
++							</Text>
++							<Text className="text-foreground-subtle font-sans text-xs mt-0.5">
++								{item.quantity}×
++								{' · '}
++								{t(`enums.QuantityModifier.${item.quantityModifier as QuantityModifier}`)}
++							</Text>
++						</View>
++						{isSelected ? (
++							<Text className="text-foreground-disabled font-sans-semi text-[10px] uppercase tracking-wider">
++								{t('kitForm.editing')}
++							</Text>
++						) : null}
++					</Pressable>
++				)
++			}}
++		</form.Subscribe>
++	)
++}
+diff --git a/packages/app/expo/app/(sheets)/kit-form/-components/ProductPickerOverlay/index.tsx b/packages/app/expo/app/(sheets)/kit-form/-components/ProductPickerOverlay/index.tsx
+new file mode 100644
+index 000000000..9add1bf12
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/-components/ProductPickerOverlay/index.tsx
+@@ -0,0 +1,66 @@
++import { FlatList, Pressable, Text, View } from 'react-native'
++import { useTranslation } from 'react-i18next'
++import { useListProductsForKit } from '@template/client-typescript/typescript'
++import { Sheet } from '@/components/ui/Sheet'
++import { formatMoney } from '@/lib/format'
++import { useKitFormStore } from '../../-stores/kit-form-store'
++import type { KitForm } from '../../-types'
++
++interface ProductPickerOverlayProps {
++	open: boolean
++	onClose: () => void
++	form: KitForm
++}
++
++export function ProductPickerOverlay({ open, onClose, form }: ProductPickerOverlayProps) {
++	const { t } = useTranslation()
++	const { setProductName } = useKitFormStore()
++
++	const { data } = useListProductsForKit({ page: 1, limit: 20 })
++	const products = data?.items ?? []
++
++	const handleSelect = (id: string, name: string, sku: string | null) => {
++		const displayName = name + (sku ? ` · ${sku}` : '')
++		setProductName(id, displayName)
++		form.setFieldValue('draftProductId', id)
++		form.setFieldValue('draftProductName', displayName)
++		onClose()
++	}
++
++	return (
++		<Sheet
++			open={open}
++			onClose={onClose}
++			title={t('kitForm.productPicker.title')}
++			size="tall"
++		>
++			<FlatList
++				data={products}
++				keyExtractor={p => p.id}
++				showsVerticalScrollIndicator={false}
++				renderItem={({ item: product }) => (
++					<Pressable
++						onPress={() => handleSelect(product.id, product.name, product.sku)}
++						accessibilityRole="button"
++						accessibilityLabel={product.name}
++						className="flex-row items-center justify-between px-1 py-3.5 border-b border-white/[0.06]"
++					>
++						<Text className="text-foreground font-sans-semi text-sm flex-1" numberOfLines={1}>
++							{product.name}
++						</Text>
++						<Text className="text-foreground-subtle font-sans text-xs ml-3">
++							{formatMoney(product.currentCost.amountCents / 100, product.currentCost.currency)}
++						</Text>
++					</Pressable>
++				)}
++				ListEmptyComponent={
++					<View className="py-8 items-center">
++						<Text className="text-foreground-subtle font-sans text-sm">
++							{t('common.loading')}
++						</Text>
++					</View>
++				}
++			/>
++		</Sheet>
++	)
++}
+diff --git a/packages/app/expo/app/(sheets)/kit-form/-stores/kit-form-store.ts b/packages/app/expo/app/(sheets)/kit-form/-stores/kit-form-store.ts
+new file mode 100644
+index 000000000..7149a2eee
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/-stores/kit-form-store.ts
+@@ -0,0 +1,20 @@
++import { create } from 'zustand'
++
++interface KitFormStore {
++	// Maps productId → display name for items added in this session.
++	// Populated by the product picker so KitItemRow can show human-readable names.
++	productNames: Record<string, string>
++	setProductName: (id: string, name: string) => void
++	reset: () => void
++}
++
++const initialState = {
++	productNames: {} as Record<string, string>,
++}
++
++export const useKitFormStore = create<KitFormStore>(set => ({
++	...initialState,
++	setProductName: (id, name) =>
++		set(state => ({ productNames: { ...state.productNames, [id]: name } })),
++	reset: () => set(initialState),
++}))
+diff --git a/packages/app/expo/app/(sheets)/kit-form/-types.ts b/packages/app/expo/app/(sheets)/kit-form/-types.ts
+new file mode 100644
+index 000000000..0e80ca8bd
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/-types.ts
+@@ -0,0 +1,34 @@
++import { z } from 'zod/v4'
++import { useForm } from '@tanstack/react-form'
++import {
++	createKitMutationRequestSchema,
++	quantityModifierSchema,
++} from '@template/client-typescript/typescript'
++import type { DeepPartial } from '@/lib'
++
++// UI-only fields that live in the form but are stripped before submitting
++const kitFormUiSchema = z.object({
++	editingItemIndex: z.number().int().nullable(),
++	draftProductId: z.string().nullable(),
++	draftProductName: z.string().nullable(),
++	draftQuantity: z.number(),
++	draftQuantityModifier: quantityModifierSchema,
++})
++
++// Merged schema: API payload + UI-only editor state
++export const kitFormSchema = createKitMutationRequestSchema.and(kitFormUiSchema)
++
++export type KitFormData = z.infer<typeof kitFormSchema>
++
++// Type-only inference helper — NEVER called at runtime.
++// Gives every consumer a typed `form: KitForm` prop without re-deriving
++// TanStack Form's generic arguments at every call site.
++function _inferKitForm() {
++	const defaults: DeepPartial<KitFormData> = {}
++	return useForm({
++		defaultValues: defaults,
++		validators: { onChange: kitFormSchema },
++	})
++}
++
++export type KitForm = ReturnType<typeof _inferKitForm>
+diff --git a/packages/app/expo/app/(sheets)/kit-form/_layout.tsx b/packages/app/expo/app/(sheets)/kit-form/_layout.tsx
+new file mode 100644
+index 000000000..d380a5b43
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/_layout.tsx
+@@ -0,0 +1,5 @@
++import { Slot } from 'expo-router'
++
++export default function KitFormLayout() {
++	return <Slot />
++}
+diff --git a/packages/app/expo/app/(sheets)/kit-form/index.tsx b/packages/app/expo/app/(sheets)/kit-form/index.tsx
+new file mode 100644
+index 000000000..7fff5c056
+--- /dev/null
++++ b/packages/app/expo/app/(sheets)/kit-form/index.tsx
+@@ -0,0 +1,256 @@
++import { useState, useEffect } from 'react'
++import { Pressable, ScrollView, Text, View } from 'react-native'
++import { router } from 'expo-router'
++import { useForm } from '@tanstack/react-form'
++import { useQueryClient } from '@tanstack/react-query'
++import { Haptics } from 'react-native-nitro-haptics'
++import { useTranslation } from 'react-i18next'
++import { z } from 'zod/v4'
++import {
++	useCreateKit,
++	createKitMutationRequestSchema,
++	listKitsQueryKey,
++	productCostTypeSchema,
++	ProductCostTypeEnum,
++	QuantityModifierEnum,
++} from '@template/client-typescript/typescript'
++import { Protected } from '@/components/Protected'
++import { KeyboardAware } from '@/components/ui/KeyboardAware'
++import { Button } from '@/components/ui/Button'
++import { Input, InputGroup } from '@/components/ui/Input'
++import { NumField } from '@/components/ui/NumField'
++import { Eyebrow } from '@/components/ui/Eyebrow'
++import { surfaces } from '@/lib/tokens'
++import { useTypedSearchParams } from '@/lib/typed-route'
++import type { DeepPartial } from '@/lib'
++import { kitFormSchema, type KitFormData } from './-types'
++import { useKitFormStore } from './-stores/kit-form-store'
++import { KitItemEditor } from './-components/KitItemEditor'
++import { KitItemList } from './-components/KitItemList'
++import { ProductPickerOverlay } from './-components/ProductPickerOverlay'
++
++const searchParamsSchema = z.object({
++	type: productCostTypeSchema.default('SINGLE'),
++})
++
++export default function KitFormSheet() {
++	const { t } = useTranslation()
++	const queryClient = useQueryClient()
++	const createKit = useCreateKit()
++	const { reset } = useKitFormStore()
++
++	// Reset store on mount + cleanup on unmount so picker state never survives
++	// the sheet being dismissed and reopened.
++	useEffect(() => {
++		reset()
++		return () => {
++			reset()
++		}
++	}, [reset])
++
++	// isPickerOpen is ephemeral overlay state — useState is the sanctioned
++	// approach (CLAUDE.md: "Ephemeral overlay open-state → local useState").
++	const [isPickerOpen, setIsPickerOpen] = useState(false)
++
++	// Every field must be .default()-ed so garbage deep-link params fall back
++	// gracefully (never crash). type=MULTIPLE opens the sheet pre-selected.
++	const [{ type: typeFromParam }] = useTypedSearchParams(searchParamsSchema)
++
++	const defaultValues: DeepPartial<KitFormData> = {
++		type: typeFromParam,
++		shipping: 0,
++		items: [],
++		editingItemIndex: null,
++		draftProductId: null,
++		draftProductName: null,
++		draftQuantity: 1,
++		draftQuantityModifier: QuantityModifierEnum.EQ,
++	}
++
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: kitFormSchema },
++		onSubmit: async ({ value }) => {
++			const result = createKitMutationRequestSchema.safeParse({
++				name: value.name,
++				type: value.type,
++				shipping: value.shipping,
++				cost: value.cost,
++				items: value.items,
++			})
++			if (!result.success) return
++
++			await createKit.mutateAsync(
++				{ data: result.data },
++				{
++					onSuccess: () => {
++						Haptics.notification('success')
++						router.back()
++					},
++					onSettled: () =>
++						queryClient.invalidateQueries({ queryKey: listKitsQueryKey() }),
++				},
++			)
++		},
++	})
++
++	const openPicker = () => setIsPickerOpen(true)
++	const closePicker = () => setIsPickerOpen(false)
++
++	return (
++		<Protected>
++			<KeyboardAware style={{ backgroundColor: surfaces.surface1 }}>
++				<ScrollView
++					className="flex-1"
++					contentContainerStyle={{ paddingBottom: 32 }}
++					keyboardShouldPersistTaps="handled"
++					showsVerticalScrollIndicator={false}
++				>
++					{/* Header */}
++					<View className="px-5 pt-5 pb-1">
++						<Eyebrow>{t('kitForm.eyebrow')}</Eyebrow>
++						<Text className="text-foreground font-sans-bold text-2xl mt-1">
++							{t('kitForm.title')}
++						</Text>
++					</View>
++
++					{/* Kit name */}
++					<View className="px-5 pt-5 gap-1.5">
++						<Text className="text-foreground-subtle font-sans-semi text-xs uppercase">
++							{t('kitForm.fields.name.label')}
++						</Text>
++						<form.Field name="name">
++							{field => (
++								<>
++									<InputGroup>
++										<Input
++											value={field.state.value ?? ''}
++											onChangeText={field.handleChange}
++											onBlur={field.handleBlur}
++											placeholder={t('kitForm.fields.name.placeholder')}
++										/>
++									</InputGroup>
++									{field.state.meta.isTouched && !field.state.meta.isValid ? (
++										<Text className="text-destructive text-xs font-sans">
++											{field.state.meta.errors.join(', ')}
++										</Text>
++									) : null}
++								</>
++							)}
++						</form.Field>
++					</View>
++
++					{/* Kit type chip selector */}
++					<View className="px-5 pt-4 gap-1.5">
++						<Text className="text-foreground-subtle font-sans-semi text-xs uppercase">
++							{t('kitForm.fields.type.label')}
++						</Text>
++						<form.Field name="type">
++							{field => (
++								<View className="flex-row gap-2">
++									{([ProductCostTypeEnum.SINGLE, ProductCostTypeEnum.MULTIPLE] as const).map(opt => {
++										const active = field.state.value === opt
++										return (
++											<Pressable
++												key={opt}
++												onPress={() => field.handleChange(opt)}
++												className={[
++													'flex-1 py-3 items-center rounded-xl border',
++													active
++														? 'bg-white/[0.15] border-white/[0.4]'
++														: 'bg-white/[0.04] border-white/[0.08]',
++												].join(' ')}
++											>
++												<Text
++													className={[
++														'font-sans-semi text-sm',
++														active ? 'text-foreground' : 'text-foreground-subtle',
++													].join(' ')}
++												>
++													{t(`enums.ProductCostType.${opt}`)}
++												</Text>
++											</Pressable>
++										)
++									})}
++								</View>
++							)}
++						</form.Field>
++					</View>
++
++					{/* Shipping cost */}
++					<View className="px-5 pt-5 items-center">
++						<form.Field name="shipping">
++							{field => (
++								<NumField
++									label={t('kitForm.fields.shipping.label')}
++									value={field.state.value ?? 0}
++									onChange={field.handleChange}
++									step={0.5}
++									min={0}
++								/>
++							)}
++						</form.Field>
++					</View>
++
++					{/* Optional extra cost */}
++					<View className="px-5 pt-4 items-center">
++						<form.Field name="cost">
++							{field => (
++								<NumField
++									label={t('kitForm.fields.cost.label')}
++									value={field.state.value ?? 0}
++									onChange={field.handleChange}
++									step={0.5}
++									min={0}
++								/>
++							)}
++						</form.Field>
++					</View>
++
++					{/* Items section */}
++					<View className="px-5 pt-6 pb-1">
++						<Eyebrow>{t('kitForm.fields.items.label')}</Eyebrow>
++					</View>
++
++					{/* Item editor is always visible above the items list — owns the
++					    draft fields (product, quantity, modifier). Typing here does NOT
++					    re-render the list rows below (3-mode discriminant selector). */}
++					<KitItemEditor form={form} onOpenPicker={openPicker} />
++					<KitItemList form={form} onOpenPicker={openPicker} />
++
++					{/* Create kit — disabled until the API payload is wire-valid */}
++					<View className="px-5 pt-6">
++						<form.Subscribe
++							selector={s => ({ isSubmitting: s.isSubmitting, values: s.values })}
++						>
++							{({ isSubmitting, values }) => {
++								const isDisabled =
++									isSubmitting ||
++									createKit.isPending ||
++									!createKitMutationRequestSchema.safeParse({
++										name: values.name,
++										type: values.type,
++										shipping: values.shipping,
++										cost: values.cost,
++										items: values.items,
++									}).success
++								return (
++									<Button
++										label={t('kitForm.submit')}
++										fullWidth
++										onPress={() => void form.handleSubmit()}
++										disabled={isDisabled}
++									/>
++								)
++							}}
++						</form.Subscribe>
++					</View>
++				</ScrollView>
++			</KeyboardAware>
++
++			{/* In-page product picker — uses Sheet primitive (not a route change).
++			    useState ensures visibility resets every time the sheet mounts. */}
++			<ProductPickerOverlay open={isPickerOpen} onClose={closePicker} form={form} />
++		</Protected>
++	)
++}
+diff --git a/packages/app/expo/app/(tabs)/home/index.tsx b/packages/app/expo/app/(tabs)/home/index.tsx
+index a6287add2..40e9aae8d 100644
+--- a/packages/app/expo/app/(tabs)/home/index.tsx
++++ b/packages/app/expo/app/(tabs)/home/index.tsx
+@@ -1,15 +1,12 @@
+ import { ScrollView, View } from 'react-native'
++import { router } from 'expo-router'
+ import { useTranslation } from 'react-i18next'
+ import { Card } from '@/components/ui/Card'
+ import { Text } from '@/components/ui/Text'
+ import { Eyebrow } from '@/components/ui/Eyebrow'
+ import { DisplayTitle } from '@/components/ui/DisplayTitle'
++import { Button } from '@/components/ui/Button'
+ 
+-/**
+- * Minimal placeholder Home tab — composed entirely from design-system
+- * primitives so it renders a sensible boilerplate screen without depending
+- * on any product-specific SDK queries.
+- */
+ export default function HomeTab() {
+ 	const { t } = useTranslation()
+ 
+@@ -28,6 +25,11 @@ export default function HomeTab() {
+ 				<Card>
+ 					<Text>{t('home.placeholder')}</Text>
+ 				</Card>
++				<Button
++					label={t('home.createKit')}
++					fullWidth
++					onPress={() => router.push('/(sheets)/kit-form')}
++				/>
+ 			</ScrollView>
+ 		</View>
+ 	)
+diff --git a/packages/app/expo/app/_layout.tsx b/packages/app/expo/app/_layout.tsx
+index 1d3408aca..25a688af9 100644
+--- a/packages/app/expo/app/_layout.tsx
++++ b/packages/app/expo/app/_layout.tsx
+@@ -94,6 +94,18 @@ export default function RootLayout() {
+ 						contentStyle: { backgroundColor: surfaces.surface1 },
+ 					}}
+ 				/>
++				<Stack.Screen
++					name="(sheets)/kit-form"
++					options={{
++						presentation: 'formSheet',
++						headerShown: false,
++						sheetGrabberVisible: true,
++						sheetAllowedDetents: [0.92],
++						sheetCornerRadius: 24,
++						sheetExpandsWhenScrolledToEdge: true,
++						contentStyle: { backgroundColor: surfaces.surface1 },
++					}}
++				/>
+ 			</Stack>
+ 		</QueryClientProvider>
+ 	)
+diff --git a/packages/app/expo/locales/en.json b/packages/app/expo/locales/en.json
+index 3f789551f..4bede33a0 100644
+--- a/packages/app/expo/locales/en.json
++++ b/packages/app/expo/locales/en.json
+@@ -92,7 +92,8 @@
+ 	"home": {
+ 		"eyebrow": "✦ HOME",
+ 		"welcome": "Welcome",
+-		"placeholder": "This is a placeholder screen. Build your home experience here."
++		"placeholder": "This is a placeholder screen. Build your home experience here.",
++		"createKit": "Create kit"
+ 	},
+ 	"profile": {
+ 		"eyebrow": "✦ PROFILE",
+@@ -119,5 +120,64 @@
+ 	},
+ 	"sheet": {
+ 		"closeAriaLabel": "Close"
++	},
++	"kitForm": {
++		"eyebrow": "✦ NEW KIT",
++		"title": "Create kit",
++		"submit": "Create kit",
++		"addItem": "Add item",
++		"saveItem": "Save item",
++		"cancelEdit": "Cancel",
++		"pickProduct": "Pick",
++		"editing": "EDITING",
++		"fields": {
++			"name": {
++				"label": "Kit name",
++				"placeholder": "e.g. Summer bundle"
++			},
++			"type": {
++				"label": "Kit type"
++			},
++			"shipping": {
++				"label": "Shipping cost"
++			},
++			"cost": {
++				"label": "Extra cost (optional)"
++			},
++			"productId": {
++				"label": "Product",
++				"placeholder": "Select a product…"
++			},
++			"quantity": {
++				"label": "Quantity"
++			},
++			"quantityModifier": {
++				"label": "Quantity rule"
++			},
++			"items": {
++				"label": "ITEMS",
++				"editItem": "Edit item",
++				"empty": {
++					"title": "No items added yet",
++					"cta": "Add first item"
++				}
++			}
++		},
++		"productPicker": {
++			"title": "Select product"
++		}
++	},
++	"enums": {
++		"ProductCostType": {
++			"SINGLE": "Single",
++			"MULTIPLE": "Multiple"
++		},
++		"QuantityModifier": {
++			"EQ": "Exact",
++			"GT": "More than",
++			"GTE": "At least",
++			"LT": "Less than",
++			"LTE": "Up to"
++		}
+ 	}
+ }
+diff --git a/packages/app/expo/locales/pt.json b/packages/app/expo/locales/pt.json
+index 06b674663..9a51073b9 100644
+--- a/packages/app/expo/locales/pt.json
++++ b/packages/app/expo/locales/pt.json
+@@ -92,7 +92,8 @@
+ 	"home": {
+ 		"eyebrow": "✦ INÍCIO",
+ 		"welcome": "Bem-vindo",
+-		"placeholder": "Esta é uma tela de exemplo. Construa sua experiência de início aqui."
++		"placeholder": "Esta é uma tela de exemplo. Construa sua experiência de início aqui.",
++		"createKit": "Criar kit"
+ 	},
+ 	"profile": {
+ 		"eyebrow": "✦ PERFIL",
+@@ -119,5 +120,64 @@
+ 	},
+ 	"sheet": {
+ 		"closeAriaLabel": "Fechar"
++	},
++	"kitForm": {
++		"eyebrow": "✦ NOVO KIT",
++		"title": "Criar kit",
++		"submit": "Criar kit",
++		"addItem": "Adicionar item",
++		"saveItem": "Salvar item",
++		"cancelEdit": "Cancelar",
++		"pickProduct": "Escolher",
++		"editing": "EDITANDO",
++		"fields": {
++			"name": {
++				"label": "Nome do kit",
++				"placeholder": "ex.: Combo verão"
++			},
++			"type": {
++				"label": "Tipo de kit"
++			},
++			"shipping": {
++				"label": "Custo de frete"
++			},
++			"cost": {
++				"label": "Custo extra (opcional)"
++			},
++			"productId": {
++				"label": "Produto",
++				"placeholder": "Selecione um produto…"
++			},
++			"quantity": {
++				"label": "Quantidade"
++			},
++			"quantityModifier": {
++				"label": "Regra de quantidade"
++			},
++			"items": {
++				"label": "ITENS",
++				"editItem": "Editar item",
++				"empty": {
++					"title": "Nenhum item adicionado ainda",
++					"cta": "Adicionar primeiro item"
++				}
++			}
++		},
++		"productPicker": {
++			"title": "Selecionar produto"
++		}
++	},
++	"enums": {
++		"ProductCostType": {
++			"SINGLE": "Único",
++			"MULTIPLE": "Múltiplo"
++		},
++		"QuantityModifier": {
++			"EQ": "Exato",
++			"GT": "Mais que",
++			"GTE": "Pelo menos",
++			"LT": "Menos que",
++			"LTE": "Até"
++		}
+ 	}
+ }

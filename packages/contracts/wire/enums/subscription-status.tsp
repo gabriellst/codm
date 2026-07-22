@@ -1,0 +1,11 @@
+namespace TemplateContracts;
+
+@doc("Subscription lifecycle status. Terminal statuses (CANCELED, INCOMPLETE_EXPIRED) are absorbing — re-subscribing goes through CreateSubscription, not a transition. Access-granting subset (ACTIVE/TRIALING/PAST_DUE) and terminality are enforced by static methods on the Subscription entity, not colocated here.")
+enum SubscriptionStatus {
+  TRIALING: "TRIALING",
+  INCOMPLETE: "INCOMPLETE",
+  ACTIVE: "ACTIVE",
+  PAST_DUE: "PAST_DUE",
+  CANCELED: "CANCELED",
+  INCOMPLETE_EXPIRED: "INCOMPLETE_EXPIRED",
+}

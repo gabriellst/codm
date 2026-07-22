@@ -1,0 +1,3111 @@
+diff --git a/packages/api/typescript/src/shared/index.ts b/packages/api/typescript/src/shared/index.ts
+index 75c2faa62..b2fbe4871 100644
+--- a/packages/api/typescript/src/shared/index.ts
++++ b/packages/api/typescript/src/shared/index.ts
+@@ -17,6 +17,7 @@ import * as wireEnums from '@template/contracts-typescript/wire/enums'
+ import * as sharedEnums from './enums'
+ import * as authEnums from '@auth/enums'
+ import * as billingEnums from '@billing/enums'
++import * as uiEnums from '@ui/enums'
+ import * as sharedObjects from './objects'
+ // Generic, wire-facing BFF read atoms (Metric/Tally) — safe to register: no refinements,
+ // no entity coupling. The `segmented*` factory functions in this barrel are non-Zod and
+@@ -40,7 +41,7 @@ const ctx = await BoundedContext.create({
+ // by matching sorted value lists (handleEnumSchema → resolveEnumName). Without this,
+ // enum components get generated names like `ReactionType2` whenever the path-based
+ // fallback collides with a sibling field. See cc-bp-13.
+-openapi.registerEnums({ ...wireEnums, ...sharedEnums, ...authEnums, ...billingEnums })
++openapi.registerEnums({ ...wireEnums, ...sharedEnums, ...authEnums, ...billingEnums, ...uiEnums })
+ 
+ // Register the SHARED value objects + read atoms as named `$ref` components, so any
+ // controller body/response that embeds them emits a `$ref: '#/components/schemas/<Name>'`
+diff --git a/packages/api/typescript/src/ui/entities/StoreVisualization.ts b/packages/api/typescript/src/ui/entities/StoreVisualization.ts
+new file mode 100644
+index 000000000..8408ec4f2
+--- /dev/null
++++ b/packages/api/typescript/src/ui/entities/StoreVisualization.ts
+@@ -0,0 +1,37 @@
++import { AggregateRoot, Id, z } from '@template/core-typescript'
++import Z from 'zod'
++import { DashboardMode } from '../enums'
++
++export const StoreVisualizationSchema = z.object({
++	storeId: z.instance(Id),
++	dashboardMode: z.enum(DashboardMode),
++})
++
++export type StoreVisualizationProps = Z.infer<typeof StoreVisualizationSchema>
++
++/**
++ * `StoreVisualization` aggregate — persists the per-store dashboard
++ * visualization mode (GLOBAL | NATIONAL). One row per store.
++ *
++ * Read by dashboard queries to pick the correct discriminated-union variant
++ * without a query param. SetStoreVisualization upserts it.
++ */
++export class StoreVisualization extends AggregateRoot<typeof StoreVisualizationSchema> {
++	static override schema = StoreVisualizationSchema
++
++	static create(data: { storeId: string; dashboardMode?: DashboardMode }): StoreVisualization {
++		return new StoreVisualization({
++			storeId: data.storeId,
++			dashboardMode: data.dashboardMode ?? DashboardMode.GLOBAL,
++		})
++	}
++
++	/** Change the persisted dashboard mode for this store. */
++	changeMode(mode: DashboardMode): void {
++		this.dashboardMode = mode
++		this.validate()
++	}
++}
++
++// Declaration merging — interface BELOW class
++export interface StoreVisualization extends StoreVisualizationProps {}
+diff --git a/packages/api/typescript/src/ui/entities/index.ts b/packages/api/typescript/src/ui/entities/index.ts
+new file mode 100644
+index 000000000..55203df22
+--- /dev/null
++++ b/packages/api/typescript/src/ui/entities/index.ts
+@@ -0,0 +1,2 @@
++export { StoreVisualization, StoreVisualizationSchema } from './StoreVisualization'
++export type { StoreVisualizationProps } from './StoreVisualization'
+diff --git a/packages/api/typescript/src/ui/enums/DashboardMode.ts b/packages/api/typescript/src/ui/enums/DashboardMode.ts
+new file mode 100644
+index 000000000..7e603c384
+--- /dev/null
++++ b/packages/api/typescript/src/ui/enums/DashboardMode.ts
+@@ -0,0 +1,7 @@
++// Per-store dashboard visualization mode. GLOBAL = the default worldwide view;
++// NATIONAL = the country-scoped view with its national extensions. Persisted on
++// `StoreVisualization` (server-owned state, never a query param).
++export enum DashboardMode {
++	GLOBAL = 'GLOBAL',
++	NATIONAL = 'NATIONAL',
++}
+diff --git a/packages/api/typescript/src/ui/enums/index.ts b/packages/api/typescript/src/ui/enums/index.ts
+new file mode 100644
+index 000000000..ce146a4a5
+--- /dev/null
++++ b/packages/api/typescript/src/ui/enums/index.ts
+@@ -0,0 +1 @@
++export { DashboardMode } from './DashboardMode'
+diff --git a/packages/api/typescript/src/ui/events/StoreVisualizationUpdatedEvent.ts b/packages/api/typescript/src/ui/events/StoreVisualizationUpdatedEvent.ts
+new file mode 100644
+index 000000000..93e8a33fc
+--- /dev/null
++++ b/packages/api/typescript/src/ui/events/StoreVisualizationUpdatedEvent.ts
+@@ -0,0 +1,12 @@
++import { BaseDomainEvent, z } from '@template/core-typescript'
++import { DashboardMode } from '../enums'
++
++const StoreVisualizationUpdatedEventSchema = z.domainEvent({
++	storeId: z.uuid(),
++	dashboardMode: z.enum(DashboardMode),
++})
++
++export class StoreVisualizationUpdatedEvent extends BaseDomainEvent<typeof StoreVisualizationUpdatedEventSchema> {
++	static override readonly name = 'ui.store_visualization.updated' as const
++	static readonly schema = StoreVisualizationUpdatedEventSchema
++}
+diff --git a/packages/api/typescript/src/ui/events/index.ts b/packages/api/typescript/src/ui/events/index.ts
+new file mode 100644
+index 000000000..fec5c3459
+--- /dev/null
++++ b/packages/api/typescript/src/ui/events/index.ts
+@@ -0,0 +1 @@
++export * from './StoreVisualizationUpdatedEvent'
+diff --git a/packages/api/typescript/src/ui/registry.ts b/packages/api/typescript/src/ui/registry.ts
+index 7c56258d4..aa6d9087a 100644
+--- a/packages/api/typescript/src/ui/registry.ts
++++ b/packages/api/typescript/src/ui/registry.ts
+@@ -2,6 +2,12 @@
+ import './errors' // Side-effect: registers context error codes with the framework runtime registry.
+ 
+ import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
++import {
++	StoreVisualizationRepository,
++	DrizzleStoreVisualizationRepository,
++	MockStoreVisualizationRepository,
++} from './repositories/StoreVisualizationRepository'
+ 
+-// The BFF context owns no ports today — query use cases resolve shared kernel services only.
+-export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([])
++export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
++	{ token: StoreVisualizationRepository, mock: MockStoreVisualizationRepository, real: DrizzleStoreVisualizationRepository },
++])
+diff --git a/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/DrizzleStoreVisualizationRepository.ts b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/DrizzleStoreVisualizationRepository.ts
+new file mode 100644
+index 000000000..39c3acedd
+--- /dev/null
++++ b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/DrizzleStoreVisualizationRepository.ts
+@@ -0,0 +1,90 @@
++import { injectable } from 'tsyringe-neo'
++import { eq } from 'drizzle-orm'
++import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
++import { storeVisualization } from '@template/contracts/db'
++import { StoreVisualization, StoreVisualizationSchema } from '@ui/entities'
++import type { DashboardMode } from '@ui/enums'
++import { StoreVisualizationRepository } from './StoreVisualizationRepository'
++
++@injectable()
++export class DrizzleStoreVisualizationRepository extends StoreVisualizationRepository {
++	constructor(private db: DrizzleClient) {
++		super()
++	}
++
++	async findById(id: string, tx?: DrizzleClient): Promise<StoreVisualization | undefined> {
++		const dbClient = tx ?? this.db
++		const result = await tryCatchAsync(async () => {
++			const rows = await dbClient.select().from(storeVisualization).where(eq(storeVisualization.id, id)).limit(1)
++			return rows[0]
++		})
++		if (!result.success || !result.data) return undefined
++		return this.toDomain(result.data)
++	}
++
++	async findByStoreId(storeId: string, tx?: DrizzleClient): Promise<StoreVisualization | undefined> {
++		const dbClient = tx ?? this.db
++		const result = await tryCatchAsync(async () => {
++			const rows = await dbClient.select().from(storeVisualization).where(eq(storeVisualization.storeId, storeId)).limit(1)
++			return rows[0]
++		})
++		if (!result.success || !result.data) return undefined
++		return this.toDomain(result.data)
++	}
++
++	async save(entity: StoreVisualization, tx?: DrizzleClient): Promise<StoreVisualization> {
++		entity.incrementVersion()
++		const dbClient = tx ?? this.db
++		const result = await tryCatchAsync(async () => {
++			const data = this.toPersistence(entity)
++			await dbClient
++				.insert(storeVisualization)
++				.values(data)
++				.onConflictDoUpdate({
++					target: storeVisualization.storeId,
++					set: {
++						dashboardMode: data.dashboardMode,
++						updatedAt: new Date(),
++						version: data.version,
++					},
++				})
++			return entity
++		})
++		if (!result.success) throw result.error
++		return result.data
++	}
++
++	async delete(id: string, tx?: DrizzleClient): Promise<void> {
++		const dbClient = tx ?? this.db
++		const result = await tryCatchAsync(async () => {
++			await dbClient.delete(storeVisualization).where(eq(storeVisualization.id, id))
++		})
++		if (!result.success) throw result.error
++	}
++
++	private toDomain(row: typeof storeVisualization.$inferSelect): StoreVisualization {
++		// Raw primitives — the entity schema's z.instance(...) transform constructs the VOs.
++		const parsed = StoreVisualizationSchema.parse({
++			storeId: row.storeId,
++			dashboardMode: row.dashboardMode as DashboardMode,
++		})
++		return new StoreVisualization({
++			...parsed,
++			id: row.id,
++			createdAt: row.createdAt,
++			updatedAt: row.updatedAt,
++			version: row.version,
++		})
++	}
++
++	private toPersistence(entity: StoreVisualization): typeof storeVisualization.$inferInsert {
++		return {
++			id: entity.id.value,
++			storeId: entity.storeId.value,
++			dashboardMode: entity.dashboardMode,
++			createdAt: entity.createdAt,
++			updatedAt: entity.updatedAt,
++			version: entity.version,
++		}
++	}
++}
+diff --git a/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/MockStoreVisualizationRepository.ts b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/MockStoreVisualizationRepository.ts
+new file mode 100644
+index 000000000..4d259375e
+--- /dev/null
++++ b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/MockStoreVisualizationRepository.ts
+@@ -0,0 +1,34 @@
++import { injectable } from 'tsyringe-neo'
++import type { Transaction } from '@template/core-typescript'
++import { StoreVisualization } from '@ui/entities'
++import { StoreVisualizationRepository } from './StoreVisualizationRepository'
++
++@injectable()
++export class MockStoreVisualizationRepository extends StoreVisualizationRepository {
++	private records = new Map<string, StoreVisualization>()
++
++	async findById(id: string, _tx?: Transaction): Promise<StoreVisualization | undefined> {
++		return this.records.get(id)
++	}
++
++	async findByStoreId(storeId: string, _tx?: Transaction): Promise<StoreVisualization | undefined> {
++		return [...this.records.values()].find(v => v.storeId.value === storeId)
++	}
++
++	async save(entity: StoreVisualization, _tx?: Transaction): Promise<StoreVisualization> {
++		this.records.set(entity.id.value, entity)
++		return entity
++	}
++
++	async delete(id: string, _tx?: Transaction): Promise<void> {
++		this.records.delete(id)
++	}
++
++	seed(entity: StoreVisualization): void {
++		this.records.set(entity.id.value, entity)
++	}
++
++	clear(): void {
++		this.records.clear()
++	}
++}
+diff --git a/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/StoreVisualizationRepository.test.ts b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/StoreVisualizationRepository.test.ts
+new file mode 100644
+index 000000000..f5e797984
+--- /dev/null
++++ b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/StoreVisualizationRepository.test.ts
+@@ -0,0 +1,52 @@
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
++import { container, type DependencyContainer } from 'tsyringe-neo'
++import { TestBed } from '@test/support'
++import { testId } from '@test/support'
++import { StoreVisualizationRepository } from './StoreVisualizationRepository'
++import { StoreVisualization } from '../../entities/StoreVisualization'
++import { DashboardMode } from '../../enums'
++
++describe('DrizzleStoreVisualizationRepository', () => {
++	let testBed: TestBed
++	let testContainer: DependencyContainer
++	let repository: StoreVisualizationRepository
++
++	beforeAll(async () => {
++		testContainer = container.createChildContainer()
++		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
++		repository = testBed.resolve(StoreVisualizationRepository)
++	})
++	beforeEach(async () => {
++		await testBed.reset()
++	})
++	afterAll(async () => {
++		await testBed.destroy()
++	})
++
++	it('saves and retrieves by id', async () => {
++		const entity = StoreVisualization.create({ storeId: testId('store', '1'), dashboardMode: DashboardMode.NATIONAL })
++		await repository.save(entity)
++		const found = await repository.findById(entity.id.value)
++		expect(found?.id.value).toBe(entity.id.value)
++		expect(found?.dashboardMode).toBe(DashboardMode.NATIONAL)
++	})
++
++	it('retrieves by storeId and upserts on conflict (one row per store)', async () => {
++		const storeId = testId('store', '2')
++		await repository.save(StoreVisualization.create({ storeId }))
++
++		const found = await repository.findByStoreId(storeId)
++		expect(found?.dashboardMode).toBe(DashboardMode.GLOBAL)
++
++		found!.changeMode(DashboardMode.NATIONAL)
++		await repository.save(found!)
++
++		const reloaded = await repository.findByStoreId(storeId)
++		expect(reloaded?.dashboardMode).toBe(DashboardMode.NATIONAL)
++	})
++
++	it('returns undefined for unknown id', async () => {
++		const found = await repository.findById(testId())
++		expect(found).toBeUndefined()
++	})
++})
+diff --git a/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/StoreVisualizationRepository.ts b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/StoreVisualizationRepository.ts
+new file mode 100644
+index 000000000..4673e3a84
+--- /dev/null
++++ b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/StoreVisualizationRepository.ts
+@@ -0,0 +1,9 @@
++import { Repository } from '@template/core-typescript'
++import type { Transaction } from '@template/core-typescript'
++import { StoreVisualization } from '@ui/entities'
++
++export abstract class StoreVisualizationRepository extends Repository<StoreVisualization> {
++	abstract findById(id: string, tx?: Transaction): Promise<StoreVisualization | undefined>
++	// One row per store — the natural lookup for the upsert flow.
++	abstract findByStoreId(storeId: string, tx?: Transaction): Promise<StoreVisualization | undefined>
++}
+diff --git a/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/index.ts b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/index.ts
+new file mode 100644
+index 000000000..18af0068b
+--- /dev/null
++++ b/packages/api/typescript/src/ui/repositories/StoreVisualizationRepository/index.ts
+@@ -0,0 +1,3 @@
++export { StoreVisualizationRepository } from './StoreVisualizationRepository'
++export { DrizzleStoreVisualizationRepository } from './DrizzleStoreVisualizationRepository'
++export { MockStoreVisualizationRepository } from './MockStoreVisualizationRepository'
+diff --git a/packages/api/typescript/src/ui/repositories/index.ts b/packages/api/typescript/src/ui/repositories/index.ts
+new file mode 100644
+index 000000000..103587769
+--- /dev/null
++++ b/packages/api/typescript/src/ui/repositories/index.ts
+@@ -0,0 +1 @@
++export * from './StoreVisualizationRepository'
+diff --git a/packages/api/typescript/src/ui/usecases/SetStoreVisualization.test.ts b/packages/api/typescript/src/ui/usecases/SetStoreVisualization.test.ts
+new file mode 100644
+index 000000000..5a826d5a5
+--- /dev/null
++++ b/packages/api/typescript/src/ui/usecases/SetStoreVisualization.test.ts
+@@ -0,0 +1,66 @@
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
++import { container, type DependencyContainer } from 'tsyringe-neo'
++import { TestBed, testId } from '@test/support'
++import { DomainEventRepository } from '@template/core-typescript'
++import { SetStoreVisualization } from './SetStoreVisualization'
++import { StoreVisualizationRepository } from '../repositories/StoreVisualizationRepository'
++import { StoreVisualizationUpdatedEvent } from '../events'
++import { DashboardMode } from '../enums'
++
++describe('SetStoreVisualization', () => {
++	let testBed: TestBed
++	let testContainer: DependencyContainer
++	let useCase: SetStoreVisualization
++	let repo: StoreVisualizationRepository
++
++	beforeAll(async () => {
++		testContainer = container.createChildContainer()
++		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
++		useCase = testBed.resolve(SetStoreVisualization)
++		repo = testBed.resolve(StoreVisualizationRepository)
++	})
++	beforeEach(async () => {
++		await testBed.reset()
++	})
++	afterAll(async () => {
++		await testBed.destroy()
++	})
++
++	async function readEvents() {
++		return testBed.resolve(DomainEventRepository).findByType(StoreVisualizationUpdatedEvent)
++	}
++
++	it('first set creates the row and emits ui.store_visualization.updated', async () => {
++		const storeId = testId('store', '1')
++
++		const result = await useCase.execute({ storeId, dashboardMode: DashboardMode.NATIONAL })
++		expect(result).toEqual({ storeId, dashboardMode: DashboardMode.NATIONAL })
++
++		const persisted = await repo.findByStoreId(storeId)
++		expect(persisted?.dashboardMode).toBe(DashboardMode.NATIONAL)
++
++		const evts = await readEvents()
++		expect(evts).toHaveLength(1)
++		expect(evts[0]!.payload).toEqual({ storeId, dashboardMode: DashboardMode.NATIONAL })
++	})
++
++	it('second set upserts the same row (no duplicate) and emits again with the new mode', async () => {
++		const storeId = testId('store', '2')
++
++		await useCase.execute({ storeId, dashboardMode: DashboardMode.NATIONAL })
++		await useCase.execute({ storeId, dashboardMode: DashboardMode.GLOBAL })
++
++		const persisted = await repo.findByStoreId(storeId)
++		expect(persisted?.dashboardMode).toBe(DashboardMode.GLOBAL)
++
++		const evts = await readEvents()
++		expect(evts).toHaveLength(2)
++		expect(evts[1]!.payload).toEqual({ storeId, dashboardMode: DashboardMode.GLOBAL })
++	})
++
++	it('rejects a value outside the DashboardMode enum', async () => {
++		await expect(useCase.execute({ storeId: testId('store', '3'), dashboardMode: 'SIDEWAYS' as DashboardMode })).rejects.toMatchObject({
++			name: 'VALIDATION_ERROR',
++		})
++	})
++})
+diff --git a/packages/api/typescript/src/ui/usecases/SetStoreVisualization.ts b/packages/api/typescript/src/ui/usecases/SetStoreVisualization.ts
+new file mode 100644
+index 000000000..dc2b07c94
+--- /dev/null
++++ b/packages/api/typescript/src/ui/usecases/SetStoreVisualization.ts
+@@ -0,0 +1,60 @@
++import { injectable } from 'tsyringe-neo'
++import { Handler, z } from '@template/core-typescript'
++import type { Transaction } from '@template/core-typescript'
++import { StoreVisualization } from '@ui/entities'
++import { DashboardMode } from '@ui/enums'
++import { StoreVisualizationUpdatedEvent } from '../events'
++import { StoreVisualizationRepository } from '../repositories/StoreVisualizationRepository'
++
++export const SetStoreVisualizationInputSchema = z.object({
++	storeId: z.uuid(),
++	dashboardMode: z.enum(DashboardMode),
++})
++
++export const SetStoreVisualizationOutputSchema = z.object({
++	storeId: z.uuid(),
++	dashboardMode: z.enum(DashboardMode),
++})
++
++@injectable()
++export class SetStoreVisualization extends Handler<typeof SetStoreVisualizationInputSchema, typeof SetStoreVisualizationOutputSchema> {
++	readonly name = 'set_store_visualization' as const
++	readonly inputSchema = SetStoreVisualizationInputSchema
++	readonly outputSchema = SetStoreVisualizationOutputSchema
++
++	constructor(private readonly storeVisualizationRepo: StoreVisualizationRepository) {
++		super()
++	}
++
++	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
++		return this.withTransaction(tx, async tx => {
++			// Upsert — one row per store: mutate the existing aggregate or create it.
++			const existing = await this.storeVisualizationRepo.findByStoreId(input.storeId, tx)
++			let visualization: StoreVisualization
++			if (existing) {
++				existing.changeMode(input.dashboardMode)
++				visualization = existing
++			} else {
++				visualization = StoreVisualization.create({ storeId: input.storeId, dashboardMode: input.dashboardMode })
++			}
++
++			await this.storeVisualizationRepo.save(visualization, tx)
++
++			// Same transaction as the entity save — the OutboxDispatcher delivers it.
++			await this.domainEventRepository.save(
++				new StoreVisualizationUpdatedEvent({
++					entityId: visualization.id.value,
++					// The store is the tenancy scope of this per-store preference.
++					ownerId: input.storeId,
++					payload: {
++						storeId: input.storeId,
++						dashboardMode: input.dashboardMode,
++					},
++				}),
++				tx,
++			)
++
++			return { storeId: input.storeId, dashboardMode: input.dashboardMode }
++		})
++	}
++}
+diff --git a/packages/api/typescript/src/ui/usecases/index.ts b/packages/api/typescript/src/ui/usecases/index.ts
+index 17dcd3b3d..a8798636e 100644
+--- a/packages/api/typescript/src/ui/usecases/index.ts
++++ b/packages/api/typescript/src/ui/usecases/index.ts
+@@ -2,3 +2,4 @@ export { GetUserInfo, GetUserInfoInputSchema, GetUserInfoOutputSchema } from './
+ export { ListNotifications, ListNotificationsInputSchema, ListNotificationsOutputSchema, NotificationItemSchema } from './ListNotifications'
+ export { GetMyAccount, GetMyAccountInputSchema, GetMyAccountOutputSchema } from './GetMyAccount'
+ export * from './billing'
++export { SetStoreVisualization, SetStoreVisualizationInputSchema, SetStoreVisualizationOutputSchema } from './SetStoreVisualization'
+diff --git a/packages/contracts/db/migrations/0003_gigantic_dust.sql b/packages/contracts/db/migrations/0003_gigantic_dust.sql
+new file mode 100644
+index 000000000..a2a875a12
+--- /dev/null
++++ b/packages/contracts/db/migrations/0003_gigantic_dust.sql
+@@ -0,0 +1,12 @@
++CREATE SCHEMA "ui";
++--> statement-breakpoint
++CREATE TABLE "ui"."store_visualization" (
++	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
++	"store_id" uuid NOT NULL,
++	"dashboard_mode" text NOT NULL,
++	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
++	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
++	"version" integer DEFAULT 1 NOT NULL
++);
++--> statement-breakpoint
++CREATE UNIQUE INDEX "store_visualization_store_id_idx" ON "ui"."store_visualization" USING btree ("store_id");
+\ No newline at end of file
+diff --git a/packages/contracts/db/migrations/meta/0003_snapshot.json b/packages/contracts/db/migrations/meta/0003_snapshot.json
+new file mode 100644
+index 000000000..c8e0c1563
+--- /dev/null
++++ b/packages/contracts/db/migrations/meta/0003_snapshot.json
+@@ -0,0 +1,2510 @@
++{
++  "id": "d57bb9cd-33a3-4ab2-8705-30ec960f084a",
++  "prevId": "76704639-f28c-4935-b99e-8aacc50e38db",
++  "version": "7",
++  "dialect": "postgresql",
++  "tables": {
++    "authentication.accounts": {
++      "name": "accounts",
++      "schema": "authentication",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "user_id": {
++          "name": "user_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "provider_id": {
++          "name": "provider_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "account_id": {
++          "name": "account_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "password": {
++          "name": "password",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "access_token": {
++          "name": "access_token",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "refresh_token": {
++          "name": "refresh_token",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "id_token": {
++          "name": "id_token",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "access_token_expires_at": {
++          "name": "access_token_expires_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "scope": {
++          "name": "scope",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "accounts_user_id_users_id_fk": {
++          "name": "accounts_user_id_users_id_fk",
++          "tableFrom": "accounts",
++          "tableTo": "users",
++          "schemaTo": "authentication",
++          "columnsFrom": [
++            "user_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "cascade",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_profiles": {
++      "name": "billing_profiles",
++      "schema": "billing",
++      "columns": {
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "email": {
++          "name": "email",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "document": {
++          "name": "document",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "language": {
++          "name": "language",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_charges": {
++      "name": "billing_charges",
++      "schema": "billing",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "invoice_id": {
++          "name": "invoice_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "platform": {
++          "name": "platform",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "method": {
++          "name": "method",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "amount_cents": {
++          "name": "amount_cents",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "attempt_no": {
++          "name": "attempt_no",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "gateway_tx_id": {
++          "name": "gateway_tx_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "decline_code": {
++          "name": "decline_code",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_checkout_sessions": {
++      "name": "billing_checkout_sessions",
++      "schema": "billing",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "session_ref": {
++          "name": "session_ref",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "platform": {
++          "name": "platform",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "intent": {
++          "name": "intent",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "engine_invoice_id": {
++          "name": "engine_invoice_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "minted_at": {
++          "name": "minted_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        }
++      },
++      "indexes": {
++        "billing_checkout_sessions_session_ref_idx": {
++          "name": "billing_checkout_sessions_session_ref_idx",
++          "columns": [
++            {
++              "expression": "session_ref",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_credit_notes": {
++      "name": "billing_credit_notes",
++      "schema": "billing",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "number": {
++          "name": "number",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "invoice_id": {
++          "name": "invoice_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "amount_cents": {
++          "name": "amount_cents",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "currency": {
++          "name": "currency",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "reason": {
++          "name": "reason",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "gateway_ref": {
++          "name": "gateway_ref",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "finalized_at": {
++          "name": "finalized_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "billing_credit_notes_invoice_id_billing_invoices_invoice_id_fk": {
++          "name": "billing_credit_notes_invoice_id_billing_invoices_invoice_id_fk",
++          "tableFrom": "billing_credit_notes",
++          "tableTo": "billing_invoices",
++          "schemaTo": "billing",
++          "columnsFrom": [
++            "invoice_id"
++          ],
++          "columnsTo": [
++            "invoice_id"
++          ],
++          "onDelete": "no action",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "billing_credit_notes_number_unique": {
++          "name": "billing_credit_notes_number_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "number"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_disputes": {
++      "name": "billing_disputes",
++      "schema": "billing",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        },
++        "gateway_dispute_ref": {
++          "name": "gateway_dispute_ref",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "platform": {
++          "name": "platform",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "gateway_tx_id": {
++          "name": "gateway_tx_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "invoice_id": {
++          "name": "invoice_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "amount_cents": {
++          "name": "amount_cents",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "opened_at": {
++          "name": "opened_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "closed_at": {
++          "name": "closed_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        }
++      },
++      "indexes": {
++        "billing_disputes_ref_platform_idx": {
++          "name": "billing_disputes_ref_platform_idx",
++          "columns": [
++            {
++              "expression": "gateway_dispute_ref",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "platform",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "billing_disputes_invoice_id_idx": {
++          "name": "billing_disputes_invoice_id_idx",
++          "columns": [
++            {
++              "expression": "invoice_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "shared.events": {
++      "name": "events",
++      "schema": "shared",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "entity_id": {
++          "name": "entity_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "payload": {
++          "name": "payload",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "source": {
++          "name": "source",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "occurred_at": {
++          "name": "occurred_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {
++        "events_entity_idx": {
++          "name": "events_entity_idx",
++          "columns": [
++            {
++              "expression": "entity_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "occurred_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "events_name_idx": {
++          "name": "events_name_idx",
++          "columns": [
++            {
++              "expression": "name",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "occurred_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "events_billing_webhook_received_entity_unq": {
++          "name": "events_billing_webhook_received_entity_unq",
++          "columns": [
++            {
++              "expression": "entity_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "where": "name = 'billing.webhook.received'",
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "authentication.fcm_registration_tokens": {
++      "name": "fcm_registration_tokens",
++      "schema": "authentication",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "user_id": {
++          "name": "user_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "token": {
++          "name": "token",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "platform": {
++          "name": "platform",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "last_seen_at": {
++          "name": "last_seen_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {
++        "fcm_registration_tokens_token_unq": {
++          "name": "fcm_registration_tokens_token_unq",
++          "columns": [
++            {
++              "expression": "token",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "fcm_registration_tokens_user_id_idx": {
++          "name": "fcm_registration_tokens_user_id_idx",
++          "columns": [
++            {
++              "expression": "user_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "fcm_registration_tokens_last_seen_at_idx": {
++          "name": "fcm_registration_tokens_last_seen_at_idx",
++          "columns": [
++            {
++              "expression": "last_seen_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {
++        "fcm_registration_tokens_user_id_users_id_fk": {
++          "name": "fcm_registration_tokens_user_id_users_id_fk",
++          "tableFrom": "fcm_registration_tokens",
++          "tableTo": "users",
++          "schemaTo": "authentication",
++          "columnsFrom": [
++            "user_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "cascade",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "shared.idempotency_keys": {
++      "name": "idempotency_keys",
++      "schema": "shared",
++      "columns": {
++        "key": {
++          "name": "key",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "scope": {
++          "name": "scope",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "response_body": {
++          "name": "response_body",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "response_status": {
++          "name": "response_status",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {
++        "idempotency_expires_idx": {
++          "name": "idempotency_expires_idx",
++          "columns": [
++            {
++              "expression": "expires_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {
++        "idempotency_keys_key_scope_pk": {
++          "name": "idempotency_keys_key_scope_pk",
++          "columns": [
++            "key",
++            "scope"
++          ]
++        }
++      },
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_invoices": {
++      "name": "billing_invoices",
++      "schema": "billing",
++      "columns": {
++        "invoice_id": {
++          "name": "invoice_id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "number": {
++          "name": "number",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "pdf_url": {
++          "name": "pdf_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "amount_cents": {
++          "name": "amount_cents",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "currency": {
++          "name": "currency",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "description": {
++          "name": "description",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "due_date": {
++          "name": "due_date",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "our_number": {
++          "name": "our_number",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "plan_name": {
++          "name": "plan_name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "period_start": {
++          "name": "period_start",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "period_end": {
++          "name": "period_end",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "voided_at": {
++          "name": "voided_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "line_items": {
++          "name": "line_items",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'[]'::jsonb"
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "billing_invoices_our_number_unique": {
++          "name": "billing_invoices_our_number_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "our_number"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_invoice_sequences": {
++      "name": "billing_invoice_sequences",
++      "schema": "billing",
++      "columns": {
++        "prefix": {
++          "name": "prefix",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "next_number": {
++          "name": "next_number",
++          "type": "bigint",
++          "primaryKey": false,
++          "notNull": true
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "notifications.notification_deliveries": {
++      "name": "notification_deliveries",
++      "schema": "notifications",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "notification_id": {
++          "name": "notification_id",
++          "type": "uuid",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "user_id": {
++          "name": "user_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "channel": {
++          "name": "channel",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "delivered_at": {
++          "name": "delivered_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "read_at": {
++          "name": "read_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {
++        "notification_deliveries_notification_user_channel_unq": {
++          "name": "notification_deliveries_notification_user_channel_unq",
++          "columns": [
++            {
++              "expression": "notification_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "user_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "channel",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "notification_deliveries_user_read_at_idx": {
++          "name": "notification_deliveries_user_read_at_idx",
++          "columns": [
++            {
++              "expression": "user_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "read_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "notification_deliveries_notification_id_idx": {
++          "name": "notification_deliveries_notification_id_idx",
++          "columns": [
++            {
++              "expression": "notification_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {
++        "notification_deliveries_notification_id_notifications_id_fk": {
++          "name": "notification_deliveries_notification_id_notifications_id_fk",
++          "tableFrom": "notification_deliveries",
++          "tableTo": "notifications",
++          "schemaTo": "notifications",
++          "columnsFrom": [
++            "notification_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "cascade",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "notifications.notifications": {
++      "name": "notifications",
++      "schema": "notifications",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "title": {
++          "name": "title",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "content": {
++          "name": "content",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "category": {
++          "name": "category",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "origin": {
++          "name": "origin",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "important": {
++          "name": "important",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "content_type": {
++          "name": "content_type",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'text/plain'"
++        },
++        "payload": {
++          "name": "payload",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'{}'::jsonb"
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "uuid",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {
++        "notifications_owner_id_idx": {
++          "name": "notifications_owner_id_idx",
++          "columns": [
++            {
++              "expression": "owner_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "notifications_created_at_idx": {
++          "name": "notifications_created_at_idx",
++          "columns": [
++            {
++              "expression": "created_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "notifications_category_idx": {
++          "name": "notifications_category_idx",
++          "columns": [
++            {
++              "expression": "category",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "notifications_origin_idx": {
++          "name": "notifications_origin_idx",
++          "columns": [
++            {
++              "expression": "origin",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "shared.outbox": {
++      "name": "outbox",
++      "schema": "shared",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "entity_id": {
++          "name": "entity_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "payload": {
++          "name": "payload",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "source": {
++          "name": "source",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "processed_at": {
++          "name": "processed_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "attempts": {
++          "name": "attempts",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "last_error": {
++          "name": "last_error",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {
++        "outbox_unprocessed_idx": {
++          "name": "outbox_unprocessed_idx",
++          "columns": [
++            {
++              "expression": "source",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "processed_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "created_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "owner.owners": {
++      "name": "owners",
++      "schema": "owner",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "kind": {
++          "name": "kind",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "responsible_user_id": {
++          "name": "responsible_user_id",
++          "type": "uuid",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "picture_url": {
++          "name": "picture_url",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "timezone": {
++          "name": "timezone",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "is_disabled": {
++          "name": "is_disabled",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "disabled_reason": {
++          "name": "disabled_reason",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {
++        "owners_is_disabled_idx": {
++          "name": "owners_is_disabled_idx",
++          "columns": [
++            {
++              "expression": "is_disabled",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        },
++        "owners_responsible_user_id_idx": {
++          "name": "owners_responsible_user_id_idx",
++          "columns": [
++            {
++              "expression": "responsible_user_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_payment_methods": {
++      "name": "billing_payment_methods",
++      "schema": "billing",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "platform": {
++          "name": "platform",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "type": {
++          "name": "type",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "pm_ref": {
++          "name": "pm_ref",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "supports_off_session": {
++          "name": "supports_off_session",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "capture_origin": {
++          "name": "capture_origin",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "origin_gateway_tx_id": {
++          "name": "origin_gateway_tx_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "brand": {
++          "name": "brand",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "last4": {
++          "name": "last4",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "exp_month": {
++          "name": "exp_month",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "exp_year": {
++          "name": "exp_year",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "network": {
++          "name": "network",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "mandate_accepted_at": {
++          "name": "mandate_accepted_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "mandate_ip": {
++          "name": "mandate_ip",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "mandate_user_agent": {
++          "name": "mandate_user_agent",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "mandate_consent_version": {
++          "name": "mandate_consent_version",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "is_default": {
++          "name": "is_default",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        }
++      },
++      "indexes": {
++        "billing_payment_methods_default_owner_idx": {
++          "name": "billing_payment_methods_default_owner_idx",
++          "columns": [
++            {
++              "expression": "owner_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "where": "\"billing\".\"billing_payment_methods\".\"is_default\" AND \"billing\".\"billing_payment_methods\".\"status\" = 'ACTIVE'",
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "quota.pending_selections": {
++      "name": "pending_selections",
++      "schema": "quota",
++      "columns": {
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "quota_key": {
++          "name": "quota_key",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "kept_ids": {
++          "name": "kept_ids",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "'[]'::jsonb"
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {
++        "pending_selections_owner_id_quota_key_pk": {
++          "name": "pending_selections_owner_id_quota_key_pk",
++          "columns": [
++            "owner_id",
++            "quota_key"
++          ]
++        }
++      },
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "quota.quota_overrides": {
++      "name": "quota_overrides",
++      "schema": "quota",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "meter": {
++          "name": "meter",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "delta": {
++          "name": "delta",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "idem_key": {
++          "name": "idem_key",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "quota_overrides_idem_key_unique": {
++          "name": "quota_overrides_idem_key_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "idem_key"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "shared.scheduled_commands": {
++      "name": "scheduled_commands",
++      "schema": "shared",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "input": {
++          "name": "input",
++          "type": "jsonb",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "run_at": {
++          "name": "run_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "attempts": {
++          "name": "attempts",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 0
++        },
++        "max_attempts": {
++          "name": "max_attempts",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 3
++        },
++        "lease_until": {
++          "name": "lease_until",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "repeat_every_ms": {
++          "name": "repeat_every_ms",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "dead_at": {
++          "name": "dead_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {
++        "scheduled_commands_due_idx": {
++          "name": "scheduled_commands_due_idx",
++          "columns": [
++            {
++              "expression": "run_at",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": false,
++          "where": "dead_at IS NULL",
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "authentication.sessions": {
++      "name": "sessions",
++      "schema": "authentication",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "user_id": {
++          "name": "user_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "token": {
++          "name": "token",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "ip_address": {
++          "name": "ip_address",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "user_agent": {
++          "name": "user_agent",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "active_owner_id": {
++          "name": "active_owner_id",
++          "type": "uuid",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "sessions_user_id_users_id_fk": {
++          "name": "sessions_user_id_users_id_fk",
++          "tableFrom": "sessions",
++          "tableTo": "users",
++          "schemaTo": "authentication",
++          "columnsFrom": [
++            "user_id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "cascade",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "sessions_token_unique": {
++          "name": "sessions_token_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "token"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "ui.store_visualization": {
++      "name": "store_visualization",
++      "schema": "ui",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "uuid",
++          "primaryKey": true,
++          "notNull": true,
++          "default": "gen_random_uuid()"
++        },
++        "store_id": {
++          "name": "store_id",
++          "type": "uuid",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "dashboard_mode": {
++          "name": "dashboard_mode",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {
++        "store_visualization_store_id_idx": {
++          "name": "store_visualization_store_id_idx",
++          "columns": [
++            {
++              "expression": "store_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_subscriptions": {
++      "name": "billing_subscriptions",
++      "schema": "billing",
++      "columns": {
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "engine_subscription_id": {
++          "name": "engine_subscription_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "plan_name": {
++          "name": "plan_name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "status": {
++          "name": "status",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "current_period_end": {
++          "name": "current_period_end",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "current_period_start": {
++          "name": "current_period_start",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "trial_end": {
++          "name": "trial_end",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "canceled_at": {
++          "name": "canceled_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "cancel_at_period_end": {
++          "name": "cancel_at_period_end",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "scheduled_plan_name": {
++          "name": "scheduled_plan_name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "billing.billing_usage_rollups": {
++      "name": "billing_usage_rollups",
++      "schema": "billing",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "owner_id": {
++          "name": "owner_id",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "meter": {
++          "name": "meter",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "period_start": {
++          "name": "period_start",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "period_end": {
++          "name": "period_end",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "quantity": {
++          "name": "quantity",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {
++        "billing_usage_rollups_owner_meter_period_uq": {
++          "name": "billing_usage_rollups_owner_meter_period_uq",
++          "columns": [
++            {
++              "expression": "owner_id",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "meter",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            },
++            {
++              "expression": "period_start",
++              "isExpression": false,
++              "asc": true,
++              "nulls": "last"
++            }
++          ],
++          "isUnique": true,
++          "concurrently": false,
++          "method": "btree",
++          "with": {}
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "authentication.user_profiles": {
++      "name": "user_profiles",
++      "schema": "authentication",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "timezone": {
++          "name": "timezone",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "language": {
++          "name": "language",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "version": {
++          "name": "version",
++          "type": "integer",
++          "primaryKey": false,
++          "notNull": true,
++          "default": 1
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {
++        "user_profiles_id_users_id_fk": {
++          "name": "user_profiles_id_users_id_fk",
++          "tableFrom": "user_profiles",
++          "tableTo": "users",
++          "schemaTo": "authentication",
++          "columnsFrom": [
++            "id"
++          ],
++          "columnsTo": [
++            "id"
++          ],
++          "onDelete": "cascade",
++          "onUpdate": "no action"
++        }
++      },
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "authentication.users": {
++      "name": "users",
++      "schema": "authentication",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "email": {
++          "name": "email",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "email_verified": {
++          "name": "email_verified",
++          "type": "boolean",
++          "primaryKey": false,
++          "notNull": true,
++          "default": false
++        },
++        "name": {
++          "name": "name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "phone": {
++          "name": "phone",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "image": {
++          "name": "image",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {
++        "users_email_unique": {
++          "name": "users_email_unique",
++          "nullsNotDistinct": false,
++          "columns": [
++            "email"
++          ]
++        }
++      },
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    },
++    "authentication.verification_tokens": {
++      "name": "verification_tokens",
++      "schema": "authentication",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true
++        },
++        "identifier": {
++          "name": "identifier",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "value": {
++          "name": "value",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "expires_at": {
++          "name": "expires_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true
++        },
++        "created_at": {
++          "name": "created_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        },
++        "updated_at": {
++          "name": "updated_at",
++          "type": "timestamp with time zone",
++          "primaryKey": false,
++          "notNull": true,
++          "default": "now()"
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "policies": {},
++      "checkConstraints": {},
++      "isRLSEnabled": false
++    }
++  },
++  "enums": {},
++  "schemas": {
++    "authentication": "authentication",
++    "billing": "billing",
++    "notifications": "notifications",
++    "owner": "owner",
++    "quota": "quota",
++    "shared": "shared",
++    "ui": "ui"
++  },
++  "sequences": {},
++  "roles": {},
++  "policies": {},
++  "views": {},
++  "_meta": {
++    "columns": {},
++    "schemas": {},
++    "tables": {}
++  }
++}
+\ No newline at end of file
+diff --git a/packages/contracts/db/migrations/meta/_journal.json b/packages/contracts/db/migrations/meta/_journal.json
+index d8f4e0509..71b7be929 100644
+--- a/packages/contracts/db/migrations/meta/_journal.json
++++ b/packages/contracts/db/migrations/meta/_journal.json
+@@ -22,6 +22,13 @@
+       "when": 1784656106851,
+       "tag": "0002_rainy_rhino",
+       "breakpoints": true
++    },
++    {
++      "idx": 3,
++      "version": "7",
++      "when": 1784659149703,
++      "tag": "0003_gigantic_dust",
++      "breakpoints": true
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/packages/contracts/db/schema/index.ts b/packages/contracts/db/schema/index.ts
+index b0a4f754f..13b75b990 100644
+--- a/packages/contracts/db/schema/index.ts
++++ b/packages/contracts/db/schema/index.ts
+@@ -4,3 +4,4 @@ export * from './billing'
+ export * from './quota'
+ export * from './owner'
+ export * from './notifications'
++export * from './ui'
+diff --git a/packages/contracts/db/schema/ui.ts b/packages/contracts/db/schema/ui.ts
+new file mode 100644
+index 000000000..43a62b590
+--- /dev/null
++++ b/packages/contracts/db/schema/ui.ts
+@@ -0,0 +1,33 @@
++import { pgSchema, uuid, text, timestamp, integer, uniqueIndex } from 'drizzle-orm/pg-core'
++
++/**
++ * `ui` is the BFF context's own schema — read-side preferences the UI persists
++ * for itself, never canonical domain state.
++ *
++ * Tables:
++ *   - `store_visualization` — per-store dashboard visualization mode
++ */
++export const uiSchema = pgSchema('ui')
++
++export const storeVisualization = uiSchema.table(
++	'store_visualization',
++	{
++		id: uuid('id').primaryKey().defaultRandom(),
++
++		// The store this preference belongs to — one row per store.
++		storeId: uuid('store_id').notNull(),
++
++		// DashboardMode context enum (GLOBAL | NATIONAL). Stored as text (repo
++		// convention, never pgEnum); the enum is context-local to api-ts `ui`, so
++		// the column stays untyped here (contracts never imports from api).
++		dashboardMode: text('dashboard_mode').notNull(),
++
++		// Audit / optimistic concurrency.
++		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
++		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
++		version: integer('version').notNull().default(1),
++	},
++	t => ({
++		storeIdx: uniqueIndex('store_visualization_store_id_idx').on(t.storeId),
++	}),
++)

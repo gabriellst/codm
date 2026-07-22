@@ -1,0 +1,25 @@
+import { View } from 'react-native'
+import { useTranslation } from 'react-i18next'
+import { Stack } from 'expo-router'
+import { z } from 'zod'
+import { useTypedSearchParams } from '@/lib/typed-route'
+import { ListWorkoutsQueryParams } from '@template/client-typescript/typescript'
+
+const workoutsSearchSchema = ListWorkoutsQueryParams.and(
+	z.object({
+	q: z.string().optional(),
+	page: z.number().default(1),
+}),
+)
+
+export default function WorkoutsScreen() {
+	const { t } = useTranslation()
+	const [params, setParams] = useTypedSearchParams(workoutsSearchSchema)
+
+	return (
+		<View className="flex-1 bg-bg-0 px-5 pt-6">
+			<Stack.Screen options={{ title: t('workouts.title') }} />
+			{/* Implement WorkoutsScreen */}
+		</View>
+	)
+}

@@ -1,0 +1,371 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [event, service]
+  depended_by: []
+  context_reads: [event]
+
+  patterns:
+    - id: HDL-01
+      name: "Class extends EventHandler"
+      when: "handler reacts to a domain or integration event (not a BullMQ job handler)"
+      rule: "@injectable() class X extends EventHandler<typeof EventClass> { readonly event = EventClass }"
+    - id: HDL-03
+      name: "Handle method"
+      when: "handler reacts to a domain or integration event (not a BullMQ job handler)"
+      rule: "async handle(event: this['input']): Promise<this['output']>"
+    - id: HDL-04
+      name: "Barrel export"
+      when: "handler reacts to a domain or integration event (not a BullMQ job handler)"
+      rule: "export in handlers/internal.ts or handlers/external.ts"
+      wrong: "not exported — handler never triggered"
+    - id: HDL-C01
+      name: "Internal handler"
+      when: "handles domain event from same context"
+      rule: "exported in handlers/internal.ts"
+    - id: HDL-C02
+      name: "External handler"
+      when: "handles integration event from different context"
+      rule: "exported in handlers/external.ts"
+    - id: HDL-C03
+      name: "Service injection"
+      when: "handler delegates to external service"
+      rule: "constructor(private service: ServiceInterface) { super() }"
+
+    # Extracted code patterns from implementations
+    - id: HDL-P01
+      name: "Standard handler structure"
+      when: "creating any event handler (not a BullMQ job handler)"
+      reason: "EventHandler derives name, inputSchema, and outputSchema from the event class — only declare the event and handle()."
+      rule: |
+        import { EventHandler } from '@template/core-typescript'
+        import { injectable } from 'tsyringe-neo'
+        import { SomeEvent } from '@context/events'
+
+        @injectable()
+        export class SomeHandler extends EventHandler<typeof SomeEvent> {
+          readonly event = SomeEvent
+
+          async handle(event: this['input']): Promise<this['output']> {
+            // ...
+            return
+          }
+        }
+
+    - id: HDL-P02
+      name: "Internal handler event class"
+      when: "handler processes domain event within same context"
+      reason: "Import the event class from the context's events barrel; name is derived from the static name on the event class."
+      rule: |
+        // Same-context handler — import from own context
+        import { UserCreatedEvent } from '@auth/events'
+        readonly event = UserCreatedEvent  // name => 'auth.user.created'
+
+    - id: HDL-P03
+      name: "External handler event class"
+      when: "handler processes integration event from another context"
+      reason: "Import the event class from @shared/events; the 'integration.' prefix lives on the event's static name."
+      rule: |
+        // Cross-context handler — import from @shared/events
+        import { MessageReceivedEvent } from '@shared/events'
+        readonly event = MessageReceivedEvent  // name => 'integration.message.received'
+
+    - id: HDL-P04
+      name: "Service injection with super() call"
+      when: "handler needs injected dependencies (mail sender, repository, etc.)"
+      reason: "Handlers using DI must call super() in the constructor so the Handler base class initializes correctly."
+      rule: |
+        constructor(private readonly mailSender: MailSender) {
+          super()
+        }
+
+        // Or with repository
+        constructor(private chatRepository: ChatRepository) {
+          super()
+        }
+
+    - id: HDL-P05
+      name: "No-dependency handler (no constructor)"
+      when: "handler has no injected dependencies"
+      reason: "When a handler only logs or performs simple logic without external services, omit the constructor entirely — the base class constructor is inherited automatically."
+      rule: |
+        @injectable()
+        export class ChatStartedHandler extends EventHandler<typeof ChatStartedEvent> {
+          readonly event = ChatStartedEvent
+
+          // No constructor needed — no dependencies
+          async handle(event: this['input']): Promise<this['output']> {
+            // ...
+            return
+          }
+        }
+
+    - id: HDL-P06
+      name: "Idempotent handler with existence check"
+      when: "handler creates or modifies persistent state"
+      reason: "Events may be delivered more than once. Handlers that write data must check for existing records to prevent duplicates."
+      rule: |
+        async handle(event: this['input']): Promise<void> {
+          const { platform, message, chat } = event.payload
+
+          let existingChat = await this.chatRepository.findById(new Id(chat.id))
+
+          if (!existingChat) {
+            existingChat = Chat.create({ platform })
+            existingChat.id = new Id(chat.id)
+          }
+
+          // Continue processing with existingChat...
+          await this.chatRepository.save(existingChat)
+        }
+
+    - id: HDL-P07
+      name: "Email sending handler"
+      when: "handler sends email as side effect"
+      reason: "Email handlers follow a consistent pattern: extract payload, build template, send via MailSender service."
+      rule: |
+        constructor(private readonly mailSender: MailSender) {
+          super()
+        }
+
+        async handle(event: this['input']): Promise<this['output']> {
+          const { user } = event.payload
+
+          const emailTemplate = new WelcomeEmail({ userName: user.name })
+          await this.mailSender.sendMail(user.email, emailTemplate)
+
+          return
+        }
+
+    - id: HDL-P10
+      name: "External event class import from @shared/events"
+      when: "handler processes integration events from other contexts"
+      reason: "Integration event classes live in @shared/events so they can be imported by any context. Internal event classes live in the context's own @context/events."
+      rule: |
+        // External handler — imports event class from @shared/events
+        import { AppointmentBookedEvent } from '@shared/events'
+        import { MessageReceivedEvent } from '@shared/events'
+
+        // Internal handler — imports event class from own context
+        import { ChatStartedEvent } from '@agent/events'
+        import { UserCreatedEvent } from '@auth/events'
+
+    - id: HDL-P11
+      name: "Handle method return type variations"
+      when: "defining the handle method signature for an event handler (not a BullMQ job handler)"
+      reason: "Both this['output'] and void are used as return types. Use this['output'] for consistency with the Handler base class type system."
+      rule: |
+        // Preferred — uses base class type alias
+        async handle(event: this['input']): Promise<this['output']> { ... }
+
+        // Also acceptable — explicit void
+        async handle(event: this['input']): Promise<void> { ... }
+
+    - id: HDL-P12
+      name: "Integration event publisher handler"
+      when: "domain event needs to trigger a cross-context integration event"
+      reason: "Decouples use cases from cross-context concerns. Use cases save domain events to outbox; handlers react and publish integration events via ExternalMediator."
+      rule: |
+        @injectable()
+        export class ClinicCreatedHandler extends EventHandler<typeof ClinicCreatedDomainEvent> {
+          readonly event = ClinicCreatedDomainEvent
+          constructor(private externalMediator: ExternalMediator) { super() }
+          async handle(event: this['input']): Promise<this['output']> {
+            const { clinicId, name, userId } = event.payload
+            await this.externalMediator.publish(
+              new ClinicCreatedEvent({ ownerId: event.ownerId, payload: { clinicId, name, userId } }),
+            )
+            return
+          }
+        }
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+      import { EventHandler } from '@template/core-typescript'
+      import { {{Name}}Event } from '@{{contextName}}/events'
+
+      @injectable()
+      export class {{Name}}Handler extends EventHandler<typeof {{Name}}Event> {
+      	readonly event = {{Name}}Event
+
+      	async handle(_event: this['input']): Promise<void> {
+      		// Implement handler logic
+      	}
+      }
+    skeletons:
+      external: |
+        import { injectable } from 'tsyringe-neo'
+        import { EventHandler } from '@template/core-typescript'
+        import { {{Name}}Event } from '@template/contracts-typescript/wire/events'
+
+        @injectable()
+        export class {{Name}}Handler extends EventHandler<typeof {{Name}}Event> {
+        	readonly event = {{Name}}Event
+
+        	async handle(_event: this['input']): Promise<void> {
+        		// Implement handler logic
+        	}
+        }
+    exemplar: |
+      @injectable()
+      export class UserCreatedHandler extends EventHandler<typeof UserCreatedEvent> {
+        readonly event = UserCreatedEvent
+        constructor(private mailSender: MailSender) { super() }
+        async handle(event: this['input']): Promise<this['output']> {
+          const { user } = event.payload
+          await this.mailSender.sendMail(user.email, new WelcomeEmail({ userName: user.name }))
+          return
+        }
+      }
+
+  scaffold: "bun cli handler <context> <name>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Publishing domain events directly instead of saving to outbox"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'internalMediator\.publish\('
+      wrong: |
+        // Handler publishing domain event directly
+        await this.internalMediator.publish(event)
+      right: |
+        // Save domain event to outbox — OutboxDispatcher handles delivery
+        await this.domainEventRepository.save(event)
+        // For integration events, use ExternalMediator.publish() (fire-and-forget, no outbox)
+
+    - id: bp-02
+      name: "Non-idempotent handler — but idempotency belongs in the entity (Tell Don't Ask)"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Handler checking idempotency externally — violates Tell Don't Ask
+        async handle(event: MessageReceivedEvent): Promise<void> {
+          if (session.hasMessage(event.payload.messageId)) return
+          session.addMessage({ ... })
+        }
+      right: |
+        // Entity method handles idempotency internally
+        async handle(event: MessageReceivedEvent): Promise<void> {
+          session.addMessage({ ... })
+          // session.addMessage() internally deduplicates or guards against replays
+        }
+
+    - id: bp-03
+      name: "Handler typing tx as DrizzleClient instead of Transaction"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'tx\??:\s*DrizzleClient'
+      wrong: |
+        // Handler names the infra type — Drizzle leaks into the write-side flow
+        import { DrizzleClient } from '@template/core-typescript'
+        protected async handle(event: this['input'], tx?: DrizzleClient): Promise<void> {
+          await this.withTransaction(tx, async tx => {
+            await this.applyCancelled(event, tx) // private method also typed DrizzleClient
+          })
+        }
+        private async applyCancelled(event: this['input'], tx: DrizzleClient): Promise<void> { ... }
+      right: |
+        // Handler speaks Transaction (the EventHandler base contract); repos accept it,
+        // and only the Drizzle repo impl narrows to DrizzleClient.
+        import type { Transaction } from '@template/core-typescript'
+        protected async handle(event: this['input'], tx?: Transaction): Promise<void> {
+          await this.withTransaction(tx, async tx => {
+            await this.applyCancelled(event, tx)
+          })
+        }
+        private async applyCancelled(event: this['input'], tx: Transaction): Promise<void> {
+          const sub = await this.subscriptions.findByPlatformAndExternalId(platform, externalId, tx)
+          // ...
+          await this.subscriptions.save(sub, tx)
+          await this.domainEventRepository.save(event, tx)
+        }
+
+    - id: bp-04
+      name: "Publishing a transition's domain event before loading/mutating/persisting the aggregate"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'internalMediator\.publish\(\s*new\s+\w+Event'
+      reason: >
+        The handler that decides a domain transition must load the aggregate, call its
+        imperative method, and save aggregate+event atomically in ONE transaction. Emitting
+        the domain event speculatively (before the row is loaded/mutated) fires events even
+        when the entity doesn't exist. Downstream outbox handlers then do side effects only.
+      wrong: |
+        async handle(event: this['input']): Promise<void> {
+          // ExternalSubscriptionUpdated fires Subscription*Event before any load/persist
+          await this.internalMediator.publish(new SubscriptionCancelledEvent({ ... }))
+        }
+      right: |
+        protected async handle(event: this['input'], tx?: Transaction): Promise<void> {
+          await this.withTransaction(tx, async tx => {
+            const sub = await this.subscriptions.findByPlatformAndExternalId(p, id, tx)
+            sub.cancel()                                   // entity decides validity, raises the event
+            await this.subscriptions.save(sub, tx)         // entity + event in one tx
+            await this.domainEventRepository.save(event, tx)
+          })
+        }
+    - id: bp-05
+      name: "On-prefixed handler name and/or one class handling multiple events"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'class\s+On[A-Z]\w*\s+extends\s+EventHandler'
+      reason: >
+        Drop the `On` prefix; name handlers `<EventName>Handler`, ONE class per event name.
+        For orchestrated side-effects, create a folder `<EventName>Handler/` whose sub-handlers
+        EXTEND the existing EventHandler base (no new SubHandler abstraction) and are injected;
+        the parent calls them. Sub-handlers stay OUT of the barrel.
+      wrong: |
+        // multiple @injectable() event handlers declared in one file, On-prefixed
+        @injectable() class OnOrderUpdated extends EventHandler<typeof OrderUpdated> { ... }
+        @injectable() class OnOrderUpdatedBindCampaign extends EventHandler<...> { ... }
+      right: |
+        // OrderUpdatedHandler/OrderUpdatedHandler.ts — parent, in the barrel
+        @injectable() class OrderUpdatedHandler extends EventHandler<typeof OrderUpdated> {
+          constructor(private bindCampaign: OrderUpdatedBindCampaignSubHandler) { super() }
+        }
+        // OrderUpdatedHandler/OrderUpdatedBindCampaignSubHandler.ts — extends EventHandler, NOT in barrel
+    - id: bp-06
+      name: "Mapping a webhook in the controller instead of the mapper+factory handler chain"
+      severity: critical
+      mechanical: false
+      reason: >
+        Webhook ingest = controller publishes a raw WebhookReceivedEvent (carrying the
+        SerializedRequest); a handler resolves the platform mapper via a factory and emits an
+        ExternalXxx event; a second handler maps that to the true domain event. No platform
+        dispatch or mapping in the controller. For billing, the mapper infers type/externalId
+        from the body and the use-case output is z.void().
+      wrong: |
+        // controller switches on platform and builds domain events inline
+        if (platform === 'stripe') return mapStripe(body)
+      right: |
+        // Controller -> WebhookReceivedEvent -> WebhookReceivedHandler -> WebhookMapperFactory
+        //   -> ExternalSubscriptionUpdatedEvent -> ExternalSubscriptionUpdatedHandler -> domain event
+        const mapper = this.webhookMapperFactory.for(platform)   // factory keyed by platform enum
+    - id: bp-07
+      name: "Reading/verifying a Request body before snapshotting it"
+      severity: critical
+      mechanical: false
+      reason: "Request bodies are single-read streams; verifying before snapshotting consumes the body and persists an empty rawRequest."
+      wrong: |
+        verify(rawRequest)                                  // consumes the one-shot body
+        const snapshot = SerializedRequest.fromRequest(rawRequest)  // body now empty
+      right: |
+        const snapshot = SerializedRequest.fromRequest(rawRequest)  // snapshot FIRST
+        verify(snapshot)                                            // then verify
+
+    - id: bp-08
+      name: "Handler raising untyped or wrong-layer errors"
+      severity: critical
+      rule: "A handler enforcing its own invariant (missing payload field, unresolvable reference, failed precondition) throws BaseError<ApplicationErrors>('CODE') — handlers are application-layer. Never DomainErrors (those belong to entities/VOs), never throw new Error('...'), never a bare string. Errors thrown from async handlers surface in the outbox dispatcher's retry/log path, so the typed code is what makes failures greppable."
+      wrong: |
+        throw new Error('customer not found')                       // untyped
+        throw new BaseError<DomainErrors>('CUSTOMER_NOT_FOUND')     // wrong layer
+      right: |
+        throw new BaseError<ApplicationErrors>('CUSTOMER_NOT_FOUND')
+      mechanical: false

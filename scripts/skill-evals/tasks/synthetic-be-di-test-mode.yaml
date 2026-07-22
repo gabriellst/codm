@@ -1,0 +1,457 @@
+id: synthetic-be-di-test-mode
+tier: holdout
+builder: sonnet
+title: PushDevice repository + RegisterPushDevice use case in the notifications
+  context (synthetic — probes DI registry wiring across envs + integration-test canon)
+sourceSpec: PROBES-BACKLOG.md#7
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template backend (packages/api/typescript), give the notifications
+  context a push-device registry. Mobile clients will register the push token
+  they obtain from the OS so deliveries can target devices. The table already
+  exists and is already migrated: notifications.push_devices in
+  packages/contracts/db/schema/notifications.ts — read it FIRST for the exact
+  columns (id, user_id FK to the auth users table, platform, push_token
+  UNIQUE, device_fingerprint nullable, registered_at, last_seen_at). It has
+  zero consumers at HEAD and deliberately keeps its legacy shape — do NOT
+  touch packages/contracts (no schema edits, no new migrations); map the
+  aggregate onto the columns that exist. This is a backend-only task: no
+  controller, no TypeSpec/contracts changes, no SDK regeneration, and leave
+  the identity context's FCM artifacts exactly as they are. Build the slice
+  the house way: (1) a PushDevice aggregate at
+  src/notifications/entities/PushDevice.ts — fields userId, platform (reuse
+  the existing FcmPlatform wire enum from
+  @template/contracts-typescript/wire/enums, IOS/ANDROID/WEB — do not mint a
+  new enum and do not widen to string), pushToken (non-empty),
+  deviceFingerprint (nullable), registeredAt, lastSeenAt, plus a
+  liveness-refresh behavior — with its colocated unit spec
+  src/notifications/entities/PushDevice.test.ts covering the invariants;
+  (2) a PushDeviceRepository under
+  src/notifications/repositories/PushDeviceRepository/ shaped like the
+  sibling NotificationDeliveryRepository directory (abstract port +
+  Mock + Drizzle implementations + index barrel), including a findByPushToken
+  lookup, with the colocated integration spec
+  DrizzlePushDeviceRepository.test.ts; (3) a RegisterPushDevice use case at
+  src/notifications/usecases/RegisterPushDevice.ts with its colocated
+  RegisterPushDevice.test.ts — input: userId (uuid), platform, pushToken,
+  optional deviceFingerprint; behavior: an unknown push token creates and
+  persists the device; re-registering a token the SAME user already owns is
+  idempotent — it refreshes the device's liveness instead of duplicating; a
+  token already registered to a DIFFERENT user fails with the named error
+  PUSH_TOKEN_ALREADY_REGISTERED mapped to HTTP conflict (product wants
+  re-assignment to be an explicit unregister-first flow); (4) wire the new
+  repository through the context registry (src/notifications/registry.ts) so
+  each environment resolves the implementation the house intends — the
+  notifications registry is already aggregated into shared/registry.ts, no
+  edits needed there; (5) a givenPushDevice helper in a new
+  packages/api/typescript/tests/support/given/notifications.ts, exported
+  through the given index, defaulting its owning user via the existing user
+  helpers when no userId override is passed (mirror
+  givenFcmRegistrationToken) — and use it for the pre-existing-device state
+  the use-case scenarios need. Decide what each test layer covers and how
+  every piece of test state gets built per the house testing architecture:
+  read docs/BACKEND.md (especially "Dependency Injection & Registries" and
+  "Testing Quick Reference") and the typescript variants of the repository,
+  usecase, entity, errors and test skills under .claude/skills/ before
+  writing code, and study the sibling exemplars
+  (src/notifications/repositories/NotificationDeliveryRepository/,
+  src/identity/entities/FcmRegistrationToken.ts and its colocated spec,
+  src/identity/usecases/RegisterFcmToken.ts,
+  tests/support/given/identity.ts) for the established shape. Where an
+  exemplar and a skill registry disagree, the registry wins. Wire everything
+  (barrels included) and finish green: cd packages/api/typescript &&
+  bun x tsc -p tsconfig.build.json --noEmit && bun test src/notifications
+  tests/support.
+axes:
+  - DI-REG
+  - TEST-MODE
+  - ERR-VOCAB
+  - SCHEMA-DERIVE
+  - ENUM-REPR
+  - NAME-CONSISTENCY
+  - LAYOUT
+graders:
+  - kind: tsc
+    spec: backend
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.test.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/PushDeviceRepository.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/MockPushDeviceRepository.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.test.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/tests/support/given/notifications.ts"
+  # ── DI-REG: all three envs through the context registry ───────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/registry.ts::mock:\\s*\\[[^\\]]*MockPushDeviceRepository"
+    id: bounded-context#CTX-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/registry.ts::integration:\\s*\\[[^\\]]*DrizzlePushDeviceRepository"
+    id: bounded-context#CTX-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/registry.ts::real:\\s*\\[[^\\]]*DrizzlePushDeviceRepository"
+    id: bounded-context#CTX-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/registry.ts::\\{\\s*token:\\s*PushDeviceRepository,\\s*instance:\\s*MockPushDeviceRepository\\s*\\}"
+    id: bounded-context#BC-P03
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/registry.ts::mock:\\s*\\[[^\\]]*DrizzlePushDeviceRepository"
+    id: bounded-context#CTX-06
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/registry.ts::(integration|real):\\s*\\[[^\\]]*MockPushDeviceRepository"
+    id: bounded-context#CTX-06
+  # ── barrels ────────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/index.ts::MockPushDeviceRepository"
+    id: repository#REPO-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/index.ts::DrizzlePushDeviceRepository"
+    id: repository#REPO-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/index.ts::PushDeviceRepository"
+    id: repository#REPO-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/index.ts::RegisterPushDevice"
+    id: bounded-context#CTX-05
+  # ── repository canon ───────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/PushDeviceRepository.ts::extends Repository<PushDevice>"
+    id: repository#REPO-01
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/PushDeviceRepository.ts::findByPushToken\\("
+    id: repository#REPO-02
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/PushDeviceRepository.ts::abstract\\s+(save|delete)\\s*\\("
+    id: repository#bp-01
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/PushDeviceRepository.ts::\\|\\s*null\\s*>"
+    id: repository#bp-08
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::@injectable\\(\\)"
+    id: repository#REPOI-01
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::constructor\\(private (readonly )?\\w+: DrizzleClient\\)"
+    id: repository#REPOI-02
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::toDomain"
+    id: repository#REPOI-03
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::toPersistence"
+    id: repository#REPOI-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::incrementVersion\\(\\)"
+    id: repository#REPOI-05
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::onConflictDoUpdate"
+    id: repository#REPOI-05
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::tryCatchAsync"
+    id: repository#REPO-P02
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::tx \\?\\? this\\.\\w+"
+    id: repository#REPOI-06
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.ts::PushDevice\\.create\\("
+    id: repository#bp-02
+  # ── entity + schema layer rules ────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.ts::extends AggregateRoot<"
+    id: entity#typescript
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.ts::z\\.enum\\(FcmPlatform\\)"
+    id: enum#typescript
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.ts::z\\.instance\\(Id\\)"
+    id: schema#layer-boundary
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.test.ts::toThrow\\("
+    id: test#TST-02
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/entities/PushDevice.test.ts::TestBed"
+    id: test#TST-02
+  # ── use case canon ─────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::InputSchema = z\\.object\\("
+    id: usecase#UC-01
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::OutputSchema"
+    id: usecase#UC-02
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::extends Handler<typeof"
+    id: usecase#UC-03
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::readonly name = '[a-z_]+' as const"
+    id: usecase#UC-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::withTransaction\\("
+    id: usecase#UC-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::findByPushToken\\([^)]*tx\\)"
+    id: usecase#UC-P14
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::\\.save\\([^)]*,\\s*tx\\)"
+    id: usecase#UC-P14
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::new BaseError<[\\w\\s|]*>\\(\\s*['\"]PUSH_TOKEN_ALREADY_REGISTERED['\"]"
+    id: usecase#UC-C07
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::z\\.uuid\\(\\)"
+    id: schema#layer-boundary
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::z\\.enum\\(FcmPlatform\\)"
+    id: enum#typescript
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::z\\.instance\\("
+    id: schema#layer-boundary
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::(internalMediator|externalMediator)\\.publish"
+    id: usecase#UC-C05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::lastSeenAt\\s*="
+    id: usecase#UC-C03
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::from\\s+['\"]@template/contracts/db"
+    id: usecase#UC-03
+  # ── error vocabulary ───────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/errors/index.ts::['\"]PUSH_TOKEN_ALREADY_REGISTERED['\"]"
+    id: errors#ERR-02
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/errors/index.ts::PUSH_TOKEN_ALREADY_REGISTERED:\\s*HttpStatusCode\\.CONFLICT"
+    id: errors#ERR-05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/**/*PushDevice*.ts::throw new Error\\("
+    id: errors#ERR-02
+  # ── TEST-MODE: use case test ───────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::TestBed\\.create\\(\\s*['\"]integration['\"]"
+    id: test#TST-03
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::createChildContainer\\(\\)"
+    id: test#TST-03
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::testBed\\.resolve\\("
+    id: test#TST-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::givenPushDevice\\("
+    id: test#bp-09
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::rejects\\.toMatchObject\\(\\{\\s*name:\\s*['\"]PUSH_TOKEN_ALREADY_REGISTERED['\"]"
+    id: test#TST-17
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::testBed\\.reset\\(\\)"
+    id: test#TST-11
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::testBed\\.destroy\\(\\)"
+    id: test#TST-11
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::VALIDATION_ERROR"
+    id: test#TST-15
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::registerInstance"
+    id: test#bp-12
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::new\\s+Mock\\w+\\("
+    id: test#bp-02
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::as any|as unknown as"
+    id: test#bp-14
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.test.ts::try\\s*\\{"
+    id: test#bp-19
+  # ── TEST-MODE: repository test ─────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.test.ts::TestBed\\.create\\(\\s*['\"]integration['\"]"
+    id: test#TST-09
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.test.ts::findByPushToken\\("
+    id: test#TST-09
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.test.ts::\\.delete\\("
+    id: test#TST-09
+  - kind: grep-must
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.test.ts::given(User|PushDevice)"
+    id: test#TST-13
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/repositories/PushDeviceRepository/DrizzlePushDeviceRepository.test.ts::registerInstance"
+    id: test#bp-12
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/**/*PushDevice*.test.ts::TestBed\\.create\\(\\s*['\"]mock['\"]"
+    id: test#bp-08
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/notifications/**/*PushDevice*.test.ts::['\"][0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}['\"]"
+    id: test#bp-18
+  # ── given helper: repo-direct, never use cases ─────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/tests/support/given/notifications.ts::givenPushDevice"
+    id: test#TST-13
+  - kind: grep-must
+    spec: "packages/api/typescript/tests/support/given/notifications.ts::PushDeviceRepository"
+    id: test#bp-09
+  - kind: grep-must
+    spec: "packages/api/typescript/tests/support/given/notifications.ts::\\.save\\("
+    id: test#bp-09
+  - kind: grep-must
+    spec: "packages/api/typescript/tests/support/given/notifications.ts::givenUser"
+    id: test#TST-13
+  - kind: grep-must-not
+    spec: "packages/api/typescript/tests/support/given/notifications.ts::\\.execute\\(|RegisterPushDevice"
+    id: test#bp-09
+  - kind: grep-must
+    spec: "packages/api/typescript/tests/support/given/index.ts::givenPushDevice"
+    id: test#TST-18
+  # ── gates ──────────────────────────────────────────────────────────
+  - kind: test-green
+    spec: "packages/api/typescript/src/notifications"
+  - kind: test-green
+    spec: "packages/api/typescript/tests/support"
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: judge
+    spec: >
+      A push-device registry slice was just added to the notifications context
+      (packages/api/typescript). Verify ALL of:
+      (a) DI-REG — src/notifications/registry.ts binds PushDeviceRepository in
+      ALL THREE environment arrays with the sibling { token, instance } shape:
+      mock resolves MockPushDeviceRepository, integration AND real resolve
+      DrizzlePushDeviceRepository; nothing else registers the repository (no
+      shared/registry.ts edits — notifications is already aggregated; no
+      registerInstance calls in src or tests); the abstract PushDeviceRepository
+      class is the DI token everywhere — the use case constructor and the tests
+      depend on it, never on the Mock/Drizzle concretes.
+      (b) TEST-MODE placement — PushDevice.test.ts is a pure unit spec (direct
+      instantiation, no TestBed, no DI container); DrizzlePushDeviceRepository.test.ts
+      and RegisterPushDevice.test.ts boot TestBed.create('integration', ...) ONCE
+      per suite on a child container in beforeAll, with beforeEach(testBed.reset())
+      and afterAll(testBed.destroy()), and resolve the repository/use case via
+      testBed.resolve. Prerequisite state is built via given helpers only: the
+      FK-satisfying user rows come from givenUser/givenUserWithAccount (directly
+      or inside givenPushDevice), pre-existing devices come from givenPushDevice,
+      and givenPushDevice itself persists through PushDeviceRepository — the
+      use-case test NEVER builds fixture state by calling RegisterPushDevice (or
+      any other use case) before the scenario's single action under test.
+      (c) Use-case test scope — RegisterPushDevice.test.ts covers orchestration
+      only: first registration persists (read back through the resolved
+      PushDeviceRepository), same-user re-register is idempotent (refreshes
+      liveness, no duplicate row/entity), different-user conflict rejects with
+      name 'PUSH_TOKEN_ALREADY_REGISTERED' via expect(...).rejects.toMatchObject;
+      there is NO re-testing of entity-level validation (empty token, bad
+      platform, VALIDATION_ERROR cases) at use-case level — those invariants
+      live in PushDevice.test.ts.
+      (d) Repository canon — the abstract class extends Repository<PushDevice>
+      and only adds finder signatures (optional tx param, Promise<... |
+      undefined>, no save/delete redeclarations); DrizzlePushDeviceRepository is
+      @injectable with DrizzleClient constructor injection, wraps queries in
+      tryCatchAsync, uses tx ?? this.db, maps rows via toDomain passing raw
+      primitives into new PushDevice (never PushDevice.create), maps out via
+      toPersistence, and save calls entity.incrementVersion() then
+      insert().values().onConflictDoUpdate; MockPushDeviceRepository is a real
+      in-memory implementation whose semantics match (including the
+      token-uniqueness lookup).
+      (e) Use case + error vocabulary — RegisterPushDevice extends Handler with
+      exported Input/Output schemas (input keeps wire primitives: z.uuid() for
+      userId, z.enum(FcmPlatform) for platform — no z.instance in the input), a
+      snake_case readonly name, all DB work inside withTransaction with tx
+      passed to EVERY repository call including the findByPushToken pre-check;
+      the idempotent branch mutates through an entity behavior method (no
+      property assignment in the use case); the conflict throws BaseError typed
+      with the context error union, and 'PUSH_TOKEN_ALREADY_REGISTERED' is added
+      to the notifications errors/index.ts union AND registered in
+      registerErrorCodes mapped to CONFLICT.
+      Scope notes — legitimate exceptions, do NOT fail these: the
+      notifications.push_devices table has NO version/created_at/updated_at
+      columns (legacy shape, intentionally unmigrated), so the Drizzle save
+      omitting version/updatedAt from the onConflictDoUpdate set and toDomain
+      not passing audit fields is the EXPECTED shape — incrementVersion() being
+      called without a persisted version column is correct here, not a bug.
+      The Drizzle repository test MAY construct PushDevice.create(...) inline
+      for the aggregate under test and MAY resolve DrizzleClient — both are
+      sanctioned for Drizzle*Repository.test.ts files. The use-case test calling
+      useCase.execute() as the action under test (once per scenario) is the
+      point of the test, not a fixture violation. Reusing the FcmPlatform wire
+      enum for the platform field is the prescribed shape — do not fail naming
+      consistency over the 'Fcm' prefix. A domain event in RegisterPushDevice
+      is OPTIONAL: absence is fine, and if present it must be persisted via
+      this.domainEventRepository.save(event, tx) (only direct mediator
+      publishing fails). Any ownerId string passed to TestBed.create is fine.
+      Judge the idiom, not variable names — local aliases (repo vs repository
+      vs deviceRepo) are fine. Inspect the new files under
+      src/notifications/{entities,repositories/PushDeviceRepository,usecases}
+      plus src/notifications/registry.ts, src/notifications/errors/index.ts,
+      the touched barrels, and tests/support/given/{notifications.ts,index.ts}.
+      Pre-existing notifications artifacts (Notification*, SendNotification,
+      MarkNotificationRead, PushDeliveryService) and the identity FCM slice are
+      out of scope.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first agent probe of the
+  DI-REG + TEST-MODE axes (PROBES-BACKLOG P2 row "synthetic-be-di-test-mode";
+  numbered #7 counting continuously across the P1+P2 tables). No gold tree,
+  agent mode only. Grounded reality at HEAD: notifications.push_devices exists
+  in packages/contracts/db/schema/notifications.ts and is migrated since
+  0000_ordinary_husk.sql (so PGlite integration tests see it with NO new
+  migration), has a UNIQUE push_token, a user_id FK onto auth users (text id;
+  user ids are uuid strings — MarkNotificationRead types userId z.uuid()), and
+  ZERO consumers in packages/api/typescript (only pushLog is consumed, by
+  LogPushDeliveryService). The probe deliberately keeps the table's legacy
+  shape (no version/created_at/updated_at columns) and forbids contracts
+  edits — the REPOI-05 "persist version in the upsert set" expectation cannot
+  apply, which is why the judge carries an explicit scope note; the
+  deterministic graders pin incrementVersion() + onConflictDoUpdate only.
+  Identity's FCM slice (FcmRegistrationToken / RegisterFcmToken /
+  givenFcmRegistrationToken) is the close-cousin exemplar the prompt points
+  at; the probe's behavior diverges on purpose (cross-user token conflict →
+  named error PUSH_TOKEN_ALREADY_REGISTERED, where RegisterFcmToken silently
+  touches) so the slice cannot be landed by pure copy-paste and the use-case
+  test gets a real orchestration error to assert. givenUser is NOT grepped in
+  the test FILES because the conflict scenario needs no second persisted user
+  (the use case throws before any insert) and the happy path may reuse the
+  userId returned by givenPushDevice — instead the prompt pins (and the grader
+  greps) that givenPushDevice defaults its owning user via the existing user
+  helpers, mirroring givenFcmRegistrationToken; the repo test grep accepts
+  given(User|PushDevice). Free real estate verified at authoring time:
+  grep for PushDevice / RegisterPushDevice / givenPushDevice /
+  PUSH_TOKEN_ALREADY_REGISTERED / findByPushToken / register_push_device hits
+  NOTHING under packages/ (node_modules excluded);
+  tests/support/given/notifications.ts does not exist; every grep-must is 0 at
+  HEAD and every must-not over existing files (registry.ts env arrays,
+  errors/index.ts, barrels, given/index.ts) passes. Gates green at HEAD:
+  tsc backend (tsconfig.build.json) clean; bun test src/notifications = 29
+  pass / 5 files; bun test tests/support = 12 pass / 6 files; registry-scan
+  and import-direction exit 0. The two test-green specs exist at HEAD
+  (regression guard) and — being directory filters — also pick up the agent's
+  new colocated specs post-build, which is intentional: new tests are graded
+  by file-exists + idiom greps + these suite gates. Discriminating questions:
+  a naive build binds Drizzle into all three envs (or skips the mock binding),
+  hand-registers infra or constructs new Mock/Drizzle repos inside tests,
+  boots TestBed.create('mock') for use-case/repo tests, builds the conflict
+  pre-state by calling RegisterPushDevice twice, re-tests VALIDATION_ERROR at
+  use-case level, asserts errors via try/catch + cast, hardcodes UUID
+  literals, mutates lastSeenAt by assignment in the use case, and returns
+  null from finders; the canon is mock/integration/real bindings in the
+  context registry (CTX-06/BC-P03), child-container TestBed.create
+  ('integration') + resolve-never-register (TST-03/04, bp-12), repo-direct
+  given helpers (TST-13/bp-09, TST-18 bare API), TST-15 scope discipline,
+  TST-17 rejects.toMatchObject, and the REPO/UC always-patterns. Glob notes:
+  no brace/paren segments are used anywhere (no Bun.Glob hazards);
+  "**" matches zero segments so src/notifications/**/*PushDevice*.ts spans
+  entities/, repositories/PushDeviceRepository/ and usecases/ including
+  RegisterPushDevice.ts (substring match), and the *.test.ts variant spans all
+  three new test files. The registry env-array regexes rely on [^\]]* — valid
+  because InstanceRegistry entries contain no nested brackets; if an agent
+  ever registers via useFactory the BC-P03 pair-grep fails and the judge
+  arbitrates. All regexes compile through parseGrepSpec (validator run at
+  authoring time: musts FAIL at HEAD, must-nots/tsc/detect/test-green PASS).

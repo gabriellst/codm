@@ -1,0 +1,661 @@
+registry:
+  type: frontend
+  layer: presentation
+  platform: mobile
+  depends_on: [sdk, primitive]
+  depended_by: []
+  context_reads: [route]
+  examples:
+    - examples/pairs/synthetic-expo-notifications-screen
+
+  patterns:
+    # --- Always patterns ---
+
+    - id: CMP-01
+      name: "Named export function"
+      when: always
+      rule: "export function X() — never export default in -components/*"
+
+    - id: CMP-02
+      name: "Project icons (not lucide / mixed libraries)"
+      when: always
+      rule: "import from '@/components/ui/Icons' (the project's custom SVG set). On native nav bars, SF Symbols via `sf` prop are also acceptable."
+      wrong: "import from 'lucide-react' or '@tabler/icons-react' on mobile — those are web-only icon libs"
+
+    - id: CMP-03
+      name: "Read URL params via Expo Router APIs"
+      when: "component reads URL state"
+      rule: |
+        // Dynamic segment:
+        import { useLocalSearchParams } from 'expo-router'
+        const { id } = useLocalSearchParams<{ id: string }>()
+
+        // Typed query params:
+        import { useTypedSearchParams } from '@/lib/typed-route'
+        const [{ tab }, setParams] = useTypedSearchParams(schema)
+      wrong: |
+        // Receiving params as props
+        interface Props { id: string; tab: string }
+
+    - id: CMP-04
+      name: "Navigate via useRouter with typed pathname"
+      when: "component triggers navigation"
+      rule: |
+        import { useRouter } from 'expo-router'
+        const router = useRouter()
+        router.push({ pathname: '/workout/[id]', params: { id } })
+        router.push('/(sheets)/start-session')
+
+    # --- Conditional patterns ---
+
+    - id: CMP-C01
+      name: "Inline skeleton for loading"
+      when: "component queries data that can be undefined"
+      rule: "function SkeletonRows() { return <View>...</View> } — local function, never exported"
+      wrong: "export function XSkeleton"
+
+    - id: CMP-C02
+      name: "Empty state via EmptyState primitive"
+      when: "list can be empty"
+      rule: "data.items.length === 0 && <EmptyState title=\"Nenhum item\" />"
+
+    - id: CMP-C03
+      name: "Status pill"
+      when: "displays status enum"
+      rule: |
+        import { Pill } from '@/components/ui/Pill'
+        <Pill variant={statusVariantMap[status]}>{t(`enums.status.${status}`)}</Pill>
+
+    # --- Data ownership patterns ---
+
+    - id: CMP-P01
+      name: "Component owns its data query"
+      when: "component renders server data"
+      reason: "Each component fetches what it needs via React Query SDK hooks. The screen does NOT fetch and pass data as props. React Query deduplicates."
+      rule: |
+        export function WorkoutList() {
+          const { data } = useListWorkouts()
+          // render based on data
+        }
+      wrong: |
+        const { data } = useListWorkouts()
+        return <WorkoutList data={data} />
+
+    - id: CMP-P02
+      name: "Local skeleton function — never exported"
+      when: "component has loading state for data-dependent areas"
+      rule: |
+        function SkeletonRows() {
+          return (
+            <View className="flex-col gap-3 px-5">
+              {[1, 2, 3, 4].map(key => (
+                <View key={key} className="h-24 rounded-lg bg-surface-1/60" />
+              ))}
+            </View>
+          )
+        }
+
+    - id: CMP-P03
+      name: "Ternary data flow: skeleton → empty → list"
+      when: "component renders a list from queried data"
+      rule: |
+        {/* Static UI always visible */}
+        <Text variant="kicker">Treinos</Text>
+
+        {/* Data-dependent area */}
+        {data ? (
+          data.items.length === 0
+            ? <EmptyState title="Nenhum treino" />
+            : data.items.map(w => <WorkoutCard key={w.id} workout={w} />)
+        ) : <SkeletonRows />}
+
+    - id: CMP-P04
+      name: "Leaf component receives a single item as a prop"
+      when: "component is rendered N times in a .map() (cards, rows, chips)"
+      rule: |
+        // Parent owns the list query / iteration
+        export function WorkoutList() {
+          const { data } = useListWorkouts()
+          return data?.items.map(w => <WorkoutCard key={w.id} workout={w} />)
+        }
+
+        // Leaf receives one item
+        export function WorkoutCard({ workout }: { workout: WorkoutItem }) {
+          return <Card>{workout.name}</Card>
+        }
+      wrong: |
+        // Leaf re-fetches the item it already received
+        export function WorkoutCard({ workoutId }: { workoutId: string }) {
+          const { data } = useGetWorkout({ id: workoutId })  // unnecessary
+        }
+      examples: ["progress/-components/PeriodPicker (PeriodChip local leaf)"]
+
+    - id: CMP-P05
+      name: "Enum iteration via Object.values + SDK enum"
+      when: "component renders chips / segmented control from an SDK enum"
+      rule: |
+        import { PeriodEnum } from '@template/client-typescript/typescript'
+        {Object.values(PeriodEnum).map(p => <PeriodChip key={p} period={p} active={period === p} onPress={...} />)}
+      examples: ["progress/-components/PeriodPicker"]
+
+    - id: CMP-P06
+      name: "Mutation handler: mutateAsync + haptic + invalidate"
+      when: "component has CRUD actions"
+      reason: "Mobile uses haptics for tactile feedback (no toast primitive on this stack)."
+      rule: |
+        import { Haptics } from 'react-native-nitro-haptics'
+        const mutation = useDeleteWorkout()
+        const queryClient = useQueryClient()
+
+        await mutation.mutateAsync({ id }, {
+          onSuccess: () => Haptics.notification('success'),
+          onSettled: () => queryClient.invalidateQueries({ queryKey: listWorkoutsQueryKey() }),
+        })
+
+    - id: CMP-P07
+      name: "Zustand store for shared client state"
+      when: "multiple components need the same value or UI toggle"
+      rule: |
+        const period = usePeriodStore(s => s.period)
+        const setPeriod = usePeriodStore(s => s.setPeriod)
+        const { data } = useGetProgress({ params: { period } })
+      examples: ["progress/-components/PeriodPicker + progress/-stores/period-store.ts"]
+
+    - id: CMP-P08
+      name: "Open sheet route via router.push"
+      when: "component triggers a navigation-stack sheet"
+      rule: |
+        import { useRouter } from 'expo-router'
+        const router = useRouter()
+        router.push('/(sheets)/start-session')
+
+    - id: CMP-P09
+      name: "In-page Sheet primitive for one-off modals"
+      when: "component shows a modal that doesn't deserve a URL"
+      rule: |
+        import { Sheet } from '@/components/ui/Sheet'
+        const [open, setOpen] = useState(false)
+        <Sheet open={open} onClose={() => setOpen(false)} title="Filtros">
+          {/* body */}
+        </Sheet>
+
+    - id: CMP-P10
+      name: "ScrollView padding for bottom tab clearance"
+      when: "component is a top-level tab screen body"
+      rule: |
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 110 }}
+          contentInsetAdjustmentBehavior="automatic"
+          showsVerticalScrollIndicator={false}
+          className="flex-1"
+        >
+          {children}
+        </ScrollView>
+      reason: "110px clears the iOS native tab bar. Available as `space.scrollPadding` in tokens.ts."
+
+    - id: CMP-P11
+      name: "AccessibilityLabel on icon-only Pressable"
+      when: "component renders an interactive element with no visible text"
+      rule: |
+        <Pressable onPress={onClose} accessibilityLabel="Fechar" hitSlop={10}>
+          <IconClose size={iconSize.xl} color={fg.fg0} />
+        </Pressable>
+      wrong: "no accessibilityLabel — VoiceOver users + Maestro tests can't target it"
+
+    - id: CMP-P12
+      name: "Enum types in interfaces — no `as EnumType` casts"
+      when: "component uses SDK enum fields"
+      rule: |
+        // CORRECT: interface field typed with enum
+        interface WorkoutCardProps { workout: { status: WorkoutStatusEnum } }
+      wrong: |
+        statusLabels[workout.status as WorkoutStatusEnum]
+
+    - id: CMP-P13
+      name: "Locale & money canon (mobile)"
+      when: "component renders money, dates, or any locale-formatted value"
+      rule: |
+        // There is NO useLocale()/useMoney() on expo — those are web hooks.
+        // Locale is resolved from i18n (device language) INSIDE the lib helpers; components never pick one.
+        import { formatMoney } from '@/lib/format'
+        import { formatDate } from '@/lib/format-date'
+
+        // SDK Money is CENTS + currency; lib formatMoney takes UNITS:
+        <Text>{formatMoney(order.total.amount / 100, order.total.currency)}</Text>
+        <Text>{formatDate(row.createdAt, 'short')}</Text>
+      wrong: |
+        import { useMoney } from '@/hooks'              // web-only — does not exist on expo
+        format(date, 'dd/MM/yyyy', { locale: ptBR })    // hardcoded locale — i18n decides
+        new Intl.NumberFormat('pt-BR', { ... })          // hardcoded locale
+        formatMoney(order.total.amount)                  // cents fed as units — 100x error
+      reason: "Single i18n-driven formatting source. Mirrors the web LOCALE-MONEY axis with the mobile spelling: module helpers in lib/, not hooks."
+
+  canonical_snippet: |
+    import { View } from 'react-native'
+    import { useQueryClient } from '@tanstack/react-query'
+    import { Haptics } from 'react-native-nitro-haptics'
+    import { useListWorkouts, useDeleteWorkout, listWorkoutsQueryKey } from '@template/client-typescript/typescript'
+    import { Text } from '@/components/ui/Text'
+    import { EmptyState } from '@/components/ui/EmptyState'
+    import { usePeriodStore } from '@/app/(tabs)/progress/-stores/period-store'
+    import { WorkoutCard } from './WorkoutCard'
+
+    function SkeletonRows() {
+      return (
+        <View className="flex-col gap-3 px-5">
+          {[1, 2, 3, 4].map(key => (
+            <View key={key} className="h-24 rounded-lg bg-surface-1/60" />
+          ))}
+        </View>
+      )
+    }
+
+    export function WorkoutList() {
+      const period = usePeriodStore(s => s.period)
+      const queryClient = useQueryClient()
+      const { data } = useListWorkouts({ params: { period } })
+      const deleteWorkout = useDeleteWorkout()
+
+      const handleDelete = async (id: string) => {
+        await deleteWorkout.mutateAsync({ id }, {
+          onSuccess: () => Haptics.notification('success'),
+          onSettled: () => queryClient.invalidateQueries({ queryKey: listWorkoutsQueryKey() }),
+        })
+      }
+
+      return (
+        <View className="flex-col gap-3">
+          <Text variant="kicker" className="px-5">Treinos</Text>
+          {data ? (
+            data.items.length === 0
+              ? <EmptyState title="Nenhum treino" />
+              : data.items.map(w => <WorkoutCard key={w.id} workout={w} onDelete={handleDelete} />)
+          ) : <SkeletonRows />}
+        </View>
+      )
+    }
+
+  scaffold: "bun cli component <route> <name>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Passing query response as prop instead of letting component fetch"
+      severity: critical
+      mechanical: false
+      wrong: |
+        const { data } = useListWorkouts()
+        return <WorkoutList data={data} />
+      right: |
+        return <WorkoutList />
+        // inside WorkoutList:
+        const { data } = useListWorkouts()
+
+    - id: bp-02
+      name: "Component doesn't handle its own loading state"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Screen gates on isLoading
+        if (isLoading) return <ScreenSkeleton />
+        return <WorkoutList data={data} />
+      right: |
+        // Component handles loading internally
+        export function WorkoutList() {
+          const { data } = useListWorkouts()
+          return data ? <List items={data.items} /> : <SkeletonRows />
+        }
+
+    - id: bp-03
+      name: "Using StyleSheet.create or hardcoded hex when Uniwind would suffice"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'StyleSheet\.create\('
+        - 'backgroundColor:\s*[''"]#'
+      wrong: |
+        const styles = StyleSheet.create({ row: { padding: 16, backgroundColor: '#16161A' } })
+      right: |
+        <View className="p-4 bg-surface-1" />
+      note: >
+        `style={{}}` is reserved for things Uniwind can't express (gradients via LinearGradient,
+        shadows, exact letter-spacing in points, transforms). Static colors / spacing / radii
+        come from Uniwind classes mapped to tokens.
+
+    - id: bp-04
+      name: "Mixing icon libraries"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'from\s+[''"]lucide-react[''"]'
+        - 'from\s+[''"]@tabler/icons-react[''"]'
+      wrong: |
+        import { Search } from 'lucide-react'           // web-only
+        import { IconSearch } from '@tabler/icons-react' // web-only
+      right: |
+        import { IconSearch } from '@/components/ui/Icons'
+        // or SF Symbols for native nav items:
+        <NativeTabs.Trigger.Icon sf="magnifyingglass" />
+
+    - id: bp-05
+      name: "Index as key in lists"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'key=\{(i|idx|index)\}'
+      wrong: |
+        {items.map((item, i) => <Card key={i} item={item} />)}
+      right: |
+        {items.map(item => <Card key={item.id} item={item} />)}
+
+    - id: bp-06
+      name: "Component without its own folder and index.tsx"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // -components/WorkoutCard.tsx
+      right: |
+        // -components/WorkoutCard/index.tsx
+
+    - id: bp-07
+      name: "Storing private files under _stores instead of -stores"
+      severity: critical
+      mechanical: false
+      wrong: |
+        progress/_stores/period-store.ts
+      right: |
+        progress/-stores/period-store.ts
+      note: "The _stores variant was deleted from the repo."
+
+    - id: bp-08
+      name: "Iterating enum inline instead of importing from SDK"
+      severity: critical
+      mechanical: false
+      wrong: |
+        const PERIODS = ['4w', '8w', '6m', '1y'] as const
+      right: |
+        import { PeriodEnum } from '@template/client-typescript/typescript'
+        const PERIODS = Object.values(PeriodEnum)
+
+    - id: bp-09
+      name: "Literal string comparison instead of enum constant"
+      severity: critical
+      mechanical: true
+      detect:
+        - '===\s*[''"][A-Z][A-Z0-9_]*[''"]'
+      wrong: |
+        if (status === 'PENDING') { ... }
+      right: |
+        if (status === WorkoutStatusEnum.PENDING) { ... }
+
+    - id: bp-10
+      name: "Using native RN elements when project primitives exist"
+      severity: critical
+      mechanical: false
+      wrong: |
+        <Pressable className="h-12 rounded-pill bg-fg-0 items-center justify-center">
+          <Text className="text-bg-0 font-sans-bold">SAVE</Text>
+        </Pressable>
+      right: |
+        import { Button } from '@/components/ui/Button'
+        <Button label="SAVE" onPress={onSave} />
+
+    - id: bp-11
+      name: "Calling the modal a 'dialog' or importing a web Dialog primitive"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'from\s+[''"]@/components/ui/Dialog[''"]'
+      wrong: |
+        import { Dialog } from '@/components/ui/Dialog'  // doesn't exist on mobile
+      right: |
+        // Sheet route (changes URL):
+        router.push('/(sheets)/start-session')
+        // Or in-page Sheet primitive (local state):
+        import { Sheet } from '@/components/ui/Sheet'
+
+    - id: bp-12
+      name: "Receiving query params as props instead of reading via Expo Router"
+      severity: critical
+      mechanical: false
+      wrong: |
+        interface Props { id: string; tab: string }
+        export function Section({ id, tab }: Props) {...}
+      right: |
+        import { useLocalSearchParams } from 'expo-router'
+        const { id } = useLocalSearchParams<{ id: string }>()
+
+    - id: bp-13
+      name: "Icon-only Pressable without accessibilityLabel"
+      severity: critical
+      mechanical: false
+      wrong: |
+        <Pressable onPress={onClose}><IconClose /></Pressable>
+      right: |
+        <Pressable onPress={onClose} accessibilityLabel="Fechar"><IconClose /></Pressable>
+
+    - id: bp-14
+      name: "Importing accessibilityLabel strings from a shared constants file"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'from\s+[''"]@/lib/a11y-labels[''"]'
+      wrong: |
+        import { LABELS } from '@/lib/a11y-labels'
+        <Pressable accessibilityLabel={LABELS.close} />
+      right: |
+        <Pressable accessibilityLabel="Fechar" />
+
+    - id: bp-15
+      name: "Casting with `as EnumType` instead of fixing the source type"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\bas\s+\w+Enum\b'
+      wrong: |
+        statusLabels[workout.status as WorkoutStatusEnum]
+      right: |
+        // Fix the interface so workout.status is already typed as the enum
+
+    - id: bp-16
+      name: "Wrapper function for date / number formatting"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'function\s+format[A-Z]\w*\s*\('
+        - 'const\s+format[A-Z]\w*\s*='
+      wrong: |
+        function formatDate(d: Date) { return format(d, 'dd/MM/yyyy', { locale: ptBR }) }
+      right: |
+        // Inline at use-site, locale-free — @/lib/format-date owns the locale via i18n:
+        <Text>{formatDate(date, 'short')}</Text>
+
+    - id: bp-17
+      name: "Using useState for state that belongs on the URL"
+      severity: critical
+      mechanical: false
+      wrong: |
+        const [page, setPage] = useState(1)
+      right: |
+        const [{ page }, setParams] = useTypedSearchParams(schema)
+        setParams({ page: page + 1 })
+
+    - id: bp-18
+      name: "Colocated route-private files: -components/<Name>/index.tsx, named exports ONLY"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // app/(tabs)/home/-components/CategoryBar.tsx with `export default CategoryBar`
+        // → Expo Router (SDK 55) registers EVERY .tsx under app/ — a default export
+        //   makes the phantom route a real navigable screen.
+        // Equally wrong: _-prefixed files (_CategoryBar.tsx) — `_` does NOT exclude anything
+        //   (only _layout is special); it just renames the phantom route.
+      right: |
+        // app/(tabs)/home/-components/CategoryBar/index.tsx
+        export function CategoryBar() { /* … */ }   // named export only (CMP-01)
+        // Phantom route nodes still exist in the tree, but with no default export they
+        // render nothing and only warn if explicitly visited in dev.
+      note: "Verified against expo-router 55 getRoutesCore: the app/ require.context includes every .tsx (only +api/+html/+middleware excluded); neither `-` nor `_` prefixes exclude. House convention (SKILL bodies, bun cli, registry#components routing, live repo) is -components/<Name>/index.tsx; the named-export rule is what keeps the leakage inert. Prefer packages/app/expo/components/ for anything not route-specific."
+
+    - id: bp-19
+      name: "Tailwind v4 content auto-detect misses nested / (parens) folders"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // No explicit @source for (tabs)/(sheets) folders
+        // → className="bg-accent-danger/10" silently drops on nested routes
+      right: |
+        /* global.css */
+        @source "../../app/(tabs)/**/*.tsx";
+        @source "../../app/(sheets)/**/*.tsx";
+      note: "Tailwind v4 content auto-detect doesn't expand `(parens)` path segments. Add @source directives for any grouped/nested folders."
+
+    - id: bp-20
+      name: "setState during render (e.g. inside form.Subscribe render prop)"
+      severity: critical
+      mechanical: false
+      wrong: |
+        <form.Subscribe selector={s => s.values}>
+          {values => {
+            setIsDisabled(!schema.safeParse(values).success)  // setState during render!
+            return <Button disabled={isDisabled} />
+          }}
+        </form.Subscribe>
+      right: |
+        <form.Subscribe selector={s => s.values}>
+          {values => {
+            const isDisabled = !schema.safeParse(values).success
+            return <Button disabled={isDisabled} />
+          }}
+        </form.Subscribe>
+
+    - id: bp-21
+      name: "Keyboard dismiss via Keyboard.dismiss() on all touches (causes blur/refocus flicker)"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'onTouchStart=\{[^}]*Keyboard\.dismiss\(\)'
+      wrong: |
+        <View onTouchStart={() => Keyboard.dismiss()}>
+          {/* All touches dismiss the keyboard, including taps on inputs */}
+        </View>
+      right: |
+        <View
+          onStartShouldSetResponderCapture={() => {
+            // Only dismiss when the touch is NOT claimed by a child input
+            Keyboard.dismiss()
+            return false
+          }}
+        >
+          {children}
+        </View>
+      note: "Use capture-phase responder on the container so it only fires on unclaimed touches. Tapping an input must NOT trigger dismiss → refocus flicker."
+
+    - id: bp-22
+      name: "Mock data in lib/mockData.ts or a frontend in-memory store"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'export\s+const\s+MOCK_[A-Z0-9_]*\s*='
+      wrong: |
+        // lib/mockData.ts
+        export const MOCK_WORKOUTS = [{ id: '1', name: 'Push Day' }]
+        // component uses MOCK_WORKOUTS directly
+      right: |
+        // Define mock data in the API controller:
+        // override mockController = true
+        // .example([{ id: '1', name: 'Push Day' }])
+        // Then run `bun sdk` and use the SDK hook normally:
+        const { data } = useListWorkouts()
+      note: "V-1 rule: controllers-first → bun sdk → then frontend screens. Mock data lives in API controllers, never in frontend files."
+
+    - id: bp-23
+      name: "Dynamic t() key outside the enums.* catalog"
+      severity: critical
+      rule: >
+        Template-literal t() keys are canonical ONLY for the enum-label catalog
+        (t(`enums.<Enum>.${value}`)). Any other literal-prefix dynamic key
+        (t(`notifications.category.${value}`)) is a label catalog in disguise: it
+        bypasses the typed-literal-keys rule AND fragments enum labels into feature
+        namespaces. Move the keys to enums.<EnumName>.* in BOTH locale files.
+      wrong: |
+        <Text>{t(`notifications.category.${notification.category}`)}</Text>
+      right: |
+        <Text>{t(`enums.NotificationCategory.${notification.category}`)}</Text>
+      mechanical: true
+      detect:
+        - 't\(`(?!enums\.|\$\{)[^`]*\$\{'
+
+    - id: bp-24
+      name: "switch/if-chain on a discriminant instead of a dispatch map"
+      severity: critical
+      rule: >
+        Variant dispatch (icon/color/variant/component per enum or discriminant value) goes
+        through ONE enum-keyed map — Record<Enum, X> — colocated with the owning component
+        (CMP-P18 / CENTRALIZE-MAPS). A switch or if/else chain on a discriminant hides
+        non-exhaustiveness (no tsc demand on new members) and scatters the dispatch. Open
+        wire domains keep the map for the known members + a typed guard fallback.
+      wrong: |
+        switch (platform) { case MarketingPlatformEnum.META: return <IconBrandFacebook /> ... }
+      right: |
+        const PLATFORM_ICON: Record<Platform, ComponentType> = { [MarketingPlatformEnum.META]: IconBrandFacebook, ... }
+        const Icon = PLATFORM_ICON[platform]
+      mechanical: true
+      detect:
+        - 'switch\s*\(\s*(\w+\.)?\w*([Kk]ind|[Tt]ype|[Ss]tatus|[Cc]ategory|[Pp]latform|[Mm]ode)\s*\)'
+        - 'else if\s*\([^\n]*\.(kind|type|status|category|platform|mode)\s*==='
+      detect_skip:
+        - 'components/ui/'
+
+    - id: bp-25
+      name: "try/catch around a mutation call"
+      severity: critical
+      rule: >
+        SDK mutations are never wrapped in try/catch — errors flow to the GlobalErrorMapper
+        pipeline (code -> i18n toast) via the query client; a local catch swallows the typed
+        error vocabulary and forks error UX per call site (MUTATION-IDIOM axis). In-flight
+        state comes from isPending/isSubmitting; success/settled side-effects go in the
+        mutation options.
+      wrong: |
+        try { await mutation.mutateAsync(payload) } catch (e) { toast.error('...') }
+      right: |
+        mutation.mutate(payload, { onSuccess: () => toast.success(t('x.saved')) })
+      mechanical: true
+      detect:
+        - 'try\s*\{[^}]*[mM]utate'
+
+    - id: bp-26
+      name: "Raw try/catch in app code"
+      severity: critical
+      rule: >
+        App code never writes raw try/catch — the sanctioned wrappers are tryCatch /
+        tryCatchAsync from @/lib (typed result, no swallowed errors); SDK mutation errors
+        flow to the GlobalErrorMapper pipeline untouched. A raw catch forks error UX and
+        hides the typed vocabulary.
+      wrong: |
+        try { await navigator.clipboard.writeText(x); toast.success(...) } catch { toast.error(...) }
+      right: |
+        const result = await tryCatchAsync(() => navigator.clipboard.writeText(x))
+        if (result.success) toast.success(...) else toast.error(...)
+      mechanical: true
+      detect:
+        - 'try\s*\{'
+
+  # Canonical component shell — what `bun cli component <route> <Name>` emits.
+  # Shape matches berzerk-club/feat/training-collaboration: plain `export function`
+  # (no React.forwardRef), `interface XProps { className?: string }`, NativeWind
+  # `className` via `cn(…)`, root tag from the recipe. Bindings are computed by the
+  # expo component assembler (scripts/cli/expo/artifacts/component.ts) and passed
+  # to renderArtifact('component', 'expo', …).
+  snippet:
+    skeleton: |
+      {{imports}}
+      {{variantsDecl}}
+      {{propsInterface}}
+
+      export function {{Pascal}}({ className, ...props }: {{Pascal}}Props) {
+      {{hookCallsBlock}}	return (
+      		<{{rootTag}} className={cn({{variantsCall}}, className)} {...props}>
+      {{recipeBody}}
+      		</{{rootTag}}>
+      	)
+      }

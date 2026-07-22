@@ -1,0 +1,285 @@
+id: synthetic-go-consumer-slice
+tier: holdout
+builder: sonnet
+title: Go sync worker consumes integration.deactivated and cancels active sync jobs
+  (synthetic — first Go-backend probe; external handler, fx wiring, contracts
+  bindings, repository persistence)
+sourceSpec: PROBES-BACKLOG.md#11
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template Go worker (packages/api/go), implement the missing consumer for
+  the integration.shared.integration.deactivated integration event. The TS
+  Integration context already publishes it (DisconnectIntegration,
+  ToggleIntegrationActive flips to inactive, and the StoreDisabled cascade), the
+  generated Go wire binding wire.IntegrationDeactivatedIntegrationEvent already
+  exists, and the contract docs say the Go sync worker consumes it to stop work
+  for that integration — but nothing in packages/api/go listens to it today: a
+  merchant disconnects an integration and its in-flight sync jobs keep grinding.
+  This is a Go-only task: do not touch packages/contracts,
+  packages/api/typescript or any frontend, and do not regenerate any bindings —
+  the event already exists on the wire.
+
+  WHAT TO BUILD. When the event arrives, every PENDING or RUNNING sync job for
+  that storeIntegrationId must end CANCELLED. The external transport redelivers
+  on error, so the handler must be idempotent: a redelivered event, or one for
+  an integration with no active jobs, is a clean no-op — no error bubbles.
+
+  DECISIONS (binding):
+  (1) New handler IntegrationDeactivatedHandler (constructor
+  NewIntegrationDeactivatedHandler) at
+  packages/api/go/internal/sync/handlers/integration_deactivated_handler.go,
+  with its test at
+  packages/api/go/internal/sync/handlers/integration_deactivated_handler_test.go.
+  The payload is decoded through the generated contracts bindings — never a
+  hand-rolled local struct mirroring the wire shape, never a re-declared event
+  name constant.
+  (2) The cancellation read is a new SyncJobRepository method
+  FindActiveByIntegration returning ALL PENDING + RUNNING jobs for a
+  storeIntegrationId — extend the interface in
+  packages/api/go/internal/sync/repositories/syncjob/syncjob_repository.go,
+  implement it in syncjob_pg.go in the same folder, and cover it in
+  syncjob_pg_test.go alongside the existing repository tests.
+  (3) The status transition goes through the aggregate: load the jobs, cancel
+  each one through the SyncJob entity's own method, save — never assign the
+  status from outside the entity and never a bulk UPDATE that bypasses the
+  aggregate's invariants.
+  (4) Wire it in packages/api/go/internal/sync/module.go so the event actually
+  reaches the handler in the running service.
+
+  Decide the rest — how the handler decodes, what it depends on, how errors and
+  redelivery interact, what the tests cover — per the house Go architecture:
+  read docs/BACKEND.md and the Go skill variants
+  (.claude/skills/handler/go/SKILL.md, .claude/skills/repository/go/SKILL.md,
+  .claude/skills/event/go/SKILL.md, .claude/skills/test/go/SKILL.md) before
+  writing code; read the generated wire surface FIRST
+  (packages/contracts/generated/go/wire/events.go and envelope.go) for the
+  exact event shape and decode entry points; and study the existing exemplars —
+  internal/sync/handlers/integration_activated_handler.go (+ its test) for the
+  consumer shape, internal/sync/module.go for the registration shape, and
+  internal/sync/repositories/syncjob/ for the repository shape. Where an
+  exemplar and a skill registry disagree, the registry wins. Finish with green
+  gates: cd packages/api/go && go build ./... && go test ./...
+axes:
+  - EVENT-EMISSION
+  - ASYNC-INLINE
+  - DI-REG
+  - TELL-DONT-ASK
+  - ENUM-REPR
+  - ERR-VOCAB
+  - NAME-CONSISTENCY
+graders:
+  # ── platform gates (Go has no tsc target; cmd is the gate) ─────────
+  - kind: cmd
+    spec: 'packages/api/go::go build ./...'
+    id: gate#go-build
+  - kind: cmd
+    spec: 'packages/api/go::go test ./...'
+    id: gate#go-test
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go'
+  - kind: file-exists
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler_test.go'
+  # ── contracts bindings, not hand-rolled structs ────────────────────
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::IntegrationDeactivatedIntegrationEventName'
+    id: handler#HDL-GO-01
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::UnmarshalIntegrationEvent'
+    id: handler#HDL-GO-03
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::IntegrationEventI'
+    id: handler#external-signature
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::"integration\.shared\.integration\.deactivated"'
+    id: handler#bp-GO-HDL-01
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::json:"'
+    id: event#wire-binding-not-handrolled
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/events/*.go::[Dd]eactivated'
+    id: event#no-local-mirror-event
+  # ── layer boundary: no SQL / DB handles in the handler ─────────────
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::database/sql|ExecContext|QueryRowContext|QueryContext'
+    id: repository#bp-GO-REPO-07
+  # ── TELL-DONT-ASK: entity owns the transition ──────────────────────
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler.go::\.Status\s*=(?!=)'
+    id: atlas#TELL-DONT-ASK
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/repositories/syncjob/*.go::UPDATE\s+sync_jobs'
+    id: atlas#TELL-DONT-ASK
+  # ── DI-REG: fx wiring + external mediator + compile-time check ─────
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/module.go::IntegrationDeactivatedHandler'
+    id: handler#HDL-GO-04
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/module.go::(ExternalMediator[\s\S]{0,600}?IntegrationDeactivatedHandler|IntegrationDeactivatedHandler[\s\S]{0,600}?ExternalMediator)'
+    id: handler#bp-GO-HDL-04
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/**/*.go::IntegrationEventHandler\s*=\s*\(\*(handlers\.)?IntegrationDeactivatedHandler\)\(nil\)'
+    id: handler#HDL-GO-02
+  # ── repository persistence (interface + pg impl + enum consts) ─────
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/repositories/syncjob/syncjob_repository.go::FindActiveByIntegration'
+    id: repository#interface-extended
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/repositories/syncjob/syncjob_pg.go::FindActiveByIntegration'
+    id: repository#pg-impl
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/repositories/syncjob/syncjob_pg.go::SyncStatusPending'
+    id: enum#repr-at-scan-boundary
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/repositories/syncjob/syncjob_pg_test.go::FindActiveByIntegration'
+    id: test#repo-read-covered
+  # ── handler tests: unit-level with fakes, exercising Handle ────────
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler_test.go::integration\.shared\.integration\.deactivated|IntegrationDeactivatedIntegrationEvent'
+    id: test#event-subject
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler_test.go::\.Handle\('
+    id: test#exercises-handle
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler_test.go::DATABASE_URL|openTestDB|sql\.Open'
+    id: test#unit-with-fakes
+  # ── ERR-VOCAB rider ────────────────────────────────────────────────
+  - kind: grep-must-not
+    spec: 'packages/api/go/internal/sync/handlers/integration_deactivated_handler*.go::panic\('
+    id: errors#no-panic
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: slice-closure
+  - kind: judge
+    spec: >
+      A consumer for the integration.shared.integration.deactivated integration
+      event was just added to the Go worker: a handler at
+      packages/api/go/internal/sync/handlers/integration_deactivated_handler.go
+      (+ test), a new FindActiveByIntegration read on the syncjob repository
+      (packages/api/go/internal/sync/repositories/syncjob/), and wiring in
+      packages/api/go/internal/sync/module.go. Verify ALL of:
+      (a) CONTRACTS BINDING — the handler's EventName() returns the generated
+      wire constant (wire.IntegrationDeactivatedIntegrationEventName, never a
+      string literal) and Handle decodes the payload into the generated
+      wire.IntegrationDeactivatedIntegrationEvent through an
+      UnmarshalIntegrationEvent entry point; the handler file defines NO local
+      struct with json tags mirroring the wire shape and re-declares no event
+      name constant; on a decode/type mismatch it returns an error rather than
+      silently dropping.
+      (b) DI-REG — the handler is fx.Provide-d AND registered with the
+      ExternalMediator (em.Register / ext.Register) via fx.Invoke in
+      internal/sync/module.go — NOT with the InternalMediator (that mediator
+      carries in-process domain events; this event arrives from the external
+      transport); a compile-time interface assertion for the new handler
+      (var _ ... IntegrationEventHandler = (*...IntegrationDeactivatedHandler)(nil))
+      exists in the handler file or module.go.
+      (c) TELL-DONT-ASK + PERSISTENCE — the cancellation is find → Cancel() →
+      Save: it loads the integration's active jobs through
+      FindActiveByIntegration, transitions each via the SyncJob aggregate's own
+      Cancel() method, and persists via the repository's Save — no direct
+      .Status = assignment outside the entity, no bulk UPDATE statement that
+      flips status in SQL, no SQL or *sql.DB usage inside the handler. The new
+      FindActiveByIntegration implementation lives on the Pg repository, goes
+      through the repository's querier/TxFromContext helper (UnitOfWork-aware,
+      not a bare r.db), reuses the existing selectCols + scan helpers, and
+      filters status with the enums.SyncStatusPending / enums.SyncStatusRunning
+      constants — not inline 'PENDING'/'RUNNING' string literals in SQL or Go.
+      (d) IDEMPOTENCY / ASYNC — an event for an integration with zero active
+      jobs returns nil (clean no-op, safe redelivery); infrastructure errors
+      (repo read/save failures) are returned so the transport can retry;
+      cancellation runs synchronously inside Handle.
+      (e) TESTS — the handler test constructs the event the way the
+      integration_activated_handler_test.go exemplar does (raw-payload fake or
+      typed construction), uses in-memory fakes for the repository (no
+      DATABASE_URL / DB connection), and covers at least the happy path
+      (active jobs end cancelled and saved) plus the no-active-jobs no-op; the
+      new repository read has coverage in syncjob_pg_test.go following the
+      existing openTestDB skip-without-DATABASE_URL idiom.
+      Scope notes — judge the idiom, not the variable name: BOTH decode
+      spellings are canon — wire.UnmarshalIntegrationEvent(provider.GetPayload())
+      plus a type assertion (the activated exemplar) OR the generic
+      types.UnmarshalIntegrationEvent[wire.IntegrationDeactivatedIntegrationEvent](event)
+      — do not fail one for not being the other. Delegating the cancellation to
+      a small use case (handler → use case → repository) is as valid as the
+      handler driving the repository directly — judge the find→Cancel→save
+      shape wherever it lives. The quoted event-name JSON inside the TEST file
+      (raw-payload fake parity) is expected — the string-literal ban applies
+      only to the handler's EventName(). fmt.Errorf("...: %w", err) wrapping is
+      the house Go idiom for infrastructure errors — do not demand typed
+      BaseError codes for them (typed codes are for business conditions, and
+      this slice may not need any new ones). Extending the existing
+      integration-activated fx.Invoke with a second handler parameter OR adding
+      a separate fx.Invoke are both canonical. Do not require a detached
+      goroutine — the activated handler's goroutine exists because backfills
+      are long-running; cancellation is short and synchronous. Returning a nil
+      or empty slice from FindActiveByIntegration when nothing matches are both
+      fine (the (nil, nil) not-found canon applies to single-row finds).
+      Inspect the new handler + test, the syncjob repository folder, and
+      internal/sync/module.go. Pre-existing handlers and module wiring are out
+      of scope except where the new registration touches them.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — the FIRST agent probe of
+  the Go backend (zero agent iterations to date). No gold tree; agent mode
+  only, built from HEAD. Grounded reality: the wire binding
+  IntegrationDeactivatedIntegrationEvent + its EventName const + the
+  envelope.go UnmarshalIntegrationEvent switch case all exist in
+  packages/contracts/generated/go/wire at HEAD; the TS Integration context
+  publishes the event (IntegrationDeactivatedHandler →
+  integration.shared.integration.deactivated); the ONLY Go consumer of any
+  integration event at HEAD is IntegrationActivatedHandler (the parity
+  exemplar), so this probe mirrors a proven shape onto free real estate.
+  Free-real-estate verification performed at authoring time: grep "Deactivated"
+  over packages/api/go/**/*.go = 0 hits; "FindActiveByIntegration" over
+  packages/**/*.go = 0 hits; "SyncStatusPending" absent from syncjob_pg.go
+  (present only in syncjob_pg_test.go, which is why the enum grep targets the
+  impl file exactly); "UPDATE\s+sync_jobs" absent from the syncjob folder (the
+  upsert spells "ON CONFLICT (id) DO UPDATE SET", which does not match);
+  json:" absent from integration_activated_handler.go (validating the
+  hand-rolled-struct ban shape). Gates verified green at HEAD: go build ./...
+  exit 0, go test ./... exit 0 WITHOUT a database — every *_pg_test.go skips
+  via the openTestDB DATABASE_URL guard, which means the new repository test
+  will also SKIP during grading; it is graded by the grep + judge, while the
+  go test gate guards compilation and the fake-driven handler tests. gofmt -l
+  is NOT clean at HEAD (pre-existing drift in core/), so no gofmt gate.
+  Deliberate divergence from the backlog row: backlog #11 says "sqlc
+  persistence", but NO sqlc exists anywhere in this repo — Go persistence
+  canon at HEAD (and per .claude/skills/repository/go/registry.yaml) is
+  hand-written SQL constants over database/sql with the querier/TxFromContext
+  UnitOfWork pattern; graders follow repo reality, not the backlog phrasing.
+  Schema note: Drizzle owns all migrations (core/db/sql/migrations is
+  fixtures-only), so the slice deliberately writes to the EXISTING sync_jobs
+  table — no migration needed. Handler/repo symbol names
+  (IntegrationDeactivatedHandler, FindActiveByIntegration) are PINNED in the
+  prompt's binding decisions, so grepping them is prompt-pinned, not
+  name-guessing; package-alias-sensitive greps drop the prefix
+  (IntegrationEventI not types\., since the skill skeleton aliases fwtypes).
+  Discriminating questions: a naive port hand-rolls a payload struct with json
+  tags (or json.Unmarshals into map[string]any), returns a literal from
+  EventName(), registers with the InternalMediator (or forgets fx.Invoke
+  entirely so the event never reaches the handler), cancels via a bulk UPDATE
+  sync_jobs SET status or by assigning job.Status from the handler, inlines
+  'PENDING'/'RUNNING' literals in SQL, and tests against a real DB; the canon
+  is wire-const EventName + UnmarshalIntegrationEvent decode, fx.Provide +
+  fx.Invoke em.Register with compile-time assertion, repository-scoped read
+  via querier(ctx) + enum consts, find → entity.Cancel() → Save, idempotent
+  nil on no-op, and fake-driven unit tests mirroring the activated handler
+  test. Glob notes: Bun.Glob "**" matches zero segments, so
+  internal/sync/**/*.go includes module.go (where the compile-time assertions
+  live at HEAD); integration_deactivated_handler*.go spans the pair of new
+  files with a single "*"; no brace branches with "/" are used anywhere. The
+  module.go ExternalMediator window grep ({0,600}) is a colocation hint and
+  can false-pass exotic layouts — the judge owns the semantic
+  which-mediator check (bp-GO-HDL-04). The .Status must-not carries a (?!=)
+  lookahead so only ASSIGNMENT trips it — a defensive status comparison (==)
+  in the handler is ask-flavored but not the graded violation. Detect riders:
+  registry-scan + import-direction + slice-closure — the last is the Go-aware
+  walker (SCW-01c counts Go consumers of published integration events;
+  warnings don't fail, errors are baselined, exit 0 at HEAD), precedented by
+  holdout-lending-loan-aggregate. All regexes compile through
+  parseGrepSpec; validate-task run at authoring time: grep-musts +
+  file-exists FAIL at HEAD, must-nots + cmd + detect PASS.

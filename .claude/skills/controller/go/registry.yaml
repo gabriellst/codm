@@ -1,0 +1,328 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [usecase, errors, schema]
+  depended_by: [sdk]
+  context_reads: [schema, usecase]
+  lang: go
+  examples:
+    - examples/citizens/go/controller/send_text.go
+    - examples/citizens/go/controller/connect_channel.go
+    - examples/citizens/go/controller/list_channels.go
+
+  snippet:
+    skeleton: |
+      // Package controllers exposes HTTP endpoints for the {{ctx}} bounded context.
+      package controllers
+
+      import (
+      	"net/http"
+
+      	// ctxusecases "template/api-go/internal/{{ctx}}/usecases"
+      	"template/core-go/pkg/httputil"
+      	"template/core-go/types"
+      )
+
+      // {{Pascal}}Request defines the shape of {{method}} {{path}}.
+      type {{Pascal}}Request struct {
+      	// from:"param"  → URL path parameters
+      	// from:"query"  → URL query parameters
+      	// from:"body"   → JSON body fields (add json:"..." + example:"..." tags)
+      	// from:"header" → HTTP headers (add swaggerignore:"true")
+      	//
+      	// Example:
+      	// ID      string             `from:"param"  name:"id"            validate:"required,uuid"`
+      	// Name    string             `from:"body"   json:"name"          validate:"required,min=1,max=100"           example:"My name"`
+      	// Status  enums.OrderStatus  `from:"query"  name:"status"        validate:"required,oneof=ACTIVE INACTIVE"  example:"ACTIVE"`  // typed enum — import "template/api-go/internal/{{ctx}}/enums"
+      	// OwnerID string             `from:"header" name:"X-Owner-Id"    validate:"required,uuid"                   swaggerignore:"true"`
+      }
+
+      // {{Pascal}}Controller handles {{method}} {{path}}.
+      type {{Pascal}}Controller struct {
+      	// handler *ctxusecases.{{Pascal}}Handler
+      }
+
+      // New{{Pascal}}Controller constructs the controller.
+      func New{{Pascal}}Controller(
+      // handler *ctxusecases.{{Pascal}}Handler,
+      ) *{{Pascal}}Controller {
+      	return &{{Pascal}}Controller{
+      		// handler: handler,
+      	}
+      }
+
+      // Metadata returns the declarative route metadata for auto-registration.
+      func (c *{{Pascal}}Controller) Metadata() types.ControllerMetadata {
+      	return types.ControllerMetadata{
+      		Context:     "{{ctx}}",
+      		Path:        "{{path}}",
+      		Method:      "{{method}}",
+      		Description: "{{Pascal}} operation",
+      		Tags:        []string{"{{ctx}}"},
+      		Request:     {{Pascal}}Request{},
+      		Response:    nil, // set to usecases.{{Pascal}}Output{} when returning a body
+      		Status:      {{statusCode}},
+      		Errors:      nil, // list domain/app error codes this endpoint may return
+      	}
+      }
+
+      // Handle decodes the request and delegates to the use case.
+      func (c *{{Pascal}}Controller) Handle(w http.ResponseWriter, r *http.Request) {
+      	req, err := httputil.DecodeRequest[{{Pascal}}Request](r)
+      	if err != nil {
+      		httputil.RespondError(w, err)
+      		return
+      	}
+      	_ = req // remove once used
+
+      	// output, err := c.handler.Execute(r.Context(), usecases.{{Pascal}}Input{})
+      	// if err != nil {
+      	// 	httputil.RespondError(w, err)
+      	// 	return
+      	// }
+
+      	httputil.RespondJSON(w, {{statusCode}}, nil)
+      }
+
+  patterns:
+    - id: CTRL-GO-01
+      when: always
+      title: Implement types.Controller — Metadata() + Handle(w, r)
+      description: >
+        Every controller struct must implement both methods. Metadata() returns
+        the declarative route registration and OpenAPI metadata. Handle decodes,
+        dispatches, and responds — no business logic.
+
+    - id: CTRL-GO-02
+      when: always
+      title: Register via fx.Annotate with fx.As(Controller) and group:"controllers"
+      description: >
+        Use fx.Provide(fx.Annotate(NewXController, fx.As(new(types.Controller)),
+        fx.ResultTags(`group:"controllers"`))) in module.go. The HTTP router
+        collects all controllers from the group and auto-registers routes from
+        Metadata(). A controller NOT in the group is never reachable.
+
+    - id: CTRL-GO-03
+      when: always
+      title: Handle always starts with httputil.DecodeRequest then checks error
+      description: >
+        The first two lines of every Handle implementation must be
+        DecodeRequest and an if-err check that calls httputil.RespondError
+        and returns. Skipping this means invalid input reaches the use case.
+
+    - id: CTRL-GO-04
+      when: always
+      title: Metadata.Request and Metadata.Response set to zero values
+      description: >
+        Set Request to the zero value of the controller request struct and
+        Response to the zero value of the output struct (or nil for 204). The
+        reflection-based OpenAPI emitter reads these to produce the spec.
+        Omitting them produces an endpoint with no schema in the OpenAPI output.
+
+    - id: CTRL-GO-05
+      when: always
+      title: Metadata.Errors lists every domain/app code the endpoint may return
+      description: >
+        Populate Metadata().Errors with the ErrorCode constants from the context's
+        errors/codes.go. The OpenAPI emitter turns each code into a 4xx/5xx
+        response entry. An omitted code causes the client to see an undocumented
+        error response.
+
+    - id: CTRL-GO-06
+      when: controller needs middleware
+      title: Middlewares declared in Metadata().Middlewares, not embedded in Handle
+      description: >
+        Attach per-controller middleware by listing it in Metadata().Middlewares.
+        The HTTP router wraps the handler with the middleware chain before
+        registering the route. Calling middleware logic inline in Handle bypasses
+        the router's wrapping and leaks middleware into the handler body.
+
+    - id: CTRL-GO-07
+      when: request has infrastructure fields
+      title: Infrastructure fields carry swaggerignore true
+      description: >
+        Session/auth fields (owner ID from a cookie or header, API keys) that
+        consumers should not see must carry swaggerignore:"true". Without this
+        tag the OpenAPI emitter exposes them as settable request fields.
+
+    - id: CTRL-GO-08
+      when: response has a body
+      title: Reuse the use case output struct as Metadata.Response
+      description: >
+        Point Metadata().Response at the use case output zero value rather than
+        defining a parallel controller-level response struct. This eliminates
+        duplication and ensures the emitter and the actual response agree.
+
+    - id: CTRL-GO-09
+      when: route has a path parameter ({id})
+      title: Bind path params via `from:"param"` struct tags, not manual URL splitting
+      description: >
+        Declare path params as request struct fields tagged `from:"param" name:"id"`.
+        httputil.DecodeRequest reads them via r.PathValue (Go 1.22). Manually splitting
+        r.URL.Path (extractLastPathSegment / n-from-end logic) silently returns the wrong
+        segment when a prefix changes. Also: every {param} in the route MUST be a struct
+        field, or the OpenAPI emitter omits it and the generated SDK client breaks.
+
+    - id: CTRL-GO-10
+      when: ingesting external webhooks
+      title: One webhook controller differentiated by query param, not per-platform
+      description: >
+        A single webhook controller reads ?platform + ?event + ?integrationId and publishes
+        a raw WebhookReceivedEvent; a handler resolves the platform mapper via a factory.
+        Do NOT create one controller per platform/event — mirror template-backend's single
+        ingest endpoint. The agent owns the webhook URL registered with the provider, so
+        the canonical event name can be embedded at registration time.
+
+  bad_practices:
+    - id: BP-GO-CTRL-01
+      severity: error
+      title: Controller not registered in module.go via fx.Annotate + group
+      wrong: |
+        // module.go
+        fx.Provide(controllers.NewMyController) // missing fx.As + fx.ResultTags
+      right: |
+        fx.Provide(fx.Annotate(
+            controllers.NewMyController,
+            fx.As(new(types.Controller)),
+            fx.ResultTags(`group:"controllers"`),
+        ))
+      mechanical: true
+      detect:
+        - 'fx\.Provide\(\s*[\w.]*New\w+Controller\s*\)'
+
+    - id: BP-GO-CTRL-02
+      severity: error
+      title: Handle contains business logic instead of dispatching to use case
+      wrong: |
+        func (c *MyController) Handle(w http.ResponseWriter, r *http.Request) {
+            req, _ := httputil.DecodeRequest[MyRequest](r)
+            // direct DB query inside Handle — business logic leaking in
+            rows, _ := c.db.Query("SELECT ...")
+        }
+      right: |
+        func (c *MyController) Handle(w http.ResponseWriter, r *http.Request) {
+            req, err := httputil.DecodeRequest[MyRequest](r)
+            if err != nil { httputil.RespondError(w, err); return }
+            output, err := c.handler.Execute(r.Context(), usecases.MyInput{...})
+            if err != nil { httputil.RespondError(w, err); return }
+            httputil.RespondJSON(w, http.StatusOK, output)
+        }
+      mechanical: false
+
+    - id: BP-GO-CTRL-03
+      severity: error
+      title: DecodeRequest error not handled immediately
+      wrong: |
+        func (c *MyController) Handle(w http.ResponseWriter, r *http.Request) {
+            req, _ := httputil.DecodeRequest[MyRequest](r) // error ignored
+            output, err := c.handler.Execute(r.Context(), usecases.MyInput{ID: req.ID})
+        }
+      right: |
+        func (c *MyController) Handle(w http.ResponseWriter, r *http.Request) {
+            req, err := httputil.DecodeRequest[MyRequest](r)
+            if err != nil {
+                httputil.RespondError(w, err)
+                return
+            }
+        }
+      mechanical: true
+      detect:
+        - ',\s*_\s*:=\s*httputil\.DecodeRequest'
+
+    - id: BP-GO-CTRL-04
+      severity: error
+      title: Metadata.Request or Metadata.Response omitted
+      wrong: |
+        func (c *MyController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                Context: "channel",
+                Path:    "/channels",
+                Method:  "GET",
+                // Request and Response omitted — OpenAPI emitter produces no schema
+            }
+        }
+      right: |
+        func (c *MyController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                Context:  "channel",
+                Path:     "/channels",
+                Method:   "GET",
+                Request:  ListInstancesRequest{},
+                Response: usecases.ListChannelsOutput{},
+                Status:   http.StatusOK,
+            }
+        }
+      mechanical: false
+
+    - id: BP-GO-CTRL-05
+      severity: warning
+      title: Middleware implemented inline in Handle instead of declared in Metadata
+      wrong: |
+        func (c *WebhookController) Handle(w http.ResponseWriter, r *http.Request) {
+            sig := r.Header.Get("X-Signature")
+            if sig != c.secret {
+                w.WriteHeader(http.StatusUnauthorized)
+                return
+            }
+            // actual logic
+        }
+      right: |
+        func (c *WebhookController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                Middlewares: []types.Middleware{mw.VerifySignature(c.secret)},
+            }
+        }
+      mechanical: false
+
+    - id: BP-GO-CTRL-06
+      severity: warning
+      title: Metadata.Errors omitted
+      wrong: |
+        return types.ControllerMetadata{
+            // Errors missing — clients see undocumented error responses
+        }
+      right: |
+        return types.ControllerMetadata{
+            Errors: []errors.ErrorCode{
+                ctxerrors.CodeJobNotFound,
+                ctxerrors.CodeInvalidSignature,
+            },
+        }
+      mechanical: false
+
+    - id: BP-GO-CTRL-07
+      severity: error
+      title: Local response helpers instead of httputil.RespondJSON / RespondError
+      wrong: |
+        // local response.go in the controller package
+        func writeErr(w http.ResponseWriter, msg string) {
+            json.NewEncoder(w).Encode(map[string]string{"error": msg}) // wrong envelope
+        }
+        // and a hardcoded message instead of a registered code
+        writeErr(w, "unknown platform")
+      right: |
+        // structured envelope { "code": "...", "message": "..." } via httputil
+        httputil.RespondError(w, coreerrors.NewBaseError(ctxerrors.CodeUnknownPlatform, "..."))
+        httputil.RespondJSON(w, http.StatusOK, output)
+      mechanical: true
+      detect:
+        - 'json\.NewEncoder\(w\)\.Encode\('
+        - 'map\[string\]string\{"error"'
+
+    - id: BP-GO-CTRL-08
+      severity: error
+      title: Manual r.URL.Path splitting to extract route params
+      wrong: |
+        func extractLastPathSegment(p string) string {
+            parts := strings.Split(p, "/")
+            return parts[len(parts)-1] // breaks if a prefix like /v1/ is added
+        }
+      right: |
+        type CancelRequest struct {
+            ID string `from:"param" name:"id" validate:"required,uuid"`
+        }
+        req, err := httputil.DecodeRequest[CancelRequest](r) // reads r.PathValue("id")
+      mechanical: true
+      detect:
+        - 'strings\.Split\(\w+,\s*"/"\)'
+        - 'parts\[len\(parts\)-1\]'

@@ -1,0 +1,32 @@
+{
+	"name": "@template/contracts",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./db/schema/index.ts",
+		"./db": "./db/schema/index.ts",
+		"./db/migrations": "./db/migrations.ts"
+	},
+	"scripts": {
+		"tsp:compile": "tsp compile wire/",
+		"tsp:watch": "tsp compile wire/ --watch",
+		"codegen:wire:typescript": "bun codegen/emit-wire-ts.ts",
+		"codegen:wire:go": "bun codegen/emit-wire-go.ts",
+		"codegen:wire": "bun run codegen:wire:typescript && bun run codegen:wire:go",
+		"drizzle:generate": "drizzle-kit generate --config=db/drizzle.config.ts",
+		"drizzle:migrate": "drizzle-kit migrate --config=db/drizzle.config.ts",
+		"all": "bun run tsp:compile && bun run codegen:wire && bun run drizzle:generate",
+		"test": "bun test codegen/"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.45.2",
+		"yaml": "^2.6.0"
+	},
+	"devDependencies": {
+		"@typespec/compiler": "^1.5.0",
+		"@typespec/openapi": "^1.5.0",
+		"@typespec/openapi3": "^1.5.0",
+		"drizzle-kit": "^0.31.0"
+	}
+}

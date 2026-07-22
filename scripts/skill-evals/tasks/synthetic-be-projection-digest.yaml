@@ -1,0 +1,396 @@
+id: synthetic-be-projection-digest
+tier: holdout
+builder: sonnet
+title: Finance cost-source digest projection + projector
+  (synthetic — probes projection-mutation canon, async-via-outbox, atomic-op discipline)
+sourceSpec: PROBES-BACKLOG.md#3
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template backend (packages/api/typescript), build the missing read-model
+  for the Finance cost console: a cost-source digest. Product wants ONE
+  denormalized list — one row per cost source per store, covering BOTH recurring
+  operational costs and warranty-reserve configurations — that the upcoming
+  console screen renders and sorts (most recently changed first) from a single
+  table, with no runtime UNIONs over the aggregate tables. The architecture
+  review already approved this as a PROJECTION kept fresh from the existing
+  finance domain events: do not replace it with a query use case, and do not
+  add any HTTP endpoint in this slice (the console query lands later). Read
+  docs/BACKEND.md first, then the typescript variants of the projection,
+  projector, repository and test skills under .claude/skills/, then the
+  EXISTING finance surface: src/finance/events/ (the six events that matter:
+  OperationalCostCreated/Updated/Deleted + WarrantyReserveCreated/Updated/
+  Deleted — note what each payload carries: the created/updated pairs carry the
+  full entity snapshot plus the envelope entityId/ownerId, the deleted pair
+  carry only ids), src/finance/entities/, src/finance/registry.ts and
+  src/finance/index.ts. Per-occurrence payment status is OUT of scope: the
+  digest does not react to OperationalCostStatusOverridden nor to the
+  Taxes/Fees/FxRate events. Requirements: a digest row is born when either kind
+  of cost source is created; its denormalized display fields refresh when the
+  source is updated; deleting a source keeps the row queryable for history
+  while clearly marking it inactive (mirror the aggregates' soft-delete
+  semantics — never hard-delete digest rows); and when a new warranty reserve
+  supersedes an older one (WarrantyReserveCreated carries
+  previousWarrantyReserveId), the predecessor's digest row must stop reading as
+  the active reserve. You decide the row schema, the natural key, and the
+  per-kind field mapping. Freshness: eventual consistency through the outbox is
+  acceptable everywhere in this slice — no request needs read-after-write on
+  the digest. Create exactly these files:
+  packages/api/typescript/src/finance/projections/CostDigest.ts (schema +
+  projection class + exported event union),
+  packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts
+  (abstract + Drizzle + Mock),
+  packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts,
+  plus colocated tests
+  packages/api/typescript/src/finance/projections/CostDigest.test.ts
+  (projection unit test — direct instantiation, every create overload and every
+  applyEvent transition, no I/O) and
+  packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.test.ts
+  (integration via the TestBed harness — every event the projector subscribes
+  to, plus proof that handling the same event twice converges on the same row
+  state). The scaffolder emits the canonical shapes: bun cli projection finance
+  CostDigest and bun cli projector finance CostDigest (docs/CLI.md). Back the
+  projection with a finance.cost_digest table: add it to
+  packages/contracts/db/schema/finance.ts and generate the migration with bun
+  migrate:create. Wire everything live: DI bindings for all three environments
+  in src/finance/registry.ts, the barrels, and the projector registered through
+  src/finance/index.ts so the outbox actually dispatches it. One known sharp
+  edge, stated so you fix it at the source: BaseEvent types the instance `name`
+  as plain `string`, so an exhaustive switch over the event union will NOT
+  narrow as-is — make the discriminant literal at the type level where it
+  belongs (a type-only change; the dotted wire names like
+  'finance.operational_cost.created' are already the events' static names) and
+  never with casts, @ts-expect-error/@ts-ignore, or parallel wrapper types.
+  This is a backend-only task: do not touch packages/app/*, do not regenerate
+  the SDK, and do not modify finance use cases or controllers. Finish with
+  green gates: cd packages/api/typescript && bun x tsc -p tsconfig.build.json
+  --noEmit && bun test src/finance.
+axes:
+  - PROJECTION-MUTATION
+  - ASYNC-INLINE
+  - CLASS-BASE
+  - SCHEMA-DERIVE
+  - DI-REG
+  - TEST-MODE
+  - LAYOUT
+  - ERR-VOCAB
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: test-green
+    spec: packages/api/typescript/src/finance
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.test.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.test.ts"
+  # ── PROJECTION-MUTATION: free-record projection class ──────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::export type CostDigestProjectionProps = [Zz]\\.infer<typeof CostDigestProjectionSchema>"
+    id: projection#PRJ-02
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::export type CostDigestProjectionEvent\\s*="
+    id: projection#PRJ-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::constructor\\(public props: CostDigestProjectionProps\\)"
+    id: projection#PRJ-03
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::static create\\(\\s*\\w+:\\s*OperationalCostCreatedEvent\\b"
+    id: projection#PRJ-05
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::static create\\(\\s*\\w+:\\s*WarrantyReserveCreatedEvent\\b"
+    id: projection#PRJ-05
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::applyEvent\\(\\s*\\w+:\\s*OperationalCostUpdatedEvent\\b"
+    id: projection#PRJ-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::applyEvent\\(\\s*\\w+:\\s*WarrantyReserveUpdatedEvent\\b"
+    id: projection#PRJ-06
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::class\\s+CostDigestProjection\\s+extends\\b"
+    id: projection#bp-prj-02
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::static\\s+from[A-Z]\\w*\\s*\\("
+    id: projection#bp-prj-04
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::@injectable"
+    id: projection#PRJ-09
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.ts::throw\\b"
+    id: projection#PRJ-08
+  # ── repository: canonical trio, no unjustified atomic vocabulary ───
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts::abstract\\s+findBy\\w*\\("
+    id: projection#PRJ-11
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts::abstract\\s+save\\("
+    id: projection#PRJ-11
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts::abstract\\s+insertIfNew\\("
+    id: projection#PRJ-11
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts::onConflictDoNothing"
+    id: projection#bp-prj-08
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts::class\\s+DrizzleCostDigestProjectionRepository\\s+extends\\s+CostDigestProjectionRepository"
+    id: repository#impl
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigestProjectionRepository.ts::class\\s+MockCostDigestProjectionRepository\\s+extends\\s+CostDigestProjectionRepository"
+    id: repository#impl
+  # ── projector: plain switch, canonical flows, exhaustiveness ───────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::extends\\s+Projector<CostDigestProjectionEvent>"
+    id: projector#PRJTR-01
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::readonly\\s+events\\b"
+    id: projector#PRJTR-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::finance\\.operational_cost\\.created|OperationalCostCreatedEvent\\.name"
+    id: projector#PRJTR-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::finance\\.warranty_reserve\\.created|WarrantyReserveCreatedEvent\\.name"
+    id: projector#PRJTR-06
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::switch\\s*\\(\\s*\\w+\\.name\\s*\\)"
+    id: projector#PRJTR-04
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts:::\\s*never\\s*="
+    id: projector#PRJTR-05
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::CostDigestProjection\\.create\\("
+    id: projector#PRJTR-09
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::\\.insertIfNew\\("
+    id: projector#PRJTR-09
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::\\.applyEvent\\("
+    id: projector#PRJTR-07
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::if\\s*\\(\\s*(!\\w+|\\w+\\s*===?\\s*null)\\s*\\)\\s*\\{?\\s*return"
+    id: projector#PRJTR-10
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::insertIfNew\\(\\s*\\{"
+    id: projector#bp-prjtr-08
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::ProjectorHandlers<|readonly\\s+on\\s*:"
+    id: projector#bp-prjtr-02
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::throw\\b"
+    id: projector#bp-prjtr-07
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.ts::ExternalMediator|DrizzleClient"
+    id: projector#PRJTR-03
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/projectors/**/*.ts::class\\s+\\w+(Created|Updated|Deleted|Removed|Recorded)Projector\\b"
+    id: projector#bp-prjtr-01
+  # ── ASYNC-INLINE: outbox wiring, zero inline coupling ──────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/index.ts::projectors"
+    id: projector#PRJTR-14
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/index.ts::export\\s+\\*\\s+from\\s+['\"]\\./CostDigestProjector['\"]"
+    id: projector#PRJTR-13
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/usecases/**/*.ts::CostDigest"
+    id: projector#bp-prjtr-09
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/controllers/**/*.ts::CostDigest"
+    id: atlas#ASYNC-INLINE
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/handlers/**/*.ts::CostDigest"
+    id: projector#bp-prjtr-10
+  # ── DI-REG + DB ─────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/registry.ts::MockCostDigestProjectionRepository"
+    id: bounded-context#registry
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/registry.ts::DrizzleCostDigestProjectionRepository"
+    id: bounded-context#registry
+  - kind: grep-must
+    spec: "packages/contracts/db/schema/finance.ts::cost_digest"
+    id: db-modelling#projection-table
+  - kind: grep-must
+    spec: "packages/contracts/db/migrations/*.sql::cost_digest"
+    id: migrate#generated
+  # ── type honesty (the narrowing fix must be clean) ──────────────────
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/**/*.ts::as\\s+(any|never)\\b|@ts-(expect-error|ignore)"
+    id: atlas#no-hacky-workarounds
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/events/*.ts::as\\s+(any|never|unknown)\\b|@ts-(expect-error|ignore)"
+    id: atlas#no-hacky-workarounds
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/**/*.ts::throw\\s+new\\s+Error\\("
+    id: errors#ERR-VOCAB
+  # ── TEST-MODE ───────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.test.ts::TestBed\\.create\\(\\s*['\"]integration['\"]"
+    id: test#integration-mode
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/projectors/CostDigestProjector.test.ts::createChildContainer\\("
+    id: test#di-isolation
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.test.ts::CostDigestProjection\\.create\\("
+    id: test#unit-overloads
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.test.ts::\\.applyEvent\\("
+    id: test#unit-transitions
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/projections/CostDigest.test.ts::TestBed"
+    id: test#unit-no-io
+  # ── detectors + scoped registry-scan + judge ────────────────────────
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: slice-closure
+  - kind: cmd
+    spec: ".::ROOT_OVERRIDE=$PWD bun scripts/detectors/registry-scan.ts $(git ls-files -co --exclude-standard -- 'packages/api/typescript/src/finance/**/*.ts' 'packages/contracts/db/schema/*.ts' | grep -Ev '\\.(gen|test|spec|d)\\.ts$')"
+    id: detect#registry-scan-scoped
+  - kind: judge
+    spec: >
+      A Finance cost-source digest projection was just added under
+      packages/api/typescript/src/finance/projections/. Verify ALL of:
+      (a) PROJECTION SHAPE — CostDigest.ts holds a flat Zod schema with the
+      Props type inferred from it, an exported CostDigestProjectionEvent union
+      built from the REAL event classes imported from the finance events module
+      (a union over wrapper/subclass types defined locally to re-type the
+      events is a violation), and a free-record class (no base class, no
+      @injectable, no validation, no throws, no domain events) whose
+      constructor takes the full props; static create is ONE overloaded method
+      (one signature per creating event — OperationalCostCreated and
+      WarrantyReserveCreated — plus a single implementation switching on the
+      event name) and applyEvent is ONE overloaded method covering every
+      mutating event it handles, mutating this.props only.
+      (b) PROJECTOR DISPATCH — CostDigestProjector extends
+      Projector<CostDigestProjectionEvent> with the generic imported from the
+      projection file (no duplicated local union), takes the
+      CostDigestProjectionRepository as its ONLY constructor dependency,
+      declares readonly events listing all six wire names
+      (finance.operational_cost.created/updated/deleted +
+      finance.warranty_reserve.created/updated/deleted), and handle() is a
+      plain switch on the event name: creation cases call repo.insertIfNew
+      with CostDigestProjection.create(event), every mutating case follows
+      find -> applyEvent -> save with a SILENT no-op return when the row is
+      missing (never a throw), and the default branch enforces exhaustiveness
+      by assigning the narrowed event to never.
+      (c) ATOMIC DISCIPLINE — the repository exposes the canonical trio (a
+      natural-key finder, save, insertIfNew with ON-CONFLICT-DO-NOTHING
+      semantics) as one abstract class with Mock + Drizzle implementations;
+      NONE of the six digest events is hot-row/bulk/monotonic/conditional/
+      cache-mirror, so the expected shape is ZERO atomic mutation ops — if any
+      extra write method exists beyond the trio it must carry a written
+      comment naming one of the five triggers AND the trigger must plausibly
+      hold for this workload; a repo-level UPDATE verb substituting for
+      applyEvent on a single-row mutation is a fail.
+      (d) ASYNC-INLINE — the projector reaches the outbox via the projectors
+      slot of BoundedContext.create in src/finance/index.ts and the
+      projections/projectors/index.ts barrel; NO finance use case, controller
+      or handler imports or invokes the projector or the projection repository
+      (this brief has no read-after-write need, so any inline
+      projector.handle(event, tx) call inside a use case is a fail);
+      registry.ts binds CostDigestProjectionRepository for all three
+      environments (Mock impl for mock, Drizzle impl for integration and real).
+      (e) DISCRIMINANT FIX — the event-union narrowing compiles because the
+      events got literal instance name types at the source (e.g. a type-only
+      declare of the instance name on the six finance event classes, or an
+      equivalent fix in the shared base) — NOT via as-casts,
+      @ts-expect-error/@ts-ignore, instanceof/if-else chains replacing the
+      switch, or wrapper subclasses local to the projection files.
+      (f) SUPERSESSION + DELETES — the WarrantyReserveCreated case both
+      inserts the new row AND, when previousWarrantyReserveId is non-null,
+      transitions the predecessor row so it no longer reads as the active
+      reserve; the two Deleted cases mark the row inactive/deleted while
+      keeping it (no SQL DELETE of digest rows); the Drizzle table in
+      packages/contracts/db/schema/finance.ts mirrors the projection schema
+      field-for-field and a generated migration creates the
+      finance.cost_digest table.
+      (g) TESTS — CostDigest.test.ts unit-tests the projection by direct
+      instantiation (no TestBed, no I/O) covering each create overload and
+      each applyEvent transition; CostDigestProjector.test.ts runs in TestBed
+      integration mode, drives every subscribed event through
+      projector.handle, and proves replay-safety (handling the same event
+      twice yields one row / the same final state).
+      Scope notes — judge the idiom, not the spelling: the events array
+      referencing the event classes' static name constants instead of literal
+      strings is canon (the overridden static names ARE the dotted wire
+      strings); implementing the supersession transition as an atomic
+      conditional repo op is acceptable ONLY with a written trigger
+      justification comment — canonical find -> applyEvent -> save needs no
+      justification and is the default expectation; a read-only finder or
+      list helper on the repository used by tests or by the projector's find
+      half is NOT an atomic mutation op — do not flag it; `as` casts on raw
+      DB rows inside the Drizzle repository's toDomain/toPersistence mapping
+      are the scaffold's established shape — the cast ban in (e) concerns the
+      event discriminant and dispatch, not row mapping; the projector being
+      invoked as handle(event) without a transaction on the outbox path is
+      expected — do not require tx threading everywhere. Inspect the new
+      files under src/finance/projections/, the touched
+      src/finance/events/*.ts, src/finance/index.ts, src/finance/registry.ts,
+      packages/contracts/db/schema/finance.ts and the newest migration under
+      packages/contracts/db/migrations/.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first backend projection/
+  projector probe (no projection, projector, or projections/ folder exists
+  anywhere under packages/api/typescript/src at HEAD; the Projector base class
+  and the BoundedContext projectors slot exist in core and are unused).
+  Free real estate verified at authoring time: zero matches repo-wide for
+  CostDigest/cost_digest; finance/index.ts has no projectors slot;
+  finance/registry.ts has no projection bindings; contracts schema +
+  migrations contain no cost_digest; every grep-must is 0 at HEAD and every
+  file-exists target is absent. Gates at HEAD: tsc backend green; bun test
+  src/finance green (93 tests / 15 files); import-direction --all and
+  slice-closure --all exit 0. registry-scan --all is RED at HEAD (5
+  unbaselined component#bp-25 findings in the WIP react dashboard/orders/
+  products screens), so the standing registry-scan rider is carried by a
+  scoped cmd grader running the same engine over the finance slice + contracts
+  schema; the file list mirrors isInScope's test/gen/spec/d exclusions because
+  explicit file args bypass that filter (passing finance test files explicitly
+  surfaces 3 pre-existing repository#bp-02 findings). Unlike detect graders
+  (main repo's script + ROOT_OVERRIDE), the cmd runs the graded tree's own
+  copy of the detector + rules — identical at the ref under grade, and git
+  ls-files -co --exclude-standard inside the detached eval worktree picks up
+  the agent's uncommitted new files. Revert to a plain `detect: registry-scan`
+  once the tree is clean. Grounded surface facts: the
+  six finance events carry dotted wire names ('finance.operational_cost.created'
+  etc.) via `static override readonly name ... as const`; created/updated
+  events carry the full entity snapshot (entity.toJSON()) plus envelope
+  entityId/ownerId; the deleted pair carry only { <aggregate>Id, storeId };
+  WarrantyReserveCreatedEvent carries previousWarrantyReserveId (supersession).
+  KEY SHARP EDGE, verified empirically with a scratch projector at HEAD:
+  BaseEvent types the instance `name` as plain `string`, so the canonical
+  `switch (event.name)` + `default: never` DOES NOT NARROW against the real
+  event classes as-is; a type-only `declare readonly name: typeof
+  <Event>.name` on each event class compiles clean and restores full
+  discriminated narrowing + exhaustiveness. The prompt states the obstacle and
+  the fix-the-cause rule without prescribing the spelling; the tsc gate + the
+  never-assignment must force SOME solution and the cast must-nots + judge (e)
+  force it to be clean (wrapper-subclass unions are named as a judge trap).
+  Discriminating questions: a naive build writes one projector per event or a
+  repo.updateX per event, builds rows inline in insertIfNew, adds atomic
+  update/increment ops without a trigger justification, throws on a missing
+  row, wires the projection write into a handler or inline into use cases,
+  hand-rolls fromXxx factories, hard-deletes digest rows, or casts its way to
+  exhaustiveness; the canon is the free-record projection owning overloaded
+  create/applyEvent, insertIfNew(Projection.create(event)), find -> applyEvent
+  -> save with silent no-op, readonly events + never-exhaustive plain switch,
+  async-via-outbox registration through the projectors slot, and zero atomic
+  ops because no trigger holds for these six events (the supersession update
+  is single-row and non-racy — atomic only with a written justification,
+  accepted by the judge). Structural trick in the overload greps: the
+  create/applyEvent musts pin TWO different event types in first-parameter
+  position, which a single union signature cannot satisfy simultaneously —
+  passing both requires >=2 declarations, i.e. real overloads. Glob notes:
+  Bun.Glob `**` matches zero segments, so projections/**/*.ts also covers the
+  flat files; no braces or parens needed anywhere; the handlers/** and
+  controllers/** must-nots match zero files at HEAD (finance has no handlers
+  dir) and pass vacuously, which is the intended guard direction. test-green
+  src/finance doubles as regression guard and as the gate for the agent's new
+  colocated tests (bun test picks them up by path); the new migration is
+  applied by the PGlite TestBed via the drizzle journal, so a malformed
+  migration fails the suite, not just dev.

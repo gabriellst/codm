@@ -1,0 +1,140 @@
+id: holdout-library-genre-dashboard
+tier: holdout
+builder: opus
+title: "H3 composition judgment — librarian dashboard: loans by genre + per-row renew"
+sourceSpec: hand-authored
+goldRef: ""
+baseRef: ""
+prompt: >-
+  # Librarian dashboard — loans by genre with a renew action
+
+
+  ## Context
+
+  Library vertical. Librarians need an operational dashboard at `/app/library`
+  answering: "how are active loans spread across book genres, and which genre
+  needs attention?" — with the ability to renew a genre's most-overdue loan on
+  the spot.
+
+
+  ## Read (backend)
+
+  One BFF read powers the whole section: `ListGenreLoans` (`ui` context query
+  use case + GET controller). For the authenticated store it returns one row per
+  genre:
+
+  - `genre`
+
+  - `activeLoans` (count)
+
+  - `overdueLoans` (count)
+
+  - `oldestLoan: { loanId, bookTitle, dueAt } | null` — the genre's most-overdue
+  (oldest due) active loan.
+
+
+  The aggregation MUST be computed by the database in a single round trip
+  (SQL-side grouping over the loans/books tables). This read drives operational
+  decisions, so do NOT assemble it from raw loan rows in the frontend and do NOT
+  stub it with fake data. If lending tables don't exist yet in
+  `packages/contracts/db/schema`, add the minimum (books: id, storeId, title,
+  genre; loans: id, storeId, bookId, status, dueAt) plus migration.
+
+
+  ## Write (backend)
+
+  `RenewLoan` — POST endpoint that extends a loan's `dueAt` by 14 days and
+  keeps/returns it to active. Keep the write side minimal but house-canon: use
+  case + named errors (not found / not renewable), store-scoped via session ctx
+  (tenant never in the body). A minimal Loan write model is acceptable — the
+  focus of this task is the read shape and the screen composition.
+
+
+  Run `bun sdk` after the controllers so the app consumes both through generated
+  hooks.
+
+
+  ## Frontend (`packages/app/react`)
+
+  1. **Route `/app/library`** — thin shell composing the screen (no data
+  fetching in the route).
+
+  2. **Genre-loans section** under the route's `-components/` that owns its data
+  via the generated SDK hook — a single list call; the server already
+  aggregated, so the section must NOT derive per-genre numbers by
+  filtering/counting raw rows client-side. Render one row per genre: genre
+  label, active count, overdue count, share of total, and a "Renew" action
+  targeting the row's `oldestLoan` (disabled when null). Inline skeleton while
+  loading.
+
+  3. **Leaf row component**: each genre row receives its row object by prop from
+  the section's map (leaf components do not fetch).
+
+  4. **Renew flow**: the action asks for confirmation through the app-global
+  dialog store (house dialog ownership — no locally-owned modal open state in
+  this screen), then fires the SDK mutation. Success behavior is declared on the
+  mutation hook: invalidate the genre read's query key so the section refetches.
+  Call sites stay clean — no try/catch around the mutation; errors surface
+  through the global error handling.
+
+  5. Run `bun tsr generate`; `bun tsc` green on both sides.
+
+
+  ## Acceptance criteria
+
+  - Exactly one read request renders the section (no per-genre or per-loan
+  fan-out, no client-side aggregation).
+
+  - Confirming a renew updates the data on screen without a manual refresh
+  (invalidation on success).
+
+  - The screen survives an empty state (no genres) without errors.
+axes:
+  - CQRS-SIDE
+  - DATA-OWNERSHIP
+  - DIALOG-OWNERSHIP
+  - SDK-CONSUME
+  - LAYOUT
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: tsc
+    spec: app-react
+  - kind: grep-must
+    spec: packages/api/typescript/src/**/*Loan*.ts::\.groupBy\(|GROUP BY
+    id: query#server-side-aggregation
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/library/**/*.tsx::useDialogStore
+    id: dialog#store-ownership
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/library/**/*.tsx::(invalidateQueries|refetchQueries)
+    id: mutation#invalidate-on-success
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/library/**/*.tsx::from
+      '@template/client-typescript
+    id: sdk#consume-via-sdk
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/library/**/*.tsx::\.filter\([^)]*\)\.length
+    id: component#no-client-aggregation
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/library/**/*.tsx::\bcatch\b
+    id: mutation#no-try-catch
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/library/**/*.tsx::<(Dialog|AlertDialog|Sheet|Drawer)[^>]*onOpenChange
+    id: dialog#no-local-modal-state
+notes: "Hand-authored holdout; no gold tree. The judgment under test:
+  server-side GROUP BY in one BFF read vs fetching raw loans and aggregating
+  client-side; Section+Leaf decomposition; dialog via useDialogStore; clean
+  mutation call sites. Calibration: no `.groupBy(` exists today in any
+  *Loan*-named backend file (existing groupBy hits are
+  tenancy/marketing/tracking repos), so the filename-scoped must is non-vacuous;
+  the glob tolerates placement in the ui use case (ListGenreLoans.ts), a
+  LoanQueryService Drizzle variant, or a Loan repository, and the regex also
+  accepts raw-SQL `GROUP BY`. The prompt explicitly forbids the faker-stub
+  shortcut (house ui reads are stubbed) so the groupBy grader cannot be dodged
+  by following the stub precedent. House sections use dialogStore.confirm +
+  mutateAsync without try/catch (finance OperationalCostSection, taxesAndFees
+  forms), so the catch must-not matches the canon; the only try/catch in any
+  route component today is a canvas-rendering helper, not a mutation.
+  share-of-total math over server rows (e.g. reduce for the denominator) does
+  not trip the filter().length must-not — only per-genre client counting does."

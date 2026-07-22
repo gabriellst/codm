@@ -1,0 +1,14 @@
+{
+	"name": "app-styles",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/app/styles",
+	"projectType": "library",
+	"targets": {
+		"lint": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "bun x biome check --diagnostic-level=error packages/app/styles"
+			}
+		}
+	}
+}

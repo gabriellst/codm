@@ -1,0 +1,8 @@
+telemetry = false
+
+[run]
+# * Disable if using NextJS
+bun = true
+
+[test]
+preload = ["./tests/setup.ts"]

@@ -1,0 +1,25 @@
+{
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"name": "e2e",
+	"sourceRoot": "packages/e2e",
+	"projectType": "application",
+	"targets": {
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": [{ "projects": "client-typescript", "target": "build" }],
+			"inputs": [
+				"{projectRoot}/**/*",
+				"{workspaceRoot}/packages/app/react/src/routeTree.gen.ts",
+				"{workspaceRoot}/packages/app/react/src/locales/**"
+			],
+			"options": { "command": "tsc --noEmit", "cwd": "packages/e2e" }
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"inputs": ["{projectRoot}/**/*", "{projectRoot}/playwright.config.ts"],
+			"options": { "command": "bun scripts/run-e2e.ts", "cwd": "packages/e2e" }
+		}
+	}
+}

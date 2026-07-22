@@ -1,0 +1,378 @@
+// template.config.ts — the ONE-file repo identity (Plan: .plans/2026-07-11-sync-machinery.md P1-1).
+//
+// Checked in per repo, NEVER synced by the sync train. Rebranding a fork
+// (template → berzerk → medscall) is editing THIS file + regenerating
+// (`bun sdk` / `bun contracts`) — never a codemod. Any generator, script, or
+// tool that needs a brand value MUST read it from here; a literal is a bug.
+//
+// Deliberately dependency-free (plain const object, no imports) so ANY
+// script/generator — bun scripts, eslint rule modules loaded via jiti,
+// codegen under packages/ — can import it without dragging in a graph.
+//
+// Go cannot import this file. Go-side seams mirror individual values and name
+// this file as their source of truth (see packages/api/go/core/pkg/openapi/walker.go
+// `modulePrefix`). Keep them in lockstep when editing here.
+
+const scope = '@template'
+
+/**
+ * PER-LANGUAGE identity config — facts owned by a language TOOLCHAIN and shared by every
+ * workspace of that language (so they don't belong on any single Workspace entry):
+ *   typescript.packageScope — the npm scope every TS workspace package lives under.
+ *   go.modulePrefix — mirrors the `module <prefix>/...` lines of the Go workspaces
+ *   (api-go, core-go, contracts-go, client-go).
+ * Exposed as REPO.lang; `REPO.scope` stays as the widely-consumed TS alias.
+ */
+const LANG_CONFIG = {
+	typescript: { packageScope: scope },
+	go: { modulePrefix: 'template' },
+} as const
+
+const goModulePrefix = LANG_CONFIG.go.modulePrefix
+
+/**
+ * WORKSPACES — the first-class table of repo workspaces. LANGUAGE IS A DECLARED PROPERTY here,
+ * never inferred from a folder/package NAME (a fork's TS backend may be named `main-back`; a Go
+ * service may be named `channel`). `alias` is the human selection token create-template exposes;
+ * `kind` drives what is selectable when stamping (shared workspaces always ship).
+ */
+// ── STAMP-MANAGED: workspaces — create-template re-renders this literal (scripts/create-template/render-manifest.ts): a stamped copy keeps ONLY the entries of kept workspaces; keys must mirror REPO.workspaces (gated by scripts/create-template/render-manifest.test.ts) ──
+const WORKSPACES = {
+	apiTs: {
+		pkgRoot: 'packages/api/typescript',
+		srcRoot: 'packages/api/typescript/src',
+		lang: 'typescript',
+		kind: 'backend',
+		alias: 'typescript',
+		nxProject: 'api-typescript',
+		devServer: 'aggregate',
+	},
+	apiGo: {
+		pkgRoot: 'packages/api/go',
+		srcRoot: 'packages/api/go/internal',
+		lang: 'go',
+		kind: 'backend',
+		alias: 'go',
+		nxProject: 'api-go',
+		devServer: 'aggregate',
+	},
+	appReact: {
+		pkgRoot: 'packages/app/react',
+		srcRoot: 'packages/app/react/src',
+		lang: 'react',
+		kind: 'frontend',
+		alias: 'react',
+		nxProject: 'app-react',
+		devServer: 'aggregate',
+	},
+	appExpo: {
+		pkgRoot: 'packages/app/expo',
+		srcRoot: 'packages/app/expo',
+		lang: 'expo',
+		kind: 'frontend',
+		alias: 'expo',
+		nxProject: 'app-expo',
+		devServer: 'standalone',
+	},
+	appAstro: {
+		pkgRoot: 'packages/app/astro',
+		srcRoot: 'packages/app/astro/src',
+		lang: 'astro',
+		kind: 'frontend',
+		alias: 'astro',
+		nxProject: 'app-astro',
+		devServer: 'aggregate',
+	},
+	contracts: {
+		pkgRoot: 'packages/contracts',
+		srcRoot: 'packages/contracts',
+		lang: 'typescript',
+		kind: 'shared',
+		alias: 'contracts',
+		nxProject: null,
+		devServer: null,
+	},
+	client: {
+		pkgRoot: 'packages/client',
+		srcRoot: 'packages/client',
+		lang: 'typescript',
+		kind: 'shared',
+		alias: 'client',
+		nxProject: 'client',
+		devServer: null,
+	},
+	e2e: {
+		pkgRoot: 'packages/e2e',
+		srcRoot: 'packages/e2e',
+		lang: 'typescript',
+		kind: 'shared',
+		alias: 'e2e',
+		nxProject: 'e2e',
+		devServer: null,
+	},
+} as const satisfies Record<string, Workspace>
+// ── STAMP-MANAGED-END: workspaces ──
+
+export type WorkspaceId = keyof typeof WORKSPACES
+export interface Workspace {
+	pkgRoot: string
+	srcRoot: string
+	lang: 'typescript' | 'go' | 'react' | 'expo' | 'astro'
+	kind: 'backend' | 'frontend' | 'shared'
+	alias: string
+	/** nx project name (`project.json` "name") — null = workspace not registered with nx (contracts). */
+	nxProject: string | null
+	/** How the workspace joins local dev: 'aggregate' = part of the root `bun dev` run-many;
+	 *  'standalone' = runs its own dev server (expo); null = no dev target. */
+	devServer: 'aggregate' | 'standalone' | null
+}
+
+export const REPO = {
+	/** npm scope every workspace package lives under (`<scope>/core-typescript`, …). */
+	scope,
+	/** Human brand label (report titles, generated-doc headers). */
+	brand: 'template',
+	/** GitHub URL — eslint rule docs point here. */
+	repoUrl: 'https://github.com/template/template-fullstack',
+
+	// ── Well-known package specifiers (all derived from `scope`) ─────────────
+	/** The cross-stack SDK package (Kubb output, committed at packages/client/dist/typescript). */
+	sdkPackage: `${scope}/client-typescript`,
+	/** The TS-backend subpath of the SDK — the specifier frontend generators emit in import lines. */
+	sdkSpecifier: `${scope}/client-typescript/typescript`,
+	/** Backend framework core (base classes, z, BaseError, …). */
+	corePackage: `${scope}/core-typescript`,
+	/** Per-language toolchain identity (see LANG_CONFIG above). */
+	lang: LANG_CONFIG,
+	/** Import-specifier marker for DB-ORM schema imports (graph extractor). ORM-agnostic name —
+	 *  today the ORM is Drizzle, but the marker is about WHERE the schema contract lives. */
+	dbOrmSchemaSpecifier: `${scope}/contracts/db`,
+	/** Per-language SDK package-name prefixes the graph/detectors key off. */
+	sdkPackagePrefixes: {
+		typescript: `${scope}/client`,
+		go: `${goModulePrefix}/client`,
+	},
+
+	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */
+	rootEnvVar: 'TEMPLATE_ROOT',
+
+	// ── Layout — ALL DERIVED from WORKSPACES (the single source); do not add literals here ──
+	workspaces: WORKSPACES,
+	/** Source roots (repo-relative) — the prefixes review/graph tooling resolves against. */
+	// ── STAMP-MANAGED: workspaceRoots — entry keys are WORKSPACES ids; create-template drops entries of dropped workspaces (a stamped manifest never roots a ghost workspace) ──
+	workspaceRoots: {
+		apiTs: WORKSPACES.apiTs.srcRoot,
+		apiGo: WORKSPACES.apiGo.srcRoot,
+		appReact: WORKSPACES.appReact.srcRoot,
+		appExpo: WORKSPACES.appExpo.srcRoot,
+		appAstro: WORKSPACES.appAstro.srcRoot,
+	},
+	// ── STAMP-MANAGED-END: workspaceRoots ──
+	/** Package roots (repo-relative). The four *Dist/Gen entries are committed-generated OUTPUT paths
+	 *  inside workspaces, not workspaces themselves. */
+	// ── STAMP-MANAGED: packageRoots — entry keys are WORKSPACES ids or generated-output ids declared in GENERATED_OUTPUT_DEPS (scripts/create-template/plan.ts); create-template keeps an entry iff its workspace/deps are kept ──
+	packageRoots: {
+		contracts: WORKSPACES.contracts.pkgRoot,
+		apiTs: WORKSPACES.apiTs.pkgRoot,
+		apiGo: WORKSPACES.apiGo.pkgRoot,
+		appReact: WORKSPACES.appReact.pkgRoot,
+		appExpo: WORKSPACES.appExpo.pkgRoot,
+		appAstro: WORKSPACES.appAstro.pkgRoot,
+		client: WORKSPACES.client.pkgRoot,
+		clientTsDist: `${WORKSPACES.client.pkgRoot}/dist/typescript`,
+		clientGoDist: `${WORKSPACES.client.pkgRoot}/dist/go`,
+		contractsGenTs: `${WORKSPACES.contracts.pkgRoot}/generated/typescript`,
+		contractsGenGo: `${WORKSPACES.contracts.pkgRoot}/generated/go`,
+		e2e: WORKSPACES.e2e.pkgRoot,
+	},
+	// ── STAMP-MANAGED-END: packageRoots ──
+	/** Frontend selection aliases — derived from WORKSPACES (kind: frontend). */
+	appTargets: Object.values(WORKSPACES)
+		.filter(w => w.kind === 'frontend')
+		.map(w => w.alias),
+
+	/**
+	 * ENV REGISTRY — the single declaration of every env key a fresh clone may set, with its
+	 * CONSUMERS. The Zod schemas stay the RUNTIME truth for typing/coercion (core Config.ts for
+	 * schema: 'kernel', src ProductConfig.ts for schema: 'product'; the Go backend's config.go
+	 * mirrors the keys it consumes);
+	 * this registry is the STRUCTURAL truth everything else derives from:
+	 *   - `.env.example` is GENERATED from it (`bun env:generate`) — never hand-edited.
+	 *   - `scripts/create-template.ts` keeps a key iff any KEPT workspace consumes it (set algebra
+	 *     over `consumers` — no owner taxonomy).
+	 *   - `tests/architecture/env-model.test.ts` gates PARITY: schema keys ↔ registry keys,
+	 *     generated .env.example == committed, Go reads ⊆ declared. Drift = red build.
+	 * CONTRACT (see EnvDecl): `consumers` is the DECLARED relation "which workspaces read this key"
+	 * (workspace ids from WORKSPACES, plus 'compose' for docker interpolation) — evaluation is set
+	 * algebra (a key ships iff any consumer ships), NEVER an if on a name/convention. `schema`
+	 * (apiTs consumers only) says which Zod schema declares it: 'kernel' = core Config.ts,
+	 * 'product' = src ProductConfig.ts. `group` is presentational (rendering section). Language is
+	 * NOT a property of env keys — it lives on the workspace.
+	 */
+	// ── STAMP-MANAGED: env — create-template keeps a key iff at least one KEPT consumer remains (set algebra over `consumers`); the stamped .env.example is re-rendered from the pruned registry so `bun env:generate --check` stays green inside a stamp ──
+	env: {
+		// ── compose / identity ──
+		PROJECT: { consumers: ['compose'], example: 'template', doc: 'docker-compose prefix + Config.name; DATABASE_URL db name must match' },
+		SERVICE: { consumers: ['compose'], example: 'backend', doc: 'docker-compose container prefix (${PROJECT}-${SERVICE})' },
+		NODE_ENV: { consumers: ['apiTs'], schema: 'kernel', example: 'development' },
+		PRODUCT_NAME: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: 'Your Product',
+			doc: 'brand rendered in transactional emails + billing copy',
+		},
+		// ── ports ──
+		API_PORT: { consumers: ['apiTs'], schema: 'kernel', example: '3030', doc: 'api-typescript' },
+		API_GO_PORT: { consumers: ['apiGo'], example: '3032', doc: 'api-go' },
+		VITE_PORT: {
+			consumers: ['appReact'],
+			example: '5173',
+			doc: 'read by the e2e harness only — vite.config.ts hardcodes 5173; keep in sync',
+		},
+		// ── database / redis ──
+		DATABASE_URL: {
+			consumers: ['apiTs', 'apiGo'],
+			schema: 'kernel',
+			example: 'postgres://postgres:postgres@localhost:5432/template?sslmode=disable',
+		},
+		REDIS_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'redis://localhost:6379' },
+		RATE_LIMIT_DISABLED: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'false',
+			doc: 'auth rate-limit escape hatch - the e2e runner sets true (per-IP windows break hermetic suites)',
+			advanced: true,
+		},
+		// ── event partitioning ──
+		API_EVENT_GROUP_ID: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'api-typescript',
+			doc: 'outbox source tag consumed by api-typescript',
+		},
+		API_GO_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'api-go', doc: 'outbox source tag consumed by api-go' },
+		// ── cross-service URLs ──
+		API_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'http://localhost:3030', doc: 'api-typescript public URL' },
+		API_GO_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:3032', doc: 'api-go public URL (SDK aggregate client)' },
+		APP_URL: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'http://localhost:5173',
+			doc: 'app-web public URL (kernel reads it for redirects/urls)',
+		},
+		// ── auth / secrets ──
+		BETTER_AUTH_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: 'CHANGE_ME', secret: true },
+		BETTER_AUTH_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:3030/v1/authentication' },
+		JWT_SECRET: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'CHANGE_ME',
+			secret: true,
+			doc: 'HMAC secret for signed tokens (e.g. invitation links)',
+		},
+		INTERNAL_SERVICE_KEY: {
+			consumers: ['apiTs', 'apiGo'],
+			schema: 'kernel',
+			example: 'CHANGE_ME',
+			secret: true,
+			doc: 'Go→TS S2S header seam (x-internal-service-key)',
+		},
+		OPERATOR_API_KEY: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '',
+			secret: true,
+			doc: 'operator endpoints (quota overrides); FAILS CLOSED when empty',
+		},
+		CREDENTIAL_VAULT_KEY: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '',
+			secret: true,
+			doc: 'AES-256 seam for AesCredentialVault — unbound in the base; a product binding the vault re-adds it to REQUIRED_SECRETS_IN_PROD',
+		},
+		// ── billing policy (ts-product) ──
+		BILLING_SANDBOX: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: 'true',
+			doc: 'in-process SandboxPaymentProvider; REQUIRED for the billing e2e flow; unset = false',
+		},
+		BILLING_DEFAULT_GATEWAY: { consumers: ['apiTs'], schema: 'product', example: 'PAGARME' },
+		BILLING_GATEWAY_PIX: { consumers: ['apiTs'], schema: 'product', example: '' },
+		BILLING_GATEWAY_CARD: { consumers: ['apiTs'], schema: 'product', example: '' },
+		BILLING_CHECKOUT_IMAGE_URL: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: '',
+			doc: 'hosted-checkout branding image; empty renders none',
+		},
+		// ── billing tuning knobs (ts-product, advanced — schema defaults are production-sane;
+		//    rendered COMMENTED in .env.example so dev setups stay lean) ──
+		BILLING_SANDBOX_PERIOD_MS: { consumers: ['apiTs'], schema: 'product', example: '120000', advanced: true },
+		BILLING_DUNNING_GRACE_DAYS: { consumers: ['apiTs'], schema: 'product', example: '3', advanced: true },
+		BILLING_DUNNING_MAX_ATTEMPTS: { consumers: ['apiTs'], schema: 'product', example: '4', advanced: true },
+		BILLING_DUNNING_RETRY_OFFSETS_DAYS: { consumers: ['apiTs'], schema: 'product', example: '1,3,5', advanced: true },
+		BILLING_DUNNING_WINDOW_DAYS: { consumers: ['apiTs'], schema: 'product', example: '10', advanced: true },
+		BILLING_CHARGEBACK_SCAN_DAYS: { consumers: ['apiTs'], schema: 'product', example: '90', advanced: true },
+		BILLING_CHECKOUT_RECONCILE_AFTER_MINUTES: { consumers: ['apiTs'], schema: 'product', example: '30', advanced: true },
+		BILLING_CHECKOUT_RECONCILE_MAX_AGE_HOURS: { consumers: ['apiTs'], schema: 'product', example: '48', advanced: true },
+		BILLING_PENDING_RECONCILE_AFTER_MINUTES: { consumers: ['apiTs'], schema: 'product', example: '30', advanced: true },
+		BILLING_PENDING_RECONCILE_MAX_AGE_HOURS: { consumers: ['apiTs'], schema: 'product', example: '48', advanced: true },
+		BILLING_REFUND_DRIFT_SCAN_DAYS: { consumers: ['apiTs'], schema: 'product', example: '30', advanced: true },
+		BILLING_REFUND_RECONCILE_MAX_AGE_HOURS: { consumers: ['apiTs'], schema: 'product', example: '72', advanced: true },
+		BILLING_WINDOW_RECONCILE_EVERY_HOURS: { consumers: ['apiTs'], schema: 'product', example: '6', advanced: true },
+		BILLING_WINDOW_RECONCILE_MAX_AGE_DAYS: { consumers: ['apiTs'], schema: 'product', example: '14', advanced: true },
+		BILLING_WITHDRAWAL_WINDOW_DAYS: { consumers: ['apiTs'], schema: 'product', example: '7', advanced: true },
+		// ── gateway credentials (fill only the ACTIVE gateways for this product) ──
+		STRIPE_API_KEY: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		STRIPE_WEBHOOK_SECRET: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		PAGARME_API_KEY: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		PAGARME_WEBHOOK_USER: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		PAGARME_WEBHOOK_PASSWORD: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		ASAAS_API_KEY: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		ASAAS_WEBHOOK_TOKEN: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		ASAAS_BASE_URL: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '' },
+		MERCADOPAGO_ACCESS_TOKEN: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		MERCADOPAGO_WEBHOOK_SECRET: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		PAGBANK_API_TOKEN: { consumers: ['apiTs'], schema: 'product', group: 'billing-gateway', example: '', secret: true },
+		// ── cors / otel ──
+		CORS_ALLOWED_ORIGINS: {
+			consumers: ['apiTs', 'apiGo'],
+			schema: 'kernel',
+			example: '*',
+			doc: "comma-separated; '*' for dev; all backends read this key",
+		},
+		OTEL_COLLECTOR_TRACE_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:4317/v1/traces' },
+		OTEL_COLLECTOR_LOG_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:4317/v1/logs' },
+		OTEL_SERVICE_NAME: {
+			consumers: ['apiTs', 'apiGo'],
+			schema: 'kernel',
+			example: 'api-typescript',
+			doc: 'per-service override; go sets its own',
+		},
+		// ── misc ──
+		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
+		// ── frontend (only VITE_* reach the browser) ──
+		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
+	},
+	// ── STAMP-MANAGED-END: env ──
+} as const
+
+export type RepoConfig = typeof REPO
+/** Who reads an env key: a workspace (by id) or the docker-compose interpolation layer. */
+export type EnvConsumer = WorkspaceId | 'compose'
+export interface EnvDecl {
+	/** Declared relation: the workspaces that read this key. A stamped repo keeps the key iff at
+	 *  least one consumer ships — pure set membership, no special cases. */
+	consumers: readonly EnvConsumer[]
+	/** Which api-ts Zod schema declares the key (required iff 'apiTs' is a consumer). */
+	schema?: 'kernel' | 'product'
+	/** Presentational grouping for .env.example sections (e.g. 'billing-gateway'). */
+	group?: string
+	example: string
+	doc?: string
+	secret?: boolean
+	/** Tuning knob with a sane schema default — rendered commented-out in .env.example. */
+	advanced?: boolean
+}

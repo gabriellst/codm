@@ -1,0 +1,24 @@
+// In Go, request/response schemas are plain structs with validate:"..." tags.
+// Define them directly inside the use case or controller file that owns them.
+//
+// Example — use case input/output:
+//
+//   type MyInput struct {
+//       ID    string  `validate:"required,uuid"`
+//       Name  string  `validate:"required,min=1,max=255"`
+//   }
+//   type MyOutput struct {
+//       ID   string `json:"id"`
+//       Name string `json:"name"`
+//   }
+//
+// Example — controller request:
+//
+//   type MyRequest struct {
+//       ID   string `from:"path"   name:"id"      validate:"required,uuid"`
+//       Name string `from:"body"   json:"name"    validate:"required,min=1"`
+//   }
+//
+// See: .claude/skills/schema/go/SKILL.md
+//      .claude/skills/controller/go/SKILL.md
+//      .claude/skills/usecase/go/SKILL.md

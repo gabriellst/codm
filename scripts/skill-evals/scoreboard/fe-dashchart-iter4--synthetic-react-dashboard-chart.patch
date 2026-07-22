@@ -1,0 +1,1002 @@
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..a641bd78b 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -1414,6 +1414,50 @@
+ 		"title": "Recommended Apps",
+ 		"visitCta": "Visit"
+ 	},
++	"reports": {
++		"title": "Sales Reports",
++		"subtitle": "Analyze performance by period, day of week, hour, and region.",
++		"recorteSelectorLabel": "Select breakdown",
++		"recorte": {
++			"income": "By period",
++			"weekday": "By day of week",
++			"hour": "By hour",
++			"period": "By shift",
++			"region": "By region"
++		},
++		"columns": {
++			"label": "Period",
++			"revenue": "Revenue",
++			"profit": "Profit",
++			"orders": "Orders",
++			"state": "State",
++			"country": "Country",
++			"total": "Total"
++		},
++		"weekday": {
++			"MONDAY": "Monday",
++			"TUESDAY": "Tuesday",
++			"WEDNESDAY": "Wednesday",
++			"THURSDAY": "Thursday",
++			"FRIDAY": "Friday",
++			"SATURDAY": "Saturday",
++			"SUNDAY": "Sunday"
++		},
++		"period": {
++			"MORNING": "Morning",
++			"AFTERNOON": "Afternoon",
++			"EVENING": "Evening",
++			"NIGHT": "Night"
++		},
++		"error": {
++			"title": "Failed to load",
++			"description": "Could not load data. Please try again."
++		},
++		"empty": {
++			"title": "No data",
++			"description": "No data found for the selected period."
++		}
++	},
+ 	"suggestions": {
+ 		"advertise": {
+ 			"cta": "Talk to partners",
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..d74900066 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -1414,6 +1414,50 @@
+ 		"title": "Aplicativos Recomendados",
+ 		"visitCta": "Visitar"
+ 	},
++	"reports": {
++		"title": "Relatórios de Vendas",
++		"subtitle": "Analise o desempenho por período, dia da semana, horário e região.",
++		"recorteSelectorLabel": "Selecionar recorte",
++		"recorte": {
++			"income": "Por período",
++			"weekday": "Por dia da semana",
++			"hour": "Por horário",
++			"period": "Por turno",
++			"region": "Por região"
++		},
++		"columns": {
++			"label": "Período",
++			"revenue": "Faturamento",
++			"profit": "Lucro",
++			"orders": "Pedidos",
++			"state": "Estado",
++			"country": "País",
++			"total": "Total"
++		},
++		"weekday": {
++			"MONDAY": "Segunda-feira",
++			"TUESDAY": "Terça-feira",
++			"WEDNESDAY": "Quarta-feira",
++			"THURSDAY": "Quinta-feira",
++			"FRIDAY": "Sexta-feira",
++			"SATURDAY": "Sábado",
++			"SUNDAY": "Domingo"
++		},
++		"period": {
++			"MORNING": "Manhã",
++			"AFTERNOON": "Tarde",
++			"EVENING": "Noite",
++			"NIGHT": "Madrugada"
++		},
++		"error": {
++			"title": "Erro ao carregar",
++			"description": "Não foi possível carregar os dados. Tente novamente."
++		},
++		"empty": {
++			"title": "Sem dados",
++			"description": "Nenhum dado encontrado para o período selecionado."
++		}
++	},
+ 	"suggestions": {
+ 		"advertise": {
+ 			"cta": "Falar com parceiros",
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..b3f672508 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -15,6 +15,7 @@ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
++import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+ import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+@@ -58,6 +59,11 @@ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   path: '/suggestions/',
+   getParentRoute: () => appRouteRoute,
+ } as any)
++const appReportsIndexRoute = appReportsIndexRouteImport.update({
++  id: '/reports/',
++  path: '/reports/',
++  getParentRoute: () => appRouteRoute,
++} as any)
+ const appProductsIndexRoute = appProductsIndexRouteImport.update({
+   id: '/products/',
+   path: '/products/',
+@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
+   '/dashboard/': typeof appDashboardIndexRoute
+   '/orders/': typeof appOrdersIndexRoute
+   '/products/': typeof appProductsIndexRoute
++  '/reports/': typeof appReportsIndexRoute
+   '/suggestions/': typeof appSuggestionsIndexRoute
+   '/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
+   '/dashboard': typeof appDashboardIndexRoute
+   '/orders': typeof appOrdersIndexRoute
+   '/products': typeof appProductsIndexRoute
++  '/reports': typeof appReportsIndexRoute
+   '/suggestions': typeof appSuggestionsIndexRoute
+   '/finance/costs': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic': typeof appMarketingTrafficIndexRoute
+@@ -179,6 +187,7 @@ export interface FileRoutesById {
+   '/(app)/dashboard/': typeof appDashboardIndexRoute
+   '/(app)/orders/': typeof appOrdersIndexRoute
+   '/(app)/products/': typeof appProductsIndexRoute
++  '/(app)/reports/': typeof appReportsIndexRoute
+   '/(app)/suggestions/': typeof appSuggestionsIndexRoute
+   '/(app)/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/(app)/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -201,6 +210,7 @@ export interface FileRouteTypes {
+     | '/dashboard/'
+     | '/orders/'
+     | '/products/'
++    | '/reports/'
+     | '/suggestions/'
+     | '/finance/costs/'
+     | '/marketing/traffic/'
+@@ -221,6 +231,7 @@ export interface FileRouteTypes {
+     | '/dashboard'
+     | '/orders'
+     | '/products'
++    | '/reports'
+     | '/suggestions'
+     | '/finance/costs'
+     | '/marketing/traffic'
+@@ -242,6 +253,7 @@ export interface FileRouteTypes {
+     | '/(app)/dashboard/'
+     | '/(app)/orders/'
+     | '/(app)/products/'
++    | '/(app)/reports/'
+     | '/(app)/suggestions/'
+     | '/(app)/finance/costs/'
+     | '/(app)/marketing/traffic/'
+@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof appSuggestionsIndexRouteImport
+       parentRoute: typeof appRouteRoute
+     }
++    '/(app)/reports/': {
++      id: '/(app)/reports/'
++      path: '/reports'
++      fullPath: '/reports/'
++      preLoaderRoute: typeof appReportsIndexRouteImport
++      parentRoute: typeof appRouteRoute
++    }
+     '/(app)/products/': {
+       id: '/(app)/products/'
+       path: '/products'
+@@ -405,6 +424,7 @@ interface appRouteRouteChildren {
+   appDashboardIndexRoute: typeof appDashboardIndexRoute
+   appOrdersIndexRoute: typeof appOrdersIndexRoute
+   appProductsIndexRoute: typeof appProductsIndexRoute
++  appReportsIndexRoute: typeof appReportsIndexRoute
+   appSuggestionsIndexRoute: typeof appSuggestionsIndexRoute
+   appFinanceCostsIndexRoute: typeof appFinanceCostsIndexRoute
+   appMarketingTrafficIndexRoute: typeof appMarketingTrafficIndexRoute
+@@ -422,6 +442,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
+   appDashboardIndexRoute: appDashboardIndexRoute,
+   appOrdersIndexRoute: appOrdersIndexRoute,
+   appProductsIndexRoute: appProductsIndexRoute,
++  appReportsIndexRoute: appReportsIndexRoute,
+   appSuggestionsIndexRoute: appSuggestionsIndexRoute,
+   appFinanceCostsIndexRoute: appFinanceCostsIndexRoute,
+   appMarketingTrafficIndexRoute: appMarketingTrafficIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/HourTable.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/HourTable.tsx
+new file mode 100644
+index 000000000..01569337f
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/HourTable.tsx
+@@ -0,0 +1,85 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useGetChart, ChartTypeEnum } from '@template/client-typescript/typescript'
++
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++
++import { SegmentRow } from './SegmentRow'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++export function HourTable({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.hour,
++		tenancyScope,
++		frequency: 'DAILY',
++		startDate,
++		endDate,
++	})
++
++	if (isPending) {
++		return (
++			<div className={cn('flex flex-col gap-2', className)} {...props}>
++				{Array.from({ length: 8 }).map((_, i) => (
++					// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
++					<Skeleton key={i} className="h-9 w-full rounded" />
++				))}
++			</div>
++		)
++	}
++
++	if (isError || !data || data.kind !== 'hour') {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.error.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.error.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	const entries = Object.entries(data.segments).sort(([a], [b]) => Number(a) - Number(b))
++	const maxRevenue = Math.max(0, ...entries.map(([, seg]) => Math.max(0, seg.revenue.amountCents)))
++
++	return (
++		<div className={cn('flex flex-col', className)} {...props}>
++			<div className="flex items-center gap-4 border-b border-border px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
++				<span className="min-w-28 shrink-0">{t('reports.columns.label')}</span>
++				<div className="flex-1" />
++				<span className="w-28 text-right">{t('reports.columns.revenue')}</span>
++				<span className="w-24 text-right">{t('reports.columns.profit')}</span>
++				<span className="w-14 text-right">{t('reports.columns.orders')}</span>
++			</div>
++			<div role="list" aria-label={t('reports.title')}>
++				{entries.map(([hour, seg]) => {
++					const barPercent =
++						maxRevenue > 0 ? (Math.max(0, seg.revenue.amountCents) / maxRevenue) * 100 : 0
++					return (
++						<SegmentRow
++							key={hour}
++							label={`${hour}h`}
++							revenueStr={formatMoney(seg.revenue)}
++							profitStr={formatMoney(seg.profit)}
++							isPositiveProfit={seg.profit.amountCents >= 0}
++							orders={seg.orders}
++							barPercent={barPercent}
++						/>
++					)
++				})}
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/IncomeTable.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/IncomeTable.tsx
+new file mode 100644
+index 000000000..159a42d67
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/IncomeTable.tsx
+@@ -0,0 +1,105 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useGetChart, ChartTypeEnum } from '@template/client-typescript/typescript'
++
++import { useMoney, useLocale } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++
++import { SegmentRow } from './SegmentRow'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++export function IncomeTable({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++	const locale = useLocale()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.income,
++		tenancyScope,
++		frequency: 'DAILY',
++		startDate,
++		endDate,
++	})
++
++	const isEmpty = !isPending && !isError && (!data || data.kind !== 'income' || data.buckets.length === 0)
++
++	if (isPending) {
++		return (
++			<div className={cn('flex flex-col gap-2', className)} {...props}>
++				{Array.from({ length: 6 }).map((_, i) => (
++					// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
++					<Skeleton key={i} className="h-9 w-full rounded" />
++				))}
++			</div>
++		)
++	}
++
++	if (isError) {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.error.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.error.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	if (isEmpty) {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.empty.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.empty.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	const buckets = [...(data as Extract<typeof data, { kind: 'income' }>).buckets].sort(
++		(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
++	)
++	const maxRevenue = Math.max(0, ...buckets.map(b => Math.max(0, b.revenue.amountCents)))
++
++	return (
++		<div className={cn('flex flex-col', className)} {...props}>
++			<div className="flex items-center gap-4 border-b border-border px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
++				<span className="min-w-28 shrink-0">{t('reports.columns.label')}</span>
++				<div className="flex-1" />
++				<span className="w-28 text-right">{t('reports.columns.revenue')}</span>
++				<span className="w-24 text-right">{t('reports.columns.profit')}</span>
++				<span className="w-14 text-right">{t('reports.columns.orders')}</span>
++			</div>
++			<div role="list" aria-label={t('reports.title')}>
++				{buckets.map(bucket => {
++					const date = new Date(bucket.timestamp)
++					const label = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)
++					const barPercent =
++						maxRevenue > 0 ? (Math.max(0, bucket.revenue.amountCents) / maxRevenue) * 100 : 0
++					return (
++						<SegmentRow
++							key={bucket.timestamp}
++							label={label}
++							revenueStr={formatMoney(bucket.revenue)}
++							profitStr={formatMoney(bucket.profit)}
++							isPositiveProfit={bucket.profit.amountCents >= 0}
++							orders={bucket.orders}
++							barPercent={barPercent}
++						/>
++					)
++				})}
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/PeriodTable.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/PeriodTable.tsx
+new file mode 100644
+index 000000000..cc0dfad29
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/PeriodTable.tsx
+@@ -0,0 +1,99 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useGetChart, ChartTypeEnum } from '@template/client-typescript/typescript'
++
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++
++import { SegmentRow } from './SegmentRow'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++const PERIOD_ORDER = ['MORNING', 'AFTERNOON', 'EVENING', 'NIGHT'] as const
++
++type PeriodKey = (typeof PERIOD_ORDER)[number]
++
++export function PeriodTable({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.period,
++		tenancyScope,
++		frequency: 'DAILY',
++		startDate,
++		endDate,
++	})
++
++	if (isPending) {
++		return (
++			<div className={cn('flex flex-col gap-2', className)} {...props}>
++				{Array.from({ length: 4 }).map((_, i) => (
++					// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
++					<Skeleton key={i} className="h-9 w-full rounded" />
++				))}
++			</div>
++		)
++	}
++
++	if (isError || !data || data.kind !== 'period') {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.error.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.error.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	const periodLabels: Record<PeriodKey, string> = {
++		MORNING: t('reports.period.MORNING'),
++		AFTERNOON: t('reports.period.AFTERNOON'),
++		EVENING: t('reports.period.EVENING'),
++		NIGHT: t('reports.period.NIGHT'),
++	}
++
++	const maxRevenue = Math.max(
++		0,
++		...PERIOD_ORDER.map(k => Math.max(0, data.segments[k].revenue.amountCents)),
++	)
++
++	return (
++		<div className={cn('flex flex-col', className)} {...props}>
++			<div className="flex items-center gap-4 border-b border-border px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
++				<span className="min-w-28 shrink-0">{t('reports.columns.label')}</span>
++				<div className="flex-1" />
++				<span className="w-28 text-right">{t('reports.columns.revenue')}</span>
++				<span className="w-24 text-right">{t('reports.columns.profit')}</span>
++				<span className="w-14 text-right">{t('reports.columns.orders')}</span>
++			</div>
++			<div role="list" aria-label={t('reports.title')}>
++				{PERIOD_ORDER.map(key => {
++					const seg = data.segments[key]
++					const barPercent =
++						maxRevenue > 0 ? (Math.max(0, seg.revenue.amountCents) / maxRevenue) * 100 : 0
++					return (
++						<SegmentRow
++							key={key}
++							label={periodLabels[key]}
++							revenueStr={formatMoney(seg.revenue)}
++							profitStr={formatMoney(seg.profit)}
++							isPositiveProfit={seg.profit.amountCents >= 0}
++							orders={seg.orders}
++							barPercent={barPercent}
++						/>
++					)
++				})}
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/RecorteSelector.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/RecorteSelector.tsx
+new file mode 100644
+index 000000000..525753438
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/RecorteSelector.tsx
+@@ -0,0 +1,45 @@
++import { useTranslation } from 'react-i18next'
++import { IconCheck, IconChevronDown } from '@tabler/icons-react'
++import { ChartTypeEnum, type ChartType } from '@template/client-typescript/typescript'
++
++import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
++
++const RECORTE_OPTIONS = Object.values(ChartTypeEnum) as ChartType[]
++
++interface RecorteSelectorProps {
++	value: ChartType
++	onChange: (value: ChartType) => void
++}
++
++export function RecorteSelector({ value, onChange }: RecorteSelectorProps) {
++	const { t } = useTranslation()
++
++	// All five label keys are literal — type-checked by react-i18next.
++	const labels: Record<ChartType, string> = {
++		[ChartTypeEnum.income]: t('reports.recorte.income'),
++		[ChartTypeEnum.weekday]: t('reports.recorte.weekday'),
++		[ChartTypeEnum.hour]: t('reports.recorte.hour'),
++		[ChartTypeEnum.period]: t('reports.recorte.period'),
++		[ChartTypeEnum.region]: t('reports.recorte.region'),
++	}
++
++	return (
++		<DropdownMenu>
++			<DropdownMenuTrigger
++				className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent/50"
++				aria-label={t('reports.recorteSelectorLabel')}
++			>
++				{labels[value]}
++				<IconChevronDown size={14} />
++			</DropdownMenuTrigger>
++			<DropdownMenuContent side="bottom" align="start">
++				{RECORTE_OPTIONS.map(chartType => (
++					<DropdownMenuItem key={chartType} onClick={() => onChange(chartType)}>
++						<span className="flex-1">{labels[chartType]}</span>
++						{value === chartType ? <IconCheck size={14} className="text-primary" /> : null}
++					</DropdownMenuItem>
++				))}
++			</DropdownMenuContent>
++		</DropdownMenu>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/RegionTable.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/RegionTable.tsx
+new file mode 100644
+index 000000000..72411d2e2
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/RegionTable.tsx
+@@ -0,0 +1,120 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useGetChart, ChartTypeEnum } from '@template/client-typescript/typescript'
++
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++interface RegionRowProps {
++	state: string
++	country: string
++	totalStr: string
++	isPositive: boolean
++	orders: number
++}
++
++function RegionRow({ state, country, totalStr, isPositive, orders }: RegionRowProps) {
++	return (
++		<div
++			role="listitem"
++			className="flex items-center gap-4 border-b border-border px-2 py-2.5 last:border-0"
++		>
++			<span className="min-w-28 shrink-0 text-sm font-medium text-foreground">{state}</span>
++			<span className="flex-1 text-sm text-muted-foreground">{country}</span>
++			<span
++				className={cn(
++					'w-28 text-right text-sm tabular-nums',
++					isPositive ? 'text-success-bright' : 'text-destructive',
++				)}
++			>
++				{totalStr}
++			</span>
++			<span className="w-14 text-right text-sm tabular-nums text-muted-foreground">{orders}</span>
++		</div>
++	)
++}
++
++export function RegionTable({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.region,
++		tenancyScope,
++		frequency: 'DAILY',
++		startDate,
++		endDate,
++	})
++
++	if (isPending) {
++		return (
++			<div className={cn('flex flex-col gap-2', className)} {...props}>
++				{Array.from({ length: 6 }).map((_, i) => (
++					// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
++					<Skeleton key={i} className="h-9 w-full rounded" />
++				))}
++			</div>
++		)
++	}
++
++	if (isError || !data || data.kind !== 'region') {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.error.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.error.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	const entries = Object.entries(data.regions).sort(
++		([, a], [, b]) => b.total.amountCents - a.total.amountCents,
++	)
++
++	if (entries.length === 0) {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.empty.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.empty.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	return (
++		<div className={cn('flex flex-col', className)} {...props}>
++			<div className="flex items-center gap-4 border-b border-border px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
++				<span className="min-w-28 shrink-0">{t('reports.columns.state')}</span>
++				<span className="flex-1">{t('reports.columns.country')}</span>
++				<span className="w-28 text-right">{t('reports.columns.total')}</span>
++				<span className="w-14 text-right">{t('reports.columns.orders')}</span>
++			</div>
++			<div role="list" aria-label={t('reports.title')}>
++				{entries.map(([key, region]) => (
++					<RegionRow
++						key={key}
++						state={region.state || key}
++						country={region.country}
++						totalStr={formatMoney(region.total)}
++						isPositive={region.total.amountCents >= 0}
++						orders={region.orders}
++					/>
++				))}
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/SegmentRow.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/SegmentRow.tsx
+new file mode 100644
+index 000000000..512fdd6af
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/SegmentRow.tsx
+@@ -0,0 +1,41 @@
++import type { ComponentProps } from 'react'
++import { cn } from '@/lib/utils'
++
++interface SegmentRowProps extends ComponentProps<'div'> {
++	label: string
++	revenueStr: string
++	profitStr: string
++	isPositiveProfit: boolean
++	orders: number
++	barPercent: number
++}
++
++export function SegmentRow({ label, revenueStr, profitStr, isPositiveProfit, orders, barPercent, className, ...props }: SegmentRowProps) {
++	return (
++		<div
++			role="listitem"
++			className={cn('flex items-center gap-4 border-b border-border px-2 py-2.5 last:border-0', className)}
++			{...props}
++		>
++			<span className="min-w-28 shrink-0 text-sm font-medium text-foreground">{label}</span>
++			<div className="flex flex-1 items-center gap-2">
++				<div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
++					<div
++						className="h-full rounded-full bg-primary transition-all"
++						style={{ width: `${barPercent}%` }}
++					/>
++				</div>
++				<span className="w-28 text-right text-sm font-medium tabular-nums text-foreground">{revenueStr}</span>
++			</div>
++			<span
++				className={cn(
++					'w-24 text-right text-sm tabular-nums',
++					isPositiveProfit ? 'text-success-bright' : 'text-destructive',
++				)}
++			>
++				{profitStr}
++			</span>
++			<span className="w-14 text-right text-sm tabular-nums text-muted-foreground">{orders}</span>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/WeekdayTable.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/WeekdayTable.tsx
+new file mode 100644
+index 000000000..0082f3ea1
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/WeekdayTable.tsx
+@@ -0,0 +1,102 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useGetChart, ChartTypeEnum } from '@template/client-typescript/typescript'
++
++import { useMoney } from '@/hooks'
++import { useTenancyStore } from '@/stores'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++
++import { SegmentRow } from './SegmentRow'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++const WEEKDAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'] as const
++
++type WeekdayKey = (typeof WEEKDAY_ORDER)[number]
++
++export function WeekdayTable({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore(s => s.tenancyScope)
++	const formatMoney = useMoney()
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: ChartTypeEnum.weekday,
++		tenancyScope,
++		frequency: 'DAILY',
++		startDate,
++		endDate,
++	})
++
++	if (isPending) {
++		return (
++			<div className={cn('flex flex-col gap-2', className)} {...props}>
++				{Array.from({ length: 7 }).map((_, i) => (
++					// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
++					<Skeleton key={i} className="h-9 w-full rounded" />
++				))}
++			</div>
++		)
++	}
++
++	if (isError || !data || data.kind !== 'weekday') {
++		return (
++			<div className={cn('flex flex-1 items-center justify-center', className)} {...props}>
++				<Empty>
++					<EmptyHeader>
++						<EmptyTitle>{t('reports.error.title')}</EmptyTitle>
++						<EmptyDescription>{t('reports.error.description')}</EmptyDescription>
++					</EmptyHeader>
++				</Empty>
++			</div>
++		)
++	}
++
++	const weekdayLabels: Record<WeekdayKey, string> = {
++		MONDAY: t('reports.weekday.MONDAY'),
++		TUESDAY: t('reports.weekday.TUESDAY'),
++		WEDNESDAY: t('reports.weekday.WEDNESDAY'),
++		THURSDAY: t('reports.weekday.THURSDAY'),
++		FRIDAY: t('reports.weekday.FRIDAY'),
++		SATURDAY: t('reports.weekday.SATURDAY'),
++		SUNDAY: t('reports.weekday.SUNDAY'),
++	}
++
++	const maxRevenue = Math.max(
++		0,
++		...WEEKDAY_ORDER.map(k => Math.max(0, data.segments[k].revenue.amountCents)),
++	)
++
++	return (
++		<div className={cn('flex flex-col', className)} {...props}>
++			<div className="flex items-center gap-4 border-b border-border px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
++				<span className="min-w-28 shrink-0">{t('reports.columns.label')}</span>
++				<div className="flex-1" />
++				<span className="w-28 text-right">{t('reports.columns.revenue')}</span>
++				<span className="w-24 text-right">{t('reports.columns.profit')}</span>
++				<span className="w-14 text-right">{t('reports.columns.orders')}</span>
++			</div>
++			<div role="list" aria-label={t('reports.title')}>
++				{WEEKDAY_ORDER.map(key => {
++					const seg = data.segments[key]
++					const barPercent =
++						maxRevenue > 0 ? (Math.max(0, seg.revenue.amountCents) / maxRevenue) * 100 : 0
++					return (
++						<SegmentRow
++							key={key}
++							label={weekdayLabels[key]}
++							revenueStr={formatMoney(seg.revenue)}
++							profitStr={formatMoney(seg.profit)}
++							isPositiveProfit={seg.profit.amountCents >= 0}
++							orders={seg.orders}
++							barPercent={barPercent}
++						/>
++					)
++				})}
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ChartSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/index.tsx
+new file mode 100644
+index 000000000..176df76fd
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ChartSection/index.tsx
+@@ -0,0 +1,85 @@
++import type { ComponentProps, ComponentType } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import type { DateRange } from 'react-day-picker'
++import { ChartTypeEnum, type ChartType } from '@template/client-typescript/typescript'
++
++import { Card } from '@/components/ui/card'
++import { DatePicker } from '@/components/ui/date-picker'
++import { cn } from '@/lib/utils'
++
++import { RecorteSelector } from './RecorteSelector'
++import { IncomeTable } from './IncomeTable'
++import { WeekdayTable } from './WeekdayTable'
++import { HourTable } from './HourTable'
++import { PeriodTable } from './PeriodTable'
++import { RegionTable } from './RegionTable'
++
++// ─── Route API ────────────────────────────────────────────────────────────────
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++// ─── Variant dispatch map ─────────────────────────────────────────────────────
++// Dispatch by URL chartType — each variant component owns its own query.
++// Keyed by ChartType so exhaustiveness is enforced by tsc.
++
++const CHART_COMPONENT: Record<ChartType, ComponentType> = {
++	[ChartTypeEnum.income]: IncomeTable,
++	[ChartTypeEnum.weekday]: WeekdayTable,
++	[ChartTypeEnum.hour]: HourTable,
++	[ChartTypeEnum.period]: PeriodTable,
++	[ChartTypeEnum.region]: RegionTable,
++}
++
++// ─── Component ────────────────────────────────────────────────────────────────
++
++export function ChartSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { chartType, startDate, endDate } = routeApi.useSearch()
++	const navigate = routeApi.useNavigate()
++
++	const dateRange: DateRange = {
++		from: startDate ? new Date(startDate) : undefined,
++		to: endDate ? new Date(endDate) : undefined,
++	}
++
++	function handleRecorteChange(next: ChartType) {
++		navigate({ search: prev => ({ ...prev, chartType: next }) })
++	}
++
++	function handleRangeChange(range: DateRange | undefined) {
++		const from = range?.from
++		const to = range?.to
++		if (!from || !to) return
++		navigate({
++			search: prev => ({
++				...prev,
++				startDate: from.toISOString().substring(0, 10),
++				endDate: to.toISOString().substring(0, 10),
++			}),
++		})
++	}
++
++	const VariantComponent = CHART_COMPONENT[chartType]
++
++	return (
++		<div className={cn('flex flex-col gap-6', className)} {...props}>
++			{/* Header — always visible */}
++			<div className="flex flex-col gap-1">
++				<h1 className="text-2xl font-bold text-foreground">{t('reports.title')}</h1>
++				<p className="text-sm text-muted-foreground">{t('reports.subtitle')}</p>
++			</div>
++
++			{/* Toolbar — always visible */}
++			<div className="flex flex-wrap items-center gap-3">
++				<RecorteSelector value={chartType} onChange={handleRecorteChange} />
++				<DatePicker mode="range" range={dateRange} onRangeChange={handleRangeChange} showPresets />
++			</div>
++
++			{/* Body — variant owns data and loading/empty states */}
++			<Card className="flex min-h-80 flex-col gap-4 p-6">
++				<VariantComponent />
++			</Card>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/index.tsx b/packages/app/react/src/routes/(app)/reports/index.tsx
+new file mode 100644
+index 000000000..63cb81129
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/index.tsx
+@@ -0,0 +1,40 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { zodValidator } from '@/lib/zod-validator'
++import { z } from 'zod'
++import { chartTypeSchema, ChartTypeEnum } from '@template/client-typescript/typescript'
++import { RouteError } from '@/components/RouteError'
++
++import { ChartSection } from './-components/ChartSection'
++
++// ─── Search schema ─────────────────────────────────────────────────────────────
++// tenancyScope comes from the global store (not URL) — not a bookmarkable filter.
++// frequency is fixed at DAILY for v1.
++
++const reportsSearchSchema = z.object({
++	chartType: chartTypeSchema.optional().default(ChartTypeEnum.income),
++	startDate: z.string().optional().default(() => {
++		const d = new Date()
++		d.setDate(d.getDate() - 30)
++		return d.toISOString().substring(0, 10)
++	}),
++	endDate: z.string().optional().default(() => new Date().toISOString().substring(0, 10)),
++})
++
++export type ReportsSearch = z.infer<typeof reportsSearchSchema>
++
++// ─── Route ────────────────────────────────────────────────────────────────────
++
++export const Route = createFileRoute('/(app)/reports/')({
++	staticData: { breadcrumb: 'Relatórios' },
++	validateSearch: zodValidator(reportsSearchSchema),
++	errorComponent: RouteError,
++	component: RouteComponent,
++})
++
++function RouteComponent() {
++	return (
++		<div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 md:p-8">
++			<ChartSection />
++		</div>
++	)
++}

@@ -1,0 +1,27 @@
+import { injectable } from 'tsyringe-neo'
+import { Handler, DrizzleClient, z } from '@template/core-typescript'
+
+export const ListDashboardOrdersInputSchema = z.object({
+	// Define input (e.g., userId, filters)
+})
+
+export const ListDashboardOrdersOutputSchema = z.object({
+	// Define frontend-shaped output
+})
+
+@injectable()
+export class ListDashboardOrders extends Handler<typeof ListDashboardOrdersInputSchema, typeof ListDashboardOrdersOutputSchema> {
+	readonly name = 'list_dashboard_orders' as const
+	readonly inputSchema = ListDashboardOrdersInputSchema
+	readonly outputSchema = ListDashboardOrdersOutputSchema
+
+	constructor(private db: DrizzleClient) {
+		super()
+	}
+
+	protected async handle(input: this['input']): Promise<this['output']> {
+		// Direct Drizzle access — no repository abstraction
+		// const rows = await this.db.select().from(table).where(eq(table.id, input.id))
+		return {} as this['output']
+	}
+}

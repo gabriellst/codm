@@ -1,0 +1,1 @@
+{"ts":"2026-06-16T09:08:29.441Z","task":"synthetic-l6-clickup","mode":"agent","pass":false,"failedGraders":["build#detect-projection","flows#core-coverage"],"docTreeHash":"1a2dc9de7e8e","model":"opus"}

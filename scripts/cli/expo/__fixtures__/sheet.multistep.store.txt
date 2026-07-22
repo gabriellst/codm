@@ -1,0 +1,18 @@
+import { create } from 'zustand'
+
+interface OnboardingState {
+	step: number
+}
+
+interface OnboardingActions {
+	next: () => void
+	reset: () => void
+}
+
+type OnboardingStore = OnboardingState & OnboardingActions
+
+export const useOnboardingStore = create<OnboardingStore>(set => ({
+	step: 0,
+	next: () => set(s => ({ step: s.step + 1 })),
+	reset: () => set({ step: 0 }),
+}))

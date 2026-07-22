@@ -1,0 +1,450 @@
+registry:
+  type: backend
+  layer: infrastructure
+  depends_on: [entity, db-schema]
+  depended_by: [usecase]
+  context_reads: [entity, db-schema]
+  lang: go
+  examples:
+    - examples/citizens/go/repository/channel_repository.go
+    - examples/citizens/go/repository/pg_channel_repository.go
+    - examples/citizens/go/repository/message_projection_repository.go
+    - examples/citizens/go/repository/pg_message_projection_repository.go
+
+  snippet:
+    skeleton: |
+      // Package {{snake}} provides the {{Pascal}}Repository interface and implementations.
+      package {{snake}}
+
+      import (
+      	"context"
+
+      	"template/api-go/internal/{{ctx}}/entities"
+      )
+
+      // {{Pascal}}Repository defines persistence operations for the {{Pascal}} aggregate.
+      type {{Pascal}}Repository interface {
+      	Find(ctx context.Context, id string) (*entities.{{Pascal}}, error)
+      	Save(ctx context.Context, entity *entities.{{Pascal}}) error
+      	// Add identifier queries as needed, e.g.:
+      	// FindByOwnerID(ctx context.Context, ownerID string) ([]*entities.{{Pascal}}, error)
+      }
+
+    skeletons:
+      pg: |
+        // Package {{snake}} provides the {{Pascal}}Repository interface and implementations.
+        package {{snake}}
+
+        import (
+        	"context"
+        	"database/sql"
+        	"fmt"
+        	"time"
+
+        	"template/api-go/internal/{{ctx}}/entities"
+        	coreentities "template/core-go/entities"
+        	coreobjects "template/core-go/objects"
+        	"template/core-go/repositories"
+        	"template/core-go/services/unitofwork"
+        )
+
+        // Compile-time check: pg{{Pascal}}Repository must implement {{Pascal}}Repository.
+        var _ {{Pascal}}Repository = (*pg{{Pascal}}Repository)(nil)
+
+        type pg{{Pascal}}Repository struct {
+        	db              *sql.DB
+        	domainEventRepo repositories.DomainEventRepository
+        }
+
+        // NewPg{{Pascal}}Repository constructs the Postgres implementation.
+        func NewPg{{Pascal}}Repository(db *sql.DB, domainEventRepo repositories.DomainEventRepository) *pg{{Pascal}}Repository {
+        	return &pg{{Pascal}}Repository{db: db, domainEventRepo: domainEventRepo}
+        }
+
+        func (r *pg{{Pascal}}Repository) txOrDB(ctx context.Context) interface {
+        	ExecContext(context.Context, string, ...any) (sql.Result, error)
+        	QueryRowContext(context.Context, string, ...any) *sql.Row
+        } {
+        	if tx, ok := unitofwork.TxFromContext(ctx); ok {
+        		return tx
+        	}
+        	return r.db
+        }
+
+        // Save inserts or updates a {{Pascal}} row. Calls IncrementVersion (already called in entity
+        // behavior methods) and persists domain events via domainEventRepo.
+        func (r *pg{{Pascal}}Repository) Save(ctx context.Context, entity *entities.{{Pascal}}) error {
+        	_ = entity.IncrementVersion()
+        	db := r.txOrDB(ctx)
+
+        	_, err := db.ExecContext(ctx, `
+        		INSERT INTO {{ctx}}.{{snake}}s
+        		  (id, owner_id, created_at, updated_at, version)
+        		VALUES ($1, $2, $3, $4, $5)
+        		ON CONFLICT (id) DO UPDATE
+        		  SET updated_at = EXCLUDED.updated_at,
+        		      version    = EXCLUDED.version
+        	`,
+        		entity.ID.String(),
+        		// entity.OwnerID,
+        		entity.CreatedAt,
+        		entity.UpdatedAt,
+        		entity.Version,
+        	)
+        	if err != nil {
+        		return fmt.Errorf("{{ctx}}.{{snake}}s save: %w", err)
+        	}
+
+        	if err := r.domainEventRepo.SaveAll(ctx, entity.PullDomainEvents()); err != nil {
+        		return err
+        	}
+
+        	return nil
+        }
+
+        // Find retrieves a {{Pascal}} by its UUID string, returning nil when not found.
+        func (r *pg{{Pascal}}Repository) Find(ctx context.Context, id string) (*entities.{{Pascal}}, error) {
+        	db := r.txOrDB(ctx)
+        	row := db.QueryRowContext(ctx, `
+        		SELECT id, created_at, updated_at, version
+        		FROM {{ctx}}.{{snake}}s WHERE id = $1
+        	`, id)
+        	return r.scanRow(row)
+        }
+
+        func (r *pg{{Pascal}}Repository) scanRow(row *sql.Row) (*entities.{{Pascal}}, error) {
+        	var (
+        		rawID     string
+        		createdAt time.Time
+        		updatedAt time.Time
+        		version   int
+        	)
+        	if err := row.Scan(&rawID, &createdAt, &updatedAt, &version); err != nil {
+        		if err == sql.ErrNoRows {
+        			return nil, nil
+        		}
+        		return nil, fmt.Errorf("{{ctx}}.{{snake}}s scan: %w", err)
+        	}
+
+        	id, err := coreobjects.IDFromString(rawID)
+        	if err != nil {
+        		return nil, err
+        	}
+
+        	base := coreentities.ReconstructBaseEntity(coreentities.ReconstructBaseEntityParams{
+        		ID:        id.UUID(),
+        		CreatedAt: createdAt,
+        		UpdatedAt: updatedAt,
+        		Version:   version,
+        	})
+
+        	return entities.Reconstruct{{Pascal}}(base), nil
+        }
+
+      mock: |
+        package {{snake}}
+
+        import (
+        	"context"
+        	"sync"
+
+        	"template/api-go/internal/{{ctx}}/entities"
+        )
+
+        // Compile-time check: mock{{Pascal}}Repository must implement {{Pascal}}Repository.
+        var _ {{Pascal}}Repository = (*mock{{Pascal}}Repository)(nil)
+
+        // mock{{Pascal}}Repository is an in-memory implementation for use in tests.
+        type mock{{Pascal}}Repository struct {
+        	mu   sync.RWMutex
+        	byID map[string]*entities.{{Pascal}}
+        }
+
+        // NewMock{{Pascal}}Repository constructs an empty mock repository.
+        func NewMock{{Pascal}}Repository() {{Pascal}}Repository {
+        	return &mock{{Pascal}}Repository{
+        		byID: make(map[string]*entities.{{Pascal}}),
+        	}
+        }
+
+        func (r *mock{{Pascal}}Repository) Save(_ context.Context, entity *entities.{{Pascal}}) error {
+        	r.mu.Lock()
+        	defer r.mu.Unlock()
+        	_ = entity.IncrementVersion()
+        	entity.PullDomainEvents() // drain events — parity with Postgres impl
+        	r.byID[entity.ID.String()] = entity
+        	return nil
+        }
+
+        func (r *mock{{Pascal}}Repository) Find(_ context.Context, id string) (*entities.{{Pascal}}, error) {
+        	r.mu.RLock()
+        	defer r.mu.RUnlock()
+        	entity, ok := r.byID[id]
+        	if !ok {
+        		return nil, nil
+        	}
+        	return entity, nil
+        }
+
+        // Reset clears all accumulated state. Test helper.
+        func (r *mock{{Pascal}}Repository) Reset() {
+        	r.mu.Lock()
+        	defer r.mu.Unlock()
+        	r.byID = make(map[string]*entities.{{Pascal}})
+        }
+
+  patterns:
+    # ── Interface ──
+    - id: REPO-GO-01
+      name: "Folder-per-repo layout"
+      when: always
+      rule: |
+        <ctx>/repositories/<snake_name>/
+        ├── <name>_repository.go        # interface
+        ├── pg_<name>_repository.go     # Postgres impl
+        └── mock_<name>_repository.go   # in-memory mock
+
+    - id: REPO-GO-02
+      name: "Not-found returns (nil, nil)"
+      when: always
+      rule: |
+        // Single-row queries: return (nil, nil) on miss — never propagate sql.ErrNoRows
+        if err == sql.ErrNoRows {
+            return nil, nil
+        }
+
+    - id: REPO-GO-03
+      name: "Compile-time interface check"
+      when: always
+      rule: |
+        var _ TranscodingJobRepository = (*pgTranscodingJobRepository)(nil)
+
+    # ── Postgres implementation ──
+    - id: REPO-GO-04
+      name: "txOrDB helper"
+      when: always
+      rule: |
+        func (r *pgFooRepository) txOrDB(ctx context.Context) interface {
+            ExecContext(context.Context, string, ...any) (sql.Result, error)
+            QueryRowContext(context.Context, string, ...any) *sql.Row
+        } {
+            if tx, ok := unitofwork.TxFromContext(ctx); ok {
+                return tx
+            }
+            return r.db
+        }
+
+    - id: REPO-GO-05
+      name: "Save calls IncrementVersion + SaveAll domain events"
+      when: always
+      rule: |
+        func (r *pgFooRepository) Save(ctx context.Context, entity *entities.Foo) error {
+            _ = entity.IncrementVersion()
+            db := r.txOrDB(ctx)
+            // ... INSERT ... ON CONFLICT DO UPDATE ...
+            return r.domainEventRepo.SaveAll(ctx, entity.PullDomainEvents())
+        }
+
+    - id: REPO-GO-06
+      name: "Enum columns cast at scan boundary"
+      when: "entity has enum fields stored as text in the DB"
+      rule: |
+        var rawStatus string
+        // ...scan into rawStatus...
+        status := enums.FooStatus(rawStatus)
+
+    - id: REPO-GO-07
+      name: "Reconstruct via entity package helper, not business constructor"
+      when: always
+      rule: |
+        // Use ReconstructFoo / ReconstructBaseEntity — skips business invariants
+        base := coreentities.ReconstructBaseEntity(coreentities.ReconstructBaseEntityParams{
+            ID:        id.UUID(),
+            CreatedAt: createdAt,
+            UpdatedAt: updatedAt,
+            Version:   version,
+        })
+        return entities.ReconstructFoo(id, field1, base), nil
+
+    # ── Mock ──
+    - id: REPO-GO-08
+      name: "Mock mirrors Save semantics"
+      when: always
+      rule: |
+        func (r *mockFooRepository) Save(_ context.Context, entity *entities.Foo) error {
+            r.mu.Lock()
+            defer r.mu.Unlock()
+            _ = entity.IncrementVersion()
+            entity.PullDomainEvents() // drain events — parity with Postgres impl
+            r.byID[entity.ID.String()] = entity
+            return nil
+        }
+
+    - id: REPO-GO-09
+      name: "Mock constructor returns interface"
+      when: always
+      rule: |
+        // Constructor return type is the INTERFACE, not the concrete struct
+        func NewMockFooRepository() FooRepository {
+            return &mockFooRepository{byID: make(map[string]*entities.Foo)}
+        }
+
+    - id: REPO-GO-10
+      name: "Mock exposes Reset() test helper"
+      when: always
+      rule: |
+        func (r *mockFooRepository) Reset() {
+            r.mu.Lock()
+            defer r.mu.Unlock()
+            r.byID = make(map[string]*entities.Foo)
+        }
+
+    # ── fx wiring ──
+    - id: REPO-GO-11
+      name: "fx.As binds interface in module.go"
+      when: always
+      rule: |
+        fx.Provide(fx.Annotate(
+            transcodingjob.NewPgTranscodingJobRepository,
+            fx.As(new(transcodingjob.TranscodingJobRepository)),
+        )),
+
+  bad_practices:
+    - id: bp-GO-REPO-01
+      name: "Repository returns sql.ErrNoRows instead of (nil, nil)"
+      severity: critical
+      mechanical: false
+      wrong: |
+        func (r *pgFooRepository) Find(ctx context.Context, id string) (*entities.Foo, error) {
+            // ...
+            if err != nil {
+                return nil, err // propagates sql.ErrNoRows — callers must special-case it
+            }
+        }
+      right: |
+        if err == sql.ErrNoRows {
+            return nil, nil
+        }
+        return nil, fmt.Errorf("foo find: %w", err)
+
+    - id: bp-GO-REPO-02
+      name: "Save omits IncrementVersion call"
+      severity: critical
+      mechanical: false
+      wrong: |
+        func (r *pgFooRepository) Save(ctx context.Context, entity *entities.Foo) error {
+            // Missing IncrementVersion — optimistic locking never advances
+            _, err := r.db.ExecContext(ctx, insertSQL, ...)
+            return err
+        }
+      right: |
+        func (r *pgFooRepository) Save(ctx context.Context, entity *entities.Foo) error {
+            _ = entity.IncrementVersion()
+            // ... insert / upsert ...
+        }
+
+    - id: bp-GO-REPO-03
+      name: "Save does not drain domain events"
+      severity: critical
+      mechanical: false
+      wrong: |
+        func (r *pgFooRepository) Save(ctx context.Context, entity *entities.Foo) error {
+            _ = entity.IncrementVersion()
+            _, err := r.db.ExecContext(ctx, insertSQL, ...)
+            return err
+            // domain events are never forwarded to the outbox
+        }
+      right: |
+        return r.domainEventRepo.SaveAll(ctx, entity.PullDomainEvents())
+
+    - id: bp-GO-REPO-04
+      name: "Global db import instead of injected *sql.DB"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'globaldb\.DB\b'
+        - '"template/core-go/db"'
+      wrong: |
+        import globaldb "template/core-go/db"
+        func (r *pgFooRepository) Find(ctx context.Context, id string) (*entities.Foo, error) {
+            row := globaldb.DB.QueryRowContext(ctx, ...)
+        }
+      right: |
+        type pgFooRepository struct { db *sql.DB; domainEventRepo repositories.DomainEventRepository }
+        func NewPgFooRepository(db *sql.DB, ...) *pgFooRepository { return &pgFooRepository{db: db} }
+
+    - id: bp-GO-REPO-05
+      name: "Mock constructor returns concrete struct instead of interface"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'func\s+NewMock\w*Repository\(\)\s*\*mock'
+      wrong: |
+        func NewMockFooRepository() *mockFooRepository { return &mockFooRepository{...} }
+      right: |
+        func NewMockFooRepository() FooRepository { return &mockFooRepository{...} }
+
+    - id: bp-GO-REPO-06
+      name: "Pagination/listing methods on domain repository"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'page,\s*limit\s+int'
+        - '\]\*entities\.\w+,\s*int,\s*error'
+      wrong: |
+        // Domain repository leaks UI concerns
+        type FooRepository interface {
+            ListByOwner(ctx context.Context, ownerID string, page, limit int) ([]*entities.Foo, int, error)
+        }
+      right: |
+        // Domain repo: only write-side lookups
+        type FooRepository interface {
+            Find(ctx context.Context, id string) (*entities.Foo, error)
+            FindByOwnerID(ctx context.Context, ownerID string) ([]*entities.Foo, error) // only if a use case needs it
+            Save(ctx context.Context, entity *entities.Foo) error
+        }
+        // Listings for the UI → projection repository or query use case (direct SQL, returns DTOs)
+
+    - id: bp-GO-REPO-07
+      name: "Business logic inside repository"
+      severity: critical
+      mechanical: false
+      wrong: |
+        func (r *pgFooRepository) Deactivate(ctx context.Context, id string) error {
+            _, err := r.db.ExecContext(ctx, "UPDATE foos SET status='INACTIVE' WHERE id=$1", id)
+            return err
+        }
+      right: |
+        // Entity encapsulates the state change
+        // entity.Deactivate()           ← in use case
+        // repo.Save(ctx, entity)        ← in use case
+
+    - id: bp-GO-REPO-08
+      name: "Missing txOrDB — bypasses UnitOfWork transaction"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'r\.db\.(QueryRowContext|ExecContext|QueryContext)'
+      wrong: |
+        func (r *pgFooRepository) Find(ctx context.Context, id string) (*entities.Foo, error) {
+            row := r.db.QueryRowContext(ctx, ...) // always uses r.db, ignores active tx
+        }
+      right: |
+        func (r *pgFooRepository) Find(ctx context.Context, id string) (*entities.Foo, error) {
+            row := r.txOrDB(ctx).QueryRowContext(ctx, ...)
+        }
+
+    - id: bp-GO-REPO-09
+      name: "fx.Provide without fx.As — consumers depend on concrete struct"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'fx\.Provide\(\s*\w+\.NewPg\w*Repository\s*\)'
+      wrong: |
+        fx.Provide(transcodingjob.NewPgTranscodingJobRepository),
+        // → consumers must request *pgTranscodingJobRepository (unexported), impossible cross-package
+      right: |
+        fx.Provide(fx.Annotate(
+            transcodingjob.NewPgTranscodingJobRepository,
+            fx.As(new(transcodingjob.TranscodingJobRepository)),
+        )),

@@ -1,0 +1,84 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# api-typescript image — the TS backend (auth, reads, projections, BFF).
+#
+# Self-contained: the server bundles from packages/api/typescript and its
+# workspace deps (@template/contracts, @template/contracts-typescript,
+# @template/core-typescript, and the committed SDK @template/client-typescript
+# which src/shared/registry.ts imports). No Go / OpenAPI codegen is needed —
+# contracts bindings and the client SDK are committed generated output.
+#
+# The Go worker (packages/api/go) ships its own image; it is NOT built here.
+# =============================================================================
+
+# --- Stage 1: Build the API bundle with Bun ---
+FROM oven/bun:latest AS builder
+
+WORKDIR /app
+
+# Build args — a live DATABASE_URL lets the build apply pending migrations
+# (Railway-style deploy). Absent, the migration step is skipped.
+ARG DATABASE_URL
+ARG DATABASE_PUBLIC_URL
+ENV DATABASE_URL=$DATABASE_URL
+ENV DATABASE_PUBLIC_URL=$DATABASE_PUBLIC_URL
+
+COPY package.json bun.lock tsconfig.json tsconfig.base.json ./
+
+# Full source for the backend and everything it imports at build time.
+#   packages/contracts            → @template/contracts + generated @template/contracts-typescript
+#   packages/api/typescript       → @template/api-typescript + nested @template/core-typescript
+#   packages/client/dist/typescript → committed SDK @template/client-typescript (ky is its only runtime dep)
+COPY ./packages/contracts ./packages/contracts
+COPY ./packages/api/typescript ./packages/api/typescript
+COPY ./packages/client/dist/typescript ./packages/client/dist/typescript
+
+# Manifest-only stubs for the remaining workspaces so `bun install` can resolve
+# the full workspace graph (source lives in their own images / is unused here).
+COPY ./packages/client/package.json ./packages/client/package.json
+COPY ./packages/app/react/package.json ./packages/app/react/package.json
+COPY ./packages/app/astro/package.json ./packages/app/astro/package.json
+COPY ./packages/app/expo/package.json ./packages/app/expo/package.json
+COPY ./packages/app/styles/package.json ./packages/app/styles/package.json
+COPY ./packages/e2e/package.json ./packages/e2e/package.json
+
+RUN bun install
+
+# Apply Drizzle migrations (contracts owns the schema + migrations). Best-effort:
+# a build without DB access still produces a runnable image.
+RUN if [ -n "$DATABASE_PUBLIC_URL" ]; then \
+      echo "Running Drizzle migrations with public URL…"; \
+      DATABASE_URL="$DATABASE_PUBLIC_URL" bun --cwd packages/contracts run drizzle:migrate || echo "Warning: migrations failed or skipped"; \
+    elif [ -n "$DATABASE_URL" ]; then \
+      echo "Running Drizzle migrations…"; \
+      bun --cwd packages/contracts run drizzle:migrate || echo "Warning: migrations failed or skipped"; \
+    else \
+      echo "No database URL provided, skipping migrations"; \
+    fi
+
+ENV NODE_ENV=production
+
+# Bundle the API to a single Node-runnable file (packages/api/typescript/dist/server.js).
+RUN bun --cwd packages/api/typescript run build
+
+# --- Stage 2: Run on Node ---
+FROM gcr.io/distroless/nodejs22-debian12 AS runner
+
+WORKDIR /app
+
+# The bundle keeps native/runtime deps (pg, OpenTelemetry, BullMQ) external, so
+# the installed node_modules travels with it for runtime resolution.
+COPY --from=builder /app/packages/api/typescript/dist/server.js ./server.js
+COPY --from=builder /app/node_modules ./node_modules
+
+ENV NODE_ENV=production
+
+# The server binds Config.env.API_PORT (see packages/api/typescript/src/index.ts).
+ARG API_PORT=3030
+ENV API_PORT=$API_PORT
+
+USER 1000:1000
+
+EXPOSE ${API_PORT}
+
+CMD ["./server.js"]

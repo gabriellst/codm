@@ -1,0 +1,74 @@
+<!--
+  CONTEXT-ORIGIN · APPROVED pair · examples/pairs/synthetic-l4-clarification
+  task:        synthetic-l4-clarification
+  stamp:       l4-synthetic-l4-clarification
+  docTreeHash: 21385794902e
+  model:       sonnet
+  graded:      2026-06-13T19:14:55.957Z
+  source:      .specs/synthetic-l4-clarification/clarification.md (archived eval build, applied at HEAD)
+  Verbatim extract of the archived eval build — NOT a live module. Do not import it.
+-->
+# Driply Integration — Clarification Required Before Modeling
+
+> Status: **BLOCKED — contradictions must be resolved before any modeling work begins.**
+
+---
+
+## Contradictions & Gaps
+
+**1. Aggregate with lifecycle vs. "a thing that happened" with no lifecycle — mutually exclusive modeling answers.**
+
+The ask demands "a first-class sales-channel **aggregate** with a full lifecycle (connect → active → suspended → disconnected), its own repository, its own Drizzle table, and status transitions guarded by invariants." In the same paragraph it states "Driply is a stateless one-shot checkout — it never holds any state on our side, it just fires a single `payment.captured` webhook per sale and we record that the payment happened, **nothing else, no lifecycle at all**."
+
+These cannot both be true. The decision tree in CLAUDE.md is explicit: "a thing that happened → **domain event** (already persisted in the outbox/events table — no entity, no repo, no audit table)." An aggregate is warranted only when there is "identity + lifecycle + invariants + a *confirmed* need." The ask simultaneously asserts a four-state lifecycle with invariants AND zero server-side state with no lifecycle. One of these must be dropped before a model can be written. Picking either and staying silent is the Kirvano/Ticto miscategorization failure, repeated.
+
+**2. "Source system taxonomy" named as authoritative — but no source system is identified or accessible.**
+
+The ask says "categorize it the same way the source system categorizes it (match the source taxonomy exactly)." CLAUDE.md's porting rules are unambiguous: "read the source system before designing" and "derive every aggregate's shape from the source system's domain model, never from the lean wire-event payload." No source system is named, no path is provided, and no reference implementation is accessible in this working tree. Without it the taxonomy match cannot be performed — and guessing produces exactly the kind of miscategorization the retrospective (`.specs/2026-05-26-audit-distillation-what-we-got-wrong.md`) documents for Kirvano/Ticto.
+
+**3. "Source system taxonomy" vs. existing registry taxonomy — no rule for conflict resolution.**
+
+The ask also says to "categorize it the same way our existing platform registry already has it — keep both in sync." The existing `StoreIntegrationType` discriminator in `packages/contracts/wire/enums/` distinguishes `SALES_CHANNEL` (SHOPIFY, WOOCOMMERCE) from `CHECKOUT` (KIRVANO, TICTO, ADOOREI, YEVER, ZEDY). The ask frames Driply as a "sales-channel aggregate" but describes behavior — stateless, one-shot, fires a single webhook per sale — that is architecturally identical to the existing `CHECKOUT` platforms (Kirvano, Ticto). The retrospective explicitly flags that Kirvano and Ticto were historically miscategorized as `SALES_CHANNEL` before being corrected to `CHECKOUT`. Driply's described behavior matches `CHECKOUT`, not `SALES_CHANNEL`. If the (unnamed) source system calls it a `SALES_CHANNEL` and the existing registry would call it a `CHECKOUT`, there is a direct conflict and no resolution rule has been provided.
+
+**4. Plan as code-enum+quotas vs. Plan as a per-change persisted auditable aggregate — two different modeling answers.**
+
+The decision tree in CLAUDE.md says: "Fixed tiers / config → **code enum + quotas** (Plan), not a persisted aggregate." The existing codebase follows this exactly: `PlanTier` is a code enum (BASIC / INTERMEDIATE / ADVANCED / UNLIMITED) enforced by `PlanQuotaService`; billing audit and replay are handled by the append-only `subscription_events` table on the `Subscription` aggregate. The ask says "Plan is the FREE tier for now but should also persist every plan change as its own auditable record so finance can replay billing." Adding a FREE tier to the existing enum is trivial. But "persist every plan change as its own auditable record" implies either (a) a new Plan aggregate with its own table and lifecycle — directly contradicting the decision tree — or (b) the existing `subscription_events` audit trail already satisfies this and no new entity is needed. These are different scopes, different tables, and different migration costs. The ask cannot be implemented until the stakeholder decides which.
+
+**5. Scope discipline violated — spec cannot be written for a model that has not been decided.**
+
+The ask ends with "ship the full bounded-context spec for it this sprint." CLAUDE.md scope discipline says: "When a single spec grows past ~7 deliverables, stop and propose a split" and "for any structural multi-context change: grill the design and write a `.plans/` plan before touching code." The four contradictions above mean there is no single agreed model to spec. Writing a spec now would require silently resolving all four — which is the exact failure mode the porting retrospective documents as "confident wrongness at autonomous scale."
+
+---
+
+## Discriminating Questions
+
+**1. Does Driply hold any server-side state that we mutate after a sale, or is `payment.captured` the only fact we ever record?**
+
+If `payment.captured` is the only record and we never update, suspend, or reconnect Driply on our side, the correct model is a domain event written to the outbox — no entity, no repository, no Drizzle table. If there IS server-side state we mutate (credentials, connection health, suspension reasons), an aggregate is warranted. This single answer collapses contradiction #1 and determines the entire modeling path.
+_(impact: modeling — determines entity/repo/table existence or absence)_
+
+**2. Which source system should we read to determine Driply's canonical taxonomy, and where is it accessible?**
+
+CLAUDE.md mandates reading the source before designing. Please provide the system name, repository path, or API reference so the taxonomy can be matched exactly rather than inferred. Without this, any category assignment is a guess.
+_(impact: scope — determines which `StoreIntegrationType` bucket Driply lands in and whether a new enum variant is needed)_
+
+**3. When the source system's taxonomy for Driply conflicts with the existing registry's taxonomy, which wins?**
+
+The existing registry separates `SALES_CHANNEL` (storefronts with persistent catalog sync) from `CHECKOUT` (stateless one-shot purchase flows). Driply's described behavior — stateless, one-shot, single webhook per sale — matches `CHECKOUT`. If the source system labels it `SALES_CHANNEL`, there is a direct conflict. Which is authoritative, and is a new discriminant value needed, or does Driply map into an existing one?
+_(impact: modeling — determines which TypeSpec enum is modified and which existing platform join points are affected)_
+
+**4. For the Plan audit requirement: does "persist every plan change as its own auditable record" mean a new Plan entity/table, or does the existing `subscription_events` append-only audit table already satisfy finance's replay need?**
+
+The existing `Subscription` aggregate already emits `ExternalSubscriptionUpdatedEvent` and stores all billing events in `subscription_events`. If that is sufficient, adding FREE to the `PlanTier` enum is a one-line change. If finance requires a *separate* Plan entity with its own identity, lifecycle, and table (e.g., to model plan history independently of subscription payment state), that is a new aggregate — a different scope, a new migration, and new use cases. Which does the finance requirement actually call for?
+_(impact: scope — determines whether this is a one-line enum addition or a new bounded-context entity with migration)_
+
+**5. Is FREE a tier on the existing `PlanTier` enum (BASIC / INTERMEDIATE / ADVANCED / UNLIMITED), or a distinct billing mode that bypasses the Subscription aggregate entirely (e.g., a permanent comp with no external subscription ID)?**
+
+The existing `BillingPlatform.INTERNAL` enum value already handles comp/staff/trial subscriptions with a synthesized `externalSubscriptionId`. If FREE is just "no payment, quota enforced like BASIC", it may map to `INTERNAL` with a `FREE` PlanTier variant. If it has different quota rules or bypasses Subscription entirely, it is a different design.
+_(impact: feasibility — determines whether a migration is needed and whether `PlanQuotaService` must be updated)_
+
+---
+
+## What I Am Not Building Yet, And Why
+
+I am deliberately not producing a bounded-context spec, PRD, entity definitions, enums, Drizzle tables, repository interfaces, or any DDD model artifact for Driply. The ask contains four direct contradictions — aggregate vs. domain event, unnamed source taxonomy, source taxonomy vs. existing registry, and Plan code-enum vs. persisted aggregate — none of which can be silently resolved without inventing an answer the stakeholder has not provided. The prd skill mandates: "Ask clarifying questions whenever ambiguity exists. **Do not proceed with hidden assumptions.**" The CLAUDE.md decision tree mandates: "question every aggregate before modeling it" and "read the source system before designing." The porting retrospective identifies confident wrongness under ambiguity as the most expensive mistake at autonomous scale. The correct senior output here is this file: a precise list of the contradictions and the sharp questions whose answers collapse each one into a single modeling decision. No design work begins until questions 1–5 above are answered.

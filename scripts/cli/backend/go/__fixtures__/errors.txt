@@ -1,0 +1,24 @@
+// Package errors defines error codes for the sales bounded context.
+package errors
+
+import (
+	"net/http"
+
+	"template/core-go/errors"
+)
+
+const (
+	// Domain errors — business rule violations raised by entities.
+	// CodeSalesInvalid errors.ErrorCode = "SALES_INVALID"
+
+	// Application errors — raised by use cases when preconditions fail.
+	// CodeSalesNotFound errors.ErrorCode = "SALES_NOT_FOUND"
+)
+
+func init() {
+	errors.RegisterErrorCodes(map[errors.ErrorCode]int{
+		// CodeSalesInvalid:   http.StatusBadRequest,
+		// CodeSalesNotFound:  http.StatusNotFound,
+	})
+	_ = http.StatusOK // prevent unused import if all entries are commented out
+}

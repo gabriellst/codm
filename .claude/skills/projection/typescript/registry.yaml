@@ -1,0 +1,514 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: [event, errors]
+  depended_by: [projector, query]
+  context_reads: [event, schema, ddd-modeling]
+
+  patterns:
+    - id: PRJ-01
+      name: "Schema declaration"
+      when: always
+      rule: "const <Name>ProjectionSchema = z.object({...}) — flat, no .transform(), no nested VO wrapping"
+      wrong: "schema inline in class, no schema (handwritten Props), or schema with .transform() returning value objects"
+
+    - id: PRJ-02
+      name: "Props type inference (exported)"
+      when: always
+      rule: "export type <Name>ProjectionProps = z.infer<typeof <Name>ProjectionSchema>"
+      wrong: "non-exported type, hand-written interface, missing entirely"
+
+    - id: PRJ-03
+      name: "Free record class — NO base class"
+      when: always
+      rule: "class <Name>Projection { constructor(public props: <Name>ProjectionProps) {} } — plain class, no extends"
+      wrong: "extends BaseEntity / extends AggregateRoot / extends Projection (marker base) — projections are free records"
+
+    - id: PRJ-04
+      name: "Event union exported"
+      when: always
+      rule: "export type <Name>ProjectionEvent = EventA | EventB | … — single source of truth used by the Projector's generic"
+      wrong: "union duplicated in the Projector file, or not exported"
+
+    - id: PRJ-05
+      name: "Method-overloaded static create per creating event"
+      when: "the projection has events that semantically create new rows"
+      rule: |
+        static create(event: MessageReceivedEvent): MessageProjection
+        static create(event: MessageSentEvent): MessageProjection
+        static create(event: CreatingEvent): MessageProjection {
+          switch (event.name) {
+            case 'channel.message_received': return new MessageProjection({...})
+            case 'channel.message_sent':     return new MessageProjection({...})
+          }
+        }
+      wrong: |
+        // N separate fromXxx methods:
+        static fromMessageReceived(event: MessageReceivedEvent) { … }
+        static fromMessageSent(event: MessageSentEvent) { … }
+        // Or a free function in the projector file:
+        function buildMessageFromReceived(event) { … }
+
+    - id: PRJ-06
+      name: "Method-overloaded applyEvent per mutating event — switch(event.name) ALWAYS, even for ONE event"
+      when: "the projection has Path-A mutation events (find → applyEvent → save)"
+      rule: |
+        applyEvent(event: MessageEditedEvent): void
+        applyEvent(event: MessageDeletedEvent): void
+        applyEvent(event: MutatingEvent): void {
+          switch (event.name) {
+            case 'channel.message_edited':  this.props.content = event.payload.content; this.props.editedAt = event.payload.editedAt; return
+            case 'channel.message_deleted': this.props.deletedAt = event.payload.at; return
+            default: { const _: never = event; return _ }
+          }
+        }
+        The `switch (event.name)` + `default: never` is MANDATORY — NOT "only when there are 2+ events".
+        A projection with a SINGLE mutating event uses the EXACT same shape (one overload signature, one
+        switch with one case + the never-default). The #1 measured projection lapse is writing the
+        one-event case as a bare assignment — `applyEvent(event: TaskStatusChangedEvent): void {
+        this.props.status = event.payload.toStatus }` — which has NO switch and FAILS detector PS-04.
+        Write the switch from the first event: it's the canonical dispatch, gives exhaustiveness, and
+        means adding the 2nd event is a new `case`, not a restructure.
+      wrong: |
+        // bare single-event assignment — NO switch(event.name) (FAILS PS-04, the #1 projection lapse):
+        applyEvent(event: TaskStatusChangedEvent): void { this.props.status = event.payload.toStatus }
+        // or applyEvent(event: AllEventsIncludingAtomic) — includes atomic-op events that have no apply branch
+
+    - id: PRJ-07
+      name: "Constructor takes full props directly"
+      when: always
+      rule: "constructor(public props: <Name>ProjectionProps) {} — no defaults, no overrides param. Callers supply full props or use static create(event)"
+      wrong: "constructor(overrides: Partial<Props> = {}) — defaults belong nowhere; if you need an empty projection it's a smell"
+
+    - id: PRJ-08
+      name: "No invariants, no validation, no domain events"
+      when: always
+      rule: "Methods only mutate this.props. No throw, no addDomainEvent, no business rules"
+      wrong: "applyEvent that validates state transitions, throws errors, or pulls domain events — those belong on the aggregate"
+
+    - id: PRJ-09
+      name: "No @injectable() on the projection class"
+      when: always
+      rule: "Plain class with no DI decorator. The projection is constructed by static create or by the repository"
+      wrong: "@injectable() export class MessageProjection"
+
+    - id: PRJ-10
+      name: "Atomic events have no projection method"
+      when: "the projection has events handled via atomic ops on the repository (hot row, bulk, monotonic, conditional, cache-mirror)"
+      rule: "No apply branch, no create overload — the atomic op on the ProjectionRepository is the verb"
+      wrong: "applyEvent containing a case for an event the projector handles via a repo atomic op — adds dead code"
+
+    - id: PRJ-11
+      name: "Paired ProjectionRepository with canonical methods"
+      when: always
+      rule: "Sibling <Name>ProjectionRepository.ts declares at minimum findByKey + save + insertIfNew. Atomic ops only when one of the canonical-flow triggers fails"
+      wrong: "projection without a repository; or repository with only atomic ops and no findByKey/save (forces every event into Path B)"
+
+    - id: PRJ-12
+      name: "Folder placement"
+      when: always
+      rule: |
+        Own-context projection: packages/api/typescript/src/<ctx>/projections/<Name>.ts
+        Cross-context (BFF) projection: packages/api/typescript/src/ui/projections/<Name>.ts
+        Repository sibling in same folder. Projector in projections/projectors/ subfolder.
+      wrong: "projection in entities/ (it's not an aggregate); cross-context projection inside a domain context (must be in ui)"
+
+    - id: PRJ-13
+      name: "Cross-context projections live in ui (BFF)"
+      when: "the projection's read shape depends on events from multiple bounded contexts"
+      rule: "Lives in packages/api/typescript/src/ui/projections/. Its projector subscribes to events from any context (via InternalMediator or external integration events)"
+      wrong: "a domain context projector listening to events from another domain context — that coupling belongs in the BFF"
+
+  bad_practices:
+    - id: bp-prj-01
+      name: "Treating projection as an aggregate"
+      severity: critical
+      wrong: |
+        export class MessageProjection extends AggregateRoot<...> {
+          static create(input) {
+            if (!isValid(input)) throw new BaseError('INVALID')
+            // raises domain event
+          }
+        }
+      right: |
+        export class MessageProjection {
+          constructor(public props: MessageProjectionProps) {}
+          // No validation, no events raised.
+        }
+      reason: "Projections never validate or raise events. Invariants and domain events belong on the aggregate."
+      mechanical: true
+      detect:
+        - 'class\s+\w+Projection\s+extends\s+AggregateRoot'
+        - 'throw\s+new\s+BaseError'
+
+    - id: bp-prj-02
+      name: "Extending BaseEntity / AggregateRoot / any marker base"
+      severity: critical
+      wrong: |
+        export class MessageProjection extends BaseEntity<MessageProjectionProps> { … }
+      right: |
+        export class MessageProjection {
+          constructor(public props: MessageProjectionProps) {}
+        }
+      reason: "Projections are free records. BaseEntity is designed for aggregates (identity, equality, raises events). Reusing it for read models drags write-side baggage."
+      mechanical: true
+      detect:
+        - 'class\s+\w+Projection\s+extends\b'
+
+    - id: bp-prj-03
+      name: "Generic create() with defaults"
+      severity: moderate
+      wrong: |
+        static create(overrides: Partial<MessageProjectionProps> = {}): MessageProjection {
+          return new MessageProjection({ /* defaults */, ...overrides })
+        }
+      right: |
+        static create(event: MessageReceivedEvent): MessageProjection
+        static create(event: MessageSentEvent): MessageProjection
+        static create(event: CreatingEvent): MessageProjection {
+          switch (event.name) { case '…': return new MessageProjection({...}) }
+        }
+      reason: "Creation is semantical. Only specific events can build a projection. No defaults, no Partial-override factory."
+      mechanical: true
+      detect:
+        - 'static\s+create\s*\(\s*\w+\s*:\s*Partial<'
+
+    - id: bp-prj-04
+      name: "N separate fromXxxEvent methods"
+      severity: moderate
+      wrong: |
+        static fromMessageReceived(event: MessageReceivedEvent) { return new MessageProjection({...}) }
+        static fromMessageSent(event: MessageSentEvent)         { return new MessageProjection({...}) }
+        // N methods, each constructing nearly-identical objects.
+      right: |
+        // One method, overloaded signatures, one switch.
+        static create(event: MessageReceivedEvent): MessageProjection
+        static create(event: MessageSentEvent): MessageProjection
+        static create(event: CreatingEvent): MessageProjection { switch (event.name) { … } }
+      reason: "TS method overloading collapses N near-identical methods into one entry point with per-call narrowing."
+      mechanical: true
+      detect:
+        - 'static\s+from[A-Z]\w*\s*\('
+
+    - id: bp-prj-05
+      name: "applyEvent covering events handled via repo atomic ops"
+      severity: moderate
+      wrong: |
+        applyEvent(event: AllEventsIncludingAtomic): void {
+          switch (event.name) {
+            case 'channel.message_delivered':
+              this.props.deliveredAt = event.payload.at  // dead code — projector calls repo.markDeliveredMany
+              return
+          }
+        }
+      right: |
+        // applyEvent only contains Path-A branches.
+        // Atomic events have no projection method — the repo's atomic op is the verb.
+      reason: "Atomic events bypass the projection. Including them in applyEvent creates a code path that never runs."
+      mechanical: false
+
+    - id: bp-prj-06
+      name: "Skipping the projection in favor of denormalizing into the aggregate table"
+      severity: critical
+      wrong: |
+        // Adding unread_count, last_message_at, last_message_preview directly
+        // to the aggregate table to avoid a separate projection.
+      right: |
+        // Aggregate carries only fields business rules read.
+        // Read-side counters/joins/derived columns live on a projection.
+      reason: "Aggregate ↔ projection split is the load-bearing rule. Polluting the aggregate with read-only columns recomputes on every transition and forces tests to seed irrelevant state."
+      mechanical: false
+
+    - id: bp-prj-07
+      name: "Cross-context projector in a domain context"
+      severity: critical
+      wrong: |
+        // packages/api/typescript/src/channel/projections/projectors/ChannelSidebarProjector.ts
+        // subscribes to events from 'patient' and 'appointment' contexts.
+      right: |
+        // packages/api/typescript/src/ui/projections/projectors/ChannelSidebarProjector.ts
+        // Cross-context projections live in the BFF (ui).
+      reason: "Domain contexts must not couple to other domain contexts' events. The ui context is the architectural place where cross-context composition is allowed."
+      mechanical: false
+
+    - id: bp-prj-08
+      name: "Repository missing canonical methods"
+      severity: critical
+      wrong: |
+        // Repository only has atomic ops:
+        abstract incrementUnreadCount(...)
+        abstract markDeliveredMany(...)
+        // No findByKey, no save, no insertIfNew.
+      right: |
+        // Three canonical methods are mandatory:
+        abstract findByPlatformId(...)
+        abstract save(...)
+        abstract insertIfNew(...)
+        // Atomic ops only when justified by a trigger.
+      reason: "The canonical find → applyEvent → save flow needs these three methods. Atomic ops are edge cases, not the API."
+      mechanical: false
+
+    - id: bp-prj-09
+      name: "Schema field not mirrored to Drizzle column"
+      severity: critical
+      wrong: |
+        // Zod schema has lastMessageAt: z.date().nullable()
+        // Drizzle table missing the column — repo returns row that fails parse.
+      right: |
+        // Schema and Drizzle column definitions match field-for-field.
+        // Add column via /migrate when adding a field to the schema.
+      reason: "Projection schema and Drizzle table are two faces of the same shape. Drift = runtime errors at every read."
+      mechanical: false
+
+    - id: bp-prj-10
+      name: "Atomic op without justification"
+      severity: moderate
+      wrong: |
+        // Adding markDelivered(messageId, at) for a single message
+        // when find → applyEvent → save would work fine.
+      right: |
+        // Canonical flow handles single-message updates.
+        // Atomic ops only when one of the triggers applies (hot row, bulk over N, monotonic, conditional, cache-mirror).
+      reason: "The atomic vocabulary is an optimisation toolbox. Adding methods without a real trigger fragments the API and tempts future readers to skip the canonical flow."
+      mechanical: false
+
+    - id: bp-prj-11
+      name: "Single-event applyEvent written as a bare assignment (no switch(event.name))"
+      severity: high
+      wrong: |
+        // Projection mutated by ONE event → the switch feels redundant, so it's dropped:
+        applyEvent(event: TaskStatusChangedEvent): void {
+          this.props.status = event.payload.toStatus
+        }
+      right: |
+        // Same shape as the multi-event form — switch(event.name) + default:never, from the FIRST event:
+        applyEvent(event: TaskStatusChangedEvent): void {
+          switch (event.name) {
+            case 'task.status_changed': this.props.status = event.payload.toStatus; return
+            default: { const _: never = event; return _ }
+          }
+        }
+      reason: "Detector PS-04 requires switch(event.name) on EVERY applyEvent, including one-event projections — it's the canonical dispatch + exhaustiveness, and adding the 2nd event becomes a new case instead of a restructure. Measured: the #1 recurring projection lapse — one projection gets the switch, its sibling single-event one doesn't (clean-clickup detect-projection, k=2)."
+      mechanical: true
+      detect:
+        - 'applyEvent\([^)]*\):\s*void\s*\{\s*this\.props'
+
+  snippet:
+    skeleton: |
+      import { z } from '@template/core-typescript'
+      // import type { TODOEvent } from '@{{contextName}}/events'
+
+      export const {{Name}}ProjectionSchema = z.object({
+      	// Flat schema — no .transform(), no nested VO wrapping.
+      	// channelId: z.string(),
+      	// remoteId: z.string(),
+      	// createdAt: z.date(),
+      })
+
+      export type {{Name}}ProjectionProps = z.infer<typeof {{Name}}ProjectionSchema>
+
+      /** Source of truth: every event that affects this projection. */
+      export type {{Name}}ProjectionEvent =
+      	// | TODOEventA
+      	// | TODOEventB
+      	never
+
+      /**
+       * Free record projection — no base class, no invariants.
+       * Constructor takes the full props. Overloaded `create` builds from a creating event.
+       * Overloaded `applyEvent` mutates state from a mutating event.
+       */
+      export class {{Name}}Projection {
+      	constructor(public props: {{Name}}ProjectionProps) {}
+
+      	// ── Creation: typed overloads, one signature per creating event ──────
+      	// Add a signature per event that semantically creates the row.
+      	//
+      	// static create(event: TODOCreatingEvent): {{Name}}Projection
+      	// static create(event: TODOCreatingEvent | TODOAnotherCreatingEvent): {{Name}}Projection {
+      	//   switch (event.name) {
+      	//     case '<context>.<creating_event>':
+      	//       return new {{Name}}Projection({
+      	//         // direct from event payload
+      	//       })
+      	//   }
+      	// }
+
+      	// ── Mutation: typed overloads, one signature per Path-A event ────────
+      	// Add a signature per event that mutates an existing row via find → applyEvent → save.
+      	// Atomic-bulk events do NOT appear here — they go directly to the repository.
+      	//
+      	// applyEvent(event: TODOMutatingEvent): void
+      	// applyEvent(event: TODOMutatingEvent): void {
+      	//   switch (event.name) {
+      	//     case '<context>.<mutating_event>':
+      	//       this.props.someField = event.payload.someField
+      	//       return
+      	//   }
+      	// }
+      }
+    skeletons:
+      repository: |
+        import { injectable } from 'tsyringe-neo'
+        import { eq } from 'drizzle-orm'
+        import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+        import type { Transaction } from '@template/core-typescript'
+        // import { {{camelName}}Projection } from '@template/contracts/db'
+        import { {{Name}}Projection, type {{Name}}ProjectionProps } from './{{Name}}'
+
+        /**
+         * Read + projection-write surface for {{Name}}Projection.
+         *
+         * Canonical (mandatory) methods:
+         *   - findByKey: read half of `find → applyEvent → save`
+         *   - save:      write half (upsert by natural key)
+         *   - insertIfNew: replay-safe creation (ON CONFLICT DO NOTHING)
+         *
+         * Atomic ops are EDGE CASES — add one only when a canonical-flow trigger fails:
+         *   • hot-row contention (concurrent writes to the same row)
+         *   • bulk operation (one event mutates N rows)
+         *   • monotonic constraint (only-if-greater)
+         *   • conditional update (requires SQL atomicity)
+         *   • cache-mirror bulk upsert (archetype A / B1)
+         *
+         * Each atomic method should carry a comment naming the trigger that justifies it.
+         */
+        export abstract class {{Name}}ProjectionRepository {
+        	// ── Canonical (always required) ──────────────────────────────────────
+        	abstract findByKey(/* key: TODOKey */ key: unknown, tx?: Transaction): Promise<{{Name}}Projection | null>
+        	abstract save(projection: {{Name}}Projection, tx?: Transaction): Promise<void>
+        	abstract insertIfNew(projection: {{Name}}Projection, tx?: Transaction): Promise<boolean>
+
+        	// ── Atomic ops (edge cases — justify each one in a comment) ──────────
+        	// abstract markXyzMany(ids: string[], at: Date, tx?: Transaction): Promise<void>
+        }
+
+        @injectable()
+        export class Drizzle{{Name}}ProjectionRepository extends {{Name}}ProjectionRepository {
+        	constructor(private db: DrizzleClient) {
+        		super()
+        	}
+
+        	async findByKey(key: unknown, tx?: DrizzleClient): Promise<{{Name}}Projection | null> {
+        		const dbClient = tx ?? this.db
+        		const result = await tryCatchAsync(async () => {
+        			// const rows = await dbClient.select().from({{camelName}}Projection).where(eq({{camelName}}Projection.id, key as string)).limit(1)
+        			// return rows[0]
+        			return undefined
+        		})
+        		if (!result.success || !result.data) return null
+        		return this.toDomain(result.data)
+        	}
+
+        	async save(projection: {{Name}}Projection, tx?: DrizzleClient): Promise<void> {
+        		const dbClient = tx ?? this.db
+        		const row = this.toPersistence(projection)
+        		// await dbClient.insert({{camelName}}Projection).values(row).onConflictDoUpdate({
+        		//   target: [{{camelName}}Projection.id],
+        		//   set: { ...row, id: undefined },
+        		// })
+        	}
+
+        	async insertIfNew(projection: {{Name}}Projection, tx?: DrizzleClient): Promise<boolean> {
+        		const dbClient = tx ?? this.db
+        		const row = this.toPersistence(projection)
+        		// const result = await dbClient.insert({{camelName}}Projection).values(row).onConflictDoNothing().returning()
+        		// return result.length > 0
+        		return false
+        	}
+
+        	private toDomain(row: unknown): {{Name}}Projection {
+        		return new {{Name}}Projection(row as {{Name}}ProjectionProps)
+        	}
+
+        	private toPersistence(projection: {{Name}}Projection): unknown {
+        		return projection.props
+        	}
+        }
+
+        @injectable()
+        export class Mock{{Name}}ProjectionRepository extends {{Name}}ProjectionRepository {
+        	private rows = new Map<string, {{Name}}ProjectionProps>()
+
+        	async findByKey(key: unknown, _tx?: Transaction): Promise<{{Name}}Projection | null> {
+        		const row = this.rows.get(String(key))
+        		return row ? new {{Name}}Projection(row) : null
+        	}
+
+        	async save(projection: {{Name}}Projection, _tx?: Transaction): Promise<void> {
+        		// this.rows.set(projection.props.id, projection.props)
+        	}
+
+        	async insertIfNew(projection: {{Name}}Projection, _tx?: Transaction): Promise<boolean> {
+        		// const key = projection.props.id
+        		// if (this.rows.has(key)) return false
+        		// this.rows.set(key, projection.props)
+        		return true
+        	}
+        }
+    exemplar: |
+      // packages/api/typescript/src/channel/projections/Message.ts
+      import { z } from '@template/core-typescript'
+      import { Direction } from '@channel/enums'
+      import type { MessageReceivedEvent, MessageSentEvent, MessageEditedEvent, MessageDeletedEvent } from '@channel/events'
+
+      export const MessageProjectionSchema = z.object({
+        channelId: z.string(),
+        remoteId: z.string(),
+        platformMessageId: z.string(),
+        direction: z.enum(Direction),
+        occurredAt: z.date(),
+        editedAt: z.date().nullable(),
+        deletedAt: z.date().nullable(),
+      })
+
+      export type MessageProjectionProps = z.infer<typeof MessageProjectionSchema>
+      export type MessageProjectionEvent =
+        | MessageReceivedEvent
+        | MessageSentEvent
+        | MessageEditedEvent
+        | MessageDeletedEvent
+
+      export class MessageProjection {
+        constructor(public props: MessageProjectionProps) {}
+
+        static create(event: MessageReceivedEvent): MessageProjection
+        static create(event: MessageSentEvent): MessageProjection
+        static create(event: MessageReceivedEvent | MessageSentEvent): MessageProjection {
+          switch (event.name) {
+            case 'channel.message_received':
+              return new MessageProjection({ channelId: event.payload.channelId, direction: Direction.RECEIVED, ... })
+            case 'channel.message_sent':
+              return new MessageProjection({ channelId: event.payload.channelId, direction: Direction.SENT, ... })
+          }
+        }
+
+        applyEvent(event: MessageEditedEvent): void
+        applyEvent(event: MessageDeletedEvent): void
+        applyEvent(event: MessageEditedEvent | MessageDeletedEvent): void {
+          switch (event.name) {
+            case 'channel.message_edited': this.props.editedAt = event.payload.editedAt; return
+            case 'channel.message_deleted': this.props.deletedAt = event.payload.at; return
+          }
+        }
+      }
+
+  scaffold: |
+    # Scaffold both files (projection class + projection repository) in one shot:
+    bun cli projection <context> <Name>
+
+    # Print to stdout for review without writing:
+    bun cli projection <context> <Name> --print
+
+    # The CLI emits:
+    #   packages/api/typescript/src/<context>/projections/<Name>.ts
+    #   packages/api/typescript/src/<context>/projections/<Name>ProjectionRepository.ts
+    #
+    # Then manually:
+    # 1. Fill in MessageProjectionEvent union (import event classes from @<context>/events)
+    # 2. Add the static create(event) overloads + applyEvent(event) overloads
+    # 3. Wire the Drizzle table mapping in the repository's toDomain/toPersistence stubs
+    # 4. Register the repository token in <ctx>/registry.ts — one expandBindings declaration ({ token, mock, real })
+    # 5. Add the Drizzle schema for the projection table under shared/db/drizzle/schema/<ctx>.ts
+    # 6. bun migrate:create to generate the SQL migration
+    # 7. Scaffold the projector: bun cli projector <context> <Name>

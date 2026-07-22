@@ -1,0 +1,27 @@
+{
+	"brand": "App",
+	"signIn": "Sign in",
+	"getStarted": "Get started",
+	"openApp": "Open app",
+	"hero": {
+		"title": "Build your next product faster.",
+		"subtitle": "A fullstack TypeScript boilerplate with DDD, Clean Architecture, CQRS, and an opinionated agentic-coding template baked in.",
+		"primaryCta": "Create your account",
+		"secondaryCta": "Sign in"
+	},
+	"features": {
+		"fast": {
+			"title": "Fast by default",
+			"description": "Bun, Vite, React Query, and Drizzle deliver instant feedback loops from dev to prod."
+		},
+		"typesafe": {
+			"title": "Type-safe end to end",
+			"description": "Zod schemas drive the API, the database, the SDK, and the frontend forms — one source of truth."
+		},
+		"domain": {
+			"title": "Domain-first",
+			"description": "Bounded contexts, aggregates, events, and an outbox already wired so you can model business rules cleanly."
+		}
+	},
+	"footer": { "copyright": "Monorepo boilerplate · MIT" }
+}

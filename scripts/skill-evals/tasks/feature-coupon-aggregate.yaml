@@ -1,0 +1,300 @@
+id: feature-coupon-aggregate
+tier: holdout
+builder: opus
+title: Sales Coupon aggregate (feature-loop — store-scoped discount coupons,
+  create + deactivate with named invariants and use-case-born events)
+sourceSpec: .specs/2026-06-10-sales-coupon-aggregate.md
+goldRef: ""
+baseRef: ""
+prompt: |
+  Implement the Sales coupon aggregate spec
+  (.specs/2026-06-10-sales-coupon-aggregate.md) in the template backend
+  (packages/api/typescript).
+
+  CONTEXT. The Sales BC (packages/api/typescript/src/sales/) owns one TS
+  write-side aggregate (OrderOverride); it has entities/ errors/ events/
+  usecases/ controllers/ repositories/ registry.ts but NO enums/ folder and
+  zero coupon artifacts. Sales tables live in packages/contracts/db/schema/
+  sales.ts under pgSchema('sales'); enum-ish columns are text validated at the
+  app layer (no pgEnum anywhere). Domain events are persisted BY USE CASES via
+  this.domainEventRepository.save(event, tx) in the same tx as the entity save
+  (UC-C05 / EVT-C10 — see UpdateOrderOverride). Merchants cannot create or
+  deactivate store-scoped discount coupons today — no aggregate, no
+  invariants, no events, no table.
+
+  DECISIONS (binding):
+  1. Aggregate — Coupon extends AggregateRoot<typeof CouponSchema> at
+     src/sales/entities/Coupon.ts; static override schema = CouponSchema;
+     props via interface merging (export type CouponProps = Z.infer<typeof
+     CouponSchema> + export interface Coupon extends CouponProps {}), no `!`
+     fields. Id = auto `new Id()` UUID from BaseEntity. Export from
+     entities/index.ts.
+  2. Enums — new sales/enums/ (+ barrel): CouponType.ts (PERCENTAGE =
+     'PERCENTAGE', FIXED_AMOUNT = 'FIXED_AMOUNT'), CouponStatus.ts (ACTIVE =
+     'ACTIVE', INACTIVE = 'INACTIVE'). Plain TS string enums.
+  3. Entity schema (format → schema) — CouponSchema = z.object({ storeId:
+     z.instance(Id), code: z.string().trim().toUpperCase().min(1, { error:
+     'COUPON_CODE_REQUIRED' as SalesDomainErrors }).max(64, { error:
+     'INVALID_COUPON_CODE' as SalesDomainErrors }), type: z.enum(CouponType),
+     value: z.number().int(), status: z.enum(CouponStatus), expiresAt:
+     z.date().optional() }). value = percentage points (PERCENTAGE) or cents
+     (FIXED_AMOUNT).
+  4. Cross-field type/value rule → .refine() (ENT-C06) on CouponSchema:
+     PERCENTAGE ⇒ 1 <= value <= 100; FIXED_AMOUNT ⇒ value >= 1; error
+     'INVALID_COUPON_VALUE' as SalesDomainErrors. No if-checks duplicating
+     this in create().
+  5. Status default in create(), NOT in schema — status required in
+     CouponSchema, NO .default(). static create(data: { storeId: string; code:
+     string; type: CouponType; value: number; expiresAt?: Date | string })
+     passes status: CouponStatus.ACTIVE explicitly. Rehydration (new
+     Coupon({...row}) in the repo's toDomain) passes the stored status — an
+     INACTIVE row stays INACTIVE.
+  6. Expiry-in-future is a creation-time guard in create(), NOT in the schema
+     (expired rows must rehydrate). After normalizing expiresAt (string → new
+     Date(...)): if expiresAt <= new Date(), throw new
+     BaseError<SalesDomainErrors>('COUPON_EXPIRY_IN_PAST') before constructing.
+  7. Tell-don't-ask deactivation — deactivate(now: Date = new Date()): void on
+     Coupon, guards INSIDE the method, in order: (a) isExpired(now) (public
+     helper: expiresAt != null && expiresAt <= now) ⇒ throw COUPON_EXPIRED
+     (expiry IS deactivation — even when stored status is ACTIVE); (b) status
+     === CouponStatus.INACTIVE ⇒ throw COUPON_ALREADY_INACTIVE; then
+     this.status = CouponStatus.INACTIVE. No incrementVersion() here (repo
+     save owns it).
+  8. Errors — extend sales/errors/index.ts: SalesDomainErrors +=
+     'COUPON_CODE_REQUIRED' | 'INVALID_COUPON_CODE' | 'INVALID_COUPON_VALUE'
+     | 'COUPON_EXPIRY_IN_PAST' | 'COUPON_EXPIRED' | 'COUPON_ALREADY_INACTIVE';
+     SalesApplicationErrors += 'COUPON_NOT_FOUND' | 'COUPON_CODE_ALREADY_EXISTS'.
+     registerErrorCodes: the four create-validation codes →
+     UNPROCESSABLE_ENTITY (422); COUPON_EXPIRED / COUPON_ALREADY_INACTIVE /
+     COUPON_CODE_ALREADY_EXISTS → CONFLICT (409); COUPON_NOT_FOUND →
+     NOT_FOUND (404).
+  9. Events (use-case-born, primitive ids) — sales/events/CouponCreatedEvent.ts:
+     name 'sales.coupon.created', schema z.domainEvent({ couponId: z.uuid(),
+     storeId: z.uuid(), code: z.string(), type: z.enum(CouponType), value:
+     z.number().int(), expiresAt: z.iso.datetime({ offset: true }).optional() }).
+     sales/events/CouponDeactivatedEvent.ts: name 'sales.coupon.deactivated',
+     payload { couponId: z.uuid(), storeId: z.uuid(), code: z.string() }. Both
+     in events/index.ts. The entity never publishes/persists: each use case
+     constructs the event (entityId: coupon.id.value, ownerId:
+     coupon.storeId.value) and `await this.domainEventRepository.save(event,
+     tx)` in the SAME tx as the entity save.
+  10. CreateCoupon (sales/usecases/CreateCoupon.ts) — input z.object({ storeId:
+      z.uuid(), code: z.string(), type: z.enum(CouponType), value:
+      z.number().int(), expiresAt: z.iso.datetime({ offset: true }).optional() });
+      output z.object({ couponId: z.uuid() }). In withTransaction: normalize
+      code.trim().toUpperCase(), findByCode(storeId, normalizedCode, tx) — hit
+      ⇒ throw BaseError<ApplicationErrors>('COUPON_CODE_ALREADY_EXISTS'); else
+      Coupon.create(...), save, persist CouponCreatedEvent, return
+      { couponId }. All repo + event calls get tx.
+  11. DeactivateCoupon — input z.object({ storeId: z.uuid(), couponId:
+      z.uuid() }), output z.void(). In withTransaction: findById(couponId, tx);
+      missing OR coupon.storeId.value !== input.storeId ⇒ throw
+      COUPON_NOT_FOUND (no cross-tenant leak); coupon.deactivate(); save;
+      persist CouponDeactivatedEvent same tx.
+  12. Controllers (mirror UpdateOrderOverrideController / AddProductTagController)
+      — sales/controllers/CreateCoupon.ts: POST /coupons, middlewares
+      [AuthAccountMiddleware, RequireStoreMember], ctx { user: { id:
+      z.string() }, session: { storeId: z.uuid() } }, body =
+      CreateCouponInputSchema.omit({ storeId: true }), returns 201 CREATED +
+      { couponId }. sales/controllers/DeactivateCoupon.ts: POST
+      /coupons/:couponId/deactivate, params z.object({ couponId: z.uuid() }),
+      no body, 204 NO_CONTENT, output z.void(). Register both in
+      controllers/index.ts; run `bun sdk` after.
+  13. Repository — sales/repositories/CouponRepository/{CouponRepository,
+      DrizzleCouponRepository,MockCouponRepository,index}.ts. Methods:
+      findById(id, tx?), findByCode(storeId, code, tx?), save(entity, tx?),
+      delete(id, tx?). save calls entity.incrementVersion() then insert ...
+      onConflictDoUpdate({ target: coupons.id }) updating
+      code/type/value/status/expiresAt/updatedAt/version. toDomain = new
+      Coupon({ id: row.id, storeId: row.storeId, code, type, value, status,
+      expiresAt: row.expiresAt ?? undefined, createdAt, updatedAt, version }).
+      Register in sales/registry.ts: mock → Mock, integration + real → Drizzle.
+  14. Persistence + migration — add coupons to packages/contracts/db/schema/
+      sales.ts: id uuid PK; store_id uuid notNull; code text notNull; type
+      text notNull; status text notNull; value integer notNull; expires_at
+      timestamptz NULL; created_at/updated_at timestamptz notNull defaultNow;
+      version integer notNull default 1;
+      uniqueIndex('coupons_store_id_code_unq').on(t.storeId, t.code) +
+      index('coupons_store_id_idx').on(t.storeId). type/status stay text
+      (house no-pgEnum convention). Generate the migration with `bun
+      migrate:create` (the PGlite TestBed applies the tree's
+      packages/contracts/db/migrations — the integration tests cannot pass
+      without it).
+  15. Tests — colocated per the test skill: entities/Coupon.test.ts (unit,
+      direct instantiation), usecases/{CreateCoupon,DeactivateCoupon}.test.ts
+      (integration TestBed), repositories/CouponRepository/
+      DrizzleCouponRepository.test.ts. State setup via repositories /
+      tests/support/given (add givenCoupon to given/sales.ts if needed) —
+      never via another use case.
+
+  ACCEPTANCE CRITERIA:
+  - AC1: Coupon.create({ storeId, code: ' save10 ', type: PERCENTAGE, value:
+    10 }) → instance with status === CouponStatus.ACTIVE (caller never passes
+    status), code === 'SAVE10', id.value a generated UUID.
+  - AC2: PERCENTAGE value 0 or 101 throws INVALID_COUPON_VALUE; 1 and 100
+    accepted.
+  - AC3: FIXED_AMOUNT value 0 or negative throws INVALID_COUPON_VALUE; any
+    positive int accepted.
+  - AC4: create with past expiresAt throws COUPON_EXPIRY_IN_PAST; future
+    expiresAt succeeds.
+  - AC5: rehydration new Coupon({...row}) with a PAST expiresAt and status
+    'INACTIVE' does NOT throw and keeps status === INACTIVE — expiry guard
+    lives only in create(), status default not in schema.
+  - AC6: empty/whitespace code throws COUPON_CODE_REQUIRED; 65-char code
+    throws INVALID_COUPON_CODE.
+  - AC7: deactivate() on an ACTIVE non-expired coupon sets status === INACTIVE
+    (version unchanged by the method).
+  - AC8: deactivate() on an INACTIVE coupon throws COUPON_ALREADY_INACTIVE.
+  - AC9: deactivate() on a coupon with passed expiresAt throws COUPON_EXPIRED
+    even when stored status is ACTIVE (expiry guard runs before the status
+    guard).
+  - AC10: CreateCoupon with a duplicate code in the same store
+    (case/whitespace-insensitive: 'save10' duplicates 'SAVE10') throws
+    COUPON_CODE_ALREADY_EXISTS; the same code in another store succeeds.
+  - AC11: CreateCoupon persists the coupon row AND a 'sales.coupon.created'
+    event (payload couponId, storeId, code, type, value, expiresAt? as
+    primitives/ISO string) visible via the domain event repository in the
+    integration TestBed — entity save and event save share one transaction.
+  - AC12: DeactivateCoupon persists status = INACTIVE AND a
+    'sales.coupon.deactivated' event (couponId, storeId, code) in the same
+    transaction.
+  - AC13: DeactivateCoupon with an unknown couponId, or one belonging to
+    another store, throws COUPON_NOT_FOUND.
+  - AC14: HTTP mapping: 422 for COUPON_CODE_REQUIRED/INVALID_COUPON_CODE/
+    INVALID_COUPON_VALUE/COUPON_EXPIRY_IN_PAST; 409 for COUPON_EXPIRED/
+    COUPON_ALREADY_INACTIVE/COUPON_CODE_ALREADY_EXISTS; 404 for
+    COUPON_NOT_FOUND (registerErrorCodes; registry.ts keeps import './errors').
+  - AC15: POST /coupons → 201 + { couponId }; POST
+    /coupons/:couponId/deactivate → 204; both require auth + store membership
+    and read storeId from ctx.session, never from the body.
+  - AC16: Drizzle round-trip: save → findById → all props equal (incl.
+    expiresAt, incremented version); a second raw insert with the same
+    (store_id, code) violates coupons_store_id_code_unq.
+
+  RED ACCEPTANCE TESTS. A verifier has placed failing acceptance tests at
+  packages/api/typescript/src/sales/entities/Coupon.test.ts (unit — AC1–AC9)
+  and packages/api/typescript/src/sales/usecases/coupon-acceptance.test.ts
+  (integration TestBed — AC10–AC13). Per house TDD (red → green → refactor)
+  your implementation must make BOTH files green WITHOUT modifying them. Read
+  .claude/skills/test/typescript/SKILL.md, the existing
+  UpdateOrderOverride.{ts,test.ts} / OrderOverride.ts in src/sales/, and the
+  relevant .claude/skills playbooks (entity, enum, errors, event, usecase,
+  controller, repository, schema, db-modelling, migrate) before writing code.
+
+  FINISHING GATES (all must pass before you are done):
+  - cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit
+  - cd packages/api/typescript && bun test src/sales/entities/Coupon.test.ts
+    src/sales/usecases/coupon-acceptance.test.ts
+axes:
+  - CLASS-BASE
+  - VALIDATION-PLACEMENT
+  - OPTIONALITY
+  - TELL-DONT-ASK
+  - ERR-VOCAB
+  - EVENT-EMISSION
+  - TRANSACTION
+  - ID-REPR
+inject:
+  - from: scripts/skill-evals/features/coupon-aggregate/Coupon.red.ts
+    to: packages/api/typescript/src/sales/entities/Coupon.test.ts
+  - from: scripts/skill-evals/features/coupon-aggregate/coupon-usecases.red.ts
+    to: packages/api/typescript/src/sales/usecases/coupon-acceptance.test.ts
+graders:
+  - kind: tsc
+    spec: backend
+    id: gate#tsc-backend
+  - kind: test-green
+    spec: packages/api/typescript/src/sales/entities/Coupon.test.ts
+    id: ac1-ac9#coupon-entity-unit
+  - kind: test-green
+    spec: packages/api/typescript/src/sales/usecases/coupon-acceptance.test.ts
+    id: ac10-ac13#coupon-usecase-acceptance
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/entities/Coupon.ts::storeId:\s*z\.instance\(Id\)'
+    id: id-repr#entity-schema-z-instance-id
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/entities/Coupon.ts::status:\s*CouponStatus\.ACTIVE'
+    id: d5#status-active-passed-in-create
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/sales/entities/Coupon.ts::status:[^,}]*\.default\('
+    id: d5#no-schema-default-on-status
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/usecases/CreateCoupon.ts::domainEventRepository\.save\('
+    id: ac11#create-usecase-persists-event
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/usecases/DeactivateCoupon.ts::domainEventRepository\.save\('
+    id: ac12#deactivate-usecase-persists-event
+  - kind: file-exists
+    spec: packages/contracts/db/migrations/005[2-9]_*.sql
+    id: d14#migration-file-exists
+  - kind: grep-must
+    spec: 'packages/contracts/db/migrations/*.sql::coupons_store_id_code_unq'
+    id: ac16#migration-carries-unique-index
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/controllers/CreateCoupon.ts::^(?=[\s\S]*session:\s*z\.object\(\{\s*storeId:\s*z\.uuid\(\))(?=[\s\S]*\.omit\(\{\s*storeId:\s*true)(?=[\s\S]*HttpStatusCode\.CREATED)'
+    id: ac15#create-controller-envelope
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/controllers/DeactivateCoupon.ts::^(?=[\s\S]*params:\s*z\.object\(\{\s*couponId:\s*z\.uuid\(\))(?=[\s\S]*HttpStatusCode\.NO_CONTENT)'
+    id: ac15#deactivate-controller-envelope
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/sales/errors/index.ts::^(?=[\s\S]*COUPON_NOT_FOUND:\s*HttpStatusCode\.NOT_FOUND)(?=[\s\S]*COUPON_CODE_ALREADY_EXISTS:\s*HttpStatusCode\.CONFLICT)(?=[\s\S]*COUPON_EXPIRED:\s*HttpStatusCode\.CONFLICT)(?=[\s\S]*COUPON_ALREADY_INACTIVE:\s*HttpStatusCode\.CONFLICT)(?=[\s\S]*COUPON_EXPIRY_IN_PAST:\s*HttpStatusCode\.UNPROCESSABLE_ENTITY)'
+    id: ac14#error-codes-registered
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/sales/usecases/**/*.ts::mediator\.publish'
+    id: evt#no-mediator-publish-in-usecases
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/sales/**/*Coupon*.ts::\bas\s+any\b'
+    id: quality#no-as-any-in-coupon-slice
+  - kind: detect
+    spec: registry-scan
+    id: detect#registry-scan
+  - kind: detect
+    spec: import-direction
+    id: detect#import-direction
+  - kind: judge
+    spec: >
+      The Sales coupon aggregate was just implemented per
+      .specs/2026-06-10-sales-coupon-aggregate.md (Decisions 1, 5, 7, 9).
+      Verify ALL of: (a) Decision 1 —
+      packages/api/typescript/src/sales/entities/Coupon.ts declares `export
+      class Coupon extends AggregateRoot<typeof CouponSchema>` with `static
+      override schema = CouponSchema` and props via interface merging (`export
+      interface Coupon extends CouponProps {}` where CouponProps is inferred
+      from CouponSchema); NO `!`-asserted property declarations and NO
+      hand-maintained constructor that assigns props field-by-field. (b)
+      Decision 5 — CouponSchema requires `status` (z.enum(CouponStatus)) with
+      NO `.default()` anywhere on it; `Coupon.create()` is the only place that
+      injects `status: CouponStatus.ACTIVE`; the repository's toDomain
+      rehydrates via `new Coupon({...row})` passing the STORED status through
+      unchanged. (c) Decision 7 — `deactivate(now: Date = new Date())` guards
+      INSIDE the method in this exact order: expiry first (isExpired(now) ⇒
+      throw 'COUPON_EXPIRED'), then already-inactive (status ===
+      CouponStatus.INACTIVE ⇒ throw 'COUPON_ALREADY_INACTIVE'), then sets
+      this.status = CouponStatus.INACTIVE; it does NOT call
+      incrementVersion(), and no caller (use case or controller) pre-checks
+      status/expiry before calling it. (d) Decision 9 — the Coupon entity
+      never persists or publishes events (no addDomainEvent / mediator /
+      domainEventRepository inside Coupon.ts); CreateCoupon.ts and
+      DeactivateCoupon.ts each run inside withTransaction, construct their
+      event (CouponCreatedEvent / CouponDeactivatedEvent with entityId =
+      coupon.id.value, ownerId = coupon.storeId.value, primitive/ISO payload
+      values) and persist it via `await this.domainEventRepository.save(event,
+      tx)` with the SAME tx handle as the repository save — and the event is
+      persisted ONLY on the success path (after the guard/duplicate checks).
+    id: judge#decisions-1-5-7-9
+notes: >-
+  Feature-loop bundle (verifier-authored; see
+  scripts/skill-evals/features/coupon-aggregate/README.md). Both injected
+  files are RED at base by failed import resolution — sales/entities/Coupon.ts,
+  sales/enums/, sales/events/Coupon*Event.ts, sales/usecases/CreateCoupon.ts /
+  DeactivateCoupon.ts and sales/repositories/CouponRepository/ do not exist at
+  HEAD (verified 2026-06-10: bun test exits 1 with "Cannot find module
+  './Coupon' / './CreateCoupon'"). All grep-must graders match 0 files at HEAD
+  and the file-exists glob is empty (migrations end at 0051_*); both
+  grep-must-not graders are clean at HEAD (the only sales mediator.publish
+  lives in handlers/OrderOverriddenPublisher.ts, outside the usecases glob);
+  both detect graders are clean at HEAD. The entity unit tests assert named
+  codes via code ∈ {error.name, error.message} because schema-borne invariants
+  (D3/D4) surface as BaseError('INVALID_ENTITY', '<CODE>') from BaseEntity
+  while guard throws (D6/D7) carry the code as the name — verified against
+  core BaseEntity behavior with a live zod probe (2026-06-10).

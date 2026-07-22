@@ -1,0 +1,311 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: [errors, enum, value-object]
+  depended_by: [repository, usecase]
+  context_reads: []
+  lang: go
+  examples:
+    - examples/citizens/go/entity/channel.go
+    - examples/citizens/go/entity/remote.go
+    - examples/citizens/go/entity/base_entity.go
+
+  snippet:
+    skeleton: |
+      // Package entities contains domain entities for the {{ctx}} bounded context.
+      package entities
+
+      import (
+      	ctxerrors "template/api-go/internal/{{ctx}}/errors"
+      	"template/core-go/entities"
+      	"template/core-go/errors"
+      	"template/core-go/objects"
+      )
+
+      // {{Pascal}} is an aggregate root for the {{ctx}} bounded context.
+      type {{Pascal}} struct {
+      	entities.BaseEntity
+      	// TODO: add domain fields, e.g.:
+      	// OwnerID string
+      	// Status  enums.{{Pascal}}Status
+      }
+
+      // New{{Pascal}} creates a new {{Pascal}}, validates inputs, and raises the creation event.
+      func New{{Pascal}}(ownerID string) (*{{Pascal}}, error) {
+      	if ownerID == "" {
+      		return nil, errors.NewBaseError(ctxerrors.Code{{Pascal}}Invalid, "{{snake}}: ownerID must not be empty")
+      	}
+
+      	base := entities.NewBaseEntity()
+      	e := &{{Pascal}}{
+      		BaseEntity: base,
+      		// OwnerID: ownerID,
+      	}
+
+      	// e.AddDomainEvent(ctxevents.New{{Pascal}}CreatedEvent(base.ID.UUID(), ownerID, ...))
+
+      	return e, nil
+      }
+
+      // SomeBehavior is an example behavior method.
+      // Guard → mutate → IncrementVersion → optional event.
+      func (e *{{Pascal}}) SomeBehavior() error {
+      	// if e.Status != enums.{{Pascal}}StatusPending {
+      	// 	return errors.NewBaseError(ctxerrors.Code{{Pascal}}Invalid, "{{snake}} is not in a valid state")
+      	// }
+      	_ = e.IncrementVersion()
+      	return nil
+      }
+
+      // Reconstruct{{Pascal}} rehydrates a {{Pascal}} from persistence without raising events.
+      // Called only from repositories — never from business code.
+      func Reconstruct{{Pascal}}(
+      	// id objects.ID,
+      	// ownerID string,
+      	base entities.BaseEntity,
+      ) *{{Pascal}} {
+      	return &{{Pascal}}{
+      		BaseEntity: base,
+      		// OwnerID: ownerID,
+      	}
+      }
+
+      // Ensure objects is used if referenced.
+      var _ = objects.ID{}
+
+  patterns:
+    - id: ENT-GO-01
+      when: always
+      title: IncrementVersion called inside entity behavior methods (not in repo.save)
+      rule: >
+        Go entities call `_ = e.IncrementVersion()` inside every behavior method that
+        mutates state. This is the opposite of the TypeScript convention (where
+        incrementVersion is in repo.save). The repository must NOT call IncrementVersion.
+      wrong: |
+        // In the repository save method:
+        func (r *PgRepository) Save(ctx context.Context, job *entities.TranscodingJob) error {
+            _ = job.IncrementVersion() // wrong — version should already be bumped by entity
+            // ...
+        }
+      right: |
+        // In the entity behavior method:
+        func (j *TranscodingJob) MarkRunning() error {
+            if j.Status != enums.JobStatusPending {
+                return errors.NewBaseError(ctxerrors.CodeJobNotPending, "...")
+            }
+            j.Status = enums.JobStatusRunning
+            _ = j.IncrementVersion() // correct place
+            return nil
+        }
+
+    - id: ENT-GO-02
+      when: always
+      title: Reconstruct<Name> uses ReconstructBaseEntity, not NewBaseEntity
+      rule: >
+        The `Reconstruct<Name>` function restores exact persisted state. It must use
+        `entities.ReconstructBaseEntity(params)` to recover the original ID, timestamps,
+        and version. Using `NewBaseEntity()` generates a new UUID and fresh timestamps —
+        that is for brand-new aggregates only.
+      wrong: |
+        func ReconstructTranscodingJob(...) *TranscodingJob {
+            return &TranscodingJob{
+                BaseEntity: entities.NewBaseEntity(), // generates new ID!
+            }
+        }
+      right: |
+        func ReconstructTranscodingJob(
+            // ...
+            base entities.BaseEntity,
+        ) *TranscodingJob {
+            return &TranscodingJob{BaseEntity: base, ...}
+        }
+        // Repository builds base via:
+        // base := entities.ReconstructBaseEntity(entities.ReconstructBaseEntityParams{
+        //     ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version,
+        // })
+
+    - id: ENT-GO-03
+      when: always
+      title: Constructor validates required inputs and returns error
+      rule: >
+        The `New<Name>` constructor must guard every required field with an explicit
+        if-check and return `errors.NewBaseError(ctxerrors.CodeX, "message")` on failure.
+        Callers must not be trusted to provide valid inputs.
+      wrong: |
+        func NewTranscodingJob(videoID, inputUrl, ownerID string) *TranscodingJob {
+            return &TranscodingJob{VideoID: videoID, ...} // no validation
+        }
+      right: |
+        func NewTranscodingJob(videoID, inputUrl, ownerID string) (*TranscodingJob, error) {
+            if videoID == "" {
+                return nil, errors.NewBaseError(ctxerrors.CodeInvalidVideoID, "videoID must not be empty")
+            }
+            // ...
+            return job, nil
+        }
+
+    - id: ENT-GO-04
+      when: entity has a creation event
+      title: Creation domain event raised inside New<Name>, not in use case
+      rule: >
+        The domain event that signals a new entity was created is raised by the constructor
+        via `job.AddDomainEvent(...)`, not by the use case. This ensures the event is
+        always present for any creation path. Reconstruct raises no events.
+      wrong: |
+        // In use case:
+        job, err := entities.NewTranscodingJob(...)
+        job.AddDomainEvent(...) // wrong — event belongs in constructor
+      right: |
+        // In constructor:
+        job.AddDomainEvent(ctxevents.NewTranscodingJobStartedEvent(...))
+        // In use case:
+        job, err := entities.NewTranscodingJob(...)
+        // no AddDomainEvent call needed
+
+    - id: ENT-GO-05
+      when: always
+      title: Behavior methods return error, never panic
+      rule: >
+        All behavior methods that can fail (state transition guards, invariant checks)
+        must return `error`. Panicking in a behavior method crashes the entire request.
+        Callers propagate the error up to the use case, which propagates to the controller.
+      wrong: |
+        func (j *TranscodingJob) MarkRunning() {
+            if j.Status != enums.JobStatusPending {
+                panic("invalid transition") // unacceptable
+            }
+        }
+      right: |
+        func (j *TranscodingJob) MarkRunning() error {
+            if j.Status != enums.JobStatusPending {
+                return errors.NewBaseError(ctxerrors.CodeJobNotPending, "job must be in PENDING status")
+            }
+            j.Status = enums.JobStatusRunning
+            _ = j.IncrementVersion()
+            return nil
+        }
+
+    - id: ENT-GO-C01
+      when: entity has many invariant-bearing fields
+      title: Private fields with exported getters for complex aggregates
+      rule: >
+        When an aggregate has many fields where direct write access would be dangerous
+        (e.g., `deletedAt`, `pinnedAt`, `muteExpiration`), use private fields with
+        exported getter methods. Simple aggregates like TranscodingJob use public fields.
+      right: |
+        type Remote struct {
+            entities.BaseEntity
+            channelID  uuid.UUID
+            deletedAt  *time.Time  // private — set only via Delete() behavior method
+        }
+        func (r *Remote) ChannelID() uuid.UUID  { return r.channelID }
+        func (r *Remote) DeletedAt() *time.Time { return r.deletedAt }
+
+    - id: ENT-GO-C02
+      when: entity participates in event sourcing (Apply method)
+      title: Apply method for replaying persisted lifecycle events
+      rule: >
+        When an entity is rebuilt by replaying events (event-sourcing style), add an
+        `Apply(name string, payload json.RawMessage) error` method that dispatches on
+        event name and mutates state without raising new events or calling IncrementVersion.
+      right: |
+        func (c *Channel) Apply(name string, payload json.RawMessage) error {
+            switch name {
+            case ctxevents.ChannelConnectedEventName:
+                var p ctxevents.ChannelConnectedPayload
+                if err := json.Unmarshal(payload, &p); err != nil { return err }
+                c.Status = enums.ChannelStatusConnected
+                c.OwnerRemoteID = p.OwnerRemoteID
+            // ...
+            default:
+                return fmt.Errorf("channel: unknown lifecycle event %q", name)
+            }
+            c.Version++
+            return nil
+        }
+
+  bad_practices:
+    - id: bp-01
+      title: Calling IncrementVersion in the repository save method
+      description: >
+        Go entity behavior methods own the version increment. If repo.save also calls
+        IncrementVersion, the version is double-bumped. This causes optimistic-lock
+        conflicts and incorrect audit trails.
+      wrong: |
+        // repository save:
+        _ = job.IncrementVersion()
+        // ... INSERT or UPDATE
+      right: |
+        // entity behavior method already called IncrementVersion()
+        // repository save does NOT call it again
+      mechanical: false
+
+    - id: bp-02
+      title: Reconstruct calls NewBaseEntity (generates new UUID)
+      description: >
+        `NewBaseEntity()` generates a fresh UUID and timestamps. Calling it in Reconstruct
+        discards the persisted identity — the entity will have a different ID from what
+        is in the database, causing foreign key violations and lost data.
+      wrong: |
+        return &TranscodingJob{
+            BaseEntity: entities.NewBaseEntity(),
+            // ...
+        }
+      right: |
+        return &TranscodingJob{
+            BaseEntity: base, // base from entities.ReconstructBaseEntity(...)
+            // ...
+        }
+      mechanical: true
+      detect:
+        - 'BaseEntity:\s*entities\.NewBaseEntity\('
+
+    - id: bp-03
+      title: Behavior methods that panic instead of returning error
+      description: >
+        A panic in a domain behavior method is unrecoverable without a recover() somewhere
+        up the stack. Always return error — the controller's error middleware turns it into
+        the right HTTP response.
+      wrong: |
+        func (j *TranscodingJob) MarkRunning() {
+            if j.Status != enums.JobStatusPending { panic("bad transition") }
+        }
+      right: |
+        func (j *TranscodingJob) MarkRunning() error {
+            if j.Status != enums.JobStatusPending {
+                return errors.NewBaseError(ctxerrors.CodeJobNotPending, "...")
+            }
+            return nil
+        }
+      mechanical: true
+      detect:
+        - 'panic\('
+
+    - id: bp-04
+      title: Domain event raised in use case instead of entity constructor
+      description: >
+        Creation events belong in the `New<Name>` constructor so they are always raised
+        regardless of which code path creates the entity. Raising them in the use case
+        means test code or internal use cases that call the constructor directly can miss
+        them.
+      wrong: |
+        // In use case:
+        job, _ := entities.NewTranscodingJob(...)
+        job.AddDomainEvent(ctxevents.NewTranscodingJobStartedEvent(...))
+      right: |
+        // In constructor:
+        job.AddDomainEvent(ctxevents.NewTranscodingJobStartedEvent(...))
+      mechanical: false
+
+    - id: bp-05
+      title: Anemic entity — use case mutates fields directly
+      description: >
+        Setting entity fields directly from a use case bypasses invariant enforcement.
+        All state mutations must go through entity behavior methods.
+      wrong: |
+        // In use case:
+        job.Status = enums.JobStatusRunning // bypasses guard + IncrementVersion
+      right: |
+        // In use case:
+        if err := job.MarkRunning(); err != nil { return err }
+      mechanical: false

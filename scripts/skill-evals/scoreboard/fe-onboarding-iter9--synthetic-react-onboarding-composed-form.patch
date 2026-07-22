@@ -1,0 +1,1298 @@
+diff --git a/packages/app/react/src/lib/union.ts b/packages/app/react/src/lib/union.ts
+index 47b1a4d96..3eb862335 100644
+--- a/packages/app/react/src/lib/union.ts
++++ b/packages/app/react/src/lib/union.ts
+@@ -38,12 +38,13 @@ export function unionVariantValues<M extends z.ZodObject>(
+ 
+ /**
+  * The member schema whose discriminant fields ALL match `match` — call `.safeParse(value)` on it.
+- * `match` keys are constrained to the union's fields and values to their valid literals (typos / bad
+- * values are compile errors). Throws if no member matches. NOTE: the return is typed as the whole
+- * union (runtime-validates the matched member); for the narrowed *type* use `Extract<Req, { … }>`.
++ * `match` keys are constrained to the union's common fields; values are typed as the union of each
++ * field's values across all members (non-distributive partial). This lets callers pass runtime
++ * union-typed values (e.g. `mode: ConnectionMode`) without a cast, unlike `Partial<Union>` which
++ * distributes and requires a value from a single member. Throws if no member matches.
+  * e.g. `pickUnionVariant(connectSchema, { platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' })`.
+  */
+-export function pickUnionVariant<M extends z.ZodObject>(union: z.ZodUnion<readonly M[]>, match: Partial<UnionShape<M>>): M {
++export function pickUnionVariant<M extends z.ZodObject>(union: z.ZodUnion<readonly M[]>, match: { [K in keyof UnionShape<M>]?: UnionShape<M>[K] }): M {
+ 	const member = union.options.find(m =>
+ 		Object.entries(match).every(([field, value]) => typeof value === 'string' && literalsOf(m.shape[field]).includes(value)),
+ 	)
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..308c2419a 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -292,10 +292,10 @@
+ 			"centreLabel": "Revenue",
+ 			"legendAria": "Cost distribution legend",
+ 			"loadError": "Could not load the cost distribution.",
++			"profitLabel": "Profit",
+ 			"profitPct": "profit",
+ 			"subtitle": "Each cost as a share of revenue",
+-			"title": "Cost Distribution",
+-			"profitLabel": "Profit"
++			"title": "Cost Distribution"
+ 		},
+ 		"goal": {
+ 			"achievedLabel": "Achieved",
+@@ -554,6 +554,10 @@
+ 			"YEVER": "Yever",
+ 			"ZEDY": "Zedy"
+ 		},
++		"ConnectionMode": {
++			"CREDENTIALS": "API Credentials",
++			"MANUAL": "Manual"
++		},
+ 		"CostKind": {
+ 			"CHARGEBACK": "Chargeback",
+ 			"FEES": "Fees",
+@@ -733,6 +737,13 @@
+ 			"NONE": "None",
+ 			"PAID_BY_CUSTOMER_AT_CHECKOUT": "Paid by customer at checkout"
+ 		},
++		"StoreIntegrationType": {
++			"CHECKOUT": "Checkout",
++			"INFOPRODUCT": "Infoproduct",
++			"MARKETING_PLATFORM": "Marketing platform",
++			"PAYMENT_GATEWAY": "Payment gateway",
++			"SALES_CHANNEL": "Sales channel"
++		},
+ 		"TaxDeductionType": {
+ 			"NONE": "None",
+ 			"PRODUCT_COST": "Product cost",
+@@ -1099,10 +1110,59 @@
+ 	},
+ 	"onboarding": {
+ 		"breadcrumb": "Onboarding",
++		"connectionMode": {
++			"subtitle": "Choose how you'll add your first integration",
++			"title": "How would you like to connect?"
++		},
++		"credentials": {
++			"subtitle": "Provide your API keys to connect securely",
++			"title": "Enter your credentials"
++		},
+ 		"error": {
+ 			"description": "We couldn't load onboarding.",
+ 			"title": "Something went wrong"
+ 		},
++		"review": {
++			"connectionMode": "Connection mode",
++			"credentials": {
++				"alias": "Alias",
++				"clientId": "Client ID",
++				"clientSecret": "Client secret",
++				"shopDomain": "Shop domain",
++				"userSecretKey": "User secret key",
++				"userToken": "User token"
++			},
++			"integrationType": "Integration type",
++			"noCredentials": "No additional credentials required",
++			"platform": "Platform",
++			"submit": "Connect",
++			"subtitle": "Confirm the details before connecting",
++			"title": "Review your connection"
++		},
++		"stepOf": "Step {{current}} of {{total}}",
++		"target": {
++			"subtitle": "Select the platform you want to connect",
++			"title": "Choose your first integration"
++		},
++		"targets": {
++			"MERCADOPAGO": {
++				"description": "Payment gateway",
++				"name": "Mercado Pago"
++			},
++			"META": {
++				"description": "Marketing platform",
++				"name": "Meta"
++			},
++			"SHOPIFY": {
++				"description": "Sales channel",
++				"name": "Shopify"
++			},
++			"YAMPI": {
++				"description": "Checkout",
++				"name": "Yampi"
++			}
++		},
++		"title": "Connect your store",
+ 		"toast": {
+ 			"success": "All set",
+ 			"successDescription": "Your account is ready."
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..2783abf4d 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -292,10 +292,10 @@
+ 			"centreLabel": "Faturamento",
+ 			"legendAria": "Legenda de distribuição de custos",
+ 			"loadError": "Não foi possível carregar a distribuição de custos.",
++			"profitLabel": "Lucro",
+ 			"profitPct": "lucro",
+ 			"subtitle": "Proporção de cada custo sobre o faturamento",
+-			"title": "Distribuição de Custos",
+-			"profitLabel": "Lucro"
++			"title": "Distribuição de Custos"
+ 		},
+ 		"goal": {
+ 			"achievedLabel": "Alcançado",
+@@ -554,6 +554,10 @@
+ 			"YEVER": "Yever",
+ 			"ZEDY": "Zedy"
+ 		},
++		"ConnectionMode": {
++			"CREDENTIALS": "Credenciais de API",
++			"MANUAL": "Manual"
++		},
+ 		"CostKind": {
+ 			"CHARGEBACK": "Chargeback",
+ 			"FEES": "Taxas",
+@@ -733,6 +737,13 @@
+ 			"NONE": "Nenhum",
+ 			"PAID_BY_CUSTOMER_AT_CHECKOUT": "Pago pelo cliente no checkout"
+ 		},
++		"StoreIntegrationType": {
++			"CHECKOUT": "Checkout",
++			"INFOPRODUCT": "Infoproduto",
++			"MARKETING_PLATFORM": "Plataforma de marketing",
++			"PAYMENT_GATEWAY": "Gateway de pagamento",
++			"SALES_CHANNEL": "Canal de vendas"
++		},
+ 		"TaxDeductionType": {
+ 			"NONE": "Nenhuma",
+ 			"PRODUCT_COST": "Custo do produto",
+@@ -1099,10 +1110,59 @@
+ 	},
+ 	"onboarding": {
+ 		"breadcrumb": "Onboarding",
++		"connectionMode": {
++			"subtitle": "Escolha como você vai adicionar sua primeira integração",
++			"title": "Como você quer conectar?"
++		},
++		"credentials": {
++			"subtitle": "Forneça suas chaves de API para conectar com segurança",
++			"title": "Insira suas credenciais"
++		},
+ 		"error": {
+ 			"description": "Não conseguimos carregar o onboarding.",
+ 			"title": "Algo deu errado"
+ 		},
++		"review": {
++			"connectionMode": "Modo de conexão",
++			"credentials": {
++				"alias": "Alias",
++				"clientId": "Client ID",
++				"clientSecret": "Client secret",
++				"shopDomain": "Domínio da loja",
++				"userSecretKey": "User secret key",
++				"userToken": "User token"
++			},
++			"integrationType": "Tipo de integração",
++			"noCredentials": "Nenhuma credencial adicional necessária",
++			"platform": "Plataforma",
++			"submit": "Conectar",
++			"subtitle": "Confirme os detalhes antes de conectar",
++			"title": "Revise sua conexão"
++		},
++		"stepOf": "Passo {{current}} de {{total}}",
++		"target": {
++			"subtitle": "Selecione a plataforma que deseja conectar",
++			"title": "Escolha sua primeira integração"
++		},
++		"targets": {
++			"MERCADOPAGO": {
++				"description": "Gateway de pagamento",
++				"name": "Mercado Pago"
++			},
++			"META": {
++				"description": "Plataforma de marketing",
++				"name": "Meta"
++			},
++			"SHOPIFY": {
++				"description": "Canal de vendas",
++				"name": "Shopify"
++			},
++			"YAMPI": {
++				"description": "Checkout",
++				"name": "Yampi"
++			}
++		},
++		"title": "Conecte sua loja",
+ 		"toast": {
+ 			"success": "Tudo pronto",
+ 			"successDescription": "Sua conta está pronta para uso."
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..5c004e66c 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
+ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
++import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+@@ -53,6 +54,11 @@ const ResetPasswordIndexRoute = ResetPasswordIndexRouteImport.update({
+   path: '/reset-password/',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
++  id: '/onboarding/',
++  path: '/onboarding/',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   id: '/suggestions/',
+   path: '/suggestions/',
+@@ -131,6 +137,7 @@ const appMarketingAccountsPlatformIndexRoute =
+ 
+ export interface FileRoutesByFullPath {
+   '/': typeof IndexRoute
++  '/onboarding/': typeof OnboardingIndexRoute
+   '/reset-password/': typeof ResetPasswordIndexRoute
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+@@ -151,6 +158,7 @@ export interface FileRoutesByFullPath {
+ }
+ export interface FileRoutesByTo {
+   '/': typeof IndexRoute
++  '/onboarding': typeof OnboardingIndexRoute
+   '/reset-password': typeof ResetPasswordIndexRoute
+   '/sign-in': typeof SignInIndexRoute
+   '/sign-up': typeof SignUpIndexRoute
+@@ -173,6 +181,7 @@ export interface FileRoutesById {
+   __root__: typeof rootRouteImport
+   '/': typeof IndexRoute
+   '/(app)': typeof appRouteRouteWithChildren
++  '/onboarding/': typeof OnboardingIndexRoute
+   '/reset-password/': typeof ResetPasswordIndexRoute
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+@@ -195,6 +204,7 @@ export interface FileRouteTypes {
+   fileRoutesByFullPath: FileRoutesByFullPath
+   fullPaths:
+     | '/'
++    | '/onboarding/'
+     | '/reset-password/'
+     | '/sign-in/'
+     | '/sign-up/'
+@@ -215,6 +225,7 @@ export interface FileRouteTypes {
+   fileRoutesByTo: FileRoutesByTo
+   to:
+     | '/'
++    | '/onboarding'
+     | '/reset-password'
+     | '/sign-in'
+     | '/sign-up'
+@@ -236,6 +247,7 @@ export interface FileRouteTypes {
+     | '__root__'
+     | '/'
+     | '/(app)'
++    | '/onboarding/'
+     | '/reset-password/'
+     | '/sign-in/'
+     | '/sign-up/'
+@@ -258,6 +270,7 @@ export interface FileRouteTypes {
+ export interface RootRouteChildren {
+   IndexRoute: typeof IndexRoute
+   appRouteRoute: typeof appRouteRouteWithChildren
++  OnboardingIndexRoute: typeof OnboardingIndexRoute
+   ResetPasswordIndexRoute: typeof ResetPasswordIndexRoute
+   SignInIndexRoute: typeof SignInIndexRoute
+   SignUpIndexRoute: typeof SignUpIndexRoute
+@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof ResetPasswordIndexRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/onboarding/': {
++      id: '/onboarding/'
++      path: '/onboarding'
++      fullPath: '/onboarding/'
++      preLoaderRoute: typeof OnboardingIndexRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/(app)/suggestions/': {
+       id: '/(app)/suggestions/'
+       path: '/suggestions'
+@@ -443,6 +463,7 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
+ const rootRouteChildren: RootRouteChildren = {
+   IndexRoute: IndexRoute,
+   appRouteRoute: appRouteRouteWithChildren,
++  OnboardingIndexRoute: OnboardingIndexRoute,
+   ResetPasswordIndexRoute: ResetPasswordIndexRoute,
+   SignInIndexRoute: SignInIndexRoute,
+   SignUpIndexRoute: SignUpIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ConnectWizard/index.tsx b/packages/app/react/src/routes/onboarding/-components/ConnectWizard/index.tsx
+new file mode 100644
+index 000000000..f78859cfd
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ConnectWizard/index.tsx
+@@ -0,0 +1,193 @@
++// SEEDED CANONICAL SPINE — complete the TODOs; do NOT rewrite or delete this file.
++// The _infer typing, sequence Record, setFieldValue merging and pickUnionVariant gate
++// are the measured-canonical machinery (form FRM-P13/15/18/43).
++import { type ComponentProps, type ReactNode } from 'react'
++import { useForm } from '@tanstack/react-form'
++import { useNavigate } from '@tanstack/react-router'
++import { toast } from 'sonner'
++import { useQueryClient } from '@tanstack/react-query'
++import {
++	connectIntegrationMutationRequestSchema,
++	ConnectionModeEnum,
++	type ConnectionMode,
++	useConnectIntegration,
++	listPlatformDescriptorsQueryKey,
++} from '@template/client-typescript/typescript'
++import type { DeepPartial } from '@/lib'
++import { pickUnionVariant } from '@/lib/union'
++import { cn } from '@/lib/utils'
++import { useTranslation } from 'react-i18next'
++import { useConnectWizardStore, type WizardPlatform } from '../../-stores/useConnectWizardStore'
++export type { WizardPlatform }
++import { ConnectionModeStep, type ConnectionModeStepData } from '../ConnectionModeStep'
++import { TargetStep, type TargetStepData } from '../TargetStep'
++import { ShopifyCredentialsStep, type ShopifyCredentials } from '../ShopifyCredentialsStep'
++import { YampiCredentialsStep, type YampiCredentials } from '../YampiCredentialsStep'
++import { ReviewStep } from '../ReviewStep'
++
++// ─── Step sequences — const-asserted tuples in an enum-keyed map (FRM-P13) ──────────────
++const CREDENTIALS_STEPS = ['CONNECTION_MODE', 'TARGET', 'CREDENTIALS', 'REVIEW'] as const
++const MANUAL_STEPS = ['CONNECTION_MODE', 'TARGET', 'REVIEW'] as const
++
++export type ConnectStepId = (typeof CREDENTIALS_STEPS)[number] | (typeof MANUAL_STEPS)[number]
++
++const STEP_SEQUENCES: Record<ConnectionMode, readonly ConnectStepId[]> = {
++	[ConnectionModeEnum.CREDENTIALS]: CREDENTIALS_STEPS,
++	[ConnectionModeEnum.MANUAL]: MANUAL_STEPS,
++	[ConnectionModeEnum.OAUTH]: CREDENTIALS_STEPS,
++}
++
++// ─── The accumulated-form typing trick (FRM-P18) ─────────────────────────────────────────
++// An UNCALLED function wrapping useForm: its ReturnType IS the typed form instance —
++// never hand-write an interface of field names. defaultValues uses the union's
++// DeepPartial so steps can merge incrementally without the Partial<Union> fight.
++function _inferConnectForm() {
++	return useForm({
++		defaultValues: {} as DeepPartial<(typeof connectIntegrationMutationRequestSchema)['_zod']['output']>,
++	})
++}
++export type ConnectForm = ReturnType<typeof _inferConnectForm>
++
++type ConnectAccumulated = DeepPartial<(typeof connectIntegrationMutationRequestSchema)['_zod']['output']>
++
++export function ConnectWizard({ className, ...props }: ComponentProps<'main'>) {
++	const { t } = useTranslation()
++	const navigate = useNavigate()
++	const queryClient = useQueryClient()
++
++	const mode = useConnectWizardStore(s => s.mode)
++	const platform = useConnectWizardStore(s => s.platform)
++	const type = useConnectWizardStore(s => s.type)
++	const stepIndex = useConnectWizardStore(s => s.stepIndex)
++	const setMode = useConnectWizardStore(s => s.setMode)
++	const setPlatformTarget = useConnectWizardStore(s => s.setPlatformTarget)
++	const setStepIndex = useConnectWizardStore(s => s.setStepIndex)
++	const reset = useConnectWizardStore(s => s.reset)
++
++	const form = _inferConnectForm()
++	const sequence = STEP_SEQUENCES[mode]
++	const stepId = sequence[stepIndex] ?? sequence[0]
++
++	const connect = useConnectIntegration({
++		mutation: {
++			onSuccess: () => {
++				toast.success(t('integrations.sheet.connectSuccess'))
++				queryClient.invalidateQueries({ queryKey: listPlatformDescriptorsQueryKey() })
++				reset()
++				// String() call infers as `string` (not the literal) so navigate uses
++				// the untyped overload and validateSearch defaults kick in automatically.
++				const appHome = String('/dashboard')
++				void navigate({ to: appHome })
++			},
++		},
++	})
++
++	// Merges step output into the accumulated form (FRM-P15) and advances the sequence.
++	function advance() {
++		if (stepIndex < sequence.length - 1) setStepIndex(stepIndex + 1)
++	}
++
++	function handleBack() {
++		setStepIndex(Math.max(0, stepIndex - 1))
++	}
++
++	// OAUTH uses CREDENTIALS steps at runtime but has no union member in the schema —
++	// exclude it so setFieldValue / pickUnionVariant see only the schema-valid modes.
++	type WizardConnectionMode = Exclude<ConnectionMode, 'OAUTH'>
++
++	function handleConnectionModeSubmit(data: ConnectionModeStepData) {
++		setMode(data.connectionMode)
++		form.setFieldValue('connectionMode', data.connectionMode as WizardConnectionMode)
++		advance()
++	}
++
++	function handleTargetSubmit(data: TargetStepData) {
++		setPlatformTarget(data.platform, data.type)
++		form.setFieldValue('connectionMode', data.connectionMode as WizardConnectionMode)
++		form.setFieldValue('platform', data.platform)
++		form.setFieldValue('type', data.type)
++		advance()
++	}
++
++	function handleCredentialsSubmit(data: ShopifyCredentials | YampiCredentials) {
++		form.setFieldValue('credentials', data as ConnectAccumulated['credentials'])
++		advance()
++	}
++
++	// Final submission gates through the union variant matched by current wizard state (FRM-P43):
++	// pickUnionVariant selects the exact member, then safeParse validates the accumulated values.
++	function handleFinish() {
++		if (!platform) return
++		const payload = form.state.values
++		const variant = pickUnionVariant(connectIntegrationMutationRequestSchema, { connectionMode: mode as WizardConnectionMode, platform })
++		const result = variant.safeParse(payload)
++		if (!result.success) return
++		connect.mutate({ data: result.data as (typeof connectIntegrationMutationRequestSchema)['_zod']['output'] })
++	}
++
++	// Credentials dispatch by platform map — never a switch chain (CMP-P18).
++	const CREDENTIALS_BY_PLATFORM: Record<WizardPlatform, ReactNode> = {
++		SHOPIFY: (
++			<ShopifyCredentialsStep
++				onSubmit={handleCredentialsSubmit}
++				onBack={handleBack}
++				isSubmitting={connect.isPending}
++			/>
++		),
++		YAMPI: (
++			<YampiCredentialsStep
++				onSubmit={handleCredentialsSubmit}
++				onBack={handleBack}
++				isSubmitting={connect.isPending}
++			/>
++		),
++		META: null,
++		MERCADOPAGO: null,
++	}
++
++	// Step dispatch by map — never a switch chain (CMP-P18). The review step receives
++	// the typed parent form for live accumulated-value display (FRM-P18).
++	const STEP_COMPONENTS: Record<ConnectStepId, ReactNode> = {
++		CONNECTION_MODE: (
++			<ConnectionModeStep
++				defaultValues={{ connectionMode: mode }}
++				onSubmit={handleConnectionModeSubmit}
++			/>
++		),
++		TARGET: (
++			<TargetStep
++				mode={mode}
++				defaultPlatform={platform}
++				onSubmit={handleTargetSubmit}
++				onBack={handleBack}
++			/>
++		),
++		CREDENTIALS: platform ? CREDENTIALS_BY_PLATFORM[platform] : null,
++		REVIEW: platform ? (
++			<ReviewStep
++				form={form}
++				platform={platform}
++				type={type}
++				connectionMode={mode}
++				onSubmit={handleFinish}
++				onBack={handleBack}
++				isSubmitting={connect.isPending}
++			/>
++		) : null,
++	}
++
++	const total = sequence.length
++	const current = stepIndex + 1
++
++	return (
++		<main className={cn('flex min-h-dvh flex-col items-center justify-center', className)} {...props}>
++			<div className="w-full max-w-md rounded-xl border bg-card shadow-sm">
++				<div className="border-b px-6 py-4">
++					<h1 className="text-lg font-semibold">{t('onboarding.title')}</h1>
++					<p className="text-muted-foreground text-sm">{t('onboarding.stepOf', { current, total })}</p>
++				</div>
++				{STEP_COMPONENTS[stepId]}
++			</div>
++		</main>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx
+new file mode 100644
+index 000000000..c6af697ec
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx
+@@ -0,0 +1,121 @@
++import { type ComponentProps } from 'react'
++import { z } from 'zod/v4'
++import { useForm } from '@tanstack/react-form'
++import { Button } from '@/components/ui/button'
++import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
++import { ToggleGroup } from '@/components/ui/toggle-group'
++import { Spinner } from '@/components/ui/spinner'
++import { type DeepPartial } from '@/lib'
++import { ConnectionModeEnum, type ConnectionMode } from '@template/client-typescript/typescript'
++import { unionVariantValues } from '@/lib/union'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++
++// Derive the valid connection modes from the SDK union (CREDENTIALS | MANUAL) — avoids
++// hand-rolling the enum and stays in sync with the contract automatically.
++const WIZARD_MODES = unionVariantValues(connectIntegrationMutationRequestSchema, 'connectionMode') as [ConnectionMode, ...ConnectionMode[]]
++
++export const ConnectionModeStepSchema = z.object({
++	connectionMode: z.enum(WIZARD_MODES),
++})
++
++export type ConnectionModeStepData = (typeof ConnectionModeStepSchema)['_zod']['output'] & {
++	connectionMode: ConnectionMode
++}
++
++interface ConnectionModeStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	defaultValues?: DeepPartial<ConnectionModeStepData>
++	onSubmit: (data: ConnectionModeStepData) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++// Enum-mode ToggleGroup needs a Record<string,string>; we expose only the wizard-relevant modes.
++const WIZARD_CONNECTION_MODE_ENUM = {
++	CREDENTIALS: ConnectionModeEnum.CREDENTIALS,
++	MANUAL: ConnectionModeEnum.MANUAL,
++} as const
++
++export function ConnectionModeStep({ defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: ConnectionModeStepProps) {
++	const { t } = useTranslation()
++
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: ConnectionModeStepSchema },
++		onSubmit: async form => {
++			const result = ConnectionModeStepSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data as ConnectionModeStepData)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-6', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.connectionMode.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.connectionMode.subtitle')}</p>
++			</div>
++
++			<FieldGroup>
++				<form.Field name="connectionMode">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name} className="sr-only">
++									{t('onboarding.connectionMode.title')}
++								</FieldLabel>
++								<ToggleGroup
++									enum={WIZARD_CONNECTION_MODE_ENUM}
++									i18nPrefix="enums.ConnectionMode"
++									value={field.state.value as 'CREDENTIALS' | 'MANUAL' | undefined}
++									onValueChange={v => field.handleChange(v as ConnectionMode)}
++									id={field.name}
++									aria-invalid={isInvalid}
++									orientation="vertical"
++									className="w-full"
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
++				{({ canSubmit, values }) => {
++					const isDisabled = isSubmitting || !canSubmit || !ConnectionModeStepSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++										<IconArrowLeft className="mr-1 size-4" />
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<div className="flex gap-2">
++								<Button type="submit" disabled={isDisabled}>
++									{isSubmitting && <Spinner className="mr-2" />}
++									{t('common.next')}
++									<IconArrowRight className="ml-1 size-4" />
++								</Button>
++							</div>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx
+new file mode 100644
+index 000000000..2d901021e
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx
+@@ -0,0 +1,121 @@
++import { type ComponentProps } from 'react'
++import { Button } from '@/components/ui/button'
++import { Spinner } from '@/components/ui/spinner'
++import {
++	connectIntegrationMutationRequestSchema,
++	ConnectionModeEnum,
++	type ConnectionMode,
++	type StoreIntegrationType,
++} from '@template/client-typescript/typescript'
++import { IconArrowLeft } from '@tabler/icons-react'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { ConnectForm, WizardPlatform } from '../ConnectWizard'
++
++interface ReviewStepProps extends ComponentProps<'div'> {
++	form: ConnectForm
++	platform: WizardPlatform
++	type: StoreIntegrationType | undefined
++	connectionMode: ConnectionMode
++	onSubmit: () => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++// Static label maps — no template-literal interpolation outside the enum-label canon.
++const PLATFORM_NAME_KEYS: Record<WizardPlatform, string> = {
++	SHOPIFY: 'onboarding.targets.SHOPIFY.name',
++	YAMPI: 'onboarding.targets.YAMPI.name',
++	META: 'onboarding.targets.META.name',
++	MERCADOPAGO: 'onboarding.targets.MERCADOPAGO.name',
++} as const
++
++const CREDENTIAL_FIELD_LABEL_KEYS: Record<string, string> = {
++	shopDomain: 'onboarding.review.credentials.shopDomain',
++	clientId: 'onboarding.review.credentials.clientId',
++	clientSecret: 'onboarding.review.credentials.clientSecret',
++	alias: 'onboarding.review.credentials.alias',
++	userToken: 'onboarding.review.credentials.userToken',
++	userSecretKey: 'onboarding.review.credentials.userSecretKey',
++} as const
++
++const SECRET_FIELDS = new Set(['clientSecret', 'userSecretKey', 'accessToken'])
++
++export function ReviewStep({ form, platform, type, connectionMode, onSubmit, onBack, isSubmitting, className, ...props }: ReviewStepProps) {
++	const { t } = useTranslation()
++
++	return (
++		<div className={cn('flex flex-col gap-6 p-6', className)} {...props}>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.review.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.review.subtitle')}</p>
++			</div>
++
++			<form.Subscribe selector={s => s.values}>
++				{values => {
++					// Gate submit on the full union schema — no as-never cast needed; safeParse
++					// walks the union and succeeds only when one member's discriminants match.
++					const isValid = connectIntegrationMutationRequestSchema.safeParse(values).success
++
++					const credentials = (values as { credentials?: Record<string, string> }).credentials
++					const credentialEntries = credentials
++						? Object.entries(credentials).filter(([, v]) => typeof v === 'string' && v.length > 0)
++						: []
++
++					return (
++						<>
++							<dl className="divide-border divide-y rounded-lg border text-sm">
++								<div className="flex justify-between px-4 py-3">
++									<dt className="text-muted-foreground">{t('onboarding.review.connectionMode')}</dt>
++									{/* Canonical enum-label pattern: t(`enums.<Enum>.${value}`) */}
++									<dd className="font-medium">{t(`enums.ConnectionMode.${connectionMode}`)}</dd>
++								</div>
++								<div className="flex justify-between px-4 py-3">
++									<dt className="text-muted-foreground">{t('onboarding.review.platform')}</dt>
++									<dd className="font-medium">{t(PLATFORM_NAME_KEYS[platform])}</dd>
++								</div>
++								{type && (
++									<div className="flex justify-between px-4 py-3">
++										<dt className="text-muted-foreground">{t('onboarding.review.integrationType')}</dt>
++										<dd className="font-medium">{t(`enums.StoreIntegrationType.${type}`)}</dd>
++									</div>
++								)}
++								{credentialEntries.length > 0
++									? credentialEntries.map(([key, value]) => (
++											<div key={key} className="flex justify-between px-4 py-3">
++												<dt className="text-muted-foreground">
++													{CREDENTIAL_FIELD_LABEL_KEYS[key] ? t(CREDENTIAL_FIELD_LABEL_KEYS[key]) : key}
++												</dt>
++												<dd className="font-mono text-xs font-medium">
++													{SECRET_FIELDS.has(key) ? '••••••••' : value}
++												</dd>
++											</div>
++										))
++									: connectionMode === ConnectionModeEnum.MANUAL && (
++											<div className="px-4 py-3">
++												<dd className="text-muted-foreground">{t('onboarding.review.noCredentials')}</dd>
++											</div>
++										)}
++							</dl>
++
++							<div className="flex justify-between">
++								<div>
++									{onBack && (
++										<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++											<IconArrowLeft className="mr-1 size-4" />
++											{t('common.back')}
++										</Button>
++									)}
++								</div>
++								<Button type="button" disabled={!isValid || isSubmitting} onClick={onSubmit}>
++									{isSubmitting && <Spinner className="mr-2" />}
++									{t('onboarding.review.submit')}
++								</Button>
++							</div>
++						</>
++					)
++				}}
++			</form.Subscribe>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx
+new file mode 100644
+index 000000000..f8d685682
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx
+@@ -0,0 +1,149 @@
++import { type ComponentProps } from 'react'
++import { useForm } from '@tanstack/react-form'
++import { Button } from '@/components/ui/button'
++import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
++import { Input } from '@/components/ui/input'
++import { Spinner } from '@/components/ui/spinner'
++import { type DeepPartial } from '@/lib'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import { pickUnionVariantField } from '@/lib/union'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { z } from 'zod/v4'
++
++// The credentials sub-schema for the SHOPIFY/CREDENTIALS member — one source for type,
++// validation, and safeParse (FRM-P44).
++const credentialsSchema = pickUnionVariantField(
++	connectIntegrationMutationRequestSchema,
++	{ platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' },
++	'credentials',
++)
++export type ShopifyCredentials = z.infer<typeof credentialsSchema>
++
++interface ShopifyCredentialsStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	defaultValues?: DeepPartial<ShopifyCredentials>
++	onSubmit: (data: ShopifyCredentials) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function ShopifyCredentialsStep({ defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: ShopifyCredentialsStepProps) {
++	const { t } = useTranslation()
++
++	const form = useForm({
++		defaultValues: defaultValues ?? ({ shopDomain: '', clientId: '', clientSecret: '' } as DeepPartial<ShopifyCredentials>),
++		validators: { onChange: credentialsSchema },
++		onSubmit: async form => {
++			const result = credentialsSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-6', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.credentials.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.credentials.subtitle')}</p>
++			</div>
++
++			<FieldGroup>
++				<form.Field name="shopDomain">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.shopDomain')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="clientId">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.clientId')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="clientSecret">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.clientSecret')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="password"
++									autoComplete="new-password"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={s => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting, values: s.values })}>
++				{({ canSubmit, isSubmitting: formSubmitting, values }) => {
++					const isPending = formSubmitting || isSubmitting
++					const isDisabled = !canSubmit || isPending || !credentialsSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isPending}>
++										<IconArrowLeft className="mr-1 size-4" />
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<Button type="submit" disabled={isDisabled}>
++								{isPending && <Spinner className="mr-2" />}
++								{t('common.next')}
++								<IconArrowRight className="ml-1 size-4" />
++							</Button>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/TargetStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/TargetStep/index.tsx
+new file mode 100644
+index 000000000..c86b9990a
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/TargetStep/index.tsx
+@@ -0,0 +1,126 @@
++import { type ComponentProps } from 'react'
++import { useForm } from '@tanstack/react-form'
++import { Button } from '@/components/ui/button'
++import { Spinner } from '@/components/ui/spinner'
++import { type ConnectionMode, type StoreIntegrationType } from '@template/client-typescript/typescript'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { WizardPlatform } from '../ConnectWizard'
++
++export interface TargetStepData {
++	platform: WizardPlatform
++	type: StoreIntegrationType
++	connectionMode: ConnectionMode
++}
++
++// Each onboarding target is a valid (type, platform, connectionMode) discriminant tuple.
++export const ONBOARDING_TARGETS = [
++	{ platform: 'SHOPIFY' as const, type: 'SALES_CHANNEL' as const, connectionMode: 'CREDENTIALS' as const },
++	{ platform: 'YAMPI' as const, type: 'CHECKOUT' as const, connectionMode: 'CREDENTIALS' as const },
++	{ platform: 'META' as const, type: 'MARKETING_PLATFORM' as const, connectionMode: 'MANUAL' as const },
++	{ platform: 'MERCADOPAGO' as const, type: 'PAYMENT_GATEWAY' as const, connectionMode: 'MANUAL' as const },
++] satisfies readonly TargetStepData[]
++
++interface TargetStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	mode: ConnectionMode
++	defaultPlatform?: WizardPlatform
++	onSubmit: (data: TargetStepData) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function TargetStep({ mode, defaultPlatform, onSubmit, onBack, isSubmitting, className, ...props }: TargetStepProps) {
++	const { t } = useTranslation()
++
++	const form = useForm({
++		defaultValues: { platform: defaultPlatform as WizardPlatform | undefined },
++		onSubmit: async ({ value }) => {
++			const target = ONBOARDING_TARGETS.find(target => target.platform === value.platform && target.connectionMode === mode)
++			if (!target) return
++			onSubmit(target)
++		},
++	})
++
++	const visibleTargets = ONBOARDING_TARGETS.filter(target => target.connectionMode === mode)
++
++	// Static label map — no template-literal interpolation; all keys are typed literals.
++	const PLATFORM_LABELS: Record<WizardPlatform, { name: string; description: string }> = {
++		SHOPIFY: {
++			name: t('onboarding.targets.SHOPIFY.name'),
++			description: t('onboarding.targets.SHOPIFY.description'),
++		},
++		YAMPI: {
++			name: t('onboarding.targets.YAMPI.name'),
++			description: t('onboarding.targets.YAMPI.description'),
++		},
++		META: {
++			name: t('onboarding.targets.META.name'),
++			description: t('onboarding.targets.META.description'),
++		},
++		MERCADOPAGO: {
++			name: t('onboarding.targets.MERCADOPAGO.name'),
++			description: t('onboarding.targets.MERCADOPAGO.description'),
++		},
++	}
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-6', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.target.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.target.subtitle')}</p>
++			</div>
++
++			<form.Field name="platform">
++				{field => (
++					<div className="flex flex-col gap-3" role="radiogroup" aria-label={t('onboarding.target.title')}>
++						{visibleTargets.map(target => (
++							<button
++								key={target.platform}
++								type="button"
++								role="radio"
++								aria-checked={field.state.value === target.platform}
++								onClick={() => field.handleChange(target.platform)}
++								className={cn(
++									'flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition-colors hover:bg-accent',
++									field.state.value === target.platform ? 'border-primary bg-primary/5' : 'border-border',
++								)}
++							>
++								<span className="font-medium">{PLATFORM_LABELS[target.platform].name}</span>
++								<span className="text-muted-foreground text-sm">{PLATFORM_LABELS[target.platform].description}</span>
++							</button>
++						))}
++					</div>
++				)}
++			</form.Field>
++
++			<form.Subscribe selector={s => s.values.platform}>
++				{selectedPlatform => (
++					<div className="flex justify-between">
++						<div>
++							{onBack && (
++								<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++									<IconArrowLeft className="mr-1 size-4" />
++									{t('common.back')}
++								</Button>
++							)}
++						</div>
++						<Button type="submit" disabled={!selectedPlatform || isSubmitting}>
++							{isSubmitting && <Spinner className="mr-2" />}
++							{t('common.next')}
++							<IconArrowRight className="ml-1 size-4" />
++						</Button>
++					</div>
++				)}
++			</form.Subscribe>
++		</form>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/YampiCredentialsStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/YampiCredentialsStep/index.tsx
+new file mode 100644
+index 000000000..5cd7c52d8
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/YampiCredentialsStep/index.tsx
+@@ -0,0 +1,149 @@
++import { type ComponentProps } from 'react'
++import { useForm } from '@tanstack/react-form'
++import { Button } from '@/components/ui/button'
++import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
++import { Input } from '@/components/ui/input'
++import { Spinner } from '@/components/ui/spinner'
++import { type DeepPartial } from '@/lib'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import { pickUnionVariantField } from '@/lib/union'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { z } from 'zod/v4'
++
++// The credentials sub-schema for the YAMPI/CREDENTIALS member — one source for type,
++// validation, and safeParse (FRM-P44).
++const credentialsSchema = pickUnionVariantField(
++	connectIntegrationMutationRequestSchema,
++	{ platform: 'YAMPI', connectionMode: 'CREDENTIALS' },
++	'credentials',
++)
++export type YampiCredentials = z.infer<typeof credentialsSchema>
++
++interface YampiCredentialsStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	defaultValues?: DeepPartial<YampiCredentials>
++	onSubmit: (data: YampiCredentials) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function YampiCredentialsStep({ defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: YampiCredentialsStepProps) {
++	const { t } = useTranslation()
++
++	const form = useForm({
++		defaultValues: defaultValues ?? ({ alias: '', userToken: '', userSecretKey: '' } as DeepPartial<YampiCredentials>),
++		validators: { onChange: credentialsSchema },
++		onSubmit: async form => {
++			const result = credentialsSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-6', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.credentials.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.credentials.subtitle')}</p>
++			</div>
++
++			<FieldGroup>
++				<form.Field name="alias">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.alias')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="userToken">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.userToken')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				<form.Field name="userSecretKey">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.userSecretKey')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="password"
++									autoComplete="new-password"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={s => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting, values: s.values })}>
++				{({ canSubmit, isSubmitting: formSubmitting, values }) => {
++					const isPending = formSubmitting || isSubmitting
++					const isDisabled = !canSubmit || isPending || !credentialsSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isPending}>
++										<IconArrowLeft className="mr-1 size-4" />
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<Button type="submit" disabled={isDisabled}>
++								{isPending && <Spinner className="mr-2" />}
++								{t('common.next')}
++								<IconArrowRight className="ml-1 size-4" />
++							</Button>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-stores/useConnectWizardStore.ts b/packages/app/react/src/routes/onboarding/-stores/useConnectWizardStore.ts
+new file mode 100644
+index 000000000..a1ec8496b
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-stores/useConnectWizardStore.ts
+@@ -0,0 +1,34 @@
++import { create } from 'zustand'
++import { ConnectionModeEnum, type ConnectionMode, type StoreIntegrationType } from '@template/client-typescript/typescript'
++
++export type WizardPlatform = 'SHOPIFY' | 'YAMPI' | 'META' | 'MERCADOPAGO'
++
++interface ConnectWizardStore {
++	mode: ConnectionMode
++	platform: WizardPlatform | undefined
++	type: StoreIntegrationType | undefined
++	stepIndex: number
++	direction: 1 | -1
++	setMode: (mode: ConnectionMode) => void
++	setPlatformTarget: (platform: WizardPlatform, type: StoreIntegrationType) => void
++	setStepIndex: (stepIndex: number) => void
++	setDirection: (direction: 1 | -1) => void
++	reset: () => void
++}
++
++const INITIAL_STATE = {
++	mode: ConnectionModeEnum.CREDENTIALS as ConnectionMode,
++	platform: undefined as WizardPlatform | undefined,
++	type: undefined as StoreIntegrationType | undefined,
++	stepIndex: 0,
++	direction: 1 as const,
++}
++
++export const useConnectWizardStore = create<ConnectWizardStore>()(set => ({
++	...INITIAL_STATE,
++	setMode: mode => set({ mode }),
++	setPlatformTarget: (platform, type) => set({ platform, type }),
++	setStepIndex: stepIndex => set({ stepIndex }),
++	setDirection: direction => set({ direction }),
++	reset: () => set({ ...INITIAL_STATE }),
++}))
+diff --git a/packages/app/react/src/routes/onboarding/index.tsx b/packages/app/react/src/routes/onboarding/index.tsx
+new file mode 100644
+index 000000000..5824faa56
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/index.tsx
+@@ -0,0 +1,15 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { RouteError } from '@/components/RouteError'
++import i18n from '@/lib/i18n'
++import { ConnectWizard } from './-components/ConnectWizard'
++
++export const Route = createFileRoute('/onboarding/')({
++	ssr: false,
++	staticData: { breadcrumb: i18n.t('onboarding.title') },
++	component: RouteComponent,
++	errorComponent: RouteError,
++})
++
++function RouteComponent() {
++	return <ConnectWizard />
++}

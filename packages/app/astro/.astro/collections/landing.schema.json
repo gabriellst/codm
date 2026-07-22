@@ -1,0 +1,131 @@
+{
+  "$ref": "#/definitions/landing",
+  "definitions": {
+    "landing": {
+      "type": "object",
+      "properties": {
+        "brand": {
+          "type": "string"
+        },
+        "signIn": {
+          "type": "string"
+        },
+        "getStarted": {
+          "type": "string"
+        },
+        "openApp": {
+          "type": "string"
+        },
+        "hero": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "primaryCta": {
+              "type": "string"
+            },
+            "secondaryCta": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "subtitle",
+            "primaryCta",
+            "secondaryCta"
+          ],
+          "additionalProperties": false
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "fast": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "typesafe": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "domain": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "description"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "fast",
+            "typesafe",
+            "domain"
+          ],
+          "additionalProperties": false
+        },
+        "footer": {
+          "type": "object",
+          "properties": {
+            "copyright": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "copyright"
+          ],
+          "additionalProperties": false
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "brand",
+        "signIn",
+        "getStarted",
+        "openApp",
+        "hero",
+        "features",
+        "footer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

@@ -1,0 +1,47 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  datadog:
+    endpoint: 0.0.0.0:8126
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+exporters:
+  otlp/tempo:
+    endpoint: localhost:9095
+    tls:
+      insecure: true
+  
+  loki:
+    endpoint: http://localhost:3100/loki/api/v1/push
+  
+  prometheusremotewrite:
+    endpoint: http://localhost:9009/api/v1/push
+  
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp, datadog]
+      processors: [batch]
+      exporters: [otlp/tempo, debug]
+    
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheusremotewrite]
+    
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [loki]
+

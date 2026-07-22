@@ -1,0 +1,288 @@
+id: synthetic-astro-landing-section
+tier: holdout
+builder: sonnet
+title: Localized pricing landing page with one deliberate island
+  (synthetic — first astro probe; route/component astro variants, island discipline, a11y, content-collection i18n)
+sourceSpec: PROBES-BACKLOG.md#10
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template landing site (packages/app/astro — the public marketing
+  surface served at /), build the missing Pricing page. This is an
+  astro-workspace-only task: do not touch the backend, the react app, the
+  expo app, or the SDK (the landing site never imports
+  @template/client-typescript). Before writing code, read the astro skill
+  variants — .claude/skills/route/astro/SKILL.md + registry.yaml,
+  .claude/skills/component/astro/SKILL.md + registry.yaml and
+  .claude/skills/primitive/astro/registry.yaml — then ground every shape
+  in the existing exemplars FIRST: astro.config.mjs (i18n with
+  prefixDefaultLocale: false — pt lives unprefixed, en under /en/),
+  src/pages/index.astro + src/pages/en/index.astro (per-locale page
+  pairs), src/content.config.ts + src/content/i18n/{pt,en}/landing.json
+  (the Zod-typed content-collection dictionaries),
+  src/components/Nav.astro + Footer.astro (getLocale + getEntry
+  consumption) and src/i18n/index.ts (the routeFor/localizedPath
+  helpers). Where the skills' generic examples (a t(locale, key) helper,
+  a [locale] dynamic segment) differ from these exemplars, the repo shape
+  wins — the pinned paths below are the contract. The bun cli scaffolder
+  has no astro recipes yet (--platform=astro prints "not yet
+  implemented"), so author the files by hand. Deliverables: (1) the page
+  at /pricing (pt) and /en/pricing (en) — exactly src/pages/pricing.astro
+  and src/pages/en/pricing.astro; each page file is a thin shell that
+  reads the pricing dictionary entry for its locale and renders
+  BaseLayout itself with a localized title + description, like
+  src/pages/index.astro does. (2) Every user-facing string of the feature
+  (page meta, section headings, plan names + prices + feature bullets,
+  FAQ questions and answers, estimator labels, aria-label strings, the
+  nav label) lives in new dictionaries src/content/i18n/pt/pricing.json +
+  src/content/i18n/en/pricing.json, registered as a new Zod-typed
+  `pricing` collection in src/content.config.ts mirroring the landing
+  collection — copy is never inlined in .astro/.tsx code. (3) The page
+  body decomposes into section components under src/components/: a plans
+  section rendering three plans from the dictionary as a semantic list
+  with a localized aria-label, and an FAQ section with at least four
+  question/answer pairs as an expand/collapse accordion. (4) ONE
+  deliberate island decision: the FAQ accordion must ship ZERO JavaScript
+  (native HTML gives expand/collapse for free), while the below-the-fold
+  plan estimator — a slider for expected monthly order volume whose
+  recommended plan + price update live as the slider moves — genuinely
+  needs runtime JS and is the single React island, at exactly
+  src/components/PricingEstimator.tsx, mounted with the smallest viable
+  client directive; the island receives all plan data and localized
+  strings via typed props and holds only local UI state — no data
+  fetching, no astro:content, no stores — and its slider needs an
+  accessible name. (5) A Pricing link in src/components/Nav.astro whose
+  href is composed with the i18n route helper so each locale deep-links
+  to its own page (pt → /pricing, en → /en/pricing), and whose localized
+  label joins the landing dictionaries (schema + both landing.json
+  files); for the new link the helper wins over the existing Nav's
+  hardcoded conditional hrefs. (6) Styling uses the design tokens
+  (var(--...) / token-mapped utilities) like the existing pages — no raw
+  hex or rgb values. Finish with green gates: cd packages/app/astro &&
+  bun x astro check && bun x astro build.
+axes:
+  - UI-COMPOSITION
+  - PRIMITIVES-A11Y
+  - DATA-OWNERSHIP
+  - LOCALE-MONEY
+  - LAYOUT
+graders:
+  # ── platform gates ─────────────────────────────────────────────────
+  - kind: cmd
+    spec: "packages/app/astro::bun x astro check"
+    id: astro#check
+  - kind: cmd
+    spec: "packages/app/astro::bun x astro build"
+    id: astro#build
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/app/astro/src/pages/pricing.astro"
+  - kind: file-exists
+    spec: "packages/app/astro/src/pages/en/pricing.astro"
+  - kind: file-exists
+    spec: "packages/app/astro/src/content/i18n/pt/pricing.json"
+  - kind: file-exists
+    spec: "packages/app/astro/src/content/i18n/en/pricing.json"
+  - kind: file-exists
+    spec: "packages/app/astro/src/components/PricingEstimator.tsx"
+  # ── ROUTE / SEO ────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/astro/src/pages/pricing.astro::<BaseLayout"
+    id: route-astro#BP-AR-001
+  - kind: grep-must
+    spec: "packages/app/astro/src/pages/en/pricing.astro::<BaseLayout"
+    id: route-astro#BP-AR-001
+  - kind: grep-must
+    spec: "packages/app/astro/src/pages/**/pricing.astro::get(Entry|Collection)\\("
+    id: route-astro#P-AR-003
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.astro::prerender\\s*=\\s*false"
+    id: route-astro#BP-AR-004
+  # ── I18N / DATA-OWNERSHIP ──────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/astro/src/content.config.ts::pricing"
+    id: route-astro#P-AR-003
+  - kind: grep-must
+    spec: "packages/app/astro/src/**/*.astro::get(Entry|Collection)\\(\\s*['\"]pricing['\"]"
+    id: component-astro#BP-AC-002
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.{astro,tsx}::from\\s+['\"][^'\"]*pricing\\.json"
+    id: component-astro#BP-AC-002
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/components/**/*.astro::[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]"
+    id: component-astro#BP-AC-002
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/components/**/*.tsx::[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]"
+    id: component-astro#BP-AC-002
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/pages/**/pricing.astro::[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]"
+    id: component-astro#BP-AC-002
+  # ── ISLAND DECISION ────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/astro/src/**/*.astro::client:(visible|idle)"
+    id: component-astro#BP-AC-004
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.astro::client:load"
+    id: component-astro#BP-AC-004
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.astro::client:only"
+    id: component-astro#BP-AC-009
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/**/*.astro::<details"
+    id: component-astro#island-static
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/**/*.astro::<summary"
+    id: component-astro#island-static
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.astro::\\buse(State|Effect|Query)\\s*\\("
+    id: component-astro#BP-AC-001
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/components/**/*.tsx::useQuery|useMutation|zustand|astro:content|(?<![\\w$.])fetch\\s*\\("
+    id: component-astro#P-AC-003
+  # ── PRIMITIVES-A11Y ────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/**/*.astro::role=\"list\""
+    id: component-astro#BP-AC-007
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/**/*.astro::aria-label"
+    id: component-astro#BP-AC-008
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/**/*.tsx::aria-label|aria-labelledby|htmlFor"
+    id: primitive-astro#a11y
+  # ── NAV / LOCALE-PREFIXED ROUTING ──────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/Nav.astro::routeFor\\("
+    id: route-astro#BP-AR-003
+  - kind: grep-must
+    spec: "packages/app/astro/src/components/Nav.astro::[Pp]ricing"
+    id: route-astro#BP-AR-003
+  - kind: grep-must
+    spec: "packages/app/astro/src/content/i18n/pt/landing.json::pricing|Pre[çc]os"
+    id: component-astro#BP-AC-002
+  - kind: grep-must
+    spec: "packages/app/astro/src/content/i18n/en/landing.json::[Pp]ricing"
+    id: component-astro#BP-AC-002
+  # ── TOKENS / WORKSPACE BOUNDARIES ──────────────────────────────────
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.{astro,tsx}::#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\\b|\\brgba?\\s*\\("
+    id: component-astro#BP-AC-003
+  - kind: grep-must-not
+    spec: "packages/app/astro/src/**/*.{astro,tsx}::@template/(app-react|app-expo|client-typescript)"
+    id: component-astro#BP-AC-005
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: judge
+    spec: >
+      A localized Pricing page was just added to the astro landing site:
+      packages/app/astro/src/pages/pricing.astro (pt) +
+      src/pages/en/pricing.astro (en), section components under
+      src/components/, dictionaries at
+      src/content/i18n/{pt,en}/pricing.json and a nav link in
+      src/components/Nav.astro. Verify ALL of:
+      (a) UI-COMPOSITION — each page file is a thin shell: frontmatter
+      reads the pricing dictionary entry for ITS locale via the typed
+      content collection and renders BaseLayout with a localized title +
+      description, composing section components — no inlined mega-page
+      body; the plans section and the FAQ section are separate .astro
+      components under src/components/ whose localized content comes from
+      the dictionary (passed via props or read via getEntry — both fine).
+      (b) ISLAND DISCIPLINE — exactly ONE React island exists for this
+      feature: PricingEstimator.tsx; it is mounted with client:visible
+      (or client:idle), never client:load / client:only; it receives all
+      plan data and localized strings via typed Props, holds only local
+      UI state, and contains no copy literals, no data fetching, no
+      astro:content import, no store; the FAQ accordion ships zero
+      JavaScript — native <details>/<summary> in .astro with NO client:
+      directive and no .tsx involvement.
+      (c) I18N + LOCALE ROUTING — every user-facing string of the new
+      feature (page title/description, section headings, plan names,
+      prices and feature bullets, FAQ questions AND answers, estimator
+      labels and aria strings, the nav label) lives in the pt + en
+      dictionaries with an identical Zod-typed key structure registered
+      in src/content.config.ts; no hardcoded copy in any new .astro/.tsx;
+      the pt page reads pt entries and the en page reads en entries; the
+      new Nav link composes its href through the ~/i18n route helper
+      (routeFor or equivalent) so pt resolves /pricing and en resolves
+      /en/pricing, and its label comes from the landing dictionary in
+      both languages.
+      (d) PRIMITIVES-A11Y — the plans render as a semantic list (ul with
+      role="list" and a localized aria-label); the FAQ uses native
+      details/summary so keyboard and screen-reader support come for
+      free; the estimator's range input has an accessible name sourced
+      from a localized prop (aria-label/aria-labelledby or a label with
+      htmlFor); any icon-only link added has an aria-label.
+      (e) SEO + TOKENS — both pages render through BaseLayout (never a
+      raw <head>), and all styling in the new files uses design-token
+      vars (var(--...)) or token-mapped utilities — no raw hex/rgb
+      values.
+      Scope notes — judge the idiom, not the variable name: the pt and en
+      page files are EXPECTED to be near-identical twins (the repo's
+      prefixDefaultLocale:false pattern duplicates pages per locale — do
+      not fail this as duplication); useState inside the island is the
+      expected shape for its local UI state — do not fail it; passing
+      plan data and strings into sections and the island via props is the
+      astro-canonical shape — do not import the react app's
+      no-prop-drilling rule; client:idle instead of client:visible is an
+      acceptable directive choice; a missing aria-live or <output> on the
+      estimator's computed result is a soft miss — fail (d) only if the
+      slider lacks an accessible name or the list/accordion semantics are
+      lost; pre-existing deviations at HEAD are OUT of scope
+      (src/pages/blog/index.astro's hardcoded pt strings, Nav.astro's
+      hardcoded 'Blog' label and conditional blog href, index.astro's
+      inline sections without role="list", and the BaseLayout jsonLd
+      is:inline hint). Inspect the new files plus src/content.config.ts,
+      src/components/Nav.astro and src/content/i18n/{pt,en}/landing.json.
+notes: >-
+  First astro probe ever — synthetic, no gold tree, agent mode only.
+  Platform gates: the backlog row asked for an astro TSC_TARGETS entry,
+  but graders.ts already ships the generic cmd grader, so the gates are
+  cmd "packages/app/astro::bun x astro check" (verified exit 0 at HEAD —
+  1 pre-existing HINT about jsonLd is:inline in BaseLayout, hints don't
+  affect the exit code) and cmd "bun x astro build" (verified exit 0,
+  ~2s, fully offline/static; also catches content-schema mismatches and
+  island hydration errors that astro check misses — astro check DOES
+  type-check .ts/.tsx in this workspace, 16 files at HEAD). Free real
+  estate verified at authoring time: zero .tsx files under astro src
+  (so every components/**/*.tsx grep measures only new work), zero
+  client: directives, zero <details>/<summary>/role="list"/aria-label in
+  any .astro/.tsx, no mention of pricing/Preços anywhere under src
+  (dictionaries, content.config.ts, Nav included), routeFor is defined in
+  src/i18n/index.ts but has zero .astro call sites (LocaleSwitcher uses
+  localizedPath; the i18n module itself is .ts so the Nav.astro grep is
+  0 at HEAD), get(Entry|Collection)('pricing') zero, no hex/rgb literals
+  in .astro/.tsx, no prerender=false, no use(State|Effect|Query)( in
+  .astro, no @template/app-react|app-expo|client-typescript imports;
+  registry-scan + import-direction exit 0 at HEAD. The accent canary
+  (must-not [áàâã...] — hardcoded pt copy in code) is scoped to
+  src/components/** and src/pages/**/pricing.astro ONLY because
+  src/pages/blog/index.astro carries hardcoded pt strings at HEAD
+  (pre-existing BP-AC-002 debt, excluded from the judge's scope too).
+  Known doc-vs-repo tensions, pinned in the prompt: route/astro +
+  component/astro SKILL.md describe a [locale] dynamic segment and a
+  t(locale, key) helper that DON'T exist at HEAD — the repo's canonical
+  spellings are per-locale page pairs (prefixDefaultLocale: false; pt
+  unprefixed + en/ copies) and Zod-typed content-collection dictionaries
+  (getEntry('landing', `${locale}/landing`)); the prompt pins exact paths
+  so the agent can't follow the skill into the non-existent layout. The
+  astro registries' scaffold lines are stale: bun cli --platform=astro
+  prints "not yet implemented" (scripts/cli/resolve.ts), so the prompt
+  says author by hand. There is NO packages/app/astro/CLAUDE.md at HEAD —
+  the astro skill variants are named first in the read list as the canon
+  carrier instead. Discriminating traps: a naive agent islands the FAQ
+  (react accordion or client:load), hardcodes copy or the nav label in
+  code (like the pre-existing hardcoded 'Blog' link), copies Nav's
+  conditional href instead of routeFor, imports pricing.json directly
+  (bypassing the Zod collection — must-not from..pricing.json), puts copy
+  or fetching inside the island, or skips list/slider a11y. The island
+  decision is examined from BOTH sides: estimator MUST be an island
+  (client:visible|idle grep) and FAQ must NOT be (details/summary
+  grep-must in .astro + judge's exactly-one-island check). Glob notes:
+  Bun.Glob ** matches zero segments, so src/pages/**/pricing.astro spans
+  both the pt and en files; filename braces ({astro,tsx}) are supported
+  but "/" inside a brace branch is not (hence separate component/page
+  globs); single-file globs are literal paths. The astro build cmd
+  writes packages/app/astro/dist/ + .astro/ in the graded tree
+  (gitignored, same as the main checkout).

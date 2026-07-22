@@ -1,0 +1,194 @@
+id: synthetic-l6-clickup
+# L6 app #2 — scaled ClickUp clone (richer than mini-Kanban: container hierarchy + task status
+# workflow + assignment + TWO read views). Same orchestrated harness (extraTools:[Task] → the eval
+# agent fans out worker subagents). Stage vector via id prefixes model#/lock#/build#/e2e#/flows#.
+# Gold rubric: scripts/skill-evals/seeds/l6-clickup/GOLD.md. The point: stress BC-decomposition +
+# the handoff machinery at richer scale (3 contexts + 2 projections + a status workflow).
+title: Autonomous build — minimal ClickUp app from a one-line idea (orchestrated, multi-agent)
+tier: holdout
+builder: fable
+sourceSpec: scripts/skill-evals/seeds/l6-clickup/GOLD.md
+goldRef: ""
+baseRef: ""
+timeoutMs: 10800000
+extraTools:
+  - Task
+prompt: >
+  BUILD A MINIMAL CLICKUP APP, end to end, in this monorepo, from this one-line idea:
+  "A workspace has spaces; each space has ordered lists; tasks live in lists and carry a status (a
+  workflow), a priority, and assignees; tasks move through statuses; the same tasks render in BOTH a
+  List view and a Board view, live as they change. Auth is handled by the template."
+  You are the ORCHESTRATOR (you have the Task tool) — model, lock the contract, plan with handoffs,
+  then DISPATCH a fresh worker subagent per Task. Follow the full pipeline in the preamble.
+  ARCHITECTURE (non-negotiable, it is the grading rubric): DDD + Clean + CQRS + Event-Driven per the
+  root CLAUDE.md and docs/BACKEND.md / docs/FRONTEND.md.
+  DECOMPOSE into SOUND bounded contexts (read .claude/skills/ddd-modeling — the invariant/lifecycle
+  boundary DOMINATES entity count): a `workspace` context owns the container hierarchy (Workspace
+  owns Spaces; a Space owns its Lists as ordered VALUE OBJECTS and defines its status set); a `task`
+  context owns the Task aggregate (its OWN context — different lifecycle; status/priority/assigneeIds/
+  listId), with invariants (a task's status must be one of its space's statuses; a task belongs to a
+  list in its space); a `collaboration`/`membership` context owns workspace members + task
+  assignment (or fold membership into workspace). Status and Priority are ENUMS (TaskStatus:
+  TODO|IN_PROGRESS|IN_REVIEW|DONE, TaskPriority: LOW|NORMAL|HIGH|URGENT), NOT contexts. NO god-context
+  (one `clickup` context owning everything), NO per-table sprawl, NEVER lump Task into workspace.
+  CONTRACT LOCK (freeze before building any context): author the integration event named exactly
+  `TaskStatusChanged` (TypeSpec model `TaskStatusChangedEvent`, event name
+  `integration.shared.task.status_changed`, payload carrying `workspaceId` (REQUIRED — the SSE
+  realtime tenancy filter), `taskId`, `fromStatus`, `toStatus`); the `TaskStatus` + `TaskPriority`
+  enums in TypeSpec used by both languages; add it to the BROWSER_EVENTS union in the ui ListenEvents
+  controller; add the workspaces/spaces/lists/tasks tables (Drizzle); run `bun contracts` + `bun sdk`.
+  READ-SIDE (the richer-app payoff): TWO projections of the same tasks — a ListViewProjection (space →
+  lists → tasks) AND a BoardViewProjection (space → statuses → tasks), each driven by a projector from
+  TaskCreated/TaskStatusChanged, exposed via `ui` BFF queries.
+  FRONTEND (react, per packages/app/react/CLAUDE.md): a space route (thin shell, params typed) with a
+  List-view + Board-view toggle that is BOOKMARKABLE (route search param, not useState); data-owning
+  sections calling the GetListView/GetBoardView hooks + routeApi + exactly one
+  useServerEvents(TaskStatusChanged…) that invalidates the view query key; a CreateTaskDialog via
+  useDialogStore validating the SDK create-task mutation schema; status-change + assign mutations
+  (kept whole, no try/catch/onError). Status/priority labels via the typed enums.* i18n catalog in
+  BOTH locales. EVERY actionable button wired (no dead buttons); NO hardcoded user-facing text (use
+  t()).
+  E2E (packages/e2e, per .claude/skills/e2e): a Playwright spec at the EXACT path
+  packages/e2e/tests/clickup-tasks-realtime.spec.ts that sets up via the API request context (not
+  UI), role/label selectors, no waitForTimeout, and asserts the REALTIME path — with the board open,
+  change a task's status via the API and assert it moves to the new status column WITHOUT reload.
+  This spec is graded by READING (static + a judge), NOT by running Playwright — write it COMPLETE
+  with ACTIVE assertions; never comment out the body / `expect(true).toBe(true)` / `.skip`. A
+  stubbed spec grades FAIL.
+  TESTS (TDD — per .claude/skills/test/typescript, NOT optional): the Task aggregate's bounded context
+  lives at packages/api/typescript/src/task/. Write COLOCATED tests there that PASS: (a) an ENTITY test
+  asserting a Task invariant (a task's status must be one of its space's statuses; a task belongs to a
+  list in its space — rejected with the named domain error); (b) a USE CASE test in TestBed integration
+  mode (`TestBed.create('integration', …)`) for CreateTask / ChangeStatus. Green:
+  `cd packages/api/typescript && bun test src/task`.
+  GATES before done: `cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit` AND
+  `bun test src/task` (green); `cd packages/app/react && bun x tsc --noEmit`; `cd packages/e2e && bun x
+  tsc --noEmit`; `bun run detect` clean. Final message: the bounded contexts, the frozen contract,
+  per-Task worker dispatch + gate results, the tests written, and which core flows are covered.
+
+axes:
+  - APP-FROM-IDEA
+  - DDD-DECOMPOSITION
+  - CONTRACT-LOCK
+  - MULTI-AGENT-HANDOFF
+  - CQRS-PROJECTION
+  - REALTIME
+  - E2E-DISCIPLINE
+
+graders:
+  # ── model stage — BC-decomposition vs the richer gold set ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect the bounded contexts this build modeled under packages/api/typescript/src/ (each is a
+      folder with entities/usecases/etc.). Judge the DDD DECOMPOSITION SOUNDNESS for a minimal
+      ClickUp app, grading against this gold standard (names may differ — grade soundness): a SOUND
+      carve-up has a `workspace` context (Workspace owns Spaces; Lists as ordered VALUE OBJECTS, not
+      their own aggregate), a `task` context (Task aggregate — its OWN context, with status/priority/
+      assignees/listId and real invariants), and a `collaboration`/`membership` context (members +
+      assignment; may be folded into workspace). PASS only if: (1) Task is its OWN context, NOT lumped
+      into workspace (different lifecycle — FAIL if lumped); (2) Lists are value objects on a Space,
+      NOT their own aggregate/context; (3) TaskStatus + TaskPriority are ENUMS, NOT contexts or
+      aggregates; (4) NO god-context (one `clickup`/`tasks` context owning workspace+task+member =
+      FAIL); (5) no per-table sprawl (separate contexts for list/status/priority/assignment = FAIL);
+      (6) Task AND Workspace each own at least one real INVARIANT. Name the contexts found + the
+      verdict per criterion.
+    id: model#bc-decomposition
+  # ── test stage — the agent must WRITE tests (TDD) and they must RUN green ──
+  - kind: file-exists
+    spec: "packages/api/typescript/src/task/**/*.test.ts"
+    id: test#colocated-exists
+  - kind: grep-must
+    spec: "packages/api/typescript/src/task/**/*.test.ts::TestBed\\.create\\(\\s*'integration'"
+    id: test#integration-mode
+  - kind: test-green
+    spec: packages/api/typescript/src/task
+    id: test#green
+  # ── contract-lock stage ──
+  - kind: grep-must
+    spec: "packages/contracts/wire/events/**/*.tsp::TaskStatusChanged"
+    id: lock#status-changed-event
+  - kind: grep-must
+    spec: "packages/contracts/wire/events/**/*.tsp::workspaceId"
+    id: lock#realtime-tenancy-key
+  - kind: grep-must
+    spec: "packages/contracts/wire/**/*.tsp::TaskStatus"
+    id: lock#status-enum
+  # ── build stage — mechanical, naming-independent ──
+  - kind: tsc
+    spec: backend
+    id: build#tsc-backend
+  - kind: tsc
+    spec: app-react
+    id: build#tsc-react
+  - kind: tsc
+    spec: e2e
+    id: build#tsc-e2e
+  - kind: detect
+    spec: registry-scan
+    id: build#detect-registry
+  - kind: detect
+    spec: import-direction
+    id: build#detect-imports
+  - kind: detect
+    spec: slice-closure
+    id: build#detect-slice
+  - kind: detect
+    spec: projection-shape
+    id: build#detect-projection
+  - kind: detect
+    spec: route-closure
+    id: build#detect-routes
+  - kind: detect
+    spec: component-props
+    id: build#detect-component-props
+  # ── CQRS stage — the richer-app payoff: TWO projections of one write model ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Verify the read side has TWO distinct projections of the same tasks: a List-view projection
+      (tasks grouped by list) AND a Board-view projection (tasks grouped by status), each a real
+      projection (a free-record projection class + a projector listening to TaskCreated/
+      TaskStatusChanged) exposed via a ui BFF query — NOT a single projection reused, NOT a raw join
+      in a controller. PASS only if BOTH projections exist and are driven by projectors from the task
+      events. Name the two projections + their projectors.
+    id: cqrs#two-projections
+  # ── e2e stage — pinned path, anti-stub, realtime ──
+  - kind: file-exists
+    spec: "packages/e2e/tests/clickup-tasks-realtime.spec.ts"
+    id: e2e#spec-exists
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/clickup-tasks-realtime.spec.ts::expect\\(\\s*true\\s*\\)\\.toBe\\(\\s*true|expect\\(\\s*1\\s*\\)\\.toBe\\(\\s*1|^\\s*//.*await expect"
+    id: e2e#not-stubbed
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect packages/e2e/tests/clickup-tasks-realtime.spec.ts. PASS only if it EXISTS and is REAL
+      (not absent, not all-fixme/skip, no `expect(true).toBe(true)`), sets up data through the API
+      request context (not UI click-paths), uses role/label selectors, has NO waitForTimeout, AND
+      contains a realtime assertion: with a board/space open, a task's STATUS is changed via the API
+      and the spec asserts the task appears under the new status WITHOUT a reload/navigation. FAIL
+      (naming why) if missing, stubbed, or lacking the realtime status-change assertion.
+    id: e2e#realtime-status
+  # ── flows stage ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Judge whether the build implements the CORE CLICKUP FLOWS end to end (backend aggregate/usecase +
+      wire + frontend), per scripts/skill-evals/seeds/l6-clickup/GOLD.md. Report coverage of each: (1)
+      create a workspace with a space + ≥2 lists; (2) create a task in a list (status + priority); (3)
+      CHANGE a task's status (a use case on Task emitting TaskStatusChanged + both projections
+      reflecting it); (4) ASSIGN a task to a member; (5) REALTIME — one useServerEvents(TaskStatusChanged…)
+      in the frontend invalidating the view query key (no setQueryData/refetchInterval); (6) the same
+      tasks render in BOTH a List view and a Board view. PASS if ≥4 of the 6 flows are genuinely
+      implemented end to end (not just scaffolded shells); state the per-flow verdict. FAIL if ≤3.
+    id: flows#core-coverage
+
+notes: >-
+  L6 app #2 (ClickUp). ORCHESTRATED (extraTools [Task]). Builds FROM SCRATCH — judges (naming varies)
+  + naming-independent mechanical gates (tsc, detect) + frozen contract anchors (TaskStatusChanged +
+  workspaceId + TaskStatus, fixed by the prompt). Richer than mini-Kanban: 3 contexts + 2 projections
+  (cqrs#two-projections) + status workflow + assignment. Stage vector via id prefixes. HEAVY: 3h,
+  AGENT_MODEL=sonnet, AGENT_RESUMES=2-3. First run is a MEASUREMENT (where does the richer scale
+  break?), not expected perfect. Validator note: at HEAD every grader FAILs/empty = free real estate;
+  tsc/detect pass at HEAD (clean) so build#* pass vacuously pre-build.

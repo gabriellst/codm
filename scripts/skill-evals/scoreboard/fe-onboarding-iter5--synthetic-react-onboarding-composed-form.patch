@@ -1,0 +1,1303 @@
+diff --git a/packages/app/react/src/lib/union.ts b/packages/app/react/src/lib/union.ts
+index 47b1a4d96..35614041f 100644
+--- a/packages/app/react/src/lib/union.ts
++++ b/packages/app/react/src/lib/union.ts
+@@ -43,7 +43,10 @@ export function unionVariantValues<M extends z.ZodObject>(
+  * union (runtime-validates the matched member); for the narrowed *type* use `Extract<Req, { … }>`.
+  * e.g. `pickUnionVariant(connectSchema, { platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' })`.
+  */
+-export function pickUnionVariant<M extends z.ZodObject>(union: z.ZodUnion<readonly M[]>, match: Partial<UnionShape<M>>): M {
++export function pickUnionVariant<Opts extends readonly z.ZodObject[]>(
++	union: z.ZodUnion<Opts>,
++	match: Partial<z.infer<z.ZodUnion<Opts>>>,
++): Opts[number] {
+ 	const member = union.options.find(m =>
+ 		Object.entries(match).every(([field, value]) => typeof value === 'string' && literalsOf(m.shape[field]).includes(value)),
+ 	)
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..b0ccc29c5 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -292,10 +292,10 @@
+ 			"centreLabel": "Revenue",
+ 			"legendAria": "Cost distribution legend",
+ 			"loadError": "Could not load the cost distribution.",
++			"profitLabel": "Profit",
+ 			"profitPct": "profit",
+ 			"subtitle": "Each cost as a share of revenue",
+-			"title": "Cost Distribution",
+-			"profitLabel": "Profit"
++			"title": "Cost Distribution"
+ 		},
+ 		"goal": {
+ 			"achievedLabel": "Achieved",
+@@ -554,6 +554,11 @@
+ 			"YEVER": "Yever",
+ 			"ZEDY": "Zedy"
+ 		},
++		"ConnectionMode": {
++			"CREDENTIALS": "Credentials",
++			"MANUAL": "Manual",
++			"OAUTH": "OAuth"
++		},
+ 		"CostKind": {
+ 			"CHARGEBACK": "Chargeback",
+ 			"FEES": "Fees",
+@@ -1099,10 +1104,59 @@
+ 	},
+ 	"onboarding": {
+ 		"breadcrumb": "Onboarding",
++		"connectionMode": {
++			"CREDENTIALS": {
++				"description": "Use API credentials provided by the platform."
++			},
++			"MANUAL": {
++				"description": "Set up manually without API integration."
++			},
++			"subtitle": "Choose how you want to set up your first integration.",
++			"title": "How do you want to connect?"
++		},
++		"credentials": {
++			"shopify": {
++				"subtitle": "Enter your Shopify store credentials.",
++				"title": "Shopify credentials"
++			},
++			"yampi": {
++				"subtitle": "Enter your Yampi store credentials.",
++				"title": "Yampi credentials"
++			}
++		},
+ 		"error": {
+ 			"description": "We couldn't load onboarding.",
+ 			"title": "Something went wrong"
+ 		},
++		"platform": {
++			"MERCADOPAGO": {
++				"description": "Payment gateway",
++				"label": "Mercado Pago"
++			},
++			"META": {
++				"description": "Marketing",
++				"label": "Meta Ads"
++			},
++			"SHOPIFY": {
++				"description": "Sales channel",
++				"label": "Shopify"
++			},
++			"YAMPI": {
++				"description": "Checkout",
++				"label": "Yampi"
++			},
++			"subtitle": "Select the platform you want to connect.",
++			"title": "Which integration?"
++		},
++		"review": {
++			"connect": "Connect",
++			"connectionMode": "Connection mode",
++			"credentials": "Credentials",
++			"platform": "Platform",
++			"subtitle": "Review your details before finishing.",
++			"title": "Review & connect",
++			"type": "Type"
++		},
+ 		"toast": {
+ 			"success": "All set",
+ 			"successDescription": "Your account is ready."
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..f388879d0 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -292,10 +292,10 @@
+ 			"centreLabel": "Faturamento",
+ 			"legendAria": "Legenda de distribuição de custos",
+ 			"loadError": "Não foi possível carregar a distribuição de custos.",
++			"profitLabel": "Lucro",
+ 			"profitPct": "lucro",
+ 			"subtitle": "Proporção de cada custo sobre o faturamento",
+-			"title": "Distribuição de Custos",
+-			"profitLabel": "Lucro"
++			"title": "Distribuição de Custos"
+ 		},
+ 		"goal": {
+ 			"achievedLabel": "Alcançado",
+@@ -554,6 +554,11 @@
+ 			"YEVER": "Yever",
+ 			"ZEDY": "Zedy"
+ 		},
++		"ConnectionMode": {
++			"CREDENTIALS": "Credenciais",
++			"MANUAL": "Manual",
++			"OAUTH": "OAuth"
++		},
+ 		"CostKind": {
+ 			"CHARGEBACK": "Chargeback",
+ 			"FEES": "Taxas",
+@@ -1099,10 +1104,59 @@
+ 	},
+ 	"onboarding": {
+ 		"breadcrumb": "Onboarding",
++		"connectionMode": {
++			"CREDENTIALS": {
++				"description": "Use credenciais de API fornecidas pelo provedor."
++			},
++			"MANUAL": {
++				"description": "Configure manualmente, sem integração via API."
++			},
++			"subtitle": "Escolha como deseja configurar sua primeira integração.",
++			"title": "Como conectar?"
++		},
++		"credentials": {
++			"shopify": {
++				"subtitle": "Informe as credenciais de acesso à sua loja Shopify.",
++				"title": "Credenciais do Shopify"
++			},
++			"yampi": {
++				"subtitle": "Informe as credenciais de acesso à sua loja Yampi.",
++				"title": "Credenciais do Yampi"
++			}
++		},
+ 		"error": {
+ 			"description": "Não conseguimos carregar o onboarding.",
+ 			"title": "Algo deu errado"
+ 		},
++		"platform": {
++			"MERCADOPAGO": {
++				"description": "Gateway de pagamento",
++				"label": "Mercado Pago"
++			},
++			"META": {
++				"description": "Marketing",
++				"label": "Meta Ads"
++			},
++			"SHOPIFY": {
++				"description": "Canal de vendas",
++				"label": "Shopify"
++			},
++			"YAMPI": {
++				"description": "Checkout",
++				"label": "Yampi"
++			},
++			"subtitle": "Selecione a plataforma que deseja conectar.",
++			"title": "Qual integração?"
++		},
++		"review": {
++			"connect": "Conectar",
++			"connectionMode": "Modo de conexão",
++			"credentials": "Credenciais",
++			"platform": "Plataforma",
++			"subtitle": "Confira as informações antes de finalizar.",
++			"title": "Revisar e conectar",
++			"type": "Tipo"
++		},
+ 		"toast": {
+ 			"success": "Tudo pronto",
+ 			"successDescription": "Sua conta está pronta para uso."
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..5c004e66c 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
+ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
++import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+@@ -53,6 +54,11 @@ const ResetPasswordIndexRoute = ResetPasswordIndexRouteImport.update({
+   path: '/reset-password/',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
++  id: '/onboarding/',
++  path: '/onboarding/',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   id: '/suggestions/',
+   path: '/suggestions/',
+@@ -131,6 +137,7 @@ const appMarketingAccountsPlatformIndexRoute =
+ 
+ export interface FileRoutesByFullPath {
+   '/': typeof IndexRoute
++  '/onboarding/': typeof OnboardingIndexRoute
+   '/reset-password/': typeof ResetPasswordIndexRoute
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+@@ -151,6 +158,7 @@ export interface FileRoutesByFullPath {
+ }
+ export interface FileRoutesByTo {
+   '/': typeof IndexRoute
++  '/onboarding': typeof OnboardingIndexRoute
+   '/reset-password': typeof ResetPasswordIndexRoute
+   '/sign-in': typeof SignInIndexRoute
+   '/sign-up': typeof SignUpIndexRoute
+@@ -173,6 +181,7 @@ export interface FileRoutesById {
+   __root__: typeof rootRouteImport
+   '/': typeof IndexRoute
+   '/(app)': typeof appRouteRouteWithChildren
++  '/onboarding/': typeof OnboardingIndexRoute
+   '/reset-password/': typeof ResetPasswordIndexRoute
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+@@ -195,6 +204,7 @@ export interface FileRouteTypes {
+   fileRoutesByFullPath: FileRoutesByFullPath
+   fullPaths:
+     | '/'
++    | '/onboarding/'
+     | '/reset-password/'
+     | '/sign-in/'
+     | '/sign-up/'
+@@ -215,6 +225,7 @@ export interface FileRouteTypes {
+   fileRoutesByTo: FileRoutesByTo
+   to:
+     | '/'
++    | '/onboarding'
+     | '/reset-password'
+     | '/sign-in'
+     | '/sign-up'
+@@ -236,6 +247,7 @@ export interface FileRouteTypes {
+     | '__root__'
+     | '/'
+     | '/(app)'
++    | '/onboarding/'
+     | '/reset-password/'
+     | '/sign-in/'
+     | '/sign-up/'
+@@ -258,6 +270,7 @@ export interface FileRouteTypes {
+ export interface RootRouteChildren {
+   IndexRoute: typeof IndexRoute
+   appRouteRoute: typeof appRouteRouteWithChildren
++  OnboardingIndexRoute: typeof OnboardingIndexRoute
+   ResetPasswordIndexRoute: typeof ResetPasswordIndexRoute
+   SignInIndexRoute: typeof SignInIndexRoute
+   SignUpIndexRoute: typeof SignUpIndexRoute
+@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof ResetPasswordIndexRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/onboarding/': {
++      id: '/onboarding/'
++      path: '/onboarding'
++      fullPath: '/onboarding/'
++      preLoaderRoute: typeof OnboardingIndexRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/(app)/suggestions/': {
+       id: '/(app)/suggestions/'
+       path: '/suggestions'
+@@ -443,6 +463,7 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
+ const rootRouteChildren: RootRouteChildren = {
+   IndexRoute: IndexRoute,
+   appRouteRoute: appRouteRouteWithChildren,
++  OnboardingIndexRoute: OnboardingIndexRoute,
+   ResetPasswordIndexRoute: ResetPasswordIndexRoute,
+   SignInIndexRoute: SignInIndexRoute,
+   SignUpIndexRoute: SignUpIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx
+new file mode 100644
+index 000000000..fca7c24e7
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ConnectionModeStep/index.tsx
+@@ -0,0 +1,113 @@
++import { z } from 'zod'
++import { useForm } from '@tanstack/react-form'
++import { Button } from '@/components/ui/button'
++import { type DeepPartial } from '@/lib'
++import { connectIntegrationMutationRequestSchema, ConnectionModeEnum } from '@template/client-typescript/typescript'
++import { unionVariantValues } from '@/lib'
++import { IconArrowRight } from '@tabler/icons-react'
++import { Spinner } from '@/components/ui/spinner'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { ComponentProps } from 'react'
++
++const ALL_MODES = unionVariantValues(connectIntegrationMutationRequestSchema, 'connectionMode')
++const ONBOARDING_MODES = ALL_MODES.filter(
++	(m): m is 'CREDENTIALS' | 'MANUAL' => m === ConnectionModeEnum.CREDENTIALS || m === ConnectionModeEnum.MANUAL,
++) as ['CREDENTIALS', 'MANUAL']
++
++export const ConnectionModeStepSchema = z.object({
++	connectionMode: z.enum(ONBOARDING_MODES),
++})
++
++type ConnectionModeStepData = z.infer<typeof ConnectionModeStepSchema>
++
++interface ConnectionModeStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	defaultValues?: DeepPartial<ConnectionModeStepData>
++	onSubmit: (data: ConnectionModeStepData) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function ConnectionModeStep({ defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: ConnectionModeStepProps) {
++	const { t } = useTranslation()
++
++	const MODE_DESCRIPTION: Record<'CREDENTIALS' | 'MANUAL', string> = {
++		CREDENTIALS: t('onboarding.connectionMode.CREDENTIALS.description'),
++		MANUAL: t('onboarding.connectionMode.MANUAL.description'),
++	}
++
++	const form = useForm({
++		defaultValues,
++		onSubmit: async form => {
++			const result = ConnectionModeStepSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-2', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.connectionMode.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.connectionMode.subtitle')}</p>
++			</div>
++
++			<form.Field name="connectionMode">
++				{field => (
++					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
++						{ONBOARDING_MODES.map(mode => (
++							<button
++								key={mode}
++								type="button"
++								onClick={() => field.handleChange(mode)}
++								className={cn(
++									'flex flex-col gap-2 rounded-xl border-2 p-5 text-left transition-all',
++									field.state.value === mode
++										? 'border-primary bg-primary/5'
++										: 'border-border hover:border-primary/40',
++								)}
++							>
++								<span className="font-semibold">{t(`enums.ConnectionMode.${mode}`)}</span>
++								<span className="text-sm text-muted-foreground">{MODE_DESCRIPTION[mode]}</span>
++							</button>
++						))}
++					</div>
++				)}
++			</form.Field>
++
++			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
++				{({ canSubmit, values }) => {
++					const isDisabled = isSubmitting || !canSubmit || !ConnectionModeStepSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<div className="flex gap-2">
++								<Button type="submit" disabled={isDisabled}>
++									{isSubmitting && <Spinner className="mr-2" />}
++									{t('common.next')}
++									<IconArrowRight className="ml-1 size-4" />
++								</Button>
++							</div>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++export type { ConnectionModeStepData }
+diff --git a/packages/app/react/src/routes/onboarding/-components/OnboardingWizard/index.tsx b/packages/app/react/src/routes/onboarding/-components/OnboardingWizard/index.tsx
+new file mode 100644
+index 000000000..55094934d
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/OnboardingWizard/index.tsx
+@@ -0,0 +1,206 @@
++import { useCallback, type ComponentProps } from 'react'
++import { useNavigate } from '@tanstack/react-router'
++import { useTranslation } from 'react-i18next'
++import { toast } from 'sonner'
++import { useQueryClient } from '@tanstack/react-query'
++import {
++	useConnectIntegration,
++	connectIntegrationMutationRequestSchema,
++	listPlatformDescriptorsQueryKey,
++} from '@template/client-typescript/typescript'
++import { pickUnionVariant } from '@/lib'
++import { cn } from '@/lib/utils'
++
++import { useOnboardingWizardStore } from '../../-stores/useOnboardingWizardStore'
++import type { OnboardingPlatform, OnboardingIntegrationType } from '../../-stores/useOnboardingWizardStore'
++import { ConnectionModeStep } from '../ConnectionModeStep'
++import type { ConnectionModeStepData } from '../ConnectionModeStep'
++import { PlatformStep } from '../PlatformStep'
++import type { PlatformStepData } from '../PlatformStep'
++import { ShopifyCredentialsStep } from '../ShopifyCredentialsStep'
++import type { ShopifyCredentialsStepData } from '../ShopifyCredentialsStep'
++import { YampiCredentialsStep } from '../YampiCredentialsStep'
++import type { YampiCredentialsStepData } from '../YampiCredentialsStep'
++import { ReviewStep } from '../ReviewStep'
++import type { WizardAccumulated } from '../ReviewStep'
++
++const CREDENTIALS_STEPS = ['CONNECTION_MODE', 'PLATFORM', 'CREDENTIALS', 'REVIEW'] as const
++const MANUAL_STEPS = ['CONNECTION_MODE', 'PLATFORM', 'REVIEW'] as const
++
++type WizardStep = 'CONNECTION_MODE' | 'PLATFORM' | 'CREDENTIALS' | 'REVIEW'
++
++const MODE_STEPS: Record<'CREDENTIALS' | 'MANUAL', readonly WizardStep[]> = {
++	CREDENTIALS: CREDENTIALS_STEPS,
++	MANUAL: MANUAL_STEPS,
++}
++
++const CREDENTIALS_PLATFORMS: Partial<Record<OnboardingPlatform, true>> = {
++	SHOPIFY: true,
++	YAMPI: true,
++}
++
++export function OnboardingWizard({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const navigate = useNavigate()
++	const queryClient = useQueryClient()
++
++	const store = useOnboardingWizardStore()
++	const {
++		connectionMode,
++		platform,
++		integrationType,
++		credentials,
++		currentStepIndex,
++		setConnectionMode,
++		setPlatformAndType,
++		setCredentials,
++		setCurrentStepIndex,
++		setDirection,
++		reset,
++	} = store
++
++	const connectIntegration = useConnectIntegration({
++		mutation: {
++			onSuccess: () => {
++				toast.success(t('onboarding.toast.success'), {
++					description: t('onboarding.toast.successDescription'),
++				})
++				queryClient.invalidateQueries({ queryKey: listPlatformDescriptorsQueryKey() })
++				reset()
++				navigate({ to: '/dashboard', search: {} })
++			},
++		},
++	})
++
++	const steps = connectionMode ? MODE_STEPS[connectionMode] : CREDENTIALS_STEPS
++	const currentStep = (steps[currentStepIndex] ?? 'CONNECTION_MODE') as WizardStep
++
++	const advance = useCallback(() => {
++		setDirection(1)
++		setCurrentStepIndex(currentStepIndex + 1)
++	}, [currentStepIndex, setDirection, setCurrentStepIndex])
++
++	const handleBack = useCallback(() => {
++		if (currentStepIndex <= 0) return
++		setDirection(-1)
++		setCurrentStepIndex(currentStepIndex - 1)
++	}, [currentStepIndex, setDirection, setCurrentStepIndex])
++
++	const handleConnectionModeSubmit = useCallback(
++		(data: ConnectionModeStepData) => {
++			setConnectionMode(data.connectionMode)
++			setDirection(1)
++			setCurrentStepIndex(1)
++		},
++		[setConnectionMode, setDirection, setCurrentStepIndex],
++	)
++
++	const handlePlatformSubmit = useCallback(
++		(data: PlatformStepData) => {
++			setPlatformAndType(data.platform as OnboardingPlatform, data.integrationType as OnboardingIntegrationType)
++			advance()
++		},
++		[setPlatformAndType, advance],
++	)
++
++	const handleShopifyCredentialsSubmit = useCallback(
++		(data: ShopifyCredentialsStepData) => {
++			setCredentials(data as Record<string, string>)
++			advance()
++		},
++		[setCredentials, advance],
++	)
++
++	const handleYampiCredentialsSubmit = useCallback(
++		(data: YampiCredentialsStepData) => {
++			setCredentials(data as Record<string, string>)
++			advance()
++		},
++		[setCredentials, advance],
++	)
++
++	const handleFinalSubmit = useCallback(async () => {
++		if (!connectionMode || !platform || !integrationType) return
++		const envelope = { connectionMode, type: integrationType, platform, credentials }
++		let result
++		try {
++			const member = pickUnionVariant(connectIntegrationMutationRequestSchema, { platform, connectionMode })
++			result = member.safeParse(envelope)
++		} catch {
++			return
++		}
++		if (!result.success) return
++		await connectIntegration.mutateAsync({ data: result.data })
++	}, [connectionMode, platform, integrationType, credentials, connectIntegration])
++
++	const CREDENTIAL_STEP: Partial<Record<OnboardingPlatform, React.ReactNode>> = {
++		SHOPIFY: (
++			<ShopifyCredentialsStep
++				defaultValues={credentials as Partial<ShopifyCredentialsStepData>}
++				onSubmit={handleShopifyCredentialsSubmit}
++				onBack={handleBack}
++				isSubmitting={connectIntegration.isPending}
++			/>
++		),
++		YAMPI: (
++			<YampiCredentialsStep
++				defaultValues={credentials as Partial<YampiCredentialsStepData>}
++				onSubmit={handleYampiCredentialsSubmit}
++				onBack={handleBack}
++				isSubmitting={connectIntegration.isPending}
++			/>
++		),
++	}
++
++	const accumulated: WizardAccumulated | undefined =
++		connectionMode && platform && integrationType
++			? { connectionMode, platform, integrationType, credentials }
++			: undefined
++
++	const STEP_CONTENT: Record<WizardStep, React.ReactNode> = {
++		CONNECTION_MODE: (
++			<ConnectionModeStep
++				defaultValues={{ connectionMode }}
++				onSubmit={handleConnectionModeSubmit}
++			/>
++		),
++		PLATFORM: connectionMode ? (
++			<PlatformStep
++				connectionMode={connectionMode}
++				defaultValues={{ platform, integrationType }}
++				onSubmit={handlePlatformSubmit}
++				onBack={handleBack}
++			/>
++		) : null,
++		CREDENTIALS:
++			platform && CREDENTIALS_PLATFORMS[platform]
++				? CREDENTIAL_STEP[platform] ?? null
++				: null,
++		REVIEW: accumulated ? (
++			<ReviewStep
++				accumulated={accumulated}
++				onSubmit={handleFinalSubmit}
++				onBack={handleBack}
++				isSubmitting={connectIntegration.isPending}
++			/>
++		) : null,
++	}
++
++	return (
++		<div className={cn('w-full max-w-lg mx-auto py-12 px-4', className)} {...props}>
++			<div className="mb-8 flex gap-1">
++				{steps.map((step, i) => (
++					<div
++						key={step}
++						className={
++							i <= currentStepIndex
++								? 'h-1 flex-1 rounded-full bg-primary'
++								: 'h-1 flex-1 rounded-full bg-muted'
++						}
++					/>
++				))}
++			</div>
++			{STEP_CONTENT[currentStep]}
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/PlatformStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/PlatformStep/index.tsx
+new file mode 100644
+index 000000000..7ca75da42
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/PlatformStep/index.tsx
+@@ -0,0 +1,153 @@
++import { z } from 'zod'
++import { useForm } from '@tanstack/react-form'
++import { Button } from '@/components/ui/button'
++import { type DeepPartial } from '@/lib'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { Spinner } from '@/components/ui/spinner'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { ComponentProps } from 'react'
++import type { OnboardingConnectionMode, OnboardingPlatform } from '../../-stores/useOnboardingWizardStore'
++
++const OnboardingPlatformEnum = {
++	SHOPIFY: 'SHOPIFY',
++	YAMPI: 'YAMPI',
++	META: 'META',
++	MERCADOPAGO: 'MERCADOPAGO',
++} as const
++
++const OnboardingIntegrationTypeEnum = {
++	SALES_CHANNEL: 'SALES_CHANNEL',
++	CHECKOUT: 'CHECKOUT',
++	MARKETING_PLATFORM: 'MARKETING_PLATFORM',
++	PAYMENT_GATEWAY: 'PAYMENT_GATEWAY',
++} as const
++
++export const ONBOARDING_TARGETS = [
++	{ platform: OnboardingPlatformEnum.SHOPIFY, type: OnboardingIntegrationTypeEnum.SALES_CHANNEL, connectionMode: 'CREDENTIALS' as const },
++	{ platform: OnboardingPlatformEnum.YAMPI, type: OnboardingIntegrationTypeEnum.CHECKOUT, connectionMode: 'CREDENTIALS' as const },
++	{ platform: OnboardingPlatformEnum.META, type: OnboardingIntegrationTypeEnum.MARKETING_PLATFORM, connectionMode: 'MANUAL' as const },
++	{ platform: OnboardingPlatformEnum.MERCADOPAGO, type: OnboardingIntegrationTypeEnum.PAYMENT_GATEWAY, connectionMode: 'MANUAL' as const },
++] as const
++
++export const PlatformStepSchema = z.object({
++	platform: z.enum(OnboardingPlatformEnum),
++	integrationType: z.enum(OnboardingIntegrationTypeEnum),
++})
++
++type PlatformStepData = z.infer<typeof PlatformStepSchema>
++
++interface PlatformStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	connectionMode: OnboardingConnectionMode
++	defaultValues?: DeepPartial<PlatformStepData>
++	onSubmit: (data: PlatformStepData) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function PlatformStep({ connectionMode, defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: PlatformStepProps) {
++	const { t } = useTranslation()
++
++	const availableTargets = ONBOARDING_TARGETS.filter(target => target.connectionMode === connectionMode)
++
++	const PLATFORM_LABEL: Record<OnboardingPlatform, string> = {
++		SHOPIFY: t('onboarding.platform.SHOPIFY.label'),
++		YAMPI: t('onboarding.platform.YAMPI.label'),
++		META: t('onboarding.platform.META.label'),
++		MERCADOPAGO: t('onboarding.platform.MERCADOPAGO.label'),
++	}
++	const PLATFORM_DESCRIPTION: Record<OnboardingPlatform, string> = {
++		SHOPIFY: t('onboarding.platform.SHOPIFY.description'),
++		YAMPI: t('onboarding.platform.YAMPI.description'),
++		META: t('onboarding.platform.META.description'),
++		MERCADOPAGO: t('onboarding.platform.MERCADOPAGO.description'),
++	}
++
++	const form = useForm({
++		defaultValues,
++		onSubmit: async form => {
++			const result = PlatformStepSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-2', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.platform.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.platform.subtitle')}</p>
++			</div>
++
++			<form.Field name="platform">
++				{platformField => (
++					<form.Field name="integrationType">
++						{typeField => (
++							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
++								{availableTargets.map(target => {
++									const isSelected = platformField.state.value === target.platform
++									return (
++										<button
++											key={target.platform}
++											type="button"
++											onClick={() => {
++												platformField.handleChange(target.platform)
++												typeField.handleChange(target.type)
++											}}
++											className={cn(
++												'flex flex-col gap-2 rounded-xl border-2 p-5 text-left transition-all',
++												isSelected
++													? 'border-primary bg-primary/5'
++													: 'border-border hover:border-primary/40',
++											)}
++										>
++											<span className="font-semibold">{PLATFORM_LABEL[target.platform]}</span>
++											<span className="text-sm text-muted-foreground">
++												{PLATFORM_DESCRIPTION[target.platform]}
++											</span>
++										</button>
++									)
++								})}
++							</div>
++						)}
++					</form.Field>
++				)}
++			</form.Field>
++
++			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
++				{({ canSubmit, values }) => {
++					const isDisabled = isSubmitting || !canSubmit || !PlatformStepSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++										<IconArrowLeft className="mr-1 size-4" />
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<div className="flex gap-2">
++								<Button type="submit" disabled={isDisabled}>
++									{isSubmitting && <Spinner className="mr-2" />}
++									{t('common.next')}
++									<IconArrowRight className="ml-1 size-4" />
++								</Button>
++							</div>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++export type { PlatformStepData }
+diff --git a/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx
+new file mode 100644
+index 000000000..02c6e5944
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ReviewStep/index.tsx
+@@ -0,0 +1,114 @@
++import { Button } from '@/components/ui/button'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import { pickUnionVariant } from '@/lib'
++import { IconArrowLeft } from '@tabler/icons-react'
++import { Spinner } from '@/components/ui/spinner'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { ComponentProps } from 'react'
++import type { OnboardingConnectionMode, OnboardingPlatform, OnboardingIntegrationType } from '../../-stores/useOnboardingWizardStore'
++
++export interface WizardAccumulated {
++	connectionMode: OnboardingConnectionMode
++	platform: OnboardingPlatform
++	integrationType: OnboardingIntegrationType
++	credentials: Record<string, string>
++}
++
++interface ReviewStepProps extends Omit<ComponentProps<'div'>, 'onSubmit'> {
++	accumulated: WizardAccumulated
++	onSubmit: () => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++const CREDENTIAL_FIELD_LABEL: Record<string, string> = {
++	shopDomain: 'integrations.sheet.shopDomain',
++	clientId: 'integrations.sheet.clientId',
++	clientSecret: 'integrations.sheet.clientSecret',
++	alias: 'integrations.sheet.alias',
++	userToken: 'integrations.sheet.userToken',
++	userSecretKey: 'integrations.sheet.userSecretKey',
++}
++
++const PLATFORM_LABEL: Record<OnboardingPlatform, string> = {
++	SHOPIFY: 'onboarding.platform.SHOPIFY.label',
++	YAMPI: 'onboarding.platform.YAMPI.label',
++	META: 'onboarding.platform.META.label',
++	MERCADOPAGO: 'onboarding.platform.MERCADOPAGO.label',
++}
++
++export function ReviewStep({ accumulated, onSubmit, onBack, isSubmitting, className, ...props }: ReviewStepProps) {
++	const { t } = useTranslation()
++
++	const envelope = {
++		connectionMode: accumulated.connectionMode,
++		type: accumulated.integrationType,
++		platform: accumulated.platform,
++		credentials: accumulated.credentials,
++	}
++
++	let isValid = false
++	try {
++		const member = pickUnionVariant(connectIntegrationMutationRequestSchema, {
++			platform: accumulated.platform,
++			connectionMode: accumulated.connectionMode,
++		})
++		isValid = member.safeParse(envelope).success
++	} catch {
++		isValid = false
++	}
++
++	const credentialEntries = Object.entries(accumulated.credentials)
++
++	return (
++		<div className={cn('flex flex-col gap-6 p-2', className)} {...props}>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.review.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.review.subtitle')}</p>
++			</div>
++
++			<dl className="rounded-xl border divide-y">
++				<div className="flex items-center justify-between px-4 py-3">
++					<dt className="text-sm text-muted-foreground">{t('onboarding.review.platform')}</dt>
++					<dd className="text-sm font-medium">{t(PLATFORM_LABEL[accumulated.platform])}</dd>
++				</div>
++				<div className="flex items-center justify-between px-4 py-3">
++					<dt className="text-sm text-muted-foreground">{t('onboarding.review.connectionMode')}</dt>
++					<dd className="text-sm font-medium">{t(`enums.ConnectionMode.${accumulated.connectionMode}`)}</dd>
++				</div>
++				{credentialEntries.length > 0 && (
++					<>
++						{credentialEntries.map(([key, value]) => (
++							<div key={key} className="flex items-center justify-between px-4 py-3">
++								<dt className="text-sm text-muted-foreground">
++									{CREDENTIAL_FIELD_LABEL[key] ? t(CREDENTIAL_FIELD_LABEL[key]) : key}
++								</dt>
++								<dd className="text-sm font-medium font-mono truncate max-w-48">
++									{key.toLowerCase().includes('secret') || key.toLowerCase().includes('token')
++										? '••••••••'
++										: value}
++								</dd>
++							</div>
++						))}
++					</>
++				)}
++			</dl>
++
++			<div className="flex justify-between">
++				<div>
++					{onBack && (
++						<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++							<IconArrowLeft className="mr-1 size-4" />
++							{t('common.back')}
++						</Button>
++					)}
++				</div>
++				<Button onClick={onSubmit} disabled={!isValid || isSubmitting}>
++					{isSubmitting && <Spinner className="mr-2" />}
++					{t('onboarding.review.connect')}
++				</Button>
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx
+new file mode 100644
+index 000000000..a1455a34e
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/ShopifyCredentialsStep/index.tsx
+@@ -0,0 +1,149 @@
++import { useForm } from '@tanstack/react-form'
++import { Input } from '@/components/ui/input'
++import { Button } from '@/components/ui/button'
++import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field'
++import { type DeepPartial, pickUnionVariantField } from '@/lib'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import type { z } from 'zod/v4'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { Spinner } from '@/components/ui/spinner'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { ComponentProps } from 'react'
++
++const shopifyCredentialsSchema = pickUnionVariantField(
++	connectIntegrationMutationRequestSchema,
++	{ platform: 'SHOPIFY', connectionMode: 'CREDENTIALS' },
++	'credentials',
++)
++export const ShopifyCredentialsStepSchema = shopifyCredentialsSchema
++
++type ShopifyCredentialsStepData = z.infer<typeof ShopifyCredentialsStepSchema>
++
++interface ShopifyCredentialsStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	defaultValues?: DeepPartial<ShopifyCredentialsStepData>
++	onSubmit: (data: ShopifyCredentialsStepData) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function ShopifyCredentialsStep({ defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: ShopifyCredentialsStepProps) {
++	const { t } = useTranslation()
++
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: ShopifyCredentialsStepSchema },
++		onSubmit: async form => {
++			const result = ShopifyCredentialsStepSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-2', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.credentials.shopify.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.credentials.shopify.subtitle')}</p>
++			</div>
++
++			<FieldGroup>
++				<form.Field name="shopDomain">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.shopDomain')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++				<form.Field name="clientId">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.clientId')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++				<form.Field name="clientSecret">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.clientSecret')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="password"
++									autoComplete="new-password"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
++				{({ canSubmit, values }) => {
++					const isDisabled = isSubmitting || !canSubmit || !ShopifyCredentialsStepSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++										<IconArrowLeft className="mr-1 size-4" />
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<div className="flex gap-2">
++								<Button type="submit" disabled={isDisabled}>
++									{isSubmitting && <Spinner className="mr-2" />}
++									{t('common.next')}
++									<IconArrowRight className="ml-1 size-4" />
++								</Button>
++							</div>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++export type { ShopifyCredentialsStepData }
+diff --git a/packages/app/react/src/routes/onboarding/-components/YampiCredentialsStep/index.tsx b/packages/app/react/src/routes/onboarding/-components/YampiCredentialsStep/index.tsx
+new file mode 100644
+index 000000000..5fca0081f
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-components/YampiCredentialsStep/index.tsx
+@@ -0,0 +1,149 @@
++import { useForm } from '@tanstack/react-form'
++import { Input } from '@/components/ui/input'
++import { Button } from '@/components/ui/button'
++import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field'
++import { type DeepPartial, pickUnionVariantField } from '@/lib'
++import { connectIntegrationMutationRequestSchema } from '@template/client-typescript/typescript'
++import type { z } from 'zod/v4'
++import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
++import { Spinner } from '@/components/ui/spinner'
++import { useTranslation } from 'react-i18next'
++import { cn } from '@/lib/utils'
++import type { ComponentProps } from 'react'
++
++const yampiCredentialsSchema = pickUnionVariantField(
++	connectIntegrationMutationRequestSchema,
++	{ platform: 'YAMPI', connectionMode: 'CREDENTIALS' },
++	'credentials',
++)
++export const YampiCredentialsStepSchema = yampiCredentialsSchema
++
++type YampiCredentialsStepData = z.infer<typeof YampiCredentialsStepSchema>
++
++interface YampiCredentialsStepProps extends Omit<ComponentProps<'form'>, 'onSubmit'> {
++	defaultValues?: DeepPartial<YampiCredentialsStepData>
++	onSubmit: (data: YampiCredentialsStepData) => void
++	onBack?: () => void
++	isSubmitting?: boolean
++}
++
++export function YampiCredentialsStep({ defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: YampiCredentialsStepProps) {
++	const { t } = useTranslation()
++
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: YampiCredentialsStepSchema },
++		onSubmit: async form => {
++			const result = YampiCredentialsStepSchema.safeParse(form.value)
++			if (!result.success) return
++			onSubmit(result.data)
++		},
++	})
++
++	return (
++		<form
++			onSubmit={e => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++			className={cn('flex flex-col gap-6 p-2', className)}
++			{...props}
++		>
++			<div className="text-center">
++				<h2 className="text-2xl font-semibold tracking-tight">{t('onboarding.credentials.yampi.title')}</h2>
++				<p className="text-muted-foreground mt-2">{t('onboarding.credentials.yampi.subtitle')}</p>
++			</div>
++
++			<FieldGroup>
++				<form.Field name="alias">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.alias')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++				<form.Field name="userToken">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.userToken')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="text"
++									autoComplete="off"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++				<form.Field name="userSecretKey">
++					{field => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('integrations.sheet.userSecretKey')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="password"
++									autoComplete="new-password"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={e => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
++				{({ canSubmit, values }) => {
++					const isDisabled = isSubmitting || !canSubmit || !YampiCredentialsStepSchema.safeParse(values).success
++					return (
++						<div className="flex justify-between">
++							<div>
++								{onBack && (
++									<Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
++										<IconArrowLeft className="mr-1 size-4" />
++										{t('common.back')}
++									</Button>
++								)}
++							</div>
++							<div className="flex gap-2">
++								<Button type="submit" disabled={isDisabled}>
++									{isSubmitting && <Spinner className="mr-2" />}
++									{t('common.next')}
++									<IconArrowRight className="ml-1 size-4" />
++								</Button>
++							</div>
++						</div>
++					)
++				}}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++export type { YampiCredentialsStepData }
+diff --git a/packages/app/react/src/routes/onboarding/-stores/useOnboardingWizardStore.ts b/packages/app/react/src/routes/onboarding/-stores/useOnboardingWizardStore.ts
+new file mode 100644
+index 000000000..8d925b864
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/-stores/useOnboardingWizardStore.ts
+@@ -0,0 +1,42 @@
++import { create } from 'zustand'
++
++export type OnboardingConnectionMode = 'CREDENTIALS' | 'MANUAL'
++export type OnboardingPlatform = 'SHOPIFY' | 'YAMPI' | 'META' | 'MERCADOPAGO'
++export type OnboardingIntegrationType = 'SALES_CHANNEL' | 'CHECKOUT' | 'MARKETING_PLATFORM' | 'PAYMENT_GATEWAY'
++
++interface OnboardingWizardStore {
++	connectionMode: OnboardingConnectionMode | undefined
++	platform: OnboardingPlatform | undefined
++	integrationType: OnboardingIntegrationType | undefined
++	credentials: Record<string, string>
++	currentStepIndex: number
++	direction: 1 | -1
++	setConnectionMode: (mode: OnboardingConnectionMode) => void
++	setPlatformAndType: (platform: OnboardingPlatform, integrationType: OnboardingIntegrationType) => void
++	setCredentials: (credentials: Record<string, string>) => void
++	setCurrentStepIndex: (index: number) => void
++	setDirection: (direction: 1 | -1) => void
++	reset: () => void
++}
++
++const INITIAL: Pick<
++	OnboardingWizardStore,
++	'connectionMode' | 'platform' | 'integrationType' | 'credentials' | 'currentStepIndex' | 'direction'
++> = {
++	connectionMode: undefined,
++	platform: undefined,
++	integrationType: undefined,
++	credentials: {},
++	currentStepIndex: 0,
++	direction: 1,
++}
++
++export const useOnboardingWizardStore = create<OnboardingWizardStore>()(set => ({
++	...INITIAL,
++	setConnectionMode: connectionMode => set({ connectionMode }),
++	setPlatformAndType: (platform, integrationType) => set({ platform, integrationType }),
++	setCredentials: credentials => set({ credentials }),
++	setCurrentStepIndex: currentStepIndex => set({ currentStepIndex }),
++	setDirection: direction => set({ direction }),
++	reset: () => set(INITIAL),
++}))
+diff --git a/packages/app/react/src/routes/onboarding/index.tsx b/packages/app/react/src/routes/onboarding/index.tsx
+new file mode 100644
+index 000000000..6019720ac
+--- /dev/null
++++ b/packages/app/react/src/routes/onboarding/index.tsx
+@@ -0,0 +1,19 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { RouteError } from '@/components/RouteError'
++import i18n from '@/lib/i18n'
++import { OnboardingWizard } from './-components/OnboardingWizard'
++
++export const Route = createFileRoute('/onboarding/')({
++	ssr: true,
++	staticData: { breadcrumb: i18n.t('onboarding.breadcrumb') },
++	component: RouteComponent,
++	errorComponent: RouteError,
++})
++
++function RouteComponent() {
++	return (
++		<main className="w-full min-h-screen flex items-center justify-center bg-background px-4">
++			<OnboardingWizard />
++		</main>
++	)
++}

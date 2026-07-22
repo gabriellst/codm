@@ -1,0 +1,3682 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "version": "v1",
+    "title": "template-backend"
+  },
+  "paths": {
+    "/v1/authentication/*": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Auth operations (better-auth passthrough)",
+        "operationId": "AuthGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Auth operations (better-auth passthrough)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Auth operations (better-auth passthrough)",
+        "operationId": "AuthPost",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Auth operations (better-auth passthrough)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/session": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Get current authenticated session",
+        "operationId": "GetSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Get current authenticated session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "emailVerified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "name",
+                        "emailVerified"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "ownerId": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "userId",
+                        "expiresAt",
+                        "ownerId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "session"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "user": {
+                        "id": "user-1",
+                        "email": "user@example.com",
+                        "name": "Alice",
+                        "emailVerified": true
+                      },
+                      "session": {
+                        "id": "session-1",
+                        "userId": "user-1",
+                        "expiresAt": "2030-01-01T00:00:00.000Z",
+                        "ownerId": null
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "user": {
+                        "id": "user-1",
+                        "email": "user@example.com",
+                        "name": "Alice",
+                        "emailVerified": true
+                      },
+                      "session": {
+                        "id": "session-1",
+                        "userId": "user-1",
+                        "expiresAt": "2030-01-01T00:00:00.000Z",
+                        "ownerId": null
+                      }
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/fcm-tokens": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Register an FCM push token for the current user device",
+        "operationId": "RegisterFcmToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "platform": {
+                    "$ref": "#/components/schemas/FcmPlatform"
+                  }
+                },
+                "required": [
+                  "token",
+                  "platform"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "token": "fcm-token-abc",
+                    "platform": "IOS"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Register an FCM push token for the current user device",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Unregister an FCM push token for the current user device",
+        "operationId": "UnregisterFcmToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "token": "fcm-token-abc"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Unregister an FCM push token for the current user device",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/req-password-reset": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Request a password reset email (contract surface; handled by better-auth passthrough)",
+        "operationId": "RequestPasswordReset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "redirectTo": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "email": "user@example.com",
+                    "redirectTo": "http://localhost:5173/reset-password"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Request a password reset email (contract surface; handled by better-auth passthrough)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reset-pass": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Reset password with a token (contract surface; handled by better-auth passthrough)",
+        "operationId": "ResetPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordBody"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "token": "reset-token-123",
+                    "newPassword": "newpassword123",
+                    "confirmNewPassword": "newpassword123"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reset password with a token (contract surface; handled by better-auth passthrough)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sign-in": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Sign in with email and password (contract surface; handled by better-auth passthrough)",
+        "operationId": "SignIn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "email": "user@example.com",
+                    "password": "password123"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Sign in with email and password (contract surface; handled by better-auth passthrough)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sign-up": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Create a new user account (contract surface; handled by better-auth passthrough)",
+        "operationId": "SignUp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpBody"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "John Doe",
+                    "email": "user@example.com",
+                    "password": "password123",
+                    "confirmPassword": "password123"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Create a new user account (contract surface; handled by better-auth passthrough)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/profile": {
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Update current user profile (name, pictureUrl)",
+        "operationId": "UpdateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "pictureUrl": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "language": {
+                    "$ref": "#/components/schemas/Language"
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "Alice",
+                    "pictureUrl": "https://cdn.example.com/avatar.png"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Update current user profile (name, pictureUrl)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/identity/account/avatar": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl",
+        "operationId": "UploadAvatar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pictureUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "pictureUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscription/cancel-scheduled-downgrade": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "\"Manter plano atual\" — drop a pending scheduled downgrade before it takes effect. A no-op if nothing is scheduled.",
+        "operationId": "CancelScheduledDowngrade",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "\"Manter plano atual\" — drop a pending scheduled downgrade before it takes effect. A no-op if nothing is scheduled.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscription/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Cancel the authenticated owner subscription. By default the cancellation takes effect at the end of the current paid period (access continues until then); pass { immediate: true } to end access now. Access is DERIVED from the recorded cancellation facts — no engine call.",
+        "operationId": "CancelSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "immediate": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "immediate": false
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cancel the authenticated owner subscription. By default the cancellation takes effect at the end of the current paid period (access continues until then); pass { immediate: true } to end access now. Access is DERIVED from the recorded cancellation facts — no engine call.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/SubscriptionStatus"
+                    },
+                    "cancelAtPeriodEnd": {
+                      "type": "boolean"
+                    },
+                    "canceledAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "cancelAtPeriodEnd",
+                    "canceledAt"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "status": "ACTIVE",
+                      "cancelAtPeriodEnd": true,
+                      "canceledAt": "2026-07-07T00:00:00.000Z"
+                    },
+                    {
+                      "status": "CANCELED",
+                      "cancelAtPeriodEnd": false,
+                      "canceledAt": "2026-07-07T00:00:00.000Z"
+                    }
+                  ]
+                },
+                "examples": {
+                  "example1": {
+                    "value": {
+                      "status": "ACTIVE",
+                      "cancelAtPeriodEnd": true,
+                      "canceledAt": "2026-07-07T00:00:00.000Z"
+                    },
+                    "summary": "Example 1"
+                  },
+                  "example2": {
+                    "value": {
+                      "status": "CANCELED",
+                      "cancelAtPeriodEnd": false,
+                      "canceledAt": "2026-07-07T00:00:00.000Z"
+                    },
+                    "summary": "Example 2"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscriptions": {
+      "patch": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Change the plan of the authenticated owner (downgrade to FREE cancels at period end)",
+        "operationId": "ChangePlan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planName": {
+                    "$ref": "#/components/schemas/PlanName"
+                  }
+                },
+                "required": [
+                  "planName"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "planName": "PRO"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Change the plan of the authenticated owner (downgrade to FREE cancels at period end)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "planName": {
+                      "$ref": "#/components/schemas/PlanName"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/SubscriptionStatus"
+                    },
+                    "effectiveAtPeriodEnd": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "planName",
+                    "status",
+                    "effectiveAtPeriodEnd"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "planName": "PRO",
+                      "status": "ACTIVE",
+                      "effectiveAtPeriodEnd": false
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "planName": "PRO",
+                      "status": "ACTIVE",
+                      "effectiveAtPeriodEnd": false
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Create a subscription for the owner",
+        "operationId": "CreateSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planName": {
+                    "$ref": "#/components/schemas/PlanName"
+                  },
+                  "consentAccepted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "planName",
+                  "consentAccepted"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "planName": "PRO",
+                    "consentAccepted": true
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Create a subscription for the owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "subscriptionId": {
+                      "type": "string"
+                    },
+                    "engineInvoiceId": {
+                      "type": "string"
+                    },
+                    "checkoutUrl": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "subscriptionId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "subscriptionId": "sub_owner-uuid",
+                      "engineInvoiceId": "native:owner-uuid:1783600000000"
+                    },
+                    {
+                      "subscriptionId": "sub_owner-uuid",
+                      "engineInvoiceId": "native:owner-uuid:1783600000000",
+                      "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_123"
+                    }
+                  ]
+                },
+                "examples": {
+                  "example1": {
+                    "value": {
+                      "subscriptionId": "sub_owner-uuid",
+                      "engineInvoiceId": "native:owner-uuid:1783600000000"
+                    },
+                    "summary": "Example 1"
+                  },
+                  "example2": {
+                    "value": {
+                      "subscriptionId": "sub_owner-uuid",
+                      "engineInvoiceId": "native:owner-uuid:1783600000000",
+                      "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_123"
+                    },
+                    "summary": "Example 2"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/checkout-setup-session": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Mint a hosted-checkout setup session to add a card to the wallet",
+        "operationId": "CreateCheckoutSetupSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Mint a hosted-checkout setup session to add a card to the wallet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "sessionRef": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "sessionRef"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "url": "https://checkout.stripe.com/c/pay/cs_123",
+                      "sessionRef": "cs_123"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "url": "https://checkout.stripe.com/c/pay/cs_123",
+                      "sessionRef": "cs_123"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{source}": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Ingest a billing webhook from the payment gateway; :source routes to the verifier + mapper.",
+        "operationId": "HandleBillingWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "x-tpl-unknown": true
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "id": "hook_1",
+                    "type": "charge.paid",
+                    "data": {
+                      "id": "ch_1",
+                      "code": "inv_1",
+                      "amount": 29900
+                    }
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "PAGARME"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingest a billing webhook from the payment gateway; :source routes to the verifier + mapper.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "accepted"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "accepted": 1
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "accepted": 1
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invoices/{engineInvoiceId}/pay": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Pay an invoice with a method-discriminated payment: stored card (CIT/MIT) or a one-off Pix artifact",
+        "operationId": "PayInvoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "method": {
+                        "type": "string",
+                        "const": "CARD"
+                      },
+                      "paymentMethodId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "newCard": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "method"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "method": {
+                        "type": "string",
+                        "const": "PIX"
+                      }
+                    },
+                    "required": [
+                      "method"
+                    ]
+                  }
+                ]
+              },
+              "examples": {
+                "example1": {
+                  "value": {
+                    "method": "CARD"
+                  },
+                  "summary": "Example 1"
+                },
+                "example2": {
+                  "value": {
+                    "method": "PIX"
+                  },
+                  "summary": "Example 2"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engineInvoiceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "inv_1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pay an invoice with a method-discriminated payment: stored card (CIT/MIT) or a one-off Pix artifact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "const": "CARD"
+                        },
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "gatewayTxId": {
+                          "type": "string"
+                        },
+                        "checkoutUrl": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "method",
+                        "ok"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "const": "PIX"
+                        },
+                        "pixId": {
+                          "type": "string"
+                        },
+                        "qr": {
+                          "type": "string"
+                        },
+                        "copyPaste": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "method",
+                        "pixId",
+                        "qr",
+                        "copyPaste",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "examples": {
+                  "example1": {
+                    "value": {
+                      "method": "CARD",
+                      "ok": true,
+                      "gatewayTxId": "gw_inv_1"
+                    },
+                    "summary": "Example 1"
+                  },
+                  "example2": {
+                    "value": {
+                      "method": "PIX",
+                      "pixId": "pix_inv_1",
+                      "qr": "data:image/png;base64,...",
+                      "copyPaste": "00020126brcode",
+                      "expiresAt": "2026-07-03T12:00:00.000Z"
+                    },
+                    "summary": "Example 2"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/plan-change/preview": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Preview the billing impact of switching the authenticated owner's subscription to a target plan",
+        "operationId": "PreviewPlanChange",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "targetPlan",
+            "schema": {
+              "$ref": "#/components/schemas/PlanName"
+            },
+            "required": true,
+            "example": "PRO"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preview the billing impact of switching the authenticated owner's subscription to a target plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amountDueNowCents": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "nextCycleCents": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "amountDueNowCents",
+                    "nextCycleCents"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "amountDueNowCents": 12345,
+                      "nextCycleCents": 29900
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "amountDueNowCents": 12345,
+                      "nextCycleCents": 29900
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invoices/{engineInvoiceId}/refund": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Refund a settled invoice (operator): cancels the gateway charge and moves the invoice to REFUNDED",
+        "operationId": "RefundInvoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amountCents": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {},
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engineInvoiceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "inv_1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refund a settled invoice (operator): cancels the gateway charge and moves the invoice to REFUNDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ok": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ok": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payment-methods/{paymentMethodId}": {
+      "delete": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Remove a non-default stored payment method from the wallet (the last active card cannot be removed)",
+        "operationId": "RemovePaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paymentMethodId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "pm-uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remove a non-default stored payment method from the wallet (the last active card cannot be removed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ok": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ok": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invoices/{id}/refund-request": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Request a refund for a settled invoice (user): computes a usage-aware refundable amount (CDC withdrawal window → full, else pro-rata of the unused period) and triggers a partial gateway refund. The credit note is issued asynchronously from the confirmed-refund webhook.",
+        "operationId": "RequestRefund",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "inv_1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request a refund for a settled invoice (user): computes a usage-aware refundable amount (CDC withdrawal window → full, else pro-rata of the unused period) and triggers a partial gateway refund. The credit note is issued asynchronously from the confirmed-refund webhook.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requestedAmountCents": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "basis": {
+                      "$ref": "#/components/schemas/RefundBasis"
+                    }
+                  },
+                  "required": [
+                    "requestedAmountCents",
+                    "basis"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "requestedAmountCents": 29900,
+                      "basis": "CDC_WINDOW"
+                    },
+                    {
+                      "requestedAmountCents": 0,
+                      "basis": "NONE"
+                    }
+                  ]
+                },
+                "examples": {
+                  "example1": {
+                    "value": {
+                      "requestedAmountCents": 29900,
+                      "basis": "CDC_WINDOW"
+                    },
+                    "summary": "Example 1"
+                  },
+                  "example2": {
+                    "value": {
+                      "requestedAmountCents": 0,
+                      "basis": "NONE"
+                    },
+                    "summary": "Example 2"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscription/resume": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "\"Reativar assinatura\" — suspend a pending scheduled cancellation, restoring the subscription to normal active state.",
+        "operationId": "ResumeSubscription",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "\"Reativar assinatura\" — suspend a pending scheduled cancellation, restoring the subscription to normal active state.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sandbox/checkout": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Sandbox-only fake hosted checkout: confirms the session and redirects back.",
+        "operationId": "SandboxCheckout",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sessionRef",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "example": "cs_sandbox_1"
+          },
+          {
+            "in": "query",
+            "name": "ownerId",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "example": "owner-uuid"
+          },
+          {
+            "in": "query",
+            "name": "intent",
+            "schema": {
+              "$ref": "#/components/schemas/CheckoutIntent"
+            },
+            "required": true,
+            "example": "PAYMENT"
+          },
+          {
+            "in": "query",
+            "name": "successUrl",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "example": "http://localhost:5173/account?checkout=success"
+          },
+          {
+            "in": "query",
+            "name": "engineInvoiceId",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "example": "native:owner:1"
+          },
+          {
+            "in": "query",
+            "name": "amountCents",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "required": false,
+            "example": 29900
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sandbox-only fake hosted checkout: confirms the session and redirects back.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "redirected": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "redirected"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "redirected": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "redirected": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payment-methods/{paymentMethodId}/default": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Make a stored payment method the wallet default (renewals charge the default)",
+        "operationId": "SetDefaultPaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paymentMethodId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "pm-uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Make a stored payment method the wallet default (renewals charge the default)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ok": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ok": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profile": {
+      "patch": {
+        "tags": [
+          "billing"
+        ],
+        "description": "Update the billing identity (name/email/document/language) — responsible user only",
+        "operationId": "UpdateBillingProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBillingProfileBody"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "email": "financeiro@clinica.com",
+                    "language": "en-US"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Update the billing identity (name/email/document/language) — responsible user only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "document": {
+                      "type": "string"
+                    },
+                    "language": {
+                      "$ref": "#/components/schemas/Language"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "email",
+                    "document",
+                    "language"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "name": "Clínica Sol",
+                      "email": "financeiro@clinica.com",
+                      "document": "11144477735",
+                      "language": "en-US"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "name": "Clínica Sol",
+                      "email": "financeiro@clinica.com",
+                      "document": "11144477735",
+                      "language": "en-US"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owners": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Create a new owner (tenant); the creator becomes the responsible user",
+        "operationId": "CreateOwner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "kind": {
+                    "$ref": "#/components/schemas/OwnerKind"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "pictureUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "Acme Org",
+                    "kind": "ORGANIZATION",
+                    "timezone": "America/Sao_Paulo",
+                    "pictureUrl": "https://cdn.example.com/logo.png"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Create a new owner (tenant); the creator becomes the responsible user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "ownerId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owners/disable": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Disable a owner (C19 DisableOwner; OWNER only)",
+        "operationId": "DisableOwner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "reason": "closing for maintenance"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Disable a owner (C19 DisableOwner; OWNER only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "isDisabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ownerId",
+                    "isDisabled"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owners/enable": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)",
+        "operationId": "EnableOwner",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "isDisabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ownerId",
+                    "isDisabled"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": false
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": false
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owners/{ownerId}/activate": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)",
+        "operationId": "SetActiveOwner",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ownerId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ownerId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owners/settings": {
+      "patch": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Update owner profile settings (name / picture / timezone)",
+        "operationId": "UpdateOwnerSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "pictureUrl": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "New Acme",
+                    "pictureUrl": "https://cdn.example.com/new-logo.png",
+                    "timezone": "America/Sao_Paulo"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Update owner profile settings (name / picture / timezone)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/quota/overrides": {
+      "post": {
+        "tags": [
+          "quota"
+        ],
+        "description": "Apply a quota override to a tenant (operator only, via X-Operator-Key)",
+        "operationId": "ApplyQuotaOverride",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string"
+                  },
+                  "meter": {
+                    "type": "string",
+                    "const": "EXAMPLE_KEY"
+                  },
+                  "delta": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "ownerId",
+                  "meter",
+                  "delta",
+                  "idempotencyKey"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "ownerId": "tenant-123",
+                    "meter": "EXAMPLE_KEY",
+                    "delta": 1000,
+                    "idempotencyKey": "quota-override-1"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Apply a quota override to a tenant (operator only, via X-Operator-Key)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/quota/subscription/downgrade": {
+      "post": {
+        "tags": [
+          "quota"
+        ],
+        "description": "Request a downgrade: validates the kept resources against the target plan, schedules the plan change, and stores the selection — atomically.",
+        "operationId": "RequestDowngrade",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planName": {
+                    "$ref": "#/components/schemas/PlanName"
+                  },
+                  "keep": {
+                    "default": {},
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "planName"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "planName": "STARTER",
+                    "keep": {}
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Request a downgrade: validates the kept resources against the target plan, schedules the plan change, and stores the selection — atomically.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "effectiveAtPeriodEnd": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "effectiveAtPeriodEnd"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "effectiveAtPeriodEnd": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "effectiveAtPeriodEnd": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/read": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "description": "Mark notification deliveries as read (C55 MarkNotificationRead)",
+        "operationId": "MarkNotificationRead",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notificationDeliveryIds": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "notificationDeliveryIds"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Mark notification deliveries as read (C55 MarkNotificationRead)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "description": "Send a notification (C53 SendNotification)",
+        "operationId": "SendNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "targetUserIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "category": {
+                    "$ref": "#/components/schemas/NotificationCategory"
+                  },
+                  "important": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "pushEnabled": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "emailEnabled": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "contentType": {
+                    "default": "text/plain",
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "x-tpl-unknown": true
+                    }
+                  },
+                  "scheduledAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "content",
+                  "category"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Send a notification (C53 SendNotification)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notificationId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "deliveriesCreated": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "deliveriesSkippedDuplicate": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "notificationId",
+                    "deliveriesCreated",
+                    "deliveriesSkippedDuplicate"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/account": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Account settings read",
+        "operationId": "GetMyAccount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Account settings read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "profile": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "company": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "pictureUrl": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "userId",
+                        "name",
+                        "email",
+                        "company",
+                        "pictureUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "preferences": {
+                      "type": "object",
+                      "properties": {
+                        "language": {
+                          "$ref": "#/components/schemas/Language"
+                        },
+                        "currency": {
+                          "$ref": "#/components/schemas/CurrencyCode"
+                        },
+                        "timezone": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "language",
+                        "currency",
+                        "timezone"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "security": {
+                      "type": "object",
+                      "properties": {
+                        "hasPassword": {
+                          "type": "boolean"
+                        },
+                        "lastPasswordChangeAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "twoFactorEnabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "hasPassword",
+                        "lastPasswordChangeAt",
+                        "twoFactorEnabled"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "profile",
+                    "preferences",
+                    "security"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/billing/subscription": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Get the current access subscription for the authenticated owner",
+        "operationId": "GetSubscription",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Get the current access subscription for the authenticated owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "planName": {
+                      "$ref": "#/components/schemas/PlanName"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/SubscriptionStatus"
+                    },
+                    "currentPeriodEnd": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelAtPeriodEnd": {
+                      "type": "boolean"
+                    },
+                    "scheduledPlanName": {
+                      "$ref": "#/components/schemas/PlanName"
+                    }
+                  },
+                  "required": [
+                    "planName",
+                    "status",
+                    "currentPeriodEnd",
+                    "cancelAtPeriodEnd",
+                    "scheduledPlanName"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "planName": "PRO",
+                      "status": "ACTIVE",
+                      "currentPeriodEnd": "2026-07-22T00:00:00.000Z",
+                      "cancelAtPeriodEnd": false,
+                      "scheduledPlanName": null
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "planName": "PRO",
+                      "status": "ACTIVE",
+                      "currentPeriodEnd": "2026-07-22T00:00:00.000Z",
+                      "cancelAtPeriodEnd": false,
+                      "scheduledPlanName": null
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/billing/usage": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Get quota usage for the authenticated owner",
+        "operationId": "GetUsage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Get quota usage for the authenticated owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "quotas": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "const": "EXAMPLE_KEY"
+                          },
+                          "used": {
+                            "type": "number"
+                          },
+                          "included": {
+                            "nullable": true,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "used",
+                          "included"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "quotas"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "quotas": [
+                        {
+                          "key": "EXAMPLE_KEY",
+                          "used": 42,
+                          "included": 5000
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "quotas": [
+                        {
+                          "key": "EXAMPLE_KEY",
+                          "used": 42,
+                          "included": 5000
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/user-info": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Header context — user identity, all member owners (role), active owner, and profile alerts",
+        "operationId": "GetUserInfo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Header context — user identity, all member owners (role), active owner, and profile alerts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        "avatarUrl": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "email",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "owners": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "current",
+                    "owners"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/billing/invoices": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "List the payment history for the authenticated owner",
+        "operationId": "ListInvoices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List the payment history for the authenticated owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invoices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "invoiceId": {
+                            "type": "string"
+                          },
+                          "number": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "pdfUrl": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "amountCents": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "currency": {
+                            "$ref": "#/components/schemas/CurrencyCode"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/InvoiceStatus"
+                          },
+                          "paidAt": {
+                            "nullable": true,
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "overdue": {
+                            "type": "boolean"
+                          },
+                          "description": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "planName": {
+                            "$ref": "#/components/schemas/PlanName"
+                          },
+                          "dueDate": {
+                            "nullable": true,
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "payableMethods": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/PaymentMethodType"
+                            }
+                          }
+                        },
+                        "required": [
+                          "invoiceId",
+                          "number",
+                          "pdfUrl",
+                          "amountCents",
+                          "currency",
+                          "status",
+                          "paidAt",
+                          "overdue",
+                          "description",
+                          "planName",
+                          "dueDate",
+                          "payableMethods"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "invoices"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "invoices": [
+                        {
+                          "invoiceId": "native:owner-uuid:first",
+                          "number": "INV-0001",
+                          "pdfUrl": "https://example.com/invoices/inv-0001.pdf",
+                          "amountCents": 29900,
+                          "currency": "BRL",
+                          "status": "PAID",
+                          "paidAt": "2026-06-22T00:00:00.000Z",
+                          "overdue": false,
+                          "description": "Fatura native:owner-uuid:first",
+                          "planName": "PRO",
+                          "dueDate": null,
+                          "payableMethods": [
+                            "CARD"
+                          ]
+                        },
+                        {
+                          "invoiceId": "native:owner-uuid:second",
+                          "number": null,
+                          "pdfUrl": null,
+                          "amountCents": 0,
+                          "currency": "BRL",
+                          "status": "OVERDUE",
+                          "paidAt": null,
+                          "overdue": true,
+                          "description": "Fatura native:owner-uuid:second",
+                          "planName": null,
+                          "dueDate": null,
+                          "payableMethods": [
+                            "CARD",
+                            "PIX"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "invoices": [
+                        {
+                          "invoiceId": "native:owner-uuid:first",
+                          "number": "INV-0001",
+                          "pdfUrl": "https://example.com/invoices/inv-0001.pdf",
+                          "amountCents": 29900,
+                          "currency": "BRL",
+                          "status": "PAID",
+                          "paidAt": "2026-06-22T00:00:00.000Z",
+                          "overdue": false,
+                          "description": "Fatura native:owner-uuid:first",
+                          "planName": "PRO",
+                          "dueDate": null,
+                          "payableMethods": [
+                            "CARD"
+                          ]
+                        },
+                        {
+                          "invoiceId": "native:owner-uuid:second",
+                          "number": null,
+                          "pdfUrl": null,
+                          "amountCents": 0,
+                          "currency": "BRL",
+                          "status": "OVERDUE",
+                          "paidAt": null,
+                          "overdue": true,
+                          "description": "Fatura native:owner-uuid:second",
+                          "planName": null,
+                          "dueDate": null,
+                          "payableMethods": [
+                            "CARD",
+                            "PIX"
+                          ]
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/notifications": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Header notifications list",
+        "operationId": "ListNotifications",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 10,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "unreadOnly",
+            "schema": {
+              "type": "boolean"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Header notifications list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "$ref": "#/components/schemas/NotificationCategory"
+                          },
+                          "origin": {
+                            "$ref": "#/components/schemas/NotificationOrigin"
+                          },
+                          "read": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "message",
+                          "category",
+                          "origin",
+                          "read",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "total": {
+                      "type": "number"
+                    },
+                    "totalPages": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "totalPages"
+                  ],
+                  "additionalProperties": false,
+                  "examples": []
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/billing/payment-methods": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "List the authenticated owner wallet: stored payment methods, default first",
+        "operationId": "ListPaymentMethods",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List the authenticated owner wallet: stored payment methods, default first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentMethods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "brand": {
+                            "type": "string"
+                          },
+                          "last4": {
+                            "type": "string"
+                          },
+                          "expMonth": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "expYear": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/PaymentMethodStatus"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "brand",
+                          "last4",
+                          "expMonth",
+                          "expYear",
+                          "isDefault",
+                          "status"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "paymentMethods"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "paymentMethods": [
+                        {
+                          "id": "pm-uuid",
+                          "brand": "visa",
+                          "last4": "4242",
+                          "expMonth": 12,
+                          "expYear": 2030,
+                          "isDefault": true,
+                          "status": "ACTIVE"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "paymentMethods": [
+                        {
+                          "id": "pm-uuid",
+                          "brand": "visa",
+                          "last4": "4242",
+                          "expMonth": 12,
+                          "expYear": 2030,
+                          "isDefault": true,
+                          "status": "ACTIVE"
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/billing/plans": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "List available billing plans",
+        "operationId": "ListPlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List available billing plans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plans": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "$ref": "#/components/schemas/PlanName"
+                          },
+                          "basePrice": {
+                            "$ref": "#/components/schemas/Money"
+                          },
+                          "quotas": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "nullable": true,
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "metered": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "metered"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "required": [
+                              "EXAMPLE_KEY"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "basePrice",
+                          "quotas"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "plans"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "plans": [
+                        {
+                          "name": "PRO",
+                          "basePrice": {
+                            "amountCents": 29900,
+                            "currency": "BRL"
+                          },
+                          "quotas": {
+                            "EXAMPLE_KEY": {
+                              "limit": 5000,
+                              "metered": true
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "plans": [
+                        {
+                          "name": "PRO",
+                          "basePrice": {
+                            "amountCents": 29900,
+                            "currency": "BRL"
+                          },
+                          "quotas": {
+                            "EXAMPLE_KEY": {
+                              "limit": 5000,
+                              "metered": true
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/events": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "Owner-scoped real-time integration events via SSE",
+        "operationId": "ListenEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Owner-scoped real-time integration events via SSE",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "ownerId": {
+                      "type": "string"
+                    },
+                    "payload": {
+                      "type": "object",
+                      "properties": {
+                        "ownerId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      },
+                      "required": [
+                        "ownerId"
+                      ],
+                      "additionalProperties": {
+                        "x-tpl-unknown": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "ownerId",
+                    "payload"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiErrors": {
+        "type": "string",
+        "enum": [
+          "CANNOT_CONVERT_INPUT",
+          "CHECKOUT_SESSION_REF_REQUIRED",
+          "COMMAND_HANDLER_NOT_FOUND",
+          "COMMAND_QUEUE_NOT_FOUND",
+          "CREDENTIAL_DECRYPT_FAILED",
+          "DELIVERY_NOT_OWNED_BY_USER",
+          "DISPUTE_REF_REQUIRED",
+          "DOWNGRADE_SELECTION_INVALID",
+          "EMAIL_ALREADY_REGISTERED",
+          "EMPTY_RECIPIENTS",
+          "ENTITY_NOT_FOUND_WHILE_SAVING",
+          "FCM_TOKEN_NOT_FOUND",
+          "FORBIDDEN",
+          "FREE_PLAN_NOT_SUBSCRIBABLE",
+          "HANDLER_NOT_BOUND",
+          "INVALIDATED_AUTH_TOKEN",
+          "INVALID_AUTH_TOKEN",
+          "INVALID_CHARGE_TRANSITION",
+          "INVALID_CHECKOUT_SESSION_TRANSITION",
+          "INVALID_CONTROLLER_EXAMPLES",
+          "INVALID_DISPUTE_TRANSITION",
+          "INVALID_EMAIL",
+          "INVALID_EMAIL_FORMAT",
+          "INVALID_ENTITY",
+          "INVALID_ID",
+          "INVALID_ID_VALUES_LENGTH",
+          "INVALID_LANGUAGE",
+          "INVALID_MANDATE",
+          "INVALID_OUTBOX_PAYLOAD",
+          "INVALID_PAYMENT_METHOD_TRANSITION",
+          "INVALID_PHONE",
+          "INVALID_PICTURE_URL",
+          "INVALID_RANGE",
+          "INVALID_REQUEST",
+          "INVALID_TIMEZONE",
+          "INVOICE_ALREADY_PAID",
+          "INVOICE_LINES_MISMATCH",
+          "MISSING_ENVIRONMENT_VARIABLE",
+          "MISSING_LOG_CONTENT",
+          "NOTIFICATION_DELIVERY_NOT_FOUND",
+          "NOT_FOUND",
+          "NOT_IMPLEMENTED",
+          "NO_CHANNEL_ENABLED",
+          "OPTIMISTIC_LOCK_CONFLICT",
+          "OWNER_ALREADY_DISABLED",
+          "OWNER_NOT_DISABLED",
+          "OWNER_NOT_FOUND",
+          "PASSWORDS_DONT_MATCH",
+          "PASSWORD_TOO_WEAK",
+          "PAYMENT_METHOD_IS_DEFAULT",
+          "PAYMENT_METHOD_LAST_ACTIVE",
+          "PAYMENT_METHOD_NOT_FOUND",
+          "PAYMENT_METHOD_OWNER_ID_REQUIRED",
+          "PAYMENT_METHOD_REQUIRED",
+          "PAYMENT_METHOD_UNSUPPORTED",
+          "PLAN_NOT_FOUND",
+          "PROVIDER_CAPABILITY_UNSUPPORTED",
+          "PROVIDER_ERROR",
+          "QUOTA_LIMIT_EXCEEDED",
+          "RATE_LIMITED",
+          "RESOURCE_LOCKED_BY_PLAN",
+          "SUBSCRIPTION_ALREADY_EXISTS",
+          "SUBSCRIPTION_ALREADY_FINALIZED",
+          "SUBSCRIPTION_NOT_FOUND",
+          "SUBSCRIPTION_NOT_SCHEDULED_FOR_CANCELLATION",
+          "SUBSCRIPTION_PENDING_CANCELLATION",
+          "UNAUTHORIZED",
+          "USER_NOT_FOUND",
+          "USER_PROFILE_NOT_FOUND",
+          "VALIDATION_ERROR",
+          "WEAK_PASSWORD",
+          "WEBHOOK_SIGNATURE_INVALID",
+          "WEBHOOK_SOURCE_UNKNOWN"
+        ],
+        "description": "All possible error codes"
+      },
+      "FcmPlatform": {
+        "type": "string",
+        "enum": [
+          "IOS",
+          "ANDROID",
+          "WEB"
+        ]
+      },
+      "ResetPasswordBody": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          },
+          "confirmNewPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "token",
+          "newPassword",
+          "confirmNewPassword"
+        ],
+        "x-tpl-zod-refinements": [
+          {
+            "function": "(data) => data.newPassword === data.confirmNewPassword",
+            "error": "PASSWORDS_DONT_MATCH",
+            "path": [
+              "body",
+              "confirmNewPassword"
+            ]
+          }
+        ]
+      },
+      "SignUpBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          },
+          "confirmPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password",
+          "confirmPassword"
+        ],
+        "x-tpl-zod-refinements": [
+          {
+            "function": "(data) => data.password === data.confirmPassword",
+            "error": "PASSWORDS_DONT_MATCH",
+            "path": [
+              "body",
+              "confirmPassword"
+            ]
+          }
+        ]
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "pt-BR",
+          "en-US"
+        ]
+      },
+      "SubscriptionStatus": {
+        "type": "string",
+        "enum": [
+          "TRIALING",
+          "INCOMPLETE",
+          "ACTIVE",
+          "PAST_DUE",
+          "CANCELED",
+          "INCOMPLETE_EXPIRED"
+        ]
+      },
+      "PlanName": {
+        "type": "string",
+        "enum": [
+          "FREE",
+          "STARTER",
+          "PRO"
+        ]
+      },
+      "RefundBasis": {
+        "type": "string",
+        "enum": [
+          "CDC_WINDOW",
+          "PRO_RATA",
+          "NONE"
+        ]
+      },
+      "CheckoutIntent": {
+        "type": "string",
+        "enum": [
+          "SETUP",
+          "PAYMENT"
+        ]
+      },
+      "UpdateBillingProfileBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "document": {
+            "type": "string",
+            "minLength": 1
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          }
+        },
+        "x-tpl-zod-refinements": [
+          {
+            "function": "(b) => b.name !== void 0 || b.email !== void 0 || b.document !== void 0 || b.language !== void 0",
+            "error": "VALIDATION_ERROR"
+          }
+        ]
+      },
+      "OwnerKind": {
+        "default": "ORGANIZATION",
+        "type": "string",
+        "enum": [
+          "ORGANIZATION",
+          "INDIVIDUAL"
+        ]
+      },
+      "NotificationCategory": {
+        "type": "string",
+        "enum": [
+          "ORDER_RECEIVED",
+          "SYNC_ERROR",
+          "FEATURE_ANNOUNCEMENT",
+          "DAILY_DIGEST",
+          "INTEGRATION_DISCONNECTED",
+          "INVITATION",
+          "OTHER"
+        ]
+      },
+      "CurrencyCode": {
+        "type": "string",
+        "enum": [
+          "AED",
+          "ALL",
+          "ARS",
+          "AUD",
+          "BDT",
+          "BGN",
+          "BHD",
+          "BIF",
+          "BOB",
+          "BRL",
+          "BWP",
+          "CAD",
+          "CHF",
+          "CLP",
+          "CNY",
+          "COP",
+          "CVE",
+          "CZK",
+          "DKK",
+          "DOP",
+          "EGP",
+          "ETB",
+          "EUR",
+          "FJD",
+          "GBP",
+          "GHS",
+          "GIP",
+          "GMD",
+          "GNF",
+          "GTQ",
+          "HKD",
+          "HUF",
+          "IDR",
+          "INR",
+          "ISK",
+          "JOD",
+          "JPY",
+          "KES",
+          "KRW",
+          "KWD",
+          "LAK",
+          "LKR",
+          "MAD",
+          "MGA",
+          "MWK",
+          "MXN",
+          "MYR",
+          "MZN",
+          "NGN",
+          "NOK",
+          "NPR",
+          "NZD",
+          "OMR",
+          "PEN",
+          "PHP",
+          "PKR",
+          "PLN",
+          "PYG",
+          "QAR",
+          "RON",
+          "RUB",
+          "RWF",
+          "SAR",
+          "SEK",
+          "SGD",
+          "SLE",
+          "SRD",
+          "THB",
+          "TND",
+          "TRY",
+          "TWD",
+          "TZS",
+          "UGX",
+          "USD",
+          "VND",
+          "XAF",
+          "XCD",
+          "XOF",
+          "ZAR",
+          "ZMW"
+        ]
+      },
+      "InvoiceStatus": {
+        "type": "string",
+        "enum": [
+          "PAID",
+          "OVERDUE",
+          "PENDING",
+          "REFUNDED",
+          "PARTIALLY_REFUNDED",
+          "VOID"
+        ]
+      },
+      "PaymentMethodType": {
+        "type": "string",
+        "enum": [
+          "CARD",
+          "APPLE_PAY",
+          "GOOGLE_PAY",
+          "PIX",
+          "BOLETO"
+        ]
+      },
+      "NotificationOrigin": {
+        "type": "string",
+        "enum": [
+          "SYSTEM",
+          "ADMIN",
+          "SCHEDULER"
+        ]
+      },
+      "PaymentMethodStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "EXPIRED",
+          "REMOVED"
+        ]
+      },
+      "Money": {
+        "type": "object",
+        "properties": {
+          "amountCents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "currency": {
+            "$ref": "#/components/schemas/CurrencyCode"
+          }
+        },
+        "required": [
+          "amountCents",
+          "currency"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "x-error-codes": [
+    "CANNOT_CONVERT_INPUT",
+    "CHECKOUT_SESSION_REF_REQUIRED",
+    "COMMAND_HANDLER_NOT_FOUND",
+    "COMMAND_QUEUE_NOT_FOUND",
+    "CREDENTIAL_DECRYPT_FAILED",
+    "DELIVERY_NOT_OWNED_BY_USER",
+    "DISPUTE_REF_REQUIRED",
+    "DOWNGRADE_SELECTION_INVALID",
+    "EMAIL_ALREADY_REGISTERED",
+    "EMPTY_RECIPIENTS",
+    "ENTITY_NOT_FOUND_WHILE_SAVING",
+    "FCM_TOKEN_NOT_FOUND",
+    "FORBIDDEN",
+    "FREE_PLAN_NOT_SUBSCRIBABLE",
+    "HANDLER_NOT_BOUND",
+    "INVALIDATED_AUTH_TOKEN",
+    "INVALID_AUTH_TOKEN",
+    "INVALID_CHARGE_TRANSITION",
+    "INVALID_CHECKOUT_SESSION_TRANSITION",
+    "INVALID_CONTROLLER_EXAMPLES",
+    "INVALID_DISPUTE_TRANSITION",
+    "INVALID_EMAIL",
+    "INVALID_EMAIL_FORMAT",
+    "INVALID_ENTITY",
+    "INVALID_ID",
+    "INVALID_ID_VALUES_LENGTH",
+    "INVALID_LANGUAGE",
+    "INVALID_MANDATE",
+    "INVALID_OUTBOX_PAYLOAD",
+    "INVALID_PAYMENT_METHOD_TRANSITION",
+    "INVALID_PHONE",
+    "INVALID_PICTURE_URL",
+    "INVALID_RANGE",
+    "INVALID_REQUEST",
+    "INVALID_TIMEZONE",
+    "INVOICE_ALREADY_PAID",
+    "INVOICE_LINES_MISMATCH",
+    "MISSING_ENVIRONMENT_VARIABLE",
+    "MISSING_LOG_CONTENT",
+    "NOTIFICATION_DELIVERY_NOT_FOUND",
+    "NOT_FOUND",
+    "NOT_IMPLEMENTED",
+    "NO_CHANNEL_ENABLED",
+    "OPTIMISTIC_LOCK_CONFLICT",
+    "OWNER_ALREADY_DISABLED",
+    "OWNER_NOT_DISABLED",
+    "OWNER_NOT_FOUND",
+    "PASSWORDS_DONT_MATCH",
+    "PASSWORD_TOO_WEAK",
+    "PAYMENT_METHOD_IS_DEFAULT",
+    "PAYMENT_METHOD_LAST_ACTIVE",
+    "PAYMENT_METHOD_NOT_FOUND",
+    "PAYMENT_METHOD_OWNER_ID_REQUIRED",
+    "PAYMENT_METHOD_REQUIRED",
+    "PAYMENT_METHOD_UNSUPPORTED",
+    "PLAN_NOT_FOUND",
+    "PROVIDER_CAPABILITY_UNSUPPORTED",
+    "PROVIDER_ERROR",
+    "QUOTA_LIMIT_EXCEEDED",
+    "RATE_LIMITED",
+    "RESOURCE_LOCKED_BY_PLAN",
+    "SUBSCRIPTION_ALREADY_EXISTS",
+    "SUBSCRIPTION_ALREADY_FINALIZED",
+    "SUBSCRIPTION_NOT_FOUND",
+    "SUBSCRIPTION_NOT_SCHEDULED_FOR_CANCELLATION",
+    "SUBSCRIPTION_PENDING_CANCELLATION",
+    "UNAUTHORIZED",
+    "USER_NOT_FOUND",
+    "USER_PROFILE_NOT_FOUND",
+    "VALIDATION_ERROR",
+    "WEAK_PASSWORD",
+    "WEBHOOK_SIGNATURE_INVALID",
+    "WEBHOOK_SOURCE_UNKNOWN"
+  ]
+}

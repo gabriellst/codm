@@ -1,0 +1,188 @@
+id: replay-fees-taxes-timeline-model
+tier: train
+builder: sonnet
+title: z.historical + Timeline<T> interval paint; typed per-entry fee & tax timelines
+sourceSpec: .specs/2026-06-02-fees-taxes-timeline-model-design.md
+goldRef: 26ae0634acea5cbfb4c39f22dbe4aa3204c950d8
+baseRef: b637d550a6b529a1d307b8d2a1c31ab7e49ac499
+prompt: >-
+  ## Context
+
+
+  Finance (`packages/api/typescript/src/finance`) owns merchant fee/tax
+  configuration. Two aggregates are under-modeled: **`FeesConfiguration`**
+  (`finance/entities/FeesConfiguration.ts`) carries `gatewayFees`,
+  `checkoutFees`, `shippingFee` — all typed `z.unknown()` — and versions the
+  WHOLE bundle with a single row-level `startDate`/`endDate` (`supersede(at)`
+  stamps the active row, `findActiveByStoreId` reads `WHERE endDate IS NULL`).
+  **`Taxes`** (`finance/entities/Taxes.ts`) is a flat aggregate — `type`,
+  `deductionType`, `rate`, `revenueTaxMultiplier`, and a
+  `marketingTaxRatePerPlatform` jsonb map — versioned the same way, conflating
+  revenue-tax and marketing-tax timelines. Catalog's `ProductCostOption`
+  (`catalog/objects/ProductCostOption.ts`) re-implements the same time-window
+  idea a third way (per-option `z.iso.date()` strings + `startDate <= endDate`
+  refine). The project's custom `z` (`core/src/utils/schema/index.ts`) is Zod
+  augmented via `ExtraSchemaTypes` (`core/src/utils/schema/ExtraTypes.ts` —
+  `domainEvent`, `integrationEvent`, `instance`, …). `MonetaryAmountSchema`
+  lives at `shared/objects/MonetaryAmount.ts`. Wire enums live in
+  `packages/contracts/wire/enums/` (including `shipping-cost-type.tsp`,
+  `payment-gateway.tsp`, `payment-method.tsp`, `checkout-platform.tsp`,
+  `marketing-platform.tsp`, `tax-type.tsp`, `tax-deduction-type.tsp`). The
+  surviving write surface is `UpdateFeesConfiguration` (`/fees-configuration`)
+  and `UpdateTaxes` (`/taxes-settings`). No seed/fixture data exists for these
+  tables; the latest migration is `0046`.
+
+
+  ## Goal
+
+
+  Merchants configure each gateway fee (per platform × payment method), the
+  single checkout fee, the shipping fee, the revenue tax, and each platform's
+  marketing tax INDEPENDENTLY over time — each entry carrying its own effective
+  window — with fully typed shapes. One shared abstraction (`z.historical` +
+  `Timeline<T>`) backs all of them and is reused by catalog's product-cost
+  options.
+
+
+  ## Requirements
+
+
+  1. **`z.historical(...)`** is a first-class custom Zod extension registered in
+  `ExtraSchemaTypes` (mirroring `z.domainEvent` overload style). It appends `{
+  startDate: z.date(), endDate: z.date().nullable().default(null) }` (`null` =
+  open-ended) plus a refine rejecting `endDate !== null && startDate >= endDate`
+  with `INVALID_DATE_RANGE`. Accepts a raw shape, a `ZodObject` (→ extend), or a
+  **discriminated union** (→ window applied per-variant so the discriminator
+  still narrows).
+
+  2. **`Timeline<T>` value object** in `shared/objects/Timeline.ts`: an
+  immutable **last-write-wins interval paint** over sorted, non-overlapping
+  entries. `place(...)` overwrites exactly the new span — trimming
+  partially-overlapped entries to their uncovered remainders (keeping their old
+  value), removing fully-covered entries, splitting an entry the span falls
+  strictly inside into two — then inserts the new entry. Worked example:
+  `[0,11)=X`, place(Y over [4,8)) → `[0,4)=X`, `[4,8)=Y`, `[8,11)=X`. Reads:
+  `activeAt(date)` (half-open containment) and `current()` (the unique
+  open-ended entry). The paint is scoped per logical series (per gateway
+  (platform, method) key; per marketing platform key) — placing into one key
+  never cuts another's entries.
+
+  3. **Typed fee/tax value objects in `finance/objects/`** (no `z.unknown()`
+  left): keys are structural, only the value is historical. `GatewayFeeRate =
+  z.historical({ variable: number 0..1, fixed: MonetaryAmountSchema })`;
+  `GatewayFee = { platform: PaymentGateway, methods: record<PaymentMethod,
+  GatewayFeeRate[]> }`. `CheckoutFee = z.historical({ platform:
+  CheckoutPlatform, rate: number 0..1 })` — a single whole-value timeline; the
+  entity field is renamed `checkoutFees` → **`checkoutFee`**. `ShippingFee =
+  z.historical(discriminatedUnion('mode', ...))` over the renamed enum (see 4):
+  `NONE` and `PAID_BY_CUSTOMER_AT_CHECKOUT` carry no value; `AVERAGE_PER_SALE`
+  and `BY_PRODUCT_QUANTITY` carry a monetary `value`. `RevenueTax =
+  z.historical({ type: TaxType, deductionType: TaxDeductionType, rate,
+  multiplier })`; `MarketingTaxRate = z.historical({ rate })`; `MarketingTax = {
+  platform: MarketingPlatform, rates: MarketingTaxRate[] }`.
+
+  4. **Enum work in contracts:** rename `ShippingCostType` →
+  **`ShippingCostMode`** with values `{ NONE, AVERAGE_PER_SALE,
+  PAID_BY_CUSTOMER_AT_CHECKOUT, BY_PRODUCT_QUANTITY }` (regenerate TS/Go
+  bindings; no reference to the old name remains in contracts or TS source). The
+  `GatewayFeeKind` FIXED/VARIABLE enum no longer models the fee shape — the new
+  schemas must not use it (full removal from contracts is optional; an analytics
+  breakdown schema may still reference it).
+
+  5. **`FeesConfiguration`** exposes `gatewayFees: GatewayFee[]`, `checkoutFee:
+  CheckoutFee[]`, `shippingFee: ShippingFee[]`; no row-level
+  `startDate`/`endDate`, no `supersede()`. **`TaxConfiguration` aggregate
+  replaces `Taxes`** with `revenueTax: RevenueTax[]` and `marketingTax:
+  MarketingTax[]`; `revenueTaxMultiplier` and `marketingTaxRatePerPlatform` no
+  longer exist.
+
+  6. **Storage stays one row per store**; timelines live embedded in jsonb.
+  Migration(s) starting at `0047` are forward recreates with no backfill: drop
+  the row-level date columns and reshape the jsonb-bearing fees/taxes tables.
+
+  7. **`ProductCostOption` refactors onto the same abstraction**: identity is
+  `(currency, country)`; only the changing `{ shipping, items }` is wrapped as
+  `z.historical` leaf values (`z.date()` window via coercion); the overlap
+  invariant comes from `Timeline`. Existing catalog tests pass.
+
+  8. **Use cases**: `UpdateFeesConfiguration` and `UpdateTaxes` accept the new
+  typed shapes and apply every change via per-entry `Timeline.place(...)`
+  (gateway per platform×method key; checkout/shipping/revenue as single
+  timelines; marketing per platform). Controller `InputSchema` keys remain only
+  `body`/`query`/`params`/`ctx`.
+
+  9. **Integration events** `FeesConfigurationUpdated` / `TaxesUpdated` carry a
+  single `effectiveAt` (the change's `effectiveFrom`).
+
+
+  ## Acceptance Criteria (verbatim essentials)
+
+
+  - AC-1/2: `z.historical` window + default + `INVALID_DATE_RANGE` refine;
+  per-variant application on discriminated unions with the discriminator still
+  narrowing.
+
+  - AC-3/15: `Timeline<T>` semantics proven by a dedicated unit suite at
+  `shared/objects/Timeline.test.ts` covering: front-trim, full-cover removal,
+  strict-inside 3-way split, open-ended paint trimming the prior open entry, gap
+  behaviour, exact-boundary adjacency (no zero-length entries), and immutability
+  of the source timeline. `z.historical` has its own tests (window default,
+  refine, per-variant union).
+
+  - AC-4/5: typed `finance/objects` exports as in Requirement 3; identity fields
+  never inside a window; `FeesConfiguration` has no `z.unknown()`, no row-level
+  dates, no `supersede()`.
+
+  - AC-7: `ShippingCostMode` rename complete.
+
+  - AC-8: `TaxConfiguration` replaces `Taxes`.
+
+  - AC-9: migration(s) apply cleanly on a fresh DB (PGlite harness).
+
+  - AC-10: `ProductCostOption` uses `z.historical`; catalog tests pass.
+
+  - AC-11/14: use cases place entries via `Timeline.place`; tests assert sibling
+  keys/timelines untouched.
+
+  - AC-13: `bun sdk` regenerated; `bun tsc` clean across workspaces.
+axes:
+  - VO-REPR
+  - SCHEMA-DERIVE
+  - DISC-UNION
+  - ENUM-REPR
+  - NAMING
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: test-green
+    spec: packages/api/typescript/src/shared/objects/Timeline.test.ts
+    id: value-object#invariant-tests
+  - kind: grep-must
+    spec: packages/api/typescript/core/src/utils/schema/ExtraTypes.ts::INVALID_DATE_RANGE
+    id: schema#refine-named-error
+  - kind: file-exists
+    spec: packages/contracts/wire/enums/shipping-cost-mode.tsp
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/finance/entities/FeesConfiguration.ts::z\.unknown
+    id: schema#no-unknown-on-entity
+  - kind: grep-must
+    spec: packages/api/typescript/src/finance/objects/*.ts::discriminatedUnion
+    id: schema#disc-union-variants
+  - kind: grep-must
+    spec: packages/api/typescript/src/finance/entities/TaxConfiguration.ts::revenueTax
+  - kind: file-exists
+    spec: packages/contracts/db/migrations/0047_*.sql
+notes: "Implementing chain: dbaf65f8a (T1 z.historical + T2 Timeline) ->
+  67cfbcd48 (T3 ShippingCostMode rename) -> d1be74c8e/311e729c9 (T5 typed
+  schemas + keyed rework) -> ec51ce553 (T4 ProductCostOption) -> 834b3e681 (T6
+  FeesConfiguration + migration 0047) -> 974fcef8d (T10) -> f22234def (T11
+  TaxConfiguration + migration 0048) -> 26ae0634a (T12 UpdateTaxes). baseRef
+  b637d550a is the exact HEAD the spec's risk note re-grounded on (per-tab mock
+  writers already deleted; latest migration 0046). Caveats baked into
+  prompt/graders: gold KEPT gateway-fee-kind.tsp (AC-6 partially executed —
+  analytics FeesBreakdownSchema still references it), so removal is stated as
+  optional and ungraded; gold's Timeline.place takes a single windowed entry
+  rather than the spec's (value, start, end) signature, so graders avoid pinning
+  the signature. Chain also contains an unrelated mid-stream refactor (289da16fb
+  clear read/BFF layer) — graders are scoped strictly to spec artifacts so both
+  gold and a faithful agent tree pass."

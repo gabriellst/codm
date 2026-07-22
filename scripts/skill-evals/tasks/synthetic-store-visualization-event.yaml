@@ -1,0 +1,55 @@
+id: synthetic-store-visualization-event
+tier: holdout
+builder: sonnet
+title: Domain event on store-visualization update (synthetic — probes EVENT-EMISSION canon)
+sourceSpec: hand-authored
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template backend (packages/api/typescript), the SetStoreVisualization use case
+  (src/ui/usecases/SetStoreVisualization.ts) persists a store's visualization preference but
+  records no event. The platform needs a domain event capturing the change — an event named
+  along the lines of ui.store_visualization.updated, carrying the storeId and the new
+  visualization value — so future read-models and integrations can react to it. Implement the
+  event and its raising per the house event architecture: read the event and usecase playbooks
+  under .claude/skills/ first (where an event class lives, how its payload schema is typed, who
+  persists it and when, and what NEVER publishes directly). Wire everything (exports included)
+  and finish with a green type-check: cd packages/api/typescript && bun x tsc -p
+  tsconfig.build.json --noEmit.
+axes: [EVENT-EMISSION, SCHEMA-DERIVE, LAYOUT]
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: file-exists
+    spec: "packages/api/typescript/src/ui/events/*.ts"
+  - kind: grep-must
+    spec: "packages/api/typescript/src/ui/events/*.ts::z\\.domainEvent\\("
+    id: event#typescript
+  - kind: grep-must
+    spec: "packages/api/typescript/src/ui/usecases/SetStoreVisualization.ts::domainEventRepository"
+    id: usecase#UC-C05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/ui/usecases/**/*.ts::(internalMediator|externalMediator)\\.publish"
+    id: usecase#UC-C05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/ui/**/*.ts::addEvent\\("
+    id: entity#ENT-P15
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: judge
+    spec: >
+      A domain event for store-visualization updates was just added. Verify ALL of:
+      (a) the event class lives under src/ui/events/ with a static name following the
+      context.entity.action convention and a payload schema typed via z.domainEvent({...});
+      (b) the event is constructed and persisted BY THE USE CASE (SetStoreVisualization) AFTER
+      the entity save, via this.domainEventRepository.save(event, tx) with the SAME tx threaded
+      — the TS canon is use-case-born events through the outbox (the entity carries NO event
+      API, and nothing calls any mediator .publish directly); (c) the event is exported from the
+      events barrel so handlers could subscribe later. Inspect src/ui/events/ and the updated
+      SetStoreVisualization.ts.
+notes: >
+  Synthetic probe authored by the orchestrating session. Directly tests the EVENT-EMISSION axis
+  that Phase 0 re-canonized (use-case-born, outbox-only) — i.e. whether an agent following
+  TODAY'S docs lands on the corrected idiom rather than the formerly-fictional entity addEvent().

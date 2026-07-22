@@ -1,0 +1,111 @@
+id: synthetic-react-storybook-data-component
+# Probes the STORYBOOK best patterns for a CONNECTED (data-owning) component — the learned canons
+# documented in component/react SKILL.md but never systematically graded: story the REAL connected
+# component (don't strip the data layer), MSW via the @/storybook helpers, the connected() wrapper,
+# givenStores for store setup, i18n preview, no @ts-expect-error. Subject: CostFormSection
+# (useListCostCountries + the route-scoped useProductCostsStore + i18n + router), which exists with NO
+# story (free real estate). The agent writes its story; graders check the patterns.
+title: Write a Storybook story for a connected data-owning component (best patterns)
+tier: holdout
+builder: sonnet
+sourceSpec: .claude/skills/component/react/SKILL.md
+goldRef: ""
+baseRef: ""
+prompt: >
+  Write a Storybook story for the CONNECTED component `CostFormSection`
+  (packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/index.tsx) at the
+  EXACT path
+  packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx.
+  READ FIRST: (a) the component itself — it owns its data via `useListCostCountries()`, reads the
+  route-scoped `useProductCostsStore` (selectedIds, clearSelection), uses `useTranslation` and a
+  `routeApi` (routeApi.useSearch); (b) the .claude/skills/component/react/SKILL.md "Creating Stories"
+  section; (c) an existing CONNECTED story as the exemplar —
+  src/components/RecommendedAppsSection/RecommendedAppsSection.stories.tsx — and the shared toolkit it
+  imports from `@/storybook`.
+  CANON — story the REAL connected component, do NOT strip the data layer: the story renders the actual
+  `CostFormSection` (imported from '.'), and its data comes from MSW, NOT from passing props or faking
+  the hook. Use the `@/storybook` helpers, never hand-roll the setup:
+  - `connected({ ... })` for the meta `parameters` — it provides the QueryClient (retry:false), the
+    stubbed TanStack router, and i18n. Do NOT hand-roll `QueryClientProvider` or a router.
+  - `mockQuery(listCostCountriesQueryOptions(...), mockData)` for the MSW handler of the Default story;
+    `loadingQuery(...)` for a Loading story; `errorQuery(...)` for an Error story — three states.
+  - `givenStores({...})` to seed the `useProductCostsStore` state the component reads.
+  Provide a realistic mock for the cost-countries list response. NO `@ts-expect-error` anywhere.
+  GATE before done: `cd packages/app/react && bun x tsc --noEmit` (the story must type-check).
+  Final message: name the patterns you used (connected/mockQuery/loadingQuery/errorQuery/givenStores)
+  and confirm tsc.
+
+axes:
+  - STORYBOOK-DATA-COMPONENT
+  - MSW
+  - GIVEN-STORES
+  - I18N-PREVIEW
+
+graders:
+  - kind: tsc
+    spec: app-react
+    id: story#tsc
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx"
+    id: story#exists
+  # stories the REAL connected component (not a prop-stripped shell)
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::CostFormSection"
+    id: story#real-component
+  # uses the canonical connected() wrapper from @/storybook (QueryClient + router + i18n)
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::connected\\("
+    id: story#connected-wrapper
+  # data via MSW helpers — the data-component pattern (not stripped, not hand-rolled http handlers)
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::mockQuery\\("
+    id: story#msw-data
+  # all three connected states (default + loading + error)
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::loadingQuery\\("
+    id: story#loading-state
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::errorQuery\\("
+    id: story#error-state
+  # seeds the Zustand store the component reads
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::givenStores"
+    id: story#given-stores
+  # imports from the @/storybook toolkit (proves it used the infra, not ad-hoc)
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::from ['\"]@/storybook['\"]"
+    id: story#uses-toolkit
+  # NO @ts-expect-error (learned canon)
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::@ts-expect-error"
+    id: story#no-ts-expect-error
+  # NOT hand-rolled — connected() provides QueryClient/router; raw provider = bypassing canon
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx::QueryClientProvider|new QueryClient\\("
+    id: story#no-handrolled-provider
+  # the semantic check
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect the Storybook story at
+      packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx
+      and the component it stories. PASS only if it follows the CONNECTED-component best pattern: (1) it
+      renders the REAL CostFormSection and its data comes from MSW (mockQuery/loadingQuery/errorQuery tied
+      to the listCostCountries query) — the data layer is NOT stripped, NOT replaced by props or a faked
+      hook; (2) it uses the `connected()` wrapper from @/storybook (which supplies QueryClient + stubbed
+      router + i18n) rather than hand-rolling those; (3) it seeds the component's `useProductCostsStore`
+      via `givenStores`; (4) it has at least Default + Loading + Error stories; (5) no @ts-expect-error.
+      FAIL, naming which, if the story strips the data layer, hand-rolls the provider/router, omits the
+      store setup, or has only a single happy-path state.
+    id: judge#storybook-patterns
+
+notes: >-
+  Fills a measured gap: the connected-story best patterns (story the real component + MSW via the
+  @/storybook helpers + connected() + givenStores + i18n preview + no @ts-expect-error) were documented
+  in component/react SKILL.md and learned via corrections (memory: storybook-data-components-msw,
+  storybook-given-stores-and-no-ts-expect-error, i18n-typed-keys-and-storybook) but never graded — a
+  documented-but-unprobed canon that can silently regress. Subject CostFormSection
+  (routes/(app)/products/costs/-components/CostFormSection) exists with no story (free real estate); the
+  path is pinned so graders are deterministic. Single-component probe — light + fast. Validator: at HEAD
+  the story file is absent → file-exists + all grep-must FAIL (free real estate), tsc passes (HEAD
+  clean), grep-must-not pass vacuously.

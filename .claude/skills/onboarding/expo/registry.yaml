@@ -1,0 +1,44 @@
+skill: onboarding
+platform: expo
+depends_on: [route, component, store]
+context_reads:
+  - packages/app/expo/app/(onboarding)/_layout.tsx
+  - packages/app/expo/lib/use-onboarding.ts
+  - packages/app/expo/components/OnboardingGate.tsx
+
+patterns:
+  - id: ONB-01
+    name: "Wizard steps are routes under (onboarding)/, not useState swaps"
+    when: always
+    rule: "One screen per step under app/(onboarding)/ (a Stack). Forward = router.push('/(onboarding)/<next>'); finish = router.replace('/(tabs)/home')."
+    wrong: "a single screen with a useState step index conditionally rendering each step's content"
+  - id: ONB-02
+    name: "Completion persisted via SecureStore + a declarative gate"
+    when: always
+    rule: "useOnboardingComplete() reads/writes expo-secure-store ({ complete: boolean | null, setComplete }). <OnboardingGate> (mirror <Protected>) redirects to /(onboarding)/welcome when not complete. The finish button calls setComplete() then navigates."
+    wrong: "completion held in component state / not persisted (wizard re-shows every launch); or a manual if-redirect inside a screen instead of <OnboardingGate>"
+  - id: ONB-03
+    name: "All copy via t(); finish button wired"
+    when: always
+    rule: "Every onboarding string comes from t('onboarding.*') in BOTH locales; the finish button has a wired onPress."
+    wrong: "hardcoded onboarding copy; a text-only finish button with no onPress"
+
+bad_practices:
+  - id: bp-onb-01
+    name: "Onboarding step state in useState instead of routes"
+    severity: high
+    wrong: |
+      const [step, setStep] = useState(0)
+      return step === 0 ? <Welcome /> : <GetStarted />
+    right: |
+      // app/(onboarding)/welcome.tsx → router.push('/(onboarding)/get-started')
+      // app/(onboarding)/get-started.tsx → setComplete(); router.replace('/(tabs)/home')
+    reason: "A useState wizard loses the back button, deep-linkability, and the native screen transition. Steps are routes."
+    mechanical: false
+  - id: bp-onb-02
+    name: "Completion not persisted"
+    severity: critical
+    wrong: "marking onboarding done in component/store state only — it re-shows on the next cold start"
+    right: "persist via expo-secure-store; useOnboardingComplete() is the single source of truth read on every launch"
+    reason: "Onboarding is a once-ever flow. Without persistence the gate can't know it already happened."
+    mechanical: false

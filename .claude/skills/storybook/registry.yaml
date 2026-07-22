@@ -1,0 +1,114 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: [component, sdk]
+  depended_by: []
+  context_reads: [component, route, store, sdk]
+  examples:
+    - examples/pairs/synthetic-react-storybook-data-component
+
+  patterns:
+    # --- Always ---
+
+    - id: SB-01
+      name: "Dumb component → args"
+      when: always
+      rule: "A component that takes all data via props is storied with StoryObj `args`; no providers, no MSW."
+      wrong: "Wrapping a pure presentational component in QueryClient/MSW/router it never uses."
+
+    - id: SB-02
+      name: "Connected component → real component + parameters.route"
+      when: always
+      rule: |
+        Story the data-owning component as-is. If it reads getRouteApi(id).useSearch(),
+        declare parameters.route = { id, search? | validateSearch? } (typed via connected()).
+      wrong: "Refactoring the component to accept mock data via props just to story it."
+
+    - id: SB-03
+      name: "Mock via typed SDK helpers"
+      when: always
+      rule: |
+        Build MSW handlers with @/storybook helpers keyed off the SDK options:
+        mockQuery(getXQueryOptions(p), resp) / loadingQuery / errorQuery /
+        mockMutation(method, getXMutationOptions(), resp) / mockMutationError / mockSession.
+      wrong: "Hand-writing http.get('*/...', () => HttpResponse.json(...)) per state in the story."
+
+    # --- Conditional ---
+
+    - id: SB-C01
+      name: "Seed stores via parameters.stores"
+      when: "component reads an app-global Zustand store (a StoresParam key — empty in the template; a product re-adds its typed keys, e.g. theme)"
+      rule: "parameters.stores = { theme: 'dark' } — the decorator (givenStores) seeds it before render."
+      wrong: "useThemeStore.setState(...) inside the story body / render."
+
+    - id: SB-C02
+      name: "Mock session"
+      when: "component calls useSession()"
+      rule: "parameters.msw.handlers includes mockSession(value)."
+
+    - id: SB-C03
+      name: "Loading + error states"
+      when: "component has skeleton / error UI"
+      rule: "A Loading story (loadingQuery) and an error story (errorQuery, 4xx)."
+
+    # --- Project conventions ---
+
+    - id: SB-P01
+      name: "Colocate mocks"
+      when: always
+      rule: |
+        Mocks live with their stories: inline fixtures for a single-consumer story; a feature-local
+        file (e.g. <feature>/-components/<x>.mocks.ts) when shared by sibling stories.
+      wrong: "A central src/mocks/ barrel."
+
+    - id: SB-P02
+      name: "DeepPartial + enum consts, no casts"
+      when: always
+      rule: |
+        Mock responses are DeepPartial of the SDK response (import DeepPartial from '@/lib'); enum
+        fields use the SDK PascalCase const (OperationalCostFlowEnum.DEBIT).
+      wrong: "as unknown as XResponse, or 'X' as XEnumKey casts."
+
+    - id: SB-P03
+      name: "Verify with tsc + storybook:build"
+      when: always
+      rule: "bun x tsc --noEmit + bun run storybook:build. No unit-test runner; no @ts-expect-error story tests."
+
+  bad_practices:
+    - id: bp-01
+      name: "Stripping the data layer to story a connected component"
+      severity: critical
+      wrong: |
+        // Refactor the real component into a presentational shell with mock props
+        export function RevenueSummaryView({ data }: { data: Dashboard }) { ... }
+        export const Default = { args: { data: mockDashboard } }
+      right: |
+        // Story the real component; mock the network it already calls
+        parameters: connected({ route: { id: '/(app)/dashboard/' } })
+        export const Default = { parameters: { msw: { handlers: [mockQuery(opts, mockDashboard)] } } }
+
+    - id: bp-02
+      name: "Hand-written http.get per state instead of typed helpers"
+      severity: high
+      wrong: |
+        export const handler = http.get('*/v1/ui/dashboard', () => HttpResponse.json(fixture))
+      right: |
+        mockQuery(getDashboardQueryOptions(p), fixture)  // url + response type from the SDK
+
+    - id: bp-03
+      name: "Casts in mock data"
+      severity: high
+      wrong: "{ ... } as unknown as GetDashboardQueryResponse  /  flow: 'EXPENSE' as OperationalCostFlowEnumKey"
+      right: "DeepPartial<GetDashboardQueryResponse> + OperationalCostFlowEnum.DEBIT"
+
+    - id: bp-04
+      name: "Central src/mocks barrel"
+      severity: medium
+      wrong: "import { dashboardHandler } from '@/mocks/dashboard'"
+      right: "Colocated: inline, or '../../dashboard.mocks' next to the dashboard stories"
+
+    - id: bp-05
+      name: "Adding MSW/providers to a dumb story, or a test runner / @ts-expect-error story tests"
+      severity: medium
+      wrong: "QueryClientProvider around a props-only component; vitest/@storybook/test; @ts-expect-error type tests"
+      right: "args for dumb; tsc + storybook:build for verification"

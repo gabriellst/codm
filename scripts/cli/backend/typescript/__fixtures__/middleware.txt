@@ -1,0 +1,24 @@
+import { singleton } from 'tsyringe-neo'
+import { BaseError, z } from '@template/core-typescript'
+import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware, BaseInterfaceErrors } from '@template/core-typescript'
+
+// Shape of request.ctx that this middleware expects downstream
+const CtxSchema = z.object({
+	// Add expected ctx fields here, e.g.:
+	// user: z.object({ id: z.string() }),
+})
+
+@singleton()
+export class AuthMiddleware implements Middleware {
+	async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<void>> {
+		const ctx = CtxSchema.safeParse(request.ctx)
+
+		if (!ctx.success) {
+			throw new BaseError<BaseInterfaceErrors>('UNAUTHORIZED')
+		}
+
+		// Attach/extend ctx for downstream handlers:
+		// request.ctx = { ...request.ctx, ... }
+		return {}
+	}
+}

@@ -1,0 +1,51 @@
+[12:55:33.719] [INFO] storybook v10.4.2
+[12:55:33.980] [INFO] Loading main config failed as the file does not seem to be valid ESM. Trying a temporary fix, please ensure the main config is valid ESM.
+[12:55:37.380] [PROMPT] Port 6006 is not available. 
+Would you like to run Storybook on port 6007 instead? {"choice":true}
+[12:55:37.384] [INFO] Loading main config failed as the file does not seem to be valid ESM. Trying a temporary fix, please ensure the main config is valid ESM.
+[12:55:37.544] [DEBUG] Getting package.json info for /Users/work/Desktop/Projetos/pessoal/template-fullstack/packages/app/react/package.json...
+[12:55:37.559] [ERROR] [38;2;241;97;97mSB_CORE-SERVER_0002 (CriticalPresetLoadError): Storybook failed to load the following preset: ./.storybook/main.ts.
+
+Please check whether your setup is correct, the Storybook dependencies (and their peer dependencies) are installed correctly and there are no package version clashes.
+
+If you believe this is a bug, please open an issue on Github.
+
+ReferenceError: require is not defined in ES module scope, you can use import instead
+    at getAbsolutePath (file://./.storybook/main.ts:3:18)
+    at file://./.storybook/main.ts:13:11
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async importModule (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-3MJQGFKY.js:737:11)
+    at async loadMainConfig (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-FL7EBVLJ.js:10115:12)
+    at async resolveTelemetryState (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-PU4IASEN.js:632:18)
+    at async withTelemetry (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-PU4IASEN.js:646:33)
+    at async dev (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/bin/core.js:2735:3)
+    at async _Command.<anonymous> (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/bin/core.js:2805:92)
+
+More info: 
+[39m
+    at loadPreset (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-FL7EBVLJ.js:9157:13)
+    at async Promise.all (index 1)
+    at async loadPresets (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-FL7EBVLJ.js:9166:73)
+    at async getPresets (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-FL7EBVLJ.js:9197:23)
+    at async buildDevStandalone (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/core-server/index.js:19412:52)
+    at async withTelemetry (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-PU4IASEN.js:655:12)
+    at async dev (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/bin/core.js:2735:3)
+    at async _Command.<anonymous> (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/bin/core.js:2805:92)
+[12:55:37.561] [WARN] Broken build, fix the error above.
+You may need to refresh the browser.
+[12:55:37.563] [WARN]   Failed to load preset: "/Users/work/Desktop/Projetos/pessoal/template-fullstack/packages/app/react/.storybook/main.ts"
+[12:55:37.563] [ERROR] [38;2;241;97;97mReferenceError: require is not defined in ES module scope, you can use import instead[39m
+    at getAbsolutePath (file://./.storybook/main.ts:3:18)
+    at file://./.storybook/main.ts:13:11
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async importModule (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-3MJQGFKY.js:737:11)
+    at async loadMainConfig (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-FL7EBVLJ.js:10115:12)
+    at async resolveTelemetryState (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-PU4IASEN.js:632:18)
+    at async withTelemetry (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/_node-chunks/chunk-PU4IASEN.js:646:33)
+    at async dev (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/bin/core.js:2735:3)
+    at async _Command.<anonymous> (file:///Users/work/Desktop/Projetos/pessoal/template-fullstack/node_modules/storybook/dist/bin/core.js:2805:92)
+[12:55:37.569] [INFO] Loading main config failed as the file does not seem to be valid ESM. Trying a temporary fix, please ensure the main config is valid ESM.
+[12:55:37.580] [INFO] Loading main config failed as the file does not seem to be valid ESM. Trying a temporary fix, please ensure the main config is valid ESM.
+[12:55:37.589] [INFO] Loading main config failed as the file does not seem to be valid ESM. Trying a temporary fix, please ensure the main config is valid ESM.

@@ -1,0 +1,69 @@
+id: replay-integration-webhook-register
+tier: train
+builder: sonnet
+title: Register provider webhooks on integration activation + SyncEventName
+  contract enum
+sourceSpec: .specs/2026-05-28-integration-webhook-register-design.md
+goldRef: f3175d431
+baseRef: 91fecb840ba41f99c98cc18b55d73fc022e7eb41
+prompt: |-
+  ## Context
+
+  When a merchant connects a sales platform (e.g. Shopify via OAuth), the provider pushes order/product changes to us via webhooks — but only after we REGISTER those webhooks with the provider's API. That registration step does not exist yet. The OAuth connect flow (`packages/api/typescript/src/integration/usecases/ConnectIntegration.ts`) persists the `StoreIntegration` and raises `IntegrationActivatedEvent`; the existing `IntegrationActivatedHandler` bridges that event to the Go sync worker, but nothing tells the provider where to send webhooks. Go's webhook ingest already exists (`packages/api/go/internal/webhooks/controllers/webhook.go`) and validates four query params: `platform`, `event`, `integrationId`, `storeId` — `event` is `oneof`-gated to the canonical sync event names. The integration BC already has three `(type, platform)`-keyed factories to mirror: `HandshakeServiceFactory`, `OAuthCodeExchangerFactory`, `AuthorizeUrlBuilderFactory` (all under `packages/api/typescript/src/integration/services/`), each throwing `PLATFORM_NOT_SUPPORTED` for unbuilt platforms. Credentials are sealed in the `CredentialVault` (core) and the connect flow stores `credentialSecretId` on the `StoreIntegration`.
+
+  ## Requirements
+
+  1. **TS owns the registration call.** Open sealed credentials from the vault, build the per-platform topic list, POST to the provider's webhook-register API. Go only receives webhooks.
+  2. **A second, independent handler subscribes to `IntegrationActivatedEvent`** — `RegisterIntegrationWebhooksHandler`, a separate outbox-driven fan-out subscriber alongside the existing Go-bridge handler, so a registration failure never blocks the bridge publish.
+  3. **`WebhookRegister` abstract + `WebhookRegisterFactory` keyed by `(type, platform)`**, mirroring the three existing factories exactly. Contract: `registerWebhooks(input: { credentials: Record<string, string>; storeIntegrationId: string; targetUrl?... })` and `deleteWebhooks(input: { credentials })` (declared for symmetry, no caller yet). The abstract base exposes a static `buildIngestUrl({ platform, event, integrationId, storeId })` returning `${Config.env.GO_WEBHOOK_PUBLIC_URL}/webhooks?platform=...&event=...&integrationId=...&storeId=...` — built PER TOPIC (each carries its own `event`).
+  4. **Shopify is the only real impl.** Topic→canonical-event map: `orders/create`→`sync.external_order_updated`, `orders/updated`→`sync.external_order_updated`, `products/create`→`sync.external_product_updated`, `products/update`→`sync.external_product_updated`, `order_transactions/create`→`sync.external_transaction_updated`. POST each to `https://{shopDomain}/admin/api/2024-07/webhooks.json` with `X-Shopify-Access-Token`. Marketing platforms have no register.
+  5. **Lift the canonical event names into contracts as a `SyncEventName` TypeSpec enum** (`packages/contracts/wire/enums/sync-event-name.tsp`) carrying ALL 10 of Go's current hand-written `sync.EventName` values (the 4 webhook-relevant + the 6 marketing ones). Regenerate bindings for TS and Go. The TS register imports the generated `SyncEventName` from `@template/contracts-typescript/wire/enums` (no string literals in the topic map). DELETE Go's hand-written `internal/sync/enums/event_name.go` and substitute all its consumers to the generated `wire.SyncEventName` directly (no alias shim). Go must still build and its sync/webhooks suites stay green.
+  6. **`registerWebhooks` is idempotent**: GET existing webhooks first, POST only missing topics, so an outbox retry never duplicates.
+  7. **New env `GO_WEBHOOK_PUBLIC_URL`** in `Config.env`, defaulting to `GO_WORKER_BASE_URL` when unset (document in `.env.example`).
+  8. **Failure semantics**: a non-2xx/network error → throw `WEBHOOK_REGISTRATION_FAILED` (new integration error code) so the outbox retries; a `PLATFORM_NOT_SUPPORTED` from the factory (marketing / unbuilt platform) is a graceful skip — the handler returns without throwing and makes no provider call.
+
+  ## Acceptance Criteria
+
+  - AC-1: `WebhookRegisterFactory.get({ type, platform })` returns the impl for `(SALES_CHANNEL, SHOPIFY)` and throws `PLATFORM_NOT_SUPPORTED` for unregistered pairs.
+  - AC-2: `ShopifyWebhookRegister.registerWebhooks(...)` POSTs each of the five topics with the access-token header and an `address` built by `buildIngestUrl` carrying the topic's mapped canonical event (verified via an injected `fetchFn` stub, like `ShopifyHandshaker`).
+  - AC-3: already-registered topics are skipped — idempotent on retry.
+  - AC-4: non-2xx/network error → `WEBHOOK_REGISTRATION_FAILED`.
+  - AC-5: `RegisterIntegrationWebhooksHandler` subscribes to `IntegrationActivatedEvent`, loads the `StoreIntegration`, opens its credential secret via the vault, and calls `registerWebhooks` with credentials + integrationId + storeId.
+  - AC-6: when the factory throws `PLATFORM_NOT_SUPPORTED`, the handler returns without throwing.
+  - AC-7: when `registerWebhooks` throws, the handler propagates (outbox retry); the existing Go-bridge handler is unaffected (separate subscriber).
+  - AC-8: `GO_WEBHOOK_PUBLIC_URL` read from `Config.env` with the `GO_WORKER_BASE_URL` fallback; `buildIngestUrl` output satisfies the Go intake controller's `oneof` validation.
+  - AC-9: `SyncEventName` exists as a generated enum in both TS and Go contracts bindings with all 10 values; the hand-written Go enum file is deleted and consumers use `wire.SyncEventName`; the Shopify topic→event map references `SyncEventName` members, not string literals.
+
+  Out of scope: webhook ingest (exists in Go), disconnect-time teardown wiring, non-Shopify impls, a `webhooksRegistered` flag/migration.
+axes:
+  - ENUM-REPR
+  - ERR-VOCAB
+  - EVENT-EMISSION
+  - NAMING
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: file-exists
+    spec: packages/contracts/wire/enums/sync-event-name.tsp
+  - kind: grep-must
+    spec: packages/api/typescript/src/integration/**/*.ts::SyncEventName\.EXTERNAL_ORDER_UPDATED
+    id: enum#contract-enum-not-literal
+  - kind: grep-must
+    spec: packages/api/typescript/src/integration/**/*.ts::order_transactions/create
+  - kind: grep-must-not
+    spec: packages/api/go/internal/sync/enums/event_name.go::.
+    id: enum#no-handwritten-parallel-enum
+  - kind: grep-must
+    spec: packages/api/go/internal/sync/**/*.go::wire\.SyncEventName
+  - kind: grep-must
+    spec: packages/api/typescript/core/src/utils/Config.ts::GO_WEBHOOK_PUBLIC_URL
+  - kind: grep-must
+    spec: packages/api/typescript/src/integration/errors/index.ts::WEBHOOK_REGISTRATION_FAILED
+    id: errors#typed-error-vocab
+notes: "Implementing chain: d2c0025b1 (T1 SyncEventName contract enum + Go
+  consumer substitution) -> f226e9c1e (T2 WebhookRegister family + Shopify impl)
+  -> 235b08871 (T3 handler). Gold tree verified: factory + buildIngestUrl +
+  topic map via SyncEventName members, event_name.go deleted, Config fallback
+  present. goldRef bumped 235b08871e224110376bc51b37ffb3080d57f068 → f3175d431:
+  original sha was a wip-era tree where backend tsc was red (same class as
+  statcard)."

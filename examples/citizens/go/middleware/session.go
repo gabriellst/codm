@@ -1,0 +1,79 @@
+// CONTEXT-ORIGIN: medscall/software/monorepo/packages/channel@ff66dbb1ee0fcd6212e5bf68879fa1d5a0a9cd1b (2026-07-20)
+// Source path: packages/channel/internal/shared/middleware/session.go
+// Harvested verbatim for the middleware skill exemplar set — do not edit; re-harvest instead.
+package middleware
+
+import (
+	"database/sql"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strings"
+)
+
+// Session reads the BetterAuth session cookie, queries the authentication.session
+// table to resolve ownerId, and injects it as the X-Owner-Id request header.
+// Controllers read it via `from:"header" name:"X-Owner-Id"`.
+func Session(db *sql.DB) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rawToken := extractCookie(r, "better-auth.session_token")
+			if rawToken == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// URL-decode the cookie value (browsers may encode +, /, = as %2B, %2F, %3D)
+			decoded, err := url.QueryUnescape(rawToken)
+			if err != nil {
+				decoded = rawToken
+			}
+
+			// BetterAuth cookie format: "<token>.<signature>" — DB stores only the token part
+			token := decoded
+			if idx := strings.Index(token, "."); idx > 0 {
+				token = token[:idx]
+			}
+
+			slog.Debug("session middleware", "token", token, "raw", rawToken)
+
+			var ownerId sql.NullString
+			err = db.QueryRowContext(r.Context(),
+				`SELECT owner_id FROM authentication.session WHERE token = $1 AND expires_at > NOW()`,
+				token,
+			).Scan(&ownerId)
+
+			if err != nil {
+				slog.Debug("session middleware: DB query failed", "error", err, "token", token)
+			}
+
+			if ownerId.Valid && ownerId.String != "" {
+				r.Header.Set("X-Owner-Id", ownerId.String)
+				slog.Debug("session middleware: resolved", "ownerId", ownerId.String)
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// extractCookie parses the Cookie header to find a cookie by name.
+// Handles cookie names with dots (like "better-auth.session_token")
+// which Go's standard r.Cookie() can sometimes mishandle.
+func extractCookie(r *http.Request, name string) string {
+	// Try Go's built-in parser first
+	for _, c := range r.Cookies() {
+		if c.Name == name {
+			return c.Value
+		}
+	}
+	// Fallback: parse raw Cookie header manually
+	raw := r.Header.Get("Cookie")
+	for _, part := range strings.Split(raw, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, name+"=") {
+			return strings.TrimPrefix(part, name+"=")
+		}
+	}
+	return ""
+}

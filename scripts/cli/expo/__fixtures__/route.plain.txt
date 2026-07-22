@@ -1,0 +1,12 @@
+import { View } from 'react-native'
+import { useTranslation } from 'react-i18next'
+
+export default function LeafScreen() {
+	const { t } = useTranslation()
+
+	return (
+		<View className="flex-1 bg-bg-0 px-5 pt-6">
+			{/* Implement LeafScreen */}
+		</View>
+	)
+}

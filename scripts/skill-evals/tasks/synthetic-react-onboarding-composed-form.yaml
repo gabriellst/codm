@@ -1,0 +1,359 @@
+id: synthetic-react-onboarding-composed-form
+timeoutMs: 4500000
+seedCommands:
+  - "bun cli onboarding-wizard Connect --union=connectIntegrationMutationRequestSchema --mode-enum=ConnectionMode --i18n=onboarding"
+  - "bun cli onboarding-step ConnectionMode --from=connectIntegrationMutationRequestSchema --i18n=onboarding.connectionMode --all-fields"
+tier: holdout
+builder: sonnet
+title: First-run onboarding wizard over the discriminated connect-integration
+  union (synthetic — probes form composition, union slicing, subscribe gating,
+  nav-only store)
+sourceSpec: PROBES-BACKLOG.md#1
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template web app (packages/app/react), build the missing first-run
+  Onboarding flow. After sign-up, product wants new users to land on a
+  standalone full-screen wizard at /onboarding that connects the store's
+  first integration — create it as the route directory
+  src/routes/onboarding/ with an index.tsx (a standalone route like
+  src/routes/sign-in/, NOT under the (app) group; the locales already carry
+  an onboarding.* copy subtree — breadcrumb, error, toast, welcome — left
+  ready for this screen, extend it as needed). The backend surface already
+  exists in the SDK: the connect operation is useConnectIntegration, whose
+  body connectIntegrationMutationRequestSchema is a z.union with one member
+  per (type, platform, connectionMode) tuple, each with its own concrete
+  credentials sub-shape — read the generated surface under
+  packages/client/dist/typescript/src/typescript/{zod,types,hooks} FIRST for
+  the exact members, and the union introspection helpers in
+  packages/app/react/src/lib/union.ts (pickUnionVariant /
+  pickUnionVariantField / unionVariantValues, re-exported from @/lib), which
+  are the house spelling for consuming such a union. There is NO
+  draft/progress endpoint: the wizard accumulates client-side and submits
+  exactly once at the end. This is a frontend-only task: do not touch the
+  backend, do not regenerate the SDK, and do not modify src/lib/union.ts or
+  the existing settings/integrations feature.
+
+  The flow: (1) a welcome + "how do you want to connect" step — the
+  connection-mode choice, whose options come from the union's connectionMode
+  discriminant with translated labels via the typed enum catalog; (2) a
+  target step — which tool to connect; onboarding launches with four
+  targets: Shopify sales channel (CREDENTIALS), Yampi checkout
+  (CREDENTIALS), Meta marketing (MANUAL) and Mercado Pago payment gateway
+  (MANUAL); (3) credentials-mode targets then collect that platform's own
+  credential fields — Shopify and Yampi differ, each validating against its
+  own union member's credentials slice — while manual-mode targets skip
+  straight ahead; (4) a review step that receives the wizard's accumulated
+  form as a typed prop, renders a live summary of everything gathered, and
+  carries the final connect action, enabled only when the matched union
+  member accepts the assembled payload. The step sequence therefore depends
+  on the chosen mode — encode the per-mode sequences as const-asserted
+  tuples keyed by the SDK ConnectionMode. Remember the submitted body must
+  carry the full discriminant tuple (type, platform, connectionMode) or the
+  member parse fails. On success: success toast (keys exist) and navigate
+  into the app. Every step keeps back/next affordances with proper gating;
+  all copy is localized in both app languages (add the new keys to
+  src/locales/pt.json and en.json).
+
+  Decide how the wizard decomposes — keep the route file a thin shell (URL
+  contract, breadcrumb, error component and composition only); the
+  orchestrating parent and the step components live under
+  src/routes/onboarding/-components/, and wizard navigation state lives in a
+  store under src/routes/onboarding/-stores/ — how step data flows back into
+  the single accumulated submission, how each step's schema is derived from
+  the SDK union, and how each variant's form is selected — all per the house
+  SCAFFOLD FIRST (binding): generate each wizard step with `bun cli onboarding-step
+  <Name> --from=<sdk.path> --i18n=<prefix>` (scripts/cli/frontend/artifacts/onboarding-step.ts
+  emits the canonical step + props contract); hand-write only the orchestration the
+  scaffold does not emit (sequence map, parent form, final union gate). For the
+  frontend architecture: read packages/app/react/CLAUDE.md, docs/FRONTEND.md
+  and the react variants of the form/route/component/store skills under
+  .claude/skills/ before writing code (the form skill's Type B multi-step
+  wizard section is the playbook for this screen; where an exemplar or doc
+  snippet and a skill registry disagree, the registry wins, and where
+  registry snippets themselves disagree about how to slice the union, the
+  @/lib/union helpers (FRM-P44) supersede older raw-introspection
+  snippets), and study the
+  existing discriminated-union consumer
+  (src/routes/(app)/settings/integrations/-components/ConnectIntegrationSheet/)
+  for the established union idioms. bun cli onboarding-step scaffolds the
+  canonical step shape (docs/CLI.md). Register the route (cd
+  packages/app/react && bun x tsr generate) and finish with a green
+  type-check: cd packages/app/react && bun x tsc --noEmit.
+axes:
+  - FORM-COMPOSE
+  - FORM-SUBSCRIBE
+  - DISC-UNION
+  - SCHEMA-DERIVE
+  - SDK-CONSUME
+  - STATE-PLACEMENT
+  - CENTRALIZE-MAPS
+  - ENUM-REPR
+  - MUTATION-IDIOM
+  - UI-COMPOSITION
+graders:
+  - kind: tsc
+    spec: app-react
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/onboarding/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/onboarding/-components/*Step/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/onboarding/-stores/*.ts"
+  - kind: grep-must
+    spec: "packages/app/react/src/routeTree.gen.ts::onboarding"
+    id: route#registration
+  # ── FORM-COMPOSE: union slices, no parallel schemas ────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::pickUnionVariantField\\("
+    id: form#FRM-P44
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::pickUnionVariant\\("
+    id: form#FRM-P43
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::unionVariantValues\\("
+    id: form#FRM-P44
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::connectIntegrationMutationRequestSchema"
+    id: form#FRM-P43
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::ReturnType<typeof _infer"
+    id: form#FRM-P18
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::setFieldValue\\("
+    id: form#FRM-P15
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::DeepPartial"
+    id: form#FRM-P17
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::\\.def\\.options\\["
+    id: form#FRM-P44
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::(interface|type)\\s+\\w+(FormValues|FormData)\\b"
+    id: form#FRM-P18
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::as\\s+(never|any|unknown)\\b|@ts-(expect-error|ignore)"
+    id: form#bp-31
+  # ── FORM-SUBSCRIBE ─────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::form\\.Subscribe"
+    id: form#FRM-P03
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::\\.safeParse\\("
+    id: form#FRM-P02
+  # ── DISC-UNION: per-mode sequences + per-variant cells ─────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::\\]\\s*as const"
+    id: form#FRM-P13
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::Record<\\s*(Exclude<\\s*)?ConnectionMode"
+    id: form#FRM-P13
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::['\"]SHOPIFY['\"]"
+    id: atlas#DISC-UNION
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::['\"]YAMPI['\"]"
+    id: atlas#DISC-UNION
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::['\"]META['\"]"
+    id: atlas#DISC-UNION
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::['\"]MERCADOPAGO['\"]"
+    id: atlas#DISC-UNION
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::['\"](SALES_CHANNEL|CHECKOUT|MARKETING_PLATFORM|PAYMENT_GATEWAY)['\"]"
+    id: atlas#DISC-UNION
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::switch\\s*\\("
+    id: component#CMP-P18
+  # ── STATE-PLACEMENT: nav-only store, store-agnostic steps ──────────
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::\\buseState\\b"
+    id: store#STR-P10
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/-components/*Step/**/*.{ts,tsx}::from\\s+['\"][^'\"]*(zustand|-stores/)"
+    id: form#FRM-P17
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/index.tsx::useForm\\(|useConnectIntegration\\b|mutateAsync"
+    id: route#RTE-01
+  # ── ENUM-REPR + i18n catalog ───────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::enums\\.ConnectionMode|enumLabel\\(\\s*['\"]ConnectionMode['\"]"
+    id: component#CMP-P07
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/en.json::\"ConnectionMode\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/pt.json::\"ConnectionMode\""
+    id: enum#i18n-catalog
+  # ── SDK-CONSUME + MUTATION-IDIOM ───────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::useConnectIntegration\\b"
+    id: atlas#SDK-CONSUME
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
+    id: atlas#SDK-CONSUME
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::onError\\s*[:,(]"
+    id: atlas#MUTATION-IDIOM
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::try\\s*\\{"
+    id: mutation#no-try-catch
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::['\"]pt-BR['\"]|['\"]en-US['\"]"
+    id: component#bp-15
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/onboarding/**/*.{ts,tsx}::throw new Error\\("
+    id: atlas#ERR-VOCAB
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: component-props
+  - kind: judge
+    spec: >
+      A first-run onboarding wizard was just added under
+      packages/app/react/src/routes/onboarding/ (plus locale keys in
+      src/locales/{pt,en}.json and the route registration in
+      routeTree.gen.ts). It drives the SDK's discriminated connect union
+      (connectIntegrationMutationRequestSchema). Verify ALL of:
+      (a) FORM-COMPOSE — every step schema is a SLICE of the SDK union
+      obtained through the @/lib union helpers: credentials steps validate
+      against pickUnionVariantField(connectIntegrationMutationRequestSchema,
+      { ...discriminants }, 'credentials') (optionally narrowed with
+      .pick()), and NO step declares a hand-rolled parallel schema
+      (z.object re-declaring member fields) nor reaches into the union
+      positionally (.def.options[i]); step data types derive from the slice
+      (z.infer / z.output / ['_zod']['output']) — never re-typed by hand;
+      the wizard's accumulated form type is NOT a hand-written
+      interface/type of field names — it comes from ReturnType of an
+      uncalled _infer* function wrapping useForm; the parent merges
+      validated step output into its form via setFieldValue and the FINAL
+      submission gates with pickUnionVariant(union,
+      match).safeParse(payload) and sends result.data (never raw,
+      unparsed form values).
+      (b) DISC-UNION — the per-mode step sequences are const-asserted
+      tuples in a module-level map keyed by the SDK ConnectionMode (Exclude
+      over unused members is fine): the CREDENTIALS sequence includes a
+      credentials step, the MANUAL sequence does not; the four launch
+      targets (SHOPIFY sales channel + YAMPI checkout via CREDENTIALS, META
+      marketing + MERCADOPAGO payment gateway via MANUAL) each resolve to
+      their concrete union member, with Shopify and Yampi rendering
+      DIFFERENT credential fields per their members; the full discriminant
+      tuple (type, platform, connectionMode) is threaded into the submitted
+      body; the current step and the per-variant credentials form are both
+      chosen via dispatch maps — no switch or if/else chain on a
+      discriminant or step value anywhere under the route dir.
+      (c) FORM-SUBSCRIBE — next/submit buttons are gated inside
+      form.Subscribe with narrow selectors and a safeParse check of the
+      relevant schema (the FRM-P03 shape); the review summary derives from
+      the accumulated form reactively (form.Subscribe or subscribed
+      selectors), not from useState mirrors; no component reads
+      form.state.values directly in a render body (reads inside
+      submit/back/handler callbacks are fine).
+      (d) STATE-PLACEMENT — the Zustand store under -stores/ holds wizard
+      NAVIGATION state only (current step index/name, direction, the
+      selected mode/target discriminant, reset) — no credential or other
+      field values, no server data, no isSubmitting mirror; there is ZERO
+      useState under the route dir; step components are store- and
+      API-agnostic: they receive defaultValues?/onSubmit/onBack?/
+      isSubmitting? via props (the FRM-P17 contract) and never import the
+      wizard store (the review step additionally receiving the typed parent
+      form is expected); the route index.tsx is a thin shell — URL
+      contract, breadcrumb/error wiring and composition only, no useForm,
+      no SDK hooks.
+      (e) SDK-CONSUME + MUTATION-IDIOM — the single submission goes through
+      the SDK useConnectIntegration hook (mutation object kept whole, not
+      destructured); in-flight state comes from the hook's isPending and/or
+      form isSubmitting; success path shows a toast and navigates into the
+      app; no try/catch around mutate/mutateAsync, no onError handler, no
+      raw fetch, no widening casts (as never/any/unknown).
+      (f) ENUM-REPR + i18n — connection-mode options are produced by
+      unionVariantValues over the union (not a hand-typed array of mode
+      strings); their human-readable labels come from the typed
+      enums.ConnectionMode.* catalog present in BOTH src/locales/pt.json
+      and en.json; remaining copy uses onboarding.* keys present in both
+      files; no inline label strings beside enum values and no
+      Record<...,string> label maps in code.
+      Scope notes — judge the idiom, not the variable name: the selected
+      mode/target discriminant living in the nav store IS the expected
+      shape (it selects the step sequence — FRM-P14); do not fail it as
+      "form data in a store". The parent holding the accumulated payload in
+      a useForm is the expected shape — do not demand it live in the URL or
+      the store. pickUnionVariant throws on a non-matching tuple; the
+      compile-checked literal matches make that unreachable — do not demand
+      defensive try/catch (it is banned). Catalog labels rendered through
+      the enumLabel('ConnectionMode', value) helper from @/lib/enums or an
+      i18nPrefix="enums.ConnectionMode" primitive are both the expected
+      catalog spelling — neither is a hardcoded label. The wizard
+      orchestrator (parent
+      form + handlers + step dispatch map) living in a Section component
+      under -components/ with a thin index.tsx is the expected split — do
+      not fail it for not matching the form skill's diagram that draws the
+      parent inside index.tsx; orchestration directly in index.tsx,
+      however, FAILS (d). Icon/variant style maps keyed by an enum are
+      canon, not label maps. Local aliases of helpers/actions and the
+      agent's own names for the step enum, store, or components are all
+      fine. Pre-existing code outside src/routes/onboarding/ (including the
+      settings/integrations feature and the as-never debt in the products
+      cost-import dialogs) is out of scope.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first agent-runnable
+  FORM probe (FORM-COMPOSE + FORM-SUBSCRIBE axes); no gold tree, agent mode
+  only, replaces the gold-only variant-forms replay for agent mode. Free
+  real estate verified at authoring time: src/routes/ has no onboarding dir
+  (only (app), index, sign-in, sign-up, reset-password), routeTree.gen.ts
+  contains zero "onboarding" mentions, src/locales/*.json contain no
+  "ConnectionMode" key (the pre-existing onboarding.* copy subtree —
+  breadcrumb/error/toast/welcome — is deliberately REUSED by the prompt and
+  not graded as a must), and every dir-scoped grep targets the new route dir
+  only — so all musts are 0 at HEAD; tsc app-react, registry-scan,
+  import-direction and component-props all green at HEAD. Grounded SDK
+  reality: connectIntegrationMutationRequestSchema is a 20-member z.union
+  with discriminants (connectionMode, type, platform) and per-variant
+  credentials shapes; all four pinned launch targets exist as members
+  (SHOPIFY:CREDENTIALS:SALES_CHANNEL, YAMPI:CREDENTIALS:CHECKOUT,
+  META:MANUAL:MARKETING_PLATFORM, MERCADOPAGO:MANUAL:PAYMENT_GATEWAY);
+  {platform, connectionMode} alone uniquely matches each, but the BODY
+  needs the full tuple to parse — hence the discriminant-threading
+  grep-must and prompt warning. The union helpers + ConnectIntegrationSheet
+  exemplar exist at HEAD (helper names in graders are legitimate — the
+  variant-forms lesson was about gold-INVENTED names); what the probe
+  measures is the WIZARD composition canon, which has zero call sites at
+  HEAD: per-mode const step tuples (FRM-P13), nav-only -stores/ store
+  (FRM-P14/STR-P05), parent setFieldValue aggregation (FRM-P15), slice-fed
+  store-agnostic steps (FRM-P16/P17), _infer form typing (FRM-P18),
+  Subscribe-gated buttons (FRM-P03), final member safeParse. Known tension,
+  accepted deliberately: BOTH the form skill SKILL.md wizard §5 AND the
+  registry's own FRM-P16 snippet still teach raw .def.options[0] step
+  extraction while FRM-P44 mandates the @/lib/union helpers — a
+  registry-INTERNAL conflict, so "the registry wins" alone is
+  non-decisive; the prompt therefore additionally pins FRM-P44 helper
+  precedence over older raw-introspection snippets, and the .def.options[
+  must-not probes obedience to that pinned canon (rung evidence against
+  SKILL.md §5 + registry FRM-P16 if it still fails with the canon read).
+  The CMP-P07 grep accepts both catalog spellings — enums.ConnectionMode
+  (i18nPrefix / t() template) and enumLabel('ConnectionMode', v) — because
+  the @/lib/enums helper is the documented iteration pattern (see
+  src/lib/enums.ts doc comment + CostTooltips.tsx at HEAD) and emits no
+  enums. literal at the call site. The dir-wide useState ban is safe for
+  this brief (no ephemeral overlay is asked for; direction/animation state
+  belongs to the nav store) — relax it only if a variant adds a transient
+  Sheet/popover, and assume no *.stories.tsx is added. ConnectionModeEnum
+  has OAUTH but the connect union only carries CREDENTIALS/MANUAL — the
+  Record grep accepts Record<ConnectionMode and Record<Exclude<ConnectionMode
+  spellings. Glob notes: Bun.Glob braces are filename-only (*.{ts,tsx} fine,
+  no "/" inside a brace branch); "**" matches zero segments so
+  "onboarding/**/*.{ts,tsx}" includes onboarding/index.tsx and
+  "-components/*Step/**/*.{ts,tsx}" includes *Step/index.tsx; the *Step
+  folder suffix is the CLI scaffolder's canonical shape (bun cli
+  onboarding-step appends Step), so file-exists on *Step/index.tsx grades
+  the scaffold-first canon, and a selection screen named without the suffix
+  still passes (any one *Step match suffices). pickUnionVariant\( does not
+  match pickUnionVariantField( (F breaks the literal paren), so the two
+  musts are independent. All regexes compile through parseGrepSpec;
+  validate-task.ts run at authoring time: musts/file-exists FAIL at HEAD,
+  must-nots/tsc/detect PASS.

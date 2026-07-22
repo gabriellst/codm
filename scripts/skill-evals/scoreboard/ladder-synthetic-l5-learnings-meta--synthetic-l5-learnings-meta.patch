@@ -1,0 +1,245 @@
+diff --git a/.learnings-inbox/findings.md b/.learnings-inbox/findings.md
+new file mode 100644
+index 000000000..c66c3c361
+--- /dev/null
++++ b/.learnings-inbox/findings.md
+@@ -0,0 +1,97 @@
++# Review-findings corpus — window 2026-06-06 -> 2026-06-13
++
++> Harvested from `bun review` runs + eval-harness graders across the last window.
++> Each finding cites the pattern id that fired and the artifact it fired on. This is the
++> raw material a `/learnings` pass digests into rung-escalation proposals.
++> Pair this with `scoreboard.jsonl` (the same window's measured pass/fail rows) before
++> deciding what — if anything — to escalate. Same `docTreeHash` across rows = same-condition
++> samples; the canon was present and read in every run below (the task prompts named the
++> carrier `CLAUDE.md` first, verified in the transcripts).
++
++---
++
++## F1 — enum labels rendered through a hand-rolled map instead of the i18n catalog
++
++- **Pattern:** `enum#ENUM-P08` (Frontend enum labels via i18n under `enums.<EnumName>.<VALUE>`)
++  / axis `CENTRALIZE-MAPS` (owner `enum#typescript`, **rung: docs**). Grader id on the
++  scoreboard: `enum#i18n-catalog` + `atlas#CENTRALIZE-MAPS`.
++- **Where it fired (5 distinct agent samples, 4 distinct tasks):**
++  - `synthetic-react-notifications` (iter2, iter4) — category labels built from an inline
++    `const CATEGORY_LABEL: Record<NotificationCategory, string> = {...}` in code; `enums.*`
++    subtree never touched. pt.json / en.json missing the keys.
++  - `synthetic-react-dashboard-chart` (iter3, iter10) — `recorte` (ChartType) option labels
++    hardcoded as Portuguese strings next to the enum values.
++  - `synthetic-expo-form-state-subscribe` (iter1) — status labels via a literal `switch` on
++    the enum returning hardcoded copy.
++- **Canon state:** the enum SKILL.md + ENUM-P08 already say "labels via `enums.<EnumName>.<VALUE>`,
++  there is NO `lib/labels.ts`, the namespace also feeds `getEnumLabel`". The doc was
++  *rewritten and made louder* one window ago (added the worked `GameGenre` example) and the
++  family STILL fires. The carrier was present and read in all 5 transcripts.
++- **Note from CORRECTNESS.md:** "the i18n catalog mis-namespacing survived a rewritten doc ->
++  became the dynamic-`t()` rule." The dynamic-`t()`-outside-`enums.*` lint rule exists for the
++  *mis-namespacing* spelling, but the *hand-rolled-label-map-in-code* spelling above is not yet
++  mechanically caught, and no scaffold emits the catalog wiring + seeds the two JSON files.
++
++## F2 — dispatch by `if/else-if` chain across enum members instead of one keyed map
++
++- **Pattern:** axis `CENTRALIZE-MAPS` again (the icon/color/variant-per-enum-value rule);
++  grader id `atlas#CENTRALIZE-MAPS`.
++- **Where it fired (3 distinct samples, 2 tasks):**
++  - `synthetic-react-dashboard-chart` (iter3, iter10) — five chart kinds rendered by an
++    inline `if (kind === 'weekday') ... else if (kind === 'region') ...` chain inside one
++    component instead of a module-level `Record<ChartType, ElementType>` dispatch.
++  - `synthetic-react-notifications` (iter4) — category icon resolved via a ternary chain.
++- **Canon state:** documented (the component skill's dispatch-map rule + app-react CLAUDE.md
++  "Dispatch maps … keyed by the enum … No `switch`/ternary chains on the value"). Carrier
++  present and read. This is the SAME owner/axis as F1 (`CENTRALIZE-MAPS`) — the two are the
++  label half and the style-map half of one decision.
++
++## F3 — hardcoded `'pt-BR'` locale literal in an `Intl`/`toLocale*` call
++
++- **Pattern:** axis `LOCALE-MONEY` (owner `app-react#CLAUDE.md`, **rung: detector** — already
++  escalated; component `bp-15` detects hardcoded ptBR). Grader id `atlas#LOCALE-MONEY` /
++  `component#bp-15`.
++- **Where it fired (1 sample):**
++  - `synthetic-react-notifications` (iter4) — one `date.toLocaleDateString('pt-BR')` slipped
++    through; the detector (`bp-15`) DID flag it as a new finding and the build's `bun detect`
++    gate went red. The agent had not run `bun detect` locally before finishing.
++- **Canon state:** already at the detector rung. The gate caught it; this is the rail working
++  as designed, not a missed escalation.
++
++## F4 — `formatMoney` imported from `@/lib/format` directly inside a component
++
++- **Pattern:** app-react CLAUDE.md "Money" section ("use `useMoney()` in a component — do not
++  call `formatMoney` from `@/lib/format` directly"). No grader/axis id — surfaced only by a
++  human reviewer comment, not by any mechanical gate.
++- **Where it fired (1 sample):**
++  - `synthetic-react-dashboard-chart` (iter10) — one `formatMoney(m, locale)` call inside a
++    leaf instead of `useMoney()`. Single occurrence, did not recur in any other sample.
++
++## F5 — grader false-positive: `enum#typed-usage` blind to an enum-derived tuple
++
++- **Observation (instrument, not product):** on `synthetic-go-controller-summary` (iter2,
++  iter3) the `enum#typed-usage` grep grader (`grep-must enums\.SyncStatus`) reported FAIL even
++  though the controller DID use the enum — it referenced the values through
++  `enums.SyncStatusValues` (the generated tuple) rather than the bare `enums.SyncStatus`
++  member access the regex anchors on. The transcript shows canon-true code; the regex is too
++  narrow. This is the same shape CORRECTNESS.md catalogues under "instrument repair is
++  first-class … grader regexes blind to equivalent spellings (the SDK's own zod schema,
++  enum-derived tuples)".
++- **Where it fired:** 2 samples, both `synthetic-go-controller-summary`. Identical mechanism.
++
++## F6 — pattern `RTE-P14` (route breadcrumb shape) has not fired in the window
++
++- **Observation (inversion / retirement candidate):** `route#RTE-P14` appears in zero review
++  findings, zero scoreboard `failedGraders`, and zero audit-log mentions across the window.
++  Two recent routes that WOULD have triggered it under the old layout instead used the new
++  `crumb` static-data shape, which the route scaffold now emits by default — the structural
++  change made the rule unreachable. The rule text still describes the pre-scaffold spelling.
++
++## F7 — one-off: a `useState` mirroring a debounced search input
++
++- **Observation (single, non-repeating):** `synthetic-react-state-placement` (iter1) had one
++  `useState` holding a debounced copy of the search text that also lived in the URL search
++  params (STATE-PLACEMENT case-2-vs-case-5 confusion). It appeared in exactly ONE sample, did
++  not recur in iter2 or any sibling task, and the relevant canon (store STR-P10 / the
++  five-questions short form in app-react CLAUDE.md) is already at the docs rung with a live
++  exemplar. No other sample in the window touched this.
+diff --git a/.learnings-inbox/scoreboard.jsonl b/.learnings-inbox/scoreboard.jsonl
+new file mode 100644
+index 000000000..02914fb95
+--- /dev/null
++++ b/.learnings-inbox/scoreboard.jsonl
+@@ -0,0 +1,10 @@
++{"ts":"2026-06-06T09:12:44.001Z","task":"synthetic-react-notifications","mode":"agent","pass":false,"failedGraders":["enum#i18n-catalog","atlas#CENTRALIZE-MAPS"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-07T14:03:10.882Z","task":"synthetic-react-notifications","mode":"agent","pass":false,"failedGraders":["enum#i18n-catalog","atlas#CENTRALIZE-MAPS","component#bp-15","atlas#LOCALE-MONEY"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-08T11:48:55.314Z","task":"synthetic-react-dashboard-chart","mode":"agent","pass":false,"failedGraders":["atlas#CENTRALIZE-MAPS","enum#i18n-catalog"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-09T16:22:01.770Z","task":"synthetic-react-dashboard-chart","mode":"agent","pass":false,"failedGraders":["atlas#CENTRALIZE-MAPS","enum#i18n-catalog"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-09T19:55:33.120Z","task":"synthetic-expo-form-state-subscribe","mode":"agent","pass":false,"failedGraders":["enum#i18n-catalog"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-10T08:30:12.004Z","task":"synthetic-go-controller-summary","mode":"agent","pass":false,"failedGraders":["enum#typed-usage"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-11T13:17:48.659Z","task":"synthetic-go-controller-summary","mode":"agent","pass":false,"failedGraders":["enum#typed-usage"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-12T10:05:27.441Z","task":"synthetic-react-state-placement","mode":"agent","pass":false,"failedGraders":["store#STR-P10"],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-12T21:41:09.918Z","task":"synthetic-react-state-placement","mode":"agent","pass":true,"failedGraders":[],"docTreeHash":"a91f7d3e0b22"}
++{"ts":"2026-06-13T07:58:14.203Z","task":"synthetic-be-projection-digest","mode":"agent","pass":true,"failedGraders":[],"docTreeHash":"a91f7d3e0b22"}
+diff --git a/.learnings/synthetic-l5-learnings-meta/proposals.md b/.learnings/synthetic-l5-learnings-meta/proposals.md
+new file mode 100644
+index 000000000..e33ecf49b
+--- /dev/null
++++ b/.learnings/synthetic-l5-learnings-meta/proposals.md
+@@ -0,0 +1,120 @@
++# /learnings meta-pass — synthetic-l5 window proposals
++# Window: 2026-06-06 → 2026-06-13 · docTreeHash: a91f7d3e0b22 (all rows same-condition)
++
++---
++
++## Findings Triage
++
++| Finding | Pattern / Axis | Current rung | k (valid scoreboard samples failing) | Verdict |
++|---------|---------------|--------------|--------------------------------------|---------|
++| F1 | `CENTRALIZE-MAPS` (label half) · owner `enum#typescript` · graders `enum#i18n-catalog` + `atlas#CENTRALIZE-MAPS` | docs | **5** — rows 1–5 (notifications×2, dashboard-chart×2, expo-form-state-subscribe×1); 4 distinct tasks; all same docTreeHash; canon present and read in all transcripts; doc already rewritten louder one window prior | **ESCALATE** |
++| F2 | `CENTRALIZE-MAPS` (dispatch-map half) · same owner `enum#typescript` · grader `atlas#CENTRALIZE-MAPS` | docs | **4** — rows 1–4 (notifications×2, dashboard-chart×2); 2 distinct tasks; same docTreeHash; same family as F1, counts toward the same axis | **ESCALATE** (same proposal as F1 — one axis, one escalation) |
++| F3 | `LOCALE-MONEY` · owner `app-react#CLAUDE.md` · graders `component#bp-15` + `atlas#LOCALE-MONEY` | **detector** | 1 (row 2 only) — `bun detect` gate went red and flagged the new finding; the rail caught it before merge | **NO-ACTION (rail working)** |
++| F4 | No axis/grader id — human review only (`app-react#CLAUDE.md` "Money" section) | docs (implicit, no axis entry) | 0 on scoreboard (surfaced by human reviewer, single occurrence) | **NO-ACTION (k=1 noise)** |
++| F5 | `enum#typed-usage` grader (instrument) — blind to `enums.SyncStatusValues` tuple spelling | n/a (instrument, not a product rung) | 2 (rows 6–7, `synthetic-go-controller-summary`×2) — canon-true code confirmed in transcripts; the grader regex is too narrow | **INSTRUMENT-REPAIR** |
++| F6 | `route#RTE-P14` (breadcrumb shape rule) | docs | 0 — zero appearances in scoreboard `failedGraders`, zero review findings, zero audit mentions; scaffold now emits the `crumb` shape by default, making the old rule structurally unreachable | **RETIRE** |
++| F7 | `STATE-PLACEMENT` · owner `store#STR-P10` · grader `store#STR-P10` | docs | 1 (row 8 only — `synthetic-react-state-placement` iter1 failed; iter2 in row 9 passed); non-repeating single | **NO-ACTION (k=1 noise)** |
++
++---
++
++## Proposals
++
++### P-001 — CENTRALIZE-MAPS: escalate from docs to scaffold (rung 1) + detector (rung 2)
++
++**Findings addressed:** F1 + F2 (one axis, one escalation)
++
++**Owner anchor:** `enum#typescript` (axis `CENTRALIZE-MAPS`, `.claude/atlas/axes.yaml`)
++
++**Target rung:** Rung 1 (scaffold / Eliminate) ranked first; Rung 2 (detector / Detect) as the complementary gate.
++
++**Mechanism:**
++
++1. **Scaffold — `bun cli` `--labels` flag (rung 1 / Eliminate).**
++   The `bun cli` enum recipe gains a `--labels` flag that, when a component or section is scaffolded against an enum, automatically:
++   - emits the `t('enums.<EnumName>.<VALUE>')` call-site wiring instead of an inline map;
++   - seeds the two catalog files (`src/locales/pt.json`, `src/locales/en.json`) with the `enums.<EnumName>.*` subtree keys.
++
++   CORRECTNESS.md §1 rung-ladder row names this mechanism verbatim: "`--labels` writes the t() wiring + seeds the catalog." This eliminates the mis-spelling at source: the builder cannot hand-roll a label map if the scaffold already emitted the correct wiring.
++
++2. **Detector for the hand-rolled-map and if/else-dispatch spellings (rung 2 / Detect).**
++   A new grader/detector pattern added to `scripts/detectors/` (or to the existing CENTRALIZE-MAPS detector if one exists) with two checks:
++   - **label-map-in-code:** `grep-must-not` matching `Record<[A-Z]\w+,\s*string>\s*=\s*\{` inside component `.tsx` files (catches the inline `const CATEGORY_LABEL: Record<NotificationCategory, string> = {...}` shape).
++   - **if-else dispatch chain on enum:** `grep-must-not` matching three or more consecutive `if \(\w+ ===` / `else if \(\w+ ===` lines inside a single component (catches the `if (kind === 'weekday') ... else if (kind === 'region')` dispatch anti-pattern).
++
++   The detector targets `packages/app/react/src/**/*.tsx` and `packages/app/expo/**/*.tsx`. It baseline-ratchets pre-existing debt so only new violations gate.
++
++**Rationale (escalation policy):** k=5 valid same-condition samples (docTreeHash `a91f7d3e0b22`) across 4 distinct tasks; canon present and read in every transcript; the doc was already rewritten louder one window prior. CORRECTNESS.md escalation policy: "when a documented canon fails k ≥ 2 valid measured samples with the canon present and read, it escalates — to a detector, a scaffold, or a type — never to 'rewrite the doc louder.'" Scaffold outranks detector on the rung ladder (p ≈ 1.0 vs p ≈ 1.0 at merge, but scaffold eliminates the cause while the detector catches it after the fact). Both are proposed because the scaffold covers net-new code while the detector guards against inline drift in existing files.
++
++**KPI impact:** Streak ↑ (removes the most-fired grader family from the scoreboard); Attempts ↓ (eliminates the fix-loop iteration for this family); Presence ↓ (the scaffold means the human reviewer no longer has to catch label maps in code).
++
++**reversible:** easy (additive: new CLI flag + new detector pattern; no existing file deleted or replaced)
++
++---
++
++### P-002 — INSTRUMENT-REPAIR: generalize `enum#typed-usage` grader regex to cover enum-derived tuples
++
++**Finding addressed:** F5
++
++**Owner anchor:** `enum#typed-usage` grader (instrument file, `scripts/skill-evals/tasks/synthetic-go-controller-summary.yaml` or the grader specification it references)
++
++**Target rung:** n/a (instrument repair, not a product rung change)
++
++**Mechanism:** Replace the current narrow regex anchor:
++
++```
++grep-must: enums\.SyncStatus
++```
++
++with a prefix-tolerant form that matches both direct member access (`enums.SyncStatus.ACTIVE`) and the generated tuple spelling (`enums.SyncStatusValues`):
++
++```
++grep-must: enums\.SyncStatus
++# generalize to prefix: enums\.SyncStatus(?:Values|[.\s\[])
++```
++
++The change is one regex line in the grader spec. It should also be applied prospectively to any other `enum#typed-usage` grader that anchors on `enums\.<EnumName>` without accounting for the `Values` tuple sibling — both spellings are generated by the codegen pipeline and are semantically equivalent uses of the enum.
++
++**Rationale:** k=2 samples on `synthetic-go-controller-summary` (rows 6–7), same docTreeHash. Transcript forensics confirmed the builder produced canon-true code; the regex did not match the generated-tuple spelling. CORRECTNESS.md §3: "Instrument repair is first-class … grader regexes blind to equivalent spellings (enum-derived tuples)." This is exactly the catalogued failure mode. Fixing and generalizing the regex is the correct action; no product or doc change is warranted.
++
++**KPI impact:** Streak ↑ (removes false-positive fails from the scoreboard for the Go controller task); Attempts ↓ (builders do not re-loop to satisfy a grader whose anchor is too narrow).
++
++**reversible:** easy (single regex edit in the grader spec; the change only widens the match set, never narrows it)
++
++---
++
++### P-003 — RETIRE route#RTE-P14: deprecate with dated callout
++
++**Finding addressed:** F6
++
++**Owner anchor:** `route#RTE-P14` (within `.claude/skills/route/react/registry.yaml` or `SKILL.md` — whichever file contains the RTE-P14 breadcrumb-shape rule)
++
++**Target rung:** retirement (rule becomes structurally unreachable; rung is moot)
++
++**Mechanism:** In the route skill file that contains RTE-P14, replace or wrap the rule body with a deprecation callout:
++
++```markdown
++> **Deprecated 2026-06-13:** the route scaffold (`bun cli route`) now emits the `crumb`
++> static-data shape by default, making this pre-scaffold spelling structurally unreachable
++> in any scaffold-generated route. Retain this note for audit trail. Do not apply this
++> pattern to new routes — the scaffold is the canonical source of the correct shape.
++```
++
++Per learnings.md §2.6: "Do NOT just delete — leave the old guidance with a `> Deprecated since <date>: <reason>` callout so the reasoning trail is preserved."
++
++**Rationale:** Zero appearances in the window (zero scoreboard `failedGraders`, zero review findings, zero audit mentions). Two recent routes that would have triggered it under the old layout used the scaffold-emitted `crumb` shape instead. The structural change made the rule unreachable: the scaffold is the rail (rung 1), and a docs rule for a shape the scaffold never emits is dead weight. Learnings §2.6 inversion check: "BPs that haven't fired in N+ sessions … maybe the underlying issue was addressed structurally." Retiring it also prevents a future builder from applying an obsolete pattern when they find the rule text and the scaffold disagrees.
++
++**KPI impact:** unmeasurable — judgment change (no scoreboard grader to delta against; the benefit is reduced doc corpus size and no contradicted scaffolding guidance).
++
++**reversible:** easy (callout annotation only; the text is preserved, not deleted; reversible by removing the callout)
++
++---
++
++## Deliberately Not Acting
++
++**F3, F4, F7 are left without a new rail.**
++
++**F3 (LOCALE-MONEY, k=1 at detector rung):** The `LOCALE-MONEY` axis is already at the detector rung; `component#bp-15` fired correctly and `bun detect` went red before merge — the rail worked exactly as designed. Escalating a rung-2 axis that caught its violation is not warranted; CORRECTNESS.md §3 "consistent fail → fix at the rung" does not apply when there is no consistent fail, and learnings.md Phase 3 "Rule-rung review" asks "can it move UP the ladder?" only when the current rung's gate is not effective. It was effective here.
++
++**F4 (formatMoney direct import, k=0 on scoreboard):** This surfaced via a single human reviewer comment with no corresponding grader or axis. k=0 on the scoreboard means there is no measured evidence of recurring agent failure — adding a detector or doc edit for a human-only, single-occurrence observation is the "treat every one-off as a pattern" anti-pattern that learnings.md §Anti-Patterns explicitly forbids. The `app-react#CLAUDE.md` "Money" section already covers this; no change is warranted.
++
++**F7 (useState mirror, k=1 non-repeating):** A single failing sample on `synthetic-react-state-placement` iter1 that self-resolved in iter2 (row 9 passed). CORRECTNESS.md §3.5 convergence criterion: "remaining misses are non-repeating singles — no grader fails twice in a row." This is exactly that. The `store#STR-P10` canon plus the five-questions short form in `app-react#CLAUDE.md` is already at the docs rung with a live exemplar. Adding a new rail for a non-repeating single would be overfitting to noise — the same thing CORRECTNESS.md §3.5 names as "fixing a non-repeating single is overfitting to noise."

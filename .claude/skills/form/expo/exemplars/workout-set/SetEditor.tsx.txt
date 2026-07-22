@@ -1,0 +1,131 @@
+// packages/app/expo/app/active-exercise/-components/SetEditor/index.tsx
+//
+// Field rendering (reps + kg as NumFields) + a `form.Subscribe` block that
+// drives the bottom submit area. The subscriber:
+//   1. Branches between "log mode" (editingSelection == null → Add Set +
+//      Add Dropset buttons) and "edit mode" (populated → Save + Cancel).
+//   2. Computes `disabled` via the BARE API schema's safeParse, not the
+//      merged form schema — that's what guards against an invalid payload
+//      reaching the server.
+
+import { View } from 'react-native'
+import { useTranslation } from 'react-i18next'
+import { logSetMutationRequestSchema } from '@template/client-typescript/typescript'
+import { Button } from '@/components/ui/Button'
+import { NumField } from '@/components/ui/NumField'
+import type { SetEditorForm } from '@/app/active-exercise/-types'
+
+interface SetEditorProps {
+	form: SetEditorForm
+}
+
+/**
+ * Reps/kg/isDropset editor. The `form` prop is owned by the screen and
+ * shared with SetList so both sides re-render in the same React commit
+ * on every value change.
+ *
+ * Bottom row branches on `form.state.values.editingSelection`:
+ *   null        → log mode → Add Set + Add Dropset
+ *   populated   → edit mode → Save + Cancel
+ */
+export function SetEditor({ form }: SetEditorProps) {
+	const { t } = useTranslation()
+
+	// `form.setFieldValue` then `handleSubmit` inside one event handler:
+	// React 18 auto-batching collapses both into one commit, so the
+	// payload-parse inside onSubmit sees `isDropset` already set.
+	const submitWithDropset = (isDropset: boolean) => async () => {
+		form.setFieldValue('isDropset', isDropset)
+		await form.handleSubmit()
+	}
+
+	return (
+		<View className="px-5 pb-8">
+			{/* Two columns of numeric inputs. Each `form.Field` re-renders
+			    only on changes to its own field — siblings stay still. */}
+			<View className="flex-row items-start gap-2.5 mb-3">
+				<form.Field name="reps">
+					{field => (
+						<View className="flex-1">
+							<NumField
+								label={t('workout.reps')}
+								value={field.state.value ?? 0}
+								onChange={field.handleChange}
+								step={1}
+								min={1}
+							/>
+						</View>
+					)}
+				</form.Field>
+				<form.Field name="kg">
+					{field => (
+						<View className="flex-1">
+							<NumField
+								label={t('workout.weight')}
+								value={field.state.value ?? 0}
+								onChange={field.handleChange}
+								step={2.5}
+								min={0}
+							/>
+						</View>
+					)}
+				</form.Field>
+			</View>
+
+			{/* Bottom submit area. Subscribes to `values` so it can derive
+			    both the disabled gate AND the edit-vs-log branch from one
+			    subscription. */}
+			<form.Subscribe selector={s => ({ isSubmitting: s.isSubmitting, values: s.values })}>
+				{({ isSubmitting, values }) => {
+					const editing = values.editingSelection
+					// Bare API schema — strips the UI-only field. THIS is what
+					// determines whether the payload is valid for the server.
+					const apiCheck = logSetMutationRequestSchema.safeParse({
+						reps: values.reps,
+						kg: values.kg,
+						isDropset: values.isDropset,
+					})
+					const disabled = isSubmitting || !apiCheck.success
+
+					if (editing != null) {
+						return (
+							<View className="gap-2">
+								<Button
+									label={t('common.save')}
+									fullWidth
+									onPress={() => void form.handleSubmit()}
+									disabled={disabled}
+								/>
+								<Button
+									label={t('workout.cancelEditing')}
+									variant="ghost"
+									fullWidth
+									onPress={() => form.reset()}
+									disabled={isSubmitting}
+								/>
+							</View>
+						)
+					}
+
+					return (
+						<View className="gap-2">
+							<Button
+								label={t('workout.registerSet')}
+								fullWidth
+								onPress={() => void submitWithDropset(false)()}
+								disabled={disabled}
+							/>
+							<Button
+								label={t('workout.addDropset')}
+								variant="ghost"
+								fullWidth
+								onPress={() => void submitWithDropset(true)()}
+								disabled={disabled}
+							/>
+						</View>
+					)
+				}}
+			</form.Subscribe>
+		</View>
+	)
+}

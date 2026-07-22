@@ -1,0 +1,30 @@
+import { injectable } from 'tsyringe-neo'
+import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+
+export const DeleteOrderInputSchema = z
+	.object({
+		ctx: z.object({ user: z.object({ id: z.string() }) }),
+		params: z.object({ id:z.string() }),
+	})
+	.example([{ params: { id: '123e4567-e89b-12d3-a456-426614174000' } }])
+
+export const DeleteOrderOutputSchema = z.void()
+
+@injectable()
+export class DeleteOrderController extends Controller<typeof DeleteOrderInputSchema, typeof DeleteOrderOutputSchema> {
+	readonly path = '/sales/:id'
+	readonly method = 'delete'
+	readonly description = 'DeleteOrder operation'
+	readonly inputSchema = DeleteOrderInputSchema
+	readonly outputSchema = DeleteOrderOutputSchema
+
+	async handle(request: this['input']): Promise<this['output']> {
+		const { params } = request
+
+		// TODO: Delegate to use case
+		return {
+			status: HttpStatusCode.OK,
+			data: {} as any,
+		}
+	}
+}

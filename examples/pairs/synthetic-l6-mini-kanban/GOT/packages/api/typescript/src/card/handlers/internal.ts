@@ -1,0 +1,1 @@
+export { CardMovedDomainEventHandler } from './CardMovedDomainEventHandler'

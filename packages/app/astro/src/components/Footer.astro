@@ -1,0 +1,12 @@
+---
+import { getEntry } from 'astro:content'
+import { getLocale } from '~/i18n'
+
+const locale = getLocale(Astro.url)
+const entry = await getEntry('landing', `${locale}/landing`)
+const t = entry!.data
+---
+
+<footer class="flex items-center justify-between border-t border-[var(--border)] bg-[var(--background)] px-8 py-6 md:px-20">
+	<span class="text-xs text-[var(--muted-foreground)]">{t.footer.copyright}</span>
+</footer>

@@ -1,0 +1,190 @@
+id: replay-internal-subscriptions-store-link
+tier: train
+builder: sonnet
+title: Internal subscription grants + store→subscription binding with
+  per-subscription quotas
+sourceSpec: .specs/2026-05-29-internal-subscriptions-and-store-subscription-link-design.md
+goldRef: f3175d431
+baseRef: 4133a1c744dff57944b32939794793fbfea7d474
+prompt: >-
+  ## Context
+
+
+  Subscriptions live in the **billing** BC. `Subscription`
+  (`packages/api/typescript/src/billing/entities/Subscription.ts`) is keyed on a
+  deterministic id `Id.fromSeed('billing','subscription', platform,
+  externalSubscriptionId)` and carries `userId, platform (BillingPlatform),
+  externalSubscriptionId, tier (PlanTier), period (PlanPeriod),
+  currentPeriodStart, currentPeriodEnd, isActive`. It is created ONLY by billing
+  webhooks (Kiwify mapper → `ExternalSubscriptionUpdatedEvent` → handler calling
+  `Subscription.create`, which raises `SubscriptionCreatedEvent` atomically).
+  `BillingPlatform` (`packages/contracts/wire/enums/billing-platform.tsp`) is `{
+  KIWIFY, OTHER }`. Per-tier store caps live in `PLAN_QUOTAS` (core
+  `PlanQuotas`, `STORE_AMOUNT` only). Stores live in **tenancy**: `Store` has no
+  subscription reference; `CreateStore` gates on
+  `PlanQuotaService.ensureStoreQuotaAvailable(userId)`, which calls
+  `SubscriptionQueryService.getActiveSubscription(userId)` (single active sub,
+  `LIMIT 1`, implemented by billing's `BillingSubscriptionQueryService`) and
+  counts the user's stores user-wide.
+
+
+  ## Problems
+
+
+  1. No way to grant access without a purchase (comp/staff/trial accounts). 2.
+  Expiration is modelled but access is really the `isActive` boolean — the
+  period-window fields actively block no-purchase grants (a null
+  `currentPeriodEnd` reads as "not active"). 3. One-subscription-per-user is
+  wrong — a user can hold several. 4. A store is not bound to a specific
+  subscription — no way to move a store off a lapsed subscription, and quota is
+  counted user-wide.
+
+
+  ## Requirements (decisions)
+
+
+  1. Add **`BillingPlatform.INTERNAL`** to the TypeSpec enum; regenerate
+  bindings (`bun sdk`).
+
+  2. **`GrantInternalSubscription` use case** in billing, input `{ userId, tier
+  }`: builds `Subscription.create({ userId, platform: INTERNAL,
+  externalSubscriptionId: 'internal:<uuid>', tier })` (uuid via `Id.value()`),
+  saving the aggregate and raising the existing `SubscriptionCreatedEvent` in
+  ONE transaction — identical to the webhook CREATED branch so the existing
+  quota publisher fires unchanged.
+
+  3. **Each grant creates a new row** ("bucket") — the random `internal:<uuid>`
+  external id makes the deterministic id unique per call. No idempotency key.
+
+  4. Guard the grant with a new **`InternalSecretKeyMiddleware`**: compares
+  header `x-internal-secret` to env `BILLING_INTERNAL_SECRET`; mismatch/absent →
+  `INVALID_SECRET_KEY` (401). The grant controller skips `AuthAccountMiddleware`
+  and applies this instead.
+
+  5. **Remove expiration**: drop `currentPeriodStart`/`currentPeriodEnd` from
+  the entity schema, the window math in
+  `create/markPaid/markRenewed/changeExternal`, and the `billing.subscriptions`
+  table (migration). Access = `isActive` only.
+
+  6. **`period` becomes `PlanPeriod | null`** (informational; Kiwify mapper
+  still sets it, grants leave null).
+
+  7. **Multiple subscriptions per user**:
+  `SubscriptionQueryService.getActiveSubscription(userId)` →
+  `getActiveSubscriptions(userId): ActiveSubscription[]`;
+  `ActiveSubscriptionSchema` drops `expirationDate`, keeping `{ subscriptionId,
+  tier }`; the billing impl returns ALL `isActive = true` rows;
+  `SubscriptionRepository` gains `findActiveByUserId(userId): Subscription[]`.
+
+  8. **Store→subscription link**: nullable `subscription_id` on `tenancy.stores`
+  (`packages/contracts/db/schema/tenancy.ts`, migration, no backfill) +
+  `subscriptionId: string | null` on the `Store` entity +
+  `Store.changeSubscription(subscriptionId)`. `CreateStore` always sets it for
+  new stores.
+
+  9. **`CreateStore` auto-picks**: `PlanQuotaService` becomes
+  `resolveSubscriptionForNewStore(userId): { subscriptionId }` — reads active
+  subs, counts stores per subscription, picks the highest-tier subscription with
+  a free slot (`count < PLAN_QUOTAS[tier].STORE_AMOUNT`); throws
+  `NO_ACTIVE_SUBSCRIPTION` when none active, `STORE_QUOTA_EXCEEDED` when all
+  full.
+
+  10. **Per-subscription quota**: quota is counted against the specific
+  subscription via a store-count-by-subscription repository query, not the
+  user-wide total.
+
+  11. **`GetMySubscription` → `GetMySubscriptions`** (list): each item `{ id,
+  platform, tier, period, isActive, storeAmount: { used, max } }`; `used` = real
+  store count per bucket read via a NEW billing-defined query-service port
+  implemented in tenancy (mirror of how billing implements tenancy's
+  `SubscriptionQueryService`); `max` from `PLAN_QUOTAS`. Empty list (no
+  synthesized free tier) when the user has none.
+
+  12. **`ChangeStoreSubscription`** — authenticated user use case `{ storeId,
+  targetSubscriptionId, userId }`: requires the store exists and the user OWNS
+  it; the store's CURRENT subscription is INACTIVE
+  (`STORE_SUBSCRIPTION_STILL_ACTIVE` otherwise); the target exists, is active,
+  belongs to the user (`SUBSCRIPTION_NOT_FOUND` / `SUBSCRIPTION_NOT_OWNED`), and
+  has a free slot (`TARGET_SUBSCRIPTION_FULL`). On success calls
+  `store.changeSubscription(...)`, saves, and raises a new tenancy domain event
+  `StoreSubscriptionChangedEvent { storeId, fromSubscriptionId,
+  toSubscriptionId, changedByUserId }` (domain-only, no integration event). Plus
+  an HTTP controller.
+
+
+  ## Acceptance Criteria
+
+
+  - AC-1: `BillingPlatform.INTERNAL` exists in TypeSpec + regenerated
+  bindings/SDK.
+
+  - AC-2: a grant creates a row with `platform = INTERNAL`, external id
+  `internal:<uuid>`, requested tier, `period = null`, `isActive = true`,
+  persisting `SubscriptionCreatedEvent` in the same transaction.
+
+  - AC-3: two grants for the same user+tier produce two distinct rows.
+
+  - AC-4: missing/incorrect `x-internal-secret` → `INVALID_SECRET_KEY` (401),
+  nothing written.
+
+  - AC-5: no `current_period_*` columns/fields anywhere; access relies on
+  `isActive` only.
+
+  - AC-6: `getActiveSubscriptions` returns every active sub as `{
+  subscriptionId, tier }`.
+
+  - AC-7/8: `CreateStore` binds to the highest-tier sub with a free slot
+  (recorded in `stores.subscription_id`); per-subscription quota counting;
+  `STORE_QUOTA_EXCEEDED` / `NO_ACTIVE_SUBSCRIPTION` as above.
+
+  - AC-9/10: `ChangeStoreSubscription` happy path + the four named rejections,
+  writing nothing on rejection.
+
+  - AC-11/12: `GetMySubscriptions` list shape with real per-bucket `used`, empty
+  list when none.
+
+  - AC-13: existing Kiwify webhook flows still work with the period-window
+  fields removed (`period` still recorded).
+
+
+  Migrations: (a) billing.subscriptions drops the two period columns; (b)
+  tenancy.stores adds nullable `subscription_id`. No backfill. Every caller of
+  the old singular `getActiveSubscription` (and mocks) must move to the plural
+  shape in the same change to keep `tsc` green.
+axes:
+  - ENUM-REPR
+  - ERR-VOCAB
+  - EVENT-EMISSION
+  - TRANSACTION
+  - DATA-OWNERSHIP
+  - ID-REPR
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: grep-must
+    spec: packages/contracts/wire/enums/billing-platform.tsp::INTERNAL
+    id: enum#wire-enum-source-of-truth
+  - kind: grep-must
+    spec: packages/api/typescript/src/billing/**/*.ts::x-internal-secret
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/billing/entities/Subscription.ts::currentPeriod
+  - kind: grep-must
+    spec: packages/api/typescript/src/tenancy/services/SubscriptionQueryService.ts::getActiveSubscriptions
+  - kind: grep-must
+    spec: packages/api/typescript/src/tenancy/**/*.ts::resolveSubscriptionForNewStore
+  - kind: grep-must
+    spec: packages/api/typescript/src/tenancy/**/*.ts::STORE_SUBSCRIPTION_STILL_ACTIVE
+    id: errors#typed-error-vocab
+  - kind: grep-must
+    spec: packages/contracts/db/schema/tenancy.ts::subscription_id
+notes: "Implementing chain: 2dedaa995 (T1 INTERNAL enum) -> be8bf1277 (T2 drop
+  expiry/plural reads) -> 4c9b9aa92 (T3 store link) -> 6f85a399c (T4
+  GetMySubscriptions) -> 197c06ee0 (T6 grant + middleware) -> e7fe58617 (T8
+  auto-bind) -> 8ca2526b6 (T9 ChangeStoreSubscription) -> d58a10a96 (last).
+  Caveat: baseRef (4133a1c74) is the docs commit that already contains this spec
+  + its .plans/ implementation plan in-tree — a fixture-side hint an eval
+  harness may want to strip. Gold uses countStoresBySubscriptionIds (batched
+  plural) instead of the spec's singular name; graders avoid pinning that
+  identifier. goldRef bumped d58a10a96228f70ad2da7af1cd6cb3a5277246ed →
+  f3175d431: original sha was a wip-era tree where backend tsc was red (same
+  class as statcard)."

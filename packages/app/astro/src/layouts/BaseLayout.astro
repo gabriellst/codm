@@ -1,0 +1,47 @@
+---
+import '~/styles/global.css'
+import Nav from '~/components/Nav.astro'
+import Footer from '~/components/Footer.astro'
+import { getLocale } from '~/i18n'
+
+interface Props {
+	title: string
+	description: string
+	ogImage?: string
+	canonical?: string
+	jsonLd?: Record<string, unknown>
+}
+
+const { title, description, ogImage, canonical, jsonLd } = Astro.props
+const locale = getLocale(Astro.url)
+const canonicalUrl = canonical ?? Astro.url.href
+---
+
+<!doctype html>
+<html lang={locale}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonicalUrl} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalUrl} />
+		{ogImage && <meta property="og:image" content={ogImage} />}
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		{ogImage && <meta name="twitter:image" content={ogImage} />}
+		{jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+		<slot name="head" />
+	</head>
+	<body class="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+		<Nav />
+		<main>
+			<slot />
+		</main>
+		<Footer />
+	</body>
+</html>

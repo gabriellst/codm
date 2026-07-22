@@ -1,0 +1,61 @@
+import { injectable } from 'tsyringe-neo'
+import { eq } from 'drizzle-orm'
+import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+import { OrderRepository } from './OrderRepository'
+import { Order } from '@sales/entities'
+// import { order } from '@template/contracts/db'
+
+@injectable()
+export class DrizzleOrderRepository extends OrderRepository {
+	constructor(private db: DrizzleClient) {
+		super()
+	}
+
+	async findById(id: string, tx?: DrizzleClient): Promise<Order | undefined> {
+		const dbClient = tx ?? this.db
+
+		const result = await tryCatchAsync(async () => {
+			// const rows = await dbClient.select().from(order).where(eq(order.id, id)).limit(1)
+			// return rows[0]
+			return undefined as any
+		})
+
+		if (!result.success || !result.data) return undefined
+		return this.toDomain(result.data)
+	}
+
+	async save(entity: Order, tx?: DrizzleClient): Promise<Order> {
+		const dbClient = tx ?? this.db
+		entity.incrementVersion()
+		const data = this.toPersistence(entity)
+
+		// await dbClient
+		// 	.insert(order)
+		// 	.values(data)
+		// 	.onConflictDoUpdate({
+		// 		target: order.id,
+		// 		set: { ...data, id: undefined },
+		// 	})
+
+		return entity
+	}
+
+	async delete(id: string, tx?: DrizzleClient): Promise<void> {
+		const dbClient = tx ?? this.db
+		// await dbClient.delete(order).where(eq(order.id, id))
+	}
+
+	private toDomain(row: unknown): Order {
+		return Order.schema.parse(row) as unknown as Order
+	}
+
+	private toPersistence(entity: Order): unknown {
+		return {
+			id: entity.id.value,
+			// Map entity props to columns
+			createdAt: entity.createdAt,
+			updatedAt: entity.updatedAt,
+			version: entity.version,
+		}
+	}
+}

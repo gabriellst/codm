@@ -1,0 +1,171 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [value-object, enum, errors]
+  depended_by: [controller, usecase]
+  context_reads: [value-object, enum]
+  lang: go
+  examples:
+    - examples/citizens/go/schema/controller.go
+    - examples/citizens/go/schema/events.go
+    - examples/citizens/go/schema/validation.go
+
+  snippet:
+    skeleton: |
+      // In Go, request/response schemas are plain structs with validate:"..." tags.
+      // Define them directly inside the use case or controller file that owns them.
+      //
+      // Example — use case input/output:
+      //
+      //   type MyInput struct {
+      //       ID    string  `validate:"required,uuid"`
+      //       Name  string  `validate:"required,min=1,max=255"`
+      //   }
+      //   type MyOutput struct {
+      //       ID   string `json:"id"`
+      //       Name string `json:"name"`
+      //   }
+      //
+      // Example — controller request:
+      //
+      //   type MyRequest struct {
+      //       ID   string `from:"path"   name:"id"      validate:"required,uuid"`
+      //       Name string `from:"body"   json:"name"    validate:"required,min=1"`
+      //   }
+      //
+      // See: .claude/skills/schema/go/SKILL.md
+      //      .claude/skills/controller/go/SKILL.md
+      //      .claude/skills/usecase/go/SKILL.md
+
+  patterns:
+    - id: SCH-GO-01
+      when: always
+      title: Input and output structs live in the same file as their consumer
+      description: >
+        Go has no standalone schema artifact. Define `XInput` and `XOutput`
+        structs in the same `.go` file as the use case handler or controller
+        that owns them. Do NOT create a separate `schema/` folder.
+
+    - id: SCH-GO-02
+      when: always
+      title: Every input field carries a validate tag
+      description: >
+        All fields in a request or input struct must have `validate:"..."` tags
+        consumed by go-playground/validator/v10. Optional fields use
+        `validate:"omitempty,..."`. Fields with no tag will silently bypass
+        validation.
+
+    - id: SCH-GO-03
+      when: always
+      title: Controller request structs use from tags for source binding
+      description: >
+        Fields in controller request structs must declare where they come from
+        using `from:"body"`, `from:"param"`, `from:"query"`, `from:"header"`,
+        or `from:"cookie"`. httputil.DecodeRequest reads these tags to populate
+        the struct before validation.
+
+    - id: SCH-GO-04
+      when: always
+      title: Infrastructure fields carry swaggerignore true
+      description: >
+        Fields that are session/auth infrastructure (owner ID from a cookie or
+        header, internal API keys) must carry `swaggerignore:"true"` so the
+        OpenAPI emitter excludes them from the public schema.
+
+    - id: SCH-GO-05
+      when: always
+      title: Output fields carry json tags; add example and format for OpenAPI
+      description: >
+        Every exported field in an output struct must have `json:"..."`. Add
+        `example:"..."` for representative values and `format:"date-time"` for
+        RFC3339 string fields. The emitter reads these at build time.
+
+    - id: SCH-GO-06
+      when: controller declares a Metadata()
+      title: Metadata.Request and Metadata.Response reference zero values
+      description: >
+        Set `Metadata().Request` to a zero value of the controller request struct
+        and `Metadata().Response` to a zero value of the output struct (or nil
+        for 204 No Content). This is how the reflection-based OpenAPI emitter
+        discovers the schema.
+
+    - id: SCH-GO-07
+      when: use case output is referenced in controller
+      title: Reuse the use case output struct as the controller response
+      description: >
+        Prefer `Response: usecases.MyOutput{}` in Metadata() over defining a
+        parallel controller-level response struct. Eliminates duplication and
+        keeps the emitter contract consistent.
+
+  bad_practices:
+    - id: BP-GO-SCH-01
+      severity: error
+      title: validate tag omitted on an input field
+      mechanical: false
+      wrong: |
+        type CreateJobInput struct {
+            VideoID string  // no validate tag — silently accepts empty string
+        }
+      right: |
+        type CreateJobInput struct {
+            VideoID string `validate:"required,uuid"`
+        }
+
+    - id: BP-GO-SCH-02
+      severity: error
+      title: from tag omitted on a controller request field
+      mechanical: false
+      wrong: |
+        type ListRequest struct {
+            Limit int `validate:"omitempty,min=1,max=100"`  // missing from tag
+        }
+      right: |
+        type ListRequest struct {
+            Limit int `from:"query" name:"limit" validate:"omitempty,min=1,max=100"`
+        }
+
+    - id: BP-GO-SCH-03
+      severity: warning
+      title: Infrastructure header/cookie field without swaggerignore
+      mechanical: true
+      detect:
+        - 'from:"(?:header|cookie)"(?![^`]*swaggerignore)'
+      wrong: |
+        type CreateRequest struct {
+            OwnerID string `from:"header" name:"X-Owner-Id" validate:"required,uuid"`
+            // exposed in OpenAPI — consumers see a field they can't set
+        }
+      right: |
+        type CreateRequest struct {
+            OwnerID string `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
+        }
+
+    - id: BP-GO-SCH-04
+      severity: warning
+      title: Duplicate response struct when use case output is sufficient
+      mechanical: false
+      wrong: |
+        // controllers/create_job.go
+        type CreateJobResponse struct {
+            JobID string `json:"jobId"` // exact copy of usecases.StartTranscodingJobOutput
+        }
+      right: |
+        // Metadata() — reuse the use case output directly
+        Response: usecases.StartTranscodingJobOutput{},
+
+    - id: BP-GO-SCH-05
+      severity: error
+      title: Missing Metadata().Errors list
+      mechanical: false
+      wrong: |
+        func (c *MyController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                // Errors omitted — consumers see no error schema in OpenAPI
+            }
+        }
+      right: |
+        func (c *MyController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                Errors: []errors.ErrorCode{ctxerrors.CodeJobNotFound, ctxerrors.CodeInvalidSignature},
+            }
+        }

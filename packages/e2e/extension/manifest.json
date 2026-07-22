@@ -1,0 +1,34 @@
+{
+	"manifest_version": 3,
+	"name": "DOM Snapshot",
+	"version": "1.0.0",
+	"description": "Capture DOMSnapshot and reconstruct as HTML/SVG",
+	"permissions": ["debugger", "activeTab", "storage", "unlimitedStorage", "downloads"],
+	"commands": {
+		"take-snapshot": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+X",
+				"mac": "Command+Shift+X"
+			},
+			"description": "Take DOM Snapshot"
+		}
+	},
+	"background": {
+		"service_worker": "background.js",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["content.js"],
+			"css": ["content.css"]
+		}
+	],
+	"action": {
+		"default_popup": "popup.html",
+		"default_title": "DOM Snapshots"
+	},
+	"icons": {
+		"48": "icon.svg"
+	}
+}

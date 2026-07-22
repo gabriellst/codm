@@ -1,0 +1,442 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity, repository, errors, service]
+  depended_by: [controller]
+  context_reads: [schema, entity, repository]
+
+  patterns:
+    # ── Structural (always) ──────────────────────────────────────
+    - id: UC-01
+      name: "InputSchema declaration"
+      when: always
+      rule: "export const XInputSchema = z.object({...})"
+    - id: UC-02
+      name: "OutputSchema declaration"
+      when: always
+      rule: "export const XOutputSchema = z.object({...})"
+    - id: UC-03
+      name: "@injectable() class extends Handler"
+      when: always
+      rule: "@injectable() class X extends Handler<typeof XInputSchema, typeof XOutputSchema>"
+    - id: UC-04
+      name: "Name snake_case via readonly"
+      when: always
+      rule: "readonly name = 'create_entity' as const"
+      wrong: "camelCase or PascalCase name (e.g., 'CreateEntity' or 'createEntity')"
+    - id: UC-05
+      name: "Handle method signature"
+      when: always
+      rule: "protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']>"
+    - id: UC-06
+      name: "withTransaction wrap"
+      when: always
+      rule: "Wrap all DB operations inside handle() in return this.withTransaction(tx, async (tx) => { ... })"
+      wrong: "Performing DB operations outside withTransaction — breaks transactional guarantees"
+
+    # ── Conditional ──────────────────────────────────────────────
+    - id: UC-C01
+      name: "findById + throw"
+      when: "use case fetches entity by ID"
+      rule: "if (!entity) throw new BaseError<ApplicationErrors>('NOT_FOUND')"
+    - id: UC-C02
+      name: "Entity creation"
+      when: "use case creates a new entity"
+      rule: "const entity = Entity.create(input); await repo.save(entity)"
+    - id: UC-C03
+      name: "Entity mutation via behavior methods"
+      when: "use case modifies existing entity (including state transitions)"
+      rule: "entity.behaviorMethod(args); await repo.save(entity) — never set properties directly"
+      example: |
+        // State transition
+        appointment.cancel()
+        await this.appointmentRepository.save(appointment, tx)
+        // Bulk update
+        service.update({ name: input.name, specialty: input.specialty })
+        await this.serviceRepository.save(service, tx)
+      wrong: "appointment.status = AppointmentStatus.CANCELLED — direct property assignment"
+    - id: UC-C04
+      name: "Transaction wrap"
+      when: "use case orchestrates child use cases that need the same transaction"
+      rule: "Pass tx from withTransaction callback to child use cases via .execute(input, tx) — child's withTransaction reuses the parent tx"
+    - id: UC-C05
+      name: "Event persist via outbox"
+      when: "use case emits domain event"
+      rule: "await this.domainEventRepository.save(event, tx) — never call internalMediator.publish() or externalMediator.publish() from use cases"
+    - id: UC-C06
+      name: "Parallel queries"
+      when: "use case fetches from multiple data sources"
+      rule: "const [a, b] = await Promise.all([...])"
+    - id: UC-C07
+      name: "ApplicationErrors only"
+      when: "use case throws errors"
+      rule: "throw new BaseError<ApplicationErrors>('ENTITY_NOT_FOUND')"
+      wrong: "throw new BaseError<DomainErrors>(...) in use case"
+
+    # ── Real-code patterns (extracted from codebase) ─────────────
+    - id: UC-P01
+      name: "Constructor DI via private params"
+      when: always
+      rule: "constructor(private xRepo: XRepository) { super() } — all dependencies as private constructor params, call super()"
+      example: |
+        constructor(
+          private appointmentRepository: AppointmentRepository,
+          private doctorAssignmentRepository: DoctorAssignmentRepository,
+        ) { super() }
+    - id: UC-P02
+      name: "Imports from @template/core-typescript"
+      when: always
+      rule: "import { Handler, BaseError, z } from '@template/core-typescript'; import type { Transaction } from '@template/core-typescript'; import { injectable } from 'tsyringe-neo'"
+      wrong: "import { Handler } from '@shared/types/Handler'; import { BaseError } from '@shared/types/BaseError'; import type { Transaction } from '@shared/types/UnitOfWork'; import { z } from '@shared/utils/schema' — all @shared/types/* and @shared/utils/* paths are dead"
+    - id: UC-P03
+      name: "z from @template/core-typescript"
+      when: always
+      rule: "import { z } from '@template/core-typescript'"
+      wrong: "import { z } from 'zod' or import { z } from '@shared/utils/schema' — always use the project's re-export from core"
+    - id: UC-P04
+      name: "Optional tx + withTransaction"
+      when: always
+      rule: "protected async handle(input: this['input'], tx?: Transaction) — tx is optional; wrap DB ops in this.withTransaction(tx, async (tx) => { ... })"
+      example: |
+        protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+          return this.withTransaction(tx, async (tx) => {
+            const entity = await this.repo.findById(id, tx)
+            await this.repo.save(entity, tx)
+            return { id: entity.id.value }
+          })
+        }
+    - id: UC-P05
+      name: "Tenant/ownership guard"
+      when: "entity belongs to a tenant (clinic, unit, doctor)"
+      rule: "After findById, verify entity belongs to the caller's tenant; throw same NOT_FOUND error to avoid leaking existence"
+      example: |
+        if (appointment.unitId.value !== input.unitId) {
+          throw new BaseError<ApplicationErrors>('APPOINTMENT_NOT_FOUND')
+        }
+    - id: UC-P07
+      name: "Uniqueness check before create"
+      when: "entity has a uniqueness constraint (userId, name+org, etc.)"
+      rule: "Query repo for existing entity before creating; throw application error if duplicate found"
+      example: |
+        const existing = await this.doctorRepository.findByUserId(userId, tx)
+        if (existing) {
+          throw new BaseError<ApplicationErrors>('USER_ALREADY_DOCTOR')
+        }
+    - id: UC-P08
+      name: "z.void() output for side-effect-only use cases"
+      when: "use case has no meaningful return value"
+      rule: "export const XOutputSchema = z.void() — use case returns undefined"
+      wrong: "OutputSchema is z.object({ success: z.boolean() }) or z.object({ id: z.string() }) for side-effect-only use cases (Delete*, Update*, Cancel*, Confirm*, Complete*), OR OutputSchema is missing entirely"
+      always_flag_when: >
+        OutputSchema is z.object({ success: z.boolean() }). Side-effect use cases (Delete*, Update*,
+        Publish*, Rollback*, Link*) should use z.void() and return undefined, not { success: true }.
+      example: |
+        export const UpdateDoctorOutputSchema = z.void()
+        // handle() ends with: return
+    - id: UC-P09
+      name: "Cross-context repository read"
+      when: "use case needs data from another bounded context"
+      rule: "Import and inject the repository from the other context; never call use cases for simple existence checks"
+      example: |
+        import { DoctorAssignmentRepository } from '@clinic/repositories'
+        constructor(
+          private appointmentRepository: AppointmentRepository,
+          private doctorAssignmentRepository: DoctorAssignmentRepository,
+        ) { super() }
+      wrong: "Importing/calling another use case just for findById lookup"
+    - id: UC-P10
+      name: "Reuse VO and context schemas — never inline"
+      when: "input/output field maps to a value object or a context-specific schema"
+      rule: >
+        Import and compose existing schemas instead of inlining z.object({...}) or z.string().
+        .input() ONLY on composite (z.object) VO schemas — e.g. AddressSchema.input().
+        Primitive VO schemas (z.string()-based: CPFSchema, EmailSchema, RGSchema) are
+        referenced directly — .input() on them is a typed no-op (see schema bp-07).
+        Use ContextSchema directly for context-specific schemas without transforms (from @context/schemas).
+        For update use cases, wrap with .optional() (e.g., AddressSchema.input().optional()).
+      example: |
+        // Create: composite VOs take .input(); primitive VOs are referenced directly
+        import { AddressSchema, CPFSchema, EmailSchema, RGSchema } from '@shared/objects'
+        import { PriceRangeSchema } from '@service/schemas'
+
+        export const CreatePatientInputSchema = z.object({
+          cpf: CPFSchema,                        // primitive VO — no .input() (typed no-op)
+          email: EmailSchema,                    // primitive VO — no .input()
+          address: AddressSchema.input(),        // composite VO (z.object) — .input()
+          priceRange: PriceRangeSchema,          // context schema (no transform → no .input())
+        })
+
+        // Update: same schemas wrapped with .optional()
+        export const UpdatePatientInputSchema = z.object({
+          patientId: z.string(),
+          email: EmailSchema.optional(),
+          address: AddressSchema.input().optional(),
+          priceRange: PriceRangeSchema.optional(),
+        })
+      wrong: "Inline z.object({...}) or z.string() when a VO/context schema already exists for the same structure"
+    - id: UC-P11
+      name: "Entity bulk update method with conditional spread"
+      when: "update use case passes multiple optional fields to entity (PATCH semantics)"
+      reason: "Update use cases accept partial input where each field is optional. Pass them through to a single entity.update() call, conditionally spreading only the defined fields so the entity preserves existing values for omitted ones."
+      rule: |
+        entity.update({
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.address !== undefined && { address: input.address }),
+        })
+      wrong: "Calling entity.update({ name: input.name, address: input.address }) unconditionally — overwrites existing fields with undefined"
+    - id: UC-P14
+      name: "tx passthrough to all repo calls"
+      when: always
+      rule: "Pass tx to EVERY repository call inside withTransaction — both finds and saves"
+      example: |
+        return this.withTransaction(tx, async (tx) => {
+          const entity = await this.repo.findById(id, tx)
+          await this.repo.save(entity, tx)
+        })
+      wrong: "Calling repo methods without tx inside withTransaction — breaks read-after-write in transactions. Also failing to use withTransaction at all when DB operations exist in handle()"
+      always_flag_when: >
+        Any repository call inside withTransaction callback omits the tx argument.
+        No exceptions — pre-create uniqueness checks (findByCode, findByName) MUST also receive tx.
+    - id: UC-P15
+      name: "Integration test with given helpers"
+      when: always
+      reason: "Use case tests use integration mode (PGlite) with given helpers for FK-safe test data setup. Given helpers use repos directly, never use cases."
+      rule: |
+        // Colocated: packages/api/typescript/src/<context>/usecases/<name>/<Name>.test.ts
+        // Uses TestBed.create('integration', ...) with beforeAll/beforeEach(reset)/afterAll(destroy)
+        // Uses given helpers to set up prerequisite entities (e.g., givenClinicWithOwner, givenPatient)
+        // Tests: success path, validation errors, domain errors, tenant/ownership guards
+        // See test skill TST-14 for canonical pattern
+      wrong: "No colocated test file exists for the use case, OR test uses mock mode instead of integration mode, OR test creates data via use cases instead of given helpers"
+
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+      import { Handler, z } from '@template/core-typescript'
+      import type { Transaction } from '@template/core-typescript'
+
+      export const {{Name}}InputSchema = z.object({
+      	// Define input schema
+      })
+
+      export const {{Name}}OutputSchema = z.object({
+      	// Define output schema
+      })
+
+      @injectable()
+      export class {{Name}} extends Handler<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+      	readonly name = '{{verbEntity}}' as const
+      	readonly inputSchema = {{Name}}InputSchema
+      	readonly outputSchema = {{Name}}OutputSchema
+
+      	// constructor(private repo: SomeRepository) {
+      	// 	super()
+      	// }
+
+      	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+      		return this.withTransaction(tx, async (tx) => {
+      			// Implement business logic
+      			return {} as this['output']
+      		})
+      	}
+      }
+    exemplar: |
+      import { Handler, BaseError, z } from '@template/core-typescript'
+      import type { Transaction } from '@template/core-typescript'
+      import { injectable } from 'tsyringe-neo'
+      import { EmailSchema } from '@shared/objects'
+      import { PriceRangeSchema } from '@context/objects'
+      import { XCreatedEvent } from '@context/events'
+
+      export const CreateXInputSchema = z.object({ name: z.string(), email: EmailSchema.input(), priceRange: PriceRangeSchema, organizationId: z.string() })
+      export const CreateXOutputSchema = z.object({ id: z.string() })
+
+      @injectable()
+      export class CreateX extends Handler<typeof CreateXInputSchema, typeof CreateXOutputSchema> {
+        readonly name = 'create_x' as const
+        readonly inputSchema = CreateXInputSchema
+        readonly outputSchema = CreateXOutputSchema
+        constructor(private xRepo: XRepository) { super() }
+        protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+          return this.withTransaction(tx, async (tx) => {
+            const entity = X.create({ name: input.name, organizationId: input.organizationId })
+            await this.xRepo.save(entity, tx)
+            const event = new XCreatedEvent({ entityId: entity.id.value, ownerId: input.organizationId, payload: { id: entity.id.value } })
+            await this.domainEventRepository.save(event, tx)
+            return { id: entity.id.value }
+          })
+        }
+      }
+
+  scaffold: "bun cli usecase <context> <name>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Use case for read operations or duplicated query logic (CQRS violation)"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'class\s+(List|Get|Find|Search|Fetch)\w*\s+extends\s+Handler'
+      wrong: |
+        // Creating a command use case that only reads data
+        class ListProducts extends Handler<...> { ... }
+        // Or duplicating read logic that already exists in a /query use case
+        class CreateOrder extends Handler<...> {
+          // fetches and returns product list as part of order creation
+        }
+      right: |
+        // Read queries belong ONLY in /query use cases in the ui context
+        // Command use cases are for writes only — never duplicate query logic
+        // SCOPE: fires in WRITE contexts only (this skill's glob excludes src/ui/**).
+        // The IDENTICAL shape (Get*/List* extends Handler) is REQUIRED in ui/usecases —
+        // read-vs-write is decided by PATH, not base class (see query QRY-P01).
+
+    - id: bp-03
+      name: "Use case pass-through for cross-context existence check"
+      severity: major
+      mechanical: true
+      detect:
+        - 'this\.get[A-Z]\w*\.execute\('
+      wrong: |
+        const book = await this.getBook.execute({ id: input.bookId })
+      right: |
+        const book = await this.bookRepository.findById(new Id(input.bookId))
+
+    - id: bp-04
+      name: "Publishing events directly from use cases or before entity persistence"
+      severity: critical
+      mechanical: true
+      detect:
+        - '(internalMediator|externalMediator)\.publish\('
+      wrong: |
+        // Publishing from use case — OutboxDispatcher handles this
+        await repo.save(entity, tx)
+        await this.domainEventRepository.save(event, tx)
+        await this.internalMediator.publish(event)  // NEVER in use cases
+        // Or event before entity save
+        await this.domainEventRepository.save(event, tx)
+        await repo.save(entity, tx)
+      right: |
+        // Save entity first, then persist event in same tx — no publish call
+        await repo.save(entity, tx)
+        await this.domainEventRepository.save(event, tx)
+        // OutboxDispatcher polls outbox and dispatches to handlers asynchronously
+
+    - id: bp-06
+      name: "UseCase suffix in file/class name"
+      severity: minor
+      mechanical: true
+      detect:
+        - 'class\s+\w+UseCase\b'
+      wrong: |
+        // CreatePatientUseCase.ts
+        class CreatePatientUseCase {}
+      right: |
+        // CreatePatient.ts
+        class CreatePatient {}
+
+    - id: bp-07
+      name: "Using .refine() on use case InputSchema"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\.refine\('
+      wrong: |
+        // Zod v4 throws when controllers call .omit() on refined schemas
+        export const CreateXInputSchema = z.object({ ... })
+          .refine(d => d.start < d.end, { error: 'INVALID_RANGE' as ApplicationErrors })
+      right: |
+        // Keep use case schemas as plain z.object() — no .refine()
+        // Controllers apply .refine() after .omit() when composing their own InputSchema
+        export const CreateXInputSchema = z.object({
+          startDate: z.date(),
+          endDate: z.date(),
+        })
+      rationale: "Zod v4 does not allow .omit() on schemas with refinements. Since controllers commonly use UseCaseInputSchema.omit({ injectedField: true }) to compose their HTTP input, .refine() on use case schemas breaks this pattern. Move refinements to the controller schema instead."
+
+    - id: bp-09
+      name: "Inline or locally duplicated schema when a VO/shared schema exists"
+      severity: major
+      mechanical: false
+      wrong: |
+        // Using primitives when VO schema exists
+        export const CreatePatientInputSchema = z.object({
+          email: z.string(),
+          address: z.object({ street: z.string(), city: z.string() }),
+        })
+        // Or redefining a VO schema locally instead of importing it
+        const AddressInput = z.object({ street: z.string(), city: z.string(), zipCode: z.string() })
+        export const CreateOrderInputSchema = z.object({ shippingAddress: AddressInput })
+      right: |
+        // Always import and compose existing VO/shared schemas
+        import { EmailSchema, AddressSchema } from '@shared/objects'
+        import { PriceRangeSchema } from '@context/objects'
+        export const CreatePatientInputSchema = z.object({
+          email: EmailSchema.input(),           // VO with transform → use .input()
+          address: AddressSchema.input(),       // VO with transform → use .input()
+          priceRange: PriceRangeSchema,         // context schema without transform → use directly
+        })
+
+    - id: bp-10
+      name: "Domain checks in use case/handler instead of entity (Tell Don't Ask violation)"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Use case or handler queries entity state before calling behavior method
+        if (!session.hasMessage(messageId)) {
+          session.addMessage({ author, content })
+        }
+        // Or checking existence/deduplication outside the entity
+        const exists = entity.items.some(i => i.id === newItemId)
+        if (!exists) {
+          entity.addItem(newItem)
+        }
+      right: |
+        // Entity method encapsulates the check internally
+        session.addMessage({ author, content })
+        // Inside entity: addMessage() handles deduplication, invariants, and guards
+
+    - id: bp-11
+      name: "Using z.nativeEnum() or inline literal arrays instead of z.enum(EnumType)"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'z\.nativeEnum\('
+        - 'z\.enum\(\s*\['
+      wrong: |
+        // z.nativeEnum is not the project standard
+        status: z.nativeEnum(OrderStatus)
+        // Inline literals instead of TypeScript enum reference
+        status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED'])
+      right: |
+        // Always use z.enum() with TypeScript enum
+        import { OrderStatus } from '../enums'
+        status: z.enum(OrderStatus)
+
+    - id: bp-12
+      name: "Command use case typing tx as DrizzleClient instead of Transaction"
+      severity: moderate
+      mechanical: true
+      detect:
+        - 'tx\?:\s*DrizzleClient\b'
+      detect_skip: 'db\??:\s*DrizzleClient\b'
+      wrong: |
+        // Command use case names the infra type — orchestration shouldn't know Drizzle
+        import { DrizzleClient } from '@template/core-typescript'
+        protected async handle(input: this['input'], tx?: DrizzleClient): Promise<this['output']> {
+          await this.withTransaction(tx, async tx => {
+            await this.orders.save(order, tx)
+          })
+        }
+      right: |
+        // Command use case speaks Transaction; repos accept it, only Drizzle repos cast.
+        import type { Transaction } from '@template/core-typescript'
+        protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+          await this.withTransaction(tx, async tx => {
+            await this.orders.save(order, tx)
+          })
+        }
+        // EXEMPT: query use cases (BFF, read-side) query Drizzle directly via an injected
+        // `db: DrizzleClient` — they have no port/impl split, so DrizzleClient is fine there.
+

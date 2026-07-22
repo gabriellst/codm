@@ -1,0 +1,1477 @@
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 3bc7c8ca8..05cdd3979 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -743,6 +743,13 @@
+ 			"PRESUMED_PROFIT": "Presumed profit",
+ 			"REAL_PROFIT": "Real profit"
+ 		},
++		"AnalyticsFrequency": {
++			"DAILY": "Daily",
++			"HOURLY": "Hourly",
++			"MONTHLY": "Monthly",
++			"WEEKLY": "Weekly",
++			"YEARLY": "Yearly"
++		},
+ 		"WarrantyPeriod": {
+ 			"DAYS_180": "180 days",
+ 			"DAYS_240": "240 days",
+@@ -1414,6 +1421,66 @@
+ 		"title": "Recommended Apps",
+ 		"visitCta": "Visit"
+ 	},
++	"reports": {
++		"title": "Reports",
++		"toolbar": {
++			"periodAriaLabel": "Select period"
++		},
++		"comparison": {
++			"count_one": "{{count}} product selected",
++			"count_other": "{{count}} products selected",
++			"clearAriaLabel": "Remove all from comparison",
++			"panelTitle": "Product Comparison",
++			"loadError": "Could not load products.",
++			"empty": "No products found to compare.",
++			"removeAriaLabel": "Remove {{name}} from comparison",
++			"delta": "Var. %"
++		},
++		"revenueTrend": {
++			"title": "Revenue Trend",
++			"granularityAriaLabel": "Select granularity",
++			"mode": {
++				"bar": "Bar",
++				"line": "Line"
++			},
++			"loadError": "Could not load chart.",
++			"empty": "No data available for this period.",
++			"legend": {
++				"revenue": "Revenue",
++				"profit": "Profit"
++			}
++		},
++		"topProducts": {
++			"title": "Top Products",
++			"totalProducts_one": "{{count}} product",
++			"totalProducts_other": "{{count}} products",
++			"columns": {
++				"name": "Product",
++				"sales": "Sales",
++				"revenue": "Revenue"
++			},
++			"compareColumn": "Compare",
++			"listAria": "Top products list",
++			"loadError": "Could not load products.",
++			"empty": "No products found for this period.",
++			"imageAlt": "Product image",
++			"compareToggleAriaLabel": "Compare {{name}}"
++		},
++		"periodTarget": {
++			"title": "Period Target",
++			"loadError": "Could not load goal.",
++			"saveSuccess": "Goal saved successfully!",
++			"unsavedChanges": "Unsaved changes",
++			"dailyRunRate": "{{value}}/day • {{days}} days in period",
++			"form": {
++				"type": "Goal type",
++				"target": "Target amount",
++				"from": "Start date",
++				"to": "End date",
++				"save": "Save goal"
++			}
++		}
++	},
+ 	"suggestions": {
+ 		"advertise": {
+ 			"cta": "Talk to partners",
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index 9f3eefa9c..b4111b957 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -743,6 +743,13 @@
+ 			"PRESUMED_PROFIT": "Lucro presumido",
+ 			"REAL_PROFIT": "Lucro real"
+ 		},
++		"AnalyticsFrequency": {
++			"DAILY": "Diário",
++			"HOURLY": "Por hora",
++			"MONTHLY": "Mensal",
++			"WEEKLY": "Semanal",
++			"YEARLY": "Anual"
++		},
+ 		"WarrantyPeriod": {
+ 			"DAYS_180": "180 dias",
+ 			"DAYS_240": "240 dias",
+@@ -1414,6 +1421,66 @@
+ 		"title": "Aplicativos Recomendados",
+ 		"visitCta": "Visitar"
+ 	},
++	"reports": {
++		"title": "Relatórios",
++		"toolbar": {
++			"periodAriaLabel": "Selecionar período"
++		},
++		"comparison": {
++			"count_one": "{{count}} produto selecionado",
++			"count_other": "{{count}} produtos selecionados",
++			"clearAriaLabel": "Remover todos da comparação",
++			"panelTitle": "Comparativo de Produtos",
++			"loadError": "Não foi possível carregar os produtos.",
++			"empty": "Nenhum produto encontrado para comparar.",
++			"removeAriaLabel": "Remover {{name}} da comparação",
++			"delta": "Var. %"
++		},
++		"revenueTrend": {
++			"title": "Tendência de Receita",
++			"granularityAriaLabel": "Selecionar granularidade",
++			"mode": {
++				"bar": "Barras",
++				"line": "Linha"
++			},
++			"loadError": "Não foi possível carregar o gráfico.",
++			"empty": "Nenhum dado disponível para o período.",
++			"legend": {
++				"revenue": "Receita",
++				"profit": "Lucro"
++			}
++		},
++		"topProducts": {
++			"title": "Top Produtos",
++			"totalProducts_one": "{{count}} produto",
++			"totalProducts_other": "{{count}} produtos",
++			"columns": {
++				"name": "Produto",
++				"sales": "Vendas",
++				"revenue": "Receita"
++			},
++			"compareColumn": "Comparar",
++			"listAria": "Lista de top produtos",
++			"loadError": "Não foi possível carregar os produtos.",
++			"empty": "Nenhum produto encontrado para o período.",
++			"imageAlt": "Foto do produto",
++			"compareToggleAriaLabel": "Comparar {{name}}"
++		},
++		"periodTarget": {
++			"title": "Meta do Período",
++			"loadError": "Não foi possível carregar a meta.",
++			"saveSuccess": "Meta salva com sucesso!",
++			"unsavedChanges": "Alterações não salvas",
++			"dailyRunRate": "{{value}}/dia • {{days}} dias no período",
++			"form": {
++				"type": "Tipo de meta",
++				"target": "Valor alvo",
++				"from": "Data de início",
++				"to": "Data de fim",
++				"save": "Salvar meta"
++			}
++		}
++	},
+ 	"suggestions": {
+ 		"advertise": {
+ 			"cta": "Falar com parceiros",
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 2ae38514e..b3f672508 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -15,6 +15,7 @@ import { Route as SignUpIndexRouteImport } from './routes/sign-up/index'
+ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+ import { Route as appSuggestionsIndexRouteImport } from './routes/(app)/suggestions/index'
++import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
+ import { Route as appProductsIndexRouteImport } from './routes/(app)/products/index'
+ import { Route as appOrdersIndexRouteImport } from './routes/(app)/orders/index'
+ import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+@@ -58,6 +59,11 @@ const appSuggestionsIndexRoute = appSuggestionsIndexRouteImport.update({
+   path: '/suggestions/',
+   getParentRoute: () => appRouteRoute,
+ } as any)
++const appReportsIndexRoute = appReportsIndexRouteImport.update({
++  id: '/reports/',
++  path: '/reports/',
++  getParentRoute: () => appRouteRoute,
++} as any)
+ const appProductsIndexRoute = appProductsIndexRouteImport.update({
+   id: '/products/',
+   path: '/products/',
+@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
+   '/dashboard/': typeof appDashboardIndexRoute
+   '/orders/': typeof appOrdersIndexRoute
+   '/products/': typeof appProductsIndexRoute
++  '/reports/': typeof appReportsIndexRoute
+   '/suggestions/': typeof appSuggestionsIndexRoute
+   '/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
+   '/dashboard': typeof appDashboardIndexRoute
+   '/orders': typeof appOrdersIndexRoute
+   '/products': typeof appProductsIndexRoute
++  '/reports': typeof appReportsIndexRoute
+   '/suggestions': typeof appSuggestionsIndexRoute
+   '/finance/costs': typeof appFinanceCostsIndexRoute
+   '/marketing/traffic': typeof appMarketingTrafficIndexRoute
+@@ -179,6 +187,7 @@ export interface FileRoutesById {
+   '/(app)/dashboard/': typeof appDashboardIndexRoute
+   '/(app)/orders/': typeof appOrdersIndexRoute
+   '/(app)/products/': typeof appProductsIndexRoute
++  '/(app)/reports/': typeof appReportsIndexRoute
+   '/(app)/suggestions/': typeof appSuggestionsIndexRoute
+   '/(app)/finance/costs/': typeof appFinanceCostsIndexRoute
+   '/(app)/marketing/traffic/': typeof appMarketingTrafficIndexRoute
+@@ -201,6 +210,7 @@ export interface FileRouteTypes {
+     | '/dashboard/'
+     | '/orders/'
+     | '/products/'
++    | '/reports/'
+     | '/suggestions/'
+     | '/finance/costs/'
+     | '/marketing/traffic/'
+@@ -221,6 +231,7 @@ export interface FileRouteTypes {
+     | '/dashboard'
+     | '/orders'
+     | '/products'
++    | '/reports'
+     | '/suggestions'
+     | '/finance/costs'
+     | '/marketing/traffic'
+@@ -242,6 +253,7 @@ export interface FileRouteTypes {
+     | '/(app)/dashboard/'
+     | '/(app)/orders/'
+     | '/(app)/products/'
++    | '/(app)/reports/'
+     | '/(app)/suggestions/'
+     | '/(app)/finance/costs/'
+     | '/(app)/marketing/traffic/'
+@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof appSuggestionsIndexRouteImport
+       parentRoute: typeof appRouteRoute
+     }
++    '/(app)/reports/': {
++      id: '/(app)/reports/'
++      path: '/reports'
++      fullPath: '/reports/'
++      preLoaderRoute: typeof appReportsIndexRouteImport
++      parentRoute: typeof appRouteRoute
++    }
+     '/(app)/products/': {
+       id: '/(app)/products/'
+       path: '/products'
+@@ -405,6 +424,7 @@ interface appRouteRouteChildren {
+   appDashboardIndexRoute: typeof appDashboardIndexRoute
+   appOrdersIndexRoute: typeof appOrdersIndexRoute
+   appProductsIndexRoute: typeof appProductsIndexRoute
++  appReportsIndexRoute: typeof appReportsIndexRoute
+   appSuggestionsIndexRoute: typeof appSuggestionsIndexRoute
+   appFinanceCostsIndexRoute: typeof appFinanceCostsIndexRoute
+   appMarketingTrafficIndexRoute: typeof appMarketingTrafficIndexRoute
+@@ -422,6 +442,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
+   appDashboardIndexRoute: appDashboardIndexRoute,
+   appOrdersIndexRoute: appOrdersIndexRoute,
+   appProductsIndexRoute: appProductsIndexRoute,
++  appReportsIndexRoute: appReportsIndexRoute,
+   appSuggestionsIndexRoute: appSuggestionsIndexRoute,
+   appFinanceCostsIndexRoute: appFinanceCostsIndexRoute,
+   appMarketingTrafficIndexRoute: appMarketingTrafficIndexRoute,
+@@ -450,13 +471,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ComparisonPanel/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/ComparisonPanel/index.tsx
+new file mode 100644
+index 000000000..b7f7b52e2
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ComparisonPanel/index.tsx
+@@ -0,0 +1,165 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useListQuickProductRanking } from '@template/client-typescript/typescript'
++import type { ListQuickProductRankingQueryResponse } from '@template/client-typescript/typescript'
++import { IconX } from '@tabler/icons-react'
++
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Button } from '@/components/ui/button'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { BalanceIcon } from '@/components/ui/icons'
++import { cn } from '@/lib/utils'
++import { useTenancyStore } from '@/stores'
++import { useMoney } from '@/hooks'
++import { useReportsStore } from '../../-stores/useReportsStore'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++type RankingItem = ListQuickProductRankingQueryResponse['items'][number]
++
++export function ComparisonPanel({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore((s) => s.tenancyScope)
++	const { comparisonBasket, clearBasket, toggleCompare } = useReportsStore()
++
++	const enabled = comparisonBasket.length > 0
++	const productIds = enabled ? comparisonBasket : undefined
++
++	const { data, isPending, isError } = useListQuickProductRanking(
++		{ tenancyScope, startDate, endDate, productIds },
++		{ query: { enabled } },
++	)
++
++	if (!enabled) return null
++
++	return (
++		<Card className={cn('gap-4 p-6', className)} {...props}>
++			<div className="flex items-center gap-3">
++				<GradientIconBadge icon={BalanceIcon} />
++				<span className="flex-1 text-lg font-medium text-muted-foreground">
++					{t('reports.comparison.panelTitle')}
++				</span>
++				<Button
++					variant="ghost"
++					size="icon-sm"
++					aria-label={t('reports.comparison.clearAriaLabel')}
++					onClick={clearBasket}
++				>
++					<IconX size={16} />
++				</Button>
++			</div>
++
++			<div className="border-t border-border/60" />
++
++			{isPending ? (
++				<ComparisonPanelSkeleton count={comparisonBasket.length} />
++			) : isError ? (
++				<p className="text-sm text-muted-foreground">{t('reports.comparison.loadError')}</p>
++			) : !data || data.items.length === 0 ? (
++				<p className="text-sm text-muted-foreground">{t('reports.comparison.empty')}</p>
++			) : (
++				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
++					{data.items.map((item) => (
++						<ComparisonCard
++							key={item.productId}
++							item={item}
++							onRemove={() => toggleCompare(item.productId)}
++						/>
++					))}
++				</div>
++			)}
++		</Card>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Comparison card leaf — receives item as prop (rendered N times in map)
++// ---------------------------------------------------------------------------
++
++interface ComparisonCardProps {
++	item: RankingItem
++	onRemove: () => void
++}
++
++function ComparisonCard({ item, onRemove }: ComparisonCardProps) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++
++	return (
++		<div className="flex flex-col gap-3 rounded-lg border border-border/60 p-4">
++			<div className="flex items-start justify-between gap-2">
++				<div className="flex items-center gap-2">
++					{item.imageUrl ? (
++						<img
++							src={item.imageUrl}
++							alt={t('reports.topProducts.imageAlt')}
++							className="size-8 shrink-0 rounded object-cover"
++						/>
++					) : (
++						<div className="size-8 shrink-0 rounded bg-muted" />
++					)}
++					<span className="line-clamp-2 text-sm font-medium text-foreground">{item.name}</span>
++				</div>
++				<Button
++					variant="ghost"
++					size="icon-sm"
++					aria-label={t('reports.comparison.removeAriaLabel', { name: item.name })}
++					onClick={onRemove}
++					className="shrink-0"
++				>
++					<IconX size={12} />
++				</Button>
++			</div>
++
++			<div className="flex flex-col gap-1.5">
++				<div className="flex items-center justify-between gap-2 text-xs">
++					<span className="text-muted-foreground">{t('reports.topProducts.columns.revenue')}</span>
++					<span className="font-medium tabular-nums text-foreground">
++						{formatMoney(item.sales.value.value)}
++					</span>
++				</div>
++				<div className="flex items-center justify-between gap-2 text-xs">
++					<span className="text-muted-foreground">{t('reports.topProducts.columns.sales')}</span>
++					<span className="tabular-nums text-muted-foreground">{item.sales.count.value}</span>
++				</div>
++				{item.sales.value.deltaPct !== null && (
++					<div className="flex items-center justify-between gap-2 text-xs">
++						<span className="text-muted-foreground">{t('reports.comparison.delta')}</span>
++						<span
++							className={cn(
++								'tabular-nums font-medium',
++								item.sales.value.deltaPct >= 0 ? 'text-success' : 'text-destructive',
++							)}
++						>
++							{`${item.sales.value.deltaPct >= 0 ? '+' : ''}${item.sales.value.deltaPct.toFixed(1)}%`}
++						</span>
++					</div>
++				)}
++			</div>
++		</div>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Skeleton
++// ---------------------------------------------------------------------------
++
++function ComparisonPanelSkeleton({ count }: { count: number }) {
++	return (
++		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
++			{Array.from({ length: count }).map((_, i) => (
++				<div key={`cmp-skeleton-${i}`} className="flex flex-col gap-3 rounded-lg border border-border/60 p-4">
++					<div className="flex items-center gap-2">
++						<Skeleton className="size-8 shrink-0 rounded" />
++						<Skeleton className="h-4 flex-1" />
++					</div>
++					<Skeleton className="h-3 w-full" />
++					<Skeleton className="h-3 w-4/5" />
++				</div>
++			))}
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/PeriodTargetCard/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/PeriodTargetCard/index.tsx
+new file mode 100644
+index 000000000..740528edb
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/PeriodTargetCard/index.tsx
+@@ -0,0 +1,305 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { useForm } from '@tanstack/react-form'
++import { useQueryClient } from '@tanstack/react-query'
++import { getRouteApi } from '@tanstack/react-router'
++import { differenceInCalendarDays, parseISO } from 'date-fns'
++import { toast } from 'sonner'
++import {
++	useGetGoal,
++	useCreateGoal,
++	useUpdateGoal,
++	getGoalQueryKey,
++	CurrencyCodeEnum,
++	GoalTypeEnum,
++	createGoalMutationRequestSchema,
++	updateGoalMutationRequestSchema,
++	type CreateGoalMutationRequest,
++	type GetGoalQueryResponse,
++} from '@template/client-typescript/typescript'
++
++import { type DeepPartial } from '@/lib'
++import { cn } from '@/lib/utils'
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Button } from '@/components/ui/button'
++import { Spinner } from '@/components/ui/spinner'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { MoneyIcon } from '@/components/ui/icons'
++import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
++import { Input } from '@/components/ui/input'
++import { ToggleGroup } from '@/components/ui/toggle-group'
++import { CurrencyInput } from '@/components/ui/currency-input'
++import { useMoney } from '@/hooks'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++type LoadedGoal = NonNullable<GetGoalQueryResponse['goal']>
++
++export function PeriodTargetCard({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const { data, isPending, isError } = useGetGoal()
++	const goal = data?.goal ?? null
++
++	return (
++		<Card className={cn('gap-4 p-6', className)} {...props}>
++			<div className="flex items-center gap-3">
++				<GradientIconBadge icon={MoneyIcon} />
++				<span className="flex-1 text-lg font-medium text-muted-foreground">
++					{t('reports.periodTarget.title')}
++				</span>
++			</div>
++
++			<div className="border-t border-border/60" />
++
++			{isPending ? (
++				<PeriodTargetSkeleton />
++			) : isError ? (
++				<p className="text-sm text-muted-foreground">{t('reports.periodTarget.loadError')}</p>
++			) : (
++				<PeriodTargetForm goal={goal} startDate={startDate} endDate={endDate} />
++			)}
++		</Card>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Form — always visible (no toggle/drawer)
++// ---------------------------------------------------------------------------
++
++interface PeriodTargetFormProps {
++	goal: LoadedGoal | null
++	startDate: string
++	endDate: string
++}
++
++function PeriodTargetForm({ goal, startDate, endDate }: PeriodTargetFormProps) {
++	const { t } = useTranslation()
++	const queryClient = useQueryClient()
++	const formatMoney = useMoney()
++
++	const invalidateGoalQueries = () => {
++		queryClient.invalidateQueries({ queryKey: getGoalQueryKey() })
++		queryClient.invalidateQueries({ queryKey: [{ url: '/v1/analytics/goals/progress' }] })
++	}
++
++	const createGoal = useCreateGoal({
++		mutation: {
++			onSuccess: () => {
++				toast.success(t('reports.periodTarget.saveSuccess'))
++				invalidateGoalQueries()
++			},
++		},
++	})
++
++	const updateGoal = useUpdateGoal({
++		mutation: {
++			onSuccess: () => {
++				toast.success(t('reports.periodTarget.saveSuccess'))
++				invalidateGoalQueries()
++			},
++		},
++	})
++
++	const isPending = createGoal.isPending || updateGoal.isPending
++
++	const defaultValues: DeepPartial<CreateGoalMutationRequest> = {
++		type: goal?.type ?? GoalTypeEnum.REVENUE,
++		targetAmount: {
++			amountCents: goal?.targetAmount.amountCents ?? 0,
++			currency: goal?.targetAmount.currency ?? CurrencyCodeEnum.BRL,
++		},
++		from: goal?.from ?? startDate,
++		to: goal?.to ?? endDate,
++	}
++
++	const form = useForm({
++		defaultValues,
++		validators: { onChange: createGoalMutationRequestSchema },
++		onSubmit: async ({ value }) => {
++			const result = createGoalMutationRequestSchema.safeParse(value)
++			if (!result.success) return
++
++			if (goal?.id) {
++				const { type: _type, ...updateFields } = result.data
++				const updateResult = updateGoalMutationRequestSchema.safeParse({
++					ids: [goal.id],
++					...updateFields,
++				})
++				if (!updateResult.success) return
++				await updateGoal.mutateAsync({ data: updateResult.data })
++			} else {
++				await createGoal.mutateAsync({ data: result.data })
++			}
++		},
++	})
++
++	return (
++		<form
++			className="flex flex-col gap-4"
++			noValidate
++			onSubmit={(e) => {
++				e.preventDefault()
++				e.stopPropagation()
++				form.handleSubmit()
++			}}
++		>
++			<form.Subscribe
++				selector={(s) => {
++					const dirty =
++						s.values.type !== (goal?.type ?? GoalTypeEnum.REVENUE) ||
++						s.values.targetAmount?.amountCents !== (goal?.targetAmount.amountCents ?? 0)
++					return dirty && s.isTouched
++				}}
++			>
++				{(isDirty) =>
++					isDirty ? (
++						<div className="rounded-md bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
++							{t('reports.periodTarget.unsavedChanges')}
++						</div>
++					) : null
++				}
++			</form.Subscribe>
++
++			<FieldGroup>
++				{/* Goal type */}
++				<form.Field name="type">
++					{(field) => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel>{t('reports.periodTarget.form.type')}</FieldLabel>
++								<ToggleGroup
++									enum={GoalTypeEnum}
++									i18nPrefix="enums.GoalType"
++									value={field.state.value}
++									onValueChange={field.handleChange}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				{/* Target amount */}
++				<form.Field name="targetAmount">
++					{(field) => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel>{t('reports.periodTarget.form.target')}</FieldLabel>
++								<CurrencyInput
++									amountCents={field.state.value?.amountCents ?? 0}
++									currency={field.state.value?.currency ?? CurrencyCodeEnum.BRL}
++									onAmountChange={(cents) =>
++										field.handleChange({ ...field.state.value, amountCents: cents })
++									}
++									onCurrencyChange={(c) =>
++										field.handleChange({ ...field.state.value, currency: c })
++									}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				{/* Start date */}
++				<form.Field name="from">
++					{(field) => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('reports.periodTarget.form.from')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="date"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={(e) => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++
++				{/* End date */}
++				<form.Field name="to">
++					{(field) => {
++						const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
++						return (
++							<Field>
++								<FieldLabel htmlFor={field.name}>{t('reports.periodTarget.form.to')}</FieldLabel>
++								<Input
++									id={field.name}
++									type="date"
++									value={field.state.value ?? ''}
++									onBlur={field.handleBlur}
++									onChange={(e) => field.handleChange(e.target.value)}
++									aria-invalid={isInvalid}
++								/>
++								{isInvalid && <FieldError errors={field.state.meta.errors} />}
++							</Field>
++						)
++					}}
++				</form.Field>
++			</FieldGroup>
++
++			<form.Subscribe
++				selector={(s) => ({
++					amountCents: s.values.targetAmount?.amountCents ?? 0,
++					currency: s.values.targetAmount?.currency ?? CurrencyCodeEnum.BRL,
++					from: s.values.from ?? startDate,
++					to: s.values.to ?? endDate,
++				})}
++			>
++				{({ amountCents, currency, from, to }) => {
++					const days = Math.max(
++						1,
++						differenceInCalendarDays(parseISO(to.slice(0, 10)), parseISO(from.slice(0, 10))) + 1,
++					)
++					const dailyCents = Math.round(amountCents / days)
++					const dailyStr = formatMoney({ amountCents: dailyCents, currency })
++					return (
++						<div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
++							{t('reports.periodTarget.dailyRunRate', { value: dailyStr, days })}
++						</div>
++					)
++				}}
++			</form.Subscribe>
++
++			{/* Submit */}
++			<form.Subscribe selector={(s) => [s.values, s.isSubmitting] as const}>
++				{([values, isSubmitting]) => (
++					<Button
++						type="submit"
++						className="w-full"
++						disabled={!createGoalMutationRequestSchema.safeParse(values).success || isPending}
++					>
++						{isSubmitting || isPending ? <Spinner /> : t('reports.periodTarget.form.save')}
++					</Button>
++				)}
++			</form.Subscribe>
++		</form>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Skeleton
++// ---------------------------------------------------------------------------
++
++function PeriodTargetSkeleton() {
++	return (
++		<div className="flex flex-col gap-4">
++			<Skeleton className="h-8 w-full" />
++			<Skeleton className="h-10 w-full" />
++			<Skeleton className="h-8 w-full" />
++			<Skeleton className="h-8 w-full" />
++			<Skeleton className="h-9 w-full" />
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/ReportsToolbar/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/ReportsToolbar/index.tsx
+new file mode 100644
+index 000000000..d290028a0
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/ReportsToolbar/index.tsx
+@@ -0,0 +1,71 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { IconX } from '@tabler/icons-react'
++import type { DateRange } from 'react-day-picker'
++
++import { DatePicker } from '@/components/ui/date-picker'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { BarGraphIcon } from '@/components/ui/icons'
++import { cn } from '@/lib/utils'
++import { useReportsStore } from '../../-stores/useReportsStore'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++export function ReportsToolbar({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate } = routeApi.useSearch()
++	const navigate = routeApi.useNavigate()
++	const { comparisonBasket, clearBasket } = useReportsStore()
++
++	const range: DateRange = {
++		from: startDate ? new Date(startDate) : undefined,
++		to: endDate ? new Date(endDate) : undefined,
++	}
++
++	const handleRangeChange = (next: DateRange | undefined) => {
++		if (!next?.from) return
++		navigate({
++			search: (prev) => ({
++				...prev,
++				startDate: next.from!.toISOString(),
++				endDate: next.to ? next.to.toISOString() : next.from!.toISOString(),
++			}),
++		})
++	}
++
++	return (
++		<div
++			className={cn('flex items-center justify-between gap-4', className)}
++			{...props}
++		>
++			<div className="flex items-center gap-3">
++				<GradientIconBadge icon={BarGraphIcon} />
++				<h1 className="text-2xl font-bold text-foreground">{t('reports.title')}</h1>
++			</div>
++
++			<div className="flex items-center gap-2">
++				{comparisonBasket.length > 0 && (
++					<div className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-sm text-primary">
++						<span>{t('reports.comparison.count', { count: comparisonBasket.length })}</span>
++						<button
++							type="button"
++							className="ml-0.5 rounded p-0.5 hover:bg-primary/20 transition-colors"
++							onClick={clearBasket}
++							aria-label={t('reports.comparison.clearAriaLabel')}
++						>
++							<IconX size={12} />
++						</button>
++					</div>
++				)}
++				<DatePicker
++					mode="range"
++					range={range}
++					onRangeChange={handleRangeChange}
++					showPresets
++					aria-label={t('reports.toolbar.periodAriaLabel')}
++				/>
++			</div>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/TrendChartCanvas.tsx b/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/TrendChartCanvas.tsx
+new file mode 100644
+index 000000000..922a78241
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/TrendChartCanvas.tsx
+@@ -0,0 +1,225 @@
++import { useCallback } from 'react'
++import type { ComponentProps } from 'react'
++import { ParentSize } from '@visx/responsive'
++import { Group } from '@visx/group'
++import { Bar, LinePath } from '@visx/shape'
++import { scaleBand, scaleLinear } from '@visx/scale'
++import { AxisBottom, AxisLeft } from '@visx/axis'
++import { GridRows } from '@visx/grid'
++import { curveMonotoneX } from '@visx/curve'
++import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip'
++import { localPoint } from '@visx/event'
++
++import type { SignedMoney } from '@template/client-typescript/typescript'
++import { useMoney } from '@/hooks'
++import { cn } from '@/lib/utils'
++
++export interface TrendBucket {
++	label: string
++	revenue: SignedMoney
++	profit: SignedMoney
++	orders: number
++}
++
++export type TrendChartMode = 'bar' | 'line'
++
++interface TrendChartCanvasProps extends ComponentProps<'div'> {
++	buckets: TrendBucket[]
++	mode: TrendChartMode
++}
++
++const COLOR_REVENUE = 'var(--primary)'
++const COLOR_PROFIT = 'var(--success)'
++const COLOR_AXIS = 'color-mix(in oklch, var(--muted-foreground) 60%, transparent)'
++const COLOR_GRID = 'color-mix(in oklch, var(--border) 60%, transparent)'
++const MARGIN = { top: 16, right: 8, bottom: 40, left: 62 }
++
++function centsToMajor(cents: number): number {
++	return cents / 100
++}
++
++interface TooltipData {
++	bucket: TrendBucket
++	x: number
++	y: number
++}
++
++function InnerChart({
++	buckets,
++	mode,
++	width,
++	height,
++}: {
++	buckets: TrendBucket[]
++	mode: TrendChartMode
++	width: number
++	height: number
++}) {
++	const formatMoney = useMoney()
++	const { showTooltip, hideTooltip, tooltipData, tooltipLeft, tooltipTop, tooltipOpen } =
++		useTooltip<TooltipData>()
++
++	const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right)
++	const innerHeight = Math.max(0, height - MARGIN.top - MARGIN.bottom)
++
++	const xScale = scaleBand<string>({
++		range: [0, innerWidth],
++		domain: buckets.map((b) => b.label),
++		padding: 0.2,
++	})
++
++	const maxRevenue = Math.max(...buckets.map((b) => Math.abs(centsToMajor(b.revenue.amountCents))), 1)
++	const yScale = scaleLinear<number>({
++		range: [innerHeight, 0],
++		domain: [0, maxRevenue * 1.15],
++		nice: true,
++	})
++
++	const getX = (b: TrendBucket) => xScale(b.label) ?? 0
++	const getRevenue = (b: TrendBucket) => yScale(Math.max(0, centsToMajor(b.revenue.amountCents)))
++	const getProfit = (b: TrendBucket) => yScale(Math.max(0, centsToMajor(b.profit.amountCents)))
++
++	const handleMouseMove = useCallback(
++		(event: React.MouseEvent<SVGElement>, bucket: TrendBucket) => {
++			const coords = localPoint(event) ?? { x: 0, y: 0 }
++			showTooltip({ tooltipData: { bucket, x: coords.x, y: coords.y }, tooltipLeft: coords.x, tooltipTop: coords.y })
++		},
++		[showTooltip],
++	)
++
++	if (width < 10) return null
++
++	return (
++		<div style={{ position: 'relative' }}>
++			<svg width={width} height={height}>
++				<Group left={MARGIN.left} top={MARGIN.top}>
++					<GridRows
++						scale={yScale}
++						width={innerWidth}
++						stroke={COLOR_GRID}
++						strokeDasharray="3,3"
++						numTicks={5}
++					/>
++
++					{mode === 'bar'
++						? buckets.map((b) => {
++								const bw = (xScale.bandwidth() / 2) - 1
++								const ry = getRevenue(b)
++								const py = getProfit(b)
++								return (
++									<Group key={b.label} onMouseMove={(e) => handleMouseMove(e, b)} onMouseLeave={hideTooltip}>
++										<Bar
++											x={getX(b)}
++											y={ry}
++											width={bw}
++											height={innerHeight - ry}
++											fill={COLOR_REVENUE}
++											fillOpacity={0.85}
++											rx={2}
++										/>
++										<Bar
++											x={getX(b) + bw + 2}
++											y={py}
++											width={bw}
++											height={innerHeight - py}
++											fill={COLOR_PROFIT}
++											fillOpacity={0.85}
++											rx={2}
++										/>
++									</Group>
++								)
++							})
++						: null}
++
++					{mode === 'line' ? (
++						<>
++							<LinePath
++								data={buckets}
++								x={(b) => getX(b) + xScale.bandwidth() / 2}
++								y={getRevenue}
++								stroke={COLOR_REVENUE}
++								strokeWidth={2}
++								curve={curveMonotoneX}
++							/>
++							<LinePath
++								data={buckets}
++								x={(b) => getX(b) + xScale.bandwidth() / 2}
++								y={getProfit}
++								stroke={COLOR_PROFIT}
++								strokeWidth={2}
++								curve={curveMonotoneX}
++							/>
++							{buckets.map((b) => (
++								<circle
++									key={b.label}
++									cx={getX(b) + xScale.bandwidth() / 2}
++									cy={getRevenue(b)}
++									r={3}
++									fill={COLOR_REVENUE}
++									onMouseMove={(e) => handleMouseMove(e, b)}
++									onMouseLeave={hideTooltip}
++								/>
++							))}
++						</>
++					) : null}
++
++					<AxisBottom
++						scale={xScale}
++						top={innerHeight}
++						stroke={COLOR_AXIS}
++						tickStroke={COLOR_AXIS}
++						tickLabelProps={{ fill: COLOR_AXIS, fontSize: 11, textAnchor: 'middle' }}
++						numTicks={Math.min(buckets.length, 12)}
++					/>
++					<AxisLeft
++						scale={yScale}
++						stroke={COLOR_AXIS}
++						tickStroke={COLOR_AXIS}
++						tickLabelProps={{ fill: COLOR_AXIS, fontSize: 11, textAnchor: 'end', dx: -4 }}
++						numTicks={5}
++						tickFormat={(v) => {
++							const n = Number(v)
++							if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
++							if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`
++							return String(n)
++						}}
++					/>
++				</Group>
++			</svg>
++
++			{tooltipOpen && tooltipData && (
++				<TooltipWithBounds
++					key={Math.random()}
++					top={tooltipTop}
++					left={tooltipLeft}
++					style={{
++						...defaultStyles,
++						background: 'var(--popover)',
++						color: 'var(--popover-foreground)',
++						border: '1px solid var(--border)',
++						borderRadius: '0.5rem',
++						fontSize: 12,
++						padding: '8px 12px',
++					}}
++				>
++					<div className="flex flex-col gap-1">
++						<span className="font-medium">{tooltipData.bucket.label}</span>
++						<span>{formatMoney(tooltipData.bucket.revenue)}</span>
++					</div>
++				</TooltipWithBounds>
++			)}
++		</div>
++	)
++}
++
++export function TrendChartCanvas({ buckets, mode, className, ...props }: TrendChartCanvasProps) {
++	return (
++		<div className={cn('min-h-64 w-full', className)} {...props}>
++			<ParentSize>
++				{({ width, height }) => (
++					<InnerChart buckets={buckets} mode={mode} width={width} height={Math.max(height, 256)} />
++				)}
++			</ParentSize>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/index.tsx
+new file mode 100644
+index 000000000..4185c7c1a
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/RevenueTrendSection/index.tsx
+@@ -0,0 +1,136 @@
++import { useMemo } from 'react'
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { format } from 'date-fns'
++import { ptBR, enUS } from 'date-fns/locale'
++import { useGetChart, AnalyticsFrequencyEnum } from '@template/client-typescript/typescript'
++import type { AnalyticsFrequency } from '@template/client-typescript/typescript'
++
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { ToggleGroup } from '@/components/ui/toggle-group'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { BarGraphIcon } from '@/components/ui/icons'
++import { cn } from '@/lib/utils'
++import { tryCatch } from '@/lib/utils'
++import { useTenancyStore } from '@/stores'
++import { useLocale } from '@/hooks'
++import { DEFAULT_LOCALE } from '@/lib/locale'
++import { ChartMode } from '../../index'
++
++import { TrendChartCanvas } from './TrendChartCanvas'
++import type { TrendBucket } from './TrendChartCanvas'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++const FREQUENCY_FORMAT: Record<AnalyticsFrequency, string> = {
++	[AnalyticsFrequencyEnum.HOURLY]: 'HH:mm',
++	[AnalyticsFrequencyEnum.DAILY]: 'dd/MM',
++	[AnalyticsFrequencyEnum.WEEKLY]: 'dd/MM',
++	[AnalyticsFrequencyEnum.MONTHLY]: 'MMM yy',
++	[AnalyticsFrequencyEnum.YEARLY]: 'yyyy',
++}
++
++/**
++ * RevenueTrendSection — income-recorte revenue/profit chart for the Reports page.
++ * Owns: frequency toggle (writes to URL, bookmarkable); bar/line mode (URL, bookmarkable).
++ * Reads: startDate, endDate, productIds, frequency, chartMode from URL; tenancyScope from global store.
++ * chartType is fixed to 'income' — this page only shows the income recorte.
++ */
++export function RevenueTrendSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const appLocale = useLocale()
++	const { startDate, endDate, productIds, frequency, chartMode } = routeApi.useSearch()
++	const navigate = routeApi.useNavigate()
++	const tenancyScope = useTenancyStore((s) => s.tenancyScope)
++
++	const dfnsLocale = appLocale === DEFAULT_LOCALE ? ptBR : enUS
++
++	const { data, isPending, isError } = useGetChart({
++		chartType: 'income',
++		tenancyScope,
++		frequency,
++		startDate,
++		endDate,
++		productIds,
++	})
++
++	const buckets = useMemo((): TrendBucket[] => {
++		if (!data || data.kind !== 'income') return []
++		const fmt = FREQUENCY_FORMAT[data.frequency]
++		return data.buckets.map((b) => {
++			const labelResult = tryCatch(() => format(new Date(b.timestamp), fmt, { locale: dfnsLocale }))
++			return {
++				label: labelResult.success ? labelResult.data : b.timestamp,
++				revenue: b.revenue,
++				profit: b.profit,
++				orders: b.orders,
++			}
++		})
++	}, [data, dfnsLocale])
++
++	const handleFrequencyChange = (next: AnalyticsFrequency) => {
++		navigate({ search: (prev) => ({ ...prev, frequency: next }) })
++	}
++
++	const handleModeChange = (next: ChartMode) => {
++		navigate({ search: (prev) => ({ ...prev, chartMode: next }) })
++	}
++
++	return (
++		<Card className={cn('flex flex-col gap-4 p-6', className)} {...props}>
++			{/* Header */}
++			<div className="flex items-center gap-3">
++				<GradientIconBadge icon={BarGraphIcon} />
++				<span className="flex-1 text-lg font-medium text-muted-foreground">
++					{t('reports.revenueTrend.title')}
++				</span>
++				<div className="flex items-center gap-2">
++					<ToggleGroup
++						enum={AnalyticsFrequencyEnum}
++						i18nPrefix="enums.AnalyticsFrequency"
++						value={frequency}
++						onValueChange={handleFrequencyChange}
++						size="sm"
++						aria-label={t('reports.revenueTrend.granularityAriaLabel')}
++					/>
++					<ToggleGroup
++						enum={ChartMode}
++						i18nPrefix="reports.revenueTrend.mode"
++						value={chartMode}
++						onValueChange={(v) => handleModeChange(v as ChartMode)}
++						size="sm"
++					/>
++				</div>
++			</div>
++
++			{/* Chart body */}
++			<div className="min-h-64">
++				{isPending ? (
++					<Skeleton className="h-64 w-full rounded-lg" />
++				) : isError || buckets.length === 0 ? (
++					<div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
++						{isError ? t('reports.revenueTrend.loadError') : t('reports.revenueTrend.empty')}
++					</div>
++				) : (
++					<TrendChartCanvas buckets={buckets} mode={chartMode} className="h-64" />
++				)}
++			</div>
++
++			{/* Legend */}
++			{!isPending && !isError && buckets.length > 0 && (
++				<div className="flex items-center gap-4 text-xs text-muted-foreground">
++					<span className="flex items-center gap-1.5">
++						<span className="inline-block size-2.5 rounded-sm bg-[hsl(var(--primary)/0.85)]" />
++						{t('reports.revenueTrend.legend.revenue')}
++					</span>
++					<span className="flex items-center gap-1.5">
++						<span className="inline-block size-2.5 rounded-sm bg-[hsl(var(--success)/0.85)]" />
++						{t('reports.revenueTrend.legend.profit')}
++					</span>
++				</div>
++			)}
++		</Card>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-components/TopProductsSection/index.tsx b/packages/app/react/src/routes/(app)/reports/-components/TopProductsSection/index.tsx
+new file mode 100644
+index 000000000..75b3499da
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-components/TopProductsSection/index.tsx
+@@ -0,0 +1,150 @@
++import type { ComponentProps } from 'react'
++import { useTranslation } from 'react-i18next'
++import { getRouteApi } from '@tanstack/react-router'
++import { useListQuickProductRanking } from '@template/client-typescript/typescript'
++import type { ListQuickProductRankingQueryResponse } from '@template/client-typescript/typescript'
++import { IconGitCompare } from '@tabler/icons-react'
++
++import { Card } from '@/components/ui/card'
++import { Skeleton } from '@/components/ui/skeleton'
++import { Button } from '@/components/ui/button'
++import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
++import { StarIcon } from '@/components/ui/icons'
++import { cn } from '@/lib/utils'
++import { useTenancyStore } from '@/stores'
++import { useMoney } from '@/hooks'
++import { useReportsStore } from '../../-stores/useReportsStore'
++
++const routeApi = getRouteApi('/(app)/reports/')
++
++type RankingItem = ListQuickProductRankingQueryResponse['items'][number]
++
++const SKELETON_COUNT = 10
++
++export function TopProductsSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const { startDate, endDate, productIds } = routeApi.useSearch()
++	const tenancyScope = useTenancyStore((s) => s.tenancyScope)
++	const { comparisonBasket, toggleCompare } = useReportsStore()
++
++	const { data, isPending, isError } = useListQuickProductRanking({
++		tenancyScope,
++		startDate,
++		endDate,
++		productIds,
++	})
++
++	return (
++		<Card className={cn('gap-4 p-6', className)} {...props}>
++			{/* Header */}
++			<div className="flex items-center gap-4">
++				<GradientIconBadge icon={StarIcon} />
++				<span className="flex-1 text-lg font-medium text-muted-foreground">
++					{t('reports.topProducts.title')}
++				</span>
++				{isPending ? (
++					<Skeleton className="h-4 w-20" />
++				) : data ? (
++					<span className="text-sm text-muted-foreground">
++						{t('reports.topProducts.totalProducts', { count: data.totalProducts })}
++					</span>
++				) : null}
++			</div>
++
++			<div className="border-t border-border/60" />
++
++			{/* Column headers */}
++			<div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-1 text-xs font-medium text-muted-foreground">
++				<span>{t('reports.topProducts.columns.name')}</span>
++				<span className="text-right">{t('reports.topProducts.columns.sales')}</span>
++				<span className="text-right">{t('reports.topProducts.columns.revenue')}</span>
++				<span className="sr-only">{t('reports.topProducts.compareColumn')}</span>
++			</div>
++
++			{/* List */}
++			<div
++				className="flex flex-col divide-y divide-border/40"
++				role="list"
++				aria-label={t('reports.topProducts.listAria')}
++			>
++				{isPending ? (
++					Array.from({ length: SKELETON_COUNT }).map((_, i) => (
++						<div key={`product-skeleton-${i}`} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 py-2">
++							<Skeleton className="h-4 flex-1" />
++							<Skeleton className="h-4 w-10" />
++							<Skeleton className="h-4 w-20" />
++							<Skeleton className="h-6 w-6 rounded" />
++						</div>
++					))
++				) : isError ? (
++					<p className="py-4 text-sm text-muted-foreground">{t('reports.topProducts.loadError')}</p>
++				) : !data || data.items.length === 0 ? (
++					<p className="py-4 text-sm text-muted-foreground">{t('reports.topProducts.empty')}</p>
++				) : (
++					data.items.map((item, index) => (
++						<TopProductRow
++							key={item.productId}
++							rank={index + 1}
++							item={item}
++							isInBasket={comparisonBasket.includes(item.productId)}
++							onToggleCompare={() => toggleCompare(item.productId)}
++						/>
++					))
++				)}
++			</div>
++		</Card>
++	)
++}
++
++// ---------------------------------------------------------------------------
++// Leaf row — rendered N times, receives props from parent
++// ---------------------------------------------------------------------------
++
++interface TopProductRowProps {
++	rank: number
++	item: RankingItem
++	isInBasket: boolean
++	onToggleCompare: () => void
++}
++
++function TopProductRow({ rank, item, isInBasket, onToggleCompare }: TopProductRowProps) {
++	const { t } = useTranslation()
++	const formatMoney = useMoney()
++
++	return (
++		<div
++			className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 py-2"
++			role="listitem"
++			aria-label={item.name}
++		>
++			<div className="flex min-w-0 items-center gap-2">
++				<span className="w-5 shrink-0 text-xs text-muted-foreground">{rank}</span>
++				{item.imageUrl ? (
++					<img
++						src={item.imageUrl}
++						alt={t('reports.topProducts.imageAlt')}
++						className="size-7 shrink-0 rounded object-cover"
++					/>
++				) : (
++					<div className="size-7 shrink-0 rounded bg-muted" />
++				)}
++				<span className="truncate text-sm font-medium text-foreground">{item.name}</span>
++			</div>
++			<span className="text-right text-sm tabular-nums text-muted-foreground">
++				{item.sales.count.value}
++			</span>
++			<span className="text-right text-sm tabular-nums text-foreground">
++				{formatMoney(item.sales.value.value)}
++			</span>
++			<Button
++				variant={isInBasket ? 'default' : 'ghost'}
++				size="icon-sm"
++				aria-label={t('reports.topProducts.compareToggleAriaLabel', { name: item.name })}
++				onClick={onToggleCompare}
++				aria-pressed={isInBasket}
++			>
++				<IconGitCompare size={14} />
++			</Button>
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/reports/-stores/useReportsStore.ts b/packages/app/react/src/routes/(app)/reports/-stores/useReportsStore.ts
+new file mode 100644
+index 000000000..404c012f5
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/-stores/useReportsStore.ts
+@@ -0,0 +1,29 @@
++import { create } from 'zustand'
++
++// Comparison basket — ephemeral per-session client state: must NOT survive a refresh
++// (STR-P10 case 3) and must NOT appear in the URL (it is per-user and not shareable).
++// A teammate following a shared link should not inherit your comparison selection.
++
++interface ReportsState {
++	comparisonBasket: string[] // product IDs selected for side-by-side comparison
++}
++
++interface ReportsActions {
++	toggleCompare: (productId: string) => void
++	clearBasket: () => void
++}
++
++type ReportsStore = ReportsState & ReportsActions
++
++export const useReportsStore = create<ReportsStore>((set) => ({
++	comparisonBasket: [],
++
++	toggleCompare: (productId) =>
++		set((state) => ({
++			comparisonBasket: state.comparisonBasket.includes(productId)
++				? state.comparisonBasket.filter((id) => id !== productId)
++				: [...state.comparisonBasket, productId],
++		})),
++
++	clearBasket: () => set({ comparisonBasket: [] }),
++}))
+diff --git a/packages/app/react/src/routes/(app)/reports/index.tsx b/packages/app/react/src/routes/(app)/reports/index.tsx
+new file mode 100644
+index 000000000..18a9acc10
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/reports/index.tsx
+@@ -0,0 +1,62 @@
++import type { ComponentProps } from 'react'
++import { createFileRoute } from '@tanstack/react-router'
++import { endOfDay, startOfDay, subDays } from 'date-fns'
++import { listQuickProductRankingQueryParamsSchema, analyticsFrequencySchema, AnalyticsFrequencyEnum } from '@template/client-typescript/typescript'
++import { z } from 'zod'
++
++import { cn } from '@/lib/utils'
++import { RevenueTrendSection } from './-components/RevenueTrendSection'
++import { TopProductsSection } from './-components/TopProductsSection'
++import { PeriodTargetCard } from './-components/PeriodTargetCard'
++import { ComparisonPanel } from './-components/ComparisonPanel'
++import { ReportsToolbar } from './-components/ReportsToolbar'
++
++export enum ChartMode {
++	bar = 'bar',
++	line = 'line',
++}
++
++// Period + granularity live in the URL — bookmarkable and shareable.
++// tenancyScope is the account-level global store (not URL state).
++// chartType is fixed to 'income' (constant — not in URL).
++// comparisonBasket is ephemeral per-session (route store — not URL state).
++// Composed from the SDK's ListQuickProductRanking query-params schema: drop tenancyScope
++// (app-global store) and the required dates, then `.and` defaulted dates + chart config.
++export const reportsSearchSchema = listQuickProductRankingQueryParamsSchema
++	.omit({ tenancyScope: true, startDate: true, endDate: true })
++	.and(
++		z.object({
++			startDate: z.string().default(() => startOfDay(subDays(new Date(), 29)).toISOString()),
++			endDate: z.string().default(() => endOfDay(new Date()).toISOString()),
++			frequency: analyticsFrequencySchema.optional().default(AnalyticsFrequencyEnum.DAILY),
++			chartMode: z.enum(ChartMode).default(ChartMode.bar),
++		}),
++	)
++
++export type ReportsSearchParams = z.infer<typeof reportsSearchSchema>
++
++export const Route = createFileRoute('/(app)/reports/')({
++	staticData: { breadcrumb: 'Relatórios' },
++	validateSearch: (search) => reportsSearchSchema.parse(search ?? {}),
++	component: RouteComponent,
++})
++
++function RouteComponent() {
++	return <ReportsPage />
++}
++
++export function ReportsPage({ className, ...props }: ComponentProps<'div'>) {
++	return (
++		<div className={cn('flex flex-1 flex-col gap-6 overflow-y-auto p-6 md:p-8', className)} {...props}>
++			<ReportsToolbar />
++			<RevenueTrendSection />
++			<div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
++				<div className="xl:col-span-2">
++					<TopProductsSection />
++				</div>
++				<PeriodTargetCard />
++			</div>
++			<ComparisonPanel />
++		</div>
++	)
++}

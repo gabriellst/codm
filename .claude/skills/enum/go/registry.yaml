@@ -1,0 +1,163 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: []
+  depended_by: [entity, controller, repository]
+  context_reads: []
+  lang: go
+  examples:
+    - examples/citizens/go/enum/message_type.go
+    - examples/citizens/go/enum/channel_status.go
+    - examples/citizens/go/enum/platform.go
+
+  snippet:
+    skeleton: |
+      // Package enums defines closed vocabularies for the {{ctx}} bounded context.
+      package enums
+
+      // {{Pascal}} represents a closed set of {{snake}} values.
+      // Values: EXAMPLE_A EXAMPLE_B
+      type {{Pascal}} string
+
+      const (
+      	{{Pascal}}ExampleA {{Pascal}} = "EXAMPLE_A"
+      	{{Pascal}}ExampleB {{Pascal}} = "EXAMPLE_B"
+      )
+
+      // IsValid reports whether s is a known {{Pascal}} value.
+      func (s {{Pascal}}) IsValid() bool {
+      	switch s {
+      	case {{Pascal}}ExampleA, {{Pascal}}ExampleB:
+      		return true
+      	}
+      	return false
+      }
+
+  patterns:
+    - id: ENUM-GO-01
+      when: always
+      title: Wire values are SCREAMING_SNAKE_CASE string literals
+      rule: >
+        The string literal assigned to each constant — the value stored in the DB and
+        sent over the wire — must be SCREAMING_SNAKE_CASE. The Go constant identifier
+        is PascalCase-prefixed with the type name.
+      wrong: |
+        const JobStatusPending JobStatus = "pending"
+      right: |
+        const JobStatusPending JobStatus = "PENDING"
+
+    - id: ENUM-GO-02
+      when: always
+      title: One enum per file, snake_case filename
+      rule: >
+        Each enum lives in its own file. The filename is the snake_case rendering of the
+        enum type name. Do not aggregate unrelated enums into a single file.
+      wrong: |
+        // enums/statuses.go — contains JobStatus + ChannelStatus + MessageType
+      right: |
+        // enums/job_status.go — contains only JobStatus
+        // enums/channel_status.go — contains only ChannelStatus
+
+    - id: ENUM-GO-03
+      when: always
+      title: Doc-comment with "Values:" line on the type
+      rule: >
+        Add `// Values: A B C` as the first body line of the type doc-comment.
+        The OpenAPI emitter and code-gen tools parse this to enumerate valid values.
+      wrong: |
+        type JobStatus string
+      right: |
+        // JobStatus represents the lifecycle state of a transcoding job.
+        // Values: PENDING RUNNING COMPLETED FAILED
+        type JobStatus string
+
+    - id: ENUM-GO-04
+      when: always
+      title: Struct fields use the named enum type, not string
+      rule: >
+        Entity and VO struct fields that carry an enum value must be declared with the
+        typed constant, never as plain `string`. Using `string` removes compile-time
+        protection against invalid values.
+      wrong: |
+        type TranscodingJob struct {
+            Status string
+        }
+      right: |
+        type TranscodingJob struct {
+            Status enums.JobStatus
+        }
+
+    - id: ENUM-GO-C01
+      when: controller or repository receives enum from external input
+      title: IsValid() guard before constructing entities
+      rule: >
+        When an enum value arrives from an HTTP request body, query param, or DB column,
+        call `IsValid()` before using it to construct an entity. This prevents invalid
+        enum strings from leaking into the domain.
+      right: |
+        status := enums.JobStatus(raw)
+        if !status.IsValid() {
+            return errors.NewBaseError(ctxerrors.CodeInvalidJobStatus, "unknown job status: "+raw)
+        }
+
+  bad_practices:
+    - id: bp-01
+      title: Lowercase wire values
+      description: >
+        Wire values (the string literals in const blocks) must be SCREAMING_SNAKE_CASE.
+        Lowercase values break DB constraints, OpenAPI enum schemas, and wire compatibility
+        with TypeScript peers that follow the same convention.
+      wrong: |
+        const JobStatusPending JobStatus = "pending"
+      right: |
+        const JobStatusPending JobStatus = "PENDING"
+      mechanical: true
+      detect:
+        - '\w+\s+\w+\s*=\s*"[A-Z0-9_]*[a-z]'
+
+    - id: bp-02
+      title: Untyped string constant
+      description: >
+        Declaring the constant without a type (`const X = "VALUE"`) loses type safety.
+        The compiler cannot catch incorrect assignments like `j.Status = "invalid"`.
+      wrong: |
+        const JobStatusPending = "PENDING"
+      right: |
+        const JobStatusPending JobStatus = "PENDING"
+      mechanical: true
+      detect:
+        - 'const\s+\w+\s*=\s*"'
+
+    - id: bp-03
+      title: Grouping multiple enums in one file
+      description: >
+        Grouping unrelated enum types in a single file makes the file hard to navigate
+        and increases merge conflict surface. One enum per file is the canonical pattern.
+      wrong: |
+        // enums/types.go
+        type JobStatus string
+        type ChannelStatus string
+        type MessageType string
+      right: |
+        // enums/job_status.go — JobStatus only
+        // enums/channel_status.go — ChannelStatus only
+        // enums/message_type.go — MessageType only
+      mechanical: true
+      detect:
+        - 'type\s+\w+\s+string[\s\S]*?type\s+\w+\s+string'
+
+    - id: bp-04
+      title: Missing IsValid on enums receiving external input
+      description: >
+        When an enum is set from an HTTP request or database row (not from a constant),
+        omitting `IsValid()` allows invalid string values to enter the domain silently.
+        Always validate before casting.
+      wrong: |
+        job.Status = enums.JobStatus(rawFromDB) // unchecked cast
+      right: |
+        status := enums.JobStatus(rawFromDB)
+        if !status.IsValid() {
+            return errors.NewBaseError(ctxerrors.CodeInvalidJobStatus, "...")
+        }
+        job.Status = status
+      mechanical: false

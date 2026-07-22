@@ -1,0 +1,31 @@
+// Package services defines the PaymentGateway interface and its stub implementation.
+package services
+
+import "context"
+
+// PaymentGatewayInput describes the input for a payment_gateway operation.
+type PaymentGatewayInput struct {
+	// TODO: add fields
+}
+
+// PaymentGateway defines the payment_gateway service interface.
+// Use cases depend on this interface, not on the concrete implementation.
+type PaymentGateway interface {
+	// Execute performs the payment_gateway operation.
+	Execute(ctx context.Context, input PaymentGatewayInput) error
+}
+
+// StubPaymentGateway is a no-op implementation for local development and testing.
+// Replace with a real implementation before going to production.
+type StubPaymentGateway struct{}
+
+// NewStubPaymentGateway constructs the stub service.
+func NewStubPaymentGateway() *StubPaymentGateway {
+	return &StubPaymentGateway{}
+}
+
+// Execute is a no-op stub that always succeeds.
+func (s *StubPaymentGateway) Execute(_ context.Context, _ PaymentGatewayInput) error {
+	// TODO: implement real service call
+	return nil
+}

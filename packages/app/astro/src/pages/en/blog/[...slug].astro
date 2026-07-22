@@ -1,0 +1,70 @@
+---
+import { Image, getImage } from 'astro:assets'
+import { getCollection, render } from 'astro:content'
+import BaseLayout from '~/layouts/BaseLayout.astro'
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog', ({ id, data }) => id.startsWith('en/') && (import.meta.env.DEV || !data.draft))
+	return posts.map(post => ({
+		params: { slug: post.id.replace(/^en\//, '').replace(/\.mdx?$/, '') },
+		props: { post },
+	}))
+}
+
+const { post } = Astro.props
+const { Content } = await render(post)
+const { title, description, publishedAt, updatedAt, author, coverImage, tags } = post.data
+const dateLabel = publishedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+const ogImageAsset = coverImage ? await getImage({ src: coverImage, width: 1200, height: 630, format: 'webp' }) : undefined
+const absoluteOg = ogImageAsset ? new URL(ogImageAsset.src, Astro.site).href : undefined
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'BlogPosting',
+	headline: title,
+	description,
+	datePublished: publishedAt.toISOString(),
+	dateModified: (updatedAt ?? publishedAt).toISOString(),
+	author: { '@type': 'Person', name: author },
+	image: absoluteOg,
+	mainEntityOfPage: { '@type': 'WebPage', '@id': Astro.url.href },
+}
+---
+
+<BaseLayout title={title} description={description} ogImage={absoluteOg} jsonLd={jsonLd}>
+	<article class="mx-auto flex max-w-[760px] flex-col gap-8 px-5 py-16 md:px-0">
+		<header class="flex flex-col gap-4">
+			<h1 class="text-4xl font-bold leading-tight tracking-tight">{title}</h1>
+			<div class="flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
+				<span>{author}</span>
+				<span>·</span>
+				<time datetime={publishedAt.toISOString()}>{dateLabel}</time>
+			</div>
+		</header>
+		{
+			coverImage && (
+				<Image
+					src={coverImage}
+					alt={title}
+					widths={[640, 960, 1200]}
+					sizes="(min-width: 768px) 760px, 100vw"
+					format="webp"
+					class="aspect-[16/9] w-full rounded-xl object-cover"
+				/>
+			)
+		}
+		<div class="prose prose-neutral max-w-none">
+			<Content />
+		</div>
+		{
+			tags.length > 0 && (
+				<footer class="flex flex-wrap gap-1.5 border-t border-[var(--border)] pt-6">
+					{tags.map(tag => (
+						<span class="rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs text-[var(--muted-foreground)]">#{tag}</span>
+					))}
+				</footer>
+			)
+		}
+	</article>
+</BaseLayout>

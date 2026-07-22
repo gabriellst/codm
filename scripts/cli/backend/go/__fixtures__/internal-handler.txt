@@ -1,0 +1,44 @@
+// Package handlers contains event handlers for the sales bounded context.
+package handlers
+
+import (
+	"context"
+	"log/slog"
+
+	ctxevents "template/api-go/internal/sales/events"
+	"template/core-go/services/mediator"
+	"template/core-go/types"
+)
+
+// CouponAppliedHandler reacts to coupon_applied domain events.
+type CouponAppliedHandler struct{}
+
+// NewCouponAppliedHandler constructs the handler.
+func NewCouponAppliedHandler() *CouponAppliedHandler {
+	return &CouponAppliedHandler{}
+}
+
+// Compile-time interface check.
+var _ mediator.DomainEventHandler = (*CouponAppliedHandler)(nil)
+
+func (h *CouponAppliedHandler) EventName() string {
+	return ctxevents.CouponAppliedEventName
+}
+
+func (h *CouponAppliedHandler) Handle(ctx context.Context, event types.DomainEventI) error {
+	typed, err := types.UnmarshalDomainEvent[ctxevents.CouponAppliedPayload](event)
+	if err != nil {
+		return err
+	}
+
+	slog.InfoContext(ctx, "sales: handling coupon_applied event",
+		"entityId", typed.EntityID,
+	)
+	_ = typed
+
+	// TODO: implement side effects
+	// - Publish integration event via externalMediator.Publish(ctx, integrationEvent)
+	// - Call a use case: _, err = h.useCase.Execute(ctx, input)
+
+	return nil
+}

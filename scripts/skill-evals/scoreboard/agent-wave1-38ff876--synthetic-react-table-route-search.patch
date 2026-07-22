@@ -1,0 +1,973 @@
+diff --git a/packages/app/react/src/components/DataTable/DataTable.tsx b/packages/app/react/src/components/DataTable/DataTable.tsx
+index 2c4e4cd2e..d71bec10d 100644
+--- a/packages/app/react/src/components/DataTable/DataTable.tsx
++++ b/packages/app/react/src/components/DataTable/DataTable.tsx
+@@ -1,5 +1,5 @@
+ import { createContext, useContext, useMemo } from 'react'
+-import { useReactTable, getCoreRowModel, type SortingState, type Table } from '@tanstack/react-table'
++import { useReactTable, getCoreRowModel, type RowSelectionState, type SortingState, type Table } from '@tanstack/react-table'
+ 
+ import type { DataTableConfig } from './types'
+ 
+@@ -51,6 +51,14 @@ export function DataTable<TRow>({ children, initialHiddenColumns, ...config }: D
+ 		return out
+ 	}, [])
+ 
++	// Row selection is controlled only when the consumer passes `onSelectionChange` (e.g. backed
++	// by a Zustand store) — otherwise TanStack manages `rowSelection` internally, unchanged.
++	const rowSelection: RowSelectionState = useMemo(() => {
++		const out: RowSelectionState = {}
++		if (config.selectedIds) for (const id of config.selectedIds) out[id] = true
++		return out
++	}, [config.selectedIds])
++
+ 	const table = useReactTable<TRow>({
+ 		data: config.data,
+ 		columns: config.columns,
+@@ -58,7 +66,13 @@ export function DataTable<TRow>({ children, initialHiddenColumns, ...config }: D
+ 		manualSorting: true,
+ 		manualPagination: true,
+ 		manualFiltering: true,
+-		state: { sorting },
++		state: { sorting, ...(config.onSelectionChange ? { rowSelection } : {}) },
++		onRowSelectionChange: config.onSelectionChange
++			? updater => {
++					const next = typeof updater === 'function' ? updater(rowSelection) : updater
++					config.onSelectionChange?.(Object.keys(next).filter(id => next[id]))
++				}
++			: undefined,
+ 		enableRowSelection: true,
+ 		enableHiding: true,
+ 		initialState: { columnVisibility: initialColumnVisibility },
+diff --git a/packages/app/react/src/components/DataTable/types.ts b/packages/app/react/src/components/DataTable/types.ts
+index 2d2789517..630dc4a7d 100644
+--- a/packages/app/react/src/components/DataTable/types.ts
++++ b/packages/app/react/src/components/DataTable/types.ts
+@@ -40,4 +40,10 @@ export interface DataTableConfig<TRow> {
+ 	onLimitChange: (limit: number) => void
+ 	onSearchChange: (search: string) => void
+ 	onSortChange?: (key: string) => void
++	/**
++	 * Controlled row selection (e.g. backed by a Zustand store). When omitted, the table falls
++	 * back to TanStack's own internal (uncontrolled) row selection state.
++	 */
++	selectedIds?: string[]
++	onSelectionChange?: (ids: string[]) => void
+ }
+diff --git a/packages/app/react/src/lib/format.ts b/packages/app/react/src/lib/format.ts
+index 93ac32788..eae4b74e1 100644
+--- a/packages/app/react/src/lib/format.ts
++++ b/packages/app/react/src/lib/format.ts
+@@ -7,7 +7,10 @@
+ import { type Locale, DEFAULT_LOCALE } from './locale'
+ 
+ /** Money value type: cents + ISO 4217 currency code. Matches the SDK wire shape. */
+-export type Money = { amountCents: number; currency: string }
++export interface Money {
++	amountCents: number
++	currency: string
++}
+ 
+ /** Format a single-currency money value (cents) in the given locale: {1234,'BRL'} -> "R$ 12,34". */
+ export function formatMoney(money: Money, locale: Locale = DEFAULT_LOCALE): string {
+diff --git a/packages/app/react/src/locales/en.json b/packages/app/react/src/locales/en.json
+index 4a150ff1a..c9c4c1426 100644
+--- a/packages/app/react/src/locales/en.json
++++ b/packages/app/react/src/locales/en.json
+@@ -136,6 +136,16 @@
+ 		"itemsPerPage": "items per page"
+ 	},
+ 	"enums": {
++		"CampaignStatus": {
++			"ACTIVE": "Active",
++			"ARCHIVED": "Archived",
++			"PAUSED": "Paused"
++		},
++		"MarketingPlatform": {
++			"GOOGLE_ADS": "Google Ads",
++			"META": "Meta",
++			"TIKTOK": "TikTok"
++		},
+ 		"CurrencyCode": {
+ 			"AED": "UAE Dirham (AED)",
+ 			"ALL": "Albanian Lek (ALL)",
+@@ -318,6 +328,35 @@
+ 		"WEBHOOK_SIGNATURE_INVALID": "Invalid webhook signature.",
+ 		"WEBHOOK_SOURCE_UNKNOWN": "Unknown webhook source."
+ 	},
++	"marketing": {
++		"campaigns": {
++			"breadcrumb": "Ad Campaigns",
++			"title": "Ad Campaigns",
++			"subtitle": "Track spend and status across your ad platforms",
++			"columns": {
++				"name": "Campaign",
++				"platform": "Platform",
++				"status": "Status",
++				"spend": "Spend",
++				"createdAt": "Created"
++			},
++			"toolbar": {
++				"searchPlaceholder": "Search campaigns...",
++				"platformFilterAriaLabel": "Filter by platform",
++				"allPlatforms": "All platforms"
++			},
++			"selection": {
++				"selectedCount_one": "{{count}} campaign selected",
++				"selectedCount_other": "{{count}} campaigns selected",
++				"clearSelection": "Clear selection"
++			},
++			"empty": {
++				"title": "No campaigns found",
++				"description": "Try adjusting your search or platform filter."
++			},
++			"loadError": "Failed to load ad campaigns"
++		}
++	},
+ 	"nav": {
+ 		"account": "My Account",
+ 		"comingSoon": "Coming soon",
+diff --git a/packages/app/react/src/locales/pt.json b/packages/app/react/src/locales/pt.json
+index e5dbb9fe6..c084ec40f 100644
+--- a/packages/app/react/src/locales/pt.json
++++ b/packages/app/react/src/locales/pt.json
+@@ -136,6 +136,16 @@
+ 		"itemsPerPage": "itens por página"
+ 	},
+ 	"enums": {
++		"CampaignStatus": {
++			"ACTIVE": "Ativa",
++			"ARCHIVED": "Arquivada",
++			"PAUSED": "Pausada"
++		},
++		"MarketingPlatform": {
++			"GOOGLE_ADS": "Google Ads",
++			"META": "Meta",
++			"TIKTOK": "TikTok"
++		},
+ 		"CurrencyCode": {
+ 			"AED": "Dirham (AED)",
+ 			"ALL": "Lek albanês (ALL)",
+@@ -318,6 +328,35 @@
+ 		"WEBHOOK_SIGNATURE_INVALID": "Assinatura de webhook inválida.",
+ 		"WEBHOOK_SOURCE_UNKNOWN": "Origem de webhook desconhecida."
+ 	},
++	"marketing": {
++		"campaigns": {
++			"breadcrumb": "Campanhas de Anúncios",
++			"title": "Campanhas de Anúncios",
++			"subtitle": "Acompanhe gasto e status entre suas plataformas de anúncios",
++			"columns": {
++				"name": "Campanha",
++				"platform": "Plataforma",
++				"status": "Status",
++				"spend": "Gasto",
++				"createdAt": "Criada em"
++			},
++			"toolbar": {
++				"searchPlaceholder": "Buscar campanhas...",
++				"platformFilterAriaLabel": "Filtrar por plataforma",
++				"allPlatforms": "Todas as plataformas"
++			},
++			"selection": {
++				"selectedCount_one": "{{count}} campanha selecionada",
++				"selectedCount_other": "{{count}} campanhas selecionadas",
++				"clearSelection": "Limpar seleção"
++			},
++			"empty": {
++				"title": "Nenhuma campanha encontrada",
++				"description": "Tente ajustar a busca ou o filtro de plataforma."
++			},
++			"loadError": "Falha ao carregar campanhas de anúncios"
++		}
++	},
+ 	"nav": {
+ 		"account": "Minha Conta",
+ 		"comingSoon": "Em breve",
+diff --git a/packages/app/react/src/routeTree.gen.ts b/packages/app/react/src/routeTree.gen.ts
+index 067261b69..8ebb717df 100644
+--- a/packages/app/react/src/routeTree.gen.ts
++++ b/packages/app/react/src/routeTree.gen.ts
+@@ -16,6 +16,7 @@ import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+ import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+ import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+ import { Route as appSettingsAccountIndexRouteImport } from './routes/(app)/settings/account/index'
++import { Route as appMarketingCampaignsIndexRouteImport } from './routes/(app)/marketing/campaigns/index'
+ 
+ const appRouteRoute = appRouteRouteImport.update({
+   id: '/(app)',
+@@ -51,6 +52,12 @@ const appSettingsAccountIndexRoute = appSettingsAccountIndexRouteImport.update({
+   path: '/settings/account/',
+   getParentRoute: () => appRouteRoute,
+ } as any)
++const appMarketingCampaignsIndexRoute =
++  appMarketingCampaignsIndexRouteImport.update({
++    id: '/marketing/campaigns/',
++    path: '/marketing/campaigns/',
++    getParentRoute: () => appRouteRoute,
++  } as any)
+ 
+ export interface FileRoutesByFullPath {
+   '/': typeof IndexRoute
+@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+   '/dashboard/': typeof appDashboardIndexRoute
++  '/marketing/campaigns/': typeof appMarketingCampaignsIndexRoute
+   '/settings/account/': typeof appSettingsAccountIndexRoute
+ }
+ export interface FileRoutesByTo {
+@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
+   '/sign-in': typeof SignInIndexRoute
+   '/sign-up': typeof SignUpIndexRoute
+   '/dashboard': typeof appDashboardIndexRoute
++  '/marketing/campaigns': typeof appMarketingCampaignsIndexRoute
+   '/settings/account': typeof appSettingsAccountIndexRoute
+ }
+ export interface FileRoutesById {
+@@ -76,6 +85,7 @@ export interface FileRoutesById {
+   '/sign-in/': typeof SignInIndexRoute
+   '/sign-up/': typeof SignUpIndexRoute
+   '/(app)/dashboard/': typeof appDashboardIndexRoute
++  '/(app)/marketing/campaigns/': typeof appMarketingCampaignsIndexRoute
+   '/(app)/settings/account/': typeof appSettingsAccountIndexRoute
+ }
+ export interface FileRouteTypes {
+@@ -86,6 +96,7 @@ export interface FileRouteTypes {
+     | '/sign-in/'
+     | '/sign-up/'
+     | '/dashboard/'
++    | '/marketing/campaigns/'
+     | '/settings/account/'
+   fileRoutesByTo: FileRoutesByTo
+   to:
+@@ -94,6 +105,7 @@ export interface FileRouteTypes {
+     | '/sign-in'
+     | '/sign-up'
+     | '/dashboard'
++    | '/marketing/campaigns'
+     | '/settings/account'
+   id:
+     | '__root__'
+@@ -103,6 +115,7 @@ export interface FileRouteTypes {
+     | '/sign-in/'
+     | '/sign-up/'
+     | '/(app)/dashboard/'
++    | '/(app)/marketing/campaigns/'
+     | '/(app)/settings/account/'
+   fileRoutesById: FileRoutesById
+ }
+@@ -165,16 +178,25 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof appSettingsAccountIndexRouteImport
+       parentRoute: typeof appRouteRoute
+     }
++    '/(app)/marketing/campaigns/': {
++      id: '/(app)/marketing/campaigns/'
++      path: '/marketing/campaigns'
++      fullPath: '/marketing/campaigns/'
++      preLoaderRoute: typeof appMarketingCampaignsIndexRouteImport
++      parentRoute: typeof appRouteRoute
++    }
+   }
+ }
+ 
+ interface appRouteRouteChildren {
+   appDashboardIndexRoute: typeof appDashboardIndexRoute
++  appMarketingCampaignsIndexRoute: typeof appMarketingCampaignsIndexRoute
+   appSettingsAccountIndexRoute: typeof appSettingsAccountIndexRoute
+ }
+ 
+ const appRouteRouteChildren: appRouteRouteChildren = {
+   appDashboardIndexRoute: appDashboardIndexRoute,
++  appMarketingCampaignsIndexRoute: appMarketingCampaignsIndexRoute,
+   appSettingsAccountIndexRoute: appSettingsAccountIndexRoute,
+ }
+ 
+@@ -192,13 +214,3 @@ const rootRouteChildren: RootRouteChildren = {
+ export const routeTree = rootRouteImport
+   ._addFileChildren(rootRouteChildren)
+   ._addFileTypes<FileRouteTypes>()
+-
+-import type { getRouter } from './router.tsx'
+-import type { startInstance } from './start.ts'
+-declare module '@tanstack/react-start' {
+-  interface Register {
+-    ssr: true
+-    router: Awaited<ReturnType<typeof getRouter>>
+-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+-  }
+-}
+diff --git a/packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx b/packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx
+new file mode 100644
+index 000000000..7323b91cb
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx
+@@ -0,0 +1,188 @@
++import { useMemo, type ComponentProps } from 'react'
++import { getRouteApi } from '@tanstack/react-router'
++import { useTranslation } from 'react-i18next'
++import type { VariantProps } from 'class-variance-authority'
++import { IconDatabaseOff } from '@tabler/icons-react'
++
++import {
++	useListProductAdCampaigns,
++	MarketingPlatformEnum,
++	CampaignStatusEnum,
++	type CampaignStatus,
++	type MarketingPlatform,
++} from '@template/client-typescript/typescript'
++import { useLocale, useMoney } from '@/hooks'
++import { DataTable, DataTableContent, DataTableSearch, DataTablePagination, type ColumnDef } from '@/components/DataTable'
++import { Badge, badgeVariants } from '@/components/ui/badge'
++import { Button } from '@/components/ui/button'
++import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
++import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
++import { cn } from '@/lib/utils'
++import { useCampaignSelectionStore } from '../../-stores/useCampaignSelectionStore'
++import { CampaignSortOrderEnum, type CampaignItem } from '../..'
++
++const routeApi = getRouteApi('/(app)/marketing/campaigns/')
++
++type BadgeVariant = VariantProps<typeof badgeVariants>['variant']
++
++const CAMPAIGN_STATUS_VARIANT: Record<CampaignStatus, BadgeVariant> = {
++	[CampaignStatusEnum.ACTIVE]: 'success',
++	[CampaignStatusEnum.PAUSED]: 'warning',
++	[CampaignStatusEnum.ARCHIVED]: 'secondary',
++}
++
++const PLATFORM_FILTER_ALL = 'ALL' as const
++const PLATFORMS = Object.values(MarketingPlatformEnum)
++
++export function CampaignTableSection({ className, ...props }: ComponentProps<'div'>) {
++	const { t } = useTranslation()
++	const locale = useLocale()
++	const formatMoney = useMoney()
++	const search = routeApi.useSearch()
++	const navigate = routeApi.useNavigate()
++
++	const selectedIds = useCampaignSelectionStore(s => s.selectedIds)
++	const selectAll = useCampaignSelectionStore(s => s.selectAll)
++	const clearSelection = useCampaignSelectionStore(s => s.clearSelection)
++
++	const { data, isPending, isError } = useListProductAdCampaigns({
++		page: search.page,
++		limit: search.limit,
++		search: search.search,
++		platform: search.platform,
++	})
++
++	const columns: ColumnDef<CampaignItem>[] = useMemo(
++		() => [
++			{
++				id: 'name',
++				accessorKey: 'name',
++				header: t('marketing.campaigns.columns.name'),
++				meta: { sortKey: 'name' },
++			},
++			{
++				id: 'platform',
++				accessorKey: 'platform',
++				header: t('marketing.campaigns.columns.platform'),
++				cell: ({ getValue }) => t(`enums.MarketingPlatform.${getValue<MarketingPlatform>()}`),
++			},
++			{
++				id: 'status',
++				accessorKey: 'status',
++				header: t('marketing.campaigns.columns.status'),
++				cell: ({ getValue }) => {
++					const status = getValue<CampaignStatus>()
++					return (
++						<Badge variant={CAMPAIGN_STATUS_VARIANT[status]}>{t(`enums.CampaignStatus.${status}`)}</Badge>
++					)
++				},
++			},
++			{
++				id: 'spend',
++				accessorKey: 'spend',
++				header: t('marketing.campaigns.columns.spend'),
++				meta: { align: 'right', sortKey: 'spend' },
++				cell: ({ row }) => formatMoney(row.original.spend),
++			},
++			{
++				id: 'createdAt',
++				accessorKey: 'createdAt',
++				header: t('marketing.campaigns.columns.createdAt'),
++				cell: ({ getValue }) => new Date(getValue<string>()).toLocaleDateString(locale),
++			},
++		],
++		[t, locale, formatMoney],
++	)
++
++	return (
++		<div className={cn('flex flex-col gap-4', className)} {...props}>
++			{selectedIds.length > 0 && (
++				<div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/40 px-4 py-2">
++					<span className="text-sm text-muted-foreground">{t('marketing.campaigns.selection.selectedCount', { count: selectedIds.length })}</span>
++					<Button variant="outline" size="sm" onClick={clearSelection}>
++						{t('marketing.campaigns.selection.clearSelection')}
++					</Button>
++				</div>
++			)}
++
++			{isError ? (
++				<p className="text-sm text-muted-foreground">{t('marketing.campaigns.loadError')}</p>
++			) : (
++				<DataTable<CampaignItem>
++					columns={columns}
++					getRowId={row => row.id}
++					data={data?.items ?? []}
++					total={data?.total ?? 0}
++					totalPages={data?.totalPages ?? 1}
++					isLoading={isPending}
++					page={search.page}
++					limit={search.limit}
++					search={search.search ?? ''}
++					sortBy={search.sortBy}
++					sortOrder={search.sortOrder}
++					selectedIds={selectedIds}
++					onSelectionChange={selectAll}
++					onPageChange={page => navigate({ search: prev => ({ ...prev, page }) })}
++					onLimitChange={limit => navigate({ search: prev => ({ ...prev, limit, page: 1 }) })}
++					onSearchChange={value => navigate({ search: prev => ({ ...prev, search: value || undefined, page: 1 }) })}
++					onSortChange={key =>
++						navigate({
++							search: prev => ({
++								...prev,
++								sortBy: key,
++								sortOrder: prev.sortOrder === CampaignSortOrderEnum.ASC ? CampaignSortOrderEnum.DESC : CampaignSortOrderEnum.ASC,
++							}),
++						})
++					}
++				>
++					<DataTableContent
++						emptyState={
++							<Empty className="py-12">
++								<EmptyHeader>
++									<EmptyMedia variant="icon">
++										<IconDatabaseOff />
++									</EmptyMedia>
++									<EmptyTitle>{t('marketing.campaigns.empty.title')}</EmptyTitle>
++									<EmptyDescription>{t('marketing.campaigns.empty.description')}</EmptyDescription>
++								</EmptyHeader>
++							</Empty>
++						}
++					>
++						<div className="flex items-center gap-3 p-4">
++							<DataTableSearch placeholder={t('marketing.campaigns.toolbar.searchPlaceholder')} className="max-w-xs" />
++
++							<Select
++								value={search.platform ?? PLATFORM_FILTER_ALL}
++								onValueChange={value =>
++									navigate({
++										search: prev => ({
++											...prev,
++											platform: value == null || value === PLATFORM_FILTER_ALL ? undefined : value,
++											page: 1,
++										}),
++									})
++								}
++							>
++								<SelectTrigger aria-label={t('marketing.campaigns.toolbar.platformFilterAriaLabel')} className="w-48">
++									<SelectValue>
++										{search.platform ? t(`enums.MarketingPlatform.${search.platform}`) : t('marketing.campaigns.toolbar.allPlatforms')}
++									</SelectValue>
++								</SelectTrigger>
++								<SelectContent>
++									<SelectItem value={PLATFORM_FILTER_ALL}>{t('marketing.campaigns.toolbar.allPlatforms')}</SelectItem>
++									{PLATFORMS.map(platform => (
++										<SelectItem key={platform} value={platform}>
++											{t(`enums.MarketingPlatform.${platform}`)}
++										</SelectItem>
++									))}
++								</SelectContent>
++							</Select>
++						</div>
++					</DataTableContent>
++
++					<DataTablePagination />
++				</DataTable>
++			)}
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts b/packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts
+new file mode 100644
+index 000000000..f103600e5
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts
+@@ -0,0 +1,24 @@
++import { create } from 'zustand'
++
++interface CampaignSelectionState {
++	selectedIds: string[]
++}
++
++interface CampaignSelectionActions {
++	toggleSelection: (id: string) => void
++	selectAll: (ids: string[]) => void
++	clearSelection: () => void
++}
++
++type CampaignSelectionStore = CampaignSelectionState & CampaignSelectionActions
++
++export const useCampaignSelectionStore = create<CampaignSelectionStore>()(set => ({
++	selectedIds: [],
++
++	toggleSelection: id =>
++		set(state => ({
++			selectedIds: state.selectedIds.includes(id) ? state.selectedIds.filter(i => i !== id) : [...state.selectedIds, id],
++		})),
++	selectAll: ids => set({ selectedIds: ids }),
++	clearSelection: () => set({ selectedIds: [] }),
++}))
+diff --git a/packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx b/packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx
+new file mode 100644
+index 000000000..dd4a3708d
+--- /dev/null
++++ b/packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx
+@@ -0,0 +1,48 @@
++import { createFileRoute } from '@tanstack/react-router'
++import { z } from 'zod'
++import { useTranslation } from 'react-i18next'
++
++import { listProductAdCampaignsQueryParamsSchema, type ListProductAdCampaignsQueryResponse } from '@template/client-typescript/typescript'
++import { zodValidator } from '@/lib/zod-validator'
++import { RouteError } from '@/components/RouteError'
++import { CampaignTableSection } from './-components/CampaignTableSection'
++
++export type CampaignItem = ListProductAdCampaignsQueryResponse['items'][number]
++
++export const CampaignSortOrderEnum = {
++	ASC: 'ASC',
++	DESC: 'DESC',
++} as const
++
++export type CampaignSortOrder = (typeof CampaignSortOrderEnum)[keyof typeof CampaignSortOrderEnum]
++
++const campaignsSearchSchema = listProductAdCampaignsQueryParamsSchema.and(
++	z.object({
++		sortBy: z.string().optional().default('name'),
++		sortOrder: z.enum(CampaignSortOrderEnum).optional().default(CampaignSortOrderEnum.DESC),
++	}),
++)
++
++export type CampaignsSearchParams = z.infer<typeof campaignsSearchSchema>
++
++export const Route = createFileRoute('/(app)/marketing/campaigns/')({
++	staticData: { breadcrumb: 'Campanhas de Anúncios' },
++	validateSearch: zodValidator(campaignsSearchSchema),
++	errorComponent: RouteError,
++	component: RouteComponent,
++})
++
++function RouteComponent() {
++	const { t } = useTranslation()
++
++	return (
++		<div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 flex flex-col gap-6">
++			<header className="flex flex-col gap-1">
++				<h1 className="text-2xl font-bold text-foreground">{t('marketing.campaigns.title')}</h1>
++				<p className="text-sm text-muted-foreground">{t('marketing.campaigns.subtitle')}</p>
++			</header>
++
++			<CampaignTableSection />
++		</div>
++	)
++}
+diff --git a/packages/app/react/src/storybook/types.ts b/packages/app/react/src/storybook/types.ts
+index 8f773ed98..742e9f081 100644
+--- a/packages/app/react/src/storybook/types.ts
++++ b/packages/app/react/src/storybook/types.ts
+@@ -14,9 +14,7 @@ export interface RouteParam {
+ /** App-global Zustand state to set up for the story (applied before render via `givenStores`).
+  *  Empty since the Store-tenancy scope was removed with the owner-model collapse — a product with
+  *  app-global client state re-adds its typed keys here (e.g. `theme?: Theme`). */
+-export interface StoresParam {
+-	[key: string]: never
+-}
++export type StoresParam = Record<string, never>
+ 
+ /** The `parameters` block a connected story declares. The index signature keeps Storybook's own
+  *  params (layout, msw, …) assignable while `route`/`stores` stay strongly typed. */
+diff --git a/packages/client/dist/typescript/src/typescript/client/listProductAdCampaigns.ts b/packages/client/dist/typescript/src/typescript/client/listProductAdCampaigns.ts
+new file mode 100644
+index 000000000..f545a56b1
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/client/listProductAdCampaigns.ts
+@@ -0,0 +1,26 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++import fetch from "@template/client-typescript/typescript/_http";
++import type { ListProductAdCampaignsQueryResponse, ListProductAdCampaignsQueryParams } from "../types/ListProductAdCampaigns.ts";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
++
++function getListProductAdCampaignsUrl() {
++  const res = { method: 'GET', url: `/v1/ui/products/ad-campaigns` as const }
++  return res
++}
++
++/**
++ * @description Product ad campaigns list
++ * {@link /v1/ui/products/ad-campaigns}
++ */
++export async function listProductAdCampaigns(params?: ListProductAdCampaignsQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
++  const { client: request = fetch, ...requestConfig } = config
++
++
++
++  const res = await request<ListProductAdCampaignsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : getListProductAdCampaignsUrl().url.toString(), params, ... requestConfig })
++  return res.data
++}
+diff --git a/packages/client/dist/typescript/src/typescript/hooks/useListProductAdCampaigns.ts b/packages/client/dist/typescript/src/typescript/hooks/useListProductAdCampaigns.ts
+new file mode 100644
+index 000000000..85ef5bc97
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/hooks/useListProductAdCampaigns.ts
+@@ -0,0 +1,55 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++import type { ListProductAdCampaignsQueryResponse, ListProductAdCampaignsQueryParams } from "../types/ListProductAdCampaigns.ts";
++import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
++import { listProductAdCampaigns } from "../client/listProductAdCampaigns.ts";
++import { queryOptions, useQuery } from "@tanstack/react-query";
++
++export const listProductAdCampaignsQueryKey = (params?: ListProductAdCampaignsQueryParams) => [{ url: '/v1/ui/products/ad-campaigns' }, ...(params ? [params] : [])] as const
++
++export type ListProductAdCampaignsQueryKey = ReturnType<typeof listProductAdCampaignsQueryKey>
++
++export function listProductAdCampaignsQueryOptions(params?: ListProductAdCampaignsQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
++
++        const queryKey = listProductAdCampaignsQueryKey(params)
++        return queryOptions<ListProductAdCampaignsQueryResponse, ResponseErrorConfig<Error>, ListProductAdCampaignsQueryResponse, typeof queryKey>({
++
++         queryKey,
++         queryFn: async ({ signal }) => {
++            return listProductAdCampaigns(params, { ...config, signal: config.signal ?? signal })
++         },
++        })
++
++}
++
++/**
++ * @description Product ad campaigns list
++ * {@link /v1/ui/products/ad-campaigns}
++ */
++export function useListProductAdCampaigns<TData = ListProductAdCampaignsQueryResponse, TQueryData = ListProductAdCampaignsQueryResponse, TQueryKey extends QueryKey = ListProductAdCampaignsQueryKey>(params?: ListProductAdCampaignsQueryParams, options:
++{
++  query?: Partial<QueryObserverOptions<ListProductAdCampaignsQueryResponse, ResponseErrorConfig<Error>, TData, TQueryData, TQueryKey>> & { client?: QueryClient },
++  client?: Partial<RequestConfig> & { client?: Client }
++}
++ = {}) {
++
++         const { query: queryConfig = {}, client: config = {} } = options ?? {}
++         const { client: queryClient, ...resolvedOptions } = queryConfig
++         const queryKey = resolvedOptions?.queryKey ?? listProductAdCampaignsQueryKey(params)
++
++
++         const query = useQuery({
++          ...listProductAdCampaignsQueryOptions(params, config),
++          ...resolvedOptions,
++          queryKey,
++         } as unknown as QueryObserverOptions, queryClient) as UseQueryResult<TData, ResponseErrorConfig<Error>> & { queryKey: TQueryKey }
++
++         query.queryKey = queryKey as TQueryKey
++
++         return query
++
++}
+diff --git a/packages/client/dist/typescript/src/typescript/index.ts b/packages/client/dist/typescript/src/typescript/index.ts
+index 881527302..ba7aac11a 100644
+--- a/packages/client/dist/typescript/src/typescript/index.ts
++++ b/packages/client/dist/typescript/src/typescript/index.ts
+@@ -29,6 +29,7 @@ export type { ListPaymentMethodsQueryKey } from "./hooks/useListPaymentMethods.t
+ export type { ListPaymentMethodsSuspenseQueryKey } from "./hooks/useListPaymentMethodsSuspense.ts";
+ export type { ListPlansQueryKey } from "./hooks/useListPlans.ts";
+ export type { ListPlansSuspenseQueryKey } from "./hooks/useListPlansSuspense.ts";
++export type { ListProductAdCampaignsQueryKey } from "./hooks/useListProductAdCampaigns.ts";
+ export type { ListenEventsQueryKey } from "./hooks/useListenEvents.ts";
+ export type { ListenEventsSuspenseQueryKey } from "./hooks/useListenEventsSuspense.ts";
+ export type { MarkNotificationReadMutationKey } from "./hooks/useMarkNotificationRead.ts";
+@@ -59,6 +60,7 @@ export type { ApiErrors, ApiErrorsEnumKey } from "./types/ApiErrors.ts";
+ export type { ApplyQuotaOverride200, ApplyQuotaOverrideMutation, ApplyQuotaOverrideMutationRequest, ApplyQuotaOverrideMutationRequestMeterEnumKey, ApplyQuotaOverrideMutationResponse } from "./types/ApplyQuotaOverride.ts";
+ export type { AuthGet200, AuthGetQuery, AuthGetQueryResponse } from "./types/AuthGet.ts";
+ export type { AuthPost200, AuthPostMutation, AuthPostMutationResponse } from "./types/AuthPost.ts";
++export type { CampaignStatus, CampaignStatusEnumKey } from "./types/CampaignStatus.ts";
+ export type { CancelScheduledDowngrade200, CancelScheduledDowngradeMutation, CancelScheduledDowngradeMutationResponse } from "./types/CancelScheduledDowngrade.ts";
+ export type { CancelSubscription200, CancelSubscriptionMutation, CancelSubscriptionMutationRequest, CancelSubscriptionMutationResponse } from "./types/CancelSubscription.ts";
+ export type { ChangePlan200, ChangePlanMutation, ChangePlanMutationRequest, ChangePlanMutationResponse } from "./types/ChangePlan.ts";
+@@ -82,8 +84,10 @@ export type { ListInvoices200, ListInvoicesQuery, ListInvoicesQueryResponse } fr
+ export type { ListNotifications200, ListNotificationsQuery, ListNotificationsQueryParams, ListNotificationsQueryResponse } from "./types/ListNotifications.ts";
+ export type { ListPaymentMethods200, ListPaymentMethodsQuery, ListPaymentMethodsQueryResponse } from "./types/ListPaymentMethods.ts";
+ export type { ListPlans200, ListPlansQuery, ListPlansQueryResponse } from "./types/ListPlans.ts";
++export type { ListProductAdCampaigns200, ListProductAdCampaignsQuery, ListProductAdCampaignsQueryParams, ListProductAdCampaignsQueryResponse } from "./types/ListProductAdCampaigns.ts";
+ export type { ListenEvents200, ListenEventsQuery, ListenEventsQueryResponse } from "./types/ListenEvents.ts";
+ export type { MarkNotificationRead200, MarkNotificationReadMutation, MarkNotificationReadMutationRequest, MarkNotificationReadMutationResponse } from "./types/MarkNotificationRead.ts";
++export type { MarketingPlatform, MarketingPlatformEnumKey } from "./types/MarketingPlatform.ts";
+ export type { Money } from "./types/Money.ts";
+ export type { NotificationCategory, NotificationCategoryEnumKey } from "./types/NotificationCategory.ts";
+ export type { NotificationOrigin, NotificationOriginEnumKey } from "./types/NotificationOrigin.ts";
+@@ -138,6 +142,7 @@ export { listInvoices } from "./client/listInvoices.ts";
+ export { listNotifications } from "./client/listNotifications.ts";
+ export { listPaymentMethods } from "./client/listPaymentMethods.ts";
+ export { listPlans } from "./client/listPlans.ts";
++export { listProductAdCampaigns } from "./client/listProductAdCampaigns.ts";
+ export { listenEvents } from "./client/listenEvents.ts";
+ export { markNotificationRead } from "./client/markNotificationRead.ts";
+ export { payInvoice } from "./client/payInvoice.ts";
+@@ -254,6 +259,9 @@ export { useListPlans } from "./hooks/useListPlans.ts";
+ export { listPlansSuspenseQueryKey } from "./hooks/useListPlansSuspense.ts";
+ export { listPlansSuspenseQueryOptions } from "./hooks/useListPlansSuspense.ts";
+ export { useListPlansSuspense } from "./hooks/useListPlansSuspense.ts";
++export { listProductAdCampaignsQueryKey } from "./hooks/useListProductAdCampaigns.ts";
++export { listProductAdCampaignsQueryOptions } from "./hooks/useListProductAdCampaigns.ts";
++export { useListProductAdCampaigns } from "./hooks/useListProductAdCampaigns.ts";
+ export { listenEventsQueryKey } from "./hooks/useListenEvents.ts";
+ export { listenEventsQueryOptions } from "./hooks/useListenEvents.ts";
+ export { useListenEvents } from "./hooks/useListenEvents.ts";
+@@ -334,12 +342,14 @@ export { uploadAvatarMutationOptions } from "./hooks/useUploadAvatar.ts";
+ export { useUploadAvatar } from "./hooks/useUploadAvatar.ts";
+ export { ApiErrorsEnum } from "./types/ApiErrors.ts";
+ export { ApplyQuotaOverrideMutationRequestMeterEnum } from "./types/ApplyQuotaOverride.ts";
++export { CampaignStatusEnum } from "./types/CampaignStatus.ts";
+ export { CheckoutIntentEnum } from "./types/CheckoutIntent.ts";
+ export { CurrencyCodeEnum } from "./types/CurrencyCode.ts";
+ export { FcmPlatformEnum } from "./types/FcmPlatform.ts";
+ export { QuotasKeyEnum } from "./types/GetUsage.ts";
+ export { InvoiceStatusEnum } from "./types/InvoiceStatus.ts";
+ export { LanguageEnum } from "./types/Language.ts";
++export { MarketingPlatformEnum } from "./types/MarketingPlatform.ts";
+ export { NotificationCategoryEnum } from "./types/NotificationCategory.ts";
+ export { NotificationOriginEnum } from "./types/NotificationOrigin.ts";
+ export { OwnerKindEnum } from "./types/OwnerKind.ts";
+@@ -356,6 +366,7 @@ export { apiErrorsSchema } from "./zod/apiErrorsSchema.ts";
+ export { applyQuotaOverride200Schema, applyQuotaOverrideMutationRequestSchema, applyQuotaOverrideMutationResponseSchema } from "./zod/applyQuotaOverrideSchema.ts";
+ export { authGet200Schema, authGetQueryResponseSchema } from "./zod/authGetSchema.ts";
+ export { authPost200Schema, authPostMutationResponseSchema } from "./zod/authPostSchema.ts";
++export { campaignStatusSchema } from "./zod/campaignStatusSchema.ts";
+ export { cancelScheduledDowngrade200Schema, cancelScheduledDowngradeMutationResponseSchema } from "./zod/cancelScheduledDowngradeSchema.ts";
+ export { cancelSubscription200Schema, cancelSubscriptionMutationRequestSchema, cancelSubscriptionMutationResponseSchema } from "./zod/cancelSubscriptionSchema.ts";
+ export { changePlan200Schema, changePlanMutationRequestSchema, changePlanMutationResponseSchema } from "./zod/changePlanSchema.ts";
+@@ -379,8 +390,10 @@ export { listInvoices200Schema, listInvoicesQueryResponseSchema } from "./zod/li
+ export { listNotifications200Schema, listNotificationsQueryParamsSchema, listNotificationsQueryResponseSchema } from "./zod/listNotificationsSchema.ts";
+ export { listPaymentMethods200Schema, listPaymentMethodsQueryResponseSchema } from "./zod/listPaymentMethodsSchema.ts";
+ export { listPlans200Schema, listPlansQueryResponseSchema } from "./zod/listPlansSchema.ts";
++export { listProductAdCampaigns200Schema, listProductAdCampaignsQueryParamsSchema, listProductAdCampaignsQueryResponseSchema } from "./zod/listProductAdCampaignsSchema.ts";
+ export { listenEvents200Schema, listenEventsQueryResponseSchema } from "./zod/listenEventsSchema.ts";
+ export { markNotificationRead200Schema, markNotificationReadMutationRequestSchema, markNotificationReadMutationResponseSchema } from "./zod/markNotificationReadSchema.ts";
++export { marketingPlatformSchema } from "./zod/marketingPlatformSchema.ts";
+ export { moneySchema } from "./zod/moneySchema.ts";
+ export { notificationCategorySchema } from "./zod/notificationCategorySchema.ts";
+ export { notificationOriginSchema } from "./zod/notificationOriginSchema.ts";
+diff --git a/packages/client/dist/typescript/src/typescript/types/CampaignStatus.ts b/packages/client/dist/typescript/src/typescript/types/CampaignStatus.ts
+new file mode 100644
+index 000000000..d48187a1d
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/types/CampaignStatus.ts
+@@ -0,0 +1,15 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++
++export const CampaignStatusEnum = {
++    ACTIVE: "ACTIVE",
++    PAUSED: "PAUSED",
++    ARCHIVED: "ARCHIVED"
++} as const;
++
++export type CampaignStatusEnumKey = (typeof CampaignStatusEnum)[keyof typeof CampaignStatusEnum];
++
++export type CampaignStatus = CampaignStatusEnumKey;
+diff --git a/packages/client/dist/typescript/src/typescript/types/ListProductAdCampaigns.ts b/packages/client/dist/typescript/src/typescript/types/ListProductAdCampaigns.ts
+new file mode 100644
+index 000000000..3ecfbd2b2
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/types/ListProductAdCampaigns.ts
+@@ -0,0 +1,81 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++import type { CampaignStatus } from "./CampaignStatus.ts";
++import type { MarketingPlatform } from "./MarketingPlatform.ts";
++import type { Money } from "./Money.ts";
++
++export type ListProductAdCampaignsQueryParams = {
++    /**
++     * @minLength 1
++     * @maxLength 9007199254740991
++     * @default 1
++     * @type integer | undefined
++    */
++    page?: number;
++    /**
++     * @minLength 1
++     * @maxLength 100
++     * @default 10
++     * @type integer | undefined
++    */
++    limit?: number;
++    /**
++     * @type string | undefined
++    */
++    search?: string;
++    /**
++     * @type string | undefined
++    */
++    platform?: MarketingPlatform;
++};
++
++/**
++ * @description Product ad campaigns list
++ */
++export type ListProductAdCampaigns200 = {
++    /**
++     * @type array
++    */
++    items: {
++        /**
++         * @type string, uuid
++        */
++        id: string;
++        /**
++         * @type string
++        */
++        name: string;
++        /**
++         * @type string
++        */
++        platform: MarketingPlatform;
++        /**
++         * @type string
++        */
++        status: CampaignStatus;
++        spend: Money;
++        /**
++         * @type string, date-time
++        */
++        createdAt: string;
++    }[];
++    /**
++     * @type number
++    */
++    total: number;
++    /**
++     * @type number
++    */
++    totalPages: number;
++};
++
++export type ListProductAdCampaignsQueryResponse = ListProductAdCampaigns200;
++
++export type ListProductAdCampaignsQuery = {
++    Response: ListProductAdCampaigns200;
++    QueryParams: ListProductAdCampaignsQueryParams;
++    Errors: any;
++};
+diff --git a/packages/client/dist/typescript/src/typescript/types/MarketingPlatform.ts b/packages/client/dist/typescript/src/typescript/types/MarketingPlatform.ts
+new file mode 100644
+index 000000000..64fdc887e
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/types/MarketingPlatform.ts
+@@ -0,0 +1,15 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++
++export const MarketingPlatformEnum = {
++    META: "META",
++    GOOGLE_ADS: "GOOGLE_ADS",
++    TIKTOK: "TIKTOK"
++} as const;
++
++export type MarketingPlatformEnumKey = (typeof MarketingPlatformEnum)[keyof typeof MarketingPlatformEnum];
++
++export type MarketingPlatform = MarketingPlatformEnumKey;
+diff --git a/packages/client/dist/typescript/src/typescript/zod/campaignStatusSchema.ts b/packages/client/dist/typescript/src/typescript/zod/campaignStatusSchema.ts
+new file mode 100644
+index 000000000..a7b42c296
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/zod/campaignStatusSchema.ts
+@@ -0,0 +1,8 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++import { z } from "zod/v4";
++
++export const campaignStatusSchema = z.enum(["ACTIVE", "PAUSED", "ARCHIVED"])
+diff --git a/packages/client/dist/typescript/src/typescript/zod/listProductAdCampaignsSchema.ts b/packages/client/dist/typescript/src/typescript/zod/listProductAdCampaignsSchema.ts
+new file mode 100644
+index 000000000..408154cb6
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/zod/listProductAdCampaignsSchema.ts
+@@ -0,0 +1,42 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++import { campaignStatusSchema } from "./campaignStatusSchema.ts";
++import { marketingPlatformSchema } from "./marketingPlatformSchema.ts";
++import { moneySchema } from "./moneySchema.ts";
++import { z } from "zod/v4";
++
++export const listProductAdCampaignsQueryParamsSchema = z.object({
++    "page": z.coerce.number().int().min(1).max(9007199254740991).default(1),
++"limit": z.coerce.number().int().min(1).max(100).default(10),
++"search": z.optional(z.string()),
++get "platform"(){
++                return z.optional(marketingPlatformSchema)
++              }
++    })
++
++/**
++ * @description Product ad campaigns list
++ */
++export const listProductAdCampaigns200Schema = z.object({
++    "items": z.array(z.object({
++    "id": z.uuid(),
++"name": z.string(),
++get "platform"(){
++                return marketingPlatformSchema
++              },
++get "status"(){
++                return campaignStatusSchema
++              },
++get "spend"(){
++                return moneySchema
++              },
++"createdAt": z.iso.datetime()
++    })),
++"total": z.number(),
++"totalPages": z.number()
++    })
++
++export const listProductAdCampaignsQueryResponseSchema = z.lazy(() => listProductAdCampaigns200Schema)
+diff --git a/packages/client/dist/typescript/src/typescript/zod/marketingPlatformSchema.ts b/packages/client/dist/typescript/src/typescript/zod/marketingPlatformSchema.ts
+new file mode 100644
+index 000000000..f3cc93c59
+--- /dev/null
++++ b/packages/client/dist/typescript/src/typescript/zod/marketingPlatformSchema.ts
+@@ -0,0 +1,8 @@
++/**
++* Generated by Kubb (https://kubb.dev/).
++* Do not edit manually.
++*/
++
++import { z } from "zod/v4";
++
++export const marketingPlatformSchema = z.enum(["META", "GOOGLE_ADS", "TIKTOK"])

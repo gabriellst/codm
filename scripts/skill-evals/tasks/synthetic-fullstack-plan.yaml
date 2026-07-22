@@ -1,0 +1,108 @@
+id: synthetic-fullstack-plan
+# THE FULL-LOOP STAGE 1 — does the SYSTEM write load-bearing handoffs? Reuses the handoff probe's
+# seeded backend (contracts + procurement BC + Go consumer + regenerated SDK from iter8), but does
+# NOT hand the agent a handoff — instead the agent must PRODUCE the implementation plan for the
+# remaining frontend + e2e, applying /plan + task-breakdown Step 4.5 + PR-28. Graded on whether the
+# plan it writes carries handoffs a fresh worker could execute without re-deriving (the exact thing
+# synthetic-fullstack-handoff already proved executes well at 27/28). Together they close the loop:
+# stage 1 = the system writes the handoff, stage 2 = a fresh agent executes it.
+title: Produce the purchase-orders frontend plan with load-bearing handoffs (backend seeded)
+tier: holdout
+builder: opus
+goldRef: ""
+baseRef: ""
+timeoutMs: 3600000
+prompt: >
+  The supplier purchase-orders BACKEND is already DONE and on disk — contracts (the integration
+  event, the PurchaseOrderStatus enum, the purchase_orders table + migration, both-language
+  bindings), the TS `procurement` bounded context, the Go consumer, and a regenerated SDK exporting
+  hooks/schemas/keys from '@template/client-typescript/typescript'. Your job is NOT to implement —
+  it is to PRODUCE THE IMPLEMENTATION PLAN for the remaining work (the react frontend + the e2e
+  spec) as a fresh planning agent would.
+  READ FIRST: .claude/commands/plan.md (the Task Structure section — every Task carries
+  **Consumes (frozen):** / **Scope fence:** / **Gate:**) and
+  .claude/skills/task-breakdown/SKILL.md (especially Step 4.5 — Handoff Sufficiency). INSPECT the
+  seeded SDK to discover the EXACT identifiers your Tasks will consume — grep
+  packages/client/dist/typescript for `usePurchaseOrder`, `PurchaseOrder`, `purchaseOrder*` to find
+  the real hook/schema/enum/key/event names. Also skim packages/app/react/CLAUDE.md for the
+  frontend canons the plan's deliverables must satisfy.
+  Then WRITE the plan to .plans/purchase-orders-frontend.md following the plan.md Task grammar
+  (`## Task T<N>:`, `**Files to write:**`, `**Agent:**`, `**Depends on:**`, `### Step T<N>.K`).
+  Decompose the frontend+e2e into well-scoped Tasks (e.g. the route shell + data-owning list
+  section, the create/cancel dialog, the realtime subscription, the e2e spec). EVERY non-Phase-0
+  Task MUST carry its load-bearing handoff: **Consumes (frozen):** naming the EXACT SDK identifiers
+  it imports verbatim (`useListPurchaseOrders`, `createPurchaseOrderMutationRequestSchema`,
+  `PurchaseOrderRecordedEventName` — never prose like "the create hook"), **Scope fence:** (DONE
+  elsewhere / OUT to sibling Tasks), and **Gate:** (the exact close-out command). The plan MUST pass
+  `bun scripts/graph/cli/index.ts validate-plan .plans/purchase-orders-frontend.md` (PR-28). Do NOT
+  write any implementation code — produce the PLAN document only. Your final message must state the
+  Task count and confirm validate-plan passed.
+
+axes:
+  - HANDOFF-AUTHORING
+  - PLAN-DECOMPOSITION
+  - SDK-CONSUME
+  - CONTRACT-LOCK
+
+inject: []
+
+# seed agent A's backend half so the planner has a frozen contract + real SDK to plan against
+seedCommands:
+  - "git apply scripts/skill-evals/seeds/synthetic-fullstack-handoff/phases-1-3.patch"
+
+graders:
+  # the plan exists
+  - kind: file-exists
+    spec: ".plans/purchase-orders-frontend.md"
+    id: plan#produced
+  # NO implementation leaked — this is a PLAN-only task (no new route/component tsx written)
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/procurement/**/*.tsx::."
+    id: plan#no-implementation
+  # mechanical handoff gate: the agent's own plan passes PR-28 (no missing-handoff finding)
+  - kind: cmd
+    spec: ".::bun scripts/graph/cli/index.ts validate-plan .plans/purchase-orders-frontend.md 2>&1 | grep -q 'PR-28' && exit 1 || exit 0"
+    id: plan#pr28-clean
+  # structural: the load-bearing handoff fields are present on Tasks
+  - kind: grep-must
+    spec: ".plans/purchase-orders-frontend.md::\\*\\*Consumes \\(frozen\\):\\*\\*"
+    id: plan#has-consumes
+  - kind: grep-must
+    spec: ".plans/purchase-orders-frontend.md::\\*\\*Gate:\\*\\*"
+    id: plan#has-gate
+  - kind: grep-must
+    spec: ".plans/purchase-orders-frontend.md::\\*\\*Scope fence:\\*\\*"
+    id: plan#has-scope-fence
+  # the handoff names REAL frozen identifiers from the seeded SDK, not prose
+  - kind: grep-must
+    spec: ".plans/purchase-orders-frontend.md::useListPurchaseOrders|useCreatePurchaseOrder|createPurchaseOrderMutationRequestSchema|PurchaseOrderRecordedEventName|listPurchaseOrdersQueryKey"
+    id: plan#consumes-exact-identifiers
+  # the semantic gate: are the handoffs genuinely load-bearing?
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect the implementation plan at .plans/purchase-orders-frontend.md. It plans the FRONTEND +
+      E2E of the purchase-orders slice; the backend + SDK are already on disk (inspect
+      packages/client/dist/typescript and packages/api/typescript/src/procurement to verify the
+      identifiers the plan claims to consume actually EXIST). Judge ONE thing: is every non-Phase-0
+      Task a LOAD-BEARING handoff a fresh-context worker could execute WITHOUT re-deriving? PASS
+      only if: (1) each such Task's **Consumes (frozen):** names EXACT SDK identifiers that exist in
+      the seeded backend (e.g. useListPurchaseOrders, createPurchaseOrderMutationRequestSchema,
+      PurchaseOrderRecordedEventName) — NOT prose like "the create hook" or "the list query"; (2)
+      **Scope fence:** and **Gate:** are real and specific (a runnable close-out command, concrete
+      DONE/OUT boundaries); (3) the decomposition is sound — the route shell, the data-owning list
+      section, the create/cancel dialog, the realtime subscription, and the e2e spec are covered as
+      well-scoped Tasks, not one mega-Task and not horizontal layers. FAIL if any dependent Task has
+      a vague/empty handoff, names identifiers that don't exist, or the decomposition is incoherent —
+      and name which Task(s). Judge ONLY the plan's handoff quality + decomposition, not code (there
+      is none).
+    id: judge#handoff-authoring
+
+notes: >-
+  FULL-LOOP STAGE 1 (handoff AUTHORING). Pairs with synthetic-fullstack-handoff (stage 2: a fresh
+  agent EXECUTES a handoff, proven 27/28). Seeds the same iter8 backend via git apply (verified
+  clean); the agent writes a PLAN, not code. Mechanical gate: the agent's plan must pass PR-28
+  (no missing-handoff finding) via validate-plan in-tree (graph rules skip gracefully). Validator
+  note: at HEAD (no seed) plan#produced + all grep-must FAIL = free real estate; plan#no-implementation
+  + plan#pr28-clean pass vacuously at HEAD. RUNNER: AGENT_MODEL=sonnet, timeoutMs 60m (planning is
+  lighter than building), AGENT_RESUMES=2.

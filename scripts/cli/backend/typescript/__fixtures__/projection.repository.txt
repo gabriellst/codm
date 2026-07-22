@@ -1,0 +1,97 @@
+import { injectable } from 'tsyringe-neo'
+import { eq } from 'drizzle-orm'
+import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+import type { Transaction } from '@template/core-typescript'
+// import { messageProjection } from '@template/contracts/db'
+import { MessageProjection, type MessageProjectionProps } from './Message'
+
+/**
+ * Read + projection-write surface for MessageProjection.
+ *
+ * Canonical (mandatory) methods:
+ *   - findByKey: read half of `find → applyEvent → save`
+ *   - save:      write half (upsert by natural key)
+ *   - insertIfNew: replay-safe creation (ON CONFLICT DO NOTHING)
+ *
+ * Atomic ops are EDGE CASES — add one only when a canonical-flow trigger fails:
+ *   • hot-row contention (concurrent writes to the same row)
+ *   • bulk operation (one event mutates N rows)
+ *   • monotonic constraint (only-if-greater)
+ *   • conditional update (requires SQL atomicity)
+ *   • cache-mirror bulk upsert (archetype A / B1)
+ *
+ * Each atomic method should carry a comment naming the trigger that justifies it.
+ */
+export abstract class MessageProjectionRepository {
+	// ── Canonical (always required) ──────────────────────────────────────
+	abstract findByKey(/* key: TODOKey */ key: unknown, tx?: Transaction): Promise<MessageProjection | null>
+	abstract save(projection: MessageProjection, tx?: Transaction): Promise<void>
+	abstract insertIfNew(projection: MessageProjection, tx?: Transaction): Promise<boolean>
+
+	// ── Atomic ops (edge cases — justify each one in a comment) ──────────
+	// abstract markXyzMany(ids: string[], at: Date, tx?: Transaction): Promise<void>
+}
+
+@injectable()
+export class DrizzleMessageProjectionRepository extends MessageProjectionRepository {
+	constructor(private db: DrizzleClient) {
+		super()
+	}
+
+	async findByKey(key: unknown, tx?: DrizzleClient): Promise<MessageProjection | null> {
+		const dbClient = tx ?? this.db
+		const result = await tryCatchAsync(async () => {
+			// const rows = await dbClient.select().from(messageProjection).where(eq(messageProjection.id, key as string)).limit(1)
+			// return rows[0]
+			return undefined
+		})
+		if (!result.success || !result.data) return null
+		return this.toDomain(result.data)
+	}
+
+	async save(projection: MessageProjection, tx?: DrizzleClient): Promise<void> {
+		const dbClient = tx ?? this.db
+		const row = this.toPersistence(projection)
+		// await dbClient.insert(messageProjection).values(row).onConflictDoUpdate({
+		//   target: [messageProjection.id],
+		//   set: { ...row, id: undefined },
+		// })
+	}
+
+	async insertIfNew(projection: MessageProjection, tx?: DrizzleClient): Promise<boolean> {
+		const dbClient = tx ?? this.db
+		const row = this.toPersistence(projection)
+		// const result = await dbClient.insert(messageProjection).values(row).onConflictDoNothing().returning()
+		// return result.length > 0
+		return false
+	}
+
+	private toDomain(row: unknown): MessageProjection {
+		return new MessageProjection(row as MessageProjectionProps)
+	}
+
+	private toPersistence(projection: MessageProjection): unknown {
+		return projection.props
+	}
+}
+
+@injectable()
+export class MockMessageProjectionRepository extends MessageProjectionRepository {
+	private rows = new Map<string, MessageProjectionProps>()
+
+	async findByKey(key: unknown, _tx?: Transaction): Promise<MessageProjection | null> {
+		const row = this.rows.get(String(key))
+		return row ? new MessageProjection(row) : null
+	}
+
+	async save(projection: MessageProjection, _tx?: Transaction): Promise<void> {
+		// this.rows.set(projection.props.id, projection.props)
+	}
+
+	async insertIfNew(projection: MessageProjection, _tx?: Transaction): Promise<boolean> {
+		// const key = projection.props.id
+		// if (this.rows.has(key)) return false
+		// this.rows.set(key, projection.props)
+		return true
+	}
+}

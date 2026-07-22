@@ -1,0 +1,18 @@
+import { Text, View } from 'react-native'
+import { useTranslation } from 'react-i18next'
+import { fs } from '@/lib/tokens'
+
+export default function DevicesSheet() {
+	const { t } = useTranslation()
+	return (
+		<View className="flex-1 px-5 pt-4 pb-6">
+			<Text
+				className="text-fg-0 font-sans-bold text-center mb-2"
+				style={{ fontSize: fs.headerTitle }}
+			>
+				{t('profile.devices.title')}
+			</Text>
+			{/* Implement Devices */}
+		</View>
+	)
+}

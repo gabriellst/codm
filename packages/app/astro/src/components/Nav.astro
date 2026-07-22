@@ -1,0 +1,36 @@
+---
+import { getEntry } from 'astro:content'
+import { getLocale } from '~/i18n'
+import LocaleSwitcher from '~/components/LocaleSwitcher.astro'
+
+const locale = getLocale(Astro.url)
+const entry = await getEntry('landing', `${locale}/landing`)
+const t = entry!.data
+---
+
+<header class="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--background)]/80 px-8 backdrop-blur-md md:px-20">
+	<a href={locale === 'pt' ? '/' : '/en/'} class="flex items-center gap-2.5">
+		<span class="text-lg font-semibold">{t.brand}</span>
+	</a>
+	<div class="flex items-center gap-4">
+		<a
+			href={locale === 'pt' ? '/blog' : '/en/blog'}
+			class="text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+		>
+			Blog
+		</a>
+		<LocaleSwitcher />
+		<a
+			href="/app/sign-in"
+			class="text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+		>
+			{t.signIn}
+		</a>
+		<a
+			href="/app/sign-up"
+			class="inline-flex items-center justify-center rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+		>
+			{t.getStarted}
+		</a>
+	</div>
+</header>
