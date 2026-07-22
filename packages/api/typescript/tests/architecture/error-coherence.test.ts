@@ -39,7 +39,6 @@ const API_SRC = join(import.meta.dir, '..', '..', 'src')
 /** App locale roots measured (not gated) for the `errors.<code>` translation convention. */
 const LOCALE_DIRS = [
 	join(import.meta.dir, '..', '..', '..', '..', 'app', 'react', 'src', 'locales'),
-	join(import.meta.dir, '..', '..', '..', '..', 'app', 'expo', 'locales'),
 ]
 
 /** Strip block + line comments so quoted codes (or apostrophes) inside prose never reach the

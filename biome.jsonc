@@ -25,14 +25,13 @@
 			"packages/api/typescript/scripts/**",
 			"packages/app/astro/src/**",
 			"!!packages/app/astro/src/**/*.astro",
-			"packages/app/expo/@types/**",
-			"packages/app/expo/app/**",
-			"packages/app/expo/components/**",
-			"packages/app/expo/lib/**",
-			"packages/app/expo/*.css",
-			"packages/app/expo/*.js",
-			"packages/app/expo/*.json",
-			"packages/app/expo/*.ts",
+
+
+
+
+
+
+
 			"packages/app/react/src/**",
 			"packages/app/react/.storybook/**",
 			"packages/client/generators/**",

@@ -4,7 +4,6 @@
 		{ "path": "packages/api/typescript" },
 		{ "path": "packages/api/typescript/core" },
 		{ "path": "packages/app/astro" },
-		{ "path": "packages/app/expo" },
 		{ "path": "packages/app/react" },
 		{ "path": "packages/client" },
 		{ "path": "packages/e2e" }

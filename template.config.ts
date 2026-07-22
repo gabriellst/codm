@@ -70,15 +70,6 @@ const WORKSPACES = {
 		nxProject: 'app-react',
 		devServer: 'aggregate',
 	},
-	appExpo: {
-		pkgRoot: 'packages/app/expo',
-		srcRoot: 'packages/app/expo',
-		lang: 'expo',
-		kind: 'frontend',
-		alias: 'expo',
-		nxProject: 'app-expo',
-		devServer: 'standalone',
-	},
 	appAstro: {
 		pkgRoot: 'packages/app/astro',
 		srcRoot: 'packages/app/astro/src',
@@ -169,7 +160,6 @@ export const REPO = {
 		apiTs: WORKSPACES.apiTs.srcRoot,
 		apiGo: WORKSPACES.apiGo.srcRoot,
 		appReact: WORKSPACES.appReact.srcRoot,
-		appExpo: WORKSPACES.appExpo.srcRoot,
 		appAstro: WORKSPACES.appAstro.srcRoot,
 	},
 	// ── STAMP-MANAGED-END: workspaceRoots ──
@@ -181,7 +171,6 @@ export const REPO = {
 		apiTs: WORKSPACES.apiTs.pkgRoot,
 		apiGo: WORKSPACES.apiGo.pkgRoot,
 		appReact: WORKSPACES.appReact.pkgRoot,
-		appExpo: WORKSPACES.appExpo.pkgRoot,
 		appAstro: WORKSPACES.appAstro.pkgRoot,
 		client: WORKSPACES.client.pkgRoot,
 		clientTsDist: `${WORKSPACES.client.pkgRoot}/dist/typescript`,

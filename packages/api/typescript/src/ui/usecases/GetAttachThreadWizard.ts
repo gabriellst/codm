@@ -1,6 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import type { z as zt } from 'zod'
 import { channels, workspaces, threads, remotes, remoteMemberships } from '@codedm/contracts/db'
 import {
 	ChannelKind,
@@ -149,9 +150,9 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 	}
 
 	private async loadContacts(
-		input: this['input'],
+		input: zt.infer<typeof GetAttachThreadWizardInputSchema>,
 		ownerChannelIds: string[],
-	): Promise<{ contacts: this['output']['contacts']; contactsNextCursor: string | null }> {
+	): Promise<{ contacts: zt.infer<typeof GetAttachThreadWizardOutputSchema>['contacts']; contactsNextCursor: string | null }> {
 		if (ownerChannelIds.length === 0) return { contacts: [], contactsNextCursor: null }
 
 		// COALESCE nulls to the epoch so "most recent first" and the keyset stay uniform (null = oldest).
