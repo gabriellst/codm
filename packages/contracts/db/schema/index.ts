@@ -1,7 +1,6 @@
 export * from './auth'
 export * from './infrastructure'
 export * from './owner'
-export * from './activity'
 
 // CodeDM new bounded contexts (Phase-0 contract lock).
 export * from './workspace'

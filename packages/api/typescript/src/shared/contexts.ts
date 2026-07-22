@@ -35,11 +35,11 @@ export interface ContextDecl {
 /**
  * Postgres schemas owned by NON-TS backends (declared intent, same rule as CONTEXTS.pgSchema:
  * a schema exists in contracts because some declared owner claims it). The Go backend owns
- * `activity` (`internal/activity`) and `gateway` (`internal/channel` — BC1, the Channel Gateway
+ * `gateway` (`internal/channel` — BC1, the Channel Gateway
  * read model written only by the Go worker's status projectors). The context-map rail unions this
  * with the TS declarations for its contracts-parity check.
  */
-export const FOREIGN_PGSCHEMAS: readonly string[] = ['activity', 'gateway']
+export const FOREIGN_PGSCHEMAS: readonly string[] = ['gateway']
 
 /**
  * TS-owned Postgres schemas FORWARD-DECLARED by the Phase-0 contract lock: the schema exists in
