@@ -17,8 +17,6 @@
 		"@codedm/app-styles": "workspace:*",
 		"@codedm/client-typescript": "workspace:*",
 		"@dnd-kit/core": "^6.3.1",
-		"@fontsource-variable/newsreader": "^5.2.10",
-		"@fontsource/poppins": "^5.2.7",
 		"@maskito/core": "^5.0.1",
 		"@maskito/kit": "^5.0.1",
 		"@maskito/react": "^5.0.1",

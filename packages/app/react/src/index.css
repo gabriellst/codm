@@ -28,9 +28,13 @@ span {
 }
 
 @theme inline {
-	--font-sans: "Nunito", sans-serif;
-	--font-display: "Nunito", sans-serif;
-	--font-serif: "Newsreader Variable", serif;
+	/* CodeDM type — system/open stacks, no external fetch.
+	   Display renders heavy + uppercase via .heading-display; body is the same clean grotesque.
+	   Mono is load-bearing (paths, slugs, terminal, versions) — it's part of the identity. */
+	--font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-display: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-serif: var(--font-sans);
+	--font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Code", "Roboto Mono", monospace;
 	--color-route-background: var(--route-background);
 	--color-chat-bg: var(--chat-bg);
 	--color-rail-bg: var(--rail-bg);
@@ -119,9 +123,9 @@ span {
 	input,
 	select,
 	textarea {
-		transition-property: color, background-color, border-color, opacity, transform;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 200ms;
+		transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+		transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+		transition-duration: 130ms;
 	}
 	.dark button {
 		color: var(--foreground);
@@ -188,11 +192,22 @@ span {
 }
 
 @layer utilities {
-	/* Display headings */
+	/* CodeDM display type — heavy, uppercase, tight. The "DM YOUR CODEBASE" voice. */
 	.heading-display {
-		font-family: "Nunito", sans-serif;
+		font-family: var(--font-display);
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: -0.02em;
+		line-height: 0.95;
+	}
+
+	/* Eyebrow / section labels — small, uppercase, letter-spaced, muted. */
+	.label-eyebrow {
+		font-size: 0.6875rem;
 		font-weight: 600;
-		letter-spacing: 0.02em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--muted-foreground);
 	}
 
 	/* Premium minimal shadows - very subtle */

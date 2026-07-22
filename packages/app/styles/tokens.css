@@ -1,82 +1,124 @@
-/* Shared design tokens — consumed by @codedm/app-react (index.css) and @codedm/app-astro (global.css).
-   Palette ported from the original product app (hex → oklch). Font: Nunito + Newsreader. */
-@import "@fontsource/nunito/300.css";
-@import "@fontsource/nunito/400.css";
-@import "@fontsource/nunito/500.css";
-@import "@fontsource/nunito/600.css";
-@import "@fontsource/nunito/700.css";
-@import "@fontsource/nunito/800.css";
-@import "@fontsource/nunito/900.css";
-@import "@fontsource-variable/newsreader";
+/* CodeDM design tokens — the product's own identity.
+   Monochrome: near-black / white / light-gray. Black is the sole action color;
+   status is expressed only through small colored dots. Pill-heavy radii, hairline
+   borders, heavy uppercase display type, generous whitespace, subtle/no shadows.
+
+   Consumed by @codedm/app-react (index.css) and @codedm/app-astro (global.css).
+   Fonts are system/open stacks (declared in index.css @theme inline) — no external fetch. */
 
 @theme {
 	--spacing: 0.3rem;
 }
 
 :root {
-	--route-background: oklch(0.98 0 0);
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.188 0.0047 196.76);
+	/* ── Canvas & surfaces ───────────────────────────── */
+	--route-background: oklch(0.975 0 0); /* #f6f6f6 — light-gray page canvas */
+	--background: oklch(1 0 0); /* pure white surfaces/cards */
+	--foreground: oklch(0.18 0 0); /* #1a1a1a — near-black text */
 	--card: var(--background);
 	--card-foreground: var(--foreground);
 	--popover: var(--background);
 	--popover-foreground: var(--foreground);
-	--primary: oklch(0.5099 0.1592 279.14); /* #5656be — BK purple */
-	--primary-foreground: oklch(0.99 0.005 285);
-	--secondary: oklch(0.188 0.0047 196.76);
-	--secondary-foreground: oklch(1 0 0);
-	--muted: oklch(0.967 0.001 286.375);
-	--muted-foreground: oklch(0.552 0.016 285.938);
-	--accent: oklch(0.7 0.12 182);
-	--accent-foreground: oklch(0.98 0.02 166);
-	--destructive: oklch(0.6859 0.2031 24.21); /* #ff5858 */
-	--destructive-foreground: oklch(0.99 0.005 285);
-	--warning: oklch(0.72 0.16 60);
-	--warning-foreground: oklch(0.99 0.005 285);
-	--success: oklch(0.6374 0.1408 156.59); /* #26A467 */
-	--success-foreground: oklch(0.99 0.005 285);
-	--success-bright: oklch(0.7936 0.1741 156.90); /* #37DC8D — vivid green for deltas/emphasis */
-	--success-bright-foreground: oklch(0.2 0.04 157);
-	--info: oklch(0.62 0.17 250);
-	--info-foreground: oklch(0.99 0.005 285);
-	--border: oklch(from var(--foreground) l c h / 0.1);
+
+	/* ── Action (the ONE color) ──────────────────────── */
+	--primary: oklch(0.16 0 0); /* #111 — black pills, sole action color */
+	--primary-foreground: oklch(1 0 0);
+
+	/* ── Neutral surfaces ────────────────────────────── */
+	--secondary: oklch(0.95 0 0); /* #ececec — soft chip / active nav pill */
+	--secondary-foreground: oklch(0.18 0 0);
+	--muted: oklch(0.966 0 0); /* #f2f2f2 — soft badge bg / hover */
+	--muted-foreground: oklch(0.556 0 0); /* #7d7d7d — secondary text */
+	--accent: oklch(0.955 0 0);
+	--accent-foreground: oklch(0.18 0 0);
+
+	/* ── Status hues — used ONLY as small dots / deltas ─ */
+	--success: oklch(0.62 0.15 149);
+	--success-foreground: oklch(0.99 0 0);
+	--success-bright: oklch(0.7 0.17 150);
+	--success-bright-foreground: oklch(0.22 0.05 150);
+	--warning: oklch(0.75 0.15 71);
+	--warning-foreground: oklch(0.22 0 0);
+	--destructive: oklch(0.585 0.2 25);
+	--destructive-foreground: oklch(0.99 0 0);
+	--info: oklch(0.6 0.13 250);
+	--info-foreground: oklch(0.99 0 0);
+
+	/* ── Lines & interaction ─────────────────────────── */
+	--border: oklch(0.912 0 0); /* #e5e5e5 — hairline */
 	--input: var(--border);
-	--ring: oklch(from var(--foreground) l c h / 0.25);
-	--hover: oklch(from var(--foreground) l c h / 0.1);
-	--focus: oklch(from var(--foreground) l c h / 0.15);
-	--brand-purple: oklch(0.5099 0.1592 279.14); /* #5656be */
-	--brand-green: oklch(0.6388 0.1309 157.06);  /* #34a36b */
-	--chart-1: oklch(0.85 0.13 165);
-	--chart-2: oklch(0.77 0.15 163);
-	--chart-3: oklch(0.7 0.15 162);
-	--chart-4: oklch(0.6 0.13 163);
-	--chart-5: oklch(0.51 0.1 166);
-	--radius: 0.6rem;
-	--sidebar: oklch(0.1661 0.0033 196.84); /* #0d0f0f */
-	--sidebar-foreground: oklch(0.97 0.002 285);
-	--sidebar-primary: var(--primary);
-	--sidebar-primary-foreground: var(--primary-foreground);
-	--sidebar-accent: var(--accent);
-	--sidebar-accent-foreground: var(--accent-foreground);
-	--sidebar-border: oklch(from var(--sidebar-foreground) l c h / 0.12);
+	--ring: oklch(from var(--foreground) l c h / 0.35);
+	--hover: oklch(from var(--foreground) l c h / 0.05);
+	--focus: oklch(from var(--foreground) l c h / 0.08);
+
+	/* ── Legacy brand aliases (kept mono so nothing breaks) ─ */
+	--brand-purple: var(--foreground);
+	--brand-green: var(--success);
+
+	/* ── Charts — monochrome ramp (color stays out of data) ─ */
+	--chart-1: oklch(0.2 0 0);
+	--chart-2: oklch(0.38 0 0);
+	--chart-3: oklch(0.55 0 0);
+	--chart-4: oklch(0.72 0 0);
+	--chart-5: oklch(0.86 0 0);
+
+	/* ── Radius — pill-heavy. Base tuned for cards; buttons/badges/inputs go full. ─ */
+	--radius: 1rem; /* 16px card base */
+
+	/* ── Sidebar (light — CodeDM chrome) ─────────────── */
+	--sidebar: oklch(0.975 0 0);
+	--sidebar-foreground: oklch(0.18 0 0);
+	--sidebar-primary: oklch(0.16 0 0);
+	--sidebar-primary-foreground: oklch(1 0 0);
+	--sidebar-accent: oklch(0.93 0 0); /* active nav pill */
+	--sidebar-accent-foreground: oklch(0.18 0 0);
+	--sidebar-border: oklch(0.9 0 0);
 	--sidebar-ring: var(--ring);
 }
 
 .dark {
-	--route-background: oklch(0.18 0.0038 229.248);
-	--background: oklch(0.18495 0.0038 229.248);
-	--foreground: oklch(0.97 0.002 285);
-	--card: oklch(0.22 0.006 285);
+	/* Genuine dark inversion — canvas goes near-black, action pills go white. */
+	--route-background: oklch(0.145 0 0);
+	--background: oklch(0.185 0 0);
+	--foreground: oklch(0.97 0 0);
+	--card: oklch(0.205 0 0);
 	--card-foreground: var(--foreground);
-	--popover: oklch(0.22 0.006 285);
+	--popover: oklch(0.205 0 0);
 	--popover-foreground: var(--foreground);
-	--secondary: oklch(0.97 0.002 285);
-	--secondary-foreground: oklch(0.188 0.0047 196.76);
-	--muted: oklch(0.32 0.008 285);
-	--muted-foreground: oklch(0.78 0.012 285);
-	--border: oklch(from var(--foreground) l c h / 0.12);
-	--input: var(--border);
-	--ring: var(--foreground);
-	--sidebar: oklch(0.1661 0.0033 196.84); /* #0d0f0f */
-	--sidebar-foreground: oklch(0.97 0.002 285);
+
+	--primary: oklch(0.97 0 0); /* white pills */
+	--primary-foreground: oklch(0.16 0 0);
+
+	--secondary: oklch(0.27 0 0);
+	--secondary-foreground: oklch(0.97 0 0);
+	--muted: oklch(0.24 0 0);
+	--muted-foreground: oklch(0.68 0 0);
+	--accent: oklch(0.27 0 0);
+	--accent-foreground: oklch(0.97 0 0);
+
+	--success: oklch(0.72 0.17 150);
+	--success-bright: oklch(0.78 0.18 150);
+	--warning: oklch(0.8 0.15 75);
+	--destructive: oklch(0.65 0.19 25);
+	--info: oklch(0.68 0.14 250);
+
+	--border: oklch(from var(--foreground) l c h / 0.14);
+	--input: oklch(from var(--foreground) l c h / 0.16);
+	--ring: oklch(from var(--foreground) l c h / 0.4);
+	--hover: oklch(from var(--foreground) l c h / 0.08);
+	--focus: oklch(from var(--foreground) l c h / 0.12);
+
+	--chart-1: oklch(0.97 0 0);
+	--chart-2: oklch(0.8 0 0);
+	--chart-3: oklch(0.64 0 0);
+	--chart-4: oklch(0.48 0 0);
+	--chart-5: oklch(0.34 0 0);
+
+	--sidebar: oklch(0.165 0 0);
+	--sidebar-foreground: oklch(0.97 0 0);
+	--sidebar-primary: oklch(0.97 0 0);
+	--sidebar-primary-foreground: oklch(0.16 0 0);
+	--sidebar-accent: oklch(0.26 0 0);
+	--sidebar-accent-foreground: oklch(0.97 0 0);
+	--sidebar-border: oklch(from var(--sidebar-foreground) l c h / 0.12);
 }
