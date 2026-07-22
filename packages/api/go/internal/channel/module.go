@@ -47,6 +47,8 @@ import (
 	"template/api-go/internal/channel/handlers"
 	"template/api-go/internal/channel/projections"
 	"template/api-go/internal/channel/projections/projectors"
+	messagerepo "template/api-go/internal/channel/repositories/message"
+	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/gateway/whatsapp"
 	"template/api-go/internal/channel/services/registry"
@@ -66,12 +68,50 @@ var Module = fx.Module("channel",
 	fx.Provide(projectors.NewConnectedProjector),
 	fx.Provide(projectors.NewDisconnectedProjector),
 
+	// Read-model repos (gateway.remotes / gateway.remote_memberships / gateway.messages).
+	fx.Provide(remoterepo.NewPgRemoteProjectionRepository),
+	fx.Provide(messagerepo.NewPgMessageProjectionRepository),
+
+	// Remote projectors.
+	fx.Provide(projectors.NewRemoteCreatedProjector),
+	fx.Provide(projectors.NewRemoteUpdatedProjector),
+	fx.Provide(projectors.NewRemoteDeletedProjector),
+	fx.Provide(projectors.NewMembershipAddedProjector),
+	fx.Provide(projectors.NewMembershipRemovedProjector),
+	fx.Provide(projectors.NewRemoteOnMessageReceivedProjector),
+	fx.Provide(projectors.NewRemoteOnMessageSentProjector),
+	fx.Provide(projectors.NewRemoteOnMessageDeletedProjector),
+
+	// Message projectors.
+	fx.Provide(projectors.NewMessageReceivedProjector),
+	fx.Provide(projectors.NewMessageSentProjector),
+	fx.Provide(projectors.NewMessageEditedProjector),
+	fx.Provide(projectors.NewMessageDeletedProjector),
+	fx.Provide(projectors.NewMessageDeliveredProjector),
+	fx.Provide(projectors.NewMessageSeenProjector),
+
 	// ── Egress: domain fact → frozen wire integration event (InternalMediator) ──
 	fx.Provide(handlers.NewMessageReceivedEgress),
 	fx.Provide(handlers.NewConnectedEgress),
 	fx.Provide(handlers.NewDisconnectedEgress),
 	fx.Provide(handlers.NewPairingQRUpdatedEgress),
 	fx.Provide(handlers.NewOutboundDeliveredEgress),
+
+	// Read-model egress: rich domain facts → frozen wire integration events.
+	fx.Provide(handlers.NewMessageSentEgress),
+	fx.Provide(handlers.NewMessageEditedEgress),
+	fx.Provide(handlers.NewMessageDeletedEgress),
+	fx.Provide(handlers.NewMessageDeliveredEgress),
+	fx.Provide(handlers.NewMessageSeenEgress),
+	fx.Provide(handlers.NewRemoteCreatedEgress),
+	fx.Provide(handlers.NewRemoteUpdatedEgress),
+	fx.Provide(handlers.NewRemoteDeletedEgress),
+	fx.Provide(handlers.NewMembershipAddedEgress),
+	fx.Provide(handlers.NewMembershipRemovedEgress),
+	fx.Provide(handlers.NewPresenceUpdatedEgress),
+	fx.Provide(handlers.NewChatPresenceUpdatedEgress),
+	fx.Provide(handlers.NewContactsSyncedEgress),
+	fx.Provide(handlers.NewMessagesSyncedEgress),
 
 	// ── Ingress: core delivery command → live session (ExternalMediator) ──
 	fx.Provide(handlers.NewDeliveryRequestedHandler),
@@ -89,6 +129,7 @@ var Module = fx.Module("channel",
 	provideController(controllers.NewListChannelsController),
 
 	fx.Invoke(registerHandlers),
+	fx.Invoke(registerReadModelHandlers),
 	fx.Invoke(registerLifecycleHooks),
 )
 
@@ -137,6 +178,87 @@ func registerHandlers(
 	im.Register(disconnectedProj)
 
 	ext.Register(delivery)
+}
+
+// readModelHandlers collects the read-model projectors + egress bridges so they
+// can be registered without a 28-argument positional signature. Each field is a
+// mediator.DomainEventHandler; fx populates them from the providers above.
+type readModelHandlers struct {
+	fx.In
+
+	IM mediator.InternalMediator
+
+	// Remote projectors (write gateway.remotes / gateway.remote_memberships).
+	RemoteCreated    *projectors.RemoteCreatedProjector
+	RemoteUpdated    *projectors.RemoteUpdatedProjector
+	RemoteDeleted    *projectors.RemoteDeletedProjector
+	MembershipAdded  *projectors.MembershipAddedProjector
+	MembershipRemove *projectors.MembershipRemovedProjector
+	RemoteOnRecv     *projectors.RemoteOnMessageReceivedProjector
+	RemoteOnSent     *projectors.RemoteOnMessageSentProjector
+	RemoteOnDeleted  *projectors.RemoteOnMessageDeletedProjector
+
+	// Message projectors (write gateway.messages).
+	MsgReceived  *projectors.MessageReceivedProjector
+	MsgSent      *projectors.MessageSentProjector
+	MsgEdited    *projectors.MessageEditedProjector
+	MsgDeleted   *projectors.MessageDeletedProjector
+	MsgDelivered *projectors.MessageDeliveredProjector
+	MsgSeen      *projectors.MessageSeenProjector
+
+	// Read-model egress bridges (domain fact → frozen wire).
+	EgMsgSent      *handlers.MessageSentEgress
+	EgMsgEdited    *handlers.MessageEditedEgress
+	EgMsgDeleted   *handlers.MessageDeletedEgress
+	EgMsgDelivered *handlers.MessageDeliveredEgress
+	EgMsgSeen      *handlers.MessageSeenEgress
+	EgRemoteCreate *handlers.RemoteCreatedEgress
+	EgRemoteUpdate *handlers.RemoteUpdatedEgress
+	EgRemoteDelete *handlers.RemoteDeletedEgress
+	EgMemberAdd    *handlers.MembershipAddedEgress
+	EgMemberRemove *handlers.MembershipRemovedEgress
+	EgPresence     *handlers.PresenceUpdatedEgress
+	EgChatPresence *handlers.ChatPresenceUpdatedEgress
+	EgContactsSync *handlers.ContactsSyncedEgress
+	EgMessagesSync *handlers.MessagesSyncedEgress
+}
+
+// registerReadModelHandlers subscribes the read-model projectors and their
+// egress bridges on the InternalMediator (fed by the OutboxDispatcher). The
+// projectors mutate the local read model; the egress bridges publish the frozen
+// wire events. Both fan out from the same domain fact.
+func registerReadModelHandlers(h readModelHandlers) {
+	// Projectors.
+	h.IM.Register(h.RemoteCreated)
+	h.IM.Register(h.RemoteUpdated)
+	h.IM.Register(h.RemoteDeleted)
+	h.IM.Register(h.MembershipAdded)
+	h.IM.Register(h.MembershipRemove)
+	h.IM.Register(h.RemoteOnRecv)
+	h.IM.Register(h.RemoteOnSent)
+	h.IM.Register(h.RemoteOnDeleted)
+	h.IM.Register(h.MsgReceived)
+	h.IM.Register(h.MsgSent)
+	h.IM.Register(h.MsgEdited)
+	h.IM.Register(h.MsgDeleted)
+	h.IM.Register(h.MsgDelivered)
+	h.IM.Register(h.MsgSeen)
+
+	// Egress bridges.
+	h.IM.Register(h.EgMsgSent)
+	h.IM.Register(h.EgMsgEdited)
+	h.IM.Register(h.EgMsgDeleted)
+	h.IM.Register(h.EgMsgDelivered)
+	h.IM.Register(h.EgMsgSeen)
+	h.IM.Register(h.EgRemoteCreate)
+	h.IM.Register(h.EgRemoteUpdate)
+	h.IM.Register(h.EgRemoteDelete)
+	h.IM.Register(h.EgMemberAdd)
+	h.IM.Register(h.EgMemberRemove)
+	h.IM.Register(h.EgPresence)
+	h.IM.Register(h.EgChatPresence)
+	h.IM.Register(h.EgContactsSync)
+	h.IM.Register(h.EgMessagesSync)
 }
 
 // registerLifecycleHooks restores and tears down live gateway sessions across
