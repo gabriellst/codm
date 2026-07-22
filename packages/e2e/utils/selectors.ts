@@ -1,5 +1,5 @@
 import type { Page, Locator } from 'playwright'
-import type { FileRouteTypes } from '../../app/react/src/routeTree.gen'
+import type { FileRouteTypes } from './app-routes'
 
 type AppRoute = FileRouteTypes['to']
 

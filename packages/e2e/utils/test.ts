@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test'
-import type { FileRouteTypes } from '../../app/react/src/routeTree.gen'
+import type { FileRouteTypes } from './app-routes'
 import { createNetworkLogger } from './diagnostics'
 import { givenFreshUser } from './given'
 
