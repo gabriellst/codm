@@ -96,7 +96,7 @@ describe('R3 no-cross-context-entity-imports', () => {
 	})
 
 	test('fires on relative cross-context entity import', () => {
-		const r = checkFile(path, `import { Invoice } from '../../billing/entities/Invoice'\n`)
+		const r = checkFile(path, `import { Owner } from '../../owner/entities/Owner'\n`)
 		expect(ruleIds(r)).toEqual(['R3'])
 	})
 
@@ -199,15 +199,6 @@ describe('R6 middleware-no-drizzleclient-injection', () => {
 	test('clean: repository injection in middleware is fine', () => {
 		const r = checkFile(path, `import { StoreMembershipRepository } from '../repositories/StoreMembershipRepository'\n`)
 		expect(r.findings).toEqual([])
-	})
-
-	test('exception: AuthAccountMiddleware bootstrap carve-out is suppressed', () => {
-		const r = checkFile(
-			'packages/api/typescript/src/auth/middlewares/AuthAccountMiddleware.ts',
-			`import { BetterAuth, DrizzleClient } from '@template/core-typescript'\n`,
-		)
-		expect(r.findings).toEqual([])
-		expect(r.suppressed.map(f => f.ruleId)).toEqual(['R6'])
 	})
 })
 

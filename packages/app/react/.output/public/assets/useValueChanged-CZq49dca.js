@@ -1,1 +1,0 @@
-import{c as s,r as a,i as r,k as n}from"./index-D9aBhbqu.js";const u=[["path",{d:"M5 12l5 5l10 -10",key:"svg-0"}]],k=s("outline","check","Check",u);function C(e,o){const c=a.useRef(e),t=r(o);n(()=>{c.current!==e&&t(c.current)},[e,t]),n(()=>{c.current=e},[e])}export{k as I,C as u};

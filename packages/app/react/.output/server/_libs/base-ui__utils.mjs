@@ -970,6 +970,13 @@ function useEnhancedClickHandler(handler) {
     onPointerDown: handlePointerDown
   };
 }
+function useOnFirstRender(fn) {
+  const ref = reactExports.useRef(true);
+  if (ref.current) {
+    ref.current = false;
+    fn();
+  }
+}
 function useControlled({
   controlled,
   default: defaultProp,
@@ -988,13 +995,6 @@ function useControlled({
   }, []);
   return [value, setValueIfUncontrolled];
 }
-function useOnFirstRender(fn) {
-  const ref = reactExports.useRef(true);
-  if (ref.current) {
-    ref.current = false;
-    fn();
-  }
-}
 function isMouseWithinBounds(event) {
   const targetRect = event.currentTarget.getBoundingClientRect();
   const isWithinBounds = targetRect.top + 1 <= event.clientY && event.clientY <= targetRect.bottom - 1 && targetRect.left + 1 <= event.clientX && event.clientX <= targetRect.right - 1;
@@ -1002,8 +1002,8 @@ function isMouseWithinBounds(event) {
 }
 export {
   AnimationFrame as A,
-  useStore as B,
-  useOnFirstRender as C,
+  useOnFirstRender as B,
+  visuallyHiddenInput as C,
   isWebKit as D,
   EMPTY_OBJECT as E,
   isMouseWithinBounds as F,
@@ -1036,5 +1036,5 @@ export {
   useOnMount as w,
   ownerDocument as x,
   useControlled as y,
-  visuallyHiddenInput as z
+  useStore as z
 };

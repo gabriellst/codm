@@ -95,21 +95,6 @@ function cleanRegex(source) {
   const end = source.endsWith("$") ? source.length - 1 : source.length;
   return source.slice(start, end);
 }
-function floatSafeRemainder(val, step) {
-  const valDecCount = (val.toString().split(".")[1] || "").length;
-  const stepString = step.toString();
-  let stepDecCount = (stepString.split(".")[1] || "").length;
-  if (stepDecCount === 0 && /\d?e-\d?/.test(stepString)) {
-    const match = stepString.match(/\d?e-(\d?)/);
-    if (match?.[1]) {
-      stepDecCount = Number.parseInt(match[1]);
-    }
-  }
-  const decCount = valDecCount > stepDecCount ? valDecCount : stepDecCount;
-  const valInt = Number.parseInt(val.toFixed(decCount).replace(".", ""));
-  const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
-  return valInt % stepInt / 10 ** decCount;
-}
 const EVALUATING = /* @__PURE__ */ Symbol("evaluating");
 function defineLazy(object2, key, getter) {
   let value = void 0;
@@ -226,13 +211,6 @@ function optionalKeys(shape) {
     return shape[k]._zod.optin === "optional" && shape[k]._zod.optout === "optional";
   });
 }
-const NUMBER_FORMAT_RANGES = {
-  safeint: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
-  int32: [-2147483648, 2147483647],
-  uint32: [0, 4294967295],
-  float32: [-34028234663852886e22, 34028234663852886e22],
-  float64: [-Number.MAX_VALUE, Number.MAX_VALUE]
-};
 function pick(schema, mask) {
   const currDef = schema._zod.def;
   const checks = currDef.checks;
@@ -645,8 +623,6 @@ const string$1 = (params) => {
   const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
   return new RegExp(`^${regex}$`);
 };
-const integer = /^-?\d+$/;
-const number$2 = /^-?\d+(?:\.\d+)?$/;
 const boolean$1 = /^(?:true|false)$/i;
 const lowercase = /^[^A-Z]*$/;
 const uppercase = /^[^a-z]*$/;
@@ -655,168 +631,6 @@ const $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
   (_a2 = inst._zod).onattach ?? (_a2.onattach = []);
-});
-const numericOriginMap = {
-  number: "number",
-  bigint: "bigint",
-  object: "date"
-};
-const $ZodCheckLessThan = /* @__PURE__ */ $constructor("$ZodCheckLessThan", (inst, def) => {
-  $ZodCheck.init(inst, def);
-  const origin = numericOriginMap[typeof def.value];
-  inst._zod.onattach.push((inst2) => {
-    const bag = inst2._zod.bag;
-    const curr = (def.inclusive ? bag.maximum : bag.exclusiveMaximum) ?? Number.POSITIVE_INFINITY;
-    if (def.value < curr) {
-      if (def.inclusive)
-        bag.maximum = def.value;
-      else
-        bag.exclusiveMaximum = def.value;
-    }
-  });
-  inst._zod.check = (payload) => {
-    if (def.inclusive ? payload.value <= def.value : payload.value < def.value) {
-      return;
-    }
-    payload.issues.push({
-      origin,
-      code: "too_big",
-      maximum: typeof def.value === "object" ? def.value.getTime() : def.value,
-      input: payload.value,
-      inclusive: def.inclusive,
-      inst,
-      continue: !def.abort
-    });
-  };
-});
-const $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", (inst, def) => {
-  $ZodCheck.init(inst, def);
-  const origin = numericOriginMap[typeof def.value];
-  inst._zod.onattach.push((inst2) => {
-    const bag = inst2._zod.bag;
-    const curr = (def.inclusive ? bag.minimum : bag.exclusiveMinimum) ?? Number.NEGATIVE_INFINITY;
-    if (def.value > curr) {
-      if (def.inclusive)
-        bag.minimum = def.value;
-      else
-        bag.exclusiveMinimum = def.value;
-    }
-  });
-  inst._zod.check = (payload) => {
-    if (def.inclusive ? payload.value >= def.value : payload.value > def.value) {
-      return;
-    }
-    payload.issues.push({
-      origin,
-      code: "too_small",
-      minimum: typeof def.value === "object" ? def.value.getTime() : def.value,
-      input: payload.value,
-      inclusive: def.inclusive,
-      inst,
-      continue: !def.abort
-    });
-  };
-});
-const $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
-  $ZodCheck.init(inst, def);
-  inst._zod.onattach.push((inst2) => {
-    var _a2;
-    (_a2 = inst2._zod.bag).multipleOf ?? (_a2.multipleOf = def.value);
-  });
-  inst._zod.check = (payload) => {
-    if (typeof payload.value !== typeof def.value)
-      throw new Error("Cannot mix number and bigint in multiple_of check.");
-    const isMultiple = typeof payload.value === "bigint" ? payload.value % def.value === BigInt(0) : floatSafeRemainder(payload.value, def.value) === 0;
-    if (isMultiple)
-      return;
-    payload.issues.push({
-      origin: typeof payload.value,
-      code: "not_multiple_of",
-      divisor: def.value,
-      input: payload.value,
-      inst,
-      continue: !def.abort
-    });
-  };
-});
-const $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat", (inst, def) => {
-  $ZodCheck.init(inst, def);
-  def.format = def.format || "float64";
-  const isInt = def.format?.includes("int");
-  const origin = isInt ? "int" : "number";
-  const [minimum, maximum] = NUMBER_FORMAT_RANGES[def.format];
-  inst._zod.onattach.push((inst2) => {
-    const bag = inst2._zod.bag;
-    bag.format = def.format;
-    bag.minimum = minimum;
-    bag.maximum = maximum;
-    if (isInt)
-      bag.pattern = integer;
-  });
-  inst._zod.check = (payload) => {
-    const input = payload.value;
-    if (isInt) {
-      if (!Number.isInteger(input)) {
-        payload.issues.push({
-          expected: origin,
-          format: def.format,
-          code: "invalid_type",
-          continue: false,
-          input,
-          inst
-        });
-        return;
-      }
-      if (!Number.isSafeInteger(input)) {
-        if (input > 0) {
-          payload.issues.push({
-            input,
-            code: "too_big",
-            maximum: Number.MAX_SAFE_INTEGER,
-            note: "Integers must be within the safe integer range.",
-            inst,
-            origin,
-            inclusive: true,
-            continue: !def.abort
-          });
-        } else {
-          payload.issues.push({
-            input,
-            code: "too_small",
-            minimum: Number.MIN_SAFE_INTEGER,
-            note: "Integers must be within the safe integer range.",
-            inst,
-            origin,
-            inclusive: true,
-            continue: !def.abort
-          });
-        }
-        return;
-      }
-    }
-    if (input < minimum) {
-      payload.issues.push({
-        origin: "number",
-        input,
-        code: "too_small",
-        minimum,
-        inclusive: true,
-        inst,
-        continue: !def.abort
-      });
-    }
-    if (input > maximum) {
-      payload.issues.push({
-        origin: "number",
-        input,
-        code: "too_big",
-        maximum,
-        inclusive: true,
-        inst,
-        continue: !def.abort
-      });
-    }
-  };
 });
 const $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
   var _a2;
@@ -1476,34 +1290,6 @@ const $ZodJWT = /* @__PURE__ */ $constructor("$ZodJWT", (inst, def) => {
       continue: !def.abort
     });
   };
-});
-const $ZodNumber = /* @__PURE__ */ $constructor("$ZodNumber", (inst, def) => {
-  $ZodType.init(inst, def);
-  inst._zod.pattern = inst._zod.bag.pattern ?? number$2;
-  inst._zod.parse = (payload, _ctx) => {
-    if (def.coerce)
-      try {
-        payload.value = Number(payload.value);
-      } catch (_) {
-      }
-    const input = payload.value;
-    if (typeof input === "number" && !Number.isNaN(input) && Number.isFinite(input)) {
-      return payload;
-    }
-    const received = typeof input === "number" ? Number.isNaN(input) ? "NaN" : !Number.isFinite(input) ? "Infinity" : void 0 : void 0;
-    payload.issues.push({
-      expected: "number",
-      code: "invalid_type",
-      input,
-      inst,
-      ...received ? { received } : {}
-    });
-    return payload;
-  };
-});
-const $ZodNumberFormat = /* @__PURE__ */ $constructor("$ZodNumberFormat", (inst, def) => {
-  $ZodCheckNumberFormat.init(inst, def);
-  $ZodNumber.init(inst, def);
 });
 const $ZodBoolean = /* @__PURE__ */ $constructor("$ZodBoolean", (inst, def) => {
   $ZodType.init(inst, def);
@@ -2587,33 +2373,6 @@ function _isoDuration(Class, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _number(Class, params) {
-  return new Class({
-    type: "number",
-    checks: [],
-    ...normalizeParams(params)
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _coercedNumber(Class, params) {
-  return new Class({
-    type: "number",
-    coerce: true,
-    checks: [],
-    ...normalizeParams(params)
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _int(Class, params) {
-  return new Class({
-    type: "number",
-    check: "number_format",
-    abort: false,
-    format: "safeint",
-    ...normalizeParams(params)
-  });
-}
-// @__NO_SIDE_EFFECTS__
 function _boolean(Class, params) {
   return new Class({
     type: "boolean",
@@ -2637,50 +2396,6 @@ function _never(Class, params) {
   return new Class({
     type: "never",
     ...normalizeParams(params)
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _lt(value, params) {
-  return new $ZodCheckLessThan({
-    check: "less_than",
-    ...normalizeParams(params),
-    value,
-    inclusive: false
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _lte(value, params) {
-  return new $ZodCheckLessThan({
-    check: "less_than",
-    ...normalizeParams(params),
-    value,
-    inclusive: true
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _gt(value, params) {
-  return new $ZodCheckGreaterThan({
-    check: "greater_than",
-    ...normalizeParams(params),
-    value,
-    inclusive: false
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _gte(value, params) {
-  return new $ZodCheckGreaterThan({
-    check: "greater_than",
-    ...normalizeParams(params),
-    value,
-    inclusive: true
-  });
-}
-// @__NO_SIDE_EFFECTS__
-function _multipleOf(value, params) {
-  return new $ZodCheckMultipleOf({
-    check: "multiple_of",
-    ...normalizeParams(params),
-    value
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -3227,50 +2942,6 @@ const stringProcessor = (schema, ctx, _json, _params) => {
     }
   }
 };
-const numberProcessor = (schema, ctx, _json, _params) => {
-  const json = _json;
-  const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
-  if (typeof format === "string" && format.includes("int"))
-    json.type = "integer";
-  else
-    json.type = "number";
-  if (typeof exclusiveMinimum === "number") {
-    if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-      json.minimum = exclusiveMinimum;
-      json.exclusiveMinimum = true;
-    } else {
-      json.exclusiveMinimum = exclusiveMinimum;
-    }
-  }
-  if (typeof minimum === "number") {
-    json.minimum = minimum;
-    if (typeof exclusiveMinimum === "number" && ctx.target !== "draft-04") {
-      if (exclusiveMinimum >= minimum)
-        delete json.minimum;
-      else
-        delete json.exclusiveMinimum;
-    }
-  }
-  if (typeof exclusiveMaximum === "number") {
-    if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-      json.maximum = exclusiveMaximum;
-      json.exclusiveMaximum = true;
-    } else {
-      json.exclusiveMaximum = exclusiveMaximum;
-    }
-  }
-  if (typeof maximum === "number") {
-    json.maximum = maximum;
-    if (typeof exclusiveMaximum === "number" && ctx.target !== "draft-04") {
-      if (exclusiveMaximum <= maximum)
-        delete json.maximum;
-      else
-        delete json.exclusiveMaximum;
-    }
-  }
-  if (typeof multipleOf === "number")
-    json.multipleOf = multipleOf;
-};
 const booleanProcessor = (_schema, _ctx, json, _params) => {
   json.type = "boolean";
 };
@@ -3755,42 +3426,6 @@ const ZodJWT = /* @__PURE__ */ $constructor("ZodJWT", (inst, def) => {
   $ZodJWT.init(inst, def);
   ZodStringFormat.init(inst, def);
 });
-const ZodNumber = /* @__PURE__ */ $constructor("ZodNumber", (inst, def) => {
-  $ZodNumber.init(inst, def);
-  ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json, params) => numberProcessor(inst, ctx, json);
-  inst.gt = (value, params) => inst.check(/* @__PURE__ */ _gt(value, params));
-  inst.gte = (value, params) => inst.check(/* @__PURE__ */ _gte(value, params));
-  inst.min = (value, params) => inst.check(/* @__PURE__ */ _gte(value, params));
-  inst.lt = (value, params) => inst.check(/* @__PURE__ */ _lt(value, params));
-  inst.lte = (value, params) => inst.check(/* @__PURE__ */ _lte(value, params));
-  inst.max = (value, params) => inst.check(/* @__PURE__ */ _lte(value, params));
-  inst.int = (params) => inst.check(int(params));
-  inst.safe = (params) => inst.check(int(params));
-  inst.positive = (params) => inst.check(/* @__PURE__ */ _gt(0, params));
-  inst.nonnegative = (params) => inst.check(/* @__PURE__ */ _gte(0, params));
-  inst.negative = (params) => inst.check(/* @__PURE__ */ _lt(0, params));
-  inst.nonpositive = (params) => inst.check(/* @__PURE__ */ _lte(0, params));
-  inst.multipleOf = (value, params) => inst.check(/* @__PURE__ */ _multipleOf(value, params));
-  inst.step = (value, params) => inst.check(/* @__PURE__ */ _multipleOf(value, params));
-  inst.finite = () => inst;
-  const bag = inst._zod.bag;
-  inst.minValue = Math.max(bag.minimum ?? Number.NEGATIVE_INFINITY, bag.exclusiveMinimum ?? Number.NEGATIVE_INFINITY) ?? null;
-  inst.maxValue = Math.min(bag.maximum ?? Number.POSITIVE_INFINITY, bag.exclusiveMaximum ?? Number.POSITIVE_INFINITY) ?? null;
-  inst.isInt = (bag.format ?? "").includes("int") || Number.isSafeInteger(bag.multipleOf ?? 0.5);
-  inst.isFinite = true;
-  inst.format = bag.format ?? null;
-});
-function number$1(params) {
-  return /* @__PURE__ */ _number(ZodNumber, params);
-}
-const ZodNumberFormat = /* @__PURE__ */ $constructor("ZodNumberFormat", (inst, def) => {
-  $ZodNumberFormat.init(inst, def);
-  ZodNumber.init(inst, def);
-});
-function int(params) {
-  return /* @__PURE__ */ _int(ZodNumberFormat, params);
-}
 const ZodBoolean = /* @__PURE__ */ $constructor("ZodBoolean", (inst, def) => {
   $ZodBoolean.init(inst, def);
   ZodType.init(inst, def);
@@ -4123,9 +3758,6 @@ function refine(fn, _params = {}) {
 function superRefine(fn) {
   return /* @__PURE__ */ _superRefine(fn);
 }
-function number(params) {
-  return /* @__PURE__ */ _coercedNumber(ZodNumber, params);
-}
 export {
   _enum as _,
   optional as a,
@@ -4133,17 +3765,12 @@ export {
   array as c,
   datetime as d,
   email as e,
-  number$1 as f,
-  any as g,
-  number as h,
-  int as i,
-  union as j,
-  url as k,
+  any as f,
+  url as g,
+  config as h,
   lazy as l,
-  config as m,
   nullable as n,
   object as o,
-  date as p,
   string as s,
   uuid as u
 };

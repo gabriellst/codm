@@ -505,7 +505,7 @@ function lazyRouteComponent(importer, exportName) {
   const load = () => {
     if (!loadPromise) loadPromise = importer().then((res) => {
       loadPromise = void 0;
-      comp = res[exportName ?? "default"];
+      comp = res[exportName];
     }).catch((err) => {
       error = err;
       if (isModuleNotFoundError(error)) {
@@ -1126,11 +1126,10 @@ export {
   RouterProvider as R,
   Scripts as S,
   useRouterState as a,
-  useNavigate as b,
+  createRootRouteWithContext as b,
   createRouter as c,
-  createRootRouteWithContext as d,
-  createFileRoute as e,
-  useRouter as f,
+  createFileRoute as d,
+  useRouter as e,
   lazyRouteComponent as l,
   renderRouterToStream as r,
   useMatches as u

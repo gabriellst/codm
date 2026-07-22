@@ -503,32 +503,10 @@ function requireJsxRuntime() {
   return jsxRuntime.exports;
 }
 var jsxRuntimeExports = requireJsxRuntime();
-var jsxDevRuntime = { exports: {} };
-var reactJsxDevRuntime_production = {};
-var hasRequiredReactJsxDevRuntime_production;
-function requireReactJsxDevRuntime_production() {
-  if (hasRequiredReactJsxDevRuntime_production) return reactJsxDevRuntime_production;
-  hasRequiredReactJsxDevRuntime_production = 1;
-  var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
-  reactJsxDevRuntime_production.Fragment = REACT_FRAGMENT_TYPE;
-  reactJsxDevRuntime_production.jsxDEV = void 0;
-  return reactJsxDevRuntime_production;
-}
-var hasRequiredJsxDevRuntime;
-function requireJsxDevRuntime() {
-  if (hasRequiredJsxDevRuntime) return jsxDevRuntime.exports;
-  hasRequiredJsxDevRuntime = 1;
-  {
-    jsxDevRuntime.exports = requireReactJsxDevRuntime_production();
-  }
-  return jsxDevRuntime.exports;
-}
-var jsxDevRuntimeExports = requireJsxDevRuntime();
 export {
   React__default as R,
   requireReact as a,
   React as b,
-  jsxDevRuntimeExports as c,
   getDefaultExportFromCjs as g,
   jsxRuntimeExports as j,
   reactExports as r

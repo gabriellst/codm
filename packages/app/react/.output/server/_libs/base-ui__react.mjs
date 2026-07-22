@@ -1,5 +1,5 @@
 import { r as reactExports, j as jsxRuntimeExports } from "./react.mjs";
-import { m as mergeObjects, f as formatErrorMessage, u as useStableCallback, a as useIsoLayoutEffect, E as EMPTY_OBJECT, b as useMergedRefs, c as useMergedRefsN, g as getReactElementRef, N as NOOP, d as useTimeout, e as useId, i as isAndroid, h as isJSDOM, j as useRefWithInit, k as isSafari, v as visuallyHidden, l as useValueAsRef, n as useAnimationFrame, T as Timeout, R as ReactStore, o as createSelector, A as AnimationFrame, p as EMPTY_ARRAY, q as inertValue, r as isIOS, s as useEnhancedClickHandler, t as useScrollLock, w as useOnMount, x as ownerDocument, y as useControlled, z as visuallyHiddenInput, S as Store, B as useStore, C as useOnFirstRender, D as isWebKit$1, F as isMouseWithinBounds } from "./base-ui__utils.mjs";
+import { m as mergeObjects, f as formatErrorMessage, u as useStableCallback, a as useIsoLayoutEffect, E as EMPTY_OBJECT, b as useMergedRefs, c as useMergedRefsN, g as getReactElementRef, N as NOOP, d as useTimeout, e as useId, i as isAndroid, h as isJSDOM, j as useRefWithInit, k as isSafari, v as visuallyHidden, l as useValueAsRef, n as useAnimationFrame, T as Timeout, R as ReactStore, o as createSelector, A as AnimationFrame, p as EMPTY_ARRAY, q as inertValue, r as isIOS, s as useEnhancedClickHandler, t as useScrollLock, w as useOnMount, x as ownerDocument, y as useControlled, S as Store, z as useStore, B as useOnFirstRender, C as visuallyHiddenInput, D as isWebKit$1, F as isMouseWithinBounds } from "./base-ui__utils.mjs";
 import { r as reactDomExports } from "./react-dom.mjs";
 import { a as isHTMLElement, b as isShadowRoot, f as floor, c as getNodeName, d as isNode, g as getWindow, e as getComputedStyle$1, h as isElement, j as isLastTraversableNode, k as getParentNode, l as getOverflowAncestors, m as isWebKit, n as evaluate, o as getPaddingObject, p as getAlignmentAxis, q as getAlignment, r as getAxisLength, s as clamp$1, t as getSide, u as getSideAxis } from "./floating-ui__utils.mjs";
 import { u as useFloating$1, h as hide$1, f as flip, s as size, o as offset, a as shift, l as limitShift } from "./floating-ui__react-dom.mjs";
@@ -6343,6 +6343,22 @@ const PopoverPopup = /* @__PURE__ */ reactExports.forwardRef(function PopoverPop
     children: element
   });
 });
+const SelectRootContext = /* @__PURE__ */ reactExports.createContext(null);
+const SelectFloatingContext = /* @__PURE__ */ reactExports.createContext(null);
+function useSelectRootContext() {
+  const context = reactExports.useContext(SelectRootContext);
+  if (context === null) {
+    throw new Error(formatErrorMessage(60));
+  }
+  return context;
+}
+function useSelectFloatingContext() {
+  const context = reactExports.useContext(SelectFloatingContext);
+  if (context === null) {
+    throw new Error(formatErrorMessage(61));
+  }
+  return context;
+}
 let FieldControlDataAttributes = /* @__PURE__ */ (function(FieldControlDataAttributes2) {
   FieldControlDataAttributes2["disabled"] = "data-disabled";
   FieldControlDataAttributes2["valid"] = "data-valid";
@@ -6433,22 +6449,6 @@ function useFieldRootContext(optional = true) {
   }
   return context;
 }
-const FormContext = /* @__PURE__ */ reactExports.createContext({
-  formRef: {
-    current: {
-      fields: /* @__PURE__ */ new Map()
-    }
-  },
-  errors: {},
-  clearErrors: NOOP,
-  validationMode: "onSubmit",
-  submitAttemptedRef: {
-    current: false
-  }
-});
-function useFormContext() {
-  return reactExports.useContext(FormContext);
-}
 const LabelableContext = /* @__PURE__ */ reactExports.createContext({
   controlId: void 0,
   setControlId: NOOP,
@@ -6460,15 +6460,6 @@ const LabelableContext = /* @__PURE__ */ reactExports.createContext({
 });
 function useLabelableContext() {
   return reactExports.useContext(LabelableContext);
-}
-function getCombinedFieldValidityData(validityData, invalid) {
-  return {
-    ...validityData,
-    state: {
-      ...validityData.state,
-      valid: !invalid && validityData.state.valid
-    }
-  };
 }
 function useLabelableId(params = {}) {
   const {
@@ -6502,556 +6493,6 @@ function useLabelableId(params = {}) {
     };
   }, [id, controlRef, controlId, setControlId, implicit, defaultId]);
   return controlId ?? defaultId;
-}
-function useField(params) {
-  const {
-    enabled = true,
-    value,
-    id,
-    name,
-    controlRef,
-    commit
-  } = params;
-  const {
-    formRef
-  } = useFormContext();
-  const {
-    invalid,
-    markedDirtyRef,
-    validityData,
-    setValidityData
-  } = useFieldRootContext();
-  const getValue = useStableCallback(params.getValue);
-  useIsoLayoutEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    let initialValue = value;
-    if (initialValue === void 0) {
-      initialValue = getValue();
-    }
-    if (validityData.initialValue === null && initialValue !== null) {
-      setValidityData((prev) => ({
-        ...prev,
-        initialValue
-      }));
-    }
-  }, [enabled, setValidityData, value, validityData.initialValue, getValue]);
-  useIsoLayoutEffect(() => {
-    if (!enabled || !id) {
-      return;
-    }
-    formRef.current.fields.set(id, {
-      getValue,
-      name,
-      controlRef,
-      validityData: getCombinedFieldValidityData(validityData, invalid),
-      validate(flushSync = true) {
-        let nextValue = value;
-        if (nextValue === void 0) {
-          nextValue = getValue();
-        }
-        markedDirtyRef.current = true;
-        if (!flushSync) {
-          commit(nextValue);
-        } else {
-          reactDomExports.flushSync(() => commit(nextValue));
-        }
-      }
-    });
-  }, [commit, controlRef, enabled, formRef, getValue, id, invalid, markedDirtyRef, name, validityData, value]);
-  useIsoLayoutEffect(() => {
-    const fields = formRef.current.fields;
-    return () => {
-      if (id) {
-        fields.delete(id);
-      }
-    };
-  }, [formRef, id]);
-}
-const FieldControl = /* @__PURE__ */ reactExports.forwardRef(function FieldControl2(componentProps, forwardedRef) {
-  const {
-    render,
-    className,
-    id: idProp,
-    name: nameProp,
-    value: valueProp,
-    disabled: disabledProp = false,
-    onValueChange,
-    defaultValue,
-    ...elementProps
-  } = componentProps;
-  const {
-    state: fieldState,
-    name: fieldName,
-    disabled: fieldDisabled
-  } = useFieldRootContext();
-  const disabled = fieldDisabled || disabledProp;
-  const name = fieldName ?? nameProp;
-  const state = reactExports.useMemo(() => ({
-    ...fieldState,
-    disabled
-  }), [fieldState, disabled]);
-  const {
-    setTouched,
-    setDirty,
-    validityData,
-    setFocused,
-    setFilled,
-    validationMode,
-    validation
-  } = useFieldRootContext();
-  const {
-    labelId
-  } = useLabelableContext();
-  const id = useLabelableId({
-    id: idProp
-  });
-  useIsoLayoutEffect(() => {
-    const hasExternalValue = valueProp != null;
-    if (validation.inputRef.current?.value || hasExternalValue && valueProp !== "") {
-      setFilled(true);
-    } else if (hasExternalValue && valueProp === "") {
-      setFilled(false);
-    }
-  }, [validation.inputRef, setFilled, valueProp]);
-  const [value, setValueUnwrapped] = useControlled({
-    controlled: valueProp,
-    default: defaultValue,
-    name: "FieldControl",
-    state: "value"
-  });
-  const isControlled = valueProp !== void 0;
-  const setValue = useStableCallback((nextValue, eventDetails) => {
-    onValueChange?.(nextValue, eventDetails);
-    if (eventDetails.isCanceled) {
-      return;
-    }
-    setValueUnwrapped(nextValue);
-  });
-  useField({
-    id,
-    name,
-    commit: validation.commit,
-    value,
-    getValue: () => validation.inputRef.current?.value,
-    controlRef: validation.inputRef
-  });
-  const element = useRenderElement("input", componentProps, {
-    ref: forwardedRef,
-    state,
-    props: [{
-      id,
-      disabled,
-      name,
-      ref: validation.inputRef,
-      "aria-labelledby": labelId,
-      ...isControlled ? {
-        value
-      } : {
-        defaultValue
-      },
-      onChange(event) {
-        const inputValue = event.currentTarget.value;
-        setValue(inputValue, createChangeEventDetails(none, event.nativeEvent));
-        setDirty(inputValue !== validityData.initialValue);
-        setFilled(inputValue !== "");
-      },
-      onFocus() {
-        setFocused(true);
-      },
-      onBlur(event) {
-        setTouched(true);
-        setFocused(false);
-        if (validationMode === "onBlur") {
-          validation.commit(event.currentTarget.value);
-        }
-      },
-      onKeyDown(event) {
-        if (event.currentTarget.tagName === "INPUT" && event.key === "Enter") {
-          setTouched(true);
-          validation.commit(event.currentTarget.value);
-        }
-      }
-    }, validation.getInputValidationProps(), elementProps],
-    stateAttributesMapping: fieldValidityMapping
-  });
-  return element;
-});
-const FieldItemContext = /* @__PURE__ */ reactExports.createContext({
-  disabled: false
-});
-function useFieldItemContext() {
-  const context = reactExports.useContext(FieldItemContext);
-  return context;
-}
-const CheckboxGroupContext = /* @__PURE__ */ reactExports.createContext(void 0);
-function useCheckboxGroupContext(optional = true) {
-  const context = reactExports.useContext(CheckboxGroupContext);
-  if (context === void 0 && !optional) {
-    throw new Error(formatErrorMessage(3));
-  }
-  return context;
-}
-const Input = /* @__PURE__ */ reactExports.forwardRef(function Input2(props, forwardedRef) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(FieldControl, {
-    ref: forwardedRef,
-    ...props
-  });
-});
-let CheckboxRootDataAttributes = /* @__PURE__ */ (function(CheckboxRootDataAttributes2) {
-  CheckboxRootDataAttributes2["checked"] = "data-checked";
-  CheckboxRootDataAttributes2["unchecked"] = "data-unchecked";
-  CheckboxRootDataAttributes2["indeterminate"] = "data-indeterminate";
-  CheckboxRootDataAttributes2["disabled"] = "data-disabled";
-  CheckboxRootDataAttributes2["readonly"] = "data-readonly";
-  CheckboxRootDataAttributes2["required"] = "data-required";
-  CheckboxRootDataAttributes2["valid"] = "data-valid";
-  CheckboxRootDataAttributes2["invalid"] = "data-invalid";
-  CheckboxRootDataAttributes2["touched"] = "data-touched";
-  CheckboxRootDataAttributes2["dirty"] = "data-dirty";
-  CheckboxRootDataAttributes2["filled"] = "data-filled";
-  CheckboxRootDataAttributes2["focused"] = "data-focused";
-  return CheckboxRootDataAttributes2;
-})({});
-function useStateAttributesMapping(state) {
-  return reactExports.useMemo(() => ({
-    checked(value) {
-      if (state.indeterminate) {
-        return {};
-      }
-      if (value) {
-        return {
-          [CheckboxRootDataAttributes.checked]: ""
-        };
-      }
-      return {
-        [CheckboxRootDataAttributes.unchecked]: ""
-      };
-    },
-    ...fieldValidityMapping
-  }), [state.indeterminate]);
-}
-const CheckboxRootContext = /* @__PURE__ */ reactExports.createContext(void 0);
-function useCheckboxRootContext() {
-  const context = reactExports.useContext(CheckboxRootContext);
-  if (context === void 0) {
-    throw new Error(formatErrorMessage(14));
-  }
-  return context;
-}
-function useValueChanged(value, onChange) {
-  const valueRef = reactExports.useRef(value);
-  const onChangeCallback = useStableCallback(onChange);
-  useIsoLayoutEffect(() => {
-    if (valueRef.current === value) {
-      return;
-    }
-    onChangeCallback(valueRef.current);
-  }, [value, onChangeCallback]);
-  useIsoLayoutEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-}
-const PARENT_CHECKBOX = "data-parent";
-const CheckboxRoot = /* @__PURE__ */ reactExports.forwardRef(function CheckboxRoot2(componentProps, forwardedRef) {
-  const {
-    checked: checkedProp,
-    className,
-    defaultChecked = false,
-    disabled: disabledProp = false,
-    id: idProp,
-    indeterminate = false,
-    inputRef: inputRefProp,
-    name: nameProp,
-    onCheckedChange: onCheckedChangeProp,
-    parent = false,
-    readOnly = false,
-    render,
-    required = false,
-    uncheckedValue,
-    value: valueProp,
-    nativeButton = false,
-    ...elementProps
-  } = componentProps;
-  const {
-    clearErrors
-  } = useFormContext();
-  const {
-    disabled: rootDisabled,
-    name: fieldName,
-    setDirty,
-    setFilled,
-    setFocused,
-    setTouched,
-    state: fieldState,
-    validationMode,
-    validityData,
-    shouldValidateOnChange,
-    validation: localValidation
-  } = useFieldRootContext();
-  const fieldItemContext = useFieldItemContext();
-  const {
-    labelId,
-    controlId,
-    setControlId,
-    getDescriptionProps
-  } = useLabelableContext();
-  const groupContext = useCheckboxGroupContext();
-  const parentContext = groupContext?.parent;
-  const isGroupedWithParent = parentContext && groupContext.allValues;
-  const disabled = rootDisabled || fieldItemContext.disabled || groupContext?.disabled || disabledProp;
-  const name = fieldName ?? nameProp;
-  const value = valueProp ?? name;
-  const id = useBaseUiId();
-  const parentId = useBaseUiId();
-  let inputId = controlId;
-  if (isGroupedWithParent) {
-    inputId = parent ? parentId : `${parentContext.id}-${value}`;
-  } else if (idProp) {
-    inputId = idProp;
-  }
-  let groupProps = {};
-  if (isGroupedWithParent) {
-    if (parent) {
-      groupProps = groupContext.parent.getParentProps();
-    } else if (value) {
-      groupProps = groupContext.parent.getChildProps(value);
-    }
-  }
-  const onCheckedChange = useStableCallback(onCheckedChangeProp);
-  const {
-    checked: groupChecked = checkedProp,
-    indeterminate: groupIndeterminate = indeterminate,
-    onCheckedChange: groupOnChange,
-    ...otherGroupProps
-  } = groupProps;
-  const groupValue = groupContext?.value;
-  const setGroupValue = groupContext?.setValue;
-  const defaultGroupValue = groupContext?.defaultValue;
-  const controlRef = reactExports.useRef(null);
-  const {
-    getButtonProps,
-    buttonRef
-  } = useButton({
-    disabled,
-    native: nativeButton
-  });
-  const validation = groupContext?.validation ?? localValidation;
-  const [checked, setCheckedState] = useControlled({
-    controlled: value && groupValue && !parent ? groupValue.includes(value) : groupChecked,
-    default: value && defaultGroupValue && !parent ? defaultGroupValue.includes(value) : defaultChecked,
-    name: "Checkbox",
-    state: "checked"
-  });
-  useIsoLayoutEffect(() => {
-    if (setControlId === NOOP) {
-      return void 0;
-    }
-    setControlId(inputId);
-    return () => {
-      setControlId(void 0);
-    };
-  }, [inputId, groupContext, setControlId, parent]);
-  useField({
-    enabled: !groupContext,
-    id,
-    commit: validation.commit,
-    value: checked,
-    controlRef,
-    name,
-    getValue: () => checked
-  });
-  const inputRef = reactExports.useRef(null);
-  const mergedInputRef = useMergedRefs(inputRefProp, inputRef, validation.inputRef);
-  useIsoLayoutEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.indeterminate = groupIndeterminate;
-      if (checked) {
-        setFilled(true);
-      }
-    }
-  }, [checked, groupIndeterminate, setFilled]);
-  useValueChanged(checked, () => {
-    if (groupContext && !parent) {
-      return;
-    }
-    clearErrors(name);
-    setFilled(checked);
-    setDirty(checked !== validityData.initialValue);
-    if (shouldValidateOnChange()) {
-      validation.commit(checked);
-    } else {
-      validation.commit(checked, true);
-    }
-  });
-  const inputProps = mergeProps$1(
-    {
-      checked,
-      disabled,
-      // parent checkboxes unset `name` to be excluded from form submission
-      name: parent ? void 0 : name,
-      // Set `id` to stop Chrome warning about an unassociated input.
-      // When using a native button, the `id` is applied to the button instead.
-      id: nativeButton ? void 0 : inputId ?? void 0,
-      required,
-      ref: mergedInputRef,
-      style: name ? visuallyHiddenInput : visuallyHidden,
-      tabIndex: -1,
-      type: "checkbox",
-      "aria-hidden": true,
-      onChange(event) {
-        if (event.nativeEvent.defaultPrevented) {
-          return;
-        }
-        const nextChecked = event.target.checked;
-        const details = createChangeEventDetails(none, event.nativeEvent);
-        groupOnChange?.(nextChecked, details);
-        onCheckedChange(nextChecked, details);
-        if (details.isCanceled) {
-          return;
-        }
-        setCheckedState(nextChecked);
-        if (value && groupValue && setGroupValue && !parent) {
-          const nextGroupValue = nextChecked ? [...groupValue, value] : groupValue.filter((item) => item !== value);
-          setGroupValue(nextGroupValue, details);
-        }
-      },
-      onFocus() {
-        controlRef.current?.focus();
-      }
-    },
-    // React <19 sets an empty value if `undefined` is passed explicitly
-    // To avoid this, we only set the value if it's defined
-    valueProp !== void 0 ? {
-      value: (groupContext ? checked && valueProp : valueProp) || ""
-    } : EMPTY_OBJECT,
-    getDescriptionProps,
-    groupContext ? validation.getValidationProps : validation.getInputValidationProps
-  );
-  const computedChecked = isGroupedWithParent ? Boolean(groupChecked) : checked;
-  const computedIndeterminate = isGroupedWithParent ? groupIndeterminate || indeterminate : indeterminate;
-  reactExports.useEffect(() => {
-    if (parentContext && value) {
-      parentContext.disabledStatesRef.current.set(value, disabled);
-    }
-  }, [parentContext, disabled, value]);
-  const state = reactExports.useMemo(() => ({
-    ...fieldState,
-    checked: computedChecked,
-    disabled,
-    readOnly,
-    required,
-    indeterminate: computedIndeterminate
-  }), [fieldState, computedChecked, disabled, readOnly, required, computedIndeterminate]);
-  const stateAttributesMapping2 = useStateAttributesMapping(state);
-  const element = useRenderElement("span", componentProps, {
-    state,
-    ref: [buttonRef, controlRef, forwardedRef, groupContext?.registerControlRef],
-    props: [{
-      id: nativeButton ? inputId ?? void 0 : id,
-      role: "checkbox",
-      "aria-checked": groupIndeterminate ? "mixed" : checked,
-      "aria-readonly": readOnly || void 0,
-      "aria-required": required || void 0,
-      "aria-labelledby": labelId,
-      [PARENT_CHECKBOX]: parent ? "" : void 0,
-      onFocus() {
-        setFocused(true);
-      },
-      onBlur() {
-        const inputEl = inputRef.current;
-        if (!inputEl) {
-          return;
-        }
-        setTouched(true);
-        setFocused(false);
-        if (validationMode === "onBlur") {
-          validation.commit(groupContext ? groupValue : inputEl.checked);
-        }
-      },
-      onClick(event) {
-        if (readOnly || disabled) {
-          return;
-        }
-        event.preventDefault();
-        inputRef.current?.click();
-      }
-    }, getDescriptionProps, validation.getValidationProps, elementProps, otherGroupProps, getButtonProps],
-    stateAttributesMapping: stateAttributesMapping2
-  });
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(CheckboxRootContext.Provider, {
-    value: state,
-    children: [element, !checked && !groupContext && name && !parent && uncheckedValue !== void 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("input", {
-      type: "hidden",
-      name,
-      value: uncheckedValue
-    }), /* @__PURE__ */ jsxRuntimeExports.jsx("input", {
-      ...inputProps
-    })]
-  });
-});
-const CheckboxIndicator = /* @__PURE__ */ reactExports.forwardRef(function CheckboxIndicator2(componentProps, forwardedRef) {
-  const {
-    render,
-    className,
-    keepMounted = false,
-    ...elementProps
-  } = componentProps;
-  const rootState = useCheckboxRootContext();
-  const rendered = rootState.checked || rootState.indeterminate;
-  const {
-    transitionStatus,
-    setMounted
-  } = useTransitionStatus(rendered);
-  const indicatorRef = reactExports.useRef(null);
-  const state = reactExports.useMemo(() => ({
-    ...rootState,
-    transitionStatus
-  }), [rootState, transitionStatus]);
-  useOpenChangeComplete({
-    open: rendered,
-    ref: indicatorRef,
-    onComplete() {
-      if (!rendered) {
-        setMounted(false);
-      }
-    }
-  });
-  const baseStateAttributesMapping = useStateAttributesMapping(rootState);
-  const stateAttributesMapping2 = reactExports.useMemo(() => ({
-    ...baseStateAttributesMapping,
-    ...transitionStatusMapping,
-    ...fieldValidityMapping
-  }), [baseStateAttributesMapping]);
-  const shouldRender = keepMounted || rendered;
-  const element = useRenderElement("span", componentProps, {
-    enabled: shouldRender,
-    ref: [forwardedRef, indicatorRef],
-    state,
-    stateAttributesMapping: stateAttributesMapping2,
-    props: elementProps
-  });
-  if (!shouldRender) {
-    return null;
-  }
-  return element;
-});
-const SelectRootContext = /* @__PURE__ */ reactExports.createContext(null);
-const SelectFloatingContext = /* @__PURE__ */ reactExports.createContext(null);
-function useSelectRootContext() {
-  const context = reactExports.useContext(SelectRootContext);
-  if (context === null) {
-    throw new Error(formatErrorMessage(60));
-  }
-  return context;
-}
-function useSelectFloatingContext() {
-  const context = reactExports.useContext(SelectFloatingContext);
-  if (context === null) {
-    throw new Error(formatErrorMessage(61));
-  }
-  return context;
 }
 const defaultItemEquality = (item, value) => Object.is(item, value);
 function compareItemEquality(item, value, comparer) {
@@ -7244,6 +6685,110 @@ const selectors = {
   scrollDownArrowVisible: createSelector((state) => state.scrollDownArrowVisible),
   hasScrollArrows: createSelector((state) => state.hasScrollArrows)
 };
+const FormContext = /* @__PURE__ */ reactExports.createContext({
+  formRef: {
+    current: {
+      fields: /* @__PURE__ */ new Map()
+    }
+  },
+  errors: {},
+  clearErrors: NOOP,
+  validationMode: "onSubmit",
+  submitAttemptedRef: {
+    current: false
+  }
+});
+function useFormContext() {
+  return reactExports.useContext(FormContext);
+}
+function getCombinedFieldValidityData(validityData, invalid) {
+  return {
+    ...validityData,
+    state: {
+      ...validityData.state,
+      valid: !invalid && validityData.state.valid
+    }
+  };
+}
+function useField(params) {
+  const {
+    enabled = true,
+    value,
+    id,
+    name,
+    controlRef,
+    commit
+  } = params;
+  const {
+    formRef
+  } = useFormContext();
+  const {
+    invalid,
+    markedDirtyRef,
+    validityData,
+    setValidityData
+  } = useFieldRootContext();
+  const getValue = useStableCallback(params.getValue);
+  useIsoLayoutEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    let initialValue = value;
+    if (initialValue === void 0) {
+      initialValue = getValue();
+    }
+    if (validityData.initialValue === null && initialValue !== null) {
+      setValidityData((prev) => ({
+        ...prev,
+        initialValue
+      }));
+    }
+  }, [enabled, setValidityData, value, validityData.initialValue, getValue]);
+  useIsoLayoutEffect(() => {
+    if (!enabled || !id) {
+      return;
+    }
+    formRef.current.fields.set(id, {
+      getValue,
+      name,
+      controlRef,
+      validityData: getCombinedFieldValidityData(validityData, invalid),
+      validate(flushSync = true) {
+        let nextValue = value;
+        if (nextValue === void 0) {
+          nextValue = getValue();
+        }
+        markedDirtyRef.current = true;
+        if (!flushSync) {
+          commit(nextValue);
+        } else {
+          reactDomExports.flushSync(() => commit(nextValue));
+        }
+      }
+    });
+  }, [commit, controlRef, enabled, formRef, getValue, id, invalid, markedDirtyRef, name, validityData, value]);
+  useIsoLayoutEffect(() => {
+    const fields = formRef.current.fields;
+    return () => {
+      if (id) {
+        fields.delete(id);
+      }
+    };
+  }, [formRef, id]);
+}
+function useValueChanged(value, onChange) {
+  const valueRef = reactExports.useRef(value);
+  const onChangeCallback = useStableCallback(onChange);
+  useIsoLayoutEffect(() => {
+    if (valueRef.current === value) {
+      return;
+    }
+    onChangeCallback(valueRef.current);
+  }, [value, onChangeCallback]);
+  useIsoLayoutEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+}
 function SelectRoot(props) {
   const {
     id,
@@ -9232,12 +8777,125 @@ const SelectScrollUpArrow = /* @__PURE__ */ reactExports.forwardRef(function Sel
     direction: "up"
   });
 });
+const FieldControl = /* @__PURE__ */ reactExports.forwardRef(function FieldControl2(componentProps, forwardedRef) {
+  const {
+    render,
+    className,
+    id: idProp,
+    name: nameProp,
+    value: valueProp,
+    disabled: disabledProp = false,
+    onValueChange,
+    defaultValue,
+    ...elementProps
+  } = componentProps;
+  const {
+    state: fieldState,
+    name: fieldName,
+    disabled: fieldDisabled
+  } = useFieldRootContext();
+  const disabled = fieldDisabled || disabledProp;
+  const name = fieldName ?? nameProp;
+  const state = reactExports.useMemo(() => ({
+    ...fieldState,
+    disabled
+  }), [fieldState, disabled]);
+  const {
+    setTouched,
+    setDirty,
+    validityData,
+    setFocused,
+    setFilled,
+    validationMode,
+    validation
+  } = useFieldRootContext();
+  const {
+    labelId
+  } = useLabelableContext();
+  const id = useLabelableId({
+    id: idProp
+  });
+  useIsoLayoutEffect(() => {
+    const hasExternalValue = valueProp != null;
+    if (validation.inputRef.current?.value || hasExternalValue && valueProp !== "") {
+      setFilled(true);
+    } else if (hasExternalValue && valueProp === "") {
+      setFilled(false);
+    }
+  }, [validation.inputRef, setFilled, valueProp]);
+  const [value, setValueUnwrapped] = useControlled({
+    controlled: valueProp,
+    default: defaultValue,
+    name: "FieldControl",
+    state: "value"
+  });
+  const isControlled = valueProp !== void 0;
+  const setValue = useStableCallback((nextValue, eventDetails) => {
+    onValueChange?.(nextValue, eventDetails);
+    if (eventDetails.isCanceled) {
+      return;
+    }
+    setValueUnwrapped(nextValue);
+  });
+  useField({
+    id,
+    name,
+    commit: validation.commit,
+    value,
+    getValue: () => validation.inputRef.current?.value,
+    controlRef: validation.inputRef
+  });
+  const element = useRenderElement("input", componentProps, {
+    ref: forwardedRef,
+    state,
+    props: [{
+      id,
+      disabled,
+      name,
+      ref: validation.inputRef,
+      "aria-labelledby": labelId,
+      ...isControlled ? {
+        value
+      } : {
+        defaultValue
+      },
+      onChange(event) {
+        const inputValue = event.currentTarget.value;
+        setValue(inputValue, createChangeEventDetails(none, event.nativeEvent));
+        setDirty(inputValue !== validityData.initialValue);
+        setFilled(inputValue !== "");
+      },
+      onFocus() {
+        setFocused(true);
+      },
+      onBlur(event) {
+        setTouched(true);
+        setFocused(false);
+        if (validationMode === "onBlur") {
+          validation.commit(event.currentTarget.value);
+        }
+      },
+      onKeyDown(event) {
+        if (event.currentTarget.tagName === "INPUT" && event.key === "Enter") {
+          setTouched(true);
+          validation.commit(event.currentTarget.value);
+        }
+      }
+    }, validation.getInputValidationProps(), elementProps],
+    stateAttributesMapping: fieldValidityMapping
+  });
+  return element;
+});
+const Input = /* @__PURE__ */ reactExports.forwardRef(function Input2(props, forwardedRef) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(FieldControl, {
+    ref: forwardedRef,
+    ...props
+  });
+});
 export {
   AvatarRoot as A,
-  DialogBackdrop as B,
-  CheckboxRoot as C,
+  Button as B,
   DialogRoot as D,
-  Button as E,
   Input as I,
   PopoverRoot as P,
   SelectRoot as S,
@@ -9245,26 +8903,26 @@ export {
   PopoverPortal as b,
   PopoverPositioner as c,
   PopoverPopup as d,
-  CheckboxIndicator as e,
-  SelectTrigger as f,
-  SelectIcon as g,
-  SelectValue as h,
-  SelectPortal as i,
-  SelectPositioner as j,
-  SelectPopup as k,
-  SelectList as l,
+  SelectTrigger as e,
+  SelectIcon as f,
+  SelectValue as g,
+  SelectPortal as h,
+  SelectPositioner as i,
+  SelectPopup as j,
+  SelectList as k,
+  SelectItem as l,
   mergeProps$1 as m,
-  SelectItem as n,
-  SelectItemText as o,
-  SelectItemIndicator as p,
-  SelectScrollUpArrow as q,
-  SelectScrollDownArrow as r,
-  AvatarImage as s,
-  AvatarFallback as t,
+  SelectItemText as n,
+  SelectItemIndicator as o,
+  SelectScrollUpArrow as p,
+  SelectScrollDownArrow as q,
+  AvatarImage as r,
+  AvatarFallback as s,
+  DialogPopup as t,
   useRender as u,
-  DialogPopup as v,
-  DialogClose as w,
-  DialogTitle as x,
-  DialogDescription as y,
-  DialogPortal as z
+  DialogClose as v,
+  DialogTitle as w,
+  DialogDescription as x,
+  DialogPortal as y,
+  DialogBackdrop as z
 };

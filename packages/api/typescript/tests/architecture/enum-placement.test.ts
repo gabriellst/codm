@@ -147,11 +147,12 @@ describe('enum-placement (cross-boundary enums live only in contracts, never mir
 			expect(mirrorHits.map(v => v.text)).toEqual([`type BillingPlatform = 'PAGARME' | 'STRIPE'`])
 
 			// CMPL-02 fixture: a cross-boundary enum def is flagged; a context-local one is not.
-			const enumsDir = join(tmpRoot, 'billing', 'enums')
-			write(join(enumsDir, 'PlanName.ts'), `export enum PlanName {\n\tFREE = 'FREE',\n}\n`)
+			// CurrencyCode is a live contracts wire enum; InvoiceStatus is not, so only the former mirrors.
+			const enumsDir = join(tmpRoot, 'owner', 'enums')
+			write(join(enumsDir, 'CurrencyCode.ts'), `export enum CurrencyCode {\n\tUSD = 'USD',\n}\n`)
 			write(join(enumsDir, 'InvoiceStatus.ts'), `export enum InvoiceStatus {\n\tOPEN = 'OPEN',\n}\n`)
 			const enumHits = scanSrcEnumDefs(tmpRoot)
-			expect(enumHits.map(v => v.file)).toEqual(['billing/enums/PlanName.ts'])
+			expect(enumHits.map(v => v.file)).toEqual(['owner/enums/CurrencyCode.ts'])
 		} finally {
 			rmSync(tmpRoot, { recursive: true, force: true })
 		}
