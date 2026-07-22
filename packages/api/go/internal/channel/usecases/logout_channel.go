@@ -45,7 +45,10 @@ func (h *LogoutChannelHandler) Execute(ctx context.Context, input LogoutChannelI
 		h.registry.Remove(channelID)
 	}
 
-	if err := h.repo.SetStatus(ctx, channelID.String(), wire.ChannelStatusDISCONNECTED, ""); err != nil {
+	// Terminal unpair: force-clear account_detail so the read model stops
+	// reporting the session as paired and the boot hook won't resurrect a device
+	// client.Logout already deleted. SetStatus(...,"") would PRESERVE the pairing.
+	if err := h.repo.ClearAccount(ctx, channelID.String()); err != nil {
 		return LogoutChannelOutput{}, err
 	}
 

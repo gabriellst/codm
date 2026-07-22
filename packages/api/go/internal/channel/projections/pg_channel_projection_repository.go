@@ -62,6 +62,22 @@ func (r *pgChannelProjectionRepository) SetStatus(ctx context.Context, id string
 	return nil
 }
 
+func (r *pgChannelProjectionRepository) ClearAccount(ctx context.Context, id string) error {
+	db := r.txOrDB(ctx)
+	_, err := db.ExecContext(ctx,
+		`UPDATE gateway.channels
+		 SET status = $2,
+		     account_detail = '',
+		     updated_at = $3
+		 WHERE id = $1`,
+		id, string(wire.ChannelStatusDISCONNECTED), time.Now().UTC(),
+	)
+	if err != nil {
+		return fmt.Errorf("pg channel projection: clear account: %w", err)
+	}
+	return nil
+}
+
 func (r *pgChannelProjectionRepository) FindByID(ctx context.Context, id string) (*ChannelProjection, error) {
 	db := r.txOrDB(ctx)
 	row := db.QueryRowContext(ctx,

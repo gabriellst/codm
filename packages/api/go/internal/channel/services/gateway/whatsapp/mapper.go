@@ -28,7 +28,11 @@ func mapEvent(channelID uuid.UUID, ownerID string, device *store.Device, evt any
 		}
 		return nil
 
-	case *events.Disconnected, *events.StreamReplaced, *events.LoggedOut:
+	case *events.LoggedOut:
+		// TERMINAL only. events.LoggedOut is the platform-side unpair (the user
+		// removed the linked device). It maps to the terminal channel.disconnected
+		// fact → wire integration.channel.disconnected (BC4 parks the threads) and
+		// clears the read-model pairing.
 		return []types.DomainEventI{
 			chanevents.NewDisconnectedEvent(channelID, ownerID, chanevents.DisconnectedPayload{
 				ChannelID: channelID,
@@ -37,6 +41,9 @@ func mapEvent(channelID uuid.UUID, ownerID string, device *store.Device, evt any
 			}),
 		}
 
+	// events.Disconnected / events.StreamReplaced are TRANSIENT. client.EnableAutoReconnect
+	// swallows them (whatsmeow reconnects), so emitting no domain event avoids
+	// churning the frozen wire and flipping the read model on every network blip.
 	default:
 		return nil
 	}

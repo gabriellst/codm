@@ -33,5 +33,13 @@ type ChannelProjectionRepository interface {
 	// (account_detail <> ''), across all owners. The boot lifecycle hook uses it
 	// to restore live sessions after a restart.
 	ListPaired(ctx context.Context) ([]*ChannelProjection, error)
+	// SetStatus updates the live status. A non-empty accountDetail is stored; an
+	// empty accountDetail is treated as "no change" (transient-disconnect safe),
+	// so it NEVER clears an existing pairing. Use ClearAccount to unpair.
 	SetStatus(ctx context.Context, id string, status wire.ChannelStatus, accountDetail string) error
+	// ClearAccount force-clears account_detail and marks the row DISCONNECTED. It
+	// is the terminal-unpair op (operator logout / platform-side LoggedOut): after
+	// it, ListPaired no longer returns the row, so the boot hook won't try to
+	// resurrect a session the platform already deleted.
+	ClearAccount(ctx context.Context, id string) error
 }

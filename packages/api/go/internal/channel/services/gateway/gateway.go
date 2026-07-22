@@ -89,6 +89,10 @@ type Channel interface {
 	GetChannelID() uuid.UUID
 	// IsGroupJID reports whether an external id refers to a group conversation.
 	IsGroupJID(id string) bool
+	// ResolveContactName returns a best-effort display name for an external id
+	// (from the platform's contact cache), or "" when unknown. Operator sends use
+	// it to populate the required wire ContactDisplayName instead of shipping blank.
+	ResolveContactName(ctx context.Context, id string) string
 }
 
 // ChannelFactory builds Channel instances for one platform.

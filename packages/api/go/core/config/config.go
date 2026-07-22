@@ -76,7 +76,11 @@ func Load() (*Config, error) {
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
+	// A trailing inline comment on an empty-value line (e.g. `KEY=  # note`) is
+	// parsed by godotenv as the literal value `# note`. Treat any value that is
+	// only a comment (starts with `#` after trimming) as empty so the documented
+	// `empty = ...` defaults hold from a scratch `cp .env.example .env`.
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" && !strings.HasPrefix(value, "#") {
 		return value
 	}
 	return defaultValue

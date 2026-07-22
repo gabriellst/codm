@@ -38,6 +38,7 @@ package channel
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"go.uber.org/fx"
@@ -91,6 +92,16 @@ var Module = fx.Module("channel",
 	fx.Invoke(registerLifecycleHooks),
 )
 
+// isUndefinedTable reports whether err is Postgres 42P01 (undefined_table) — the
+// expected shape when the contracts-owned gateway.channels is not migrated yet.
+func isUndefinedTable(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "42P01") || strings.Contains(msg, "does not exist")
+}
+
 // provideController annotates a controller constructor for the shared
 // group:"controllers" collection the HttpRouter consumes.
 func provideController(ctor any) fx.Option {
@@ -138,6 +149,14 @@ func registerHandlers(
 //     resume flowing without a human re-hitting POST /connect.
 //   - OnStop: cleanly disconnect every live session (cancels the adapter
 //     goroutines) via the registry's DisconnectAll.
+//
+// Boot ordering: gateway.channels is owned by the `gateway` pg schema declared in
+// packages/contracts (Drizzle), NOT by the Go worker. On a scratch database the
+// table only exists after `bun migrate:dev` runs. So in the two-process topology
+// `bun migrate:dev` MUST run before the Go gateway boots. Until it does, ListPaired
+// hits an undefined table (SQLSTATE 42P01); that is an EXPECTED first-boot state,
+// so it is logged at Warn (not Error) and the hook returns success — the server
+// still starts and reads clean once migrations land.
 func registerLifecycleHooks(
 	lc fx.Lifecycle,
 	reg registry.ChannelRegistry,
@@ -149,7 +168,13 @@ func registerLifecycleHooks(
 			if err != nil {
 				// Non-fatal: boot the gateway even if the read model is
 				// unavailable — the operator can still re-Connect manually.
-				slog.Error("channel bootstrap: list paired channels failed", "error", err)
+				if isUndefinedTable(err) {
+					// Expected on a scratch DB before `bun migrate:dev` creates
+					// gateway.channels. Warn, don't Error — scratch boot reads clean.
+					slog.Warn("channel bootstrap: gateway.channels not migrated yet; run `bun migrate:dev` (skipping paired-session restore)", "error", err)
+				} else {
+					slog.Error("channel bootstrap: list paired channels failed", "error", err)
+				}
 				return nil
 			}
 			for _, p := range paired {

@@ -241,16 +241,50 @@ func (c *WhatsmeowChannel) IsGroupJID(id string) bool {
 	return strings.HasSuffix(id, "@g.us")
 }
 
+// ResolveContactName looks up a best-effort display name from whatsmeow's contact
+// store (pushname / full / business name), or "" when the id is unparseable or
+// the contact is unknown. Callers backfill their own fallback.
+func (c *WhatsmeowChannel) ResolveContactName(ctx context.Context, id string) string {
+	if c.client == nil || c.client.Store == nil || c.client.Store.Contacts == nil {
+		return ""
+	}
+	jid, err := parseOrBuildJID(id)
+	if err != nil {
+		return ""
+	}
+	info, err := c.client.Store.Contacts.GetContact(ctx, jid)
+	if err != nil || !info.Found {
+		return ""
+	}
+	switch {
+	case info.FullName != "":
+		return info.FullName
+	case info.PushName != "":
+		return info.PushName
+	case info.BusinessName != "":
+		return info.BusinessName
+	default:
+		return ""
+	}
+}
+
 // handleEvent receives raw whatsmeow events, updates connection status, and
 // persists the mapped domain events.
 func (c *WhatsmeowChannel) handleEvent(evt any) {
 	switch evt.(type) {
 	case *events.Connected:
+		// Only emit channel.connected on a real transition. whatsmeow fires
+		// Connected on every auto-reconnect; re-raising the fact each time would
+		// churn the frozen wire and re-touch the read model with no state change.
 		c.mu.Lock()
+		wasConnected := c.status == gateway.ConnectionStatusConnected
 		c.status = gateway.ConnectionStatusConnected
 		c.mu.Unlock()
-		c.emitConnected()
+		if !wasConnected {
+			c.emitConnected()
+		}
 	case *events.Disconnected, *events.StreamReplaced:
+		// Transient: reflect live state but emit nothing — auto-reconnect handles it.
 		c.mu.Lock()
 		c.status = gateway.ConnectionStatusDisconnected
 		c.mu.Unlock()

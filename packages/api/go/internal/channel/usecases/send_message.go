@@ -56,9 +56,18 @@ func (h *SendMessageHandler) Execute(ctx context.Context, input SendMessageInput
 		return SendMessageOutput{}, errors.NewBaseError(errors.CodeExternalService, err.Error())
 	}
 
+	// The wire ContactDisplayName is required. Agent replies carry it from BC4;
+	// operator sends must resolve their own. Best-effort from the platform contact
+	// cache, falling back to the external id so we never ship a blank name.
+	displayName := ch.ResolveContactName(ctx, input.To)
+	if displayName == "" {
+		displayName = input.To
+	}
+
 	delivered := chanevents.NewOutboundDeliveredEvent(channelID, OperatorID, chanevents.OutboundDeliveredPayload{
 		ChannelID:      channelID,
 		ContactID:      input.To,
+		DisplayName:    displayName,
 		IsGroup:        ch.IsGroupJID(input.To),
 		SenderIdentity: wire.SenderIdentityOPERATOR,
 		DeliveredAt:    time.Now().UTC(),

@@ -35,7 +35,13 @@ func (p *ConnectedProjector) Handle(ctx context.Context, event fwtypes.DomainEve
 	return p.repo.SetStatus(ctx, pl.ChannelID.String(), wire.ChannelStatusCONNECTED, pl.AccountDetail)
 }
 
-// ── channel.disconnected → status DISCONNECTED ───────────────────────────────
+// ── channel.disconnected (TERMINAL) → status DISCONNECTED + unpair ────────────
+//
+// channel.disconnected is a terminal fact: platform-side LoggedOut or an explicit
+// teardown. Transient whatsmeow drops (Disconnected/StreamReplaced) are swallowed
+// by auto-reconnect and never reach here (see mapper.mapEvent). Terminal means the
+// pairing is gone, so we force-clear account_detail — not SetStatus(...,""), which
+// would preserve it and leave a dead session in ListPaired.
 
 type DisconnectedProjector struct{ repo projections.ChannelProjectionRepository }
 
@@ -53,5 +59,5 @@ func (p *DisconnectedProjector) Handle(ctx context.Context, event fwtypes.Domain
 		return err
 	}
 	pl := ev.Payload
-	return p.repo.SetStatus(ctx, pl.ChannelID.String(), wire.ChannelStatusDISCONNECTED, "")
+	return p.repo.ClearAccount(ctx, pl.ChannelID.String())
 }
