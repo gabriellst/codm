@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconCheck, IconChevronRight, IconX } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useGetAttachThreadWizard, useAttachThread } from '@codedm/client-typescript/typescript'
@@ -21,6 +22,7 @@ const WORKSPACE_BADGE: Record<'GIT' | 'CLAUDE_PROJECT', string> = { GIT: 'git', 
 
 /** Guided attach flow (T15): contact → workspace → agents → review, on a chrome-less fullscreen. */
 export function AttachThreadWizard() {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { data, isLoading } = useGetAttachThreadWizard()
 	const attach = useAttachThread()
@@ -79,7 +81,7 @@ export function AttachThreadWizard() {
 						</button>
 					))}
 				</nav>
-				<Button variant="secondary" size="icon" aria-label="Close" className="rounded-full" onClick={close}>
+				<Button variant="secondary" size="icon" aria-label={t('attach.close')} className="rounded-full" onClick={close}>
 					<IconX />
 				</Button>
 			</header>
@@ -94,10 +96,10 @@ export function AttachThreadWizard() {
 						</div>
 					) : data.noChannelConnected ? (
 						<Empty className="pt-16">
-							<EmptyTitle>Connect a channel first</EmptyTitle>
-							<EmptyDescription>You need at least one connected channel before you can attach a thread.</EmptyDescription>
+							<EmptyTitle>{t('attach.needChannelTitle')}</EmptyTitle>
+							<EmptyDescription>{t('attach.needChannelDescription')}</EmptyDescription>
 							<Button className="mt-2" onClick={() => navigate({ to: '/channels' })}>
-								Go to Channels
+								{t('attach.goToChannels')}
 							</Button>
 						</Empty>
 					) : (
@@ -149,11 +151,11 @@ export function AttachThreadWizard() {
 				<footer className="fixed inset-x-0 bottom-0 flex justify-center border-t border-border bg-card px-6 py-4">
 					<div className="flex w-full max-w-xl items-center justify-between">
 						<Button variant="ghost" disabled={step === 0} onClick={() => setStep(s => Math.max(0, s - 1))}>
-							Back
+							{t('attach.back')}
 						</Button>
 						{step < 3 ? (
 							<Button disabled={!canContinue} onClick={() => setStep(s => s + 1)}>
-								Continue <IconChevronRight data-icon="inline-end" />
+								{t('attach.continue')} <IconChevronRight data-icon="inline-end" />
 							</Button>
 						) : (
 							<Button disabled={!canContinue || attach.isPending} onClick={submit}>
@@ -191,10 +193,11 @@ function ContactStep({
 	selected: Contact | null
 	onSelect: (c: Contact) => void
 }) {
+	const { t } = useTranslation()
 	return (
 		<div className="flex flex-col gap-5">
-			<StepHeading title="Pick a thread" subtitle="Choose the contact, group or inbox your agent will live in." />
-			<Input placeholder="Search contacts and groups" value={search} onChange={e => onSearch(e.target.value)} />
+			<StepHeading title={t('attach.stepThreadTitle')} subtitle={t('attach.stepThreadSubtitle')} />
+			<Input placeholder={t('attach.searchContacts')} value={search} onChange={e => onSearch(e.target.value)} />
 			<div className="flex flex-col gap-1">
 				{contacts.map(contact => {
 					const channelKind = channelKindById.get(contact.channelId)
@@ -217,7 +220,7 @@ function ContactStep({
 								<span className="text-sm text-muted-foreground">{channelKind ? channelLabel[channelKind] : ''}</span>
 							</div>
 							{contact.alreadyAttached ? (
-								<Badge variant="outline">Attached</Badge>
+								<Badge variant="outline">{t('attach.attached')}</Badge>
 							) : (
 								<IconChevronRight className="size-4 text-muted-foreground" />
 							)}
@@ -238,9 +241,10 @@ function WorkspaceStep({
 	selected: string | null
 	onSelect: (id: string) => void
 }) {
+	const { t } = useTranslation()
 	return (
 		<div className="flex flex-col gap-5">
-			<StepHeading title="Pick a workspace" subtitle="The project folder your agents will work in." />
+			<StepHeading title={t('attach.stepWorkspaceTitle')} subtitle={t('attach.stepWorkspaceSubtitle')} />
 			<div className="flex flex-col gap-1">
 				{workspaces.map(workspace => (
 					<button
@@ -279,9 +283,10 @@ function AgentsStep({
 	selected: ProviderKind[]
 	onToggle: (p: ProviderKind) => void
 }) {
+	const { t } = useTranslation()
 	return (
 		<div className="flex flex-col gap-5">
-			<StepHeading title="Pick the agents" subtitle="Which provider CLIs can work in this thread." />
+			<StepHeading title={t('attach.stepAgentsTitle')} subtitle={t('attach.stepAgentsSubtitle')} />
 			<div className="flex flex-col gap-2">
 				{providers.map(provider => {
 					const Glyph = providerGlyph[provider.provider]
@@ -333,14 +338,15 @@ function ReviewStep({
 	workspacePath: string
 	providers: ProviderKind[]
 }) {
+	const { t } = useTranslation()
 	const rows = [
-		{ label: 'Contact', value: `${contact.displayName}${channelKind ? ` · ${channelLabel[channelKind]}` : ''}` },
-		{ label: 'Workspace', value: workspacePath, mono: true },
-		{ label: 'Agents', value: providers.map(p => providerLabel[p]).join(', ') },
+		{ label: t('attach.rowContact'), value: `${contact.displayName}${channelKind ? ` · ${channelLabel[channelKind]}` : ''}` },
+		{ label: t('attach.rowWorkspace'), value: workspacePath, mono: true },
+		{ label: t('attach.rowAgents'), value: providers.map(p => providerLabel[p]).join(', ') },
 	]
 	return (
 		<div className="flex flex-col gap-5">
-			<StepHeading title="Review" subtitle="Confirm the binding and attach the thread." />
+			<StepHeading title={t('attach.stepReviewTitle')} subtitle={t('attach.stepReviewSubtitle')} />
 			<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
 				{rows.map(row => (
 					<div key={row.label} className="flex items-center justify-between gap-4 p-4">

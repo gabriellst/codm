@@ -20,5 +20,7 @@ const OPERATOR_SESSION = {
 
 export const auth = {
 	useSession: () => ({ data: OPERATOR_SESSION, isPending: false, error: null }),
-	signOut: async () => {},
+	signOut: async () => {
+		// no-op: offline operator stub has no server session to end
+	},
 }

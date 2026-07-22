@@ -12,6 +12,7 @@ export default React.forwardRef(function ProfitIcon(
       viewBox="0 0 24 24"
       {...props}
     >
+      {/* eslint-disable-next-line local/no-hardcoded-jsx-text -- SVG <title> is the icon semantic name, not localized copy */}
       <title>Profit</title>
       <g
         fill="none"

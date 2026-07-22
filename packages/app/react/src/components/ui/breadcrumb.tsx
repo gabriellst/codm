@@ -2,11 +2,14 @@ import * as React from 'react'
 import { mergeProps } from '@base-ui/react/merge-props'
 import { useRender } from '@base-ui/react/use-render'
 
+import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
 import { IconChevronRight, IconDots } from '@tabler/icons-react'
 
 function Breadcrumb({ className, ...props }: React.ComponentProps<'nav'>) {
-	return <nav aria-label="breadcrumb" data-slot="breadcrumb" className={cn(className)} {...props} />
+	const { t } = useTranslation()
+	return <nav aria-label={t('common.breadcrumbLabel')} data-slot="breadcrumb" className={cn(className)} {...props} />
 }
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
@@ -52,6 +55,7 @@ function BreadcrumbSeparator({ children, className, ...props }: React.ComponentP
 }
 
 function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<'span'>) {
+	const { t } = useTranslation()
 	return (
 		<span
 			data-slot="breadcrumb-ellipsis"
@@ -61,7 +65,7 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<'span'
 			{...props}
 		>
 			<IconDots />
-			<span className="sr-only">More</span>
+			<span className="sr-only">{t('common.more')}</span>
 		</span>
 	)
 }

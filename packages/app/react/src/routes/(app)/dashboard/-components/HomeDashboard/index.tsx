@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codedm/client-typescript/typescript'
@@ -52,7 +53,8 @@ export function HomeDashboard() {
 }
 
 function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsYou']> }) {
-	const detail = needsYou.stopKinds.map(k => stopLabel[k]).join(' · ') || 'Waiting on you'
+	const { t } = useTranslation()
+	const detail = needsYou.stopKinds.map(k => stopLabel[k]).join(' · ') || t('session.agentStopped')
 	return (
 		<Card className="border-warning/50">
 			<CardContent className="flex items-center gap-4 p-5">
@@ -60,11 +62,11 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 					!
 				</span>
 				<div className="flex flex-1 flex-col">
-					<span className="font-semibold text-foreground">{needsYou.threadDisplayName} needs you</span>
+					<span className="font-semibold text-foreground">{t('dashboard.needsYouName', { name: needsYou.threadDisplayName })}</span>
 					<span className="text-sm text-muted-foreground">{detail}</span>
 				</div>
 				<Button size="sm" render={<Link to="/threads/$threadId" params={{ threadId: needsYou.threadId }} />}>
-					Open session
+					{t('dashboard.openSession')}
 				</Button>
 			</CardContent>
 		</Card>
@@ -72,11 +74,12 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 }
 
 function ActiveSessions({ sessions }: { sessions: Dashboard['activeSessions'] }) {
+	const { t } = useTranslation()
 	return (
 		<section className="flex flex-col gap-3">
-			<h2 className="text-lg font-semibold text-foreground">Active sessions</h2>
+			<h2 className="text-lg font-semibold text-foreground">{t('dashboard.activeSessions')}</h2>
 			{sessions.length === 0 ? (
-				<p className="text-sm text-muted-foreground">No active sessions.</p>
+				<p className="text-sm text-muted-foreground">{t('dashboard.noActiveSessions')}</p>
 			) : (
 				<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
 					{sessions.map(session => (
@@ -109,9 +112,10 @@ function ActiveSessions({ sessions }: { sessions: Dashboard['activeSessions'] })
 }
 
 function LatestActivity({ items }: { items: Dashboard['latestActivity'] }) {
+	const { t } = useTranslation()
 	return (
 		<section className="flex flex-col gap-3">
-			<h2 className="text-lg font-semibold text-foreground">Latest activity</h2>
+			<h2 className="text-lg font-semibold text-foreground">{t('dashboard.latestActivity')}</h2>
 			<div className="flex flex-col gap-3">
 				{items.map(item => (
 					<Link
@@ -133,15 +137,16 @@ function LatestActivity({ items }: { items: Dashboard['latestActivity'] }) {
 }
 
 function TodayCard({ today }: { today: Dashboard['today'] }) {
+	const { t } = useTranslation()
 	const rows = [
-		{ label: 'Issues opened', value: String(today.issuesOpened) },
-		{ label: 'Issues closed', value: String(today.issuesClosed) },
-		{ label: 'Median response', value: `${Math.round(today.medianResponseSeconds)}s` },
+		{ label: t('dashboard.issuesOpened'), value: String(today.issuesOpened) },
+		{ label: t('dashboard.issuesClosed'), value: String(today.issuesClosed) },
+		{ label: t('dashboard.medianResponse'), value: `${Math.round(today.medianResponseSeconds)}s` },
 	]
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Today</CardTitle>
+				<CardTitle>{t('dashboard.today')}</CardTitle>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-5">
 				{rows.map(row => (
@@ -156,11 +161,12 @@ function TodayCard({ today }: { today: Dashboard['today'] }) {
 }
 
 function ChannelsCard({ channels }: { channels: Dashboard['channels'] }) {
+	const { t } = useTranslation()
 	if (channels.length === 0) return null
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Channels</CardTitle>
+				<CardTitle>{t('dashboard.channels')}</CardTitle>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				{channels.map(channel => {

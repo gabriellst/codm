@@ -1,3 +1,10 @@
+/*
+ * Styleguide is a developer-only component showcase, not a shipped user surface: its labels are
+ * primitive/variant names ("Primary", "Ghost", enum demo values) that are intentionally raw and
+ * never localized. The i18n / dead-button / raw-enum rails don't apply here, so they're disabled
+ * file-wide (per react CLAUDE.md — justify-disable for the showcase).
+ */
+/* eslint-disable local/no-hardcoded-jsx-text, local/button-needs-handler, local/no-raw-enum-render */
 import { useState, type ReactNode } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { IconArrowRight, IconChevronRight, IconCheck, IconPlus, IconSearch, IconSparkles, IconX } from '@tabler/icons-react'

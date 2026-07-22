@@ -7,7 +7,7 @@
 import { type Locale, DEFAULT_LOCALE } from './locale'
 
 /** Money value type: cents + ISO 4217 currency code. Matches the SDK wire shape. */
-export type Money = { amountCents: number; currency: string }
+export interface Money { amountCents: number; currency: string }
 
 /** Format a single-currency money value (cents) in the given locale: {1234,'BRL'} -> "R$ 12,34". */
 export function formatMoney(money: Money, locale: Locale = DEFAULT_LOCALE): string {

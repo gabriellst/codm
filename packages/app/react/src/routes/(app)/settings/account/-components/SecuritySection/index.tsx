@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { GradientIconBadge } from '@/components/ui/gradient-icon-badge'
 import { LockIcon } from '@/components/ui/icons'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -44,7 +43,9 @@ export function SecuritySection({ className, ...props }: ComponentProps<'div'>) 
 	return (
 		<Card className={cn('gap-0 p-0', className)} {...props}>
 			<CardHeader className="flex flex-row items-center gap-3 border-b border-border/60 px-5 py-4">
-				<GradientIconBadge icon={LockIcon} />
+				<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary" aria-hidden>
+					<LockIcon className="size-5 text-foreground" />
+				</span>
 				<div className="flex min-w-0 flex-col gap-0.5">
 					<CardTitle className="text-sm font-semibold text-foreground">{t('account.security.sectionTitle')}</CardTitle>
 					<CardDescription className="text-xs">{t('account.security.sectionDescription')}</CardDescription>

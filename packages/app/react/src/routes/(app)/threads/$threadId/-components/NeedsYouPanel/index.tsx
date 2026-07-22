@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import {
 	getHomeDashboardQueryKey,
@@ -17,6 +18,7 @@ type Stop = GetNeedsYouPanelQueryResponse['stops'][number]
 
 /** Active stops on a thread with per-kind resolution actions (T14). Renders nothing when clear. */
 export function NeedsYouPanel({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data } = useGetNeedsYouPanel(threadId)
 
@@ -31,9 +33,9 @@ export function NeedsYouPanel({ threadId }: { threadId: string }) {
 		<Card className="mb-4 border-warning/50">
 			<div className="flex items-center justify-between border-b border-border px-5 py-3">
 				<span className="inline-flex items-center gap-2 font-semibold text-foreground">
-					Needs you <span className="text-sm font-normal text-muted-foreground">{stops.length}</span>
+					{t('session.needsYou')} <span className="text-sm font-normal text-muted-foreground">{stops.length}</span>
 				</span>
-				<span className="text-sm text-muted-foreground">Agent stopped and is waiting</span>
+				<span className="text-sm text-muted-foreground">{t('session.agentStopped')}</span>
 			</div>
 			<div className="flex flex-col divide-y divide-border">
 				{stops.map(stop => (

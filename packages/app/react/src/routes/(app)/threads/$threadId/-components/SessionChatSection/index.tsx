@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { getSessionChatQueryKey, useGetSessionChat } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -9,6 +10,7 @@ import { Composer } from '../Composer'
 
 /** The full thread conversation (T09): needs-you panel, transcript, and the mode-aware composer. */
 export function SessionChatSection({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetSessionChat(threadId)
 
@@ -32,8 +34,8 @@ export function SessionChatSection({ threadId }: { threadId: string }) {
 
 			{data.transcript.length === 0 ? (
 				<Empty className="py-16">
-					<EmptyTitle>No messages yet</EmptyTitle>
-					<EmptyDescription>Messages from this contact and your agents will appear here.</EmptyDescription>
+					<EmptyTitle>{t('session.chatEmptyTitle')}</EmptyTitle>
+					<EmptyDescription>{t('session.chatEmptyDescription')}</EmptyDescription>
 				</Empty>
 			) : (
 				<div className="flex flex-col gap-4 py-2">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { getSettingsQueryKey, useGetSettings, useUpdateStopCriteria } from '@codedm/client-typescript/typescript'
 import type { GetSettingsQueryResponse } from '@codedm/client-typescript/typescript'
@@ -20,6 +21,7 @@ const CRITERIA: { key: CriteriaKey; label: string; description: string }[] = [
  * "Needs you". Each toggle persists the full criteria object via UpdateStopCriteria.
  */
 export function StopCriteriaSection() {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetSettings()
 	const update = useUpdateStopCriteria()
@@ -39,11 +41,8 @@ export function StopCriteriaSection() {
 	return (
 		<section className="flex flex-col gap-3">
 			<div className="flex flex-col gap-1">
-				<h2 className="label-eyebrow">Stop criteria</h2>
-				<p className="text-sm text-muted-foreground">
-					When any of these happen the agent stops, the thread is flagged "Needs you", and the stop shows up in the session until you
-					resolve it.
-				</p>
+				<h2 className="label-eyebrow">{t('settings.stopCriteria')}</h2>
+				<p className="text-sm text-muted-foreground">{t('settings.stopCriteriaDescription')}</p>
 			</div>
 			{isLoading || !criteria ? (
 				<div className="flex flex-col gap-3">

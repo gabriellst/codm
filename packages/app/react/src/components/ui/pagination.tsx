@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -6,7 +7,10 @@ import { surface } from '@/components/ui/surfaces'
 import { IconChevronLeft, IconChevronRight, IconDots } from '@tabler/icons-react'
 
 function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
-	return <nav aria-label="pagination" data-slot="pagination" className={cn('mx-auto flex w-full justify-center', className)} {...props} />
+	const { t } = useTranslation()
+	return (
+		<nav aria-label={t('common.paginationLabel')} data-slot="pagination" className={cn('mx-auto flex w-full justify-center', className)} {...props} />
+	)
 }
 
 function PaginationContent({ className, ...props }: React.ComponentProps<'ul'>) {
@@ -37,24 +41,27 @@ function PaginationLink({ className, isActive, size = 'icon', ...props }: Pagina
 }
 
 function PaginationPrevious({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {
+	const { t } = useTranslation()
 	return (
-		<PaginationLink aria-label="Go to previous page" size="default" className={cn('pl-1.5!', className)} {...props}>
+		<PaginationLink aria-label={t('common.goToPreviousPage')} size="default" className={cn('pl-1.5!', className)} {...props}>
 			<IconChevronLeft data-icon="inline-start" />
-			<span className="hidden sm:block">Previous</span>
+			<span className="hidden sm:block">{t('common.previous')}</span>
 		</PaginationLink>
 	)
 }
 
 function PaginationNext({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {
+	const { t } = useTranslation()
 	return (
-		<PaginationLink aria-label="Go to next page" size="default" className={cn('pr-1.5!', className)} {...props}>
-			<span className="hidden sm:block">Next</span>
+		<PaginationLink aria-label={t('common.goToNextPage')} size="default" className={cn('pr-1.5!', className)} {...props}>
+			<span className="hidden sm:block">{t('common.next')}</span>
 			<IconChevronRight data-icon="inline-end" />
 		</PaginationLink>
 	)
 }
 
 function PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'>) {
+	const { t } = useTranslation()
 	return (
 		<span
 			aria-hidden
@@ -63,7 +70,7 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'
 			{...props}
 		>
 			<IconDots />
-			<span className="sr-only">More pages</span>
+			<span className="sr-only">{t('common.morePages')}</span>
 		</span>
 	)
 }

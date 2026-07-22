@@ -12,6 +12,7 @@ export default React.forwardRef(function LoadingIcon(
 			style={{ ...(props.style || {}), background: "transparent" }}
 			{...props}
 		>
+			{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- SVG <title> is the icon semantic name, not localized copy */}
 			<title>Loading</title>
       <circle
 				cx="50"

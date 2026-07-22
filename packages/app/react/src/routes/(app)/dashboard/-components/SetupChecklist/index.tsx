@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { IconCheck } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import type { GetSetupChecklistQueryResponse } from '@codedm/client-typescript/typescript'
@@ -21,6 +22,7 @@ interface Step {
  * a check once the corresponding read reports it done.
  */
 export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQueryResponse }) {
+	const { t } = useTranslation()
 	const steps: Step[] = [
 		{ n: 1, title: 'Connect a channel', description: 'WhatsApp, Instagram or Telegram', to: '/channels', done: checklist.channelDone },
 		{
@@ -37,8 +39,8 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 		<div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-6 pb-16 pt-24 text-center">
 			<div className="flex flex-col gap-3">
 				<p className="text-sm text-muted-foreground">{greeting()}</p>
-				<h1 className="heading-display text-4xl text-foreground md:text-5xl">Welcome to CodeDM</h1>
-				<p className="text-muted-foreground">Three quick steps and your contacts can put coding agents to work on this Mac.</p>
+				<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('home.welcome')}</h1>
+				<p className="text-muted-foreground">{t('home.welcomeSubtitle')}</p>
 			</div>
 
 			<Card className="w-full text-left">
@@ -65,9 +67,9 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 				</CardContent>
 				<CardFooter className="justify-end gap-4 border-t border-border pt-4 text-sm">
 					<Link to="/onboarding" className="font-medium text-foreground underline-offset-4 hover:underline">
-						Replay intro
+						{t('home.replayIntro')}
 					</Link>
-					<span className="font-medium text-muted-foreground">Explore with demo data</span>
+					<span className="font-medium text-muted-foreground">{t('home.exploreDemo')}</span>
 				</CardFooter>
 			</Card>
 		</div>

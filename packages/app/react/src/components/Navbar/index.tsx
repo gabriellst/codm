@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { IconAntennaBars5, IconFolder, IconHome, IconListDetails, IconPlus, IconSettings } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
@@ -21,6 +22,7 @@ const rowActive = 'bg-sidebar-accent text-sidebar-foreground'
  * the agent count; workspaces and issues reads supply the two remaining counts.
  */
 export function Sidebar({ className }: React.ComponentProps<'aside'>) {
+	const { t } = useTranslation()
 	const { data: dashboard } = useGetHomeDashboard()
 	const { data: workspaces } = useListWorkspaces()
 	const { data: issues } = useGetIssuesOverview()
@@ -46,10 +48,10 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 
 			<div className="flex min-h-0 flex-1 flex-col gap-2">
 				<div className="flex items-center justify-between px-2">
-					<span className="label-eyebrow">Threads</span>
+					<span className="label-eyebrow">{t('console.threads')}</span>
 					<Link
 						to="/attach"
-						aria-label="Attach a thread"
+						aria-label={t('console.attachThread')}
 						className="flex size-6 items-center justify-center rounded-full text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
 					>
 						<IconPlus className="size-4" />
@@ -58,7 +60,7 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 
 				<div className="flex flex-col gap-0.5 overflow-y-auto">
 					{threads.length === 0 ? (
-						<p className="px-3 py-1 text-sm text-muted-foreground">No threads yet</p>
+						<p className="px-3 py-1 text-sm text-muted-foreground">{t('console.noThreadsYet')}</p>
 					) : (
 						threads.map(thread => (
 							<Link
@@ -78,9 +80,9 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 			</div>
 
 			<div className="px-2 text-xs leading-relaxed text-muted-foreground">
-				Open source · runs locally
+				{t('console.footerLocal')}
 				<br />
-				No account needed
+				{t('console.footerNoAccount')}
 			</div>
 		</aside>
 	)

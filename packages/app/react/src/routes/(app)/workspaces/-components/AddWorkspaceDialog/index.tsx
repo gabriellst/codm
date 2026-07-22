@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listWorkspacesQueryKey, useAddWorkspace } from '@codedm/client-typescript/typescript'
@@ -18,6 +19,7 @@ import { Label } from '@/components/ui/label'
 
 /** "Add folder" flow: point CodeDM at a project folder; badges are detected server-side. */
 export function AddWorkspaceDialog() {
+	const { t } = useTranslation()
 	const [open, setOpen] = useState(false)
 	const [path, setPath] = useState('')
 	const queryClient = useQueryClient()
@@ -43,30 +45,28 @@ export function AddWorkspaceDialog() {
 			<DialogTrigger
 				render={
 					<Button>
-						<IconPlus data-icon="inline-start" /> Add folder
+						<IconPlus data-icon="inline-start" /> {t('workspaces.addFolder')}
 					</Button>
 				}
 			/>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Add a workspace</DialogTitle>
-					<DialogDescription>
-						Point at a project folder on this Mac. Git and Claude-project badges are detected automatically.
-					</DialogDescription>
+					<DialogTitle>{t('workspaces.addTitle')}</DialogTitle>
+					<DialogDescription>{t('workspaces.addDescription')}</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-2">
-					<Label htmlFor="workspace-path">Project folder</Label>
+					<Label htmlFor="workspace-path">{t('workspaces.projectFolder')}</Label>
 					<Input
 						id="workspace-path"
 						className="font-mono"
-						placeholder="~/dev/acme-storefront"
+						placeholder={t('workspaces.pathPlaceholder')}
 						value={path}
 						onChange={e => setPath(e.target.value)}
 						onKeyDown={e => e.key === 'Enter' && submit()}
 					/>
 				</div>
 				<DialogFooter>
-					<DialogClose render={<Button variant="ghost">Cancel</Button>} />
+					<DialogClose render={<Button variant="ghost">{t('common.cancel')}</Button>} />
 					<Button onClick={submit} disabled={!path.trim() || addWorkspace.isPending}>
 						{String(addWorkspace.isPending ? 'Adding…' : 'Add folder')}
 					</Button>

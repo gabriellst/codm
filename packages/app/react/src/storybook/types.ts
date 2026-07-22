@@ -14,9 +14,7 @@ export interface RouteParam {
 /** App-global Zustand state to set up for the story (applied before render via `givenStores`).
  *  Empty since the Store-tenancy scope was removed with the owner-model collapse — a product with
  *  app-global client state re-adds its typed keys here (e.g. `theme?: Theme`). */
-export interface StoresParam {
-	[key: string]: never
-}
+export type StoresParam = Record<string, never>;
 
 /** The `parameters` block a connected story declares. The index signature keeps Storybook's own
  *  params (layout, msw, …) assignable while `route`/`stores` stay strongly typed. */

@@ -52,7 +52,6 @@
 	--focus: oklch(from var(--foreground) l c h / 0.08);
 
 	/* ── Legacy brand aliases (kept mono so nothing breaks) ─ */
-	--brand-purple: var(--foreground);
 	--brand-green: var(--success);
 
 	/* ── Charts — monochrome ramp (color stays out of data) ─ */

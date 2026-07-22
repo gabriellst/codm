@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useGetSessionIssues } from '@codedm/client-typescript/typescript'
 import type { IssueStatus } from '@codedm/client-typescript/typescript'
 import { IssueRow } from '@/components/console/IssueRow'
@@ -9,6 +10,7 @@ const STATUS_ORDER: IssueStatus[] = ['NEEDS_INPUT', 'WORKING', 'COMPLETED']
 
 /** Issues of one thread grouped by status, with the auto-archive note (T11). */
 export function SessionIssuesSection({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
 	const { data, isLoading } = useGetSessionIssues(threadId)
 
 	if (isLoading || !data) {
@@ -30,13 +32,13 @@ export function SessionIssuesSection({ threadId }: { threadId: string }) {
 	return (
 		<div className="flex flex-col gap-6 py-2">
 			<p className="text-sm text-muted-foreground">
-				{stats.awaitingInput} awaiting input · {stats.working} working · {stats.completed} completed
+				{t('session.issuesStats', { awaiting: stats.awaitingInput, working: stats.working, completed: stats.completed })}
 			</p>
 
 			{empty ? (
 				<Empty>
-					<EmptyTitle>No issues in this thread</EmptyTitle>
-					<EmptyDescription>Routed messages that spawn work will show up here as issues.</EmptyDescription>
+					<EmptyTitle>{t('session.issuesEmptyTitle')}</EmptyTitle>
+					<EmptyDescription>{t('session.issuesEmptyDescription')}</EmptyDescription>
 				</Empty>
 			) : (
 				<div className="flex flex-col gap-8">
@@ -51,7 +53,7 @@ export function SessionIssuesSection({ threadId }: { threadId: string }) {
 
 					{data.archived.length > 0 && (
 						<section className="flex flex-col gap-1">
-							<h2 className="label-eyebrow px-2 pb-1">Archived</h2>
+							<h2 className="label-eyebrow px-2 pb-1">{t('session.archived')}</h2>
 							{data.archived.map(item => (
 								<IssueRow key={item.issueId} item={{ ...item, threadId }} />
 							))}

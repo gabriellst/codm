@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { useGetIssuesOverview } from '@codedm/client-typescript/typescript'
 import type { IssueStatus } from '@codedm/client-typescript/typescript'
@@ -14,6 +15,7 @@ const STATUS_ORDER: IssueStatus[] = ['NEEDS_INPUT', 'WORKING', 'COMPLETED']
 
 /** Every issue across every thread, grouped by status, with an archived reveal (T04). */
 export function IssuesOverviewSection() {
+	const { t } = useTranslation()
 	const { archived } = routeApi.useSearch()
 	const { data, isLoading } = useGetIssuesOverview({ includeArchived: archived })
 
@@ -29,7 +31,7 @@ export function IssuesOverviewSection() {
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
 			<PageHeader
-				title="Issues"
+				title={t('issues.title')}
 				subtitle={subtitle ?? <Skeleton className="h-4 w-64" />}
 				action={
 					<Button variant={archived ? 'secondary' : 'outline'} size="sm" render={<Link to="/issues" search={{ archived: !archived }} />}>
@@ -46,8 +48,8 @@ export function IssuesOverviewSection() {
 				</div>
 			) : orderedGroups.length === 0 && (!data || data.archived.length === 0) ? (
 				<Empty>
-					<EmptyTitle>No issues yet</EmptyTitle>
-					<EmptyDescription>Issues appear here once your agents start working on routed messages.</EmptyDescription>
+					<EmptyTitle>{t('issues.emptyTitle')}</EmptyTitle>
+					<EmptyDescription>{t('issues.emptyDescription')}</EmptyDescription>
 				</Empty>
 			) : (
 				<div className="flex flex-col gap-8">
@@ -62,7 +64,7 @@ export function IssuesOverviewSection() {
 
 					{archived && data && data.archived.length > 0 && (
 						<section className="flex flex-col gap-1">
-							<h2 className="label-eyebrow px-2 pb-1">Archived</h2>
+							<h2 className="label-eyebrow px-2 pb-1">{t('issues.archived')}</h2>
 							{data.archived.map(item => (
 								<IssueRow key={item.issueId} item={item} />
 							))}

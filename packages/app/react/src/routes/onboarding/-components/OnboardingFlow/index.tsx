@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ const STEPS = [
 
 /** First-run intro (T01): value prop, how it works, and the control plane — 3 slides. */
 export function OnboardingFlow() {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [slide, setSlide] = useState(0)
 	const done = () => navigate({ to: '/dashboard' })
@@ -26,7 +28,7 @@ export function OnboardingFlow() {
 			<header className="flex items-center justify-between px-6 py-6 md:px-10">
 				<Logo />
 				<Link to="/dashboard" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-					Skip
+					{t('onboarding.skip')}
 				</Link>
 			</header>
 
@@ -45,16 +47,16 @@ export function OnboardingFlow() {
 					<div className="flex items-center gap-3">
 						{slide > 0 && (
 							<Button variant="outline" onClick={() => setSlide(s => s - 1)}>
-								Back
+								{t('onboarding.back')}
 							</Button>
 						)}
 						{slide < 2 ? (
 							<Button onClick={() => setSlide(s => s + 1)}>
-								Next <IconArrowRight data-icon="inline-end" />
+								{t('onboarding.next')} <IconArrowRight data-icon="inline-end" />
 							</Button>
 						) : (
 							<Button onClick={done}>
-								Get started <IconArrowRight data-icon="inline-end" />
+								{t('onboarding.getStarted')} <IconArrowRight data-icon="inline-end" />
 							</Button>
 						)}
 					</div>
@@ -65,6 +67,7 @@ export function OnboardingFlow() {
 }
 
 function ValueSlide() {
+	const { t } = useTranslation()
 	return (
 		<div className="flex flex-col items-center gap-6">
 			<div className="flex items-center gap-3">
@@ -86,19 +89,17 @@ function ValueSlide() {
 					)
 				})}
 			</div>
-			<h1 className="heading-display text-4xl text-foreground md:text-5xl">DM your codebase</h1>
-			<p className="text-muted-foreground">
-				CodeDM connects WhatsApp, Instagram and Telegram to coding agents running on this Mac — DM your codebase like it's any DM platform.
-				Open source, no account, everything stays local.
-			</p>
+			<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('onboarding.slide1Title')}</h1>
+			<p className="text-muted-foreground">{t('onboarding.slide1Body')}</p>
 		</div>
 	)
 }
 
 function HowItWorksSlide() {
+	const { t } = useTranslation()
 	return (
 		<div className="flex w-full flex-col items-center gap-6">
-			<h1 className="heading-display text-4xl text-foreground md:text-5xl">How it works</h1>
+			<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('onboarding.slide2Title')}</h1>
 			<div className="flex w-full flex-col gap-5 text-left">
 				{STEPS.map(step => (
 					<div key={step.n} className="flex items-start gap-4">
@@ -117,13 +118,11 @@ function HowItWorksSlide() {
 }
 
 function ControlSlide() {
+	const { t } = useTranslation()
 	return (
 		<div className="flex flex-col items-center gap-6">
-			<h1 className="heading-display text-4xl text-foreground md:text-5xl">You stay in control</h1>
-			<p className="text-muted-foreground">
-				Agents pause on server errors, blocked replies, or when someone asks for a human. You review, steer with a whisper, or take over —
-				nothing ships without your say.
-			</p>
+			<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('onboarding.slide3Title')}</h1>
+			<p className="text-muted-foreground">{t('onboarding.slide3Body')}</p>
 		</div>
 	)
 }

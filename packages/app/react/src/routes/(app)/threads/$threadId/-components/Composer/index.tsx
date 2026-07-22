@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconArrowUp } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { getSessionChatQueryKey, useSendDirectMessage, useSteerThread } from '@codedm/client-typescript/typescript'
@@ -18,6 +19,7 @@ const MODES: { value: ThreadMode; label: string }[] = [
  * Seeded from the read's `composerMode` but the operator can switch either way.
  */
 export function Composer({ threadId, composerMode }: { threadId: string; composerMode: ThreadMode }) {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const [mode, setMode] = useState<ThreadMode>(composerMode)
 	const [text, setText] = useState('')
@@ -67,7 +69,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 					placeholder={mode === 'STEER' ? 'Whisper a steer to the agents…' : 'Reply in the channel…'}
 					className="min-h-10 flex-1 resize-none border-0 bg-transparent focus-visible:ring-0"
 				/>
-				<Button size="icon" aria-label="Send" disabled={!text.trim() || pending} onClick={send}>
+				<Button size="icon" aria-label={t('session.send')} disabled={!text.trim() || pending} onClick={send}>
 					<IconArrowUp />
 				</Button>
 			</div>

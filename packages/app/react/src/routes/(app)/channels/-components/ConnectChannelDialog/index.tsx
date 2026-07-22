@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconChevronLeft, IconChevronRight, IconQrcode } from '@tabler/icons-react'
 import { channelGlyph, channelLabel, emailGlyph } from '@/components/console/glyphs'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ type View = 'picker' | 'pairing'
  * pairing view shows an honest waiting state rather than a fabricated code.
  */
 export function ConnectChannelDialog() {
+	const { t } = useTranslation()
 	const [open, setOpen] = useState(false)
 	const [view, setView] = useState<View>('picker')
 
@@ -25,13 +27,13 @@ export function ConnectChannelDialog() {
 
 	return (
 		<Dialog open={open} onOpenChange={close}>
-			<DialogTrigger render={<Button>Connect channel</Button>} />
+			<DialogTrigger render={<Button>{t('channels.connectChannel')}</Button>} />
 			<DialogContent>
 				{view === 'picker' ? (
 					<>
 						<DialogHeader>
-							<DialogTitle>Connect a channel</DialogTitle>
-							<DialogDescription>Messages in connected channels can be routed to your agents.</DialogDescription>
+							<DialogTitle>{t('channels.connectTitle')}</DialogTitle>
+							<DialogDescription>{t('channels.connectDescription')}</DialogDescription>
 						</DialogHeader>
 						<div className="flex flex-col gap-2">
 							<button
@@ -44,7 +46,7 @@ export function ConnectChannelDialog() {
 								</span>
 								<div className="flex flex-1 flex-col">
 									<span className="text-sm font-semibold text-foreground">{channelLabel.TELEGRAM}</span>
-									<span className="text-xs text-muted-foreground">Pair via QR code</span>
+									<span className="text-xs text-muted-foreground">{t('channels.pairViaQr')}</span>
 								</div>
 								<IconChevronRight className="size-4 text-muted-foreground" />
 							</button>
@@ -53,8 +55,8 @@ export function ConnectChannelDialog() {
 									<EmailGlyph className="size-5" />
 								</span>
 								<div className="flex flex-1 flex-col">
-									<span className="text-sm font-semibold text-foreground">Email (IMAP)</span>
-									<span className="text-xs text-muted-foreground">Coming soon</span>
+									<span className="text-sm font-semibold text-foreground">{t('channels.emailImap')}</span>
+									<span className="text-xs text-muted-foreground">{t('channels.comingSoon')}</span>
 								</div>
 							</div>
 						</div>
@@ -62,18 +64,18 @@ export function ConnectChannelDialog() {
 				) : (
 					<>
 						<DialogHeader>
-							<DialogTitle>Pair Telegram</DialogTitle>
-							<DialogDescription>Open Telegram on your phone, then scan this code to link the channel.</DialogDescription>
+							<DialogTitle>{t('channels.pairTitle')}</DialogTitle>
+							<DialogDescription>{t('channels.pairDescription')}</DialogDescription>
 						</DialogHeader>
 						<div className="flex flex-col items-center gap-4 py-2">
 							<div className="flex size-52 items-center justify-center rounded-2xl border border-dashed border-border bg-muted text-muted-foreground">
 								<IconQrcode className="size-16" />
 							</div>
-							<p className="text-center text-sm text-muted-foreground">Waiting for the local gateway to generate a pairing code…</p>
+							<p className="text-center text-sm text-muted-foreground">{t('channels.pairWaiting')}</p>
 						</div>
 						<div className="flex justify-start">
 							<Button variant="ghost" size="sm" onClick={() => setView('picker')}>
-								<IconChevronLeft data-icon="inline-start" /> Back
+								<IconChevronLeft data-icon="inline-start" /> {t('console.back')}
 							</Button>
 						</div>
 					</>

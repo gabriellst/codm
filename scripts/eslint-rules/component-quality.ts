@@ -17,9 +17,10 @@ import { REPO } from '../../template.config'
 
 const createRule = ESLintUtils.RuleCreator(name => `${REPO.repoUrl}#${name}`)
 
-// Attributes that wire a <Button> to an action. asChild → the action lives on the child (a Link /
-// DialogTrigger). type="submit" → the enclosing form's onSubmit. href/formAction → navigation/submit.
-const ACTION_ATTRS = new Set(['onClick', 'onPress', 'onPressIn', 'asChild', 'href', 'formAction', 'onSubmit'])
+// Attributes that wire a <Button> to an action. asChild / render → the action lives on the composed
+// child (Base UI `render={<Link/>}` renders the Button AS that element, so navigation/handler is wired
+// by the child). type="submit" → the enclosing form's onSubmit. href/formAction → navigation/submit.
+const ACTION_ATTRS = new Set(['onClick', 'onPress', 'onPressIn', 'asChild', 'render', 'href', 'formAction', 'onSubmit'])
 
 export const buttonNeedsHandler = createRule({
 	name: 'button-needs-handler',

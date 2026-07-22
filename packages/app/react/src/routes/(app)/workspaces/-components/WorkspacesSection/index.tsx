@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { IconFolder } from '@tabler/icons-react'
 import { useListWorkspaces } from '@codedm/client-typescript/typescript'
 import type { ListWorkspacesQueryResponse, WorkspaceBadge } from '@codedm/client-typescript/typescript'
@@ -13,15 +14,16 @@ type Workspace = ListWorkspacesQueryResponse['workspaces'][number]
 
 /** Registered project folders on this Mac, with their git/Claude badges and thread counts (T07). */
 export function WorkspacesSection() {
+	const { t } = useTranslation()
 	const { data, isLoading } = useListWorkspaces()
 	const workspaces = data?.workspaces ?? []
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
-			<PageHeader title="Workspaces" action={<AddWorkspaceDialog />} />
+			<PageHeader title={t('workspaces.title')} action={<AddWorkspaceDialog />} />
 
 			<div className="flex flex-col gap-2">
-				<h2 className="label-eyebrow px-1">Project folders</h2>
+				<h2 className="label-eyebrow px-1">{t('workspaces.projectFolders')}</h2>
 				{isLoading ? (
 					<div className="flex flex-col gap-3">
 						<Skeleton className="h-16 rounded-2xl" />
@@ -29,8 +31,8 @@ export function WorkspacesSection() {
 					</div>
 				) : workspaces.length === 0 ? (
 					<Empty>
-						<EmptyTitle>No workspaces yet</EmptyTitle>
-						<EmptyDescription>Add a project folder and CodeDM will detect its git repo and Claude project.</EmptyDescription>
+						<EmptyTitle>{t('workspaces.emptyTitle')}</EmptyTitle>
+						<EmptyDescription>{t('workspaces.emptyDescription')}</EmptyDescription>
 					</Empty>
 				) : (
 					<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">

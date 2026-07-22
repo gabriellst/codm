@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { IconFile, IconLink, IconPhoto } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
 import { useListArtifacts } from '@codedm/client-typescript/typescript'
@@ -12,6 +13,7 @@ const artifactGlyph: Record<ArtifactKind, Icon> = { IMAGE: IconPhoto, FILE: Icon
 
 /** The non-code outputs of a thread — preview deploys, screenshots, files (T13). */
 export function ArtifactsSection({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
 	const { data, isLoading } = useListArtifacts(threadId)
 	const artifacts = data?.artifacts ?? []
 
@@ -27,8 +29,8 @@ export function ArtifactsSection({ threadId }: { threadId: string }) {
 	if (artifacts.length === 0) {
 		return (
 			<Empty className="py-16">
-				<EmptyTitle>No artifacts yet</EmptyTitle>
-				<EmptyDescription>Preview deploys, screenshots and files produced by your agents land here.</EmptyDescription>
+				<EmptyTitle>{t('session.artifactsEmptyTitle')}</EmptyTitle>
+				<EmptyDescription>{t('session.artifactsEmptyDescription')}</EmptyDescription>
 			</Empty>
 		)
 	}

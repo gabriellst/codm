@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import type { GetSessionChatQueryResponse } from '@codedm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
@@ -12,6 +13,7 @@ type Entry = GetSessionChatQueryResponse['transcript'][number]
  * full-width system line (classifications, edits, test runs).
  */
 export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: string }) {
+	const { t } = useTranslation()
 	if (entry.kind === 'ACTION') {
 		return (
 			<div className="flex items-start gap-2 py-1 text-sm text-muted-foreground">
@@ -42,7 +44,7 @@ export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: 
 						params={{ threadId, issueId: entry.issueId }}
 						className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 font-mono hover:bg-muted"
 					>
-						<Dot className="bg-info" /> issue
+						<Dot className="bg-info" /> {t('session.transcriptIssue')}
 					</Link>
 				)}
 				<span>{caption}</span>

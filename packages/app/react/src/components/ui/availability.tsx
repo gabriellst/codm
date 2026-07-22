@@ -1021,7 +1021,9 @@ function TimeSpanCard({
 			<div className="flex flex-col gap-0.5 text-inherit">
 				<p className="font-semibold leading-none">{formatDisplayTime(span.start_time, useAmPm)}</p>
 				<div className="flex items-center gap-0.5">
-					<IconClock className="size-2" /> <p className="text-[10px] opacity-80">{calculatedDuration.toFixed(1).replace('.0', '')}h</p>
+					<IconClock className="size-2" />{' '}
+					{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- "h" is a duration unit symbol, not translatable copy */}
+					<p className="text-[10px] opacity-80">{calculatedDuration.toFixed(1).replace('.0', '')}h</p>
 				</div>
 			</div>
 			{onDelete && (

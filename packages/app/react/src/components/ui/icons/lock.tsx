@@ -12,6 +12,7 @@ export default React.forwardRef(function LockIcon(
       viewBox="0 0 24 24"
       {...props}
     >
+      {/* eslint-disable-next-line local/no-hardcoded-jsx-text -- SVG <title> is the icon semantic name, not localized copy */}
       <title>Lock</title>
       <path
         fill="currentColor"

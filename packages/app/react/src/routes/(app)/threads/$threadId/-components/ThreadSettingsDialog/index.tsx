@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import {
 	getThreadSettingsQueryKey,
@@ -18,6 +19,7 @@ const BUFFER_SIZES: BufferSize[] = ['25', '50', '100', '200']
 
 /** Per-thread behavior modal (T10): respond trigger, who can invoke agents, and context buffer depth. */
 export function ThreadSettingsDialog({ threadId, trigger }: { threadId: string; trigger: ReactElement }) {
+	const { t } = useTranslation()
 	const [open, setOpen] = useState(false)
 
 	return (
@@ -25,8 +27,8 @@ export function ThreadSettingsDialog({ threadId, trigger }: { threadId: string; 
 			<DialogTrigger render={trigger} />
 			<DialogContent className="max-w-lg">
 				<DialogHeader>
-					<DialogTitle>Thread settings</DialogTitle>
-					<DialogDescription>Tune how agents behave in this thread.</DialogDescription>
+					<DialogTitle>{t('session.settingsTitle')}</DialogTitle>
+					<DialogDescription>{t('session.settingsDescription')}</DialogDescription>
 				</DialogHeader>
 				{open && <ThreadSettingsBody threadId={threadId} />}
 			</DialogContent>
@@ -35,6 +37,7 @@ export function ThreadSettingsDialog({ threadId, trigger }: { threadId: string; 
 }
 
 function ThreadSettingsBody({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetThreadSettings(threadId)
 	const configureMentionGate = useConfigureMentionGate()
@@ -69,11 +72,11 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 	return (
 		<div className="flex flex-col gap-6">
 			<section className="flex flex-col gap-3">
-				<h3 className="label-eyebrow">Respond trigger</h3>
+				<h3 className="label-eyebrow">{t('session.respondTrigger')}</h3>
 				<label className="flex items-center gap-4">
 					<div className="flex flex-1 flex-col">
-						<span className="text-sm font-medium text-foreground">Only reply when mentioned</span>
-						<span className="text-sm text-muted-foreground">Otherwise agents respond to every message in the thread.</span>
+						<span className="text-sm font-medium text-foreground">{t('session.onlyWhenMentioned')}</span>
+						<span className="text-sm text-muted-foreground">{t('session.onlyWhenMentionedHint')}</span>
 					</div>
 					<Switch
 						checked={gateEnabled}
@@ -85,8 +88,8 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 				</label>
 				{gateEnabled && (
 					<Input
-						aria-label="Mention tag"
-						placeholder="@codedm"
+						aria-label={t('session.mentionTag')}
+						placeholder={t('session.mentionTagPlaceholder')}
 						value={tag}
 						onChange={e => setTag(e.target.value)}
 						onBlur={() => saveGate(true, tag)}
@@ -96,8 +99,8 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 
 			<section className="flex flex-col gap-3">
 				<div className="flex items-center justify-between">
-					<h3 className="label-eyebrow">Participants</h3>
-					<span className="text-xs text-muted-foreground">{data.invokerCount} can invoke</span>
+					<h3 className="label-eyebrow">{t('session.participants')}</h3>
+					<span className="text-xs text-muted-foreground">{t('session.canInvoke', { count: data.invokerCount })}</span>
 				</div>
 				<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
 					{data.participants.map(participant => (
@@ -121,7 +124,7 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h3 className="label-eyebrow">Context buffer</h3>
+				<h3 className="label-eyebrow">{t('session.contextBuffer')}</h3>
 				<div className="inline-flex items-center gap-1 rounded-full bg-secondary p-1">
 					{BUFFER_SIZES.map(size => (
 						<button
@@ -137,7 +140,7 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 						</button>
 					))}
 				</div>
-				<p className="text-sm text-muted-foreground">How many recent messages agents see as context.</p>
+				<p className="text-sm text-muted-foreground">{t('session.contextBufferHint')}</p>
 			</section>
 		</div>
 	)

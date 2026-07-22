@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { IconChevronLeft, IconPlayerPause, IconPlayerPlay, IconSettings2 } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
@@ -25,6 +26,7 @@ const TABS = [
 
 /** The session masthead shared by the Chat / Issues / Artifacts tabs: identity, control-plane state, tab switcher. */
 export function SessionHeader({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
 	const router = useRouter()
 	const queryClient = useQueryClient()
 	const pathname = useRouterState({ select: s => s.location.pathname })
@@ -49,7 +51,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 
 	return (
 		<div className="flex shrink-0 flex-col gap-4 pb-4">
-			<Button variant="secondary" size="icon" aria-label="Back" className="rounded-full" onClick={() => router.history.back()}>
+			<Button variant="secondary" size="icon" aria-label={t('session.back')} className="rounded-full" onClick={() => router.history.back()}>
 				<IconChevronLeft />
 			</Button>
 
@@ -124,7 +126,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 							disabled={resume.isPending}
 							onClick={() => resume.mutate({ threadId }, { onSuccess: invalidate })}
 						>
-							<IconPlayerPlay data-icon="inline-start" /> Resume
+							<IconPlayerPlay data-icon="inline-start" /> {t('session.resume')}
 						</Button>
 					) : (
 						<Button
@@ -133,7 +135,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 							disabled={pause.isPending}
 							onClick={() => pause.mutate({ threadId }, { onSuccess: invalidate })}
 						>
-							<IconPlayerPause data-icon="inline-start" /> Pause
+							<IconPlayerPause data-icon="inline-start" /> {t('session.pause')}
 						</Button>
 					)}
 
@@ -141,7 +143,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 						threadId={threadId}
 						trigger={
 							<Button variant="outline" size="sm">
-								<IconSettings2 data-icon="inline-start" /> Thread settings
+								<IconSettings2 data-icon="inline-start" /> {t('session.threadSettings')}
 							</Button>
 						}
 					/>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { IconChevronRight } from '@tabler/icons-react'
 import { useGetHomeDashboard } from '@codedm/client-typescript/typescript'
 import type { ChannelKind, ChannelStatus } from '@codedm/client-typescript/typescript'
@@ -19,16 +20,17 @@ const statusLabel: Record<ChannelStatus, string> = {
  * channel kinds is listed with its live status and nothing invented.
  */
 export function ChannelsSection() {
+	const { t } = useTranslation()
 	const { data, isLoading } = useGetHomeDashboard()
 
 	const statusByKind = new Map<ChannelKind, ChannelStatus>((data?.channels ?? []).map(c => [c.kind, c.status]))
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
-			<PageHeader title="Channels" action={<ConnectChannelDialog />} />
+			<PageHeader title={t('channels.title')} action={<ConnectChannelDialog />} />
 
 			<div className="flex flex-col gap-2">
-				<h2 className="label-eyebrow px-1">Your channels</h2>
+				<h2 className="label-eyebrow px-1">{t('channels.yourChannels')}</h2>
 				{isLoading ? (
 					<div className="flex flex-col gap-3">
 						<Skeleton className="h-16 rounded-2xl" />

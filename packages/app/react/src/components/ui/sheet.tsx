@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog as SheetPrimitive } from '@base-ui/react/dialog'
 
 import { cn } from '@/lib/utils'
@@ -45,6 +46,7 @@ function SheetContent({
 	side?: 'top' | 'right' | 'bottom' | 'left'
 	showCloseButton?: boolean
 }) {
+	const { t } = useTranslation()
 	return (
 		<SheetPortal>
 			<SheetOverlay />
@@ -65,7 +67,7 @@ function SheetContent({
 						render={<Button variant="ghost" className="absolute top-3 right-3" size="icon-sm" />}
 					>
 						<IconX />
-						<span className="sr-only">Close</span>
+						<span className="sr-only">{t('common.close')}</span>
 					</SheetPrimitive.Close>
 				)}
 			</SheetPrimitive.Popup>

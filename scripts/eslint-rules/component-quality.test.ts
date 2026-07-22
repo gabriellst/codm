@@ -31,6 +31,7 @@ describe('button-needs-handler', () => {
 			'const a = <Button onPress={fn}>Save</Button>',
 			'const a = <Button type="submit">Save</Button>',
 			'const a = <Button asChild><a href="/x">Go</a></Button>',
+			'const a = <Button render={<Link to="/x" />}>Go</Button>', // Base UI render prop wires the action
 			'const a = <Button {...props}>Save</Button>',
 			'const a = <Button disabled>Loading</Button>',
 			'const a = <Close render={<Button variant="ghost" />} />', // Base UI composition

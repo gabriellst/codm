@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconChevronLeft } from '@tabler/icons-react'
 import { useRouter } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -23,10 +24,11 @@ export function PageHeader({
 	className?: string
 }) {
 	const router = useRouter()
+	const { t } = useTranslation()
 	return (
 		<div className={cn('flex flex-col gap-4', className)}>
 			{back && (
-				<Button variant="secondary" size="icon" aria-label="Back" className="rounded-full" onClick={() => router.history.back()}>
+				<Button variant="secondary" size="icon" aria-label={t('console.back')} className="rounded-full" onClick={() => router.history.back()}>
 					<IconChevronLeft />
 				</Button>
 			)}

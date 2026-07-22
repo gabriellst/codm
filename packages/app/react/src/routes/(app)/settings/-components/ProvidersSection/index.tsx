@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useDetectProviders } from '@codedm/client-typescript/typescript'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { Badge } from '@/components/ui/badge'
@@ -5,12 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 /** Detected agent-provider CLIs with binary path, version and install status. */
 export function ProvidersSection() {
+	const { t } = useTranslation()
 	const { data, isLoading } = useDetectProviders()
 	const providers = data?.providers ?? []
 
 	return (
 		<section className="flex flex-col gap-3">
-			<h2 className="label-eyebrow">Agent providers</h2>
+			<h2 className="label-eyebrow">{t('settings.agentProviders')}</h2>
 			{isLoading ? (
 				<div className="flex flex-col gap-3">
 					<Skeleton className="h-14 rounded-2xl" />

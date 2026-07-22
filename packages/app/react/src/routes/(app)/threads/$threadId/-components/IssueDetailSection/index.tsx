@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconArrowUp, IconChevronLeft } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -21,6 +22,7 @@ type Detail = GetIssueDetailQueryResponse
 
 /** One issue drill-down (T12): the dark terminal panel, routed messages, and an issue-scoped steer. */
 export function IssueDetailSection({ threadId, issueId }: { threadId: string; issueId: string }) {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 	const { data, isLoading } = useGetIssueDetail(issueId)
@@ -55,7 +57,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 				params={{ threadId }}
 				className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
 			>
-				<IconChevronLeft className="size-4" /> All issues
+				<IconChevronLeft className="size-4" /> {t('session.allIssues')}
 			</Link>
 
 			<div className="flex items-start justify-between gap-4">
@@ -71,7 +73,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 				</div>
 				{!data.issue.archived && (
 					<Button variant="outline" size="sm" disabled={archive.isPending} onClick={onArchive}>
-						Archive
+						{t('session.archive')}
 					</Button>
 				)}
 			</div>
@@ -80,7 +82,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 
 			{data.routedMessages.length > 0 && (
 				<section className="flex flex-col gap-3">
-					<h2 className="label-eyebrow">Messages routed here</h2>
+					<h2 className="label-eyebrow">{t('session.messagesRoutedHere')}</h2>
 					<div className="flex flex-col gap-4">
 						{data.routedMessages.map(entry => (
 							<TranscriptBubble key={entry.entryId} entry={entry} threadId={threadId} />
@@ -96,12 +98,13 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 
 /** The one dark surface in the console: a monospace terminal log on near-black. */
 function TerminalPanel({ lines }: { lines: Detail['terminalLog'] }) {
+	const { t } = useTranslation()
 	return (
 		<section className="flex flex-col gap-3">
-			<h2 className="label-eyebrow">Terminal session</h2>
+			<h2 className="label-eyebrow">{t('session.terminalSession')}</h2>
 			<div className="overflow-x-auto rounded-2xl bg-[oklch(0.16_0_0)] p-4 font-mono text-sm leading-relaxed text-[oklch(0.9_0_0)]">
 				{lines.length === 0 ? (
-					<p className="text-[oklch(0.6_0_0)]">Waiting for terminal output…</p>
+					<p className="text-[oklch(0.6_0_0)]">{t('session.waitingTerminal')}</p>
 				) : (
 					lines.map((line, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: terminal log is append-only — index is a stable identity
@@ -117,6 +120,7 @@ function TerminalPanel({ lines }: { lines: Detail['terminalLog'] }) {
 }
 
 function IssueSteerComposer({ issueId }: { issueId: string }) {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const [text, setText] = useState('')
 	const steer = useSteerIssue()
@@ -147,14 +151,14 @@ function IssueSteerComposer({ issueId }: { issueId: string }) {
 							send()
 						}
 					}}
-					placeholder="Steer this issue…"
+					placeholder={t('session.steerPlaceholder')}
 					className="min-h-10 flex-1 resize-none border-0 bg-transparent focus-visible:ring-0"
 				/>
-				<Button size="icon" aria-label="Steer" disabled={!text.trim() || steer.isPending} onClick={send}>
+				<Button size="icon" aria-label={t('session.steer')} disabled={!text.trim() || steer.isPending} onClick={send}>
 					<IconArrowUp />
 				</Button>
 			</div>
-			<p className="px-1 text-xs text-muted-foreground">Steers reach the agent working this issue only.</p>
+			<p className="px-1 text-xs text-muted-foreground">{t('session.steerHint')}</p>
 		</div>
 	)
 }

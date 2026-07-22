@@ -4,9 +4,8 @@ import type { TablerIcon } from '@tabler/icons-react'
 /**
  * App-specific icons (stripped of internal gradients / theme color logic).
  *
- * Each icon paints with `currentColor` so it can be tinted by:
- *   - any Tailwind text utility (e.g. `text-primary`, `text-foreground`)
- *   - wrapped in <GradientIcon icon={…}> to get the top→bottom gradient
+ * Each icon paints with `currentColor` so it can be tinted by any Tailwind text
+ * utility (e.g. `text-primary`, `text-foreground`).
  *
  * Auto-generated from /tmp/gen-icon-index.mjs.
  */
@@ -141,7 +140,6 @@ export type SvgIconComponent = ComponentType<ComponentProps<'svg'>>
 
 /**
  * Canonical icon-component type — every icon the app renders is either one of the
- * custom SVG icons in this folder OR a Tabler icon. GradientIcon (the only consumer
- * that forwards size/stroke) bridges the two with a single local cast.
+ * custom SVG icons in this folder OR a Tabler icon.
  */
 export type IconComponent = SvgIconComponent | TablerIcon

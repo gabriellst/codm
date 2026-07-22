@@ -1,4 +1,5 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
+import { useTranslation } from 'react-i18next'
 import { IconChevronDown } from '@tabler/icons-react'
 import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
 
@@ -115,6 +116,7 @@ export interface CurrencySelectorProps {
  * group provides the unified surface.
  */
 function CurrencySelector({ value, onChange, currencies = DEFAULT_CURRENCIES, className, disabled = false }: CurrencySelectorProps) {
+	const { t } = useTranslation()
 	const items = currencies.map(code => ({
 		value: code,
 		// label is used by Base UI for filtering — flag + code makes both searchable
@@ -160,7 +162,7 @@ function CurrencySelector({ value, onChange, currencies = DEFAULT_CURRENCIES, cl
 
 			<ComboboxContent align="start" sideOffset={6}>
 				{/* Search input rendered inside the popup */}
-				<ComboboxInput placeholder="Buscar moeda" showTrigger={false} showClear autoFocus />
+				<ComboboxInput placeholder={t('common.searchCurrency')} showTrigger={false} showClear autoFocus />
 				<ComboboxList>
 					<ComboboxCollection>
 						{(item: (typeof items)[number]) => (
@@ -172,7 +174,7 @@ function CurrencySelector({ value, onChange, currencies = DEFAULT_CURRENCIES, cl
 							</ComboboxItem>
 						)}
 					</ComboboxCollection>
-					<ComboboxEmpty>Nenhuma moeda encontrada</ComboboxEmpty>
+					<ComboboxEmpty>{t('common.noCurrencyFound')}</ComboboxEmpty>
 				</ComboboxList>
 			</ComboboxContent>
 		</Combobox>

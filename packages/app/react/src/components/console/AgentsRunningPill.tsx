@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codedm/client-typescript/typescript'
 import { useServerEvents } from '@/hooks'
@@ -10,6 +11,7 @@ import { Dot } from './StatusDot'
  * dashboard read (never hand-mutate the cache) whenever a thread flips state.
  */
 export function AgentsRunningPill() {
+	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data } = useGetHomeDashboard()
 
@@ -23,7 +25,7 @@ export function AgentsRunningPill() {
 	return (
 		<span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-1.5 text-sm font-medium text-secondary-foreground shadow-sm">
 			<Dot className={running ? 'bg-success' : 'bg-muted-foreground/40'} />
-			{count} {String(count === 1 ? 'agent' : 'agents')} running
+			{t('console.agentsRunning', { count })}
 		</span>
 	)
 }
