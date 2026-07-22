@@ -3,17 +3,35 @@
 * Do not edit manually.
 */
 
+import { stopKindSchema } from "./stopKindSchema.ts";
+import { threadStatusSchema } from "./threadStatusSchema.ts";
 import { z } from "zod/v4";
 
 /**
  * @description Owner-scoped real-time integration events via SSE
  */
-export const listenEvents200Schema = z.object({
+export const listenEvents200Schema = z.union([z.object({
+    "name": z.enum(["browser.thread_status_changed"]),
+"threadId": z.string(),
+get "status"(){
+                return threadStatusSchema
+              },
+"agentsRunningNow": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "name": z.enum(["browser.stop_raised"]),
+"threadId": z.string(),
+"threadDisplayName": z.string(),
+"issueId": z.string(),
+"issueKey": z.string(),
+get "stopKind"(){
+                return stopKindSchema
+              }
+    }), z.object({
     "name": z.string(),
 "ownerId": z.string(),
 "payload": z.object({
     "ownerId": z.uuid()
     }).catchall(z.any())
-    })
+    })])
 
 export const listenEventsQueryResponseSchema = z.lazy(() => listenEvents200Schema)

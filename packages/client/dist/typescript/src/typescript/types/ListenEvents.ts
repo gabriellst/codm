@@ -3,11 +3,69 @@
 * Do not edit manually.
 */
 
+import type { StopKind } from "./StopKind.ts";
+import type { ThreadStatus } from "./ThreadStatus.ts";
+
+export const ListenEvents200NameEnum = {
+    "browser.thread_status_changed": "browser.thread_status_changed"
+} as const;
+
+export type ListenEvents200NameEnumKey = (typeof ListenEvents200NameEnum)[keyof typeof ListenEvents200NameEnum];
+
+export const ListenEvents200NameEnum2 = {
+    "browser.stop_raised": "browser.stop_raised"
+} as const;
+
+export type ListenEvents200NameEnum2Key = (typeof ListenEvents200NameEnum2)[keyof typeof ListenEvents200NameEnum2];
 
 /**
  * @description Owner-scoped real-time integration events via SSE
 */
-export type ListenEvents200 = {
+export type ListenEvents200 = ({
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnumKey;
+    /**
+     * @type string
+    */
+    threadId: string;
+    /**
+     * @type string
+    */
+    status: ThreadStatus;
+    /**
+     * @minLength -9007199254740991
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    agentsRunningNow: number;
+} | {
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnum2Key;
+    /**
+     * @type string
+    */
+    threadId: string;
+    /**
+     * @type string
+    */
+    threadDisplayName: string;
+    /**
+     * @type string
+    */
+    issueId: string;
+    /**
+     * @type string
+    */
+    issueKey: string;
+    /**
+     * @type string
+    */
+    stopKind: StopKind;
+} | {
     /**
      * @type string
     */
@@ -26,7 +84,7 @@ export type ListenEvents200 = {
         ownerId: string;
         [key: string]: unknown;
     };
-};
+});
 
 export type ListenEventsQueryResponse = ListenEvents200;
 

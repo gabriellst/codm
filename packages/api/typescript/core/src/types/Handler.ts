@@ -82,7 +82,7 @@ export abstract class Handler<
 	}
 
 	// `| void` lets handlers whose outputSchema resolves to z.void()
-	// (e.g. RegisterFcmToken, UpdateProfile, every EventHandler
+	// (e.g. SetActiveOwner, DisableOwner, every EventHandler
 	// subclass …) return bare without a cast. TypeScript can't see
 	// through the generic indirection to narrow `this['output']` to
 	// `void` when outputSchema is z.void(); the union covers that

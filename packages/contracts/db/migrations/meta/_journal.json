@@ -15,6 +15,13 @@
       "when": 1784698343187,
       "tag": "0001_late_victor_mancha",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784702062538,
+      "tag": "0002_many_reaper",
+      "breakpoints": true
     }
   ]
 }

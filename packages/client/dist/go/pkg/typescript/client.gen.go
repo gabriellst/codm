@@ -433,6 +433,54 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for StopKind.
+const (
+	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	SERVERERROR             StopKind = "SERVER_ERROR"
+)
+
+// Valid indicates whether the value is a known member of the StopKind enum.
+func (e StopKind) Valid() bool {
+	switch e {
+	case APPROVALNEEDED:
+		return true
+	case BLOCKEDBYCLASSIFICATION:
+		return true
+	case HUMANREQUESTED:
+		return true
+	case SERVERERROR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ThreadStatus.
+const (
+	IDLE           ThreadStatus = "IDLE"
+	NEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
+	PAUSED         ThreadStatus = "PAUSED"
+	RUNNING        ThreadStatus = "RUNNING"
+)
+
+// Valid indicates whether the value is a known member of the ThreadStatus enum.
+func (e ThreadStatus) Valid() bool {
+	switch e {
+	case IDLE:
+		return true
+	case NEEDSATTENTION:
+		return true
+	case PAUSED:
+		return true
+	case RUNNING:
+		return true
+	default:
+		return false
+	}
+}
+
 // ApiErrors All possible error codes
 type ApiErrors string
 
@@ -444,6 +492,12 @@ type Language string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
+
+// StopKind defines model for StopKind.
+type StopKind string
+
+// ThreadStatus defines model for ThreadStatus.
+type ThreadStatus string
 
 // CreateOwnerJSONBody defines parameters for CreateOwner.
 type CreateOwnerJSONBody struct {

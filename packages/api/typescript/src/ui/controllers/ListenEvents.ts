@@ -9,6 +9,7 @@ import {
 	encodeSSEFrame,
 } from '@template/core-typescript'
 import { BaseIntegrationEvent } from '@template/core-typescript'
+import { ThreadStatus, StopKind } from '@template/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 
 /**
@@ -26,23 +27,21 @@ import { OperatorMiddleware } from '@auth/middlewares'
  * Names are the frozen wire discriminators (the codegen gates every one to the `integration.`
  * prefix), so they are listed as string literals — the contract, not a runtime import.
  *
- * DEFERRAL — the three frozen `browser.*` frames are NOT materialized as discrete on-wire frames
- * in this phase (DEFERRED to the gateway/terminal phase; needs founder confirmation). The draft
- * froze them with denormalized display fields that are computed at broadcast time, not carried on
- * any outbox fact — so they cannot exist as `integration.*` wire events, and the wire codegen only
- * emits models that `extends IntegrationEvent`. The exact frozen shapes, recorded here so the
- * gateway phase materializes them verbatim:
- *   - browser.thread_status_changed   { threadId: string; status: ThreadStatus; agentsRunningNow: number }
- *       ← denormalized from the issue-lifecycle events below (status + a live running-agent count).
- *   - browser.stop_raised             { threadId: string; threadDisplayName: string; issueId: string;
- *                                       issueKey: string; stopKind: StopKind }
- *       ← integration.issue.stop_raised enriched with threadDisplayName + issueKey for the callout.
+ * FROZEN SSE FRAMES — the two enriched `browser.*` frames are now materialized as executable, typed
+ * Zod schemas (`BrowserThreadStatusChangedFrameSchema` / `BrowserStopRaisedFrameSchema` below) and
+ * folded into `ListenEventsControllerOutputSchema`, so the frozen shapes — with their denormalized
+ * display fields (agentsRunningNow / threadDisplayName / issueKey) — are LOCKED at the contract now
+ * instead of living as prose. Only their *delivery* is deferred: the broadcaster below still re-emits
+ * the raw `integration.*` envelope, and the denormalized fields are synthesized in the
+ * gateway/terminal phase when the display-projection + terminal transport land. That delivery cutover
+ * needs FOUNDER CONFIRMATION — the fields are computed at broadcast time, not carried on any outbox
+ * fact, so they cannot become `integration.*` wire events (the codegen only emits models that
+ * `extends IntegrationEvent`); the enrichment happens in the gateway broadcaster, not on the wire.
+ *
+ * `browser.terminal_output_appended` stays a comment on purpose — per the draft it is the two-stream
+ * TRANSPORT frame (NOT a domain / outbox fact) and belongs to the terminal-session stream, not this
+ * owner-scoped outbox broadcaster, so it is intentionally NOT part of this endpoint's SSE union:
  *   - browser.terminal_output_appended { issueId: string; line: string; at: string }
- *       ← the two-stream TRANSPORT frame (per the draft's own note: NOT a domain fact / outbox fact);
- *         it belongs to the terminal-session stream, NOT this owner-scoped outbox broadcaster.
- * Until then, the broadcaster below re-emits the raw `integration.*` events; the denormalized
- * fields (agentsRunningNow / threadDisplayName / issueKey) are synthesized in the gateway phase
- * when the display-projection + terminal transport land.
  *
  * WIRING NOTE (finalized in the gateway/terminal phase): the broadcaster below filters each
  * client by an `ownerId` read from the event *payload*, whereas the CodeDM lock carries `ownerId`
@@ -71,21 +70,56 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 
 const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))
 
+/**
+ * Frozen `browser.*` SSE frames (Phase-0 contract lock) — the enriched, denormalized views the
+ * operator console subscribes to, distinct from the raw `integration.*` outbox facts above. Locked
+ * as typed schema now; broadcast-time enrichment (populating the denormalized fields) lands in the
+ * gateway phase (see the docblock's FROZEN SSE FRAMES note). Discriminated by the frame `name`.
+ */
+export const BrowserThreadStatusChangedFrameSchema = z.object({
+	name: z.literal('browser.thread_status_changed'),
+	threadId: z.string(),
+	status: z.enum(ThreadStatus),
+	agentsRunningNow: z.number().int(),
+})
+
+export const BrowserStopRaisedFrameSchema = z.object({
+	name: z.literal('browser.stop_raised'),
+	threadId: z.string(),
+	threadDisplayName: z.string(),
+	issueId: z.string(),
+	issueKey: z.string(),
+	stopKind: z.enum(StopKind),
+})
+
+export const BrowserSseFrameSchema = z.discriminatedUnion('name', [
+	BrowserThreadStatusChangedFrameSchema,
+	BrowserStopRaisedFrameSchema,
+])
+
 export const ListenEventsControllerInputSchema = z.object({
 	ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
 })
 
 /**
- * Generic SSE frame envelope, discriminated by the event `name` — the SDK derives the typed
- * `ServerEventName` from this schema for the frontend `useServerEvents` hook. The boilerplate
- * has no domain events yet, so the envelope carries an open `payload`; a new app narrows this
- * to a `z.discriminatedUnion('name', [...])` over its own `ownerId`-bearing events.
+ * The endpoint's SSE frame union — the SDK derives the typed `ServerEventName` union from this for
+ * the frontend `useServerEvents` hook. Two surfaces coexist:
+ *   - the generic `integration.*` envelope, the transport reality today: discriminated by the event
+ *     `name`, carrying an open `ownerId`-scoped `payload` (what the broadcaster re-emits now);
+ *   - the two frozen enriched `browser.*` frames, locked here so their denormalized shapes ship at
+ *     the contract even though broadcast-time delivery is wired in the gateway phase.
  */
-export const ListenEventsControllerOutputSchema = z.object({
+const GenericIntegrationFrameSchema = z.object({
 	name: z.string(),
 	ownerId: z.string(),
 	payload: z.object({ ownerId: z.uuid() }).loose(),
 })
+
+export const ListenEventsControllerOutputSchema = z.union([
+	BrowserThreadStatusChangedFrameSchema,
+	BrowserStopRaisedFrameSchema,
+	GenericIntegrationFrameSchema,
+])
 
 interface SSEClient {
 	ownerId: string

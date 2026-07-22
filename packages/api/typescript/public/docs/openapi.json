@@ -696,37 +696,101 @@
             "content": {
               "text/event-stream": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "ownerId": {
-                      "type": "string"
-                    },
-                    "payload": {
+                  "anyOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "ownerId": {
+                        "name": {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "const": "browser.thread_status_changed"
+                        },
+                        "threadId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/ThreadStatus"
+                        },
+                        "agentsRunningNow": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
-                        "ownerId"
+                        "name",
+                        "threadId",
+                        "status",
+                        "agentsRunningNow"
                       ],
-                      "additionalProperties": {
-                        "x-tpl-unknown": true
-                      }
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "const": "browser.stop_raised"
+                        },
+                        "threadId": {
+                          "type": "string"
+                        },
+                        "threadDisplayName": {
+                          "type": "string"
+                        },
+                        "issueId": {
+                          "type": "string"
+                        },
+                        "issueKey": {
+                          "type": "string"
+                        },
+                        "stopKind": {
+                          "$ref": "#/components/schemas/StopKind"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "threadId",
+                        "threadDisplayName",
+                        "issueId",
+                        "issueKey",
+                        "stopKind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "ownerId": {
+                          "type": "string"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "properties": {
+                            "ownerId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            }
+                          },
+                          "required": [
+                            "ownerId"
+                          ],
+                          "additionalProperties": {
+                            "x-tpl-unknown": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "ownerId",
+                        "payload"
+                      ],
+                      "additionalProperties": false
                     }
-                  },
-                  "required": [
-                    "name",
-                    "ownerId",
-                    "payload"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               }
             }
@@ -879,6 +943,24 @@
           "XOF",
           "ZAR",
           "ZMW"
+        ]
+      },
+      "ThreadStatus": {
+        "type": "string",
+        "enum": [
+          "RUNNING",
+          "IDLE",
+          "NEEDS_ATTENTION",
+          "PAUSED"
+        ]
+      },
+      "StopKind": {
+        "type": "string",
+        "enum": [
+          "SERVER_ERROR",
+          "BLOCKED_BY_CLASSIFICATION",
+          "HUMAN_REQUESTED",
+          "APPROVAL_NEEDED"
         ]
       }
     }
