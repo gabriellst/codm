@@ -1,6 +1,6 @@
-import { AggregateRoot, z } from '@template/core-typescript'
+import { AggregateRoot, z } from '@codedm/core-typescript'
 import type Z from 'zod'
-import { WorkspaceBadge } from '@template/contracts-typescript/wire/enums'
+import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * `Workspace` (BC2 Workspace Registry) — a local project folder the operator registered, plus its

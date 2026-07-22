@@ -3,9 +3,9 @@
 // simply echoes it. Kept so the frontend session seam (SDK `useGetSession`) still resolves, though
 // the web/native session hooks short-circuit to the same constant without a round-trip.
 import { injectable } from 'tsyringe-neo'
-import { Middleware, MiddlewareClass, z } from '@template/core-typescript'
-import { Controller } from '@template/core-typescript'
-import { HttpStatusCode } from '@template/core-typescript'
+import { Middleware, MiddlewareClass, z } from '@codedm/core-typescript'
+import { Controller } from '@codedm/core-typescript'
+import { HttpStatusCode } from '@codedm/core-typescript'
 import { SessionSchema } from '@auth/schemas'
 import { OperatorMiddleware } from '@auth/middlewares'
 

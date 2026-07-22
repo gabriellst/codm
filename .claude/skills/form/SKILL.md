@@ -19,7 +19,7 @@ If the path is **ambiguous**, ask the user once and don't proceed until they ans
 
 ## Shared principles (apply on BOTH platforms)
 
-1. **SDK schema is the single source of truth.** Forms validate against `xxxMutationRequestSchema` from `@template/client-typescript/<service>`. Never hand-roll validation rules.
+1. **SDK schema is the single source of truth.** Forms validate against `xxxMutationRequestSchema` from `@codedm/client-typescript/<service>`. Never hand-roll validation rules.
 2. **TanStack Form owns field state.** `useForm({ defaultValues, validators: { onChange: schema }, onSubmit })`. Never `useState` for form values.
 3. **Submit via the SDK mutation hook.** On success: `toast` / `Toast` + `queryClient.invalidateQueries({ queryKey: ... })`. Never call `fetch` directly.
 4. **Same Zod schema as the controller.** That's the contract the backend enforces too.

@@ -1,4 +1,4 @@
-import { BaseError, type BaseDomainErrors } from '@template/core-typescript'
+import { BaseError, type BaseDomainErrors } from '@codedm/core-typescript'
 
 /** Anything carrying a half-open `[startDate, endDate)` window. `endDate` null = +∞. */
 export interface TimeWindowed {

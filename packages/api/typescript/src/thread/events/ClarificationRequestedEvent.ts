@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 /** Context-private fact: the router asked a disambiguation question (max one open per sender). The
  *  internal bridge orders the ROUTER-identity delivery via `integration.channel.delivery_requested`. */

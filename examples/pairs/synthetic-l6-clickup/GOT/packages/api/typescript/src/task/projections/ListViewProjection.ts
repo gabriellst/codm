@@ -1,6 +1,6 @@
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { TaskStatus, TaskPriority } from '@template/contracts-typescript/wire/enums'
+import { TaskStatus, TaskPriority } from '@codedm/contracts-typescript/wire/enums'
 import { TaskCreatedEvent } from '@task/events/TaskCreatedEvent'
 import { TaskStatusChangedEvent } from '@task/events/TaskStatusChangedEvent'
 import { TaskAssignedEvent } from '@task/events/TaskAssignedEvent'

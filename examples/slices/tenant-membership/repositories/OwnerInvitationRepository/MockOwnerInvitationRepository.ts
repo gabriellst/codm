@@ -1,6 +1,6 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { OwnerInvitation } from '../../entities/OwnerInvitation'
 import { OwnerInvitationRepository } from './OwnerInvitationRepository'
 

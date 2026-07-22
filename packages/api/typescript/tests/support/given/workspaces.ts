@@ -1,6 +1,6 @@
 // Workspace given helper — sets up a Workspace via the repository directly (never the use case).
 import type { TestBed } from '../TestBed'
-import { WorkspaceBadge } from '@template/contracts-typescript/wire/enums'
+import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { Workspace } from '@workspace/entities/Workspace'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'

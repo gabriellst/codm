@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { StopKind } from '@template/contracts-typescript/wire/enums'
+import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { TerminalOutputAccumulator } from './TerminalOutputAccumulator'
 import type { TerminalRuntimeEvent } from '../AgentRunner'
 

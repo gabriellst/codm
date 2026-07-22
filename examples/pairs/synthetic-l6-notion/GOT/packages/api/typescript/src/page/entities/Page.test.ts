@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
-import { BaseError } from '@template/core-typescript'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { BaseError } from '@codedm/core-typescript'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 import { Page } from './Page'
 
 const WORKSPACE = '11111111-1111-4111-8111-111111111111'

@@ -8,7 +8,7 @@
  * Money on the wire is always single-currency (spec D1) — multi-currency stays internal
  * in the MultiCurrencyMoney value object.
  */
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 import { SignedMoneySchema } from '../objects'
 
 /** KPI atom: numeric value + period-over-period delta fraction (null = no prior period). */

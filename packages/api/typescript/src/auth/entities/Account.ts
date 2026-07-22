@@ -1,7 +1,7 @@
 // Recipe: dev:packages/api/src/auth/entities/Account.ts
-import { AggregateRoot } from '@template/core-typescript'
-import { Id } from '@template/core-typescript'
-import { z } from '@template/core-typescript'
+import { AggregateRoot } from '@codedm/core-typescript'
+import { Id } from '@codedm/core-typescript'
+import { z } from '@codedm/core-typescript'
 import Z from 'zod'
 
 const AccountSchema = z.object({

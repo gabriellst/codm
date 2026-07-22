@@ -361,7 +361,7 @@ registry:
       reason: "Authorization is enforced at the middleware layer. RequireOwner is declared in `override middlewares` — the controller itself just reads ctx.user.id and ctx.session.ownerId, injected by AuthAccountMiddleware + RequireOwner."
       rule: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
         import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
         import { RequireOwner } from '@owner/middlewares'
 
@@ -459,7 +459,7 @@ registry:
         status: z.nativeEnum(OrderStatus)
       right: |
         // Always use z.enum() with TypeScript enum reference — SDK generates type-safe enum
-        import { OrderStatus } from '@template/contracts-typescript/wire/enums'
+        import { OrderStatus } from '@codedm/contracts-typescript/wire/enums'
         status: z.enum(OrderStatus)
 
     - id: bp-05
@@ -718,7 +718,7 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+      import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 
       export const {{Name}}InputSchema = z.object({
       	ctx: z.object({ user: z.object({ id: z.string() }) }),
@@ -739,7 +739,7 @@ registry:
     skeletons:
       list: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -769,7 +769,7 @@ registry:
         }
       get: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -799,7 +799,7 @@ registry:
         }
       create: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -831,7 +831,7 @@ registry:
         }
       update: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -857,7 +857,7 @@ registry:
         }
       delete: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -892,7 +892,7 @@ registry:
       mock: "	override mockController = true"
     exemplar: |
       import { injectable } from 'tsyringe-neo'
-      import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+      import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
       import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
       import { RequireOwner } from '@owner/middlewares'
       import { UpdateXInputSchema, UpdateXOutputSchema } from '@context/usecases/UpdateX'

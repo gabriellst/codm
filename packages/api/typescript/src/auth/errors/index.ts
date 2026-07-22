@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 // The auth context owns the whole user surface since the identity collapse: BetterAuth identity +
 // the supplementary UserProfile aggregate. Former identity error codes live here now.

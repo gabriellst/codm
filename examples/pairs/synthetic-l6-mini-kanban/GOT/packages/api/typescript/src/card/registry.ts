@@ -1,5 +1,5 @@
 import './errors'
-import type { InstanceRegistry } from '@template/core-typescript'
+import type { InstanceRegistry } from '@codedm/core-typescript'
 import { CardRepository } from './repositories/CardRepository'
 import { MockCardRepository } from './repositories/MockCardRepository'
 import { DrizzleCardRepository } from './repositories/DrizzleCardRepository'

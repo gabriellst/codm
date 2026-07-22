@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import type { Transaction } from '@template/core-typescript'
-import { Projector } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
+import { Projector } from '@codedm/core-typescript'
 import { MessageProjection, type MessageProjectionEvent } from '../Message'
 import { MessageProjectionRepository } from '../MessageProjectionRepository'
 

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Handler, z, type Transaction } from '@template/core-typescript'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { BaseError, Handler, z, type Transaction } from '@codedm/core-typescript'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 
 import { PageRepository } from '../repositories/PageRepository'
 import { findBlock } from '../objects/Block'

@@ -1,7 +1,7 @@
 import { useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconChevronDown, IconChevronRight } from '@tabler/icons-react'
-import { BlockTypeEnum, type PageViewBlockNode } from '@template/client-typescript/typescript'
+import { BlockTypeEnum, type PageViewBlockNode } from '@codedm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 

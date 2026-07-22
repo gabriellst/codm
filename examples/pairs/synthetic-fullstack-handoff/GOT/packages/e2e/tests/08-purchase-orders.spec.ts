@@ -1,4 +1,4 @@
-import { CurrencyCodeEnum } from '@template/client-typescript/typescript'
+import { CurrencyCodeEnum } from '@codedm/client-typescript/typescript'
 
 import { test, expect } from '../utils/test'
 import { t } from '../utils/i18n'

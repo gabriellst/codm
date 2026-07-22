@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { StopResolution } from '@template/contracts-typescript/wire/enums'
+import type { StopResolution } from '@codedm/contracts-typescript/wire/enums'
 import { StopRepository, type RaiseStopInput, type StopRow } from './StopRepository'
 
 @injectable()

@@ -6,7 +6,7 @@
 > verbatim — and carries a
 > `// CONTEXT-ORIGIN:` header naming its origin file. It is **not part of the
 > workspace build** (no `package.json`, not referenced by any `tsconfig`, not an
-> Nx project), so the `@template/*` imports intentionally do not resolve. Read it
+> Nx project), so the `@codedm/*` imports intentionally do not resolve. Read it
 > as a reference for the pattern, not as something to compile.
 
 This is the **composition-first discriminated-union read model** pattern: how a

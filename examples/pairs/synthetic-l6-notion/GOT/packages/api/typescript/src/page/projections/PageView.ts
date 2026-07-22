@@ -1,5 +1,5 @@
 import Z from 'zod'
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 import { BlockSchema, findBlock, type BlockProps } from '../objects/Block'
 import type { PageCreatedEvent, BlockAddedEvent, BlockEditedEvent } from '../events'
 

@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
-import { StopKind } from '@template/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * Context-private fact: a terminal session stopped and needs the human (a non-zero exit maps to

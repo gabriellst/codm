@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "@template/app-styles/tokens.css";
-@import "@template/app-styles/web-utilities.css";
+@import "@codedm/app-styles/tokens.css";
+@import "@codedm/app-styles/web-utilities.css";
 
 body {
 	background-color: var(--background);

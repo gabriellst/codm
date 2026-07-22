@@ -82,7 +82,7 @@ registry:
       when: "test exercises UI that depends on external services (channel backend, WhatsApp)"
       rule: |
         import { mockRoute, mockSSE } from '../utils/mock'
-        import { listNotificationsQueryKey, type ListNotificationsQueryResponse } from '@template/client-typescript/typescript'
+        import { listNotificationsQueryKey, type ListNotificationsQueryResponse } from '@codedm/client-typescript/typescript'
 
         const data: ListNotificationsQueryResponse = { items: [...] }
         await mockRoute<ListNotificationsQueryResponse>(page, listNotificationsQueryKey, data)
@@ -94,7 +94,7 @@ registry:
       when: "page uses SSE/EventSource connections"
       rule: |
         import { mockSSE } from '../utils/mock'
-        import { listenEventsQueryKey } from '@template/client-typescript/typescript'
+        import { listenEventsQueryKey } from '@codedm/client-typescript/typescript'
 
         await mockSSE(page, listenEventsQueryKey)
       wrong: |
@@ -153,7 +153,7 @@ registry:
       when: "filling or selecting enum values in comboboxes/selects"
       reason: "Some enums render as raw values (PRO, PENDING), others render through i18n labels (ORDER_RECEIVED → Pedido recebido). Using the wrong source causes the test to not find the option."
       rule: |
-        import { PlanNameEnum, NotificationCategoryEnum } from '@template/client-typescript/typescript'
+        import { PlanNameEnum, NotificationCategoryEnum } from '@codedm/client-typescript/typescript'
         import { t } from '../utils/i18n'
 
         // Raw enum value — UI renders the value directly (plans, statuses)
@@ -189,7 +189,7 @@ registry:
       when: "selecting an option in a <Select> bound to an enum (any SDK *Enum value)"
       reason: "Visible labels are translated and can substring-collide ('Ação' inside 'Simulação' → strict-mode failure). The underlying enum values are stable SCREAMING_SNAKE_CASE keys and never collide. Our SelectItem primitive forwards `value` as `data-value` via Base UI's render prop, so `pickOptionByValue` locates by `[role=option][data-value=KEY]`."
       rule: |
-        import { PlanNameEnum } from '@template/client-typescript/typescript'
+        import { PlanNameEnum } from '@codedm/client-typescript/typescript'
         import { pickOptionByValue } from '../utils/selectors'
 
         await dialog.getByLabel(t('billing.form.planPlaceholder')).click()
@@ -235,7 +235,7 @@ registry:
         import { ALL_REGISTRIES } from '../../api/src/shared/registry'
       right: |
         // Use SDK HTTP calls instead
-        import { createOwner } from '@template/client-typescript/typescript'
+        import { createOwner } from '@codedm/client-typescript/typescript'
         await createOwner({ data }, { client: session.client })
       mechanical: true
       detect:
@@ -276,7 +276,7 @@ registry:
         await page.route('**/notifications*', route =>
           route.fulfill({ body: JSON.stringify({ items: [] }) }))
       right: |
-        import type { ListNotificationsQueryResponse } from '@template/client-typescript/typescript'
+        import type { ListNotificationsQueryResponse } from '@codedm/client-typescript/typescript'
         const data: ListNotificationsQueryResponse = { items: [] }
         await mockRoute<ListNotificationsQueryResponse>(page, queryKey, data)
       mechanical: true
@@ -371,7 +371,7 @@ registry:
         await pickOption(page, t('enums.PlanName.PRO'))
         await page.getByRole('option', { name: 'Pro' }).click()
       right: |
-        import { PlanNameEnum } from '@template/client-typescript/typescript'
+        import { PlanNameEnum } from '@codedm/client-typescript/typescript'
         import { pickOptionByValue } from '../utils/selectors'
         await pickOptionByValue(page, PlanNameEnum.PRO)
       mechanical: true

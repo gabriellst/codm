@@ -7,9 +7,9 @@ import {
 	SSE_CONNECTED_FRAME,
 	createSSEResponse,
 	encodeSSEFrame,
-} from '@template/core-typescript'
-import { BaseIntegrationEvent } from '@template/core-typescript'
-import { ThreadStatus, StopKind } from '@template/contracts-typescript/wire/enums'
+} from '@codedm/core-typescript'
+import { BaseIntegrationEvent } from '@codedm/core-typescript'
+import { ThreadStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { BrowserFrameEnricher } from '../services/BrowserFrameEnricher'
 

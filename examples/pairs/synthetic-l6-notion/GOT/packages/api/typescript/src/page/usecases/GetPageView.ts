@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, DrizzleClient, BaseError } from '@template/core-typescript'
+import { Handler, z, DrizzleClient, BaseError } from '@codedm/core-typescript'
 import Z from 'zod'
 import { eq } from 'drizzle-orm'
-import { pageViewProjection } from '@template/contracts/db'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { pageViewProjection } from '@codedm/contracts/db'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 import type { PageApplicationErrors } from '../errors'
 
 export const GetPageViewInputSchema = z.object({

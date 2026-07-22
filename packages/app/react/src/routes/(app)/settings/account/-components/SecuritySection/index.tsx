@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGetMyAccount } from '@template/client-typescript/typescript'
+import { useGetMyAccount } from '@codedm/client-typescript/typescript'
 import { IconKey, IconTrash, IconShieldCheck } from '@tabler/icons-react'
 import { toast } from 'sonner'
 

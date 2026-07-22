@@ -7,7 +7,7 @@ import {
   getBoardQueryKey,
   type GetBoardListItem,
   type GetBoardCardItem,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { useServerEvents } from '@/hooks'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { Skeleton } from '@/components/ui/skeleton'

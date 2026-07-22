@@ -61,7 +61,7 @@ Schemas are **exported** so controllers can import them:
 
 ```typescript
 // <context>/usecases/CreateProduct.ts
-import { Handler, z } from '@template/core-typescript'
+import { Handler, z } from '@codedm/core-typescript'
 
 // Input schema - EXPORTED for controller use
 export const CreateProductInputSchema = z.object({
@@ -270,7 +270,7 @@ protected abstract handle(input: this['input'], tx?: Transaction): Promise<this[
 For use cases that save multiple entities atomically, use `this.withTransaction()` inside `handle()`:
 
 ```typescript
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 
 @injectable()
 export class TransferFunds extends Handler<
@@ -510,8 +510,8 @@ For update operations where fields are optional, call entity methods **condition
 ```typescript
 // patient/usecases/UpdatePatient.ts
 import { injectable } from 'tsyringe-neo'
-import { Handler, BaseError, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Handler, BaseError, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { PatientRepository } from '@patient/repositories'
 import { ApplicationErrors } from '@patient/errors'
 // InternalMediator is inherited from Handler — no import needed
@@ -781,7 +781,7 @@ await this.domainEventRepository.save(event, tx)  // dual-writes to events + out
 
 ```typescript
 // WRONG - SDK HTTP client inside api
-import { getCustomer } from '@template/client-typescript/http'
+import { getCustomer } from '@codedm/client-typescript/http'
 
 // WRONG - pass-through use case only for lookup
 import { GetCustomer } from '@customer/usecases'
@@ -813,7 +813,7 @@ export class CreateProduct { }
 
 ## References
 
-- `@template/core-typescript` — Handler base class, BaseError, z, Transaction, HttpStatusCode
+- `@codedm/core-typescript` — Handler base class, BaseError, z, Transaction, HttpStatusCode
 - `packages/api/typescript/src/patient/usecases/UpdatePatient.ts` - Reference for conditional entity updates
 - `docs/BACKEND.md` - Architecture principles (why)
 - `/entity` skill - For creating entities used by use cases

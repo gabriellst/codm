@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, tryCatchAsync } from '@template/core-typescript'
+import { BaseError, tryCatchAsync } from '@codedm/core-typescript'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 
 /**

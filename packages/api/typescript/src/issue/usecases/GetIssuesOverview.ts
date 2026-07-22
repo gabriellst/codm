@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@template/core-typescript'
-import { issues, threads } from '@template/contracts/db'
-import { IssueStatus } from '@template/contracts-typescript/wire/enums'
+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { issues, threads } from '@codedm/contracts/db'
+import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
 
 const IssueItemSchema = z.object({
 	issueId: z.uuid(),

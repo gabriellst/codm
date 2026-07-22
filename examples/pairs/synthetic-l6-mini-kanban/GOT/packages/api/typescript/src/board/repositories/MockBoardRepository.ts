@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { Board } from '../entities/Board'
 import { BoardRepository } from './BoardRepository'
 

@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const BlockEditedEventSchema = z.domainEvent({
 	pageId: z.uuid(),

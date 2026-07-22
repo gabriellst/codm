@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { BufferSize } from '@template/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ConfigureMentionGate } from '../usecases/ConfigureThreadSettings'
 import { SetParticipantInvocation } from '../usecases/ConfigureThreadSettings'

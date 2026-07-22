@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetSessionChat, GetSessionChatOutputSchema } from '../usecases/GetSessionChat'
 import { GetThreadSettings, GetThreadSettingsOutputSchema } from '../usecases/GetThreadSettings'

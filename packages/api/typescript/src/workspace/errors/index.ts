@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 // BC2 Workspace Registry has no in-aggregate invariant beyond schema validation.
 export type WorkspaceDomainErrors = never

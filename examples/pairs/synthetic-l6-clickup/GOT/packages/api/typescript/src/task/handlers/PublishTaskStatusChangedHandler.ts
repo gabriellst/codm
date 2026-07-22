@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { TaskStatusChangedEvent as TaskStatusChangedIntegrationEvent } from '@template/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { TaskStatusChangedEvent as TaskStatusChangedIntegrationEvent } from '@codedm/contracts-typescript/wire/events'
 import { TaskStatusChangedEvent } from '../events'
 
 @injectable()

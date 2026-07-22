@@ -1,7 +1,7 @@
 // Per-env DI bindings for the thread (BC4 Thread & Routing) context.
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { ThreadRepository, DrizzleThreadRepository, MockThreadRepository } from './repositories/ThreadRepository'
 import {
 	ConsumedMessageRepository,

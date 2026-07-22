@@ -3,7 +3,7 @@
 // snapshots stay stable. Swap a usecase's body for a real query and delete the
 // faker calls — nothing else changes.
 import { faker } from '@faker-js/faker'
-import { CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 
 faker.seed(1)
 

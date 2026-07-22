@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@template/core-typescript'
-import { OwnerKind } from '@template/contracts-typescript/wire/enums'
+import { BaseError } from '@codedm/core-typescript'
+import { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 import { Owner } from './Owner'
 
 const base = { name: 'Acme', kind: OwnerKind.ORGANIZATION, responsibleUserId: 'user-1' }

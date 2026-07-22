@@ -9,7 +9,7 @@
 import { type ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
-import { NotificationCategoryEnum, type NotificationCategory, type ListNotifications200 } from '@template/client-typescript/typescript'
+import { NotificationCategoryEnum, type NotificationCategory, type ListNotifications200 } from '@codedm/client-typescript/typescript'
 
 export type NotificationListItem = ListNotifications200['items'][number]
 

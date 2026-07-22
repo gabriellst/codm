@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
-import { ClassificationMethod } from '@template/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
 
 /** Context-private fact: an inbound message was demultiplexed into an issue (or fell through to a
  *  clarification). Bridged to the frozen `integration.message.classified` (BC4 → BC5 routes it). */

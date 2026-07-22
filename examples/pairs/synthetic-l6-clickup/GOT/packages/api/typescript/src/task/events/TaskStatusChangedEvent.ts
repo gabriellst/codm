@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
-import { TaskStatus } from '@template/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { TaskStatus } from '@codedm/contracts-typescript/wire/enums'
 
 export const TaskStatusChangedEventSchema = z.domainEvent({
 	taskId: z.uuid(),

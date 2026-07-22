@@ -3,8 +3,8 @@
 // a single string, so it serializes as the bare string on events/rows. INVALID_TIMEZONE is
 // registered with the runtime error registry in @auth/errors (the consumer context); Timezone
 // lives in shared/, so the code is cast to the core base type for the compile-time signature.
-import { BasePrimitiveValueObject, tryCatch, z } from '@template/core-typescript'
-import type { BaseDomainErrors } from '@template/core-typescript'
+import { BasePrimitiveValueObject, tryCatch, z } from '@codedm/core-typescript'
+import type { BaseDomainErrors } from '@codedm/core-typescript'
 
 const INVALID_TIMEZONE = 'INVALID_TIMEZONE' as BaseDomainErrors
 

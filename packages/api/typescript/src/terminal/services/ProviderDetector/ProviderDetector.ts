@@ -1,4 +1,4 @@
-import { ProviderKind, ProviderStatus } from '@template/contracts-typescript/wire/enums'
+import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * The detection record for one provider CLI — the shape T08 (Settings) and T15 (Attach wizard) read

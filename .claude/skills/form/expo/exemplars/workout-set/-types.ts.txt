@@ -11,7 +11,7 @@
 
 import { z } from 'zod/v4'
 import { useForm } from '@tanstack/react-form'
-import { logSetMutationRequestSchema } from '@template/client-typescript/typescript'
+import { logSetMutationRequestSchema } from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
 
 /**

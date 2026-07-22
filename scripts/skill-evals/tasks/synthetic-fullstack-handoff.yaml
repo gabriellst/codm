@@ -20,7 +20,7 @@ prompt: >
   exists, the exact SDK identifiers you build against, and your R1–R6 deliverables. Do NOT redefine
   any contract, do NOT rerun `bun contracts`, do NOT rebuild or duplicate the backend, do NOT
   hand-roll a fetch or a parallel zod schema — consume the seeded SDK from
-  '@template/client-typescript/typescript'. Trust the SDK on disk over your memory of how these
+  '@codedm/client-typescript/typescript'. Trust the SDK on disk over your memory of how these
   shapes "should" look.
   READ before you build: packages/app/react/CLAUDE.md END TO END (especially the Real-time, State
   placement, Dialogs, and Enum-labels sections) +
@@ -190,7 +190,7 @@ graders:
       migration, no `bun contracts` rerun (the seeded ones are authoritative). (2) B CONSUMED the
       seeded SDK — the route/section import useListPurchaseOrders / useCreatePurchaseOrder /
       useCancelPurchaseOrder / listPurchaseOrdersQueryKey / createPurchaseOrderMutationRequestSchema /
-      PurchaseOrderStatusEnum from '@template/client-typescript/typescript', NOT a hand-rolled fetch or
+      PurchaseOrderStatusEnum from '@codedm/client-typescript/typescript', NOT a hand-rolled fetch or
       a parallel zod schema of the body. (3) B did NOT rebuild the backend — no new
       procurement use case/controller/entity (those are seeded and must remain the single
       implementation). (4) the frontend integrates coherently with the handed-off contract (event

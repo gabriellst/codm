@@ -6,7 +6,7 @@
    role:    Web-only Tailwind 4 @utility: gradient-box / gradient-bg-* / gradient-border-* (drives button.tsx)
    Verbatim copy kept as corpus reference — NOT wired into any build.
    ───────────────────────────────────────────────────────────────────────────── */
-/* Web-only Tailwind 4 utilities — shared by @template/app-react and @template/app-astro.
+/* Web-only Tailwind 4 utilities — shared by @codedm/app-react and @codedm/app-astro.
    NOT for expo: React Native (uniwind) has no CSS gradients / background-clip / @property.
    Import AFTER `@import "tailwindcss"` so the @utility directives register with the engine. */
 

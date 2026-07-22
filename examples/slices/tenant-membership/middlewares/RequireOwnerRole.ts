@@ -1,7 +1,7 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
-import { BaseError, z } from '@template/core-typescript'
-import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware, MiddlewareClass } from '@template/core-typescript'
-import type { BaseInterfaceErrors } from '@template/core-typescript'
+import { BaseError, z } from '@codedm/core-typescript'
+import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware, MiddlewareClass } from '@codedm/core-typescript'
+import type { BaseInterfaceErrors } from '@codedm/core-typescript'
 import { Role as OwnerRole } from '../enums/Role'
 
 /**

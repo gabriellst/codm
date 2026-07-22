@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
 import {
 	IssueOpenedEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
 	AgentReplyDraftedEvent as AgentReplyDraftedIntegrationEvent,
-} from '@template/contracts-typescript/wire/events'
+} from '@codedm/contracts-typescript/wire/events'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'

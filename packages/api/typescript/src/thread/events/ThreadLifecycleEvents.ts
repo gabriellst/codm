@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 // Context-private thread control-plane facts (no cross-context consumers today; kept for the audit
 // trail + a future live-status SSE surface). One file — they share an identical minimal shape.

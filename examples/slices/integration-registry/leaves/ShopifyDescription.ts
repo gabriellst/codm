@@ -1,8 +1,8 @@
 // CONTEXT-ORIGIN: template@feat/template-polyglot (2026-07-01) — Tier-3 exemplar, not live code
 // ORIGIN-FILE: packages/api/typescript/src/integration/services/shopify/ShopifyDescription.ts
 
-import { z } from '@template/core-typescript/schema'
-import { ConnectionMode, SalesPlatform, StoreIntegrationType } from '@template/contracts-typescript/wire/enums'
+import { z } from '@codedm/core-typescript/schema'
+import { ConnectionMode, SalesPlatform, StoreIntegrationType } from '@codedm/contracts-typescript/wire/enums'
 
 /** Shopify — OAUTH mode: merchant uses Shopify's platform app; only shopDomain is needed to initiate. */
 export const ShopifyOAuthDescriptionSchema = z.object({

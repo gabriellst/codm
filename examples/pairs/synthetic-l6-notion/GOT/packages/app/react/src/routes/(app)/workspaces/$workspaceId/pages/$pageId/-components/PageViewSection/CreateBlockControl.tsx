@@ -7,7 +7,7 @@ import {
 	getPageViewQueryKey,
 	BlockTypeEnum,
 	type BlockType,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { isEnumValue } from '@/lib/enums'
 import { Button } from '@/components/ui/button'

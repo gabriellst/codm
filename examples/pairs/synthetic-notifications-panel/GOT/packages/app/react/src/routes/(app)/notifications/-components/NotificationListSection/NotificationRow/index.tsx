@@ -26,7 +26,7 @@ import {
 	listNotificationsQueryKey,
 	NotificationCategoryEnum,
 	type NotificationCategory,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { useLocale } from '@/hooks'
 import { useDialogStore } from '@/stores/useDialogStore'

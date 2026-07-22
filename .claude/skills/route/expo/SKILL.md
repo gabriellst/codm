@@ -16,7 +16,7 @@ Creates a new screen in `packages/app/expo/app/` with proper Expo Router configu
 - Screens render layout and decide WHICH components appear based on state.
 - Screens do NOT fetch data for components — each component owns its own SDK hook.
 - Components read params via `useLocalSearchParams` or `useTypedSearchParams`, navigate via `useRouter`.
-- Types come from the SDK (`@template/client-typescript/typescript`). Inline route-specific types in the screen file.
+- Types come from the SDK (`@codedm/client-typescript/typescript`). Inline route-specific types in the screen file.
 
 ## When to use this skill
 
@@ -33,7 +33,7 @@ Creates a new screen in `packages/app/expo/app/` with proper Expo Router configu
 
 ## Prerequisites
 
-- SDK is generated. Hooks/types live in `@template/client-typescript/typescript`.
+- SDK is generated. Hooks/types live in `@codedm/client-typescript/typescript`.
 - `experiments.typedRoutes: true` is enabled in `packages/app/expo/app.json`. This gives `expo-router` compile-time path safety (no string typos in `router.push({ pathname })`).
 - For type-safe **query params**, use the project helper `useTypedSearchParams` from `packages/app/expo/lib/typed-route.ts` — Expo Router does not auto-type query params even with typed routes on.
 
@@ -99,7 +99,7 @@ A typical tab screen:
 // packages/app/expo/app/(tabs)/progress/index.tsx
 import { ScrollView, View } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { useGetProgress } from '@template/client-typescript/typescript'
+import { useGetProgress } from '@codedm/client-typescript/typescript'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { HalftoneBandsPattern } from '@/components/ui/HalftoneBandsPattern'
 import { ScreenError } from '@/components/ui/ScreenError'

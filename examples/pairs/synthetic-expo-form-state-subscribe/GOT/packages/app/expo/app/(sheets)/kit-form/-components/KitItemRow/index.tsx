@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next'
 import {
 	QuantityModifierEnum,
 	type CreateKitMutationRequest,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import type { KitForm } from '../../-types'
 
 type KitItem = CreateKitMutationRequest['items'][number]

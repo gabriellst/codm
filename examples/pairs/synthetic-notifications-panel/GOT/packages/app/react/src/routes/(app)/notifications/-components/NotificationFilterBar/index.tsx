@@ -9,7 +9,7 @@
 import { getRouteApi } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import * as React from 'react'
-import { NotificationCategoryEnum } from '@template/client-typescript/typescript'
+import { NotificationCategoryEnum } from '@codedm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { isEnumValue } from '@/lib/enums'
 import { FieldLabel } from '@/components/ui/field'

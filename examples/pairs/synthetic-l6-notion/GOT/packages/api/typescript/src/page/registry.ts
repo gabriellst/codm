@@ -1,5 +1,5 @@
 import './errors'
-import type { InstanceRegistry } from '@template/core-typescript'
+import type { InstanceRegistry } from '@codedm/core-typescript'
 import { PageRepository, DrizzlePageRepository, MockPageRepository } from './repositories/PageRepository'
 import {
 	PageViewProjectionRepository,

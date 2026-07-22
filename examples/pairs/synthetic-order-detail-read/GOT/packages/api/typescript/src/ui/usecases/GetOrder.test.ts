@@ -11,7 +11,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { testId } from '@test/support'
 import { givenOrder } from '@test/support/given'
-import { OrderStatus, CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { OrderStatus, CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 import { GetOrder } from './GetOrder'
 
 describe('GetOrder', () => {

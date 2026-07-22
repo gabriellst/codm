@@ -70,7 +70,7 @@ Edit the controller file with proper Zod schema. **CRITICAL: Use `.example([...]
 
 ```typescript
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { CreateProductInputSchema, CreateProductOutputSchema } from '@product/usecases/CreateProduct'
 
 // Option 1: Import from use case (preferred when use case has schemas)
@@ -482,7 +482,7 @@ export const ListProductCostsInputSchema = z
 
 // ❌ WRONG — a list-screen filter living in packages/contracts/wire/enums.
 //    Cross-language bindings + a Phase-0-frozen global for a single-screen toggle.
-import { ProductCostListFilter } from '@template/contracts-typescript/wire/enums'
+import { ProductCostListFilter } from '@codedm/contracts-typescript/wire/enums'
 filters: z.array(z.enum(ProductCostListFilter)).optional()
 ```
 
@@ -567,7 +567,7 @@ After creating controllers:
 
 ## References
 
-- `@template/core-typescript` — Controller, HttpStatusCode, z, BaseError (all framework types)
+- `@codedm/core-typescript` — Controller, HttpStatusCode, z, BaseError (all framework types)
 - `docs/BACKEND.md` - Architecture principles (why)
 - `/usecase` skill - For implementing the business logic
 - `/errors` skill - For defining and registering errors

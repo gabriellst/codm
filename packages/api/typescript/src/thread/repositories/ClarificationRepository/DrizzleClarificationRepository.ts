@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { DrizzleClient } from '@template/core-typescript'
-import { threadClarifications } from '@template/contracts/db'
+import { DrizzleClient } from '@codedm/core-typescript'
+import { threadClarifications } from '@codedm/contracts/db'
 import { ClarificationRepository, type ClarificationRow, type OpenClarificationInput } from './ClarificationRepository'
 
 @injectable()

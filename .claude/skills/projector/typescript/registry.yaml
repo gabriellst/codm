@@ -306,8 +306,8 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import type { Transaction } from '@template/core-typescript'
-      import { Projector } from '@template/core-typescript'
+      import type { Transaction } from '@codedm/core-typescript'
+      import { Projector } from '@codedm/core-typescript'
       import { {{Name}}Projection, type {{Name}}ProjectionEvent } from '../{{Name}}'
       import { {{Name}}ProjectionRepository } from '../{{Name}}ProjectionRepository'
 
@@ -365,8 +365,8 @@ registry:
     exemplar: |
       // packages/api/typescript/src/<ctx>/projections/projectors/<Name>Projector.ts
       import { injectable } from 'tsyringe-neo'
-      import type { Transaction } from '@template/core-typescript'
-      import { Projector } from '@template/core-typescript'
+      import type { Transaction } from '@codedm/core-typescript'
+      import { Projector } from '@codedm/core-typescript'
       import { <Name>Projection, type <Name>ProjectionEvent } from '../<Name>'
       import { <Name>ProjectionRepository } from '../<Name>ProjectionRepository'
 

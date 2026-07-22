@@ -1,10 +1,10 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { cards as cardsTable } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { cards as cardsTable } from '@codedm/contracts/db'
 import { Card } from '../entities/Card'
 import { CardRepository } from './CardRepository'
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 
 @injectable()
 export class DrizzleCardRepository extends CardRepository {

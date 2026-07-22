@@ -411,13 +411,13 @@ cross_cutting_bad_practices:
     severity: critical
     wrong: |
       // Inside api/ code:
-      import { something } from '@template/client-typescript/typescript'
-      import { something } from '@template/client-typescript/typescript'
+      import { something } from '@codedm/client-typescript/typescript'
+      import { something } from '@codedm/client-typescript/typescript'
     right: |
       // Inside api: compose contexts via use cases and/or events
       // SDK is for external consumers and frontend only
       // Exception: channel types (enums, schemas, events) may be imported
-      // from '@template/client-typescript/typescript' using direct sub-paths (see cc-bp-14)
+      // from '@codedm/client-typescript/typescript' using direct sub-paths (see cc-bp-14)
 
   - id: cc-bp-14
     scope: all
@@ -426,16 +426,16 @@ cross_cutting_bad_practices:
     wrong: |
       // Barrel import pulls in ALL 375+ exports with 122 circular .d.ts chains
       // This makes the TypeScript LSP extremely slow (spins for seconds on every change)
-      import { PlatformEnum } from '@template/client-typescript/typescript'
-      import { MessageTypeEnum } from '@template/client-typescript/typescript'
+      import { PlatformEnum } from '@codedm/client-typescript/typescript'
+      import { MessageTypeEnum } from '@codedm/client-typescript/typescript'
     right: |
       // Direct sub-path import — loads only the specific .d.ts file, no barrel cycles
-      import { PlatformEnum } from '@template/client-typescript/typescript'
-      import { MessageTypeEnum } from '@template/client-typescript/typescript'
-      import { ServerEventName } from '@template/client-typescript/typescript'
+      import { PlatformEnum } from '@codedm/client-typescript/typescript'
+      import { MessageTypeEnum } from '@codedm/client-typescript/typescript'
+      import { ServerEventName } from '@codedm/client-typescript/typescript'
       // For zod schemas that internally reference the barrel (import("../index.ts")),
       // the barrel is loaded anyway — use the barrel import for those:
-      import { channelMessageReceivedEventSchema } from '@template/client-typescript/typescript'
+      import { channelMessageReceivedEventSchema } from '@codedm/client-typescript/typescript'
       // Rule: if the type has zero dependencies (enums, simple types), use direct sub-path.
       // If the type's .d.ts references the barrel internally, use the barrel import.
 

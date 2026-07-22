@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'bun:test'
 import { RequireOwnerRole } from './RequireOwnerRole'
 import { Role as OwnerRole } from '../enums/Role'
-import type { HttpControllerRequest } from '@template/core-typescript'
+import type { HttpControllerRequest } from '@codedm/core-typescript'
 
 function makeRequest(ctx: unknown): HttpControllerRequest<unknown> {
 	return { ctx, params: {}, body: {}, raw: {} } as unknown as HttpControllerRequest<unknown>

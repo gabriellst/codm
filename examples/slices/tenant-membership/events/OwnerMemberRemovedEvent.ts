@@ -1,5 +1,5 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const OwnerMemberRemovedEventSchema = z.domainEvent({
 	ownerId: z.string(),

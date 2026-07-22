@@ -104,7 +104,7 @@ registry:
       name: "Enum fields reference imported enum types"
       when: "event payload contains status, role, type, or category fields"
       reason: "Ensures type safety and single source of truth for allowed values"
-      rule: "z.enum(AppointmentStatus), z.enum(ExternalPlatform), z.enum(Specialty) — always import from @template/contracts-typescript/wire/enums or @<context>/enums"
+      rule: "z.enum(AppointmentStatus), z.enum(ExternalPlatform), z.enum(Specialty) — always import from @codedm/contracts-typescript/wire/enums or @<context>/enums"
       wrong: "z.enum(['PENDING', 'ACTIVE']) or z.string() for enum-like fields"
     - id: EVT-P09
       name: "Barrel exports only the class"
@@ -122,16 +122,16 @@ registry:
           name: z.string(),
         })
     - id: EVT-P11
-      name: "Import z from @template/core-typescript"
+      name: "Import z from @codedm/core-typescript"
       when: always
       reason: "Project-extended Zod instance with domainEvent/integrationEvent helpers lives in the core package"
-      rule: "import { z } from '@template/core-typescript'"
+      rule: "import { z } from '@codedm/core-typescript'"
       wrong: "import { z } from 'zod' — misses custom schema methods like z.domainEvent(); import { z } from '@shared/utils/schema' — dead path"
     - id: EVT-P12
-      name: "Import base class from @template/core-typescript"
+      name: "Import base class from @codedm/core-typescript"
       when: always
       reason: "BaseDomainEvent and BaseIntegrationEvent are exported from the core package"
-      rule: "import { BaseDomainEvent } from '@template/core-typescript'. Same for BaseIntegrationEvent."
+      rule: "import { BaseDomainEvent } from '@codedm/core-typescript'. Same for BaseIntegrationEvent."
       wrong: "Importing from '@shared/types' or '@shared/types/BaseDomainEvent' — those paths are dead"
 
   bad_practices:
@@ -263,7 +263,7 @@ registry:
 
   snippet:
     skeleton: |
-      import { BaseDomainEvent, z } from '@template/core-typescript'
+      import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
       const {{Name}}EventSchema = z.domainEvent({
       	id: z.string(),
@@ -275,7 +275,7 @@ registry:
       }
     skeletons:
       integration: |
-        import { BaseIntegrationEvent, z } from '@template/core-typescript'
+        import { BaseIntegrationEvent, z } from '@codedm/core-typescript'
 
         const {{Name}}EventSchema = z.integrationEvent('integration.{{camelName}}', {
         	id: z.string(),

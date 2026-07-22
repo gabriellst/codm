@@ -57,7 +57,7 @@ touch packages/api/typescript/src/<context>/middlewares/<Name>Middleware.ts
 
 ### Step 2: Implement the Class
 
-The signature is fixed by `Middleware` in `@template/core-typescript`:
+The signature is fixed by `Middleware` in `@codedm/core-typescript`:
 
 ```ts
 export abstract class Middleware {
@@ -70,9 +70,9 @@ A guard middleware (validates and may attach to `ctx`):
 ```ts
 // packages/api/typescript/src/ui/middlewares/OnboardingMiddleware.ts
 import { singleton } from 'tsyringe-neo'
-import { BaseError } from '@template/core-typescript'
-import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@template/core-typescript'
-import { z } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
+import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codedm/core-typescript'
+import { z } from '@codedm/core-typescript'
 import { OnboardingRepository } from '@ui/repositories'
 import { ApplicationErrors } from '@ui/errors'
 

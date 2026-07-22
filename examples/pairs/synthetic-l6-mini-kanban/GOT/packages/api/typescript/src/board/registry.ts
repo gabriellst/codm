@@ -1,5 +1,5 @@
 import './errors'
-import type { InstanceRegistry } from '@template/core-typescript'
+import type { InstanceRegistry } from '@codedm/core-typescript'
 import { BoardRepository } from './repositories/BoardRepository'
 import { MockBoardRepository } from './repositories/MockBoardRepository'
 import { DrizzleBoardRepository } from './repositories/DrizzleBoardRepository'

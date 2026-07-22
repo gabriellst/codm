@@ -199,7 +199,7 @@ static isValid(cpf: string): boolean {
 
 ```typescript
 // For value objects in @shared/objects
-import type { BaseDomainErrors } from '@template/core-typescript'
+import type { BaseDomainErrors } from '@codedm/core-typescript'
 // Error codes in schema: { error: 'INVALID_EMAIL' as BaseDomainErrors }
 
 // For value objects in context-specific folders
@@ -212,7 +212,7 @@ import { DomainErrors } from '../errors'
 ### CPF (Primitive — with transform in schema)
 
 ```typescript
-import { BasePrimitiveValueObject, BaseDomainErrors, z } from '@template/core-typescript'
+import { BasePrimitiveValueObject, BaseDomainErrors, z } from '@codedm/core-typescript'
 
 export const CPFSchema = z
   .string()
@@ -251,7 +251,7 @@ export class CPF extends BasePrimitiveValueObject<typeof CPFSchema> {
 ### CRM (Composite — context-specific)
 
 ```typescript
-import { BaseValueObject, BaseError, z } from '@template/core-typescript'
+import { BaseValueObject, BaseError, z } from '@codedm/core-typescript'
 import { BrazilianState } from '@<context>/enums'
 import { DomainErrors } from '../errors'
 import Z from 'zod'

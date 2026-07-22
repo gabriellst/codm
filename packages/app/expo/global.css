@@ -14,7 +14,7 @@
 /*
  * ── Token harmonization (FU3) ─────────────────────────────────────────────
  * Token NAMES match the shadcn-style convention used in
- * @template/app-styles/tokens.css (background/foreground/card/popover/
+ * @codedm/app-styles/tokens.css (background/foreground/card/popover/
  * secondary/muted/border/ring/success/warning/destructive). Token VALUES
  * remain the project's dark-only "Berzerk" aesthetic — nearly-black neutrals
  * with vivid accent colors. This means:
@@ -22,7 +22,7 @@
  *   - Tailwind utilities are identical across react/astro/expo
  *     (`bg-background`, `text-foreground`, `bg-success`, `text-destructive`).
  *   - Designers can swap expo to the shared light/dark palette later by
- *     replacing this `@theme` block with `@import "@template/app-styles/tokens.css"`
+ *     replacing this `@theme` block with `@import "@codedm/app-styles/tokens.css"`
  *     plus an `@theme inline` bridge — one file change, no consumer churn.
  *
  * Extension tokens (no shadcn equivalent — kept for Berzerk granularity):

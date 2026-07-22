@@ -96,13 +96,13 @@ const data = await fetch(import.meta.env.PUBLIC_API_URL + '/api/stats')
 - `PUBLIC_*` — visible to the browser (via `import.meta.env.PUBLIC_*`).
 - Non-`PUBLIC_` — server-only, accessible only in frontmatter.
 
-## Shared design tokens via `@template/app-styles`
+## Shared design tokens via `@codedm/app-styles`
 
-The astro app imports `@template/app-styles/tokens.css` once in `src/styles/global.css`:
+The astro app imports `@codedm/app-styles/tokens.css` once in `src/styles/global.css`:
 
 ```css
-@import "@template/app-styles/tokens.css";
-@import "@template/app-styles/web-utilities.css";
+@import "@codedm/app-styles/tokens.css";
+@import "@codedm/app-styles/web-utilities.css";
 ```
 
 After that, all components use **CSS variables** (`var(--background)`, `var(--primary)`) or **Tailwind utilities** that map to those tokens. Never inline a hex value. If a token is missing, add it to the shared `tokens.css` rather than forking inline.
@@ -183,7 +183,7 @@ import ThemeToggle from '~/components/ThemeToggle.tsx'
 - [ ] Colors come from CSS variables / Tailwind utilities mapped to `tokens.css`, never inline hex.
 - [ ] Locale is detected from `Astro.params.locale` or `getLocale(Astro.url)`, never from URL parsing.
 - [ ] Links between locales use `localizedPath(Astro.url, targetLocale)`.
-- [ ] No imports from `@template/app-react/*` or `@template/app-expo/*` — astro is its own workspace.
+- [ ] No imports from `@codedm/app-react/*` or `@codedm/app-expo/*` — astro is its own workspace.
 - [ ] SEO: `<title>`, `<meta name="description">`, OG tags, and (for blog posts) `jsonLd` are passed to `BaseLayout`.
 - [ ] Output mode left as `static` unless SSR is genuinely required per-route.
 

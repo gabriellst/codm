@@ -20,7 +20,7 @@ registry:
         import * as internalHandlers from './handlers/internal'
         import * as externalHandlers from './handlers/external'
         import middlewares from './middlewares'
-        import { BoundedContext } from '@template/core-typescript'
+        import { BoundedContext } from '@codedm/core-typescript'
 
         const ctx = await BoundedContext.create({
           name: 'product',
@@ -53,7 +53,7 @@ registry:
       wrong: "Using a `registry/` folder instead of a flat `registry.ts` file. Hand-writing the raw 3-env `{ mock: [], integration: [], real: [] }` literal. Binding context repositories/services inline in `index.ts`."
       snippet: |
         // packages/api/typescript/src/<context>/registry.ts
-        import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+        import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
         import { ProductRepository, MockProductRepository, DrizzleProductRepository } from './repositories'
 
         // One declaration per token — `integration` omitted mirrors `real`; `null` = declared absence.
@@ -255,7 +255,7 @@ registry:
     import * as externalHandlers from './handlers/external'
     import middlewares from './middlewares'
 
-    import { BoundedContext } from '@template/core-typescript'
+    import { BoundedContext } from '@codedm/core-typescript'
 
     const ctx = await BoundedContext.create({
       name: 'product',
@@ -269,7 +269,7 @@ registry:
     export default ctx.router
 
     // product/registry.ts
-    import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+    import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
     import { ProductRepository, MockProductRepository, DrizzleProductRepository } from './repositories'
 
     // One declaration per token — `integration` omitted mirrors `real`; `null` = declared absence.

@@ -16,7 +16,7 @@ prompt: >
   The supplier purchase-orders BACKEND is already DONE and on disk — contracts (the integration
   event, the PurchaseOrderStatus enum, the purchase_orders table + migration, both-language
   bindings), the TS `procurement` bounded context, the Go consumer, and a regenerated SDK exporting
-  hooks/schemas/keys from '@template/client-typescript/typescript'. Your job is NOT to implement —
+  hooks/schemas/keys from '@codedm/client-typescript/typescript'. Your job is NOT to implement —
   it is to PRODUCE THE IMPLEMENTATION PLAN for the remaining work (the react frontend + the e2e
   spec) as a fresh planning agent would.
   READ FIRST: .claude/commands/plan.md (the Task Structure section — every Task carries

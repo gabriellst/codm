@@ -1,4 +1,4 @@
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 
 export interface StopPolicy {
 	serverErrors: boolean

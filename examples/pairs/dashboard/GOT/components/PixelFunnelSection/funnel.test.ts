@@ -7,7 +7,7 @@
 // Verbatim copy kept as corpus reference — NOT a live module. Do not import it.
 // ─────────────────────────────────────────────────────────────────────────────
 import { describe, it, expect } from 'bun:test'
-import type { GetPixelFunnelQueryResponse } from '@template/client-typescript/typescript'
+import type { GetPixelFunnelQueryResponse } from '@codedm/client-typescript/typescript'
 import { FUNNEL_STAGES, attenuate, buildStageRows } from './funnel'
 
 const numMetric = (value: number) => ({ value, deltaPct: null })

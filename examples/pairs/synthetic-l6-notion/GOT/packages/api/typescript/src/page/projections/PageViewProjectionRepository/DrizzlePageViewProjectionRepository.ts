@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
-import { pageViewProjection } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
+import { pageViewProjection } from '@codedm/contracts/db'
 import { PageViewProjection, type PageViewProjectionProps } from '../PageView'
 import { PageViewProjectionRepository } from './PageViewProjectionRepository'
 

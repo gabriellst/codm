@@ -1,4 +1,4 @@
-import { AggregateRoot, Id, z } from '@template/core-typescript'
+import { AggregateRoot, Id, z } from '@codedm/core-typescript'
 import { LanguageTag, Timezone } from '@shared/objects'
 import type Z from 'zod'
 

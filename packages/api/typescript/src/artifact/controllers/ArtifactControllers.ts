@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { ArtifactKind } from '@template/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { RecordArtifact } from '../usecases/RecordArtifact'
 import { ListArtifacts, ListArtifactsOutputSchema } from '../usecases/ListArtifacts'

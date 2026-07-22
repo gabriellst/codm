@@ -134,7 +134,7 @@ registry:
       name: "Enum iteration via Object.values + SDK enum"
       when: "component renders chips / segmented control from an SDK enum"
       rule: |
-        import { PeriodEnum } from '@template/client-typescript/typescript'
+        import { PeriodEnum } from '@codedm/client-typescript/typescript'
         {Object.values(PeriodEnum).map(p => <PeriodChip key={p} period={p} active={period === p} onPress={...} />)}
       examples: ["progress/-components/PeriodPicker"]
 
@@ -234,7 +234,7 @@ registry:
     import { View } from 'react-native'
     import { useQueryClient } from '@tanstack/react-query'
     import { Haptics } from 'react-native-nitro-haptics'
-    import { useListWorkouts, useDeleteWorkout, listWorkoutsQueryKey } from '@template/client-typescript/typescript'
+    import { useListWorkouts, useDeleteWorkout, listWorkoutsQueryKey } from '@codedm/client-typescript/typescript'
     import { Text } from '@/components/ui/Text'
     import { EmptyState } from '@/components/ui/EmptyState'
     import { usePeriodStore } from '@/app/(tabs)/progress/-stores/period-store'
@@ -373,7 +373,7 @@ registry:
       wrong: |
         const PERIODS = ['4w', '8w', '6m', '1y'] as const
       right: |
-        import { PeriodEnum } from '@template/client-typescript/typescript'
+        import { PeriodEnum } from '@codedm/client-typescript/typescript'
         const PERIODS = Object.values(PeriodEnum)
 
     - id: bp-09

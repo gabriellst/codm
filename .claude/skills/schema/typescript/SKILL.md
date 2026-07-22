@@ -49,7 +49,7 @@ Controllers are the system boundary — they validate format, shape, and consist
 
 ```typescript
 // auth/controllers/SignUp.ts
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 import { DocumentSchema } from '@auth/schemas'
 import { PhonePlainSchema } from '@shared/objects'
 
@@ -88,7 +88,7 @@ Use cases are internal — they trust the caller already validated. **When a fie
 
 ```typescript
 // patient/usecases/CreatePatient.ts
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 import { RGSchema, CPFSchema, EmailSchema, PhonePlainSchema, AddressSchema, PersonNameSchema } from '@shared/objects'
 
 export const CreatePatientInputSchema = z.object({
@@ -381,7 +381,7 @@ Always use `Z.infer<typeof Schema>` for type inference, never access internal `_
 
 See `bp-04` in registry.yaml for the wrong/right pattern.
 
-**Note:** `z` from `@template/core-typescript` is a custom runtime value — it doesn't expose `z.infer<T>`. Use `import Z from 'zod'` for type-level utilities.
+**Note:** `z` from `@codedm/core-typescript` is a custom runtime value — it doesn't expose `z.infer<T>`. Use `import Z from 'zod'` for type-level utilities.
 
 ## References
 

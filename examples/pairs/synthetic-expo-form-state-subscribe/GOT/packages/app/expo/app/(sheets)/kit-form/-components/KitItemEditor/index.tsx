@@ -22,7 +22,7 @@ import {
 	QuantityModifierEnum,
 	type QuantityModifier,
 	type ListProductsForKit200,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { NumField } from '@/components/ui/NumField'
 import type { KitForm } from '../../-types'
 

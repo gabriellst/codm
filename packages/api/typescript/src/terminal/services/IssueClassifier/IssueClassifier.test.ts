@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import type { z, ZodType } from 'zod'
-import { BaseError } from '@template/core-typescript'
-import { ClassificationMethod } from '@template/contracts-typescript/wire/enums'
+import { BaseError } from '@codedm/core-typescript'
+import { ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type TerminalRuntimeEvent } from '../AgentRunner'
 import { IssueClassifier, type OpenIssueRef } from './IssueClassifier'
 

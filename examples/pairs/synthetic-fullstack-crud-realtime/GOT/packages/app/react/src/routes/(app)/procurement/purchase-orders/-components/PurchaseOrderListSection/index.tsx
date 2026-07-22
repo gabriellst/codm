@@ -9,7 +9,7 @@ import {
 	listPurchaseOrdersQueryKey,
 	PurchaseOrderStatusEnum,
 	type ListPurchaseOrdersQueryResponse,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import { DataTable, DataTableContent, DataTablePagination, DataTableSearch, type ColumnDef } from '@/components/DataTable'
 import { Badge } from '@/components/ui/badge'

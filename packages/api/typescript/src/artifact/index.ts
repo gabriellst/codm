@@ -1,4 +1,4 @@
-import { BoundedContext } from '@template/core-typescript'
+import { BoundedContext } from '@codedm/core-typescript'
 import * as controllers from './controllers'
 import { INSTANCE_REGISTRY } from './registry'
 import * as internalHandlers from './handlers/internal'

@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
-import { IssueArchiveReason, StopResolution } from '@template/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { IssueArchiveReason, StopResolution } from '@codedm/contracts-typescript/wire/enums'
 
 // Context-private facts BC5 owns and BRIDGES to frozen integration events. (Execution facts —
 // opened / completed / stop_raised / agent.reply_drafted — are published by the terminal engine;

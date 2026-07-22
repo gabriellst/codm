@@ -15,7 +15,7 @@ prompt: >
   do not touch the sidebar nav — the page is reached by URL). The backend
   surface already exists in the SDK: useGetChart, the ChartType discriminant
   with its ChartTypeEnum const, chartTypeSchema and getChartQueryParamsSchema
-  from @template/client-typescript/typescript — read the generated surface under
+  from @codedm/client-typescript/typescript — read the generated surface under
   packages/client/dist/typescript/src/typescript/{types,zod,hooks} FIRST,
   especially types/GetChart.ts: the endpoint returns ONE response per recorte,
   a union discriminated by kind ('income' | 'weekday' | 'hour' | 'period' |
@@ -145,7 +145,7 @@ graders:
     id: component#CMP-P02
   # ── SDK-CONSUME + hygiene riders ───────────────────────────────────
   - kind: grep-must
-    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.tsx::from\\s+['\"]@template/client-typescript/typescript['\"]"
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.tsx::from\\s+['\"]@codedm/client-typescript/typescript['\"]"
     id: atlas#SDK-CONSUME
   - kind: grep-must-not
     spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
@@ -246,7 +246,7 @@ notes: >-
   dispatch map, no flattening, no casts), never a literal z.discriminatedUnion
   call in the app. Required query params chartType/tenancyScope/frequency/
   startDate/endDate; ChartTypeEnum, chartTypeSchema, getChartQueryParamsSchema,
-  useGetChart all exported from @template/client-typescript/typescript;
+  useGetChart all exported from @codedm/client-typescript/typescript;
   SignedMoney is structurally identical to Money, so useMoney's formatter
   accepts it as-is (judge scope note covers it). Discriminating questions:
   HEAD's own RevenueChartSection (dashboard) is the anti-exemplar — useState

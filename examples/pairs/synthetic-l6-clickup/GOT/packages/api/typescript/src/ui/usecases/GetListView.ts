@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq, asc } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@template/core-typescript'
-import { TaskStatus, TaskPriority } from '@template/contracts-typescript/wire/enums'
-import { clickupListView, lists, spaces } from '@template/contracts/db'
+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { TaskStatus, TaskPriority } from '@codedm/contracts-typescript/wire/enums'
+import { clickupListView, lists, spaces } from '@codedm/contracts/db'
 
 // ---------------------------------------------------------------------------
 // Input

@@ -148,10 +148,10 @@ registry:
         })
 
     - id: TST-12
-      name: "Import from @template/core-typescript, no dead @shared paths"
+      name: "Import from @codedm/core-typescript, no dead @shared paths"
       when: always
-      reason: "The @shared barrels and direct module paths were removed; all framework primitives now live in the @template/core-typescript barrel."
-      rule: "Import framework primitives (BaseError, Handler, tryCatchAsync, z, Transaction) from @template/core-typescript."
+      reason: "The @shared barrels and direct module paths were removed; all framework primitives now live in the @codedm/core-typescript barrel."
+      rule: "Import framework primitives (BaseError, Handler, tryCatchAsync, z, Transaction) from @codedm/core-typescript."
 
     - id: TST-13
       name: "Given helpers for test data setup"
@@ -348,7 +348,7 @@ registry:
         import { BaseError } from '@shared/types/BaseError'
         import { tryCatchAsync } from '@shared/utils/TryCatch'
       right: |
-        import { BaseError, tryCatchAsync } from '@template/core-typescript'
+        import { BaseError, tryCatchAsync } from '@codedm/core-typescript'
 
     - id: bp-10
       name: "Testing entity-level validation in use case tests"
@@ -412,13 +412,13 @@ registry:
       severity: critical
       mechanical: true
       detect:
-        - 'import\s*\{[^}]*\b(Mock\w+|EventEmitter2Mediator|OutboxDispatcher)\b[^}]*\}\s*from\s*[''"]@template/core-typescript[''"]'
+        - 'import\s*\{[^}]*\b(Mock\w+|EventEmitter2Mediator|OutboxDispatcher)\b[^}]*\}\s*from\s*[''"]@codedm/core-typescript[''"]'
       reason: >
         The Mock* repositories, MockUnitOfWorkFactory, EventEmitter2Mediator, and OutboxDispatcher
-        in @template/core-typescript exist for the REGISTRIES to wire per mode — never for tests
+        in @codedm/core-typescript exist for the REGISTRIES to wire per mode — never for tests
         to import and instantiate. A test importing them is about to bypass TestBed.
       wrong: |
-        import { MockUnitOfWorkFactory, EventEmitter2Mediator, MockDomainEventRepository } from '@template/core-typescript'
+        import { MockUnitOfWorkFactory, EventEmitter2Mediator, MockDomainEventRepository } from '@codedm/core-typescript'
       right: |
         import { TestBed } from '@test/support'   // TestBed owns infra wiring; tests resolve, never construct it
 

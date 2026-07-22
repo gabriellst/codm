@@ -1,7 +1,7 @@
 // Per-env DI bindings for the workspace (BC2 Workspace Registry) context.
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { WorkspaceRepository, DrizzleWorkspaceRepository, MockWorkspaceRepository } from './repositories/WorkspaceRepository'
 import { WorkspaceDetector, SystemWorkspaceDetector, MockWorkspaceDetector } from './services/WorkspaceDetector'
 import { WorkspaceUsageQuery, DrizzleWorkspaceUsageQuery, MockWorkspaceUsageQuery } from './services/WorkspaceUsageQuery'

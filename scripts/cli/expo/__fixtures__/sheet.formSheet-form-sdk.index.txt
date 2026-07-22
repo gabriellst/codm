@@ -4,7 +4,7 @@ import { useForm } from '@tanstack/react-form'
 import { useTranslation } from 'react-i18next'
 import { KeyboardAware } from '@/components/ui/KeyboardAware'
 import { Button } from '@/components/ui/Button'
-import { updateBioRequestSchema } from '@template/client-typescript/typescript'
+import { updateBioRequestSchema } from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib/types'
 
 type EditBioInput = typeof updateBioRequestSchema['_output']

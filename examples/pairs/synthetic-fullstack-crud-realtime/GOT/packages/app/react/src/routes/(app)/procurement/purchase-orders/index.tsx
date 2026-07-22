@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@/lib/zod-validator'
 import { z } from 'zod'
-import { purchaseOrderStatusSchema } from '@template/client-typescript/typescript'
+import { purchaseOrderStatusSchema } from '@codedm/client-typescript/typescript'
 
 import { PurchaseOrderListSection } from './-components/PurchaseOrderListSection'
 

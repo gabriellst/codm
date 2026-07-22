@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Handler, z, DrizzleClient } from '@template/core-typescript'
+import { BaseError, Handler, z, DrizzleClient } from '@codedm/core-typescript'
 import { eq } from 'drizzle-orm'
-import { sessions } from '@template/contracts/db'
+import { sessions } from '@codedm/contracts/db'
 import { OwnerRepository } from '../repositories/OwnerRepository'
 import type { ApplicationErrors } from '../errors'
 

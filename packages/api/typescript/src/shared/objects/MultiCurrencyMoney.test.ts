@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 import { Money } from './Money'
 import { MultiCurrencyMoney } from './MultiCurrencyMoney'
 

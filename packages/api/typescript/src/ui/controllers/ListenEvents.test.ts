@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import type { BaseIntegrationEvent } from '@template/core-typescript'
-import { StopKind } from '@template/contracts-typescript/wire/enums'
-import { IssueStopRaisedEvent, ChannelMessageReceivedEvent } from '@template/contracts-typescript/wire/events'
+import type { BaseIntegrationEvent } from '@codedm/core-typescript'
+import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStopRaisedEvent, ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { browserDeliveryOwnerId } from './ListenEvents'
 
 const OWNER_A = '00000000-0000-4000-8000-00000000000a'

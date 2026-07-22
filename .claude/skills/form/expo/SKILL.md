@@ -12,7 +12,7 @@ Creates a validated form in the Expo app using TanStack Form, SDK Zod schemas, a
 
 ## Core Principles [FRM-01..FRM-07]
 
-1. **SDK schema is the single source of truth.** Import `xxxMutationRequestSchema` from `@template/client-typescript/typescript`. Use it as `validators.onChange` AND as the source for the submit button's `safeParse` gate.
+1. **SDK schema is the single source of truth.** Import `xxxMutationRequestSchema` from `@codedm/client-typescript/typescript`. Use it as `validators.onChange` AND as the source for the submit button's `safeParse` gate.
 2. **TanStack Form for field state.** `useForm({ defaultValues, validators: { onChange: schema }, onSubmit })`. Never `useState` for form values.
 3. **Native primitives only.** `Input`, `InputGroup`, `InputPrefix`, `InputSuffix`, `NumField`, `Button`, `KeyboardAware` from `@/components/ui/*`. Never raw `<TextInput>` / `<Pressable>` styled as a CTA.
 4. **`KeyboardAware` wraps any form with text inputs.** It owns `KeyboardAvoidingView` behavior + tap-to-dismiss. Wrap the form body, not the entire screen, so non-form siblings (header, illustration) layout independently.
@@ -36,7 +36,7 @@ Creates a validated form in the Expo app using TanStack Form, SDK Zod schemas, a
 
 ## Prerequisites
 
-- SDK generated: `@template/client-typescript/typescript` exposes `useCreateX` / `useUpdateX` and `xxxMutationRequestSchema`.
+- SDK generated: `@codedm/client-typescript/typescript` exposes `useCreateX` / `useUpdateX` and `xxxMutationRequestSchema`.
 - Form primitives exist: `ls packages/app/expo/components/ui/` should show `Input.tsx`, `NumField.tsx`, `KeyboardAware.tsx`, `Button.tsx`, `Sheet.tsx`.
 
 ---
@@ -56,7 +56,7 @@ import {
   createItemMutationRequestSchema,
   listItemsQueryKey,
   type CreateItemMutationRequest,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
 import { Input, InputGroup } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -177,7 +177,7 @@ import {
   updateProfileMutationRequestSchema,
   getProfileQueryKey,
   type ProfileResponse,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
 import { Input, InputGroup } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -579,7 +579,7 @@ onSuccess: () => {
 queryClient.invalidateQueries({ queryKey: ['items'] })
 
 // CORRECT
-import { listItemsQueryKey } from '@template/client-typescript/typescript'
+import { listItemsQueryKey } from '@codedm/client-typescript/typescript'
 queryClient.invalidateQueries({ queryKey: listItemsQueryKey() })
 ```
 

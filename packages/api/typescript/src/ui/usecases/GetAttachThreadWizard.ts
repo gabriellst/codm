@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@template/core-typescript'
-import { channels, workspaces, threads } from '@template/contracts/db'
+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { channels, workspaces, threads } from '@codedm/contracts/db'
 import {
 	ChannelKind,
 	ChannelStatus,
@@ -9,7 +9,7 @@ import {
 	ProviderKind,
 	ProviderStatus,
 	WorkspaceBadge,
-} from '@template/contracts-typescript/wire/enums'
+} from '@codedm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@terminal/services/ProviderDetector'
 
 const ContactOptionSchema = z.object({

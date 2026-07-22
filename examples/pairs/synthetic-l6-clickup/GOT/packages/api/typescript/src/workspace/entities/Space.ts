@@ -1,4 +1,4 @@
-import { AggregateRoot, z } from '@template/core-typescript'
+import { AggregateRoot, z } from '@codedm/core-typescript'
 import Z from 'zod'
 import { SpaceList } from '../objects/SpaceList'
 import { SpaceCreatedEvent, ListAddedEvent } from '../events'

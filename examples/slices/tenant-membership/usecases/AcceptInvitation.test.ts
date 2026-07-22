@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, testId, givenOwner } from '@test/support'
-import { DomainEventRepository } from '@template/core-typescript'
+import { DomainEventRepository } from '@codedm/core-typescript'
 import { Role } from '../enums/Role'
 import { AcceptInvitation } from './AcceptInvitation'
 import { InviteMember } from './InviteMember'

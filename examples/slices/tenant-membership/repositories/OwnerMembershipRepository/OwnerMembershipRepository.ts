@@ -1,6 +1,6 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
-import { Repository } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Repository } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { OwnerMembership } from '../../entities/OwnerMembership'
 
 export abstract class OwnerMembershipRepository extends Repository<OwnerMembership> {

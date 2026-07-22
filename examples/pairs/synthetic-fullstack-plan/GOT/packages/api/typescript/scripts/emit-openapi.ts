@@ -11,7 +11,7 @@ process.env.START_SERVER = 'false'
 // reflect-metadata must be first
 import 'reflect-metadata'
 
-import { openapi } from '@template/core-typescript'
+import { openapi } from '@codedm/core-typescript'
 
 // Import context modules to trigger BoundedContext.create (builds routers, wires handlers).
 // shared/index.ts must come first — it creates the root BoundedContext + applies registries.

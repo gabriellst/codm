@@ -15,13 +15,13 @@ import {
 	DrizzleClient,
 	LoggingService,
 	openapi,
-} from '@template/core-typescript'
+} from '@codedm/core-typescript'
 import { CONTEXTS } from './contexts'
 import { ALL_REGISTRIES } from './registry'
 // Context-local (non-wire) enums: spread each context's enum barrel so any
 // controller-facing enum is auto-registered. Adding an enum to a context's
 // `enums/index.ts` is enough — no need to remember to list it here.
-import * as wireEnums from '@template/contracts-typescript/wire/enums'
+import * as wireEnums from '@codedm/contracts-typescript/wire/enums'
 import * as sharedEnums from './enums'
 import * as authEnums from '@auth/enums'
 import * as sharedObjects from './objects'

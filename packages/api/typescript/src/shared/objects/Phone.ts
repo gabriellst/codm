@@ -1,9 +1,9 @@
 // Ported from v1.8 (packages/api/src/shared/objects/Phone.ts), imports adapted to
-// the polyglot `@template/core-typescript` barrel. Brazilian-centric parsing: a bare
+// the polyglot `@codedm/core-typescript` barrel. Brazilian-centric parsing: a bare
 // 10/11-digit number assumes country code 55. INVALID_PHONE is registered in
 // @auth/errors (the consumer context — User identity).
-import { BaseValueObject, BaseError, z } from '@template/core-typescript'
-import type { BaseDomainErrors } from '@template/core-typescript'
+import { BaseValueObject, BaseError, z } from '@codedm/core-typescript'
+import type { BaseDomainErrors } from '@codedm/core-typescript'
 import Z from 'zod'
 
 // INVALID_PHONE is registered with the runtime error registry in @auth/errors

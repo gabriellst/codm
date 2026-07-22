@@ -34,7 +34,7 @@ function domainEvent(ctx: string, cls: string, name: string): [string, string] {
 	return [
 		`${SRC}${ctx}/events/${cls}.ts`,
 		[
-			`import { BaseDomainEvent, z } from '@template/core-typescript'`,
+			`import { BaseDomainEvent, z } from '@codedm/core-typescript'`,
 			``,
 			`export const ${cls}Schema = z.domainEvent({ id: z.uuid() })`,
 			``,
@@ -51,8 +51,8 @@ function wireEvent(cls: string, name: string): [string, string] {
 	return [
 		`${WIRE}${kebab}.ts`,
 		[
-			`import { z } from '@template/core-typescript/schema'`,
-			`import { BaseIntegrationEvent } from '@template/core-typescript/events'`,
+			`import { z } from '@codedm/core-typescript/schema'`,
+			`import { BaseIntegrationEvent } from '@codedm/core-typescript/events'`,
 			``,
 			`export const ${cls}Schema = z.integrationEvent('${name}', { id: z.string() })`,
 			``,
@@ -90,7 +90,7 @@ function handlerFile(ctx: string, cls: string, opts: HandlerOpts): [string, stri
 	return [
 		`${SRC}${ctx}/handlers/${cls}.ts`,
 		[
-			`import { EventHandler } from '@template/core-typescript'`,
+			`import { EventHandler } from '@codedm/core-typescript'`,
 			opts.importLine,
 			``,
 			`export class ${cls} extends EventHandler<never> {`,
@@ -145,7 +145,7 @@ describe('SCW-01a declared-never-raised', () => {
 			wireEvent('OrderOverriddenEvent', 'integration.shared.order.overridden'),
 			handlerFile('sales', 'OrderOverriddenPublisherHandler', {
 				importLine: [
-					`import { OrderOverriddenEvent as OrderOverriddenIntegrationEvent } from '@template/contracts-typescript/wire/events'`,
+					`import { OrderOverriddenEvent as OrderOverriddenIntegrationEvent } from '@codedm/contracts-typescript/wire/events'`,
 					`import { OrderOverriddenEvent } from '../events'`,
 				].join('\n'),
 				eventExpr: 'OrderOverriddenEvent',
@@ -210,7 +210,7 @@ describe('SCW-01c published-without-consumer', () => {
 			wireEvent('CartLinkedToOrderEvent', 'integration.shared.cart.linked_to_order'),
 			[
 				`${SRC}sales/usecases/LinkCart.ts`,
-				`import { CartLinkedToOrderEvent } from '@template/contracts-typescript/wire/events'\nexport const e = new CartLinkedToOrderEvent({ ownerId: 'x', payload: { id: 'x' } })`,
+				`import { CartLinkedToOrderEvent } from '@codedm/contracts-typescript/wire/events'\nexport const e = new CartLinkedToOrderEvent({ ownerId: 'x', payload: { id: 'x' } })`,
 			],
 			[GO_WIRE, goConsts],
 		])
@@ -224,7 +224,7 @@ describe('SCW-01c published-without-consumer', () => {
 			wireEvent('CartLinkedToOrderEvent', 'integration.shared.cart.linked_to_order'),
 			[
 				`${SRC}sales/usecases/LinkCart.ts`,
-				`import { CartLinkedToOrderEvent } from '@template/contracts-typescript/wire/events'\nexport const e = new CartLinkedToOrderEvent({ ownerId: 'x', payload: { id: 'x' } })`,
+				`import { CartLinkedToOrderEvent } from '@codedm/contracts-typescript/wire/events'\nexport const e = new CartLinkedToOrderEvent({ ownerId: 'x', payload: { id: 'x' } })`,
 			],
 			[GO_WIRE, goConsts],
 			[
@@ -247,7 +247,7 @@ describe('SCW-01c published-without-consumer', () => {
 			wireEvent('CartLinkedToOrderEvent', 'integration.shared.cart.linked_to_order'),
 			[
 				`${SRC}sales/usecases/LinkCart.ts`,
-				`import { CartLinkedToOrderEvent } from '@template/contracts-typescript/wire/events'\nexport const e = new CartLinkedToOrderEvent({ ownerId: 'x', payload: { id: 'x' } })`,
+				`import { CartLinkedToOrderEvent } from '@codedm/contracts-typescript/wire/events'\nexport const e = new CartLinkedToOrderEvent({ ownerId: 'x', payload: { id: 'x' } })`,
 			],
 		])
 		const findings = walk(files, {
@@ -261,7 +261,7 @@ describe('SCW-01c published-without-consumer', () => {
 			wireEvent('ProgressUpdatedEvent', 'integration.shared.integration.progress_updated'),
 			[
 				`${SRC}integration/usecases/PublishProgress.ts`,
-				`import { ProgressUpdatedEvent } from '@template/contracts-typescript/wire/events'\nexport const e = new ProgressUpdatedEvent({ ownerId: 'x', payload: { id: 'x' } })`,
+				`import { ProgressUpdatedEvent } from '@codedm/contracts-typescript/wire/events'\nexport const e = new ProgressUpdatedEvent({ ownerId: 'x', payload: { id: 'x' } })`,
 			],
 			[
 				`${SRC}integration/handlers/external.ts`,
@@ -280,7 +280,7 @@ describe('SCW-01d subscribed-without-publisher', () => {
 		const files = makeFiles([
 			wireEvent('HandshakeFailedEvent', 'integration.shared.integration.handshake_failed'),
 			handlerFile('notifications', 'HandshakeFailedNotifyHandler', {
-				importLine: `import { HandshakeFailedEvent } from '@template/contracts-typescript/wire/events'`,
+				importLine: `import { HandshakeFailedEvent } from '@codedm/contracts-typescript/wire/events'`,
 				eventExpr: 'HandshakeFailedEvent',
 			}),
 			[`${SRC}notifications/handlers/external.ts`, `export { HandshakeFailedNotifyHandler } from './HandshakeFailedNotifyHandler'`],
@@ -303,7 +303,7 @@ describe('SCW-02 projection closure', () => {
 	const projector = (events: string): [string, string] => [
 		`${SRC}sales/projections/projectors/MessageProjector.ts`,
 		[
-			`import { Projector } from '@template/core-typescript'`,
+			`import { Projector } from '@codedm/core-typescript'`,
 			`import { MessageProjection } from '../MessageProjection'`,
 			``,
 			`export class MessageProjector extends Projector<never> {`,
@@ -324,7 +324,7 @@ describe('SCW-02 projection closure', () => {
 	const ctxIndexWithSlot: [string, string] = [
 		`${SRC}sales/index.ts`,
 		[
-			`import { BoundedContext } from '@template/core-typescript'`,
+			`import { BoundedContext } from '@codedm/core-typescript'`,
 			`import * as projectors from './projections/projectors'`,
 			``,
 			`const ctx = await BoundedContext.create({ name: 'sales', projectors })`,
@@ -386,7 +386,7 @@ describe('SCW-02 projection closure', () => {
 	test('projector present but slot is `projectors: {}` is an SCW-03 error; inline use exempts', () => {
 		const emptySlotIndex: [string, string] = [
 			`${SRC}sales/index.ts`,
-			`import { BoundedContext } from '@template/core-typescript'\nconst ctx = await BoundedContext.create({ name: 'sales', projectors: {} })\nexport default ctx.router`,
+			`import { BoundedContext } from '@codedm/core-typescript'\nconst ctx = await BoundedContext.create({ name: 'sales', projectors: {} })\nexport default ctx.router`,
 		]
 		const base: [string, string][] = [
 			projection,
@@ -413,7 +413,7 @@ describe('SCW-02 projection closure', () => {
 describe('SCW-03 controller registration', () => {
 	const controller = (ctx: string, file: string, cls: string): [string, string] => [
 		`${SRC}${ctx}/controllers/${file}.ts`,
-		`import { Controller } from '@template/core-typescript'\nexport class ${cls} extends Controller<never> {}`,
+		`import { Controller } from '@codedm/core-typescript'\nexport class ${cls} extends Controller<never> {}`,
 	]
 
 	test('controller missing from the barrel is an error; multiline multi-class export block is clean', () => {
@@ -421,7 +421,7 @@ describe('SCW-03 controller registration', () => {
 			[
 				`${SRC}billing/controllers/Subscriptions.ts`,
 				[
-					`import { Controller } from '@template/core-typescript'`,
+					`import { Controller } from '@codedm/core-typescript'`,
 					`export class CreateSubscriptionController extends Controller<never> {}`,
 					`export class CancelSubscriptionController extends Controller<never> {}`,
 				].join('\n'),
@@ -524,7 +524,7 @@ describe('SCW-03 handler registration', () => {
 		const files = makeFiles([
 			wireEvent('OrderUpdatedEvent', 'integration.shared.order.updated'),
 			handlerFile('sales', 'OrderUpdatedHandler', {
-				importLine: `import { OrderUpdatedEvent } from '@template/contracts-typescript/wire/events'`,
+				importLine: `import { OrderUpdatedEvent } from '@codedm/contracts-typescript/wire/events'`,
 				eventExpr: 'OrderUpdatedEvent',
 			}),
 			[`${SRC}sales/handlers/internal.ts`, `export { OrderUpdatedHandler } from './OrderUpdatedHandler'`],
@@ -594,7 +594,7 @@ describe('SCW-03 context wiring', () => {
 		const files = makeFiles([
 			[
 				`${SRC}sales/index.ts`,
-				`import { BoundedContext } from '@template/core-typescript'\nconst ctx = await BoundedContext.create({ name: 'sales' })\nexport default ctx.router`,
+				`import { BoundedContext } from '@codedm/core-typescript'\nconst ctx = await BoundedContext.create({ name: 'sales' })\nexport default ctx.router`,
 			],
 			[
 				`${SRC}routers.ts`,
@@ -610,7 +610,7 @@ describe('SCW-03 context wiring', () => {
 		const files = makeFiles([
 			[
 				`${SRC}sales/index.ts`,
-				`import { BoundedContext } from '@template/core-typescript'\nconst ctx = await BoundedContext.create({ name: 'sales' })\nexport default ctx.router`,
+				`import { BoundedContext } from '@codedm/core-typescript'\nconst ctx = await BoundedContext.create({ name: 'sales' })\nexport default ctx.router`,
 			],
 			[
 				`${SRC}routers.ts`,
@@ -655,7 +655,7 @@ describe('SCW-04 duplicate-subscriber collision', () => {
 			[`${SRC}billing/handlers/internal.ts`, `export { SubscriptionCreatedHandler } from './SubscriptionCreatedHandler'`],
 			wireEvent('OrderUpdatedEvent', 'integration.shared.order.updated'),
 			handlerFile('billing', 'OrderUpdatedHandler', {
-				importLine: `import { OrderUpdatedEvent } from '@template/contracts-typescript/wire/events'`,
+				importLine: `import { OrderUpdatedEvent } from '@codedm/contracts-typescript/wire/events'`,
 				eventExpr: 'OrderUpdatedEvent',
 			}),
 			[`${SRC}billing/handlers/external.ts`, `export { OrderUpdatedHandler } from './OrderUpdatedHandler'`],
@@ -672,12 +672,12 @@ describe('SCW-04 duplicate-subscriber collision', () => {
 			[`${SRC}billing/handlers/internal.ts`, `export { SubscriptionCreatedHandler } from './SubscriptionCreatedHandler'`],
 			[
 				`${SRC}billing/projections/projectors/QuotaProjector.ts`,
-				`import { Projector } from '@template/core-typescript'\nexport class QuotaProjector extends Projector<never> {\n\treadonly events = ['billing.subscription.created']\n\tasync handle(event: unknown): Promise<void> { void event }\n}`,
+				`import { Projector } from '@codedm/core-typescript'\nexport class QuotaProjector extends Projector<never> {\n\treadonly events = ['billing.subscription.created']\n\tasync handle(event: unknown): Promise<void> { void event }\n}`,
 			],
 			[`${SRC}billing/projections/projectors/index.ts`, `export { QuotaProjector } from './QuotaProjector'`],
 			[
 				`${SRC}billing/index.ts`,
-				`import { BoundedContext } from '@template/core-typescript'\nimport * as projectors from './projections/projectors'\nconst ctx = await BoundedContext.create({ name: 'billing', projectors })\nexport default ctx.router`,
+				`import { BoundedContext } from '@codedm/core-typescript'\nimport * as projectors from './projections/projectors'\nconst ctx = await BoundedContext.create({ name: 'billing', projectors })\nexport default ctx.router`,
 			],
 			REPLACING_MEDIATOR,
 		])

@@ -6,7 +6,7 @@
    role:    Shared design tokens (light/dark) — BK purple palette, Nunito+Newsreader, --template-purple/green
    Verbatim copy kept as corpus reference — NOT wired into any build.
    ───────────────────────────────────────────────────────────────────────────── */
-/* Shared design tokens — consumed by @template/app-react (index.css) and @template/app-astro (global.css).
+/* Shared design tokens — consumed by @codedm/app-react (index.css) and @codedm/app-astro (global.css).
    Palette ported from the template app (hex → oklch). Font: Nunito + Newsreader. */
 @import "@fontsource/nunito/300.css";
 @import "@fontsource/nunito/400.css";

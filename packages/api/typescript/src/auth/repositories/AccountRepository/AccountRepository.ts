@@ -1,6 +1,6 @@
 // Recipe: dev:packages/api/src/auth/repositories/AccountRepository/AccountRepository.ts
-import { Repository } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Repository } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { Account } from '../../entities'
 
 export abstract class AccountRepository extends Repository<Account> {

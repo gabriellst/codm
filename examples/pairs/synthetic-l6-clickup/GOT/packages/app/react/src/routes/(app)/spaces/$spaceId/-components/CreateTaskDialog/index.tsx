@@ -9,7 +9,7 @@ import {
 	getBoardViewQueryKey,
 	TaskPriorityEnum,
 	type CreateTaskMutationRequest,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import { DeepPartial } from '@/lib'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'

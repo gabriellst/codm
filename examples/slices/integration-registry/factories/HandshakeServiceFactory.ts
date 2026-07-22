@@ -2,8 +2,8 @@
 // ORIGIN-FILE: packages/api/typescript/src/integration/services/HandshakeService/HandshakeServiceFactory.ts
 
 import { injectable } from 'tsyringe-neo'
-import { BaseError } from '@template/core-typescript'
-import { MarketingPlatform, SalesPlatform, StoreIntegrationType } from '@template/contracts-typescript/wire/enums'
+import { BaseError } from '@codedm/core-typescript'
+import { MarketingPlatform, SalesPlatform, StoreIntegrationType } from '@codedm/contracts-typescript/wire/enums'
 import type { IntegrationApplicationErrors } from '../../errors'
 import type { PlatformProps } from '@integration/services'
 import { HandshakeService } from './HandshakeService'

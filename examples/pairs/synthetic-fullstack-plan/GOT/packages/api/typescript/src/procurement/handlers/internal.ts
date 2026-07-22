@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { PurchaseOrderRecordedEvent } from '@template/contracts-typescript/wire/events'
-import type { PurchaseOrderStatus, CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { PurchaseOrderRecordedEvent } from '@codedm/contracts-typescript/wire/events'
+import type { PurchaseOrderStatus, CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 import { PurchaseOrderCreatedEvent, PurchaseOrderCancelledEvent } from '../events'
 
 type AnyPOEventInput = {

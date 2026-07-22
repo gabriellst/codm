@@ -49,8 +49,8 @@ are `DeepPartial`-checked against the SDK (no casts).
 
 ```tsx
 import type { Meta, StoryObj } from '@storybook/react'
-import { getUsageQueryOptions, QuotasKeyEnum } from '@template/client-typescript/typescript'
-import type { GetUsageQueryResponse } from '@template/client-typescript/typescript'
+import { getUsageQueryOptions, QuotasKeyEnum } from '@codedm/client-typescript/typescript'
+import type { GetUsageQueryResponse } from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
 import { connected, errorQuery, loadingQuery, mockQuery } from '@/storybook'
 import { UsageSummarySection } from '.'

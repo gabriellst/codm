@@ -163,7 +163,7 @@ replace money-position `MetricSchema` with `CurrencyMetricSchema`. Counts/percen
 | `MULTI_GLOBAL` | MULTI | GLOBAL | STAT(cons.), PERSTORE, DETAILS(cons.) |
 | `MULTI_NATIONAL` | MULTI | NATIONAL | STAT(cons.), PERSTORE, DETAILS(cons.), PAYMENT_METHODS |
 
-### Key schema sketches (Zod; `z` from `@template/core-typescript`)
+### Key schema sketches (Zod; `z` from `@codedm/core-typescript`)
 ```ts
 export const TallySchema = z.object({ count: MetricSchema, value: MetricSchema })
 export const ConsolidatedTallySchema = z.object({ count: MetricSchema, value: CurrencyMetricSchema })

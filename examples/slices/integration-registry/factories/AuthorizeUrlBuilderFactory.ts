@@ -2,7 +2,7 @@
 // ORIGIN-FILE: packages/api/typescript/src/integration/services/AuthorizeUrlBuilder/AuthorizeUrlBuilderFactory.ts
 
 import { injectable } from 'tsyringe-neo'
-import { BaseError } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
 import {
 	CheckoutPlatform,
 	InfoproductPlatform,
@@ -10,7 +10,7 @@ import {
 	PaymentGateway,
 	SalesPlatform,
 	StoreIntegrationType,
-} from '@template/contracts-typescript/wire/enums'
+} from '@codedm/contracts-typescript/wire/enums'
 import type { IntegrationApplicationErrors } from '../../errors'
 import type { PlatformProps } from '../index'
 import { AuthorizeUrlBuilder, PLATFORM_PATH_SEGMENTS, type PlatformPathSegment } from './AuthorizeUrlBuilder'

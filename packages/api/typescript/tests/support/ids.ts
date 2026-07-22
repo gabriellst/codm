@@ -1,7 +1,7 @@
 // Canonical test-identifier factory. Replaces hardcoded UUID literals (bp-18).
 // Deterministic ids share the project's locked BK_DASH_NAMESPACE via Id.fromSeed,
 // so a named fixture is stable across runs; pass no segments for a random id.
-import { Id } from '@template/core-typescript'
+import { Id } from '@codedm/core-typescript'
 
 /**
  * `testId('store', 'a')` → deterministic UUIDv5 for that tuple (stable across runs).

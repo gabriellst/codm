@@ -1,6 +1,6 @@
-import { AggregateRoot, z } from '@template/core-typescript'
+import { AggregateRoot, z } from '@codedm/core-typescript'
 import type Z from 'zod'
-import { ArtifactKind } from '@template/contracts-typescript/wire/enums'
+import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
 
 export const ArtifactSchema = z.object({
 	ownerId: z.uuid(),

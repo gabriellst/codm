@@ -1,4 +1,4 @@
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 export type UiDomainErrors = never
 export type DomainErrors = BaseDomainErrors | UiDomainErrors

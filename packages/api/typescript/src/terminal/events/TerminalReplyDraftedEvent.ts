@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 /**
  * Context-private fact: an agent finished a terminal run and drafted a reply for its issue. The

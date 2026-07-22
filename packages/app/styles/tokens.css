@@ -1,4 +1,4 @@
-/* Shared design tokens — consumed by @template/app-react (index.css) and @template/app-astro (global.css).
+/* Shared design tokens — consumed by @codedm/app-react (index.css) and @codedm/app-astro (global.css).
    Palette ported from the original product app (hex → oklch). Font: Nunito + Newsreader. */
 @import "@fontsource/nunito/300.css";
 @import "@fontsource/nunito/400.css";

@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@template/core-typescript'
+import { Handler, z } from '@codedm/core-typescript'
 import { Board } from '../entities/Board'
 import { BoardList } from '../entities/BoardList'
 import { BoardRepository } from '../repositories/BoardRepository'
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 
 export const CreateBoardInputSchema = z.object({
 	storeId: z.uuid(),

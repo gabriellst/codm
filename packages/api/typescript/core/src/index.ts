@@ -42,7 +42,7 @@ export * from './middlewares'
 // Repositories
 export * from './repositories'
 
-// DB infrastructure (no schema definitions — those live in @template/contracts)
+// DB infrastructure (no schema definitions — those live in @codedm/contracts)
 export * from './db'
 
 // Utils

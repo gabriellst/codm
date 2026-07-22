@@ -57,7 +57,7 @@ packages/app/astro/src/
 ├── i18n/
 │   └── pt.ts | en.ts
 └── styles/
-    └── global.css                  # imports @template/app-styles/tokens.css
+    └── global.css                  # imports @codedm/app-styles/tokens.css
 ```
 
 ## Astro component anatomy
@@ -136,9 +136,9 @@ const locale = Astro.currentLocale ?? 'pt';
 
 Never hard-code strings inside `.astro` — even short ones. The `t()` helper is the single contract; the test asserts on translation keys, not literal text.
 
-## Shared tokens — `@template/app-styles`
+## Shared tokens — `@codedm/app-styles`
 
-The astro app imports `@template/app-styles/tokens.css` once from `src/styles/global.css`. After that, components use CSS variables (`var(--background)`, `var(--primary)`, etc.) or Tailwind utility classes mapped to those tokens. **Never inline a hex value.** If a token doesn't exist for what you need, add it to the shared `tokens.css` rather than forking color values per page.
+The astro app imports `@codedm/app-styles/tokens.css` once from `src/styles/global.css`. After that, components use CSS variables (`var(--background)`, `var(--primary)`, etc.) or Tailwind utility classes mapped to those tokens. **Never inline a hex value.** If a token doesn't exist for what you need, add it to the shared `tokens.css` rather than forking color values per page.
 
 ## Open/Closed Principle — derive lists from data
 
@@ -188,7 +188,7 @@ Every Astro page-level component should:
 - [ ] Colors come from CSS variables / Tailwind utility classes that map to `tokens.css`.
 - [ ] If a React island was used, the directive is the smallest viable (`client:visible` ≥ `client:load`).
 - [ ] Semantic HTML; icon-only links have `aria-label`.
-- [ ] No imports from `@template/app-react/*` or `@template/app-expo/*` — astro is its own workspace.
+- [ ] No imports from `@codedm/app-react/*` or `@codedm/app-expo/*` — astro is its own workspace.
 
 ## References
 

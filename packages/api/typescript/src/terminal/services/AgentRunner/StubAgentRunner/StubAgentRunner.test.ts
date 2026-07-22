@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { z } from '@template/core-typescript'
-import { ProviderKind } from '@template/contracts-typescript/wire/enums'
+import { z } from '@codedm/core-typescript'
+import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { StubAgentRunner } from './StubAgentRunner'
 import type { TerminalRuntimeEvent } from '../types'
 

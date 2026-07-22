@@ -1,4 +1,4 @@
-# @template/client
+# @codedm/client
 
 Polyglot client SDK generator for OpenAPI 3.0.3.
 
@@ -7,7 +7,7 @@ generates symmetric TypeScript, Rust, and Go clients under `dist/{typescript,rus
 
 ## What this produces
 
-- **`dist/typescript/`** — `@template/client-typescript`: Kubb-generated client functions,
+- **`dist/typescript/`** — `@codedm/client-typescript`: Kubb-generated client functions,
   React Query hooks, Zod schemas, and an aggregate `Client.create({...})` class.
 - **`dist/rust/`** — `template-client-rust`: progenitor-generated per-service modules
   with a top-level `Client` struct + `ClientBuilder`.

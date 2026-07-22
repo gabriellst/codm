@@ -1,6 +1,6 @@
 // Recipe: dev:packages/api/src/auth/repositories/UserRepository/MockUserRepository.ts
 import { injectable } from 'tsyringe-neo'
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { User } from '../../entities'
 import { UserRepository } from './UserRepository'
 

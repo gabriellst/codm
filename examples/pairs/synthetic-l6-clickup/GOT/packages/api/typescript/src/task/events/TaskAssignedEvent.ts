@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const TaskAssignedEventSchema = z.domainEvent({
 	taskId: z.uuid(),

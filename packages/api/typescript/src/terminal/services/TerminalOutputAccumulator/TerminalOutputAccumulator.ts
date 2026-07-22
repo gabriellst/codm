@@ -1,4 +1,4 @@
-import { StopKind } from '@template/contracts-typescript/wire/enums'
+import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import type { TerminalRuntimeEvent } from '../AgentRunner'
 import type { TerminalOutputFrame } from '../TerminalSessionRegistry'
 

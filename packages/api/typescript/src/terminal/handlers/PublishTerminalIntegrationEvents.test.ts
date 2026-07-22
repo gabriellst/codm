@@ -1,12 +1,12 @@
 import { describe, expect, it, mock } from 'bun:test'
-import type { ExternalMediator } from '@template/core-typescript'
+import type { ExternalMediator } from '@codedm/core-typescript'
 import {
 	IssueOpenedEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
 	AgentReplyDraftedEvent,
-} from '@template/contracts-typescript/wire/events'
-import { ProviderKind, StopKind } from '@template/contracts-typescript/wire/enums'
+} from '@codedm/contracts-typescript/wire/events'
+import { ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { PublishTerminalIntegrationEvents } from './PublishTerminalIntegrationEvents'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'

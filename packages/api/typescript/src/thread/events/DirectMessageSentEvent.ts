@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 /** Context-private fact: the operator spoke directly on the channel (only while paused). The
  *  internal bridge orders the OPERATOR-identity delivery via `integration.channel.delivery_requested`. */

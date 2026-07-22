@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ArtifactKind } from '@template/contracts-typescript/wire/enums'
+import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
 import { Artifact } from './Artifact'
 
 const base = {

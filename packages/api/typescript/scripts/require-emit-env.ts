@@ -4,7 +4,7 @@
  * Why a separate module and not a top-of-file statement: under ESM, every `import` is hoisted and
  * evaluated (depth-first, source order) BEFORE any statement in the importer's body. So a bare
  * `process.env.EMIT_OPENAPI = 'true'` in emit-openapi.ts runs too late — the composition root
- * (`@template/core-typescript` → `../src/routers` → `@shared/index`'s top-level-await
+ * (`@codedm/core-typescript` → `../src/routers` → `@shared/index`'s top-level-await
  * BoundedContext.create) has already evaluated with EMIT_OPENAPI still undefined, booting the REAL
  * embedded PGlite (mkdir + migrate ~/.codedm/data + start the outbox dispatcher). This module has no
  * dependency on the composition root, so importing it before core/routers makes its assertion the

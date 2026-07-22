@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { BaseError } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
 import { TerminalSessionRegistry, type TerminalOutputFrame } from './TerminalSessionRegistry'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 

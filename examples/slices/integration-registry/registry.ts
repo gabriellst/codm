@@ -2,7 +2,7 @@
 // ORIGIN-FILE: packages/api/typescript/src/integration/services/index.ts
 
 import Z from 'zod'
-import { z } from '@template/core-typescript/schema'
+import { z } from '@codedm/core-typescript/schema'
 import {
 	CheckoutPlatform,
 	ConnectionMode,
@@ -11,7 +11,7 @@ import {
 	PaymentGateway,
 	SalesPlatform,
 	StoreIntegrationType,
-} from '@template/contracts-typescript/wire/enums'
+} from '@codedm/contracts-typescript/wire/enums'
 
 // ─── Per-(platform × mode) Description leaves ────────────────────────────────
 

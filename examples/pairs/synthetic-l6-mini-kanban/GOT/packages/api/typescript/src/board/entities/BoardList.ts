@@ -1,4 +1,4 @@
-import { Id, z } from '@template/core-typescript'
+import { Id, z } from '@codedm/core-typescript'
 import Z from 'zod'
 
 export const BoardListSchema = z.object({

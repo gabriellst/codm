@@ -117,7 +117,7 @@ route/
 
 ```typescript
 // CORRECT — section owns its query, no data prop from route
-import { useListPatients } from '@template/client-typescript/typescript'
+import { useListPatients } from '@codedm/client-typescript/typescript'
 const routeApi = getRouteApi('/(app)/patients/')
 
 export function PatientListSection() {
@@ -238,7 +238,7 @@ import { ComponentProps } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { useListProducts, useDeleteProduct, listProductsQueryKey } from '@template/client-typescript/typescript'
+import { useListProducts, useDeleteProduct, listProductsQueryKey } from '@codedm/client-typescript/typescript'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDebouncedSearch } from '@/hooks'
@@ -345,7 +345,7 @@ When the backend models a screen's operation/config as a **discriminated union**
 Derive options from SDK enums + labels map:
 
 ```typescript
-import { SpecialtyEnum } from '@template/client-typescript/typescript'
+import { SpecialtyEnum } from '@codedm/client-typescript/typescript'
 import { specialtyLabels } from '@/lib/labels'
 
 const SPECIALTIES = Object.values(SpecialtyEnum)
@@ -483,7 +483,7 @@ Every component must be navigable by AI agents and screen readers. Two mechanism
 
 ```typescript
 import type { Meta, StoryObj } from '@storybook/react'
-import { productStatusEnumEnum } from '@template/client-typescript/typescript'
+import { productStatusEnumEnum } from '@codedm/client-typescript/typescript'
 import { ProductCard } from '..'
 
 const mockProduct = {

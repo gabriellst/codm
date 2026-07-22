@@ -12,7 +12,7 @@ import {
 	getSession,
 	NotificationCategoryEnum,
 	type NotificationCategory,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { givenFreshUser, type FreshUser } from './user'
 
 export interface SeededNotification {

@@ -1,6 +1,6 @@
-import { AggregateRoot, BaseError, z } from '@template/core-typescript'
+import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { OwnerKind } from '@template/contracts-typescript/wire/enums'
+import { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
 
 // IANA timezone shape: Region/City or Region/Sub/City; plus UTC alias.

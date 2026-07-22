@@ -7,7 +7,7 @@
 // Verbatim copy kept as corpus reference — NOT a live module. Do not import it.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useTranslation } from 'react-i18next'
-import type { GetDashboard200 } from '@template/client-typescript/typescript'
+import type { GetDashboard200 } from '@codedm/client-typescript/typescript'
 
 import { enumLabel } from '@/lib/enums'
 import { useMoney } from '@/hooks'

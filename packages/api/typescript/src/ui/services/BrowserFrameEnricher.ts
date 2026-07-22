@@ -1,15 +1,15 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
 import type { z } from 'zod'
-import { BaseIntegrationEvent, DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { issues, stops, threads } from '@template/contracts/db'
-import { IssueStatus, ThreadStatus } from '@template/contracts-typescript/wire/enums'
+import { BaseIntegrationEvent, DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { issues, stops, threads } from '@codedm/contracts/db'
+import { IssueStatus, ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
 import {
 	IssueOpenedEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
 	IssueStopResolvedEvent,
-} from '@template/contracts-typescript/wire/events'
+} from '@codedm/contracts-typescript/wire/events'
 import type { BrowserThreadStatusChangedFrameSchema, BrowserStopRaisedFrameSchema } from '../controllers/ListenEvents'
 
 type ThreadStatusChangedFrame = z.infer<typeof BrowserThreadStatusChangedFrameSchema>

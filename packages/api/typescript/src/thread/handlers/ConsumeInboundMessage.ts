@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@template/core-typescript'
-import { ChannelMessageReceivedEvent } from '@template/contracts-typescript/wire/events'
+import { EventHandler } from '@codedm/core-typescript'
+import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { IngestChannelMessage } from '../usecases/IngestChannelMessage'

@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { ApiErrorsEnum } from '@template/client-typescript/typescript'
+import { ApiErrorsEnum } from '@codedm/client-typescript/typescript'
 import i18n from './i18n'
 
 // Frontend-only error codes that the API doesn't emit.

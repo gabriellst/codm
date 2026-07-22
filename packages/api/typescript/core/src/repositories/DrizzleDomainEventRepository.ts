@@ -2,7 +2,7 @@ import { DomainEventRepository, type DomainEventConstructor } from './DomainEven
 import { BaseDomainEvent } from '../types/BaseDomainEvent'
 import type { AnyIntegrationEvent } from '../types/BaseIntegrationEvent'
 import { DrizzleClient } from '../db'
-import { events, outbox } from '@template/contracts/db'
+import { events, outbox } from '@codedm/contracts/db'
 import { and, asc, desc, eq, gte, like, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe-neo'
 import { tryCatchAsync } from '../utils/TryCatch'

@@ -2,7 +2,7 @@
 import { describe, it, expect, mock } from 'bun:test'
 import { RequireOwnerMember } from './RequireOwnerMember'
 import type { OwnerMembershipRepository } from '@owner/repositories/OwnerMembershipRepository'
-import type { HttpControllerRequest } from '@template/core-typescript'
+import type { HttpControllerRequest } from '@codedm/core-typescript'
 import { testId } from '@test/support'
 
 /**

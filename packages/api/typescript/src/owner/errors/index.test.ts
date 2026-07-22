@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError, GlobalErrorMapper, HttpStatusCode } from '@template/core-typescript'
+import { BaseError, GlobalErrorMapper, HttpStatusCode } from '@codedm/core-typescript'
 import type { ApplicationErrors, DomainErrors, Errors, InterfaceErrors } from './index'
 import './index'
 

@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
-import { TaskPriority } from '@template/contracts-typescript/wire/enums'
+import { TaskPriority } from '@codedm/contracts-typescript/wire/enums'
 import { CreateTask } from '@task/usecases'
 
 export const CreateTaskControllerInputSchema = z.object({

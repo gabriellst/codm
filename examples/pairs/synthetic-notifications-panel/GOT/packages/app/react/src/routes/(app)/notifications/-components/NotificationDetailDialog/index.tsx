@@ -8,7 +8,7 @@
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
-import { useMarkNotificationRead, listNotificationsQueryKey } from '@template/client-typescript/typescript'
+import { useMarkNotificationRead, listNotificationsQueryKey } from '@codedm/client-typescript/typescript'
 import { useLocale } from '@/hooks'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { Badge } from '@/components/ui/badge'

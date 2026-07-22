@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { zodValidator } from '@/lib/zod-validator'
-import { listPurchaseOrdersQueryParamsSchema } from '@template/client-typescript/typescript'
+import { listPurchaseOrdersQueryParamsSchema } from '@codedm/client-typescript/typescript'
 
 import { Button } from '@/components/ui/button'
 import { useDialogStore } from '@/stores/useDialogStore'

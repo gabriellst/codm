@@ -1,8 +1,8 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
 import { and, eq, gt, isNull, sql } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { ownerInvitations } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { ownerInvitations } from '@codedm/contracts/db'
 import { OwnerInvitation } from '../../entities/OwnerInvitation'
 import { OwnerInvitationRepository } from './OwnerInvitationRepository'
 

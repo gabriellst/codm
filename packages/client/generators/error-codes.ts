@@ -5,7 +5,7 @@
  * OpenAPI generator from the runtime GlobalErrorMapper — core seed + every context's
  * registerErrorCodes). The union of all services lands in
  * `dist/typescript/src/error-codes/index.ts`, importable as
- * `@template/client-typescript/error-codes` (the dist wildcard subpath export).
+ * `@codedm/client-typescript/error-codes` (the dist wildcard subpath export).
  *
  * Consumers: app locale catalogues compile-check their `errors` section with
  * `satisfies Record<ErrorCode, string>` — a backend code without a translation is a tsc

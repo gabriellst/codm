@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 export type ProcurementDomainErrors = 'PURCHASE_ORDER_ALREADY_CANCELLED' | 'PURCHASE_ORDER_ALREADY_PLACED'
 export type DomainErrors = BaseDomainErrors | ProcurementDomainErrors

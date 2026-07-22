@@ -17,7 +17,7 @@ import {
 	connectIntegrationMutationRequestSchema,
 	type ConnectIntegrationMutationRequest,
 	type ConnectionMode,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { IconArrowRight } from '@tabler/icons-react'
 import { Spinner } from '@/components/ui/spinner'
 import { useTranslation } from 'react-i18next'

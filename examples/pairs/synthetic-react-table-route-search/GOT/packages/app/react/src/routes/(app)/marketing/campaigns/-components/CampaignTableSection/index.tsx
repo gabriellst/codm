@@ -18,7 +18,7 @@ import {
 	CampaignStatusEnum,
 	type CampaignStatus,
 	type MarketingPlatform,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { useLocale, useMoney } from '@/hooks'
 import { DataTable, DataTableContent, DataTableSearch, DataTablePagination, type ColumnDef } from '@/components/DataTable'
 import { Badge, badgeVariants } from '@/components/ui/badge'

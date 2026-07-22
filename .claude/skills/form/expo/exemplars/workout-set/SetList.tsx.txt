@@ -12,7 +12,7 @@
 
 import { FlatList, Text, View, type ViewProps } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import type { GetActiveExercise200 } from '@template/client-typescript/typescript'
+import type { GetActiveExercise200 } from '@codedm/client-typescript/typescript'
 import type { SetEditorForm } from '@/app/active-exercise/-types'
 import { SetRow } from './SetRow'
 

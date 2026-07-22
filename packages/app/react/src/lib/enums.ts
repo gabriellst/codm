@@ -10,7 +10,7 @@ import i18n from './i18n'
  * language-reactive context (e.g. inside a render / `useMemo` that depends on `i18n.language`).
  *
  * To iterate an enum (e.g. `<Select>` options), use the SDK const directly — it is iterable:
- *   import { OperationalCostRecurrencyEnum } from '@template/client-typescript/typescript'
+ *   import { OperationalCostRecurrencyEnum } from '@codedm/client-typescript/typescript'
  *   Object.values(OperationalCostRecurrencyEnum).map(v => ({ value: v, label: enumLabel('OperationalCostRecurrency', v) }))
  */
 export function enumLabel<V extends string>(enumName: string, value: V): string {

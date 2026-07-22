@@ -20,7 +20,7 @@ import {
 	getActiveExerciseQueryKey,
 	type GetActiveExercise200,
 	type LogSetMutationRequest,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
 import { SetEditor } from './-components/SetEditor'
 import { SetList } from './-components/SetList'

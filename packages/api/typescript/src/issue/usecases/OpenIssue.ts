@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
-import { IssueStatus, ProviderKind } from '@template/contracts-typescript/wire/enums'
+import { Handler, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
+import { IssueStatus, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { Issue } from '../entities/Issue'
 import { IssueRepository } from '../repositories/IssueRepository'
 

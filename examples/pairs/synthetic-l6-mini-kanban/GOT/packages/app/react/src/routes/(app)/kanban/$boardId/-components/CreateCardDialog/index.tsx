@@ -5,7 +5,7 @@ import {
   useCreateCard,
   createCardMutationRequestSchema,
   getBoardQueryKey,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

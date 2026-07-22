@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { ProviderKind, ProviderStatus } from '@template/contracts-typescript/wire/enums'
+import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { KNOWN_PROVIDERS, PROVIDER_BINARIES, ProviderDetector, type ProviderDetection } from './ProviderDetector'
 
 /**

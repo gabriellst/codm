@@ -184,8 +184,8 @@ describe('error-coherence (*Errors union literals === registerErrorCodes keys, p
 			writeFileSync(
 				join(errorsDir, 'index.ts'),
 				[
-					`import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'`,
-					`import type { BaseDomainErrors, BaseInfrastructureErrors } from '@template/core-typescript'`,
+					`import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'`,
+					`import type { BaseDomainErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'`,
 					``,
 					`// prose with an apostrophe: this file isn't allowed to confuse the literal matcher`,
 					`export type TenancyDomainErrors =`,

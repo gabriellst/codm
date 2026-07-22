@@ -1,5 +1,5 @@
 import type { ZodType } from 'zod'
-import { ProviderKind } from '@template/contracts-typescript/wire/enums'
+import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * One line of terminal output produced by a provider CLI subprocess. `stream` distinguishes the

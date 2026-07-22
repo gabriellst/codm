@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { DrizzleClient } from '@template/core-typescript'
-import { stops } from '@template/contracts/db'
-import type { StopKind, StopResolution } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient } from '@codedm/core-typescript'
+import { stops } from '@codedm/contracts/db'
+import type { StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
 import { StopRepository, type RaiseStopInput, type StopRow } from './StopRepository'
 
 @injectable()

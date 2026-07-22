@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { desc, eq } from 'drizzle-orm'
-import { DrizzleClient } from '@template/core-typescript'
-import { transcriptEntries } from '@template/contracts/db'
-import type { TranscriptKind, ProviderKind, ClassificationMethod } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient } from '@codedm/core-typescript'
+import { transcriptEntries } from '@codedm/contracts/db'
+import type { TranscriptKind, ProviderKind, ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
 import { TranscriptRepository, type AppendTranscriptInput, type TranscriptEntryRow } from './TranscriptRepository'
 
 @injectable()

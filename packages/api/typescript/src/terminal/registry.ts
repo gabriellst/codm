@@ -1,7 +1,7 @@
 // Per-env DI bindings for the terminal (agent-runtime) context.
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { AgentRunner, StubAgentRunner, CliAgentRunner } from './services/AgentRunner'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { TerminalSessionRegistry } from './services/TerminalSessionRegistry'

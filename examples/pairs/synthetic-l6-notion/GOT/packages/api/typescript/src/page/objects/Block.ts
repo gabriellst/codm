@@ -1,6 +1,6 @@
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * Block is a recursive composite VALUE OBJECT modelling a typed content node in a

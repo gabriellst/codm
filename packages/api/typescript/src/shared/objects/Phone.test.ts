@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { BaseError } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
 import { Phone } from './Phone'
 
 describe('Phone Value Object', () => {

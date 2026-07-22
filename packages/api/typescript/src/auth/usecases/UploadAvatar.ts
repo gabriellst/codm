@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@template/core-typescript'
+import { Handler, z } from '@codedm/core-typescript'
 import { faker } from '@shared/testing/mock'
 
 export const UploadAvatarInputSchema = z.object({

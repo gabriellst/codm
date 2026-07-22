@@ -295,7 +295,7 @@ registry:
 
   snippet:
     skeleton: |
-      import { z } from '@template/core-typescript'
+      import { z } from '@codedm/core-typescript'
       // import type { TODOEvent } from '@{{contextName}}/events'
 
       export const {{Name}}ProjectionSchema = z.object({
@@ -351,9 +351,9 @@ registry:
       repository: |
         import { injectable } from 'tsyringe-neo'
         import { eq } from 'drizzle-orm'
-        import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-        import type { Transaction } from '@template/core-typescript'
-        // import { {{camelName}}Projection } from '@template/contracts/db'
+        import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+        import type { Transaction } from '@codedm/core-typescript'
+        // import { {{camelName}}Projection } from '@codedm/contracts/db'
         import { {{Name}}Projection, type {{Name}}ProjectionProps } from './{{Name}}'
 
         /**
@@ -448,7 +448,7 @@ registry:
         }
     exemplar: |
       // packages/api/typescript/src/channel/projections/Message.ts
-      import { z } from '@template/core-typescript'
+      import { z } from '@codedm/core-typescript'
       import { Direction } from '@channel/enums'
       import type { MessageReceivedEvent, MessageSentEvent, MessageEditedEvent, MessageDeletedEvent } from '@channel/events'
 

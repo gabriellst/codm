@@ -1,6 +1,6 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { Role } from '../enums/Role'
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const OwnerMemberAddedEventSchema = z.domainEvent({
 	ownerId: z.string(),

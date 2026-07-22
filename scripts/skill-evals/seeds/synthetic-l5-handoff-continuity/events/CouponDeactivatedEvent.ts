@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const CouponDeactivatedEventSchema = z.domainEvent({
 	couponId: z.uuid(),

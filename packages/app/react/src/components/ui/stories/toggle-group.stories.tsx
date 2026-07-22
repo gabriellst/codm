@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import * as React from 'react'
-import { CurrencyCodeEnum } from '@template/client-typescript/typescript'
-import type { CurrencyCodeEnumKey } from '@template/client-typescript/typescript'
+import { CurrencyCodeEnum } from '@codedm/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
 
 import { ToggleGroup, ToggleGroupItem } from '../toggle-group'
 

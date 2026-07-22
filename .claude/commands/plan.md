@@ -336,7 +336,7 @@ bun cli entity sales Order --aggregate
 ```typescript
 // packages/api/typescript/src/sales/entities/Order.ts — COMPLETE final file, matching the
 // scaffolded entity shape (static schema, declaration-merged interface), with the behavior added.
-import { ... } from '@template/core-typescript'
+import { ... } from '@codedm/core-typescript'
 // ...full entity including ship() ...
 ```
 ````

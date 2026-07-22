@@ -1,7 +1,7 @@
 import { and, getTableColumns, is, sql, type SQL } from 'drizzle-orm'
 import { getTableConfig, PgTable } from 'drizzle-orm/pg-core'
-import { DrizzleClient } from '@template/core-typescript'
-import * as schema from '@template/contracts/db'
+import { DrizzleClient } from '@codedm/core-typescript'
+import * as schema from '@codedm/contracts/db'
 
 export type PersistedEventRow = typeof schema.events.$inferSelect
 export type OutboxRow = typeof schema.outbox.$inferSelect
@@ -29,7 +29,7 @@ type SchemaBarrel = typeof schema
 type SchemaOf<T> = T extends { _: { schema: infer S } } ? ([S] extends [string] ? S : 'public') : 'public'
 
 /**
- * Central table registry — TEST-INFRA ONLY. Every `PgTable` exported by the `@template/contracts/db`
+ * Central table registry — TEST-INFRA ONLY. Every `PgTable` exported by the `@codedm/contracts/db`
  * barrel is a valid probe key, namespaced `<pgSchema>.<export>` (`'shared.events'`,
  * `'billing.subscription'`, `'sales.orders'`...) so tables in different Postgres schemas can
  * never collide on export name. This is a LITERAL union (not `string`) derived from the barrel's own
@@ -38,7 +38,7 @@ type SchemaOf<T> = T extends { _: { schema: infer S } } ? ([S] extends [string] 
  * and therefore `count()`/`snapshot()` — for free; no change to this file.
  *
  * Why the barrel and not one `import * as` per schema module (as the medscall origin did): in this
- * template the schema lives in a SEPARATE package (`@template/contracts`) while `api/typescript` is a
+ * template the schema lives in a SEPARATE package (`@codedm/contracts`) while `api/typescript` is a
  * `composite` TS project. A relative import into `packages/contracts/db/schema/*.ts` pulls those
  * source files into this composite project and trips `TS6307` (file not in the project's `include`),
  * and the package only publishes the flat `./db` barrel in its `exports` map — so per-module imports

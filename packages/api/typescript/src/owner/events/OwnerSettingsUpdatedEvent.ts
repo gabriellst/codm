@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 import { OwnerSchema } from '../entities/Owner'
 
 export const OwnerSettingsUpdatedEventSchema = z.domainEvent({

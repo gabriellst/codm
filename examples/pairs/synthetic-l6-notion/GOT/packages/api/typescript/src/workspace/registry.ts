@@ -1,5 +1,5 @@
 import './errors'
-import type { InstanceRegistry } from '@template/core-typescript'
+import type { InstanceRegistry } from '@codedm/core-typescript'
 import { WorkspaceRepository, MockWorkspaceRepository, DrizzleWorkspaceRepository } from './repositories/WorkspaceRepository'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = {

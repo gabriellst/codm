@@ -21,7 +21,7 @@ prompt: >
   createKitMutationRequestSchema, listKitsQueryKey,
   useListProductsForKit, and the ProductCostTypeEnum /
   QuantityModifierEnum consts (with their zod schemas) from
-  @template/client-typescript/typescript — read
+  @codedm/client-typescript/typescript — read
   packages/app/expo/CLAUDE.md FIRST. SCAFFOLD FIRST (binding): generate the formSheet and
   form via the expo CLI (`bun cli sheet ...`, `bun cli form ...` — scripts/cli/expo/,
   golden-tested) before any hand-written logic. Then the generated surface under
@@ -256,7 +256,7 @@ graders:
     id: route#bp-10
   # ── SDK-CONSUME ────────────────────────────────────────────────────
   - kind: grep-must
-    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::from\\s+['\"]@template/client-typescript/typescript['\"]"
+    spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::from\\s+['\"]@codedm/client-typescript/typescript['\"]"
     id: atlas#SDK-CONSUME
   - kind: grep-must-not
     spec: "packages/app/expo/app/(sheets)/kit-form/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"

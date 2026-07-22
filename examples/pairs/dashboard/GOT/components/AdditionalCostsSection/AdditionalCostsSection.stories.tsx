@@ -14,8 +14,8 @@ import {
 	getDashboardQueryOptions,
 	OperationalCostFlowEnum,
 	OperationalCostRecurrencyEnum,
-} from '@template/client-typescript/typescript'
-import type { GetDashboardQueryResponse } from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
+import type { GetDashboardQueryResponse } from '@codedm/client-typescript/typescript'
 
 import { connected, errorQuery, loadingQuery, mockQuery } from '@/storybook'
 import type { DeepPartial } from '@/lib'

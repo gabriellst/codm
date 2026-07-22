@@ -5,8 +5,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { BaseDomainEvent, DomainEventRepository, DrizzleClient } from '@template/core-typescript'
-import { events } from '@template/contracts/db'
+import { BaseDomainEvent, DomainEventRepository, DrizzleClient } from '@codedm/core-typescript'
+import { events } from '@codedm/contracts/db'
 import { TestBed, testId } from '@test/support'
 
 // Two distinct event names — used to prove listByNameSince filters by `name`, not just by window.

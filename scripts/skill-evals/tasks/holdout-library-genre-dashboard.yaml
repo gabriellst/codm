@@ -111,7 +111,7 @@ graders:
     id: mutation#invalidate-on-success
   - kind: grep-must
     spec: packages/app/react/src/routes/(app)/library/**/*.tsx::from
-      '@template/client-typescript
+      '@codedm/client-typescript
     id: sdk#consume-via-sdk
   - kind: grep-must-not
     spec: packages/app/react/src/routes/(app)/library/**/*.tsx::\.filter\([^)]*\)\.length

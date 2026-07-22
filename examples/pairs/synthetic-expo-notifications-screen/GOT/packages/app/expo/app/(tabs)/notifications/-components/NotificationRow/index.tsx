@@ -15,9 +15,9 @@ import {
 	useMarkNotificationRead,
 	listNotificationsQueryKey,
 	NotificationCategoryEnum,
-} from '@template/client-typescript/typescript'
-import type { NotificationCategory } from '@template/client-typescript/typescript'
-import type { ListNotifications200 } from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
+import type { NotificationCategory } from '@codedm/client-typescript/typescript'
+import type { ListNotifications200 } from '@codedm/client-typescript/typescript'
 import { Text } from '@/components/ui/Text'
 import { IconBolt, IconCalendar, IconChart, IconCheck, IconFlame, IconHeart, IconTrophy } from '@/components/ui/Icons'
 import type { IconProps } from '@/components/ui/Icons'

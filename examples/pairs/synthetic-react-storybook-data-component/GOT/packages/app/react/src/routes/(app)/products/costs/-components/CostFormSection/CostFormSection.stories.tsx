@@ -7,8 +7,8 @@
 // source:      packages/app/react/src/routes/(app)/products/costs/-components/CostFormSection/CostFormSection.stories.tsx (archived eval build, applied at HEAD)
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import type { Meta, StoryObj } from '@storybook/react'
-import { listCostCountriesQueryOptions } from '@template/client-typescript/typescript'
-import type { ListCostCountriesQueryResponse } from '@template/client-typescript/typescript'
+import { listCostCountriesQueryOptions } from '@codedm/client-typescript/typescript'
+import type { ListCostCountriesQueryResponse } from '@codedm/client-typescript/typescript'
 
 import { connected, errorQuery, loadingQuery, mockQuery } from '@/storybook'
 import type { DeepPartial } from '@/lib'

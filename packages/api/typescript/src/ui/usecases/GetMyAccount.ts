@@ -1,7 +1,7 @@
 // TODO(stub): unblocked by an account-settings read-model. authentication.users + identity.user_profiles/user_preferences cover name/email/image/language/timezone, but the OutputSchema needs `profile.company`, `security.lastPasswordChangeAt`, `security.twoFactorEnabled` (better-auth two-factor table, not in schema) and a single `preferences.currency` (CurrencyCode) — none of which have a source column. A clean Drizzle map requires those columns/sources first.
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@template/core-typescript'
-import { Language, CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { Handler, z } from '@codedm/core-typescript'
+import { Language, CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 import { faker, mockIsoDate, pick } from '../../shared/testing/mock'
 
 // ---------------------------------------------------------------------------

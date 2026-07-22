@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 import { UserProfileSchema } from '../entities/UserProfile'
 
 export const ProfileUpdatedEventSchema = z.domainEvent({

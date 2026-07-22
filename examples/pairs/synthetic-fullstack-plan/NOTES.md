@@ -26,7 +26,7 @@ Single-document diff, not the legacy concatenated format: `grep -c '^diff --git'
 
 ### Why a plain apply at any live commit fails, and what fixed it
 
-A direct `git apply --check` of the on-disk patch (`scripts/skill-evals/scoreboard/fullstack-plan-iter1--synthetic-fullstack-plan.patch`) against `5b907dfbd` fails on exactly one file: `packages/api/typescript/src/ui/controllers/ListenEvents.ts`, at the hunk whose unchanged context line reads `} from '@template/contracts-typescript/wire/events'`. The base file at `5b907dfbd` (confirmed via the patch's own `index c6e923748..` pre-image blob, which is present in the repo's object database) still reads `@template/contracts-typescript` there — same root cause already diagnosed on the sibling `synthetic-fullstack-handoff` candidate: the repo underwent a wholesale `@template → @template` rebrand sweep at commit `3d203d214` ("W4 rebrand", 2026-07-20) that mechanically rewrote **every tracked file containing the literal string `@template`**, including this frozen scoreboard patch (`grep -c '@template'` on the current on-disk patch = 0, `grep -c '@template'` = 49 — a 100%-consistent post-sweep rewrite, not partial).
+A direct `git apply --check` of the on-disk patch (`scripts/skill-evals/scoreboard/fullstack-plan-iter1--synthetic-fullstack-plan.patch`) against `5b907dfbd` fails on exactly one file: `packages/api/typescript/src/ui/controllers/ListenEvents.ts`, at the hunk whose unchanged context line reads `} from '@codedm/contracts-typescript/wire/events'`. The base file at `5b907dfbd` (confirmed via the patch's own `index c6e923748..` pre-image blob, which is present in the repo's object database) still reads `@codedm/contracts-typescript` there — same root cause already diagnosed on the sibling `synthetic-fullstack-handoff` candidate: the repo underwent a wholesale `@template → @template` rebrand sweep at commit `3d203d214` ("W4 rebrand", 2026-07-20) that mechanically rewrote **every tracked file containing the literal string `@template`**, including this frozen scoreboard patch (`grep -c '@template'` on the current on-disk patch = 0, `grep -c '@template'` = 49 — a 100%-consistent post-sweep rewrite, not partial).
 
 Fix applied (no fabrication — pure git-history retrieval): recovered the pristine pre-sweep bytes of this same patch file from git history at `7f54066df` ("chore: scoreboard checkpoint before clean-branch work", the commit that added it, right before `3d203d214` later rewrote it and one commit before nothing else touched it):
 
@@ -34,7 +34,7 @@ Fix applied (no fabrication — pure git-history retrieval): recovered the prist
 git show 7f54066df:scripts/skill-evals/scoreboard/fullstack-plan-iter1--synthetic-fullstack-plan.patch > /tmp/original-fullstack-plan-iter1.patch
 ```
 
-`diff` against the current on-disk patch: 98 changed lines, 100% `@template` ⇄ `@template` token substitutions (e.g. `@template/core-typescript` → `@template/core-typescript`, `@template/contracts-typescript` → `@template/contracts-typescript`) — confirming this is exactly the mechanical rebrand bleed-through and nothing else, no semantic drift.
+`diff` against the current on-disk patch: 98 changed lines, 100% `@template` ⇄ `@template` token substitutions (e.g. `@codedm/core-typescript` → `@codedm/core-typescript`, `@codedm/contracts-typescript` → `@codedm/contracts-typescript`) — confirming this is exactly the mechanical rebrand bleed-through and nothing else, no semantic drift.
 
 Applying this pre-sweep, git-history-original patch at `5b907dfbd`:
 

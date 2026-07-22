@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@template/core-typescript'
-import { issues, stops, terminalLines, transcriptEntries } from '@template/contracts/db'
-import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@template/contracts-typescript/wire/enums'
+import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
+import { issues, stops, terminalLines, transcriptEntries } from '@codedm/contracts/db'
+import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 
 export const GetIssueDetailInputSchema = z.object({ ownerId: z.uuid(), issueId: z.uuid() })

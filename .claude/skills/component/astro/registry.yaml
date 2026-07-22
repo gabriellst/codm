@@ -33,7 +33,7 @@ bad_practices:
     severity: high
     when: always
     summary: Inline hex/rgb color values in styles or `<style>` blocks.
-    why: Tokens live in `@template/app-styles/tokens.css`; inline colors break dark mode and theme overrides.
+    why: Tokens live in `@codedm/app-styles/tokens.css`; inline colors break dark mode and theme overrides.
     fix: Use `var(--primary)` / Tailwind utilities that map to tokens. If the token doesn't exist, add it.
     mechanical: true
     detect:
@@ -51,12 +51,12 @@ bad_practices:
   - id: BP-AC-005
     severity: medium
     when: always
-    summary: Importing from `@template/app-react` or `@template/app-expo` inside the astro workspace.
+    summary: Importing from `@codedm/app-react` or `@codedm/app-expo` inside the astro workspace.
     why: Each app workspace is independent. The styles workspace is the only shared surface for design tokens.
-    fix: Recreate the component locally in `packages/app/astro/src/components/` or extract into `@template/app-styles` if it's pure CSS.
+    fix: Recreate the component locally in `packages/app/astro/src/components/` or extract into `@codedm/app-styles` if it's pure CSS.
     mechanical: true
     detect:
-      - '@template/app-(react|expo)'
+      - '@codedm/app-(react|expo)'
 
   - id: BP-AC-006
     severity: medium

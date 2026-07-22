@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { PurchaseOrderRecordedEvent } from '@template/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { PurchaseOrderRecordedEvent } from '@codedm/contracts-typescript/wire/events'
 import { PurchaseOrderCreatedEvent } from '../events/PurchaseOrderCreatedEvent'
 import { PurchaseOrderCancelledEvent } from '../events/PurchaseOrderCancelledEvent'
 

@@ -1,6 +1,6 @@
-import { BasePrimitiveValueObject, z } from '@template/core-typescript'
+import { BasePrimitiveValueObject, z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 import { Money } from './Money'
 
 /** Partial record of ISO-4217 currency → integer amount in cents. Internal

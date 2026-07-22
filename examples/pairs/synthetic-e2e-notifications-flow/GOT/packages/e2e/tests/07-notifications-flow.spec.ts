@@ -10,7 +10,7 @@ import {
 	listNotificationsQueryKey,
 	NotificationOriginEnum,
 	type ListNotificationsQueryResponse,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { test, expect } from '../utils/test'
 import { mockRoute } from '../utils/mock'
 import { t } from '../utils/i18n'

@@ -10,7 +10,7 @@
 
 import { View } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { logSetMutationRequestSchema } from '@template/client-typescript/typescript'
+import { logSetMutationRequestSchema } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/Button'
 import { NumField } from '@/components/ui/NumField'
 import type { SetEditorForm } from '@/app/active-exercise/-types'

@@ -6,7 +6,7 @@
 import { TestBed } from '@test/support'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, DependencyContainer } from 'tsyringe-neo'
-import { IdempotencyGuard } from '@template/core-typescript'
+import { IdempotencyGuard } from '@codedm/core-typescript'
 import { IdempotencyScope } from '@shared/enums'
 
 describe('DrizzleIdempotencyGuard', () => {

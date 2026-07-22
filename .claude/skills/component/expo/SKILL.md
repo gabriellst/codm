@@ -124,7 +124,7 @@ This is the exact pattern from `packages/app/expo/app/(tabs)/progress/-component
 ```tsx
 import { Text, View } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { PeriodEnum, type Period } from '@template/client-typescript/typescript'
+import { PeriodEnum, type Period } from '@codedm/client-typescript/typescript'
 import { Card } from '@/components/ui/Card'
 import { letterSpacingPt } from '@/lib/tokens'
 import { usePeriodStore } from '@/app/(tabs)/progress/-stores/period-store'
@@ -174,7 +174,7 @@ The store at `packages/app/expo/app/(tabs)/progress/-stores/period-store.ts`:
 
 ```tsx
 import { create } from 'zustand'
-import { PeriodEnum, type Period } from '@template/client-typescript/typescript'
+import { PeriodEnum, type Period } from '@codedm/client-typescript/typescript'
 
 interface PeriodState { period: Period }
 interface PeriodActions { setPeriod: (period: Period) => void }
@@ -193,7 +193,7 @@ import { View, ScrollView } from 'react-native'
 import { Text } from '@/components/ui/Text'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { useListWorkouts } from '@template/client-typescript/typescript'
+import { useListWorkouts } from '@codedm/client-typescript/typescript'
 import { WorkoutCard } from './WorkoutCard'
 
 function SkeletonRows() {
@@ -257,7 +257,7 @@ With `experiments.typedRoutes: true`, the `pathname` is type-checked.
 ```tsx
 import { useQueryClient } from '@tanstack/react-query'
 import { Haptics } from 'react-native-nitro-haptics'
-import { useDeleteWorkout, listWorkoutsQueryKey } from '@template/client-typescript/typescript'
+import { useDeleteWorkout, listWorkoutsQueryKey } from '@codedm/client-typescript/typescript'
 
 export function WorkoutCard({ workout }: { workout: WorkoutItem }) {
   const deleteWorkout = useDeleteWorkout()
@@ -289,7 +289,7 @@ Use haptics for tactile feedback instead of toast (which doesn't exist as a prim
 ### Open/Closed — derive options from SDK enums
 
 ```tsx
-import { PeriodEnum, type Period } from '@template/client-typescript/typescript'
+import { PeriodEnum, type Period } from '@codedm/client-typescript/typescript'
 {Object.values(PeriodEnum).map(p => <PeriodChip key={p} period={p} ... />)}
 
 // or, when the labels live in i18n:

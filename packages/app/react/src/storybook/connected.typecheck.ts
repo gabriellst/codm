@@ -2,7 +2,7 @@
 // Compile-time smoke for the connected-stories helpers — NO runtime, NO test runner. `bun x tsc` is
 // the check. This is intentionally NOT a *.test.ts (those are excluded from the workspace tsconfig),
 // so tsc type-checks every call here; if an SDK response/param shape drifts, the build fails here.
-import { getMyAccountQueryOptions, updateOwnerSettingsMutationOptions } from '@template/client-typescript/typescript'
+import { getMyAccountQueryOptions, updateOwnerSettingsMutationOptions } from '@codedm/client-typescript/typescript'
 
 import { connected, errorQuery, loadingQuery, mockMutation, mockMutationError, mockQuery, mockSession } from '.'
 

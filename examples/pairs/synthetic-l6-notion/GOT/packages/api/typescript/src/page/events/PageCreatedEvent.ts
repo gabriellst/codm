@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 import { PageSchema } from '../entities/Page'
 
 export const PageCreatedEventSchema = z.domainEvent({

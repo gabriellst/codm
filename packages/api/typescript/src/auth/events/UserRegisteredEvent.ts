@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 import { UserRole } from '../enums/UserRole'
 
 // The ONE user-registration event since the identity→auth collapse. Emitted by IdentityAuthHooks

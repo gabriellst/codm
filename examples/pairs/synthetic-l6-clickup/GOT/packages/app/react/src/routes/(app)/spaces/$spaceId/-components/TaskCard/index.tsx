@@ -8,7 +8,7 @@ import {
 	getBoardViewQueryKey,
 	TaskStatusEnum,
 	type TaskStatus,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'

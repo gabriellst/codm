@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
-import { TranscriptKind } from '@template/contracts-typescript/wire/enums'
+import { TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { IngestChannelMessage } from './IngestChannelMessage'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { MessageIngestedEvent } from '../events'
-import { DomainEventRepository } from '@template/core-typescript'
+import { DomainEventRepository } from '@codedm/core-typescript'
 
 /**
  * C16 IngestChannelMessage — the invocation-gate matrix. The message is ALWAYS transcribed +

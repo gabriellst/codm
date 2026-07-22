@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, BaseError, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Handler, BaseError, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { Task } from '../entities'
 import { TaskRepository } from '../repositories/TaskRepository/TaskRepository'
 import { SpaceRepository } from '../../workspace/repositories/SpaceRepository/SpaceRepository'
 import type { ApplicationErrors } from '../errors'
-import { TaskPriority } from '@template/contracts-typescript/wire/enums'
+import { TaskPriority } from '@codedm/contracts-typescript/wire/enums'
 
 export const CreateTaskInputSchema = z.object({
 	workspaceId: z.uuid(),

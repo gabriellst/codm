@@ -10,7 +10,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 
-import { listProductAdCampaignsQueryParamsSchema, type ListProductAdCampaignsQueryResponse } from '@template/client-typescript/typescript'
+import { listProductAdCampaignsQueryParamsSchema, type ListProductAdCampaignsQueryResponse } from '@codedm/client-typescript/typescript'
 import { zodValidator } from '@/lib/zod-validator'
 import { RouteError } from '@/components/RouteError'
 import { CampaignTableSection } from './-components/CampaignTableSection'

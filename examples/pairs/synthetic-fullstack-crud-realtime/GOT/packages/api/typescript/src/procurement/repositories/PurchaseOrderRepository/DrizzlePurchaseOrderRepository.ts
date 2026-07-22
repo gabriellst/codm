@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { purchaseOrders } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { purchaseOrders } from '@codedm/contracts/db'
 import { PurchaseOrder, PurchaseOrderSchema } from '../../entities/PurchaseOrder'
 import { PurchaseOrderRepository } from './PurchaseOrderRepository'
 

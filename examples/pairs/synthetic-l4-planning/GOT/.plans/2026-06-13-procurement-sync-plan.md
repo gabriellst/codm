@@ -215,7 +215,7 @@ This generates:
 - `packages/api/typescript/src/procurement/errors/index.ts`
 
 ```typescript
-import { registerErrorCodes } from '@template/core-typescript'
+import { registerErrorCodes } from '@codedm/core-typescript'
 
 export type ProcurementErrors =
   | 'PURCHASE_ORDER_NOT_FOUND'
@@ -263,8 +263,8 @@ bun cli controller procurement PlacePurchaseOrder
 - `packages/api/typescript/src/procurement/controllers/PlacePurchaseOrder.ts`
 
 ```typescript
-import { Controller, z } from '@template/core-typescript'
-import { SupplierPlatform, ConnectionMode } from '@template/contracts-typescript'
+import { Controller, z } from '@codedm/core-typescript'
+import { SupplierPlatform, ConnectionMode } from '@codedm/contracts-typescript'
 
 export const PlacePurchaseOrderControllerInputSchema = z.object({
   ctx: z.object({ storeId: z.uuid() }),
@@ -309,7 +309,7 @@ export class PlacePurchaseOrderController extends Controller<
 - `packages/api/typescript/src/procurement/controllers/CancelPurchaseOrder.ts`
 
 ```typescript
-import { Controller, z } from '@template/core-typescript'
+import { Controller, z } from '@codedm/core-typescript'
 
 export const CancelPurchaseOrderControllerInputSchema = z.object({
   ctx: z.object({ storeId: z.uuid() }),
@@ -347,8 +347,8 @@ bun cli query ui GetPurchaseOrderTimeline
 - `packages/api/typescript/src/ui/controllers/GetPurchaseOrderTimeline.ts`
 
 ```typescript
-import { Controller, z } from '@template/core-typescript'
-import { InboundShipmentStatus } from '@template/contracts-typescript'
+import { Controller, z } from '@codedm/core-typescript'
+import { InboundShipmentStatus } from '@codedm/contracts-typescript'
 
 export const GetPurchaseOrderTimelineControllerInputSchema = z.object({
   ctx: z.object({ storeId: z.uuid() }),
@@ -391,8 +391,8 @@ export class GetPurchaseOrderTimelineController extends Controller<
 - `packages/api/typescript/src/ui/controllers/GetSupplierScorecard.ts`
 
 ```typescript
-import { Controller, z } from '@template/core-typescript'
-import { SupplierPlatform } from '@template/contracts-typescript'
+import { Controller, z } from '@codedm/core-typescript'
+import { SupplierPlatform } from '@codedm/contracts-typescript'
 
 export const GetSupplierScorecardControllerInputSchema = z.object({
   ctx: z.object({ storeId: z.uuid() }),
@@ -449,7 +449,7 @@ bun emit-openapi
 bun sdk
 ```
 
-After this step the SDK is frozen. All downstream tasks (T5–T11) consume the generated hooks and types from `@template/client-typescript`. If a controller shape must change after T4, re-run `bun sdk` and update this plan with a note.
+After this step the SDK is frozen. All downstream tasks (T5–T11) consume the generated hooks and types from `@codedm/client-typescript`. If a controller shape must change after T4, re-run `bun sdk` and update this plan with a note.
 
 ---
 
@@ -591,9 +591,9 @@ bun cli entity procurement PurchaseOrder --aggregate
 - `packages/api/typescript/src/procurement/entities/PurchaseOrder.ts`
 
 ```typescript
-import { AggregateRoot, z } from '@template/core-typescript'
-import { PurchaseOrderStatus, SupplierPlatform, ConnectionMode } from '@template/contracts-typescript'
-import { BaseError } from '@template/core-typescript'
+import { AggregateRoot, z } from '@codedm/core-typescript'
+import { PurchaseOrderStatus, SupplierPlatform, ConnectionMode } from '@codedm/contracts-typescript'
+import { BaseError } from '@codedm/core-typescript'
 import type { ProcurementErrors } from '../errors'
 
 const OrderLineSchema = z.object({
@@ -674,7 +674,7 @@ bun cli event procurement PurchaseOrderPlaced
 - `packages/api/typescript/src/procurement/events/PurchaseOrderPlacedEvent.ts`
 
 ```typescript
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const PurchaseOrderPlacedEventSchema = z.domainEvent({
   purchaseOrderId: z.uuid(),
@@ -748,8 +748,8 @@ bun cli usecase procurement PlacePurchaseOrder
 - `packages/api/typescript/src/procurement/usecases/PlacePurchaseOrder.ts`
 
 ```typescript
-import { Handler, z } from '@template/core-typescript'
-import { SupplierPlatform, ConnectionMode } from '@template/contracts-typescript'
+import { Handler, z } from '@codedm/core-typescript'
+import { SupplierPlatform, ConnectionMode } from '@codedm/contracts-typescript'
 import { injectable, inject } from 'tsyringe'
 import { PurchaseOrder } from '../entities/PurchaseOrder'
 import { PurchaseOrderPlacedEvent } from '../events/PurchaseOrderPlacedEvent'
@@ -843,7 +843,7 @@ Register `DrizzlePurchaseOrderRepository` under `IPurchaseOrderRepository` for `
 - `packages/api/typescript/src/procurement/events/PurchaseOrderCancelledEvent.ts`
 
 ```typescript
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const PurchaseOrderCancelledEventSchema = z.domainEvent({
   purchaseOrderId: z.uuid(),
@@ -868,7 +868,7 @@ bun cli usecase procurement CancelPurchaseOrder
 - `packages/api/typescript/src/procurement/usecases/CancelPurchaseOrder.ts`
 
 ```typescript
-import { Handler, z, BaseError } from '@template/core-typescript'
+import { Handler, z, BaseError } from '@codedm/core-typescript'
 import { injectable, inject } from 'tsyringe'
 import { PurchaseOrderCancelledEvent } from '../events/PurchaseOrderCancelledEvent'
 import type { IPurchaseOrderRepository } from '../repositories/IPurchaseOrderRepository'
@@ -934,7 +934,7 @@ Tests must assert:
 
 ```typescript
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'bun:test'
-import { TestBed } from '@template/core-typescript/testing'
+import { TestBed } from '@codedm/core-typescript/testing'
 import { container } from 'tsyringe'
 import { CancelPurchaseOrder } from './CancelPurchaseOrder'
 import { PlacePurchaseOrder } from './PlacePurchaseOrder'
@@ -1443,8 +1443,8 @@ bun cli component SupplierScorecardSection --route "(app)/procurement"
 
 ```tsx
 import { useForm } from '@tanstack/react-form'
-import { usePlacePurchaseOrder } from '@template/client-typescript/typescript'
-import { PlacePurchaseOrderControllerInputSchema } from '@template/client-typescript/typescript'
+import { usePlacePurchaseOrder } from '@codedm/client-typescript/typescript'
+import { PlacePurchaseOrderControllerInputSchema } from '@codedm/client-typescript/typescript'
 
 export function PurchaseOrderFormSection() {
   const mutation = usePlacePurchaseOrder()
@@ -1477,7 +1477,7 @@ export function PurchaseOrderFormSection() {
 ### Step T10.4 — InboundShipmentTimelineSection
 
 ```tsx
-import { useGetPurchaseOrderTimeline } from '@template/client-typescript/typescript'
+import { useGetPurchaseOrderTimeline } from '@codedm/client-typescript/typescript'
 
 export function InboundShipmentTimelineSection({ purchaseOrderId }: { purchaseOrderId: string }) {
   const { data } = useGetPurchaseOrderTimeline(
@@ -1500,7 +1500,7 @@ export function InboundShipmentTimelineSection({ purchaseOrderId }: { purchaseOr
 ### Step T10.5 — SupplierScorecardSection
 
 ```tsx
-import { useGetSupplierScorecard } from '@template/client-typescript/typescript'
+import { useGetSupplierScorecard } from '@codedm/client-typescript/typescript'
 
 export function SupplierScorecardSection() {
   const { data } = useGetSupplierScorecard(

@@ -1,7 +1,7 @@
 // Per-env DI bindings for Owner BC.
 import './errors' // Side-effect: registers context error codes with the framework runtime registry.
 
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { OwnerDirectory, MockOwnerDirectory } from '@shared/services'
 import { OwnerRepository, DrizzleOwnerRepository, MockOwnerRepository } from './repositories/OwnerRepository'
 import { DrizzleOwnerDirectory } from './services'

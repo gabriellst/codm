@@ -1,6 +1,6 @@
-import { AggregateRoot, BaseError, Id, z } from '@template/core-typescript'
+import { AggregateRoot, BaseError, Id, z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { PurchaseOrderStatus, type CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { PurchaseOrderStatus, type CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 import { Money } from '../../shared/objects'
 import type { ProcurementDomainErrors } from '../errors'
 

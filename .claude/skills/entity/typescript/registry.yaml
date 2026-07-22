@@ -574,7 +574,7 @@ registry:
         name: z.string().min(1, { error: 'NAME_REQUIRED' as DomainErrors }),
         .refine(data => data.start < data.end, { error: 'INVALID_RANGE' as DomainErrors })
         // For entities in the shared context, use BaseDomainErrors instead:
-        import type { BaseDomainErrors } from '@template/core-typescript'
+        import type { BaseDomainErrors } from '@codedm/core-typescript'
         name: z.string().min(1, { error: 'NAME_REQUIRED' as BaseDomainErrors })
 
     - id: bp-12
@@ -661,7 +661,7 @@ registry:
 
   snippet:
     skeleton: |
-      import { {{base}}, z } from '@template/core-typescript'
+      import { {{base}}, z } from '@codedm/core-typescript'
       import Z from 'zod'
       import { DomainErrors } from '../errors'
 

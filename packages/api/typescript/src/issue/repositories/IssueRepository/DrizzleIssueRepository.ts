@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, lte } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { issues } from '@template/contracts/db'
-import { IssueStatus, ProviderKind, IssueArchiveReason } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { issues } from '@codedm/contracts/db'
+import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codedm/contracts-typescript/wire/enums'
 import { Issue, IssueSchema } from '../../entities/Issue'
 import { IssueRepository } from './IssueRepository'
 

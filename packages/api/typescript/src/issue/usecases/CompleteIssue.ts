@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
-import { IssueStatus } from '@template/contracts-typescript/wire/enums'
+import { Handler, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
+import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
 import { IssueRepository } from '../repositories/IssueRepository'
 
 export const CompleteIssueInputSchema = z.object({ issueId: z.uuid(), meta: z.string().optional() })

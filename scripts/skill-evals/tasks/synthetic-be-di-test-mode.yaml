@@ -22,7 +22,7 @@ prompt: >
   the house way: (1) a PushDevice aggregate at
   src/notifications/entities/PushDevice.ts — fields userId, platform (reuse
   the existing FcmPlatform wire enum from
-  @template/contracts-typescript/wire/enums, IOS/ANDROID/WEB — do not mint a
+  @codedm/contracts-typescript/wire/enums, IOS/ANDROID/WEB — do not mint a
   new enum and do not widen to string), pushToken (non-empty),
   deviceFingerprint (nullable), registeredAt, lastSeenAt, plus a
   liveness-refresh behavior — with its colocated unit spec
@@ -222,7 +222,7 @@ graders:
     spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::lastSeenAt\\s*="
     id: usecase#UC-C03
   - kind: grep-must-not
-    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::from\\s+['\"]@template/contracts/db"
+    spec: "packages/api/typescript/src/notifications/usecases/RegisterPushDevice.ts::from\\s+['\"]@codedm/contracts/db"
     id: usecase#UC-03
   # ── error vocabulary ───────────────────────────────────────────────
   - kind: grep-must

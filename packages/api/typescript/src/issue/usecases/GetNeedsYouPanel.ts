@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@template/core-typescript'
-import { stops, issues } from '@template/contracts/db'
-import { StopKind, StopResolution } from '@template/contracts-typescript/wire/enums'
+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { stops, issues } from '@codedm/contracts/db'
+import { StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
 import { resolutionsForKind } from '../objects/StopResolutions'
 
 export const GetNeedsYouPanelInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })

@@ -6,7 +6,7 @@
 // graded:      2026-07-21T18:43:06.075Z
 // source:      packages/api/typescript/src/ui/events/StoreVisualizationUpdatedEvent.ts (archived eval build, applied at HEAD)
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 import { DashboardMode } from '../enums'
 
 const StoreVisualizationUpdatedEventSchema = z.domainEvent({

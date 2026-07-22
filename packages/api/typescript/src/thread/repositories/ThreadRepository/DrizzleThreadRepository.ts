@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { threads } from '@template/contracts/db'
-import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { threads } from '@codedm/contracts/db'
+import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import { Thread, ThreadSchema, type MentionGate, type Participant } from '../../entities/Thread'
 import { ThreadRepository } from './ThreadRepository'
 

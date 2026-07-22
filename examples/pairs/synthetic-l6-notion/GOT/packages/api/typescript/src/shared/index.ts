@@ -7,12 +7,12 @@
 // Adapted from: dev:packages/api/src/shared/index.ts
 // ref: .claude/skills/bounded-context/SKILL.md
 
-import { BoundedContext, OutboxDispatcher, ExternalMediator, openapi } from '@template/core-typescript'
+import { BoundedContext, OutboxDispatcher, ExternalMediator, openapi } from '@codedm/core-typescript'
 import { ALL_REGISTRIES } from './registry'
 // Context-local (non-wire) enums: spread each context's enum barrel so any
 // controller-facing enum is auto-registered. Adding an enum to a context's
 // `enums/index.ts` is enough — no need to remember to list it here.
-import * as wireEnums from '@template/contracts-typescript/wire/enums'
+import * as wireEnums from '@codedm/contracts-typescript/wire/enums'
 import * as authEnums from '@auth/enums'
 import * as billingEnums from '@billing/enums'
 import * as catalogEnums from '@catalog/enums'

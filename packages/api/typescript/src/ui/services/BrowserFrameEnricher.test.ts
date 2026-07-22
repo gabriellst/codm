@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenIssue } from '@test/support'
-import { StopKind, ThreadStatus } from '@template/contracts-typescript/wire/enums'
-import { IssueOpenedEvent, IssueStopRaisedEvent, IssueCompletedEvent } from '@template/contracts-typescript/wire/events'
+import { StopKind, ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
+import { IssueOpenedEvent, IssueStopRaisedEvent, IssueCompletedEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { BrowserFrameEnricher } from './BrowserFrameEnricher'
 

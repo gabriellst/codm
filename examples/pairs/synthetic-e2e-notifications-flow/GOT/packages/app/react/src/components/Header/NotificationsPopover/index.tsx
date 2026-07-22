@@ -8,7 +8,7 @@
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import { IconBell } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
-import { useListNotifications } from '@template/client-typescript/typescript'
+import { useListNotifications } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription } from '@/components/ui/empty'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'

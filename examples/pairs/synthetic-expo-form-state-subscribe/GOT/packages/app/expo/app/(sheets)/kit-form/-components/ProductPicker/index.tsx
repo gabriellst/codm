@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 import {
 	useListProductsForKit,
 	type ListProductsForKit200,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { formatMoney } from '@/lib/format'
 import { fg, surfaces } from '@/lib/tokens'
 import { IconClose } from '@/components/ui/Icons'

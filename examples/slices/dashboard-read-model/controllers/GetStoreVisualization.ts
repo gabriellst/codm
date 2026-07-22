@@ -2,7 +2,7 @@
 // ORIGIN-FILE: packages/api/typescript/src/ui/controllers/GetStoreVisualization.ts
 
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
 import { GetStoreVisualization, GetStoreVisualizationOutputSchema } from '../usecases/GetStoreVisualization'

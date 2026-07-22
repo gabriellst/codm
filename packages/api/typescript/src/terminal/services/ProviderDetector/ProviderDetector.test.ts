@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ProviderKind, ProviderStatus } from '@template/contracts-typescript/wire/enums'
+import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { SystemProviderDetector } from './SystemProviderDetector'
 import { MockProviderDetector } from './MockProviderDetector'
 

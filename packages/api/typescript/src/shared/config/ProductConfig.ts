@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /**
  * Product env seam — the product-specific analog of the kernel `Config`
- * (`@template/core-typescript` → `core/src/utils/Config.ts`), mirroring medscall's decision to keep
+ * (`@codedm/core-typescript` → `core/src/utils/Config.ts`), mirroring medscall's decision to keep
  * the product Config in `src/shared` (medscall@f04e8a0f `packages/api/src/shared/utils/Config.ts`).
  *
  * The kernel Config holds ONLY generic, product-agnostic env (DB/Redis/OTEL/PORT, generic secrets,

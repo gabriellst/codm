@@ -1,7 +1,7 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { OwnerMemberInvitedEvent as OwnerMemberInvitedIntegrationEvent } from '@template/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { OwnerMemberInvitedEvent as OwnerMemberInvitedIntegrationEvent } from '@codedm/contracts-typescript/wire/events'
 import { OwnerMemberInvitedEvent } from '../events'
 import { OwnerInvitationRepository } from '../repositories/OwnerInvitationRepository'
 

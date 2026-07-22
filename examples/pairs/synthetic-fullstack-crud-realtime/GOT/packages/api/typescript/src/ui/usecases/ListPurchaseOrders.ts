@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, count, desc, eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@template/core-typescript'
-import { CurrencyCode, PurchaseOrderStatus } from '@template/contracts-typescript/wire/enums'
-import { purchaseOrders } from '@template/contracts/db'
+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { CurrencyCode, PurchaseOrderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { purchaseOrders } from '@codedm/contracts/db'
 
 // ---------------------------------------------------------------------------
 // Input — store-scoped paginated purchase orders read.

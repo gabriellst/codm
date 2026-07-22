@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { CreatePage, CreatePageOutputSchema } from '../usecases/CreatePage'
 

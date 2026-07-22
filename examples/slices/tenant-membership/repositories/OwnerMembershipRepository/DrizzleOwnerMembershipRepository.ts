@@ -1,8 +1,8 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
 import { and, eq, sql } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { ownerMemberships, users as authUsers } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { ownerMemberships, users as authUsers } from '@codedm/contracts/db'
 import { Role as OwnerRole } from '../../enums/Role'
 import { OwnerMembership } from '../../entities/OwnerMembership'
 import { OwnerMembershipRepository } from './OwnerMembershipRepository'

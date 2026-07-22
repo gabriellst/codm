@@ -1,5 +1,5 @@
 import type { BrowserContext } from 'playwright'
-import { configureClient } from '@template/client-typescript/http'
+import { configureClient } from '@codedm/client-typescript/http'
 import { generateEmail } from '../generators'
 import { apiOperatorSession, injectSession, type ApiSession } from './api'
 

@@ -1,7 +1,7 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { singleton } from 'tsyringe-neo'
-import { BaseError } from '@template/core-typescript'
-import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
+import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codedm/core-typescript'
 import { OwnerMembershipRepository } from '@owner/repositories/OwnerMembershipRepository'
 import type { ApplicationErrors } from '@owner/errors'
 import { SessionSchema } from '@auth/schemas'

@@ -14,7 +14,7 @@ function extractUrl(queryKeyOrPattern: QueryKeyFn | string): string {
  * - A glob string pattern
  *
  * Usage:
- *   import { listNotificationsQueryKey, type GetChannelSidebarQueryResponse } from '@template/client-typescript/typescript'
+ *   import { listNotificationsQueryKey, type GetChannelSidebarQueryResponse } from '@codedm/client-typescript/typescript'
  *   await mockRoute<GetChannelSidebarQueryResponse>(page, listNotificationsQueryKey, { items: [...] })
  */
 export async function mockRoute<TResponse>(

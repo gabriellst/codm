@@ -31,11 +31,11 @@ import {
 	MockCommandQueue,
 	PostgresCommandQueue,
 	Config,
-} from '@template/core-typescript'
-import * as schema from '@template/contracts/db'
-import { migrationsDir } from '@template/contracts/db/migrations'
-import { Client } from '@template/client-typescript'
-import type { RequestConfig, ResponseConfig } from '@template/client-typescript/http'
+} from '@codedm/core-typescript'
+import * as schema from '@codedm/contracts/db'
+import { migrationsDir } from '@codedm/contracts/db/migrations'
+import { Client } from '@codedm/client-typescript'
+import type { RequestConfig, ResponseConfig } from '@codedm/client-typescript/http'
 
 /**
  * Test request stub for the SDK `Client`. The generated operations call

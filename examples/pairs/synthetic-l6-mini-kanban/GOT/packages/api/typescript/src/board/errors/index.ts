@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 export type BoardDomainErrors = 'BOARD_TITLE_EMPTY'
 export type DomainErrors = BaseDomainErrors | BoardDomainErrors

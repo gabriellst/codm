@@ -1,4 +1,4 @@
-import { configureClient } from '@template/client-typescript/http'
+import { configureClient } from '@codedm/client-typescript/http'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { Config, configureZod, handleApiError } from './lib'

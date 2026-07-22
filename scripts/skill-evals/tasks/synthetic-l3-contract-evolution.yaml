@@ -173,7 +173,7 @@ graders:
       (d) CONSUMER INTACT — the TS handler
       packages/api/typescript/src/sales/handlers/PixelCheckoutCompletedLinkCartHandler.ts
       still imports the event type from
-      @template/contracts-typescript/wire/events (the SDK), reads `event.payload`
+      @codedm/contracts-typescript/wire/events (the SDK), reads `event.payload`
       through that imported type, and does NOT re-declare a parallel local
       schema/interface for the payload nor reach for `as any` / `@ts-expect-error`
       to absorb the new field. Whether the handler additionally USES `visitorKey`

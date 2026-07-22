@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, BaseError, z, type Transaction } from '@template/core-typescript'
+import { Handler, BaseError, z, type Transaction } from '@codedm/core-typescript'
 import { PurchaseOrderRepository } from '../repositories/PurchaseOrderRepository'
 import { PurchaseOrderCancelledEvent } from '../events'
 import type { ProcurementApplicationErrors } from '../errors'

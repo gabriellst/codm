@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { OwnerKind } from '@template/contracts-typescript/wire/enums'
+import { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 import { testId } from '@test/support'
 import { OwnerCreatedEvent, OwnerSettingsUpdatedEvent, OwnerDisabledEvent, OwnerEnabledEvent } from './index'
 

@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, BaseError, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Handler, BaseError, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { TaskRepository } from '../repositories/TaskRepository/TaskRepository'
 import type { ApplicationErrors } from '../errors'
-import { TaskStatus } from '@template/contracts-typescript/wire/enums'
+import { TaskStatus } from '@codedm/contracts-typescript/wire/enums'
 
 export const ChangeTaskStatusInputSchema = z.object({
 	taskId: z.uuid(),

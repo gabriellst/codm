@@ -9,7 +9,7 @@ import {
 	CurrencyCodeEnum,
 	createPurchaseOrderMutationRequestSchema,
 	type CreatePurchaseOrderMutationRequest,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'

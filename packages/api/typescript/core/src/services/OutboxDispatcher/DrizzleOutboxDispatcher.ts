@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { DrizzleClient } from '../../db'
-import { outbox } from '@template/contracts/db'
+import { outbox } from '@codedm/contracts/db'
 import { InternalMediator, ExternalMediator } from '../Mediator'
 import { OutboxDispatcher } from './OutboxDispatcher'
 import { BaseEvent } from '../../types/BaseEvent'

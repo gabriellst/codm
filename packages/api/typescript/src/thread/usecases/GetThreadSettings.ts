@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@template/core-typescript'
-import { threads } from '@template/contracts/db'
-import { BufferSize } from '@template/contracts-typescript/wire/enums'
+import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
+import { threads } from '@codedm/contracts/db'
+import { BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import type { Participant } from '../entities/Thread'
 import type { ApplicationErrors } from '../errors'
 

@@ -1,4 +1,4 @@
-import { BaseValueObject, z } from '@template/core-typescript'
+import { BaseValueObject, z } from '@codedm/core-typescript'
 import Z from 'zod'
 
 export const SpaceListSchema = z.object({

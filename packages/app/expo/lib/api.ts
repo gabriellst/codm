@@ -1,5 +1,5 @@
 import Constants from 'expo-constants'
-import { configureClient } from '@template/client-typescript/http'
+import { configureClient } from '@codedm/client-typescript/http'
 
 /**
  * Resolves the base URL for the SDK from (in order):

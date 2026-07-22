@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { ContactKind, SenderIdentity } from '@template/contracts-typescript/wire/enums'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { ContactKind, SenderIdentity } from '@codedm/contracts-typescript/wire/enums'
 import {
 	ThreadAttachedEvent as ThreadAttachedIntegrationEvent,
 	MessageClassifiedEvent as MessageClassifiedIntegrationEvent,
 	ChannelDeliveryRequestedEvent,
-} from '@template/contracts-typescript/wire/events'
+} from '@codedm/contracts-typescript/wire/events'
 import { ThreadAttachedEvent } from '../events/ThreadAttachedEvent'
 import { MessageClassifiedEvent } from '../events/MessageClassifiedEvent'
 import { ClarificationRequestedEvent } from '../events/ClarificationRequestedEvent'

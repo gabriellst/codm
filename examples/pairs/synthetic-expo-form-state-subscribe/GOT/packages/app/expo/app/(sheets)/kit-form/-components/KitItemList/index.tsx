@@ -15,7 +15,7 @@
 
 import { FlatList, Pressable, Text, View } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import type { ListProductsForKit200 } from '@template/client-typescript/typescript'
+import type { ListProductsForKit200 } from '@codedm/client-typescript/typescript'
 import type { KitForm } from '../../-types'
 import { KitItemRow } from '../KitItemRow'
 
@@ -67,7 +67,7 @@ export function KitItemList({ form, productsById, onOpenPicker }: KitItemListPro
 							return (
 								<KitItemRow
 									form={form}
-									item={item as { productId: string; quantity: number; quantityModifier: import('@template/client-typescript/typescript').QuantityModifier }}
+									item={item as { productId: string; quantity: number; quantityModifier: import('@codedm/client-typescript/typescript').QuantityModifier }}
 									index={index}
 									productName={productName}
 								/>

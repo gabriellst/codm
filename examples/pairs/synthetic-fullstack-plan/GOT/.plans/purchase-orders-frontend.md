@@ -51,7 +51,7 @@ After scaffolding, open the generated file and verify the search schema composes
 
 ```typescript
 // Expected shape after scaffold (fill in if CLI emits placeholder):
-import { listPurchaseOrdersQueryParamsSchema } from '@template/client-typescript/typescript'
+import { listPurchaseOrdersQueryParamsSchema } from '@codedm/client-typescript/typescript'
 
 const purchaseOrdersSearchSchema = listPurchaseOrdersQueryParamsSchema.and(z.object({}))
 ```
@@ -215,7 +215,7 @@ The data-owning list section renders the purchase orders table (supplier, status
 **Skills:** component
 **Depends on:** T1
 **Consumes (frozen):** `useListPurchaseOrders`, `listPurchaseOrdersQueryKey`, `listPurchaseOrdersQueryParamsSchema`, `PurchaseOrderStatusEnum`, `PurchaseOrderStatus`, `ListPurchaseOrders200`, `'integration.shared.purchase_order.recorded'`
-**Scope fence:** DONE — SDK hooks/schemas/enum shipped and locked in `@template/client-typescript/typescript`; route shell + i18n keys from T1; OUT — dialogs (T3/T4). LEFT — list data table + SSE subscription.
+**Scope fence:** DONE — SDK hooks/schemas/enum shipped and locked in `@codedm/client-typescript/typescript`; route shell + i18n keys from T1; OUT — dialogs (T3/T4). LEFT — list data table + SSE subscription.
 **Gate:** `cd packages/app/react && bun x tsc --noEmit && bun run detect`
 
 ### Step T2.1 — Scaffold PurchaseOrderListSection via bun cli component
@@ -253,7 +253,7 @@ import {
   PurchaseOrderStatusEnum,
   type PurchaseOrderStatus,
   type ListPurchaseOrders200,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { format } from 'date-fns'
 
 import { DataTable, DataTableContent, DataTableSearch, DataTablePagination, type ColumnDef } from '@/components/DataTable'
@@ -421,7 +421,7 @@ import {
   useCreatePurchaseOrder,
   createPurchaseOrderMutationRequestSchema,
   listPurchaseOrdersQueryKey,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import {
   Dialog,
@@ -591,7 +591,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   useCancelPurchaseOrder,
   listPurchaseOrdersQueryKey,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import {
   DialogContent,
@@ -651,7 +651,7 @@ Add an `actions` column to the `columns` memo and import the dialog + `useDialog
 ```typescript
 // Additional imports:
 import { useDialogStore } from '@/stores/useDialogStore'
-import { PurchaseOrderStatusEnum } from '@template/client-typescript/typescript'
+import { PurchaseOrderStatusEnum } from '@codedm/client-typescript/typescript'
 import { CancelPurchaseOrderDialog } from '../CancelPurchaseOrderDialog'
 
 // Inside the component:
@@ -856,7 +856,7 @@ git commit -m "feat(e2e): purchase-orders Playwright spec skeleton (Task T5)"
 
 ## Notes
 
-- `PurchaseOrderStatusEnum` values: `DRAFT`, `PLACED`, `CANCELLED` — from `@template/client-typescript/typescript`.
+- `PurchaseOrderStatusEnum` values: `DRAFT`, `PLACED`, `CANCELLED` — from `@codedm/client-typescript/typescript`.
 - SSE event `'integration.shared.purchase_order.recorded'` — typed as `ServerEventName`; a typo is a tsc error.
 - Money is on the wire as `{ totalAmountCents: number, totalAmountCurrency: string }`. Build a `Money` object `{ amountCents, currency }` before passing to `useMoney()`.
 - `cancelPurchaseOrder` path param is `purchaseOrderId` (from `cancelPurchaseOrderPathParamsSchema`).

@@ -1,8 +1,8 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getRouteApi, Link } from '@tanstack/react-router'
-import { useGetWorkspacePageTree } from '@template/client-typescript/typescript'
-import type { PageTreeNode } from '@template/client-typescript/typescript'
+import { useGetWorkspacePageTree } from '@codedm/client-typescript/typescript'
+import type { PageTreeNode } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 

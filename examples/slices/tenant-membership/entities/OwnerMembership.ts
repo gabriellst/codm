@@ -1,5 +1,5 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
-import { AggregateRoot, Id, z } from '@template/core-typescript'
+import { AggregateRoot, Id, z } from '@codedm/core-typescript'
 import Z from 'zod'
 import { Role as OwnerRole } from '../enums/Role'
 

@@ -1,6 +1,6 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { Role } from '../enums/Role'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireOwnerMember } from '@owner/middlewares/RequireOwnerMember'

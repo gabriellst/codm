@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { AddBlock, AddBlockOutputSchema } from '../usecases/AddBlock'
 

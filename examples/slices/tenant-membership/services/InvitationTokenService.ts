@@ -1,7 +1,7 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { BaseError, Config, tryCatch } from '@template/core-typescript'
+import { BaseError, Config, tryCatch } from '@codedm/core-typescript'
 import type { ApplicationErrors } from '../errors'
 
 export interface InvitationTokenPayload {

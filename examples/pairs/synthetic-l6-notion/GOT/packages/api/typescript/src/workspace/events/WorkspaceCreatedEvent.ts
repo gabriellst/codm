@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 import { WorkspaceSchema } from '../entities/Workspace'
 
 export const WorkspaceCreatedEventSchema = z.domainEvent({

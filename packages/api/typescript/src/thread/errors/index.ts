@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 // Domain errors — Thread aggregate invariants (raised by entity methods).
 export type ThreadDomainErrors = 'NO_PROVIDER_SELECTED' | 'LAST_INVOKER' | 'PARTICIPANT_NOT_FOUND'

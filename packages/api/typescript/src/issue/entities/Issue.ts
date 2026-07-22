@@ -1,6 +1,6 @@
-import { AggregateRoot, BaseError, z } from '@template/core-typescript'
+import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
 import type Z from 'zod'
-import { IssueStatus, ProviderKind, IssueArchiveReason } from '@template/contracts-typescript/wire/enums'
+import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codedm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
 
 export const IssueSchema = z.object({

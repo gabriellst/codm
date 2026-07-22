@@ -1,4 +1,4 @@
-import { BaseIntegrationEvent, z } from '@template/core-typescript'
+import { BaseIntegrationEvent, z } from '@codedm/core-typescript'
 
 const OrderCreatedEventSchema = z.integrationEvent('integration.orderCreated', {
 	id: z.string(),

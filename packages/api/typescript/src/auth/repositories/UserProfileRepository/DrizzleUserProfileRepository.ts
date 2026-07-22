@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { userProfiles } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { userProfiles } from '@codedm/contracts/db'
 import { UserProfile } from '../../entities/UserProfile'
 import { UserProfileRepository } from './UserProfileRepository'
 

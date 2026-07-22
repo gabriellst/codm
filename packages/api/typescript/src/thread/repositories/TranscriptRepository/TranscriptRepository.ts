@@ -1,5 +1,5 @@
-import type { Transaction } from '@template/core-typescript'
-import type { TranscriptKind, ProviderKind, ClassificationMethod } from '@template/contracts-typescript/wire/enums'
+import type { Transaction } from '@codedm/core-typescript'
+import type { TranscriptKind, ProviderKind, ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
 
 export interface TranscriptEntryRow {
 	entryId: string

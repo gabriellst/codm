@@ -1,7 +1,7 @@
-import { BaseValueObject } from '@template/core-typescript'
-import { z } from '@template/core-typescript'
+import { BaseValueObject } from '@codedm/core-typescript'
+import { z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { CurrencyCode } from '@template/contracts-typescript/wire/enums'
+import { CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
 
 export const MoneySchema = z.object({
 	amountCents: z.number().int().nonnegative(),

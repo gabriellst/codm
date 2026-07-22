@@ -1,5 +1,5 @@
-import { Repository } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Repository } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { UserProfile } from '../../entities/UserProfile'
 
 export abstract class UserProfileRepository extends Repository<UserProfile> {

@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 const OrderCreatedEventSchema = z.domainEvent({
 	id: z.string(),

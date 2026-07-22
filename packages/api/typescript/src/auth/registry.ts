@@ -7,7 +7,7 @@ import {
 	RateLimitStore,
 	InMemoryRateLimitStore,
 	RedisRateLimitStore,
-} from '@template/core-typescript'
+} from '@codedm/core-typescript'
 import { UserRepository } from './repositories/UserRepository/UserRepository'
 import { DrizzleUserRepository } from './repositories/UserRepository/DrizzleUserRepository'
 import { MockUserRepository } from './repositories/UserRepository/MockUserRepository'

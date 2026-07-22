@@ -66,13 +66,13 @@ Edit `<context>/errors/index.ts`. The file does two things — declare the TYPE 
 
 ```ts
 // packages/api/typescript/src/billing/errors/index.ts
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
 import type {
   BaseDomainErrors,
   BaseApplicationErrors,
   BaseInterfaceErrors,
   BaseInfrastructureErrors,
-} from '@template/core-typescript'
+} from '@codedm/core-typescript'
 
 // ── Type unions used as BaseError<T> generics ──────────────────────────
 
@@ -115,7 +115,7 @@ TypeScript modules only execute on import. Type-only imports (`import type`) are
 ```ts
 // packages/api/typescript/src/billing/registry.ts
 import './errors' // Side-effect: registers this context's codes with the runtime registry.
-import type { InstanceRegistry } from '@template/core-typescript'
+import type { InstanceRegistry } from '@codedm/core-typescript'
 // ... DI bindings ...
 ```
 
@@ -140,7 +140,7 @@ Without this line, the codes never register and any throw of `INVOICE_NOT_FOUND`
 ### In Entities (Domain Errors)
 
 ```ts
-import { BaseError } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
 import type { DomainErrors } from '../errors'
 
 export class Invoice extends AggregateRoot {
@@ -156,7 +156,7 @@ export class Invoice extends AggregateRoot {
 ### In Use Cases (Application Errors)
 
 ```ts
-import { BaseError } from '@template/core-typescript'
+import { BaseError } from '@codedm/core-typescript'
 import type { ApplicationErrors } from '../errors'
 
 @injectable()

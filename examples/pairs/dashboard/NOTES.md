@@ -76,8 +76,8 @@ deliverable, not just the data-bound parts. Treat it as reusable frontend infra,
 ## 4. Do NOT copy on port
 
 - **Brand tokens & scope.** `--template-purple` / `--template-green`, the BK purple palette, `fill-template-purple/70`,
-  `bg-template-purple/15`, the "purple coin", and every `@template/client-typescript/typescript` /
-  `@template/core-typescript` import specifier are **brand**, not canon. On any port, rebrand the palette and
+  `bg-template-purple/15`, the "purple coin", and every `@codedm/client-typescript/typescript` /
+  `@codedm/core-typescript` import specifier are **brand**, not canon. On any port, rebrand the palette and
   swap the SDK scope to the target's (`@berzerk/*` downstream; the template's own scope). The **mechanism**
   (gradient utilities, `GradientIcon` currentColor trick, `satisfies keyof`) is the reusable part.
 - **i18n keys** (`pixelFunnel.*`, `dashboard.additionalCosts.*`) are product copy, not structure — don't lift

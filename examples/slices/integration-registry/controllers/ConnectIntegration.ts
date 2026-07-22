@@ -2,8 +2,8 @@
 // ORIGIN-FILE: packages/api/typescript/src/integration/controllers/ConnectIntegration.ts
 
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { ConnectionMode, Role, SalesPlatform, StoreIntegrationType } from '@template/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { ConnectionMode, Role, SalesPlatform, StoreIntegrationType } from '@codedm/contracts-typescript/wire/enums'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
 import { RequireStoreRole } from '@tenancy/middlewares/RequireStoreRole'

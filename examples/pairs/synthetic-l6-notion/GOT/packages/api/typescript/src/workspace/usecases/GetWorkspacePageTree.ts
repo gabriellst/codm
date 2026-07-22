@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, DrizzleClient } from '@template/core-typescript'
+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
 import Z from 'zod'
 import { eq } from 'drizzle-orm'
-import { pages } from '@template/contracts/db'
+import { pages } from '@codedm/contracts/db'
 
 export const GetWorkspacePageTreeInputSchema = z.object({
 	workspaceId: z.uuid(),

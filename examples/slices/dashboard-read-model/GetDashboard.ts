@@ -3,7 +3,7 @@
 
 import { injectable } from 'tsyringe-neo'
 import Z from 'zod'
-import { Handler, z } from '@template/core-typescript'
+import { Handler, z } from '@codedm/core-typescript'
 import {
 	ViewScope,
 	DashboardMode,
@@ -16,7 +16,7 @@ import {
 	PaymentStatus,
 	OperationalCostFlow,
 	OperationalCostRecurrency,
-} from '@template/contracts-typescript/wire/enums'
+} from '@codedm/contracts-typescript/wire/enums'
 import { NumberMetricSchema, MoneyMetricSchema, TallySchema } from '../../shared/schemas'
 import {
 	StatSchema,

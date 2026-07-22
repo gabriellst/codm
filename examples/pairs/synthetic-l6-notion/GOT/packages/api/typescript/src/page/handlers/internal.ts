@@ -4,9 +4,9 @@
 // `integration.shared.page.content_changed` integration event so browser SSE
 // clients can receive live updates for the workspace.
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { PageContentChangedEvent } from '@template/contracts-typescript/wire/events'
-import { PageChangeKind } from '@template/contracts-typescript/wire/enums'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { PageContentChangedEvent } from '@codedm/contracts-typescript/wire/events'
+import { PageChangeKind } from '@codedm/contracts-typescript/wire/enums'
 import { PageCreatedEvent, BlockAddedEvent, BlockEditedEvent } from '../events'
 
 @injectable()

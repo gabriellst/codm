@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@template/core-typescript'
-import { CardMovedEvent } from '@template/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { CardMovedEvent } from '@codedm/contracts-typescript/wire/events'
 import { CardMovedDomainEvent } from '../events/CardMovedDomainEvent'
 
 @injectable()

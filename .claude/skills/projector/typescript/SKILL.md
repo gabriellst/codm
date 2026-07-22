@@ -87,7 +87,7 @@ That's the whole base. Two abstract members, no dispatch shape prescribed.
 ```ts
 // packages/api/typescript/src/channel/projections/projectors/MessageProjector.ts
 import { injectable } from 'tsyringe-neo'
-import type { Transaction, Projector } from '@template/core-typescript'
+import type { Transaction, Projector } from '@codedm/core-typescript'
 import { MessageProjection, type MessageProjectionEvent } from '@channel/projections/Message'
 import { MessageProjectionRepository } from '@channel/projections/MessageProjectionRepository'
 
@@ -259,7 +259,7 @@ For every event in `<Name>ProjectionEvent`, pick Creation / canonical Path A / a
 ```ts
 // packages/api/typescript/src/<ctx>/projections/projectors/<Name>Projector.ts  (or ui/...)
 import { injectable } from 'tsyringe-neo'
-import type { Transaction, Projector } from '@template/core-typescript'
+import type { Transaction, Projector } from '@codedm/core-typescript'
 import { <Name>Projection, type <Name>ProjectionEvent } from '../<Name>'
 import { <Name>ProjectionRepository } from '../<Name>ProjectionRepository'
 

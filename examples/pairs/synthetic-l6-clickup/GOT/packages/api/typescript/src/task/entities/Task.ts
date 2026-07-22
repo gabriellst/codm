@@ -1,6 +1,6 @@
-import { AggregateRoot, BaseError, z } from '@template/core-typescript'
+import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { TaskStatus, TaskPriority } from '@template/contracts-typescript/wire/enums'
+import { TaskStatus, TaskPriority } from '@codedm/contracts-typescript/wire/enums'
 import { TaskCreatedEvent, TaskStatusChangedEvent, TaskAssignedEvent, TaskMovedEvent } from '../events'
 import type { DomainErrors } from '../errors'
 

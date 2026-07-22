@@ -33,7 +33,7 @@ import {
 	HttpRouter,
 	Middleware,
 	Router,
-} from '@template/core-typescript'
+} from '@codedm/core-typescript'
 
 // Composition root — all context routers wired + checked against the manifest. Importing this
 // pulls in every context's side-effect module (starting with @shared/index, which creates the

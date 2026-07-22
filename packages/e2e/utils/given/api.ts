@@ -1,5 +1,5 @@
 import type { BrowserContext } from 'playwright'
-import { createClient, type RequestConfig, type ResponseConfig } from '@template/client-typescript/http'
+import { createClient, type RequestConfig, type ResponseConfig } from '@codedm/client-typescript/http'
 
 const API_BASE_URL = process.env.API_URL ?? 'http://localhost:3030'
 const baseClient = createClient('typescript')

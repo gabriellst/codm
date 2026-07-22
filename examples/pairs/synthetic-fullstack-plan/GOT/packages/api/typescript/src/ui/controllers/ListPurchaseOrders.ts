@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
-import { PurchaseOrderStatus } from '@template/contracts-typescript/wire/enums'
+import { PurchaseOrderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { ListPurchaseOrders, ListPurchaseOrdersOutputSchema } from '../usecases/ListPurchaseOrders'
 
 export const ListPurchaseOrdersControllerInputSchema = z.object({

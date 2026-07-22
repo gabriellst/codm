@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 /**
  * Context-private fact: a terminal session finished cleanly. The internal bridge maps it to the

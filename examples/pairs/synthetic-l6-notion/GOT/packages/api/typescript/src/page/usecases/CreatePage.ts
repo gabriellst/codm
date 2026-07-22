@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, type Transaction } from '@template/core-typescript'
+import { Handler, z, type Transaction } from '@codedm/core-typescript'
 
 import { Page } from '../entities/Page'
 import { PageRepository } from '../repositories/PageRepository'

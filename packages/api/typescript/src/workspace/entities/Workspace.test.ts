@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@template/core-typescript'
-import { WorkspaceBadge } from '@template/contracts-typescript/wire/enums'
+import { BaseError } from '@codedm/core-typescript'
+import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
 import { Workspace } from './Workspace'
 
 const ownerId = '00000000-0000-4000-8000-000000000001'

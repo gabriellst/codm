@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient } from '@template/core-typescript'
-import { consumedMessages } from '@template/contracts/db'
+import { DrizzleClient } from '@codedm/core-typescript'
+import { consumedMessages } from '@codedm/contracts/db'
 import { ConsumedMessageRepository, type ConsumeInput } from './ConsumedMessageRepository'
 
 @injectable()

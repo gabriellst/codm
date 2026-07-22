@@ -223,7 +223,7 @@ Before code:
 
 ```ts
 // packages/api/typescript/src/<ctx>/projections/<Name>.ts  (or ui/projections/<Name>.ts)
-import { z } from '@template/core-typescript'
+import { z } from '@codedm/core-typescript'
 
 export const MessageProjectionSchema = z.object({
   channelId: z.string(),
@@ -326,7 +326,7 @@ Three canonical methods + any atomic ops the workload justifies. See "Repository
 ### Step 6 — Register in `<ctx>/registry.ts`
 
 ```ts
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { MessageProjectionRepository, DrizzleMessageProjectionRepository, MockMessageProjectionRepository } from './projections/MessageProjectionRepository'
 
 // One declaration per token — `integration` omitted mirrors `real`.

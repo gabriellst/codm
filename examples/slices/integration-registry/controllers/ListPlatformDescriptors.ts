@@ -2,7 +2,7 @@
 // ORIGIN-FILE: packages/api/typescript/src/integration/controllers/ListPlatformDescriptors.ts
 
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { type PlatformDescription, PlatformRegistrySchema } from '@integration/services'
 
 export const ListPlatformDescriptorsControllerInputSchema = z.object({})

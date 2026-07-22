@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
-import { TaskStatus, TaskPriority } from '@template/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { TaskStatus, TaskPriority } from '@codedm/contracts-typescript/wire/enums'
 
 export const TaskCreatedEventSchema = z.domainEvent({
 	taskId: z.uuid(),

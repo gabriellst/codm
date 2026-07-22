@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { owners } from '@template/contracts/db'
-import type { OwnerKind } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { owners } from '@codedm/contracts/db'
+import type { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 import { Owner, OwnerSchema } from '../../entities/Owner'
 import { OwnerRepository } from './OwnerRepository'
 

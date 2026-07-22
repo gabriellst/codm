@@ -1,4 +1,4 @@
-import type { Transaction } from '@template/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { PageViewProjection, type PageViewProjectionProps } from '../PageView'
 import { PageViewProjectionRepository } from './PageViewProjectionRepository'
 

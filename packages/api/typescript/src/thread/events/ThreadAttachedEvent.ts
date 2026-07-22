@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
-import { ContactKind, ProviderKind } from '@template/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { ContactKind, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 
 /** Context-private fact: a conversation was bound to a workspace + providers. The internal bridge
  *  maps it to the frozen `integration.thread.attached` (BC4 → BC5 warms workspace indexing). */

@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, MimeTypes, z, SSE_CONNECTED_FRAME, createSSEResponse, encodeSSEFrame } from '@template/core-typescript'
+import { Controller, MimeTypes, z, SSE_CONNECTED_FRAME, createSSEResponse, encodeSSEFrame } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { TerminalSessionRegistry, type TerminalStreamWriter } from '../services/TerminalSessionRegistry'
 

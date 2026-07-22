@@ -1,6 +1,6 @@
 import Z from 'zod'
-import { AggregateRoot, BaseError, z } from '@template/core-typescript'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 import { BlockSchema, findBlock, isContainer, type BlockProps } from '../objects/Block'
 import type { PageDomainErrors } from '../errors'
 

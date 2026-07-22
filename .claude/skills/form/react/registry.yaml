@@ -12,7 +12,7 @@ registry:
     - id: FRM-01
       name: "SDK schema as validation base"
       when: always
-      rule: "import { xMutationRequestSchema } from '@template/client-typescript/typescript'"
+      rule: "import { xMutationRequestSchema } from '@codedm/client-typescript/typescript'"
       wrong: "redefining validation rules already in SDK"
     - id: FRM-02
       name: "useForm with validators"
@@ -933,7 +933,7 @@ registry:
         const formSchema = z.object({ name: z.string(), price: z.number() }) // duplicates SDK
         const form = useForm({ validators: { onChange: formSchema } })
       right: |
-        import { createProductMutationRequestSchema } from '@template/client-typescript/typescript'
+        import { createProductMutationRequestSchema } from '@codedm/client-typescript/typescript'
         const form = useForm({ validators: { onChange: createProductMutationRequestSchema } })
       refs: [A1-dossier]
       mechanical: true

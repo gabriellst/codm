@@ -119,7 +119,7 @@ export function computeDocTreeHash(root = MAIN_REPO): string {
 // (which only walks ancestor dirs) finds no node_modules at all — `bun x tsc` would
 // auto-install a bare typescript and every package import would fail to resolve.
 // Fix: mirror each installed node_modules dir of the main repo into the tree as
-// per-entry symlinks. Workspace-package links (node_modules/@template/* → packages/*)
+// per-entry symlinks. Workspace-package links (node_modules/@codedm/* → packages/*)
 // are re-pointed at the GRADED TREE's own copy when present, so cross-package types
 // (committed SDK + contracts bindings) come from the ref under grade, never from the
 // main checkout's current HEAD.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@template/core-typescript'
-import { ProviderKind, ContactKind } from '@template/contracts-typescript/wire/enums'
+import { BaseError } from '@codedm/core-typescript'
+import { ProviderKind, ContactKind } from '@codedm/contracts-typescript/wire/enums'
 import { Thread } from './Thread'
 
 const base = {

@@ -22,7 +22,7 @@ The CLI produces a **typed skeleton** that the agent or developer wires up. Gene
 ## 2. House rules (every generated file follows)
 
 1. **CVA + `cn()`.** Components emit a `cva()` declaration with `variants`/`defaultVariants` and use `cn(<name>Variants({...}), className)`. Imports: `cn` from `@/lib/utils`, `cva` + `VariantProps` from `class-variance-authority`.
-2. **Typed SDK references.** Types and hooks are imported from `'@template/client-typescript/typescript'` by name. Form schemas reference SDK Zod request schemas via `.pick()` / `.shape`. No `any`, no `as unknown as`.
+2. **Typed SDK references.** Types and hooks are imported from `'@codedm/client-typescript/typescript'` by name. Form schemas reference SDK Zod request schemas via `.pick()` / `.shape`. No `any`, no `as unknown as`.
 3. **i18n is mandatory for every user-facing string.** Headings, FieldLabels, placeholders, button text, dialog title/description/footer, empty-state messages, toasts, `aria-label` on container regions, `title` tooltips, route breadcrumbs — all use `t('<prefix>.<slot>')` (or `i18n.t(...)` outside React components). The CLI **refuses to generate** when a template would emit visible text without `--i18n=<prefix>`.
 4. **Compose SDK schemas with `.and()`**, never `.extend()` (which would overwrite SDK constraints like `.default()`, `.refine()`, `.max()`).
 5. **Canonical route wiring**: `validateSearch: zodValidator(<schema>)`, `errorComponent: RouteError`, `staticData.breadcrumb: i18n.t('nav.<key>')`, `export const Route = createFileRoute(...)({...})`.

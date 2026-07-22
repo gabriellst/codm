@@ -16,7 +16,7 @@ It is not an empty scaffold: single-`ownerId` tenancy (**owner** context), **bil
 | `packages/app/astro` | Astro 5 · MDX · Tailwind 4 | Landing pages + blog + SEO (served at `/`) |
 | `packages/app/expo` | React Native · Expo Router · Uniwind | Native mobile (iOS + Android) |
 | `packages/app/styles` | CSS design tokens | Shared tokens for `app-react` + `app-astro` |
-| `packages/client` | Kubb / oapi-codegen | Generated SDKs; TS output committed at `packages/client/dist/typescript` (`@template/client-typescript`) |
+| `packages/client` | Kubb / oapi-codegen | Generated SDKs; TS output committed at `packages/client/dist/typescript` (`@codedm/client-typescript`) |
 | `packages/e2e` | Playwright | 5 canonical cross-stack flows (`packages/e2e/tests/README.md`) |
 
 Build is orchestrated by **Nx** for TS targets + **Go modules** for Go. Both backends share a **single Postgres** (Drizzle owns migrations) and talk to each other through a **transactional outbox + Redis streams `ExternalMediator`** — no Kafka.

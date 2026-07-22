@@ -1,5 +1,5 @@
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
-import type { InstanceRegistry } from '@template/core-typescript'
+import type { InstanceRegistry } from '@codedm/core-typescript'
 import { TaskRepository } from './repositories/TaskRepository/TaskRepository'
 import { DrizzleTaskRepository } from './repositories/TaskRepository/DrizzleTaskRepository'
 import { MockTaskRepository } from './repositories/TaskRepository/MockTaskRepository'

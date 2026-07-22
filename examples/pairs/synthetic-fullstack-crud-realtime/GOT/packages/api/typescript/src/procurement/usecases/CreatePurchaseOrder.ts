@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, type Transaction } from '@template/core-typescript'
+import { Handler, z, type Transaction } from '@codedm/core-typescript'
 import { MoneySchema } from '../../shared/objects'
 import { PurchaseOrder } from '../entities/PurchaseOrder'
 import { PurchaseOrderRepository } from '../repositories/PurchaseOrderRepository'

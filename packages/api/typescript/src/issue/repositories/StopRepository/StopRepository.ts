@@ -1,5 +1,5 @@
-import type { Transaction } from '@template/core-typescript'
-import type { StopKind, StopResolution } from '@template/contracts-typescript/wire/enums'
+import type { Transaction } from '@codedm/core-typescript'
+import type { StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
 
 export interface StopRow {
 	stopId: string

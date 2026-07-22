@@ -1,5 +1,5 @@
 import Z from 'zod'
-import { AggregateRoot, Id, z } from '@template/core-typescript'
+import { AggregateRoot, Id, z } from '@codedm/core-typescript'
 
 export const WorkspaceSchema = z.object({
 	name: z.string().min(1),

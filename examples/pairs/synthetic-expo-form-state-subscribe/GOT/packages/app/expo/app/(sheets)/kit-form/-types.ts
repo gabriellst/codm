@@ -21,7 +21,7 @@ import { useForm } from '@tanstack/react-form'
 import {
 	createKitMutationRequestSchema,
 	quantityModifierSchema,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib/types'
 
 /**

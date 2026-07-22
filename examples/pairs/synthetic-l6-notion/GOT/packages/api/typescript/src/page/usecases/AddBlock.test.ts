@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { BlockType } from '@template/contracts-typescript/wire/enums'
+import { BlockType } from '@codedm/contracts-typescript/wire/enums'
 import { CreatePage } from './CreatePage'
 import { AddBlock } from './AddBlock'
 import { EditBlock } from './EditBlock'

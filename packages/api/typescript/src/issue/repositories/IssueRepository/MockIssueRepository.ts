@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { IssueStatus } from '@template/contracts-typescript/wire/enums'
+import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
 import { Issue } from '../../entities/Issue'
 import { IssueRepository } from './IssueRepository'
 

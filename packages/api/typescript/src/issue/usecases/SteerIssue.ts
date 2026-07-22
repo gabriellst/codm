@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError, Id } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Handler, z, BaseError, Id } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { IssueRepository } from '../repositories/IssueRepository'
 import { TerminalLineRepository } from '../repositories/TerminalLineRepository'
 import type { ApplicationErrors } from '../errors'

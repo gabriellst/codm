@@ -51,8 +51,8 @@ Create `<context>/repositories/<Entity>Repository.ts`:
 
 ```typescript
 // customer/repositories/CustomerRepository.ts
-import { Repository } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Repository } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { Customer } from '../entities'
 
 // Abstract class extending base Repository
@@ -72,10 +72,10 @@ Create `<context>/repositories/Drizzle<Entity>Repository.ts`:
 // customer/repositories/DrizzleCustomerRepository.ts
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
 import { CustomerRepository } from './CustomerRepository'
 import { Customer } from '../entities'
-import { customerTable } from '@template/contracts/db'
+import { customerTable } from '@codedm/contracts/db'
 
 @injectable()
 export class DrizzleCustomerRepository extends CustomerRepository {
@@ -223,7 +223,7 @@ For context-scoped repositories, register those bindings in `packages/api/typesc
 
 ```typescript
 // packages/api/typescript/src/<context>/registry.ts
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { CustomerRepository, MockCustomerRepository, DrizzleCustomerRepository } from '../repositories'
 
 // One declaration per repo token — `integration` omitted mirrors `real`; `null` = declared absence.
@@ -264,7 +264,7 @@ Both find and mutation methods accept an optional transaction parameter. This is
 
 ```typescript
 // PORT (abstract class) — uses Transaction (infra-agnostic)
-// import type { Transaction } from '@template/core-typescript'
+// import type { Transaction } from '@codedm/core-typescript'
 abstract findById(id: string, tx?: Transaction): Promise<Customer | undefined>
 
 // DRIZZLE IMPL — narrows tx to DrizzleClient (the sanctioned override)
@@ -431,8 +431,8 @@ The database can have many-to-many relationships via junction tables, but in cod
 
 ```typescript
 // customer/repositories/CustomerRepository.ts
-import { Repository } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Repository } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { Customer } from '../entities'
 
 export abstract class CustomerRepository extends Repository<Customer> {
@@ -449,7 +449,7 @@ When the repository serves a **Projection** (read-model) instead of an aggregate
 |---|---|---|
 | File | `<ctx>/repositories/<Name>Repository.ts` | `<ctx>/projections/<Name>ProjectionRepository.ts` |
 | Persists | An `AggregateRoot` rehydrated from the table | A free-record projection (plain class, no base class) |
-| Shared base | Extends `Repository<T>` from `@template/core-typescript` | **No shared base** — each repo declares its own surface |
+| Shared base | Extends `Repository<T>` from `@codedm/core-typescript` | **No shared base** — each repo declares its own surface |
 | Canonical methods (mandatory) | `findById`, `save`, `delete` | **`findByKey`** (or named finder), **`save`**, **`insertIfNew`** — enough for the canonical `find → applyEvent → save` flow + replay-safe creation |
 | Atomic ops | Generally no — aggregates persist as a whole entity | **Edge cases only.** Added when a canonical-flow trigger fails: hot row contention, bulk over N rows, monotonic constraint, conditional update, cache-mirror upsert. Each atomic method carries a comment naming the trigger that justifies it. |
 
@@ -459,8 +459,8 @@ See `/projection` for the full Projection + ProjectionRepository pairing pattern
 
 ## References
 
-- `@template/core-typescript` - Repository, DrizzleClient, Transaction, tryCatchAsync
-- `@template/contracts/db` - Drizzle table schemas
+- `@codedm/core-typescript` - Repository, DrizzleClient, Transaction, tryCatchAsync
+- `@codedm/contracts/db` - Drizzle table schemas
 - `docs/BACKEND.md` - Architecture principles (why)
 - `/entity` skill - For creating entities to persist
 - `/migrate` skill - For creating database tables

@@ -255,7 +255,7 @@ registry:
       name: "Compose SDK schema with frontend-only fields via .merge()"
       when: "screen needs query params that combine SDK + UI fields"
       rule: |
-        import { listWorkoutsQueryParamsSchema } from '@template/client-typescript/typescript'
+        import { listWorkoutsQueryParamsSchema } from '@codedm/client-typescript/typescript'
         const schema = listWorkoutsQueryParamsSchema.merge(
           z.object({ selectedId: z.string().optional().default('') }),
         )
@@ -263,7 +263,7 @@ registry:
   canonical_snippet: |
     // packages/app/expo/app/(tabs)/<tab>/index.tsx
     import { ScrollView, View } from 'react-native'
-    import { useGetSomething } from '@template/client-typescript/typescript'
+    import { useGetSomething } from '@codedm/client-typescript/typescript'
     import { ScreenError } from '@/components/ui/ScreenError'
     import { SomeFilters } from './-components/SomeFilters'
     import { SomeList } from './-components/SomeList'
@@ -376,7 +376,7 @@ registry:
         const QUERY_KEY = ['workouts', period]
         const { data } = useQuery({ queryKey: QUERY_KEY, ... })
       right: |
-        import { useListWorkouts } from '@template/client-typescript/typescript'
+        import { useListWorkouts } from '@codedm/client-typescript/typescript'
         const { data } = useListWorkouts({ params: { period } })
       mechanical: true
       detect:

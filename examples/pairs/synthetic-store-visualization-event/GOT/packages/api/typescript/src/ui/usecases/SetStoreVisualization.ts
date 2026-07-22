@@ -7,8 +7,8 @@
 // source:      packages/api/typescript/src/ui/usecases/SetStoreVisualization.ts (archived eval build, applied at HEAD)
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Handler, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { StoreVisualization } from '@ui/entities'
 import { DashboardMode } from '@ui/enums'
 import { StoreVisualizationUpdatedEvent } from '../events'

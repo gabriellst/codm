@@ -1,7 +1,7 @@
 // Thread given helper — sets up a Thread via the repository directly (never the use case).
 import type { TestBed } from '../TestBed'
-import { Id } from '@template/core-typescript'
-import { ProviderKind, ContactKind, BufferSize } from '@template/contracts-typescript/wire/enums'
+import { Id } from '@codedm/core-typescript'
+import { ProviderKind, ContactKind, BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { Thread } from '@thread/entities/Thread'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'

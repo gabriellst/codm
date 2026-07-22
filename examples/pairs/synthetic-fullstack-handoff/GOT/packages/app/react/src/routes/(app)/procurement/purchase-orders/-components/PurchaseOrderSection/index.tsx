@@ -12,7 +12,7 @@ import {
 	PurchaseOrderStatusEnum,
 	type PurchaseOrderStatus,
 	type ListPurchaseOrdersQueryResponse,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import { DataTable, DataTableContent, DataTableSearch, DataTablePagination, type ColumnDef } from '@/components/DataTable'
 import { Badge } from '@/components/ui/badge'

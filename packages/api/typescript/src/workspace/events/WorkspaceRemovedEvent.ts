@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 /**
  * Context-private fact: a workspace was removed. The internal bridge maps it to the frozen

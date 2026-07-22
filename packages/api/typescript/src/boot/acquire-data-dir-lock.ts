@@ -15,7 +15,7 @@
  *
  * Skipped under EMIT_OPENAPI (codegen never boots the real daemon and binds the in-memory driver).
  */
-import { Config, acquireDataDirLock, resolveDataDir } from '@template/core-typescript'
+import { Config, acquireDataDirLock, resolveDataDir } from '@codedm/core-typescript'
 
 if (process.env.EMIT_OPENAPI !== 'true') {
 	acquireDataDirLock(resolveDataDir(Config.env.CODEDM_DATA_DIR))

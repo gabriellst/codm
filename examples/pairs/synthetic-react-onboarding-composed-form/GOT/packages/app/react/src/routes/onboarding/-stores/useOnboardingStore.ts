@@ -7,7 +7,7 @@
 // source:      packages/app/react/src/routes/onboarding/-stores/useOnboardingStore.ts (archived eval build, applied at HEAD)
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import { create } from 'zustand'
-import type { ConnectionMode, IntegrationPlatform } from '@template/client-typescript/typescript'
+import type { ConnectionMode, IntegrationPlatform } from '@codedm/client-typescript/typescript'
 
 // The connect union only carries CREDENTIALS/MANUAL members — OAUTH is a valid ConnectionMode
 // elsewhere in the product, but the ConnectionModeStep never offers it here (unionVariantValues

@@ -52,12 +52,12 @@ bad_practices:
   - id: BP-AR-005
     severity: medium
     when: always
-    summary: Importing React component from `@template/app-react`.
+    summary: Importing React component from `@codedm/app-react`.
     why: Each app workspace is independent. If you need a complex interactive piece, link to `/app/...` and let the react app handle it; for small interactivity inline the React island in `astro/src/components/`.
     fix: Local React island in `packages/app/astro/src/components/` or external link to `/${locale}/app`.
     mechanical: true
     detect:
-      - '@template/app-react'
+      - '@codedm/app-react'
 
   - id: BP-AR-006
     severity: medium

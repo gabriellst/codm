@@ -18,7 +18,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenStore, testId } from '@test/support'
-import { DomainEventRepository } from '@template/core-typescript'
+import { DomainEventRepository } from '@codedm/core-typescript'
 import { Coupon } from '../entities/Coupon'
 import { CouponStatus, CouponType } from '../enums'
 import { CouponCreatedEvent, CouponDeactivatedEvent } from '../events'

@@ -19,7 +19,7 @@ import {
 	IntegrationPlatformEnum,
 	useConnectIntegration,
 	type ConnectionMode,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { pickUnionVariant } from '@/lib/union'
 import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'

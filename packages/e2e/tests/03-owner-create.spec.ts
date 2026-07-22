@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test'
 import { test } from '../utils/test'
-import { createOwner, setActiveOwner, getUserInfo } from '@template/client-typescript/typescript'
+import { createOwner, setActiveOwner, getUserInfo } from '@codedm/client-typescript/typescript'
 
 /**
  * Canonical flow 3 — owner (tenant) lifecycle over the single ownerId axis.

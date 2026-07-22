@@ -23,7 +23,7 @@ import {
 	HttpRouter,
 	Middleware,
 	Router,
-} from '@template/core-typescript'
+} from '@codedm/core-typescript'
 
 // Root context — side-effect import: creates root BoundedContext, applies ALL_REGISTRIES,
 // starts outbox/redis, registers external handlers. Must come before child context imports.

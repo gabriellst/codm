@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { WorkspaceBadge } from '@template/contracts-typescript/wire/enums'
+import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
 import { WorkspaceDetector, type WorkspaceInspection } from './WorkspaceDetector'
 
 /**

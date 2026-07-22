@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { purchaseOrders } from '@template/contracts/db'
-import { PurchaseOrderStatus } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { purchaseOrders } from '@codedm/contracts/db'
+import { PurchaseOrderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { PurchaseOrder, PurchaseOrderSchema } from '../../entities/PurchaseOrder'
 import { PurchaseOrderRepository } from './PurchaseOrderRepository'
 

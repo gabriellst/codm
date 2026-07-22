@@ -69,7 +69,7 @@ the finished string.
 
 ```ts
 // ✅
-import type { Money } from '@template/client-typescript/typescript'
+import type { Money } from '@codedm/client-typescript/typescript'
 
 // ❌ @/lib/format does NOT re-export Money
 import type { Money } from '@/lib/format'

@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@template/core-typescript'
+import { BaseDomainEvent, z } from '@codedm/core-typescript'
 
 export const PasswordResetEventSchema = z.domainEvent({
 	userId: z.uuid(),

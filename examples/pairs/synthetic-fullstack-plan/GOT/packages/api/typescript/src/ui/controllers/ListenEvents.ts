@@ -7,8 +7,8 @@ import {
 	SSE_CONNECTED_FRAME,
 	createSSEResponse,
 	encodeSSEFrame,
-} from '@template/core-typescript'
-import { BaseIntegrationEvent } from '@template/core-typescript'
+} from '@codedm/core-typescript'
+import { BaseIntegrationEvent } from '@codedm/core-typescript'
 import {
 	CampaignProductBindingCreatedEvent,
 	CampaignProductBindingRemovedEvent,
@@ -30,7 +30,7 @@ import {
 	WarrantyReserveDeletedEvent,
 	WarrantyReserveUpdatedEvent,
 	PurchaseOrderRecordedEvent,
-} from '@template/contracts-typescript/wire/events'
+} from '@codedm/contracts-typescript/wire/events'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
 

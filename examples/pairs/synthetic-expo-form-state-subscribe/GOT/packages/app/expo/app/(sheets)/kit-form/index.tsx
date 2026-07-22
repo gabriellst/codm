@@ -22,7 +22,7 @@ import {
 	ProductCostTypeEnum,
 	type ProductCostType,
 	type ListProductsForKit200,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { Protected } from '@/components/Protected'
 import { KeyboardAware } from '@/components/ui/KeyboardAware'
 import { Input, InputGroup } from '@/components/ui/Input'

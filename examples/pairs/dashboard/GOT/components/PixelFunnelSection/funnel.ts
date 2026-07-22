@@ -6,7 +6,7 @@
 // role:    Pure funnel math — curated 5-stage subset, log attenuation, buildStageRows
 // Verbatim copy kept as corpus reference — NOT a live module. Do not import it.
 // ─────────────────────────────────────────────────────────────────────────────
-import type { GetPixelFunnelQueryResponse } from '@template/client-typescript/typescript'
+import type { GetPixelFunnelQueryResponse } from '@codedm/client-typescript/typescript'
 
 /** All keys of the funnel response's `steps` map (the 8 PixelEventType names). */
 type PixelStepKey = keyof GetPixelFunnelQueryResponse['steps']

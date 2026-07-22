@@ -16,7 +16,7 @@
  *
  * ref: medscall@0d0fa480 (single router composition root, checked against the manifest)
  */
-import type { Router } from '@template/core-typescript'
+import type { Router } from '@codedm/core-typescript'
 import type { ContextModule } from '@shared/contexts'
 
 // Import each context Router — order matters: @shared boots first (DI side effects: applies

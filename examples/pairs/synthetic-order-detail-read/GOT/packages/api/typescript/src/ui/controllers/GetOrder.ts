@@ -7,10 +7,10 @@
 // source:      packages/api/typescript/src/ui/controllers/GetOrder.ts (archived eval build, applied at HEAD)
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@template/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 import { RequireOwner } from '@owner/middlewares'
-import { CurrencyCode, OrderStatus } from '@template/contracts-typescript/wire/enums'
+import { CurrencyCode, OrderStatus } from '@codedm/contracts-typescript/wire/enums'
 
 import { GetOrder, GetOrderOutputSchema } from '../usecases/GetOrder'
 

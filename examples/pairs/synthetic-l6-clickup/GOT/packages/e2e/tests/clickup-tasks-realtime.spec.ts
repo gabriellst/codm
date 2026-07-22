@@ -8,7 +8,7 @@ import {
 	changeTaskStatus,
 	TaskStatusEnum,
 	TaskPriorityEnum,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 /**
  * TC-01: Kanban Board SSE realtime — task moves column without page reload

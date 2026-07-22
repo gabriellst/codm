@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
 	getListViewQueryKey,
 	getBoardViewQueryKey,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 
 import { Button } from '@/components/ui/button'
 import { useServerEvents } from '@/hooks'

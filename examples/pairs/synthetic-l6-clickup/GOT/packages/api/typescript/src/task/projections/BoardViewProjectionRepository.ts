@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
-import { clickupBoardView } from '@template/contracts/db'
-import { TaskStatus, TaskPriority } from '@template/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
+import { clickupBoardView } from '@codedm/contracts/db'
+import { TaskStatus, TaskPriority } from '@codedm/contracts-typescript/wire/enums'
 import { BoardViewProjection, type BoardViewProjectionProps } from './BoardViewProjection'
 
 // ---------------------------------------------------------------------------

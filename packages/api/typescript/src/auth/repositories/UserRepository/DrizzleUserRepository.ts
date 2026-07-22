@@ -1,10 +1,10 @@
 // Recipe: dev:packages/api/src/auth/repositories/UserRepository/DrizzleUserRepository.ts
-// Adapted: uses @template/contracts/db schema; auth.users has no version column so
+// Adapted: uses @codedm/contracts/db schema; auth.users has no version column so
 // uses a plain upsert (no optimistic lock needed — better-auth owns this table).
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { users } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { users } from '@codedm/contracts/db'
 import { User } from '../../entities'
 import { UserRepository } from './UserRepository'
 

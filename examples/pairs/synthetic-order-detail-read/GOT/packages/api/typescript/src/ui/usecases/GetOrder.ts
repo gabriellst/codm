@@ -8,9 +8,9 @@
 // Verbatim extract of the archived eval build — NOT a live module. Do not import it.
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { BaseError, DrizzleClient, Handler, z } from '@template/core-typescript'
-import { CurrencyCode, OrderStatus } from '@template/contracts-typescript/wire/enums'
-import { orders } from '@template/contracts/db'
+import { BaseError, DrizzleClient, Handler, z } from '@codedm/core-typescript'
+import { CurrencyCode, OrderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { orders } from '@codedm/contracts/db'
 
 import type { ApplicationErrors } from '../errors'
 

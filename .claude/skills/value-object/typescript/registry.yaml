@@ -462,7 +462,7 @@ registry:
         For VOs in the shared context, the cast should be `as BaseDomainErrors`.
         For VOs in a domain context (catalog, subscription, customer, etc.), the cast should be
         `as DomainErrors` imported from the context's errors file, or `as BaseDomainErrors`
-        from @template/core-typescript.
+        from @codedm/core-typescript.
       wrong: |
         // Error code is an untyped string — not checked against DomainErrors union
         export const AddressSchema = z.object({
@@ -477,7 +477,7 @@ registry:
           city: z.string().min(1, { error: 'INVALID_ADDRESS' as DomainErrors }),
         })
         // For VOs in the shared context, use BaseDomainErrors instead:
-        import type { BaseDomainErrors } from '@template/core-typescript'
+        import type { BaseDomainErrors } from '@codedm/core-typescript'
         export const PhoneSchema = z.string().refine(v => v.length >= 8, {
           error: 'INVALID_PHONE' as BaseDomainErrors,
         })
@@ -487,7 +487,7 @@ registry:
 
   snippet:
     skeleton: |
-      import { BaseValueObject, z } from '@template/core-typescript'
+      import { BaseValueObject, z } from '@codedm/core-typescript'
       import Z from 'zod'
       import { DomainErrors } from '../errors'
 
@@ -511,7 +511,7 @@ registry:
       export type {{Name}}Props = Z.input<typeof {{Name}}Schema>
     skeletons:
       primitive: |
-        import { BasePrimitiveValueObject, z } from '@template/core-typescript'
+        import { BasePrimitiveValueObject, z } from '@codedm/core-typescript'
         import { DomainErrors } from '../errors'
 
         export const {{Name}}Schema = z
@@ -531,7 +531,7 @@ registry:
         	}
         }
     exemplar: |
-      import { BasePrimitiveValueObject, BaseValueObject, BaseDomainErrors, z } from '@template/core-typescript'
+      import { BasePrimitiveValueObject, BaseValueObject, BaseDomainErrors, z } from '@codedm/core-typescript'
       import Z from 'zod'
       // Primitive VO
       export const EmailSchema = z

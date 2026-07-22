@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Projector } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { Projector } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { TaskCreatedEvent } from '@task/events/TaskCreatedEvent'
 import { TaskStatusChangedEvent } from '@task/events/TaskStatusChangedEvent'
 import { TaskAssignedEvent } from '@task/events/TaskAssignedEvent'

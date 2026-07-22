@@ -1,6 +1,6 @@
-# OpenAPI compliance contract — @template/client
+# OpenAPI compliance contract — @codedm/client
 
-Specs consumed by `@template/client` MUST conform to the rules below.
+Specs consumed by `@codedm/client` MUST conform to the rules below.
 Non-compliance is rejected by `lib/preprocess.ts` with an error naming
 the violated rule.
 

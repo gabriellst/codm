@@ -1,9 +1,9 @@
 // CONTEXT-ORIGIN: template@feat/template-polyglot (2026-07-01) — Tier-3 exemplar, not live code
 // ORIGIN-FILE: packages/api/typescript/src/ui/entities/StoreVisualization.ts
 
-import { AggregateRoot, Id, z } from '@template/core-typescript'
+import { AggregateRoot, Id, z } from '@codedm/core-typescript'
 import Z from 'zod'
-import { DashboardMode } from '@template/contracts-typescript/wire/enums'
+import { DashboardMode } from '@codedm/contracts-typescript/wire/enums'
 
 export const StoreVisualizationSchema = z.object({
 	storeId: z.instance(Id),

@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Id } from '@template/core-typescript'
+import { Id } from '@codedm/core-typescript'
 import { TranscriptRepository, type AppendTranscriptInput, type TranscriptEntryRow } from './TranscriptRepository'
 
 @injectable()

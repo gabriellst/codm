@@ -41,7 +41,7 @@ prompt: >
   PurchaseOrderCancelledEvent saved in the SAME transaction via domainEventRepository);
   an internal handler (handlers/internal.ts) that reacts to both domain events and
   publishes the integration event built from the contracts binding (PurchaseOrderRecordedEvent
-  from @template/contracts-typescript/wire/events) via the external mediator;
+  from @codedm/contracts-typescript/wire/events) via the external mediator;
   PurchaseOrderRepository (interface + Drizzle + Mock) wired for all three environments;
   controllers POST /purchase-orders and POST /purchase-orders/:id/cancel (wire path
   /v1/procurement/..., AuthAccountMiddleware + RequireStoreMember, ctx envelope, body
@@ -150,7 +150,7 @@ graders:
     spec: "packages/api/typescript/src/procurement/handlers/internal.ts::PurchaseOrderRecordedEvent"
     id: handler#publishes-integration
   - kind: grep-must
-    spec: "packages/api/typescript/src/procurement/handlers/internal.ts::@template/contracts-typescript"
+    spec: "packages/api/typescript/src/procurement/handlers/internal.ts::@codedm/contracts-typescript"
     id: handler#contracts-binding
   - kind: grep-must
     spec: "packages/api/typescript/src/procurement/registry.ts::PurchaseOrderRepository"

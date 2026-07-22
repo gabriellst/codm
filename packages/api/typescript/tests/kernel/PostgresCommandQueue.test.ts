@@ -6,8 +6,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
-import { DrizzleClient, MockLoggingService, PostgresCommandQueue, type Handler } from '@template/core-typescript'
-import { scheduledCommands } from '@template/contracts/db'
+import { DrizzleClient, MockLoggingService, PostgresCommandQueue, type Handler } from '@codedm/core-typescript'
+import { scheduledCommands } from '@codedm/contracts/db'
 
 describe('PostgresCommandQueue (integration)', () => {
 	let testBed: TestBed

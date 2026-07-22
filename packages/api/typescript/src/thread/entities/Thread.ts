@@ -1,6 +1,6 @@
-import { AggregateRoot, BaseError, z } from '@template/core-typescript'
+import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
 import type Z from 'zod'
-import { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@template/contracts-typescript/wire/enums'
+import { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import type { ApplicationErrors, DomainErrors } from '../errors'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.

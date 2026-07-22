@@ -1,7 +1,7 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Handler, z } from '@template/core-typescript'
-import type { Transaction } from '@template/core-typescript'
+import { BaseError, Handler, z } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { Role as OwnerRole } from '../enums/Role'
 import { OwnerMembershipRepository } from '../repositories/OwnerMembershipRepository'
 import { OwnerMemberRoleChangedEvent } from '../events'

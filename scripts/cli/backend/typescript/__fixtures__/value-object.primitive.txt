@@ -1,4 +1,4 @@
-import { BasePrimitiveValueObject, z } from '@template/core-typescript'
+import { BasePrimitiveValueObject, z } from '@codedm/core-typescript'
 import { DomainErrors } from '../errors'
 
 export const SkuSchema = z

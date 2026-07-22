@@ -14,7 +14,7 @@ import {
 	listNotificationsQueryParamsSchema,
 	NotificationCategoryEnum,
 	type ListNotificationsQueryResponse,
-} from '@template/client-typescript/typescript'
+} from '@codedm/client-typescript/typescript'
 import { zodValidator } from '@/lib/zod-validator'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'

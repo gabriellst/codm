@@ -12,7 +12,7 @@ prompt: >-
   separated by vertical dividers, plus a right-hand summary rail (conversion
   rate + abandoned-cart value) split by a horizontal divider, over a faint
   background grid. The backend contract is frozen and already in the SDK:
-  `useGetPixelFunnel` from `@template/client-typescript/typescript`, input `{
+  `useGetPixelFunnel` from `@codedm/client-typescript/typescript`, input `{
   tenancyScope, startDate, endDate, productIds? }` (store IDs are injected
   server-side — never sent by the FE), output `{ hasPixel: boolean; base:
   Metric; steps: Record<PixelEventType, Metric>; conversionRate: Metric; carts:

@@ -1,4 +1,4 @@
-import { HttpStatusCode, registerErrorCodes } from '@template/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
 
 export type CardErrors =
 	| 'CARD_NOT_FOUND'

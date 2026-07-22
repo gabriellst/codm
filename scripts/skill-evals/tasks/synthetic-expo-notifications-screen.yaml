@@ -15,7 +15,7 @@ prompt: >
   in app/(tabs)/_layout.tsx. The backend surface already exists in the SDK:
   useListNotifications, useMarkNotificationRead, listNotificationsQueryKey
   and the NotificationCategory enum from
-  @template/client-typescript/typescript — read the generated surface under
+  @codedm/client-typescript/typescript — read the generated surface under
   packages/client/dist/typescript/src/typescript/{hooks,types} FIRST for
   the exact params and response shapes; note the list endpoint takes NO
   category param on the wire (category filtering is client-side over the
@@ -193,7 +193,7 @@ graders:
     id: route#bp-10
   # ── SDK-CONSUME ────────────────────────────────────────────────────
   - kind: grep-must
-    spec: "packages/app/expo/app/(tabs)/notifications/-components/**/*.tsx::from\\s+['\"]@template/client-typescript/typescript['\"]"
+    spec: "packages/app/expo/app/(tabs)/notifications/-components/**/*.tsx::from\\s+['\"]@codedm/client-typescript/typescript['\"]"
     id: atlas#SDK-CONSUME
   - kind: grep-must-not
     spec: "packages/app/expo/app/*/notification*/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
@@ -263,8 +263,8 @@ notes: >-
   Synthetic probe authored from grounded HEAD facts — first expo (mobile)
   probe of the frontend axes; no gold tree, agent mode only. Grounded SDK
   reality: the SDK IS wired on mobile (lib/api.ts configureClient via
-  @template/client-typescript/http; hooks importable from
-  @template/client-typescript/typescript) but NO expo screen consumes a
+  @codedm/client-typescript/http; hooks importable from
+  @codedm/client-typescript/typescript) but NO expo screen consumes a
   product hook yet, and useTypedSearchParams has zero call sites at HEAD —
   every must-grep measures only new work. ListNotifications query params are
   page/limit/search/unreadOnly (unreadOnly is a STRING on the wire, NO

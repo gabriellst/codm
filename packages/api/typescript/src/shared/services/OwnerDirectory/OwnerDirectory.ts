@@ -1,5 +1,5 @@
-import type { Transaction } from '@template/core-typescript'
-import type { OwnerKind } from '@template/contracts-typescript/wire/enums'
+import type { Transaction } from '@codedm/core-typescript'
+import type { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * TENANCY facts behind an ownerId — what kind of tenant it is and which user

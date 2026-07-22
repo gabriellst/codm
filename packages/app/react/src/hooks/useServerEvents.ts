@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { listenEventsQueryKey, type ListenEventsQueryResponse } from '@template/client-typescript/typescript'
+import { listenEventsQueryKey, type ListenEventsQueryResponse } from '@codedm/client-typescript/typescript'
 import { Config } from '@/lib/config'
 import { tryCatch } from '@/lib/utils'
 

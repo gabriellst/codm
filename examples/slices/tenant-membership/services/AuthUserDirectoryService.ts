@@ -1,8 +1,8 @@
 // CONTEXT-ORIGIN: template@v1.9 W1 (2026-07-20) — Tier-3 exemplar, not live code
 import { injectable } from 'tsyringe-neo'
 import { inArray } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
-import { users } from '@template/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { users } from '@codedm/contracts/db'
 import { type UserDirectoryEntry, UserDirectoryService } from '../../owner/services/UserDirectoryService'
 
 /**

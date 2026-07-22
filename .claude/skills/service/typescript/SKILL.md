@@ -126,7 +126,7 @@ export class DefaultPricingService extends PricingService {
 
 ```typescript
 // packages/api/typescript/src/<context>/registry.ts
-import { type InstanceRegistry, expandBindings } from '@template/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { PricingService, MockPricingService, DefaultPricingService } from '../services'
 
 // One declaration per token — `integration` omitted mirrors `real`; `null` = declared absence.

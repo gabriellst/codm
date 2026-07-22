@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Id } from '@template/core-typescript'
+import { Id } from '@codedm/core-typescript'
 import { ClarificationRepository, type ClarificationRow, type OpenClarificationInput } from './ClarificationRepository'
 
 @injectable()

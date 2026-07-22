@@ -47,7 +47,7 @@ registry:
     - id: REPOI-06
       name: "Transaction parameter"
       when: always
-      rule: "PORT/Mock: tx?: Transaction (from @template/core-typescript). Drizzle impl: tx?: DrizzleClient (sanctioned narrowing override). Body: const dbClient = tx ?? this.db"
+      rule: "PORT/Mock: tx?: Transaction (from @codedm/core-typescript). Drizzle impl: tx?: DrizzleClient (sanctioned narrowing override). Body: const dbClient = tx ?? this.db"
 
     # ── Conditional patterns ──
     - id: REPO-C03
@@ -551,11 +551,11 @@ registry:
       severity: critical
       mechanical: true
       detect:
-        - 'import\s*\{[^}]*\bdb\b[^}]*\}\s*from\s*.@template/core-typescript.'
+        - 'import\s*\{[^}]*\bdb\b[^}]*\}\s*from\s*.@codedm/core-typescript.'
         - 'await\s+db\.'
       wrong: |
         // Global import couples the class to a specific db instance
-        import { db } from '@template/core-typescript'  // WRONG: should be injected via constructor
+        import { db } from '@codedm/core-typescript'  // WRONG: should be injected via constructor
 
         @injectable()
         export class DrizzleCustomerRepository extends CustomerRepository {
@@ -661,7 +661,7 @@ registry:
         async findByPlatformAndExternalId(p, e, _tx?: DrizzleClient) { ... }
       right: |
         // PORT speaks Transaction (persistence-agnostic handle from the UnitOfWork)
-        import type { Transaction } from '@template/core-typescript'
+        import type { Transaction } from '@codedm/core-typescript'
         export abstract class SubscriptionRepository extends Repository<Subscription> {
           abstract findByPlatformAndExternalId(platform: BillingPlatform, externalId: string, tx?: Transaction): Promise<Subscription | undefined>
         }
@@ -679,8 +679,8 @@ registry:
 
   snippet:
     skeleton: |
-      import { Repository } from '@template/core-typescript'
-      import type { Transaction } from '@template/core-typescript'
+      import { Repository } from '@codedm/core-typescript'
+      import type { Transaction } from '@codedm/core-typescript'
       import { {{Name}} } from '@{{contextName}}/entities'
 
       export abstract class {{Name}}Repository extends Repository<{{Name}}> {
@@ -690,10 +690,10 @@ registry:
       drizzle: |
         import { injectable } from 'tsyringe-neo'
         import { eq } from 'drizzle-orm'
-        import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+        import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
         import { {{Name}}Repository } from './{{Name}}Repository'
         import { {{Name}} } from '@{{contextName}}/entities'
-        // import { {{camelName}} } from '@template/contracts/db'
+        // import { {{camelName}} } from '@codedm/contracts/db'
 
         @injectable()
         export class Drizzle{{Name}}Repository extends {{Name}}Repository {
@@ -751,15 +751,15 @@ registry:
         }
     exemplar: |
       // PORT (abstract class) — tx is Transaction (infra-agnostic)
-      import { Repository } from '@template/core-typescript'
-      import type { Transaction } from '@template/core-typescript'
+      import { Repository } from '@codedm/core-typescript'
+      import type { Transaction } from '@codedm/core-typescript'
 
       export abstract class ProductRepository extends Repository<Product> {
         abstract findById(id: string, tx?: Transaction): Promise<Product | undefined>
       }
 
       // Drizzle impl — narrows tx to DrizzleClient (sanctioned override; no `as` cast needed)
-      import { DrizzleClient, tryCatchAsync } from '@template/core-typescript'
+      import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
 
       @injectable()
       export class DrizzleProductRepository extends ProductRepository {

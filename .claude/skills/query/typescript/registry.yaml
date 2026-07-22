@@ -49,7 +49,7 @@ registry:
         - '\.map\([^)]*await\b'
     - id: bp-07
       name: "Query use case in write/domain context"
-      rule: "Write contexts (clinic, patient, service, doctor, etc.) MUST NOT contain read-only query use cases. Only BFF contexts (ui, agent) can have queries. When a query is reusable across BFF layers (e.g. both ui and agent need GetUnitInfo), it lives in ui and agent imports from @ui/usecases/.... Error types in shared queries use BaseApplicationErrors from @template/core-typescript, not context-specific ApplicationErrors."
+      rule: "Write contexts (clinic, patient, service, doctor, etc.) MUST NOT contain read-only query use cases. Only BFF contexts (ui, agent) can have queries. When a query is reusable across BFF layers (e.g. both ui and agent need GetUnitInfo), it lives in ui and agent imports from @ui/usecases/.... Error types in shared queries use BaseApplicationErrors from @codedm/core-typescript, not context-specific ApplicationErrors."
       wrong: "GetUnitInfo in packages/api/typescript/src/agent/usecases/ when ui also needed it — caused a 2-commit fix chain to move to ui context and fix error type imports"
       mechanical: false
     - id: bp-08
@@ -270,7 +270,7 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import { Handler, DrizzleClient, z } from '@template/core-typescript'
+      import { Handler, DrizzleClient, z } from '@codedm/core-typescript'
 
       export const {{Name}}InputSchema = z.object({
       	// Define input (e.g., userId, filters)
@@ -299,8 +299,8 @@ registry:
     exemplar: |
       // --- Use case (packages/api/typescript/src/<ctx>/usecases/ListX.ts) ---
       import { injectable } from 'tsyringe-neo'
-      import { Handler, z, DrizzleClient } from '@template/core-typescript'
-      // import { xTable } from '@template/contracts/db'  // real Drizzle table from contracts
+      import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+      // import { xTable } from '@codedm/contracts/db'  // real Drizzle table from contracts
 
       const ListXInputSchema = z.object({
         query: z.paginatedQuery({ status: z.string().optional() }),
@@ -316,7 +316,7 @@ registry:
         readonly outputSchema = ListXOutputSchema
         constructor(private db: DrizzleClient) { super() }
         protected async handle(input: this['input']): Promise<this['output']> {
-          // Replace xTable with the imported Drizzle table from '@template/contracts/db'
+          // Replace xTable with the imported Drizzle table from '@codedm/contracts/db'
           const rows = await this.db.select().from(xTable).limit(input.query.limit)
           return this.outputSchema.parse({ items: rows, total: rows.length, totalPages: 1 })
         }

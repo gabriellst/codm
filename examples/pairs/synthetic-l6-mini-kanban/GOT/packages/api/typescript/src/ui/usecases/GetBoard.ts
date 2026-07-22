@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError, DrizzleClient } from '@template/core-typescript'
+import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
 import { eq } from 'drizzle-orm'
-import { boards as boardsTable, boardLists as boardListsTable, cards as cardsTable } from '@template/contracts/db'
+import { boards as boardsTable, boardLists as boardListsTable, cards as cardsTable } from '@codedm/contracts/db'
 
 export const GetBoardInputSchema = z.object({
 	storeId: z.uuid(),
