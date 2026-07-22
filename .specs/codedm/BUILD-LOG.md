@@ -9,6 +9,8 @@
 
 | 3 CONTRACT LOCK | 3 (2 fixes de grader) | ✅ VERDE (92) | 18 enums + 16 integration events + browser union travados; pgSchemas dos 4 contextos + migração; FCM/profile removidos da superfície; codegen ts+go + SDK regen. Gates re-verificados independentemente: tsc=0, test=0, contracts=0. CONTRATO CONGELADO — mudança daqui em diante é falha de processo. |
 
+| 4 GATEWAY | 3 + fix pós-grade | ✅ VERDE com deferrals | Transplante whatsmeow completo (QR/reconexão/history-sync/outbox UUIDv5/Redis egress/apikey), retargetado no contrato congelado; SDK ganhou client do gateway. Reds mecânicos corrigidos (env:generate re-emitido; schema activity órfão removido + FOREIGN_PGSCHEMAS). Gates re-verificados: contracts/test/tooling/tsc = 0. |
+
 ## Decisões da noite
 - (fase 1) manter FCM-token e eventos auth como stubs compiláveis em vez de cirurgia profunda — remoção definitiva fica pro contract lock da fase 3, que redefine a superfície.
 - (fase 2 / grader iteration 1) O binding `real` é um `useFactory` per-resolve e o tsyringe-neo NÃO memoiza factories → cada `resolve` mintava um `new PGlite(dataDir)` divergente (instâncias vivas sobre o mesmo dir não compartilham estado), matando o write-side event-driven. Fix: memoizar a instância única do driver + `db` via `registerInstance` no boot (`shared/index.ts`, espelha `TestBed.ts:92-93`). Segundo fix: guarda single-instance por lockfile PID **sibling** (`<dataDir>.lock`, fora do pgdata pra não quebrar o initdb do PGlite) — segunda daemon no mesmo dir falha alto com `DataDirLockedError`.
@@ -37,3 +39,7 @@ Evidência capturada (grader iteration 2, 2026-07-22 — reproduzida pós-fix):
 - Gates: `tsc -p tsconfig.build.json` exit 0; `bun test` 369 pass / 0 fail; `bun run build` (2045 módulos — +1 pelo novo boot module); `bun scripts/env/generate.ts --check` ✓ in sync.
 - (fase 2) ExternalMediator real segue EventEmitter2 in-process; RedisExternalMediator existe e NÃO foi vinculado — binding decidido na fase 4 (transplante do gateway define o transporte Go↔TS). Founder confirma de manhã.
 - (fase 2) Controllers órfãos (RegisterFcmToken/UpdateProfile) ficam para a fase 3 resolver na redefinição da superfície.
+- (fase 4) DEDUP de mensagens inbound relocado por design pro BC4 (contrato carrega MessageID) — HARD GATE da fase 6: o consumer com unique-constraint TEM que aterrissar lá, senão exactly-once fica silenciosamente ausente.
+- (fase 4) Seam multi-plataforma preservado só no nível contrato/enum (factory única WhatsApp); refactor do map[ChannelKind]Factory quando o 2º adapter entrar.
+- (fase 4) Gateway Go exige Postgres+Redis vivos (sem caminho zero-infra como o daemon TS/PGlite) + migrate:dev ANTES do boot dele — runbook documenta; founder confirma se quer caminho embutido no Go.
+- (fase 4) send_message hardcoda OperatorID no evento outbound (benigno single-operator; resolver se tenancy voltar).
