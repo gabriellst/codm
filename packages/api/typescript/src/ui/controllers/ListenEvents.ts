@@ -11,6 +11,7 @@ import {
 import { BaseIntegrationEvent } from '@template/core-typescript'
 import { ThreadStatus, StopKind } from '@template/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
+import { BrowserFrameEnricher } from '../services/BrowserFrameEnricher'
 
 /**
  * The curated browser-facing event union — the dashboard operator-scoped SSE surface.
@@ -27,16 +28,15 @@ import { OperatorMiddleware } from '@auth/middlewares'
  * Names are the frozen wire discriminators (the codegen gates every one to the `integration.`
  * prefix), so they are listed as string literals — the contract, not a runtime import.
  *
- * FROZEN SSE FRAMES — the two enriched `browser.*` frames are now materialized as executable, typed
- * Zod schemas (`BrowserThreadStatusChangedFrameSchema` / `BrowserStopRaisedFrameSchema` below) and
- * folded into `ListenEventsControllerOutputSchema`, so the frozen shapes — with their denormalized
- * display fields (agentsRunningNow / threadDisplayName / issueKey) — are LOCKED at the contract now
- * instead of living as prose. Only their *delivery* is deferred: the broadcaster below still re-emits
- * the raw `integration.*` envelope, and the denormalized fields are synthesized in the
- * gateway/terminal phase when the display-projection + terminal transport land. That delivery cutover
- * needs FOUNDER CONFIRMATION — the fields are computed at broadcast time, not carried on any outbox
- * fact, so they cannot become `integration.*` wire events (the codegen only emits models that
- * `extends IntegrationEvent`); the enrichment happens in the gateway broadcaster, not on the wire.
+ * FROZEN SSE FRAMES — the two enriched `browser.*` frames are materialized as executable, typed Zod
+ * schemas (`BrowserThreadStatusChangedFrameSchema` / `BrowserStopRaisedFrameSchema` below) and folded
+ * into `ListenEventsControllerOutputSchema`, so the frozen shapes — with their denormalized display
+ * fields (agentsRunningNow / threadDisplayName / issueKey) — are LOCKED at the contract. Delivery is
+ * now LIVE (phase-6b): the `BrowserFrameEnricher` synthesizes these frames from the corresponding
+ * integration facts (needs-you / stop raised / live status) at broadcast time and the broadcaster
+ * fans them out ALONGSIDE the raw envelope. The fields are computed at broadcast time, not carried on
+ * any outbox fact, so they never become `integration.*` wire events (the codegen only emits models
+ * that `extends IntegrationEvent`); the enrichment happens in this broadcaster, not on the wire.
  *
  * `browser.terminal_output_appended` stays a comment on purpose — per the draft it is the two-stream
  * TRANSPORT frame (NOT a domain / outbox fact) and belongs to the terminal-session stream, not this
@@ -46,8 +46,8 @@ import { OperatorMiddleware } from '@auth/middlewares'
  * WIRING NOTE: the broadcaster below filters each client by the ENVELOPE `ownerId`
  * (`browserDeliveryOwnerId`) — the CodeDM lock carries `ownerId` on the envelope only, which is also
  * what each emitted frame carries — so generic `integration.*` frames are delivered to their owner's
- * connected clients today. The two enriched `browser.*` frames remain schema-only until the
- * gateway-phase enricher lands (see the FROZEN SSE FRAMES note above).
+ * connected clients today. The two enriched `browser.*` frames are synthesized + delivered by the
+ * `BrowserFrameEnricher` (see the FROZEN SSE FRAMES note above).
  */
 const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	// Human-in-the-loop control plane (T03 Home callout / T14 Needs-You / dock badge)
@@ -135,7 +135,9 @@ export const ListenEventsControllerOutputSchema = z.union([
 
 interface SSEClient {
 	ownerId: string
-	send: (event: BaseIntegrationEvent) => void
+	// Sends any pre-shaped SSE frame — the raw `integration.*` envelope OR an enriched `browser.*`
+	// frame (which carries no envelope `ownerId`; tenancy is already filtered before send).
+	send: (frame: unknown) => void
 }
 
 const MAX_CLIENTS = 1000
@@ -157,7 +159,10 @@ export class ListenEventsController extends Controller<
 	private clients = new Set<SSEClient>()
 	private broadcasterRegistered = false
 
-	constructor(private externalMediator: ExternalMediator) {
+	constructor(
+		private externalMediator: ExternalMediator,
+		private enricher: BrowserFrameEnricher,
+	) {
 		super()
 	}
 
@@ -165,16 +170,27 @@ export class ListenEventsController extends Controller<
 	 * One mediator callback per process, fanned out to every connected client. Tenancy filter: an
 	 * event reaches a client ONLY when it is on the browser surface (BROWSER_EVENT_NAMES) and its
 	 * ENVELOPE ownerId matches the client's session owner (see `browserDeliveryOwnerId`).
+	 *
+	 * Two frames coexist on the wire: the raw `integration.*` envelope is re-emitted for EVERY
+	 * browser-surface fact (unchanged), and the `BrowserFrameEnricher` synthesizes the enriched
+	 * `browser.thread_status_changed` / `browser.stop_raised` frames from the corresponding facts
+	 * (needs-you / stop raised / live status) — ADDITIVE, so no existing consumer loses its envelope.
 	 */
 	private ensureBroadcaster(): void {
 		if (this.broadcasterRegistered) return
 		this.broadcasterRegistered = true
-		this.externalMediator.registerCallback(event => {
+		this.externalMediator.registerCallback(async event => {
 			if (!(event instanceof BaseIntegrationEvent)) return
 			const targetOwnerId = browserDeliveryOwnerId(event)
 			if (!targetOwnerId) return
-			for (const client of this.clients) {
-				if (client.ownerId === targetOwnerId) client.send(event)
+			const recipients = [...this.clients].filter(client => client.ownerId === targetOwnerId)
+			if (recipients.length === 0) return
+
+			const rawFrame = { name: event.name, ownerId: event.ownerId, payload: event.payload }
+			const enriched = await this.enricher.enrich(event)
+			for (const client of recipients) {
+				client.send(rawFrame)
+				for (const frame of enriched) client.send(frame)
 			}
 		})
 	}
@@ -193,7 +209,7 @@ export class ListenEventsController extends Controller<
 					}
 					const client: SSEClient = {
 						ownerId,
-						send: event => handle.send(encodeSSEFrame({ name: event.name, ownerId: event.ownerId, payload: event.payload })),
+						send: frame => handle.send(encodeSSEFrame(frame)),
 					}
 					handle.send(SSE_CONNECTED_FRAME)
 					this.clients.add(client)
