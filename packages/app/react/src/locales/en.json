@@ -117,15 +117,19 @@
 	},
 	"channels": {
 		"comingSoon": "Coming soon",
+		"comingSoonHint": "Support for this channel is coming soon.",
 		"connectChannel": "Connect channel",
 		"connectDescription": "Messages in connected channels can be routed to your agents.",
 		"connectTitle": "Connect a channel",
 		"emailImap": "Email (IMAP)",
+		"gatewayWaiting": "Waiting for the local WhatsApp gateway to start so it can generate the pairing code…",
 		"pairDescription": "Open Telegram on your phone, then scan this code to link the channel.",
 		"pairTitle": "Pair Telegram",
 		"pairViaQr": "Pair via QR code",
 		"pairWaiting": "Waiting for the local gateway to generate a pairing code…",
 		"title": "Channels",
+		"whatsappPairDescription": "Pairing happens through the local WhatsApp gateway. Once it's running, scan this QR code with WhatsApp on your phone to link the channel.",
+		"whatsappPairTitle": "Pair WhatsApp",
 		"yourChannels": "Your channels"
 	},
 	"common": {

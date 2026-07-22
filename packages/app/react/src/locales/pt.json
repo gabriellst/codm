@@ -117,15 +117,19 @@
 	},
 	"channels": {
 		"comingSoon": "Em breve",
+		"comingSoonHint": "Suporte a este canal chega em breve.",
 		"connectChannel": "Conectar canal",
 		"connectDescription": "Mensagens de canais conectados podem ser encaminhadas aos seus agentes.",
 		"connectTitle": "Conectar um canal",
 		"emailImap": "E-mail (IMAP)",
+		"gatewayWaiting": "Aguardando o gateway local do WhatsApp iniciar para gerar o código de pareamento…",
 		"pairDescription": "Abra o Telegram no seu celular e escaneie este código para vincular o canal.",
 		"pairTitle": "Parear Telegram",
 		"pairViaQr": "Parear via QR code",
 		"pairWaiting": "Aguardando o gateway local gerar um código de pareamento…",
 		"title": "Canais",
+		"whatsappPairDescription": "O pareamento acontece pelo gateway local do WhatsApp. Assim que ele estiver ativo, escaneie este QR code com o WhatsApp no seu celular para vincular o canal.",
+		"whatsappPairTitle": "Parear WhatsApp",
 		"yourChannels": "Seus canais"
 	},
 	"common": {

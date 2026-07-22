@@ -3,22 +3,19 @@ import { IconChevronRight } from '@tabler/icons-react'
 import { useGetHomeDashboard } from '@codedm/client-typescript/typescript'
 import type { ChannelKind, ChannelStatus } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
+import { enumLabel } from '@/lib'
 import { CHANNEL_KINDS, channelGlyph, channelLabel } from '@/components/console/glyphs'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConnectChannelDialog } from '../ConnectChannelDialog'
 
-const statusLabel: Record<ChannelStatus, string> = {
-	CONNECTED: 'Connected',
-	PAIRING: 'Pairing…',
-	DISCONNECTED: 'Not connected',
-}
-
 /**
- * Connected channels and their health (T05). The backend exposes channel status
- * through the dashboard read; there is no per-account read yet, so each of the three
- * channel kinds is listed with its live status and nothing invented.
+ * Connected channels and their health (T05). WhatsApp is the only channel that can be connected
+ * today: its row opens the connect flow (chevron, live status). Instagram DM and Telegram are
+ * "coming soon" — inert rows with no chevron and no click. The backend exposes channel status
+ * through the dashboard read; nothing about connectivity is invented.
  */
+const CONNECTABLE: readonly ChannelKind[] = ['WHATSAPP']
+
 export function ChannelsSection() {
 	const { t } = useTranslation()
 	const { data, isLoading } = useGetHomeDashboard()
@@ -40,21 +37,42 @@ export function ChannelsSection() {
 				) : (
 					<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
 						{CHANNEL_KINDS.map(kind => {
+							const connectable = CONNECTABLE.includes(kind)
 							const status = statusByKind.get(kind) ?? 'DISCONNECTED'
 							const Glyph = channelGlyph[kind]
-							const connected = status === 'CONNECTED'
-							return (
-								<div key={kind} className="flex items-center gap-4 p-4">
+
+							const body = (
+								<>
 									<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
 										<Glyph className="size-5" />
 									</span>
 									<div className="flex min-w-0 flex-1 flex-col">
 										<span className="font-semibold text-foreground">{channelLabel[kind]}</span>
-										<span className="text-sm text-muted-foreground">{statusLabel[status]}</span>
+										<span className="text-sm text-muted-foreground">
+											{connectable ? enumLabel('ChannelStatus', status) : t('channels.comingSoon')}
+										</span>
 									</div>
-									<Badge variant={connected ? 'secondary' : 'outline'}>{String(connected ? 'Connected' : 'Not connected')}</Badge>
-									<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-								</div>
+								</>
+							)
+
+							if (!connectable) {
+								return (
+									<div key={kind} className="flex items-center gap-4 p-4 opacity-55" aria-disabled="true">
+										{body}
+									</div>
+								)
+							}
+
+							return (
+								<ConnectChannelDialog
+									key={kind}
+									trigger={
+										<button type="button" className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted">
+											{body}
+											<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+										</button>
+									}
+								/>
 							)
 						})}
 					</div>
