@@ -31,10 +31,13 @@ span {
 	/* CodeDM type — system/open stacks, no external fetch.
 	   Display renders heavy + uppercase via .heading-display; body is the same clean grotesque.
 	   Mono is load-bearing (paths, slugs, terminal, versions) — it's part of the identity. */
-	--font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	--font-display: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-sans:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-display:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 	--font-serif: var(--font-sans);
-	--font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Code", "Roboto Mono", monospace;
+	--font-mono:
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Code", "Roboto Mono", monospace;
 	--color-route-background: var(--route-background);
 	--color-chat-bg: var(--chat-bg);
 	--color-rail-bg: var(--rail-bg);

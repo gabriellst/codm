@@ -2,29 +2,18 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-// Same gradient/hover/focus pattern as <Input>. Tweak alongside input.tsx.
-const textareaBg = 'gradient-bg-[var(--background)_0%,color-mix(in_oklab,var(--background),var(--foreground)_10%)_110%]'
-const textareaBorder = 'gradient-border-[oklch(from_var(--border)_l_c_h_/_0.15)_0%,oklch(from_var(--border)_l_c_h_/_0)_60%]'
-const textareaBorderHover =
-	'hover:gradient-border-[oklch(from_var(--border)_l_c_h_/_0.3)_0%,oklch(from_var(--border)_l_c_h_/_0.2)_100%]'
-const textareaBorderFocus =
-	'focus:gradient-border-[oklch(from_var(--border)_l_c_h_/_0.35)_0%,oklch(from_var(--border)_l_c_h_/_0.35)_100%]'
-
+// Flat CodeDM surface — same language as <Input>, but a rounded rectangle (a
+// pill can't hold multiple lines). Border darkens on hover/focus.
 const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(function Textarea({ className, ...props }, ref) {
 	return (
 		<textarea
 			ref={ref}
 			data-slot="textarea"
 			className={cn(
-				'gradient-box',
-				textareaBg,
-				textareaBorder,
-				textareaBorderHover,
-				textareaBorderFocus,
-				'rounded-lg px-2.5 py-2 text-base md:text-sm placeholder:text-muted-foreground',
-				'field-sizing-content min-h-16 w-full outline-none transition-colors',
-				'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:ring-[0.1875rem]',
-				'focus-visible:ring-ring/50 focus-visible:ring-[0.1875rem]',
+				'rounded-2xl border border-border bg-background px-3.5 py-2.5 text-base md:text-sm text-foreground placeholder:text-muted-foreground',
+				'field-sizing-content min-h-16 w-full outline-none transition-colors duration-150 ease-out',
+				'hover:border-foreground/25 focus-visible:border-foreground/40 focus-visible:ring-0',
+				'aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20',
 				'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
 				className,
 			)}

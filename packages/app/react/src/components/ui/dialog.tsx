@@ -48,7 +48,7 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-98 data-open:zoom-in-100 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 ring-border/50 grid max-w-[calc(100%-2rem)] gap-4 rounded-xl p-4 text-sm ring-1 duration-200 ease-in-out sm:max-w-sm fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none supports-backdrop-filter:backdrop-blur-sm',
+					'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-98 data-open:zoom-in-100 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 border border-border shadow-[0_16px_48px_-12px_rgb(0_0_0/0.22)] grid max-w-[calc(100%-2rem)] gap-4 rounded-2xl p-6 text-sm duration-150 ease-out sm:max-w-md fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none',
 					className,
 				)}
 				{...props}
@@ -57,7 +57,7 @@ function DialogContent({
 				{showCloseButton && (
 					<DialogPrimitive.Close
 						data-slot="dialog-close"
-						render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />}
+						render={<Button variant="secondary" className="absolute top-4 right-4" size="icon" />}
 					>
 						<IconX />
 						<span className="sr-only">Close</span>
@@ -84,7 +84,7 @@ function DialogFooter({
 		<div
 			data-slot="dialog-footer"
 			className={cn(
-				'bg-muted/30 -mx-4 -mb-4 rounded-b-xl border-t border-border/50 p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+				'bg-muted/40 -mx-6 -mb-6 rounded-b-2xl border-t border-border p-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
 				className,
 			)}
 			{...props}
@@ -96,7 +96,7 @@ function DialogFooter({
 }
 
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
-	return <DialogPrimitive.Title data-slot="dialog-title" className={cn('text-sm leading-none font-medium', className)} {...props} />
+	return <DialogPrimitive.Title data-slot="dialog-title" className={cn('text-lg leading-snug font-semibold', className)} {...props} />
 }
 
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {

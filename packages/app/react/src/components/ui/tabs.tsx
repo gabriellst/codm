@@ -5,13 +5,14 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
-// Plain background gradients (no gradient-box, no border ring) — tabs layer the
-// gradient as a normal background-image so any active separator/underline (the
-// trigger's ::after) sits visually on top of the bar fill, not on top of a
-// gradient-box border.
-const tabsListBg = 'bg-[linear-gradient(var(--background)_-20%,color-mix(in_oklab,var(--background),var(--foreground)_8%)_100%)]'
+// CodeDM segmented control: a soft-gray track holds pill triggers; the active one
+// lifts to a solid white (card) pill with a whisper of shadow. The `line` variant
+// stays a bare row with an underline indicator (wizard-step tabs).
+const tabsListBg = 'bg-muted'
+// Scoped to the default (segmented) list so the `line` variant never gets a pill fill —
+// it shows only the underline indicator.
 const tabsTriggerActiveBg =
-	'data-active:bg-[linear-gradient(color-mix(in_oklab,var(--background),var(--foreground)_11%)_-15%,color-mix(in_oklab,var(--background),var(--foreground)_3%)_100%)]'
+	'group-data-[variant=default]/tabs-list:data-active:bg-card group-data-[variant=default]/tabs-list:data-active:shadow-sm'
 
 function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive.Root.Props) {
 	return (
@@ -25,7 +26,7 @@ function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive
 }
 
 const tabsListVariants = cva(
-	'rounded-lg p-[0.1875rem] group-data-horizontal/tabs:h-8 data-[variant=line]:rounded-none group/tabs-list text-muted-foreground inline-flex w-fit items-center justify-center group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col',
+	'rounded-full p-1 group-data-horizontal/tabs:h-9 data-[variant=line]:rounded-none data-[variant=line]:p-0 group/tabs-list text-muted-foreground inline-flex w-fit items-center justify-center group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col',
 	{
 		variants: {
 			variant: {
@@ -50,7 +51,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
 		<TabsPrimitive.Tab
 			data-slot="tabs-trigger"
 			className={cn(
-				"gap-1.5 rounded-md px-1.5 py-0.5 text-sm font-medium [&_svg:not([class*='size-'])]:size-4 focus-visible:ring-ring/50 hover:text-foreground dark:hover:text-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center whitespace-nowrap transition-all group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start focus-visible:ring-[0.1875rem] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"gap-1.5 rounded-full px-3.5 py-0.5 text-sm font-medium [&_svg:not([class*='size-'])]:size-4 focus-visible:ring-ring/40 hover:text-foreground dark:hover:text-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center whitespace-nowrap transition-all group-data-[variant=line]/tabs-list:rounded-none group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start focus-visible:ring-[0.1875rem] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				// Active state — apply the trigger fill as a plain background-image (no border, no clip).
 				// Both default and line variants get it; line additionally shows the underline (::after below).
 				`${tabsTriggerActiveBg} data-active:text-foreground`,

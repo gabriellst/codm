@@ -3,49 +3,34 @@ import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
-import { trigger } from './surfaces'
 
-// Per-variant gradients local to this file. `secondary` uses the shared `trigger`
-// preset (see surfaces.ts); everything else has variant-specific colors that don't
-// repeat across the system.
-
-const primaryBg = 'gradient-bg-[var(--primary),var(--primary)]'
-const primaryBorder =
-	'gradient-border-[oklch(from_var(--primary-foreground)_l_c_h_/_0.2)_0%,oklch(from_var(--primary-foreground)_l_c_h_/_0.035)_86%]'
-
-const primaryAltBg = 'gradient-bg-[var(--foreground)_0%,var(--background)_200%]'
-// const primaryAltBorder = '' — primaryAlt intentionally has no gradient border
-
-const outlineBg = 'gradient-bg-[var(--background)_-20%,color-mix(in_oklab,var(--background),var(--foreground)_6%)_160%]'
-const outlineBorder = 'gradient-border-[oklch(from_var(--border)_l_c_h_/_0.2)_0%,oklch(from_var(--border)_l_c_h_/_0.05)_100%]'
-
-const destructiveBg = 'gradient-bg-[var(--destructive),var(--destructive)]'
-const destructiveBorder =
-	'gradient-border-[oklch(from_var(--destructive-foreground)_l_c_h_/_0.3)_0%,oklch(from_var(--destructive-foreground)_l_c_h_/_0.035)_86%]'
+// CodeDM buttons are flat, fully-rounded pills. Black is the sole action color
+// (`default`); everything else is monochrome (hairline outline, soft-gray, ghost,
+// underline link). Sentence case — labels are NOT uppercased (that voice is reserved
+// for display headings). Icon sizes become perfect circles via the rounded-full base.
 
 const buttonVariants = cva(
-	"focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-lg text-sm font-medium focus-visible:ring-2 aria-invalid:ring-2 [&_svg:not([class*='size-'])]:size-4 inline-flex items-center justify-center whitespace-nowrap transition-all duration-200 ease-in-out cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none shrink-0 [&_svg]:shrink-0 outline-none group/button select-none",
+	"focus-visible:ring-ring/40 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-full text-sm font-medium focus-visible:ring-2 aria-invalid:ring-2 [&_svg:not([class*='size-'])]:size-4 inline-flex items-center justify-center whitespace-nowrap transition-all duration-150 ease-out cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none shrink-0 [&_svg]:shrink-0 outline-none group/button select-none",
 	{
 		variants: {
 			variant: {
-				default: `gradient-box ${primaryBg} ${primaryBorder} hover:brightness-90 text-primary-foreground font-semibold`,
-				primaryAlt: `gradient-box ${primaryAltBg} hover:brightness-90 text-secondary-foreground font-semibold`,
-				secondary: `${trigger}`,
-				outline: `gradient-box ${outlineBg} ${outlineBorder} hover:brightness-90`,
-				ghost: 'border border-transparent hover:bg-hover hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground',
-				destructive: `gradient-box ${destructiveBg} ${destructiveBorder} hover:brightness-90 text-destructive-foreground font-semibold`,
-				warning:
-					'bg-warning/10 hover:bg-warning/20 active:bg-warning/25 focus-visible:ring-warning/20 dark:bg-warning/15 text-warning border border-warning/30 hover:border-warning/50 focus-visible:border-warning/40 disabled:text-muted-foreground',
-				link: 'text-primary underline-offset-4 hover:underline hover:text-primary/80',
+				default: 'bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/85 font-semibold',
+				primaryAlt: 'bg-foreground text-background hover:bg-foreground/90 font-semibold',
+				secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/70 active:bg-secondary/60',
+				outline: 'border border-border bg-background text-foreground hover:bg-muted active:bg-muted/70',
+				ghost: 'border border-transparent text-foreground hover:bg-muted aria-expanded:bg-muted',
+				destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 font-semibold',
+				warning: 'border border-warning/40 text-warning hover:bg-warning/10 aria-expanded:bg-warning/10',
+				link: 'text-foreground underline-offset-4 hover:underline aria-expanded:underline',
 			},
 			size: {
-				default: 'h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-				xs: "h-6 gap-1 rounded-lg px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-				sm: "h-7 gap-1 rounded-lg px-2.5 text-sm in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-				lg: 'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
+				default: 'h-8 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
+				xs: "h-6 gap-1 px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
+				sm: "h-7 gap-1 px-3 text-sm has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-3.5",
+				lg: 'h-9 gap-1.5 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4',
 				icon: 'size-8',
-				'icon-xs': "size-6 rounded-lg in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-				'icon-sm': 'size-7 rounded-lg in-data-[slot=button-group]:rounded-lg',
+				'icon-xs': "size-6 [&_svg:not([class*='size-'])]:size-3",
+				'icon-sm': 'size-7',
 				'icon-lg': 'size-9',
 				none: '',
 			},
