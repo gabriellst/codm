@@ -19,8 +19,12 @@ body {
 	padding-right: env(safe-area-inset-right);
 }
 
+/* Body spans breathe on a comfortable ramp — a blanket line-height:1 crushed every stacked
+   title→description pair (the cramped ListRows). Tight, single-line atoms (badges, pills, the
+   display heading) set their own leading via their component classes / .heading-display, which win
+   over this element rule. */
 span {
-	line-height: 1;
+	line-height: 1.4;
 }
 
 *:not(input):not(textarea):not(select) {
