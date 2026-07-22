@@ -14,6 +14,7 @@ import {
 	ExternalMediator,
 	EventEmitter2Mediator,
 	MockExternalMediator,
+	RedisExternalMediator,
 	OutboxDispatcher,
 	DrizzleOutboxDispatcher,
 	MockOutboxDispatcher,
@@ -132,7 +133,13 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: HttpRouter, mock: null, integration: null, real: FastifyHttpRouter },
 	{ token: InternalMediator, mock: EventEmitter2Mediator, real: EventEmitter2Mediator },
 	// mock: capture-only mediator — flow tests assert integration events without publishing.
-	{ token: ExternalMediator, mock: MockExternalMediator, real: EventEmitter2Mediator },
+	// real: Redis Streams transport — the cross-service egress/ingress the Go gateway also speaks
+	// (XADD events:<name>, consumer-group drain+PEL+dead-letter; medscall lineage). integration is
+	// PINNED to the in-process EventEmitter2Mediator (it would otherwise mirror `real`): integration
+	// tests must never open a Redis socket, and TestBed swaps in a SpyMediator for both mock and
+	// integration anyway — so this pin only guards a stray non-TestBed resolve, leaving mock/
+	// integration behaviour exactly as before.
+	{ token: ExternalMediator, mock: MockExternalMediator, integration: EventEmitter2Mediator, real: RedisExternalMediator },
 	{ token: OutboxDispatcher, mock: MockOutboxDispatcher, real: DrizzleOutboxDispatcher },
 	// OTLP-backed in production; falls back to MockLoggingService if OTEL_COLLECTOR_LOG_URL is
 	// unset. useFactory (not a class) because construction needs Config-derived args and must
