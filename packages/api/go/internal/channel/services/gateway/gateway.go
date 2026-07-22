@@ -5,11 +5,20 @@
 // Multi-platform seam: the port is intentionally transport-shaped (connect,
 // pair, send text, receive) and carries no WhatsApp specifics. The frozen
 // wire.ChannelKind enum is locked for three platforms (WHATSAPP, INSTAGRAM_DM,
-// TELEGRAM) but only WHATSAPP is realized. Adding a New Platform:
+// TELEGRAM) but only WHATSAPP is realized today.
+//
+// The dispatch seam is currently single-platform: module.go binds one
+// ChannelFactory (the whatsmeow adapter) and the registry holds it directly;
+// ChannelConfig carries no Kind, and the Connect use case hardcodes
+// wire.ChannelKindWHATSAPP. This is deliberate while WhatsApp is the only
+// platform. Adding a second platform is therefore NOT just a new bind — it means
+// introducing the keying mechanism first:
 //
 //  1. add a ChannelFactory implementation under services/gateway/<platform>/
-//  2. bind it in module.go keyed by wire.ChannelKind (a @union-style switch)
-//  3. the rest of the context (registry, handlers, controllers) is unchanged.
+//  2. add Kind to ChannelConfig and replace the registry's single factory with a
+//     map[wire.ChannelKind]ChannelFactory (the real @union-style switch), then
+//     bind each adapter under its kind in module.go
+//  3. the rest of the context (handlers, controllers, read model) is unchanged.
 package gateway
 
 import (

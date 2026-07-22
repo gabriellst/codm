@@ -30,10 +30,20 @@ type HttpRouter struct {
 }
 
 func NewHttpRouter(cfg *config.Config) *HttpRouter {
-	return &HttpRouter{
+	router := &HttpRouter{
 		mux:     http.NewServeMux(),
 		version: cfg.Version,
 	}
+
+	// Liveness probe: answers 200 without touching WhatsApp, Postgres, or Redis,
+	// so boot health is assertable independently of external infra or a WA login.
+	router.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	return router
 }
 
 // Use adds a global middleware applied to all routes.
@@ -95,6 +105,7 @@ func (r *HttpRouter) Handler() http.Handler {
 // PrintRoutes logs all registered route patterns (for debugging).
 func (r *HttpRouter) PrintRoutes() {
 	fmt.Println("Registered routes:")
+	fmt.Println("  GET /healthz")
 	fmt.Println("  GET /api/openapi.json")
 	fmt.Println("  GET /api/docs")
 	fmt.Println("  GET / (SPA)")

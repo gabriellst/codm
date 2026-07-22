@@ -97,6 +97,26 @@ func (r *pgChannelProjectionRepository) ListByOwner(ctx context.Context, ownerID
 	return out, rows.Err()
 }
 
+func (r *pgChannelProjectionRepository) ListPaired(ctx context.Context) ([]*ChannelProjection, error) {
+	db := r.txOrDB(ctx)
+	rows, err := db.QueryContext(ctx,
+		`SELECT `+channelColumns+` FROM gateway.channels WHERE account_detail <> '' ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("pg channel projection: list paired: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*ChannelProjection
+	for rows.Next() {
+		p, scanErr := scanRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func (r *pgChannelProjectionRepository) txOrDB(ctx context.Context) channelExecContext {

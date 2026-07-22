@@ -15,9 +15,31 @@
 //     delivery_requested (wire→session, ExternalMediator)
 //   - projections/                — channels read model + status projectors
 //   - usecases/ + controllers/    — the api-key-guarded HTTP surface
+//
+// Exactly-once (dedup) delegation: the gateway does NOT dedup inbound messages.
+// whatsmeow legitimately redelivers the same events.Message (reconnect, retry
+// receipts, offline drain), and the outbox→Redis Streams egress is at-least-once,
+// so duplicate MessageIDs can reach the consumer. The frozen wire event carries
+// a stable MessageID for exactly this reason: the downstream Thread & Routing
+// context (BC4) owns dedup, keying on ChannelMessageReceivedEvent.MessageID with
+// a unique constraint. That context is not yet built (see PENDING_PGSCHEMAS:
+// thread); when it lands it MUST enforce that guarantee — the gateway
+// deliberately keeps no seen-message state.
+//
+// Runtime contract: the Go gateway currently requires external Postgres + Redis
+// (the worker topology). NewPostgresDB eagerly pings Postgres and the
+// RedisExternalMediator pings Redis at OnStart, so the process only boots with
+// infra up — bring it up with `bun docker:compose` before starting the gateway
+// or asserting boot health against GET /healthz. (A file-backed embedded path
+// parallel to the TS PGlite daemon is a follow-up; until then the smoke test is
+// gated on docker:compose.)
 package channel
 
 import (
+	"context"
+	"log/slog"
+
+	"github.com/google/uuid"
 	"go.uber.org/fx"
 
 	"template/api-go/internal/channel/controllers"
@@ -66,6 +88,7 @@ var Module = fx.Module("channel",
 	provideController(controllers.NewListChannelsController),
 
 	fx.Invoke(registerHandlers),
+	fx.Invoke(registerLifecycleHooks),
 )
 
 // provideController annotates a controller constructor for the shared
@@ -103,4 +126,58 @@ func registerHandlers(
 	im.Register(disconnectedProj)
 
 	ext.Register(delivery)
+}
+
+// registerLifecycleHooks restores and tears down live gateway sessions across
+// the process lifecycle.
+//
+//   - OnStart: whatsmeow persists paired devices in its sqlstore, and the
+//     channels read model records which channels are paired (account_detail set).
+//     After a restart/deploy the in-process registry is empty, so we enumerate
+//     the paired channels and re-Register + Connect each one — inbound messages
+//     resume flowing without a human re-hitting POST /connect.
+//   - OnStop: cleanly disconnect every live session (cancels the adapter
+//     goroutines) via the registry's DisconnectAll.
+func registerLifecycleHooks(
+	lc fx.Lifecycle,
+	reg registry.ChannelRegistry,
+	repo projections.ChannelProjectionRepository,
+) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			paired, err := repo.ListPaired(ctx)
+			if err != nil {
+				// Non-fatal: boot the gateway even if the read model is
+				// unavailable — the operator can still re-Connect manually.
+				slog.Error("channel bootstrap: list paired channels failed", "error", err)
+				return nil
+			}
+			for _, p := range paired {
+				channelID, perr := uuid.Parse(p.ID)
+				if perr != nil {
+					slog.Warn("channel bootstrap: bad channel id, skipping", "id", p.ID, "error", perr)
+					continue
+				}
+				ch, rerr := reg.Register(ctx, channelID, gateway.ChannelConfig{
+					OwnerID:       p.OwnerID,
+					OwnerRemoteID: p.AccountDetail,
+				})
+				if rerr != nil {
+					slog.Error("channel bootstrap: register failed", "channelId", channelID, "error", rerr)
+					continue
+				}
+				if cerr := ch.Connect(ctx); cerr != nil {
+					slog.Error("channel bootstrap: reconnect failed", "channelId", channelID, "error", cerr)
+					continue
+				}
+				slog.Info("channel bootstrap: reconnected paired session", "channelId", channelID)
+			}
+			slog.Info("channel bootstrap complete", "restored", reg.Count())
+			return nil
+		},
+		OnStop: func(_ context.Context) error {
+			reg.DisconnectAll()
+			return nil
+		},
+	})
 }

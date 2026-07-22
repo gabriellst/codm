@@ -29,5 +29,9 @@ type ChannelProjectionRepository interface {
 	FindByID(ctx context.Context, id string) (*ChannelProjection, error)
 	FindByOwnerAndKind(ctx context.Context, ownerID string, kind wire.ChannelKind) (*ChannelProjection, error)
 	ListByOwner(ctx context.Context, ownerID string) ([]*ChannelProjection, error)
+	// ListPaired returns every channel that already has a paired platform account
+	// (account_detail <> ''), across all owners. The boot lifecycle hook uses it
+	// to restore live sessions after a restart.
+	ListPaired(ctx context.Context) ([]*ChannelProjection, error)
 	SetStatus(ctx context.Context, id string, status wire.ChannelStatus, accountDetail string) error
 }

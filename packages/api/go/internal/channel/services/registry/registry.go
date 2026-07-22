@@ -1,8 +1,11 @@
 // Package registry keeps the in-process map of live gateway channel sessions.
 //
-// It has no repository dependency and no batch bootstrap: after a restart the
-// operator re-authenticates via Connect, which repopulates the map with fresh
-// platform sessions.
+// It has no repository dependency: the map is populated by Register, called both
+// from the Connect use case (fresh pairing / manual reconnect) and from the
+// channel module's OnStart lifecycle hook, which enumerates the paired channels
+// (whatsmeow devices persist in the sqlstore) and restores each session after a
+// restart. On shutdown the module's OnStop hook calls DisconnectAll to tear the
+// live sessions down cleanly.
 package registry
 
 import (
