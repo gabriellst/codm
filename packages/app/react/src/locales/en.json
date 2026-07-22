@@ -561,7 +561,8 @@
 		"providerNotFound": "not found in PATH",
 		"stopCriteria": "Stop criteria",
 		"stopCriteriaDescription": "When any of these happen the agent stops, the thread is flagged \"Needs you\", and the stop shows up in the session until you resolve it.",
-		"title": "Settings"
+		"title": "Settings",
+		"operatorUnnamed": "Unnamed"
 	},
 	"workspaces": {
 		"addDescription": "Point at a project folder on this Mac. Git and Claude-project badges are detected automatically.",

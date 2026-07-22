@@ -6,8 +6,10 @@ import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/
 import { ProviderDetector } from '@terminal/services/ProviderDetector'
 import { StopPolicyConfigRepository } from '@issue/repositories/StopPolicyConfigRepository'
 
-/** App version — mirrors packages/api/typescript/package.json `version`. Surfaced read-only for the About row. */
-const APP_VERSION = '0.0.1'
+import pkg from '../../../package.json' with { type: 'json' }
+
+/** App version — SOURCED from package.json so the About row can never drift from the real version. */
+const APP_VERSION: string = pkg.version
 
 const ProviderAvailabilitySchema = z.object({
 	provider: z.enum(ProviderKind),
@@ -76,7 +78,8 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 			providers,
 			stopCriteria,
 			general: {
-				operatorName: ownerRow[0]?.name ?? 'Operator',
+				// Empty when unnamed — the frontend renders its own i18n placeholder; never an EN literal from the API.
+				operatorName: ownerRow[0]?.name ?? '',
 				timezone: ownerRow[0]?.timezone ?? '',
 				dataDir: Config.env.CODEDM_DATA_DIR,
 			},

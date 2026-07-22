@@ -17,7 +17,7 @@ export function GeneralSection() {
 	}
 
 	const rows: { label: string; value: string; mono?: boolean }[] = [
-		{ label: t('settings.generalOperator'), value: data.general.operatorName },
+		{ label: t('settings.generalOperator'), value: data.general.operatorName || t('settings.operatorUnnamed') },
 		{ label: t('settings.generalTimezone'), value: data.general.timezone },
 		{ label: t('settings.generalDataDir'), value: data.general.dataDir, mono: true },
 		{ label: t('settings.generalAppVersion'), value: data.appVersion, mono: true },

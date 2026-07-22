@@ -561,7 +561,8 @@
 		"providerNotFound": "não encontrado no PATH",
 		"stopCriteria": "Critérios de parada",
 		"stopCriteriaDescription": "Quando qualquer um desses ocorre, o agente para, a conversa é marcada como \"Precisa de você\" e a parada aparece na sessão até você resolvê-la.",
-		"title": "Configurações"
+		"title": "Configurações",
+		"operatorUnnamed": "Sem nome"
 	},
 	"workspaces": {
 		"addDescription": "Aponte para uma pasta de projeto neste Mac. Selos de Git e de projeto Claude são detectados automaticamente.",

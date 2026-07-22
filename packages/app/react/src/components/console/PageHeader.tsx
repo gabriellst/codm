@@ -28,22 +28,24 @@ export function PageHeader({
 	const { t } = useTranslation()
 	return (
 		<div className={cn('flex items-start justify-between gap-4', className)}>
-			<div className="flex min-w-0 flex-1 flex-col gap-2">
-				<div className="flex items-center gap-3">
-					{back && (
-						<Button
-							variant="secondary"
-							size="icon"
-							aria-label={t('console.back')}
-							className="size-9 shrink-0 rounded-full"
-							onClick={() => router.history.back()}
-						>
-							<IconChevronLeft />
-						</Button>
-					)}
+			<div className="flex min-w-0 flex-1 items-start gap-3">
+				{back && (
+					<Button
+						variant="secondary"
+						size="icon"
+						aria-label={t('console.back')}
+						className="size-9 shrink-0 rounded-full"
+						onClick={() => router.history.back()}
+					>
+						<IconChevronLeft />
+					</Button>
+				)}
+				{/* Title + subtitle share a column so the subtitle left-aligns with the TITLE TEXT,
+				    not the container edge (it must never hang under the back button). */}
+				<div className="flex min-w-0 flex-col gap-2">
 					<h1 className="heading-display text-3xl text-foreground md:text-4xl">{title}</h1>
+					{subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
 				</div>
-				{subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
 			</div>
 			{action && <div className="shrink-0">{action}</div>}
 		</div>
