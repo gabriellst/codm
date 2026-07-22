@@ -1,11 +1,15 @@
 package enums
 
-// MembershipAction describes a live change to a group's member set.
-type MembershipAction string
+import "template/contracts-go/wire"
+
+// MembershipAction describes a live change to a group's member set. Retargeted
+// onto the frozen contracts wire binding (classification §C.1: exact value-set
+// match, dormant) — a name/import-only swap.
+type MembershipAction = wire.MembershipAction
 
 const (
-	MembershipActionJoined   MembershipAction = "joined"
-	MembershipActionLeft     MembershipAction = "left"
-	MembershipActionPromoted MembershipAction = "promoted"
-	MembershipActionDemoted  MembershipAction = "demoted"
+	MembershipActionJoined   = wire.MembershipActionjoined
+	MembershipActionLeft     = wire.MembershipActionleft
+	MembershipActionPromoted = wire.MembershipActionpromoted
+	MembershipActionDemoted  = wire.MembershipActiondemoted
 )

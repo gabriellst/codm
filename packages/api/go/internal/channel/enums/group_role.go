@@ -1,10 +1,14 @@
 package enums
 
-// GroupRole is the role of a member inside a group.
-type GroupRole string
+import "template/contracts-go/wire"
+
+// GroupRole is the role of a member inside a group. Retargeted onto the frozen
+// contracts wire binding (classification §C.1: exact value-set match, dormant) —
+// a name/import-only swap.
+type GroupRole = wire.GroupRole
 
 const (
-	GroupRoleMember     GroupRole = "member"
-	GroupRoleAdmin      GroupRole = "admin"
-	GroupRoleSuperAdmin GroupRole = "super_admin"
+	GroupRoleMember     = wire.GroupRolemember
+	GroupRoleAdmin      = wire.GroupRoleadmin
+	GroupRoleSuperAdmin = wire.GroupRolesuper_admin
 )

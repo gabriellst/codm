@@ -337,4 +337,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	template/contracts-go v0.0.0
 )
+
+replace template/contracts-go => ../../contracts/generated/go
