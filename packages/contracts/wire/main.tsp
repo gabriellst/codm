@@ -19,6 +19,16 @@ import "./enums/owner-kind.tsp";
 import "./enums/channel-kind.tsp";
 import "./enums/channel-status.tsp";
 import "./enums/contact-kind.tsp";
+// Channel wire surface — full medscall port (defined-and-dormant except where the
+// first gateway phase exercises them). Message payload / receipt / presence / sync enums.
+import "./enums/message-type.tsp";
+import "./enums/direction.tsp";
+import "./enums/presence-type.tsp";
+import "./enums/chat-presence-type.tsp";
+import "./enums/history-sync-type.tsp";
+import "./enums/membership-action.tsp";
+import "./enums/group-role.tsp";
+import "./enums/special-platform-event-type.tsp";
 import "./enums/provider-kind.tsp";
 import "./enums/provider-status.tsp";
 import "./enums/workspace-badge.tsp";

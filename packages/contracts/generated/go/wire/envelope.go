@@ -33,6 +33,12 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 			return nil, err
 		}
 		return v, nil
+	case "integration.channel.chat_presence_updated":
+		var v ChannelChatPresenceUpdatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
 	case "integration.channel.connected":
 		var v ChannelConnectedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
@@ -51,8 +57,62 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 			return nil, err
 		}
 		return v, nil
+	case "integration.channel.logged_out":
+		var v ChannelLoggedOutEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.membership_added":
+		var v ChannelMembershipAddedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.membership_removed":
+		var v ChannelMembershipRemovedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_message.deleted":
+		var v ChannelMessageDeletedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_message.delivered":
+		var v ChannelMessageDeliveredEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_message.edited":
+		var v ChannelMessageEditedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
 	case "integration.channel_message.received":
 		var v ChannelMessageReceivedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_message.seen":
+		var v ChannelMessageSeenEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_message.sent":
+		var v ChannelMessageSentEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.messages_synced":
+		var v ChannelMessagesSyncedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}
@@ -65,6 +125,60 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 		return v, nil
 	case "integration.channel.pairing_qr_updated":
 		var v ChannelPairingQrUpdatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.presence_updated":
+		var v ChannelPresenceUpdatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.remote_created":
+		var v ChannelRemoteCreatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.remote_deleted":
+		var v ChannelRemoteDeletedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.remote_updated":
+		var v ChannelRemoteUpdatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.remotes_synced":
+		var v ChannelRemotesSyncedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel_special_platform_event.received":
+		var v ChannelSpecialPlatformEventReceivedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.sync_completed":
+		var v ChannelSyncCompletedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.sync_progress":
+		var v ChannelSyncProgressEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.channel.sync_started":
+		var v ChannelSyncStartedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}

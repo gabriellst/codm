@@ -80,6 +80,34 @@ components:
         - '100'
         - '200'
       description: Rolling per-thread context buffer size, in messages. A closed set of tiers {25,50,100,200}. Modeled as a STRING enum (the wire codegen carries string enums; numeric-literal unions are not first-class) — the domain narrows it to the numeric tiers and the DB stores it as text via the shared text-column convention.
+    ChannelChatPresenceUpdatedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - chatId
+        - senderId
+        - state
+        - observedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.chat_presence_updated
+        channelId:
+          type: string
+        chatId:
+          type: string
+        senderId:
+          type: string
+        state:
+          $ref: '#/components/schemas/ChatPresenceType'
+        observedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A typing/recording indicator inside a specific chat. Descends the medscall integration.channel.chat_presence_updated (whatsmeow *events.ChatPresence). state names the transient indicator (composing | recording | paused). ownerId travels on the envelope.
     ChannelConnectedEvent:
       type: object
       required:
@@ -169,6 +197,174 @@ components:
         - INSTAGRAM_DM
         - TELEGRAM
       description: Messaging platform a Channel bridges. Frozen for three (founder decision 4); only WHATSAPP is realized in the first gateway phase — INSTAGRAM_DM and TELEGRAM are reserved variants. Descends the medscall Platform enum. Persisted on channel-side projections (Go-owned).
+    ChannelLoggedOutEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - reason
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.logged_out
+        channelId:
+          type: string
+        reason:
+          type: string
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. The platform forcibly logged the gateway session out (device unlinked, ban, credential revocation) — distinct from a graceful disconnect. Descends the medscall integration.channel.logged_out. reason is the platform-supplied cause; platformData is dropped (per-platform opaque). ownerId travels on the envelope.
+    ChannelMembershipAddedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - groupId
+        - memberId
+        - isAdmin
+        - joinedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.membership_added
+        channelId:
+          type: string
+        groupId:
+          type: string
+        memberId:
+          type: string
+        isAdmin:
+          type: boolean
+        joinedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A participant joined a group. Descends the medscall integration.channel.membership_added. Writes a gateway.remote_memberships row (channelId, groupId, memberId). isAdmin captures the join-time role; the promoted/demoted transitions are modeled by the dormant MembershipAction enum. ownerId travels on the envelope.
+    ChannelMembershipRemovedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - groupId
+        - memberId
+        - removedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.membership_removed
+        channelId:
+          type: string
+        groupId:
+          type: string
+        memberId:
+          type: string
+        removedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A participant left (or was removed from) a group. Descends the medscall integration.channel.membership_removed. Deletes the matching gateway.remote_memberships row. ownerId travels on the envelope.
+    ChannelMessageDeletedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - messageId
+        - remoteId
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel_message.deleted
+        channelId:
+          type: string
+        messageId:
+          type: string
+        remoteId:
+          type: string
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A tombstone for a previously sent/received message. Descends the medscall channel.message_deleted domain event, promoted to the wire per the full-port mandate. The gateway.messages read model stamps deleted_at and hides the row; the original sent/received fact stays in the event log for audit. ownerId travels on the envelope.
+    ChannelMessageDeliveredEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - remoteId
+        - senderId
+        - messageIds
+        - timestamp
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel_message.delivered
+        channelId:
+          type: string
+        remoteId:
+          type: string
+        senderId:
+          type: string
+        messageIds:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: integer
+          format: int64
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A recipient device received one or more of the owner's messages in a chat. Descends the medscall integration.channel_message.delivered. Timestamp is a watermark — every owner message in the chat with message_timestamp <= timestamp is considered delivered to senderId; the gateway.messages read model advances delivered_at. messageIds may be empty (bare online-ack), single, or batched. ownerId travels on the envelope.
+    ChannelMessageEditedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - messageId
+        - remoteId
+        - senderId
+        - timestamp
+        - messageType
+        - contentJson
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel_message.edited
+        channelId:
+          type: string
+        messageId:
+          type: string
+        remoteId:
+          type: string
+        senderId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        messageType:
+          $ref: '#/components/schemas/MessageType'
+        contentJson:
+          type: string
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A previously sent/received message's content was revised. Descends the medscall channel.message_edited domain event, promoted to the wire per the full-port mandate. The gateway.messages read model overlays the newest edit's content onto the original row and stamps edited_at. Content is opaque on the wire (contentJson). ownerId travels on the envelope.
     ChannelMessageReceivedEvent:
       type: object
       required:
@@ -215,6 +411,112 @@ components:
       allOf:
         - $ref: '#/components/schemas/IntegrationEvent'
       description: BC1 Channel Gateway -> BC4 Thread & Routing. A normalized inbound message on a connected channel. Descends medscall integration.channel_message.received. The ContactRef VO is flattened to scalar contact* fields (the wire codegen carries scalars + enums, not nested models); the core reassembles it. `receivedAt` is when the platform says the message was sent. ownerId travels on the envelope.
+    ChannelMessageSeenEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - remoteId
+        - senderId
+        - messageIds
+        - timestamp
+        - self
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel_message.seen
+        channelId:
+          type: string
+        remoteId:
+          type: string
+        senderId:
+          type: string
+        messageIds:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: integer
+          format: int64
+        self:
+          type: boolean
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. Messages in a chat were read or played. Descends the medscall integration.channel_message.seen — covers whatsmeow read / played / read-self (self=true, owner read on another device) receipts. Timestamp is a watermark; the gateway.messages read model advances seen_at for every owner message with message_timestamp <= timestamp. self=true rows drive multi-device chat-seen sync; senderId != owner rows drive per-message blue-tick status. ownerId travels on the envelope.
+    ChannelMessageSentEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - messageId
+        - internalMessageId
+        - remoteId
+        - senderId
+        - isGroup
+        - timestamp
+        - observedAt
+        - messageType
+        - contentJson
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel_message.sent
+        channelId:
+          type: string
+        messageId:
+          type: string
+        internalMessageId:
+          type: string
+        remoteId:
+          type: string
+        senderId:
+          type: string
+        isGroup:
+          type: boolean
+        timestamp:
+          type: integer
+          format: int64
+        observedAt:
+          type: string
+          format: date-time
+        messageType:
+          $ref: '#/components/schemas/MessageType'
+        contentJson:
+          type: string
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. An outbound message left the gateway (the raw projection driver behind gateway.messages, distinct from the leaner BC4-facing outbound_delivered). Descends the medscall channel.message_sent domain event, promoted to the wire per the full-port mandate. The content discriminated union (Platform,MessageType) is opaque on the wire — carried JSON-serialized in contentJson. platformData is dropped (per-platform opaque). ownerId travels on the envelope.
+    ChannelMessagesSyncedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - total
+        - inserted
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.messages_synced
+        channelId:
+          type: string
+        total:
+          type: integer
+          format: int32
+        inserted:
+          type: integer
+          format: int32
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. One HistorySync batch finished inserting message rows. Descends the medscall integration.channel.messages_synced. Summary counts only (no per-message data) — lets consumers invalidate the thread/message views. ownerId travels on the envelope.
     ChannelOutboundDeliveredEvent:
       type: object
       required:
@@ -275,6 +577,160 @@ components:
       allOf:
         - $ref: '#/components/schemas/IntegrationEvent'
       description: BC1 Channel Gateway -> BC4 Thread & Routing. A fresh pairing QR/token was produced (rotates ~every 30s). Descends medscall WhatsAppQRCodeUpdated; drives the T06 live QR over SSE.
+    ChannelPresenceUpdatedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - remoteId
+        - unavailable
+        - observedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.presence_updated
+        channelId:
+          type: string
+        remoteId:
+          type: string
+        unavailable:
+          type: boolean
+        lastSeen:
+          type: integer
+          format: int64
+        observedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A contact's overall availability changed (online/offline, lastSeen advanced). Descends the medscall integration.channel.presence_updated (whatsmeow *events.Presence). Carries the raw unavailable boolean + optional lastSeen unix timestamp; the PresenceType enum is the harmonized named-state companion. ownerId travels on the envelope.
+    ChannelRemoteCreatedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - remoteId
+        - contactKind
+        - platform
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.remote_created
+        channelId:
+          type: string
+        remoteId:
+          type: string
+        contactKind:
+          $ref: '#/components/schemas/ContactKind'
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A Remote aggregate (contact / group / broadcast) was first observed on a channel. Descends the medscall integration.channel.remote_created. Carries identity + kind only; profile fields (name, avatar) arrive via remote_updated. The source RemoteType is harmonized onto ContactKind (USER->CONTACT). ownerId travels on the envelope.
+    ChannelRemoteDeletedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - remoteId
+        - deletedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.remote_deleted
+        channelId:
+          type: string
+        remoteId:
+          type: string
+        deletedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A remote was soft-deleted (contact removed / left permanently). Descends the medscall integration.channel.remote_deleted. The gateway.remotes read model stamps deleted_at without removing the row. ownerId travels on the envelope.
+    ChannelRemoteUpdatedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - remoteId
+        - contactKind
+        - displayName
+        - observedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.remote_updated
+        channelId:
+          type: string
+        remoteId:
+          type: string
+        contactKind:
+          $ref: '#/components/schemas/ContactKind'
+        displayName:
+          type: string
+        description:
+          type: string
+        observedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A remote's profile snapshot changed (user rename, group subject/description). Descends the medscall integration.channel.remote_updated. Users carry displayName only; groups carry displayName (subject) + optional description. The source field `name` is renamed displayName to avoid colliding with the envelope's `name` discriminator. Membership changes ride the membership_added/removed events, not this one. The source RemoteType is harmonized onto ContactKind (USER->CONTACT). ownerId travels on the envelope.
+    ChannelRemotesSyncedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - total
+        - inserted
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.remotes_synced
+        channelId:
+          type: string
+        total:
+          type: integer
+          format: int32
+        inserted:
+          type: integer
+          format: int32
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. One bootstrap contact-sync pass finished inserting remote rows. Descends the medscall integration.channel.remotes_synced (the source's contacts_synced fact). Summary counts only — lets consumers invalidate the sidebar/remote list. ownerId travels on the envelope.
+    ChannelSpecialPlatformEventReceivedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - platformEventName
+        - eventType
+        - platform
+        - payloadJson
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel_special_platform_event.received
+        channelId:
+          type: string
+        platformEventName:
+          type: string
+        eventType:
+          $ref: '#/components/schemas/SpecialPlatformEventType'
+        platform:
+          $ref: '#/components/schemas/ChannelKind'
+        payloadJson:
+          type: string
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: 'BC1 Channel Gateway. A generic envelope for a platform-native out-of-band event. Descends the medscall integration.channel_special_platform_event.received. Defined-and-dormant: the only realized variant (qr_code_updated) is served concretely by the frozen pairing_qr_updated event; this wrapper carries eventType (SpecialPlatformEventType) + an opaque JSON-serialized payload (payloadJson) for future platform events. The source field `eventName` is renamed platformEventName to avoid colliding with the generated Go EventName() discriminator method. ownerId travels on the envelope.'
     ChannelStatus:
       type: string
       enum:
@@ -282,6 +738,73 @@ components:
         - PAIRING
         - CONNECTED
       description: Connection health of a Channel. DISCONNECTED (no session) → PAIRING (QR/OAuth in progress) → CONNECTED (reachable). Descends the medscall channel status.
+    ChannelSyncCompletedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - completedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.sync_completed
+        channelId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A sync session finished. Descends the medscall integration.channel.sync_completed. ownerId travels on the envelope.
+    ChannelSyncProgressEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - historySyncType
+        - percent
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.sync_progress
+        channelId:
+          type: string
+        historySyncType:
+          $ref: '#/components/schemas/HistorySyncType'
+        percent:
+          type: integer
+          format: int32
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. Progress metrics for an ongoing sync session. Descends the medscall integration.channel.sync_progress. historySyncType names the whatsmeow batch class (initial | recent); percent is 0-100. ownerId travels on the envelope.
+    ChannelSyncStartedEvent:
+      type: object
+      required:
+        - name
+        - channelId
+        - startedAt
+      properties:
+        name:
+          type: string
+          enum:
+            - integration.channel.sync_started
+        channelId:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+      description: BC1 Channel Gateway. A sync session began. Descends the medscall integration.channel.sync_started. ownerId travels on the envelope.
+    ChatPresenceType:
+      type: string
+      enum:
+        - composing
+        - recording
+        - paused
+      description: Typing/recording indicator inside a specific chat. Descends the medscall channel ChatPresenceType (whatsmeow *events.ChatPresence). Lowercase wire values are preserved verbatim from the source. Carried by the chat_presence_updated wire event's `state` field.
     ClassificationMethod:
       type: string
       enum:
@@ -295,7 +818,8 @@ components:
       enum:
         - CONTACT
         - GROUP
-      description: Whether a channel counterparty is a single contact or a group conversation. Flattened out of the ContactRef value object onto the wire (the codegen carries scalars + enums, not nested models); the domain reassembles ContactRef as a Value Object.
+        - BROADCAST
+      description: 'Whether a channel counterparty is a single contact, a group conversation, or a broadcast list. Flattened out of the ContactRef value object onto the wire (the codegen carries scalars + enums, not nested models); the domain reassembles ContactRef as a Value Object. Absorbs the medscall channel RemoteType {USER->CONTACT, GROUP, BROADCAST}: BROADCAST is added here rather than minting a parallel RemoteType enum (extend-over-duplicate); the frozen CONTACT/GROUP values are untouched.'
     CurrencyCode:
       type: string
       enum:
@@ -380,6 +904,25 @@ components:
         - ZAR
         - ZMW
       description: ISO-4217 currency codes. Stored on every monetary amount; never freeform.
+    Direction:
+      type: string
+      enum:
+        - SENT
+        - RECEIVED
+      description: Whether a gateway message row is outbound (SENT by the owner) or inbound (RECEIVED). Descends the medscall channel Direction. The gateway.messages projector derives it from which lifecycle event drove the row (channel_message.sent -> SENT, channel_message.received -> RECEIVED); persisted as the `direction` column.
+    GroupRole:
+      type: string
+      enum:
+        - member
+        - admin
+        - super_admin
+      description: 'Role of a member inside a group. Descends the medscall channel GroupRole. Lowercase wire values preserved verbatim. Defined-and-dormant: the gateway.remote_memberships projection stores the boolean `is_admin` today; this enum is the harmonized closed set for consumers that need the full member/admin/super_admin gradient.'
+    HistorySyncType:
+      type: string
+      enum:
+        - initial
+        - recent
+      description: Classifies a whatsmeow HistorySync batch by its SyncType. Descends the medscall channel HistorySyncType — only the two user-facing variants are surfaced (FULL, PUSH_NAME, NON_BLOCKING_DATA, ON_DEMAND are dropped at the source mapper). Lowercase wire values preserved verbatim. Carried by the sync_progress wire event's `historySyncType` field.
     IntegrationEvent:
       type: object
       required:
@@ -411,6 +954,25 @@ components:
           integration.channel.pairing_qr_updated: '#/components/schemas/ChannelPairingQrUpdatedEvent'
           integration.channel.outbound_delivered: '#/components/schemas/ChannelOutboundDeliveredEvent'
           integration.channel.delivery_requested: '#/components/schemas/ChannelDeliveryRequestedEvent'
+          integration.channel_message.sent: '#/components/schemas/ChannelMessageSentEvent'
+          integration.channel_message.edited: '#/components/schemas/ChannelMessageEditedEvent'
+          integration.channel_message.deleted: '#/components/schemas/ChannelMessageDeletedEvent'
+          integration.channel_message.delivered: '#/components/schemas/ChannelMessageDeliveredEvent'
+          integration.channel_message.seen: '#/components/schemas/ChannelMessageSeenEvent'
+          integration.channel.remote_created: '#/components/schemas/ChannelRemoteCreatedEvent'
+          integration.channel.remote_updated: '#/components/schemas/ChannelRemoteUpdatedEvent'
+          integration.channel.remote_deleted: '#/components/schemas/ChannelRemoteDeletedEvent'
+          integration.channel.membership_added: '#/components/schemas/ChannelMembershipAddedEvent'
+          integration.channel.membership_removed: '#/components/schemas/ChannelMembershipRemovedEvent'
+          integration.channel.messages_synced: '#/components/schemas/ChannelMessagesSyncedEvent'
+          integration.channel.remotes_synced: '#/components/schemas/ChannelRemotesSyncedEvent'
+          integration.channel.sync_started: '#/components/schemas/ChannelSyncStartedEvent'
+          integration.channel.sync_progress: '#/components/schemas/ChannelSyncProgressEvent'
+          integration.channel.sync_completed: '#/components/schemas/ChannelSyncCompletedEvent'
+          integration.channel.presence_updated: '#/components/schemas/ChannelPresenceUpdatedEvent'
+          integration.channel.chat_presence_updated: '#/components/schemas/ChannelChatPresenceUpdatedEvent'
+          integration.channel.logged_out: '#/components/schemas/ChannelLoggedOutEvent'
+          integration.channel_special_platform_event.received: '#/components/schemas/ChannelSpecialPlatformEventReceivedEvent'
           integration.thread.attached: '#/components/schemas/ThreadAttachedEvent'
           integration.message.classified: '#/components/schemas/MessageClassifiedEvent'
           integration.issue.opened: '#/components/schemas/IssueOpenedEvent'
@@ -560,6 +1122,14 @@ components:
         - pt-BR
         - en-US
       description: UI locale the app ships translations for.
+    MembershipAction:
+      type: string
+      enum:
+        - joined
+        - left
+        - promoted
+        - demoted
+      description: "A live change to a group's member set. Descends the medscall channel MembershipAction. Lowercase wire values preserved verbatim. Defined-and-dormant: the membership_added / membership_removed wire events model the join/leave facts directly (with `isAdmin`); this enum is the harmonized closed set for the promoted/demoted transitions the source also emits."
     MessageClassifiedEvent:
       type: object
       required:
@@ -583,12 +1153,38 @@ components:
       allOf:
         - $ref: '#/components/schemas/IntegrationEvent'
       description: BC4 Thread & Routing -> BC5 Issue Execution. A single-stream inbound message was demultiplexed into an issue (or fell through to clarification). issueId is absent only when the method resolved to a clarification.
+    MessageType:
+      type: string
+      enum:
+        - TEXT
+        - IMAGE
+        - VIDEO
+        - AUDIO
+        - DOCUMENT
+        - STICKER
+        - LOCATION
+        - CONTACT
+        - POLL
+        - LIST
+        - BUTTON
+        - REACTION
+        - STATUS
+      description: Kind of payload a channel message carries. Descends the medscall channel MessageType — the full whatsmeow-derived surface is ported verbatim; only TEXT is exercised in the first gateway phase, the rest are defined-and-dormant. Materialized on the gateway.messages projection's content union (contentJson is the serialized variant).
     OwnerKind:
       type: string
       enum:
         - ORGANIZATION
         - INDIVIDUAL
       description: Discriminator for the tenant aggregate (Owner). Generic, product-agnostic placeholder values — a product specializes them (e.g. CLINIC / SOLO_DOCTOR, STORE / MERCHANT) by re-labelling. The kernel only cares that an ownerId resolves to some kind. Persisted on owner.owners.kind.
+    PresenceType:
+      type: string
+      enum:
+        - AVAILABLE
+        - UNAVAILABLE
+        - COMPOSING
+        - RECORDING
+        - PAUSED
+      description: "A contact's overall availability signal on a channel. Descends the medscall channel PresenceType (whatsmeow *events.Presence). Defined-and-dormant: the presence_updated wire event carries the raw `unavailable` boolean + `lastSeen`; this enum is the harmonized closed set for consumers that want a named state."
     ProviderKind:
       type: string
       enum:
@@ -616,6 +1212,11 @@ components:
         - ROUTER
         - OPERATOR
       description: Who an outbound channel message is delivered as. AGENT (labeled agent reply), ROUTER (clarification question, no label), OPERATOR (direct message while paused). Promoted from the modeling's inline senderIdentity union.
+    SpecialPlatformEventType:
+      type: string
+      enum:
+        - qr_code_updated
+      description: Discriminator for a platform-specific out-of-band event carried by channel_special_platform_event.received. Descends the medscall channel ChannelSpecialPlatformEventType. Lowercase wire value preserved verbatim. qr_code_updated is realized concretely by the frozen pairing_qr_updated event; this generic envelope + enum is defined-and-dormant for future platform-native events.
     StopKind:
       type: string
       enum:

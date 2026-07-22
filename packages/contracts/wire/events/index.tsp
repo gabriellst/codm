@@ -19,6 +19,36 @@ import "./channel-pairing-qr-updated.tsp";
 import "./channel-outbound-delivered.tsp";
 import "./channel-delivery-requested.tsp";
 
+// Gateway full-port — the complete medscall channel wire surface, retargeted to the codedm
+// envelope. Everything below is defined-and-dormant except where the first gateway phase
+// exercises it; every fact is an `integration.*` event so the outbox routes it to the
+// ExternalMediator (the assert-wire-names gate enforces the prefix).
+// Message lifecycle (drives the gateway.messages projection alongside the frozen received/outbound).
+import "./channel-message-sent.tsp";
+import "./channel-message-edited.tsp";
+import "./channel-message-deleted.tsp";
+import "./channel-message-delivered.tsp";
+import "./channel-message-seen.tsp";
+// Remote (contact/group/broadcast) lifecycle.
+import "./channel-remote-created.tsp";
+import "./channel-remote-updated.tsp";
+import "./channel-remote-deleted.tsp";
+// Group membership.
+import "./channel-membership-added.tsp";
+import "./channel-membership-removed.tsp";
+// Bootstrap / history sync progress.
+import "./channel-messages-synced.tsp";
+import "./channel-remotes-synced.tsp";
+import "./channel-sync-started.tsp";
+import "./channel-sync-progress.tsp";
+import "./channel-sync-completed.tsp";
+// Presence.
+import "./channel-presence-updated.tsp";
+import "./channel-chat-presence-updated.tsp";
+// Session / platform out-of-band.
+import "./channel-logged-out.tsp";
+import "./channel-special-platform-event-received.tsp";
+
 // Core <-> Terminal (BC4 <-> BC5 <-> BC6) — routing, issue lifecycle, artifacts, workspace refs
 import "./thread-attached.tsp";
 import "./message-classified.tsp";

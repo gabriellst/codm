@@ -89,6 +89,23 @@ func ParseChannelStatus(s string) (ChannelStatus, error) {
 	}
 }
 
+type ChatPresenceType string
+
+const (
+	ChatPresenceTypecomposing ChatPresenceType = "composing"
+	ChatPresenceTyperecording ChatPresenceType = "recording"
+	ChatPresenceTypepaused ChatPresenceType = "paused"
+)
+
+func ParseChatPresenceType(s string) (ChatPresenceType, error) {
+	switch ChatPresenceType(s) {
+	case ChatPresenceTypecomposing, ChatPresenceTyperecording, ChatPresenceTypepaused:
+		return ChatPresenceType(s), nil
+	default:
+		return "", fmt.Errorf("invalid ChatPresenceType: %q", s)
+	}
+}
+
 type ClassificationMethod string
 
 const (
@@ -112,11 +129,12 @@ type ContactKind string
 const (
 	ContactKindCONTACT ContactKind = "CONTACT"
 	ContactKindGROUP ContactKind = "GROUP"
+	ContactKindBROADCAST ContactKind = "BROADCAST"
 )
 
 func ParseContactKind(s string) (ContactKind, error) {
 	switch ContactKind(s) {
-	case ContactKindCONTACT, ContactKindGROUP:
+	case ContactKindCONTACT, ContactKindGROUP, ContactKindBROADCAST:
 		return ContactKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid ContactKind: %q", s)
@@ -217,6 +235,55 @@ func ParseCurrencyCode(s string) (CurrencyCode, error) {
 	}
 }
 
+type Direction string
+
+const (
+	DirectionSENT Direction = "SENT"
+	DirectionRECEIVED Direction = "RECEIVED"
+)
+
+func ParseDirection(s string) (Direction, error) {
+	switch Direction(s) {
+	case DirectionSENT, DirectionRECEIVED:
+		return Direction(s), nil
+	default:
+		return "", fmt.Errorf("invalid Direction: %q", s)
+	}
+}
+
+type GroupRole string
+
+const (
+	GroupRolemember GroupRole = "member"
+	GroupRoleadmin GroupRole = "admin"
+	GroupRolesuper_admin GroupRole = "super_admin"
+)
+
+func ParseGroupRole(s string) (GroupRole, error) {
+	switch GroupRole(s) {
+	case GroupRolemember, GroupRoleadmin, GroupRolesuper_admin:
+		return GroupRole(s), nil
+	default:
+		return "", fmt.Errorf("invalid GroupRole: %q", s)
+	}
+}
+
+type HistorySyncType string
+
+const (
+	HistorySyncTypeinitial HistorySyncType = "initial"
+	HistorySyncTyperecent HistorySyncType = "recent"
+)
+
+func ParseHistorySyncType(s string) (HistorySyncType, error) {
+	switch HistorySyncType(s) {
+	case HistorySyncTypeinitial, HistorySyncTyperecent:
+		return HistorySyncType(s), nil
+	default:
+		return "", fmt.Errorf("invalid HistorySyncType: %q", s)
+	}
+}
+
 type IssueArchiveReason string
 
 const (
@@ -267,6 +334,51 @@ func ParseLanguage(s string) (Language, error) {
 	}
 }
 
+type MembershipAction string
+
+const (
+	MembershipActionjoined MembershipAction = "joined"
+	MembershipActionleft MembershipAction = "left"
+	MembershipActionpromoted MembershipAction = "promoted"
+	MembershipActiondemoted MembershipAction = "demoted"
+)
+
+func ParseMembershipAction(s string) (MembershipAction, error) {
+	switch MembershipAction(s) {
+	case MembershipActionjoined, MembershipActionleft, MembershipActionpromoted, MembershipActiondemoted:
+		return MembershipAction(s), nil
+	default:
+		return "", fmt.Errorf("invalid MembershipAction: %q", s)
+	}
+}
+
+type MessageType string
+
+const (
+	MessageTypeTEXT MessageType = "TEXT"
+	MessageTypeIMAGE MessageType = "IMAGE"
+	MessageTypeVIDEO MessageType = "VIDEO"
+	MessageTypeAUDIO MessageType = "AUDIO"
+	MessageTypeDOCUMENT MessageType = "DOCUMENT"
+	MessageTypeSTICKER MessageType = "STICKER"
+	MessageTypeLOCATION MessageType = "LOCATION"
+	MessageTypeCONTACT MessageType = "CONTACT"
+	MessageTypePOLL MessageType = "POLL"
+	MessageTypeLIST MessageType = "LIST"
+	MessageTypeBUTTON MessageType = "BUTTON"
+	MessageTypeREACTION MessageType = "REACTION"
+	MessageTypeSTATUS MessageType = "STATUS"
+)
+
+func ParseMessageType(s string) (MessageType, error) {
+	switch MessageType(s) {
+	case MessageTypeTEXT, MessageTypeIMAGE, MessageTypeVIDEO, MessageTypeAUDIO, MessageTypeDOCUMENT, MessageTypeSTICKER, MessageTypeLOCATION, MessageTypeCONTACT, MessageTypePOLL, MessageTypeLIST, MessageTypeBUTTON, MessageTypeREACTION, MessageTypeSTATUS:
+		return MessageType(s), nil
+	default:
+		return "", fmt.Errorf("invalid MessageType: %q", s)
+	}
+}
+
 type OwnerKind string
 
 const (
@@ -280,6 +392,25 @@ func ParseOwnerKind(s string) (OwnerKind, error) {
 		return OwnerKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid OwnerKind: %q", s)
+	}
+}
+
+type PresenceType string
+
+const (
+	PresenceTypeAVAILABLE PresenceType = "AVAILABLE"
+	PresenceTypeUNAVAILABLE PresenceType = "UNAVAILABLE"
+	PresenceTypeCOMPOSING PresenceType = "COMPOSING"
+	PresenceTypeRECORDING PresenceType = "RECORDING"
+	PresenceTypePAUSED PresenceType = "PAUSED"
+)
+
+func ParsePresenceType(s string) (PresenceType, error) {
+	switch PresenceType(s) {
+	case PresenceTypeAVAILABLE, PresenceTypeUNAVAILABLE, PresenceTypeCOMPOSING, PresenceTypeRECORDING, PresenceTypePAUSED:
+		return PresenceType(s), nil
+	default:
+		return "", fmt.Errorf("invalid PresenceType: %q", s)
 	}
 }
 
@@ -347,6 +478,21 @@ func ParseSenderIdentity(s string) (SenderIdentity, error) {
 		return SenderIdentity(s), nil
 	default:
 		return "", fmt.Errorf("invalid SenderIdentity: %q", s)
+	}
+}
+
+type SpecialPlatformEventType string
+
+const (
+	SpecialPlatformEventTypeqr_code_updated SpecialPlatformEventType = "qr_code_updated"
+)
+
+func ParseSpecialPlatformEventType(s string) (SpecialPlatformEventType, error) {
+	switch SpecialPlatformEventType(s) {
+	case SpecialPlatformEventTypeqr_code_updated:
+		return SpecialPlatformEventType(s), nil
+	default:
+		return "", fmt.Errorf("invalid SpecialPlatformEventType: %q", s)
 	}
 }
 

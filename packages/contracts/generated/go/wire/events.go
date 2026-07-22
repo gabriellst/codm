@@ -44,6 +44,25 @@ type ArtifactRecordedEvent struct {
 
 func (e ArtifactRecordedEvent) EventName() string { return ArtifactRecordedEventName }
 
+// ChannelChatPresenceUpdatedEventName is the wire discriminator for ChannelChatPresenceUpdatedEvent.
+const ChannelChatPresenceUpdatedEventName = "integration.channel.chat_presence_updated"
+
+// ChannelChatPresenceUpdatedEvent — wire shape of integration.channel.chat_presence_updated.
+// BC1 Channel Gateway. A typing/recording indicator inside a specific chat. Descends the medscall integration.channel.chat_presence_updated (whatsmeow *events.ChatPresence). state names the transient indicator (composing | recording | paused). ownerId travels on the envelope.
+type ChannelChatPresenceUpdatedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	ChatID string `json:"chatId"`
+	SenderID string `json:"senderId"`
+	State ChatPresenceType `json:"state"`
+	ObservedAt time.Time `json:"observedAt"`
+}
+
+func (e ChannelChatPresenceUpdatedEvent) EventName() string { return ChannelChatPresenceUpdatedEventName }
+
 // ChannelConnectedEventName is the wire discriminator for ChannelConnectedEvent.
 const ChannelConnectedEventName = "integration.channel.connected"
 
@@ -101,6 +120,120 @@ type ChannelDisconnectedEvent struct {
 
 func (e ChannelDisconnectedEvent) EventName() string { return ChannelDisconnectedEventName }
 
+// ChannelLoggedOutEventName is the wire discriminator for ChannelLoggedOutEvent.
+const ChannelLoggedOutEventName = "integration.channel.logged_out"
+
+// ChannelLoggedOutEvent — wire shape of integration.channel.logged_out.
+// BC1 Channel Gateway. The platform forcibly logged the gateway session out (device unlinked, ban, credential revocation) — distinct from a graceful disconnect. Descends the medscall integration.channel.logged_out. reason is the platform-supplied cause; platformData is dropped (per-platform opaque). ownerId travels on the envelope.
+type ChannelLoggedOutEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	Reason string `json:"reason"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelLoggedOutEvent) EventName() string { return ChannelLoggedOutEventName }
+
+// ChannelMembershipAddedEventName is the wire discriminator for ChannelMembershipAddedEvent.
+const ChannelMembershipAddedEventName = "integration.channel.membership_added"
+
+// ChannelMembershipAddedEvent — wire shape of integration.channel.membership_added.
+// BC1 Channel Gateway. A participant joined a group. Descends the medscall integration.channel.membership_added. Writes a gateway.remote_memberships row (channelId, groupId, memberId). isAdmin captures the join-time role; the promoted/demoted transitions are modeled by the dormant MembershipAction enum. ownerId travels on the envelope.
+type ChannelMembershipAddedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	GroupID string `json:"groupId"`
+	MemberID string `json:"memberId"`
+	IsAdmin bool `json:"isAdmin"`
+	JoinedAt time.Time `json:"joinedAt"`
+}
+
+func (e ChannelMembershipAddedEvent) EventName() string { return ChannelMembershipAddedEventName }
+
+// ChannelMembershipRemovedEventName is the wire discriminator for ChannelMembershipRemovedEvent.
+const ChannelMembershipRemovedEventName = "integration.channel.membership_removed"
+
+// ChannelMembershipRemovedEvent — wire shape of integration.channel.membership_removed.
+// BC1 Channel Gateway. A participant left (or was removed from) a group. Descends the medscall integration.channel.membership_removed. Deletes the matching gateway.remote_memberships row. ownerId travels on the envelope.
+type ChannelMembershipRemovedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	GroupID string `json:"groupId"`
+	MemberID string `json:"memberId"`
+	RemovedAt time.Time `json:"removedAt"`
+}
+
+func (e ChannelMembershipRemovedEvent) EventName() string { return ChannelMembershipRemovedEventName }
+
+// ChannelMessageDeletedEventName is the wire discriminator for ChannelMessageDeletedEvent.
+const ChannelMessageDeletedEventName = "integration.channel_message.deleted"
+
+// ChannelMessageDeletedEvent — wire shape of integration.channel_message.deleted.
+// BC1 Channel Gateway. A tombstone for a previously sent/received message. Descends the medscall channel.message_deleted domain event, promoted to the wire per the full-port mandate. The gateway.messages read model stamps deleted_at and hides the row; the original sent/received fact stays in the event log for audit. ownerId travels on the envelope.
+type ChannelMessageDeletedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	MessageID string `json:"messageId"`
+	RemoteID string `json:"remoteId"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelMessageDeletedEvent) EventName() string { return ChannelMessageDeletedEventName }
+
+// ChannelMessageDeliveredEventName is the wire discriminator for ChannelMessageDeliveredEvent.
+const ChannelMessageDeliveredEventName = "integration.channel_message.delivered"
+
+// ChannelMessageDeliveredEvent — wire shape of integration.channel_message.delivered.
+// BC1 Channel Gateway. A recipient device received one or more of the owner's messages in a chat. Descends the medscall integration.channel_message.delivered. Timestamp is a watermark — every owner message in the chat with message_timestamp <= timestamp is considered delivered to senderId; the gateway.messages read model advances delivered_at. messageIds may be empty (bare online-ack), single, or batched. ownerId travels on the envelope.
+type ChannelMessageDeliveredEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	RemoteID string `json:"remoteId"`
+	SenderID string `json:"senderId"`
+	MessageIds []string `json:"messageIds"`
+	Timestamp int64 `json:"timestamp"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelMessageDeliveredEvent) EventName() string { return ChannelMessageDeliveredEventName }
+
+// ChannelMessageEditedEventName is the wire discriminator for ChannelMessageEditedEvent.
+const ChannelMessageEditedEventName = "integration.channel_message.edited"
+
+// ChannelMessageEditedEvent — wire shape of integration.channel_message.edited.
+// BC1 Channel Gateway. A previously sent/received message's content was revised. Descends the medscall channel.message_edited domain event, promoted to the wire per the full-port mandate. The gateway.messages read model overlays the newest edit's content onto the original row and stamps edited_at. Content is opaque on the wire (contentJson). ownerId travels on the envelope.
+type ChannelMessageEditedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	MessageID string `json:"messageId"`
+	RemoteID string `json:"remoteId"`
+	SenderID string `json:"senderId"`
+	Timestamp int64 `json:"timestamp"`
+	MessageType MessageType `json:"messageType"`
+	ContentJson string `json:"contentJson"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelMessageEditedEvent) EventName() string { return ChannelMessageEditedEventName }
+
 // ChannelMessageReceivedEventName is the wire discriminator for ChannelMessageReceivedEvent.
 const ChannelMessageReceivedEventName = "integration.channel_message.received"
 
@@ -125,6 +258,69 @@ type ChannelMessageReceivedEvent struct {
 }
 
 func (e ChannelMessageReceivedEvent) EventName() string { return ChannelMessageReceivedEventName }
+
+// ChannelMessageSeenEventName is the wire discriminator for ChannelMessageSeenEvent.
+const ChannelMessageSeenEventName = "integration.channel_message.seen"
+
+// ChannelMessageSeenEvent — wire shape of integration.channel_message.seen.
+// BC1 Channel Gateway. Messages in a chat were read or played. Descends the medscall integration.channel_message.seen — covers whatsmeow read / played / read-self (self=true, owner read on another device) receipts. Timestamp is a watermark; the gateway.messages read model advances seen_at for every owner message with message_timestamp <= timestamp. self=true rows drive multi-device chat-seen sync; senderId != owner rows drive per-message blue-tick status. ownerId travels on the envelope.
+type ChannelMessageSeenEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	RemoteID string `json:"remoteId"`
+	SenderID string `json:"senderId"`
+	MessageIds []string `json:"messageIds"`
+	Timestamp int64 `json:"timestamp"`
+	Self bool `json:"self"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelMessageSeenEvent) EventName() string { return ChannelMessageSeenEventName }
+
+// ChannelMessageSentEventName is the wire discriminator for ChannelMessageSentEvent.
+const ChannelMessageSentEventName = "integration.channel_message.sent"
+
+// ChannelMessageSentEvent — wire shape of integration.channel_message.sent.
+// BC1 Channel Gateway. An outbound message left the gateway (the raw projection driver behind gateway.messages, distinct from the leaner BC4-facing outbound_delivered). Descends the medscall channel.message_sent domain event, promoted to the wire per the full-port mandate. The content discriminated union (Platform,MessageType) is opaque on the wire — carried JSON-serialized in contentJson. platformData is dropped (per-platform opaque). ownerId travels on the envelope.
+type ChannelMessageSentEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	MessageID string `json:"messageId"`
+	InternalMessageID string `json:"internalMessageId"`
+	RemoteID string `json:"remoteId"`
+	SenderID string `json:"senderId"`
+	IsGroup bool `json:"isGroup"`
+	Timestamp int64 `json:"timestamp"`
+	ObservedAt time.Time `json:"observedAt"`
+	MessageType MessageType `json:"messageType"`
+	ContentJson string `json:"contentJson"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelMessageSentEvent) EventName() string { return ChannelMessageSentEventName }
+
+// ChannelMessagesSyncedEventName is the wire discriminator for ChannelMessagesSyncedEvent.
+const ChannelMessagesSyncedEventName = "integration.channel.messages_synced"
+
+// ChannelMessagesSyncedEvent — wire shape of integration.channel.messages_synced.
+// BC1 Channel Gateway. One HistorySync batch finished inserting message rows. Descends the medscall integration.channel.messages_synced. Summary counts only (no per-message data) — lets consumers invalidate the thread/message views. ownerId travels on the envelope.
+type ChannelMessagesSyncedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	Total int32 `json:"total"`
+	Inserted int32 `json:"inserted"`
+}
+
+func (e ChannelMessagesSyncedEvent) EventName() string { return ChannelMessagesSyncedEventName }
 
 // ChannelOutboundDeliveredEventName is the wire discriminator for ChannelOutboundDeliveredEvent.
 const ChannelOutboundDeliveredEventName = "integration.channel.outbound_delivered"
@@ -165,6 +361,165 @@ type ChannelPairingQrUpdatedEvent struct {
 }
 
 func (e ChannelPairingQrUpdatedEvent) EventName() string { return ChannelPairingQrUpdatedEventName }
+
+// ChannelPresenceUpdatedEventName is the wire discriminator for ChannelPresenceUpdatedEvent.
+const ChannelPresenceUpdatedEventName = "integration.channel.presence_updated"
+
+// ChannelPresenceUpdatedEvent — wire shape of integration.channel.presence_updated.
+// BC1 Channel Gateway. A contact's overall availability changed (online/offline, lastSeen advanced). Descends the medscall integration.channel.presence_updated (whatsmeow *events.Presence). Carries the raw unavailable boolean + optional lastSeen unix timestamp; the PresenceType enum is the harmonized named-state companion. ownerId travels on the envelope.
+type ChannelPresenceUpdatedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	RemoteID string `json:"remoteId"`
+	Unavailable bool `json:"unavailable"`
+	LastSeen *int64 `json:"lastSeen,omitempty"`
+	ObservedAt time.Time `json:"observedAt"`
+}
+
+func (e ChannelPresenceUpdatedEvent) EventName() string { return ChannelPresenceUpdatedEventName }
+
+// ChannelRemoteCreatedEventName is the wire discriminator for ChannelRemoteCreatedEvent.
+const ChannelRemoteCreatedEventName = "integration.channel.remote_created"
+
+// ChannelRemoteCreatedEvent — wire shape of integration.channel.remote_created.
+// BC1 Channel Gateway. A Remote aggregate (contact / group / broadcast) was first observed on a channel. Descends the medscall integration.channel.remote_created. Carries identity + kind only; profile fields (name, avatar) arrive via remote_updated. The source RemoteType is harmonized onto ContactKind (USER->CONTACT). ownerId travels on the envelope.
+type ChannelRemoteCreatedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	RemoteID string `json:"remoteId"`
+	ContactKind ContactKind `json:"contactKind"`
+	Platform ChannelKind `json:"platform"`
+}
+
+func (e ChannelRemoteCreatedEvent) EventName() string { return ChannelRemoteCreatedEventName }
+
+// ChannelRemoteDeletedEventName is the wire discriminator for ChannelRemoteDeletedEvent.
+const ChannelRemoteDeletedEventName = "integration.channel.remote_deleted"
+
+// ChannelRemoteDeletedEvent — wire shape of integration.channel.remote_deleted.
+// BC1 Channel Gateway. A remote was soft-deleted (contact removed / left permanently). Descends the medscall integration.channel.remote_deleted. The gateway.remotes read model stamps deleted_at without removing the row. ownerId travels on the envelope.
+type ChannelRemoteDeletedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	RemoteID string `json:"remoteId"`
+	DeletedAt time.Time `json:"deletedAt"`
+}
+
+func (e ChannelRemoteDeletedEvent) EventName() string { return ChannelRemoteDeletedEventName }
+
+// ChannelRemoteUpdatedEventName is the wire discriminator for ChannelRemoteUpdatedEvent.
+const ChannelRemoteUpdatedEventName = "integration.channel.remote_updated"
+
+// ChannelRemoteUpdatedEvent — wire shape of integration.channel.remote_updated.
+// BC1 Channel Gateway. A remote's profile snapshot changed (user rename, group subject/description). Descends the medscall integration.channel.remote_updated. Users carry displayName only; groups carry displayName (subject) + optional description. The source field `name` is renamed displayName to avoid colliding with the envelope's `name` discriminator. Membership changes ride the membership_added/removed events, not this one. The source RemoteType is harmonized onto ContactKind (USER->CONTACT). ownerId travels on the envelope.
+type ChannelRemoteUpdatedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	RemoteID string `json:"remoteId"`
+	ContactKind ContactKind `json:"contactKind"`
+	DisplayName string `json:"displayName"`
+	Description *string `json:"description,omitempty"`
+	ObservedAt time.Time `json:"observedAt"`
+}
+
+func (e ChannelRemoteUpdatedEvent) EventName() string { return ChannelRemoteUpdatedEventName }
+
+// ChannelRemotesSyncedEventName is the wire discriminator for ChannelRemotesSyncedEvent.
+const ChannelRemotesSyncedEventName = "integration.channel.remotes_synced"
+
+// ChannelRemotesSyncedEvent — wire shape of integration.channel.remotes_synced.
+// BC1 Channel Gateway. One bootstrap contact-sync pass finished inserting remote rows. Descends the medscall integration.channel.remotes_synced (the source's contacts_synced fact). Summary counts only — lets consumers invalidate the sidebar/remote list. ownerId travels on the envelope.
+type ChannelRemotesSyncedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	Total int32 `json:"total"`
+	Inserted int32 `json:"inserted"`
+}
+
+func (e ChannelRemotesSyncedEvent) EventName() string { return ChannelRemotesSyncedEventName }
+
+// ChannelSpecialPlatformEventReceivedEventName is the wire discriminator for ChannelSpecialPlatformEventReceivedEvent.
+const ChannelSpecialPlatformEventReceivedEventName = "integration.channel_special_platform_event.received"
+
+// ChannelSpecialPlatformEventReceivedEvent — wire shape of integration.channel_special_platform_event.received.
+// BC1 Channel Gateway. A generic envelope for a platform-native out-of-band event. Descends the medscall integration.channel_special_platform_event.received. Defined-and-dormant: the only realized variant (qr_code_updated) is served concretely by the frozen pairing_qr_updated event; this wrapper carries eventType (SpecialPlatformEventType) + an opaque JSON-serialized payload (payloadJson) for future platform events. The source field `eventName` is renamed platformEventName to avoid colliding with the generated Go EventName() discriminator method. ownerId travels on the envelope.
+type ChannelSpecialPlatformEventReceivedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	PlatformEventName string `json:"platformEventName"`
+	EventType SpecialPlatformEventType `json:"eventType"`
+	Platform ChannelKind `json:"platform"`
+	PayloadJson string `json:"payloadJson"`
+}
+
+func (e ChannelSpecialPlatformEventReceivedEvent) EventName() string { return ChannelSpecialPlatformEventReceivedEventName }
+
+// ChannelSyncCompletedEventName is the wire discriminator for ChannelSyncCompletedEvent.
+const ChannelSyncCompletedEventName = "integration.channel.sync_completed"
+
+// ChannelSyncCompletedEvent — wire shape of integration.channel.sync_completed.
+// BC1 Channel Gateway. A sync session finished. Descends the medscall integration.channel.sync_completed. ownerId travels on the envelope.
+type ChannelSyncCompletedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	CompletedAt time.Time `json:"completedAt"`
+}
+
+func (e ChannelSyncCompletedEvent) EventName() string { return ChannelSyncCompletedEventName }
+
+// ChannelSyncProgressEventName is the wire discriminator for ChannelSyncProgressEvent.
+const ChannelSyncProgressEventName = "integration.channel.sync_progress"
+
+// ChannelSyncProgressEvent — wire shape of integration.channel.sync_progress.
+// BC1 Channel Gateway. Progress metrics for an ongoing sync session. Descends the medscall integration.channel.sync_progress. historySyncType names the whatsmeow batch class (initial | recent); percent is 0-100. ownerId travels on the envelope.
+type ChannelSyncProgressEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	HistorySyncType HistorySyncType `json:"historySyncType"`
+	Percent int32 `json:"percent"`
+}
+
+func (e ChannelSyncProgressEvent) EventName() string { return ChannelSyncProgressEventName }
+
+// ChannelSyncStartedEventName is the wire discriminator for ChannelSyncStartedEvent.
+const ChannelSyncStartedEventName = "integration.channel.sync_started"
+
+// ChannelSyncStartedEvent — wire shape of integration.channel.sync_started.
+// BC1 Channel Gateway. A sync session began. Descends the medscall integration.channel.sync_started. ownerId travels on the envelope.
+type ChannelSyncStartedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ChannelID string `json:"channelId"`
+	StartedAt time.Time `json:"startedAt"`
+}
+
+func (e ChannelSyncStartedEvent) EventName() string { return ChannelSyncStartedEventName }
 
 // IssueArchivedEventName is the wire discriminator for IssueArchivedEvent.
 const IssueArchivedEventName = "integration.issue.archived"

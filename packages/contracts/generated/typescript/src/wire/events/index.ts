@@ -4,12 +4,31 @@ import Z from 'zod'
 import {
 	AgentReplyDraftedEventSchema,
 	ArtifactRecordedEventSchema,
+	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
 	ChannelDeliveryRequestedEventSchema,
 	ChannelDisconnectedEventSchema,
+	ChannelLoggedOutEventSchema,
+	ChannelMembershipAddedEventSchema,
+	ChannelMembershipRemovedEventSchema,
+	ChannelMessageDeletedEventSchema,
+	ChannelMessageDeliveredEventSchema,
+	ChannelMessageEditedEventSchema,
 	ChannelMessageReceivedEventSchema,
+	ChannelMessageSeenEventSchema,
+	ChannelMessageSentEventSchema,
+	ChannelMessagesSyncedEventSchema,
 	ChannelOutboundDeliveredEventSchema,
 	ChannelPairingQrUpdatedEventSchema,
+	ChannelPresenceUpdatedEventSchema,
+	ChannelRemoteCreatedEventSchema,
+	ChannelRemoteDeletedEventSchema,
+	ChannelRemoteUpdatedEventSchema,
+	ChannelRemotesSyncedEventSchema,
+	ChannelSpecialPlatformEventReceivedEventSchema,
+	ChannelSyncCompletedEventSchema,
+	ChannelSyncProgressEventSchema,
+	ChannelSyncStartedEventSchema,
 	IssueArchivedEventSchema,
 	IssueCompletedEventSchema,
 	IssueOpenedEventSchema,
@@ -23,12 +42,31 @@ import {
 
 export * from './agent-reply-drafted'
 export * from './artifact-recorded'
+export * from './channel-chat-presence-updated'
 export * from './channel-connected'
 export * from './channel-delivery-requested'
 export * from './channel-disconnected'
+export * from './channel-logged-out'
+export * from './channel-membership-added'
+export * from './channel-membership-removed'
+export * from './channel-message-deleted'
+export * from './channel-message-delivered'
+export * from './channel-message-edited'
 export * from './channel-message-received'
+export * from './channel-message-seen'
+export * from './channel-message-sent'
+export * from './channel-messages-synced'
 export * from './channel-outbound-delivered'
 export * from './channel-pairing-qr-updated'
+export * from './channel-presence-updated'
+export * from './channel-remote-created'
+export * from './channel-remote-deleted'
+export * from './channel-remote-updated'
+export * from './channel-remotes-synced'
+export * from './channel-special-platform-event-received'
+export * from './channel-sync-completed'
+export * from './channel-sync-progress'
+export * from './channel-sync-started'
 export * from './issue-archived'
 export * from './issue-completed'
 export * from './issue-opened'
@@ -42,12 +80,31 @@ export * from './workspace-removed'
 export const IntegrationEventSchema = z.discriminatedUnion('name', [
 	AgentReplyDraftedEventSchema,
 	ArtifactRecordedEventSchema,
+	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
 	ChannelDeliveryRequestedEventSchema,
 	ChannelDisconnectedEventSchema,
+	ChannelLoggedOutEventSchema,
+	ChannelMembershipAddedEventSchema,
+	ChannelMembershipRemovedEventSchema,
+	ChannelMessageDeletedEventSchema,
+	ChannelMessageDeliveredEventSchema,
+	ChannelMessageEditedEventSchema,
 	ChannelMessageReceivedEventSchema,
+	ChannelMessageSeenEventSchema,
+	ChannelMessageSentEventSchema,
+	ChannelMessagesSyncedEventSchema,
 	ChannelOutboundDeliveredEventSchema,
 	ChannelPairingQrUpdatedEventSchema,
+	ChannelPresenceUpdatedEventSchema,
+	ChannelRemoteCreatedEventSchema,
+	ChannelRemoteDeletedEventSchema,
+	ChannelRemoteUpdatedEventSchema,
+	ChannelRemotesSyncedEventSchema,
+	ChannelSpecialPlatformEventReceivedEventSchema,
+	ChannelSyncCompletedEventSchema,
+	ChannelSyncProgressEventSchema,
+	ChannelSyncStartedEventSchema,
 	IssueArchivedEventSchema,
 	IssueCompletedEventSchema,
 	IssueOpenedEventSchema,
