@@ -1,7 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
-import { RequireOwner } from '@owner/middlewares/RequireOwner'
+import { OperatorMiddleware } from '@auth/middlewares'
 import { UploadAvatar, UploadAvatarOutputSchema } from '../usecases/UploadAvatar'
 
 export const UploadAvatarControllerInputSchema = z.object({
@@ -24,7 +23,7 @@ export class UploadAvatarController extends Controller<
 	readonly inputSchema = UploadAvatarControllerInputSchema
 	readonly outputSchema = UploadAvatarControllerOutputSchema
 
-	override middlewares = [AuthAccountMiddleware, RequireOwner]
+	override middlewares = [OperatorMiddleware]
 
 	constructor(private command: UploadAvatar) {
 		super()

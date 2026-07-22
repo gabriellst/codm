@@ -9,8 +9,7 @@ import {
 	encodeSSEFrame,
 } from '@template/core-typescript'
 import { BaseIntegrationEvent } from '@template/core-typescript'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
-import { RequireOwner } from '@owner/middlewares/RequireOwner'
+import { OperatorMiddleware } from '@auth/middlewares'
 
 /**
  * The curated browser-facing event union. ONLY integration events whose payload carries a
@@ -62,7 +61,7 @@ export class ListenEventsController extends Controller<
 	readonly outputSchema = ListenEventsControllerOutputSchema
 	override readonly contentType: MimeTypes = MimeTypes['.stream']
 
-	override middlewares = [AuthAccountMiddleware, RequireOwner]
+	override middlewares = [OperatorMiddleware]
 
 	private clients = new Set<SSEClient>()
 	private broadcasterRegistered = false

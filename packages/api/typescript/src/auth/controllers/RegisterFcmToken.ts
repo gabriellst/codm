@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@template/core-typescript'
 import { FcmPlatform } from '@template/contracts-typescript/wire/enums'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+import { OperatorMiddleware } from '@auth/middlewares'
 import { RegisterFcmToken, RegisterFcmTokenInputSchema } from '../usecases/RegisterFcmToken'
 
 export const RegisterFcmTokenControllerInputSchema = z
@@ -35,7 +35,7 @@ export class RegisterFcmTokenController extends Controller<
 	readonly outputSchema = RegisterFcmTokenControllerOutputSchema
 
 	// AuthAccountMiddleware injects ctx.user.id
-	override middlewares = [AuthAccountMiddleware]
+	override middlewares = [OperatorMiddleware]
 
 	constructor(private registerFcmToken: RegisterFcmToken) {
 		super()

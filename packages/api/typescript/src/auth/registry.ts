@@ -18,7 +18,6 @@ import {
 	DrizzleFcmRegistrationTokenRepository,
 	MockFcmRegistrationTokenRepository,
 } from './repositories/FcmRegistrationTokenRepository'
-import { IdentityAuthHooks } from './services/IdentityAuthHooks'
 import { DrizzleAccountRepository } from './repositories/AccountRepository/DrizzleAccountRepository'
 import { MockAccountRepository } from './repositories/AccountRepository/MockAccountRepository'
 
@@ -27,9 +26,6 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: AccountRepository, mock: MockAccountRepository, real: DrizzleAccountRepository },
 	{ token: UserProfileRepository, mock: MockUserProfileRepository, real: DrizzleUserProfileRepository },
 	{ token: FcmRegistrationTokenRepository, mock: MockFcmRegistrationTokenRepository, real: DrizzleFcmRegistrationTokenRepository },
-	// better-auth lifecycle hooks touch real identity tables — declared absent in mock (flows there
-	// never boot identity; integration/real self-bind the concrete service).
-	{ token: IdentityAuthHooks, mock: null, real: IdentityAuthHooks },
 	// In-memory limiter everywhere except production, which needs the shared Redis window.
 	{ token: RateLimitStore, mock: InMemoryRateLimitStore, integration: InMemoryRateLimitStore, real: RedisRateLimitStore },
 ])

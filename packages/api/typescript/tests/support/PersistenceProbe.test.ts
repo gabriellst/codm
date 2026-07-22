@@ -84,25 +84,25 @@ describe('PersistenceProbe', () => {
 		it('returns a count per requested table, keyed exactly by the tuple passed in (runtime)', async () => {
 			await domainEventRepository.save(makeEvent())
 
-			const before = await testBed.probe().snapshot(['shared.events', 'shared.outbox', 'billing.subscription'] as const)
+			const before = await testBed.probe().snapshot(['shared.events', 'shared.outbox', 'authentication.users'] as const)
 			await domainEventRepository.save(makeEvent())
-			const after = await testBed.probe().snapshot(['shared.events', 'shared.outbox', 'billing.subscription'] as const)
+			const after = await testBed.probe().snapshot(['shared.events', 'shared.outbox', 'authentication.users'] as const)
 
 			expect(after['shared.events']).toBe(before['shared.events'] + 1)
 			expect(after['shared.outbox']).toBe(before['shared.outbox'] + 1)
-			// Proof of a negative — nothing in this test writes billing subscriptions.
-			expect(after['billing.subscription']).toBe(before['billing.subscription'])
+			// Proof of a negative — nothing in this test writes authentication users.
+			expect(after['authentication.users']).toBe(before['authentication.users'])
 		})
 
 		it('spans MORE THAN ONE schema module — proof the registry is no longer a curated single-module list', async () => {
-			const snap = await testBed.probe().snapshot(['shared.events', 'billing.subscription'] as const)
+			const snap = await testBed.probe().snapshot(['shared.events', 'authentication.users'] as const)
 
 			// Compile-time proof: this assignment only type-checks if `snap` is exactly
-			// `{ 'shared.events': number; 'billing.subscription': number }` — a wider
+			// `{ 'shared.events': number; 'authentication.users': number }` — a wider
 			// `Record<string, number>` or a `Record` missing/adding a key would fail `tsc` here.
-			const typed: { 'shared.events': number; 'billing.subscription': number } = snap
+			const typed: { 'shared.events': number; 'authentication.users': number } = snap
 			expect(typed['shared.events']).toBeGreaterThanOrEqual(0)
-			expect(typed['billing.subscription']).toBeGreaterThanOrEqual(0)
+			expect(typed['authentication.users']).toBeGreaterThanOrEqual(0)
 		})
 
 		it('is TYPED — the return shape is derived from the literal tuple, not a loose Record (compile-time)', async () => {
@@ -112,8 +112,8 @@ describe('PersistenceProbe', () => {
 			expect(typed['shared.events']).toBeGreaterThanOrEqual(0)
 			expect(typed['shared.outbox']).toBeGreaterThanOrEqual(0)
 
-			// @ts-expect-error — 'billing.subscription' was never requested, so it must not exist on the type.
-			const _missingKey = snap['billing.subscription']
+			// @ts-expect-error — 'authentication.users' was never requested, so it must not exist on the type.
+			const _missingKey = snap['authentication.users']
 		})
 	})
 })

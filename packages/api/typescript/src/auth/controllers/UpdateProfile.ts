@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+import { OperatorMiddleware } from '@auth/middlewares'
 import { UpdateProfile, UpdateProfileInputSchema } from '../usecases/UpdateProfile'
 
 export const UpdateProfileControllerInputSchema = z
@@ -34,7 +34,7 @@ export class UpdateProfileController extends Controller<
 	readonly outputSchema = UpdateProfileControllerOutputSchema
 
 	// AuthAccountMiddleware injects ctx.user.id
-	override middlewares = [AuthAccountMiddleware]
+	override middlewares = [OperatorMiddleware]
 
 	constructor(private updateProfile: UpdateProfile) {
 		super()

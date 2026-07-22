@@ -26,18 +26,6 @@ const API_ROOT = join(import.meta.dir, '..', '..')
 /** Files legitimately allowed to resolve DrizzleClient — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
-		path: 'src/auth/services/Authentication/BetterAuth.signup.test.ts',
-		why: "constructs BetterAuth directly with a real client — better-auth needs a live DB adapter; the service's own DB-backed sign-up behavior is the subject, same exception class as Drizzle*Repository.test.ts",
-	},
-	{
-		path: 'src/auth/services/Authentication/BetterAuth.reset.test.ts',
-		why: "constructs BetterAuth directly with a real client to exercise the password-reset flow end to end against the DB — the service's own DB-backed behavior is the subject, not a persisted business-data read",
-	},
-	{
-		path: 'src/auth/services/Authentication/BetterAuth.emails.test.ts',
-		why: "constructs BetterAuth directly with a real client to exercise the email-verification flow against the DB — the service's own DB-backed behavior is the subject, not a persisted business-data read",
-	},
-	{
 		path: 'tests/kernel/PostgresCommandQueue.test.ts',
 		why: "tests PostgresCommandQueue's own DB-backed scheduling behavior directly (row-by-id, repeat scheduling, db.transaction) — the DB is the subject, same exception class as Drizzle*Repository.test.ts",
 	},

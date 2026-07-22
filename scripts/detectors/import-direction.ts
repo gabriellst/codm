@@ -132,10 +132,7 @@ const RULES: Rule[] = [
 		severity: 'error',
 		message:
 			'middlewares enforce preconditions via services/repositories, not raw DrizzleClient access (.claude/skills/middleware/typescript/SKILL.md)',
-		exceptions: [
-			// Auth-bootstrap carve-out per middleware skill canonical snippet; dormant at HEAD.
-			'packages/api/typescript/src/auth/middlewares/AuthAccountMiddleware.ts',
-		],
+		exceptions: [],
 	},
 ]
 

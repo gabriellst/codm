@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+import { OperatorMiddleware } from '@auth/middlewares'
 import { GetMyAccount, GetMyAccountOutputSchema } from '../usecases/GetMyAccount'
 
 export const GetMyAccountControllerInputSchema = z.object({
@@ -24,7 +24,7 @@ export class GetMyAccountController extends Controller<
 	readonly outputSchema = GetMyAccountControllerOutputSchema
 
 	// No RequireOwner — account settings are user-scoped, not owner-scoped.
-	override middlewares = [AuthAccountMiddleware]
+	override middlewares = [OperatorMiddleware]
 
 	constructor(private query: GetMyAccount) {
 		super()

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+import { OperatorMiddleware } from '@auth/middlewares'
 import { GetUserInfo, GetUserInfoOutputSchema } from '../usecases/GetUserInfo'
 
 export const GetUserInfoControllerInputSchema = z.object({
@@ -21,7 +21,7 @@ export class GetUserInfoController extends Controller<typeof GetUserInfoControll
 	readonly outputSchema = GetUserInfoControllerOutputSchema
 
 	// Header loads before an owner is selected → no RequireOwner.
-	override middlewares = [AuthAccountMiddleware]
+	override middlewares = [OperatorMiddleware]
 
 	constructor(private query: GetUserInfo) {
 		super()

@@ -1,7 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@template/core-typescript'
-import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
-import { RequireOwner } from '../middlewares/RequireOwner'
+import { OperatorMiddleware } from '@auth/middlewares'
 import { EnableOwner, EnableOwnerOutputSchema } from '../usecases/EnableOwner'
 
 export const EnableOwnerControllerInputSchema = z
@@ -29,7 +28,7 @@ export class EnableOwnerController extends Controller<typeof EnableOwnerControll
 	readonly inputSchema = EnableOwnerControllerInputSchema
 	readonly outputSchema = EnableOwnerControllerOutputSchema
 
-	override middlewares = [AuthAccountMiddleware, RequireOwner]
+	override middlewares = [OperatorMiddleware]
 
 	constructor(private enableOwner: EnableOwner) {
 		super()

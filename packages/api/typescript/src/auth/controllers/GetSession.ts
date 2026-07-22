@@ -1,12 +1,13 @@
-// Recipe: dev:packages/api/src/auth/controllers pattern.
-// Returns current session user + session info. Does not require AuthActorMiddleware
-// (session may not have an actor set yet — this is the session lookup endpoint itself).
+// Session endpoint. After the operator collapse there is no session store and no better-auth
+// lookup — OperatorMiddleware stamps the constant operator identity onto ctx, and this controller
+// simply echoes it. Kept so the frontend session seam (SDK `useGetSession`) still resolves, though
+// the web/native session hooks short-circuit to the same constant without a round-trip.
 import { injectable } from 'tsyringe-neo'
 import { Middleware, MiddlewareClass, z } from '@template/core-typescript'
 import { Controller } from '@template/core-typescript'
 import { HttpStatusCode } from '@template/core-typescript'
 import { SessionSchema } from '@auth/schemas'
-import { AuthAccountMiddleware } from '@auth/middlewares'
+import { OperatorMiddleware } from '@auth/middlewares'
 
 export const GetSessionInputSchema = z
 	.object({
@@ -15,16 +16,16 @@ export const GetSessionInputSchema = z
 	.example([
 		{
 			ctx: {
-				user: { id: 'user-1', email: 'user@example.com', name: 'Alice', emailVerified: true },
-				session: { id: 'session-1', userId: 'user-1', expiresAt: new Date('2030-01-01T00:00:00.000Z'), ownerId: null },
+				user: { id: 'operator', email: 'operator@codedm.local', name: 'Operator', emailVerified: true },
+				session: { id: 'operator', userId: 'operator', expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId: 'operator' },
 			},
 		},
 	])
 
 export const GetSessionOutputSchema = SessionSchema.example([
 	{
-		user: { id: 'user-1', email: 'user@example.com', name: 'Alice', emailVerified: true },
-		session: { id: 'session-1', userId: 'user-1', expiresAt: new Date('2030-01-01T00:00:00.000Z'), ownerId: null },
+		user: { id: 'operator', email: 'operator@codedm.local', name: 'Operator', emailVerified: true },
+		session: { id: 'operator', userId: 'operator', expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId: 'operator' },
 	},
 ])
 
@@ -32,11 +33,11 @@ export const GetSessionOutputSchema = SessionSchema.example([
 export class GetSessionController extends Controller<typeof GetSessionInputSchema, typeof GetSessionOutputSchema> {
 	readonly path = '/session'
 	readonly method = 'get' as const
-	readonly description = 'Get current authenticated session'
+	readonly description = 'Get the current operator session'
 	readonly inputSchema = GetSessionInputSchema
 	readonly outputSchema = GetSessionOutputSchema
 
-	override middlewares: (Middleware | MiddlewareClass)[] = [AuthAccountMiddleware]
+	override middlewares: (Middleware | MiddlewareClass)[] = [OperatorMiddleware]
 
 	async handle(request: this['input']): Promise<this['output']> {
 		const { ctx } = request
