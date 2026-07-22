@@ -8,3 +8,6 @@ export * from './workspace'
 export * from './thread'
 export * from './issue'
 export * from './artifact'
+
+// BC1 Channel Gateway (Go-owned read model).
+export * from './channel'

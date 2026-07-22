@@ -236,10 +236,10 @@ export const REPO = {
 			example: 'postgres://postgres:postgres@localhost:5432/template?sslmode=disable',
 		},
 		CODEDM_DATA_DIR: {
-			consumers: ['apiTs'],
+			consumers: ['apiTs', 'apiGo'],
 			schema: 'kernel',
 			example: '~/.codedm/data',
-			doc: 'embedded file-backed PGlite data dir for the real daemon (migrations apply on boot); ~ expands to $HOME',
+			doc: 'embedded file-backed PGlite data dir for the real daemon (migrations apply on boot); ~ expands to $HOME. api-go reads it as the gateway data-dir root.',
 		},
 		REDIS_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'redis://localhost:6379' },
 		RATE_LIMIT_DISABLED: {
@@ -311,6 +311,18 @@ export const REPO = {
 			schema: 'kernel',
 			example: 'api-typescript',
 			doc: 'per-service override; go sets its own',
+		},
+		// ── channel gateway (BC1, api-go) ──
+		CODEDM_GATEWAY_API_KEY: {
+			consumers: ['apiGo'],
+			example: '',
+			secret: true,
+			doc: "api-key guarding the Go channel-gateway HTTP surface (S2S 'apikey' header); empty = allow all (local single-operator)",
+		},
+		CODEDM_GATEWAY_WHATSMEOW_URL: {
+			consumers: ['apiGo'],
+			example: '',
+			doc: 'postgres URL for the whatsmeow session store; empty falls back to DATABASE_URL',
 		},
 		// ── misc ──
 		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
