@@ -22,6 +22,10 @@
 
 | 8b EXPO+ASTRO | 2 (90) | ✅ VERDE | Expo: 5 tabs, kit console nativo, sessão com composer keyboard-aware, terminal dark read-only, SecureStore (daemon URL + onboarding), badge local needs-you; polling 5s como fallback SSE honesto. Astro: landing bilíngue na identidade. Sem build de simulador (tsc/lint only). |
 
+| 9 E2E FINALE | 2 (92) | ✅ VERDE | Bridge Go↔TS provada com Redis REAL (reconciliação flat-envelope; boot bug latente do consumer corrigido; redelivery no-op cross-process). E2E: boot real hermético (PGlite scratch), seam de ingresso gated CODEDM_E2E, 2 bugs reais de boot achados (instanceof em objetos do outbox matava a bridge silenciosamente; corrida de migração ESM). Specs: 4 pass + 2 skips honestos (stop/sse-pill precisam de runner que falhe). Follow-ups: flatten TS→Go no publish; eventos SSE-only não bridgeados. |
+
+## GOAL DA NOITE: COMPLETO — 9/9 fases verdes (21→22 jul 2026)
+
 ## Decisões da noite
 - (fase 1) manter FCM-token e eventos auth como stubs compiláveis em vez de cirurgia profunda — remoção definitiva fica pro contract lock da fase 3, que redefine a superfície.
 - (fase 2 / grader iteration 1) O binding `real` é um `useFactory` per-resolve e o tsyringe-neo NÃO memoiza factories → cada `resolve` mintava um `new PGlite(dataDir)` divergente (instâncias vivas sobre o mesmo dir não compartilham estado), matando o write-side event-driven. Fix: memoizar a instância única do driver + `db` via `registerInstance` no boot (`shared/index.ts`, espelha `TestBed.ts:92-93`). Segundo fix: guarda single-instance por lockfile PID **sibling** (`<dataDir>.lock`, fora do pgdata pra não quebrar o initdb do PGlite) — segunda daemon no mesmo dir falha alto com `DataDirLockedError`.
