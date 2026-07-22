@@ -1,5 +1,5 @@
 import "../react.mjs";
-const TanStackRouterDevtools = function() {
+var TanStackRouterDevtools = function() {
   return null;
 };
 export {

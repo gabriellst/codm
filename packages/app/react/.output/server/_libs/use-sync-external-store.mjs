@@ -1,12 +1,12 @@
 import { a as requireReact } from "./react.mjs";
 var withSelector = { exports: {} };
 var withSelector_production = {};
-var shim = { exports: {} };
-var useSyncExternalStoreShim_production = {};
-var hasRequiredUseSyncExternalStoreShim_production;
-function requireUseSyncExternalStoreShim_production() {
-  if (hasRequiredUseSyncExternalStoreShim_production) return useSyncExternalStoreShim_production;
-  hasRequiredUseSyncExternalStoreShim_production = 1;
+var shim$1 = { exports: {} };
+var useSyncExternalStoreShim_production$1 = {};
+var hasRequiredUseSyncExternalStoreShim_production$1;
+function requireUseSyncExternalStoreShim_production$1() {
+  if (hasRequiredUseSyncExternalStoreShim_production$1) return useSyncExternalStoreShim_production$1;
+  hasRequiredUseSyncExternalStoreShim_production$1 = 1;
   var React = requireReact();
   function is(x, y) {
     return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
@@ -48,23 +48,23 @@ function requireUseSyncExternalStoreShim_production() {
     return getSnapshot();
   }
   var shim2 = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
-  useSyncExternalStoreShim_production.useSyncExternalStore = void 0 !== React.useSyncExternalStore ? React.useSyncExternalStore : shim2;
-  return useSyncExternalStoreShim_production;
+  useSyncExternalStoreShim_production$1.useSyncExternalStore = void 0 !== React.useSyncExternalStore ? React.useSyncExternalStore : shim2;
+  return useSyncExternalStoreShim_production$1;
 }
-var hasRequiredShim;
-function requireShim() {
-  if (hasRequiredShim) return shim.exports;
-  hasRequiredShim = 1;
+var hasRequiredShim$1;
+function requireShim$1() {
+  if (hasRequiredShim$1) return shim$1.exports;
+  hasRequiredShim$1 = 1;
   {
-    shim.exports = requireUseSyncExternalStoreShim_production();
+    shim$1.exports = requireUseSyncExternalStoreShim_production$1();
   }
-  return shim.exports;
+  return shim$1.exports;
 }
 var hasRequiredWithSelector_production;
 function requireWithSelector_production() {
   if (hasRequiredWithSelector_production) return withSelector_production;
   hasRequiredWithSelector_production = 1;
-  var React = requireReact(), shim2 = requireShim();
+  var React = requireReact(), shim2 = requireShim$1();
   function is(x, y) {
     return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
   }
@@ -132,8 +132,69 @@ function requireWithSelector() {
   return withSelector.exports;
 }
 var withSelectorExports = requireWithSelector();
-var shimExports = requireShim();
+var shim = { exports: {} };
+var useSyncExternalStoreShim_production = {};
+var hasRequiredUseSyncExternalStoreShim_production;
+function requireUseSyncExternalStoreShim_production() {
+  if (hasRequiredUseSyncExternalStoreShim_production) return useSyncExternalStoreShim_production;
+  hasRequiredUseSyncExternalStoreShim_production = 1;
+  var React = requireReact();
+  function is(x, y) {
+    return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
+  }
+  var objectIs = "function" === typeof Object.is ? Object.is : is, useState = React.useState, useEffect = React.useEffect, useLayoutEffect = React.useLayoutEffect, useDebugValue = React.useDebugValue;
+  function useSyncExternalStore$2(subscribe, getSnapshot) {
+    var value = getSnapshot(), _useState = useState({ inst: { value, getSnapshot } }), inst = _useState[0].inst, forceUpdate = _useState[1];
+    useLayoutEffect(
+      function() {
+        inst.value = value;
+        inst.getSnapshot = getSnapshot;
+        checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+      },
+      [subscribe, value, getSnapshot]
+    );
+    useEffect(
+      function() {
+        checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+        return subscribe(function() {
+          checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+        });
+      },
+      [subscribe]
+    );
+    useDebugValue(value);
+    return value;
+  }
+  function checkIfSnapshotChanged(inst) {
+    var latestGetSnapshot = inst.getSnapshot;
+    inst = inst.value;
+    try {
+      var nextValue = latestGetSnapshot();
+      return !objectIs(inst, nextValue);
+    } catch (error) {
+      return true;
+    }
+  }
+  function useSyncExternalStore$1(subscribe, getSnapshot) {
+    return getSnapshot();
+  }
+  var shim2 = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+  useSyncExternalStoreShim_production.useSyncExternalStore = void 0 !== React.useSyncExternalStore ? React.useSyncExternalStore : shim2;
+  return useSyncExternalStoreShim_production;
+}
+var hasRequiredShim;
+function requireShim() {
+  if (hasRequiredShim) return shim.exports;
+  hasRequiredShim = 1;
+  {
+    shim.exports = requireUseSyncExternalStoreShim_production();
+  }
+  return shim.exports;
+}
+var shimExports$1 = requireShim();
+var shimExports = requireShim$1();
 export {
-  shimExports as s,
+  shimExports as a,
+  shimExports$1 as s,
   withSelectorExports as w
 };

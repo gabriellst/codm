@@ -1,8 +1,10 @@
-import { r as reactExports, b as React } from "./react.mjs";
-import { c as createSelectorCreator, l as lruMemoize } from "./reselect.mjs";
-import { s as shimExports, w as withSelectorExports } from "./use-sync-external-store.mjs";
+import { b as React, r as reactExports } from "./react.mjs";
+import { w as withSelectorExports, a as shimExports } from "./use-sync-external-store.mjs";
 import "./react-dom.mjs";
 import { g as getWindow, i as isOverflowElement } from "./floating-ui__utils.mjs";
+const SafeReact = {
+  ...React
+};
 const UNINITIALIZED = {};
 function useRefWithInit(init, initArg) {
   const ref = reactExports.useRef(UNINITIALIZED);
@@ -11,11 +13,11 @@ function useRefWithInit(init, initArg) {
   }
   return ref;
 }
-const useInsertionEffect = React[`useInsertionEffect${Math.random().toFixed(1)}`.slice(0, -3)];
+const useInsertionEffect = SafeReact.useInsertionEffect;
 const useSafeInsertionEffect = (
   // React 17 doesn't have useInsertionEffect.
   useInsertionEffect && // Preact replaces useInsertionEffect with useLayoutEffect and fires too late.
-  useInsertionEffect !== reactExports.useLayoutEffect ? useInsertionEffect : (fn) => fn()
+  useInsertionEffect !== SafeReact.useLayoutEffect ? useInsertionEffect : (fn) => fn()
 );
 function useStableCallback(callback) {
   const stable = useRefWithInit(createStableCallback).current;
@@ -54,12 +56,15 @@ function mergeObjects(a, b) {
   }
   return void 0;
 }
-function formatErrorMessage(code, ...args) {
-  const url = new URL("https://base-ui.com/production-error");
-  url.searchParams.set("code", code.toString());
-  args.forEach((arg) => url.searchParams.append("args[]", arg));
-  return `Base UI error #${code}; visit ${url} for the full message.`;
+function createFormatErrorMessage(baseUrl, prefix) {
+  return function formatErrorMessage2(code, ...args) {
+    const url = new URL(baseUrl);
+    url.searchParams.set("code", code.toString());
+    args.forEach((arg) => url.searchParams.append("args[]", arg));
+    return `${prefix} error #${code}; visit ${url} for the full message.`;
+  };
 }
+const formatErrorMessage = createFormatErrorMessage("https://base-ui.com/production-error", "Base UI");
 function useMergedRefs(a, b, c, d) {
   const forkRef = useRefWithInit(createForkRef).current;
   if (didChange(forkRef, a, b, c, d)) {
@@ -159,8 +164,27 @@ function getReactElementRef(element) {
 }
 function NOOP() {
 }
-const EMPTY_ARRAY = Object.freeze([]);
 const EMPTY_OBJECT = Object.freeze({});
+let globalId = 0;
+function useGlobalId(idOverride, prefix = "mui") {
+  const [defaultId, setDefaultId] = reactExports.useState(idOverride);
+  const id = idOverride || defaultId;
+  reactExports.useEffect(() => {
+    if (defaultId == null) {
+      globalId += 1;
+      setDefaultId(`${prefix}-${globalId}`);
+    }
+  }, [defaultId, prefix]);
+  return id;
+}
+const maybeReactUseId = SafeReact.useId;
+function useId(idOverride, prefix) {
+  if (maybeReactUseId !== void 0) {
+    const reactId = maybeReactUseId();
+    return idOverride ?? (prefix ? `${prefix}-${reactId}` : reactId);
+  }
+  return useGlobalId(idOverride, prefix);
+}
 const EMPTY$2 = [];
 function useOnMount(fn) {
   reactExports.useEffect(fn, EMPTY$2);
@@ -199,28 +223,53 @@ function useTimeout() {
   useOnMount(timeout.disposeEffect);
   return timeout;
 }
-const SafeReact = {
-  ...React
-};
-let globalId = 0;
-function useGlobalId(idOverride, prefix = "mui") {
-  const [defaultId, setDefaultId] = reactExports.useState(idOverride);
-  const id = idOverride || defaultId;
-  reactExports.useEffect(() => {
-    if (defaultId == null) {
-      globalId += 1;
-      setDefaultId(`${prefix}-${globalId}`);
-    }
-  }, [defaultId, prefix]);
-  return id;
-}
-const maybeReactUseId = SafeReact.useId;
-function useId(idOverride, prefix) {
-  if (maybeReactUseId !== void 0) {
-    const reactId = maybeReactUseId();
-    return idOverride ?? (prefix ? `${prefix}-${reactId}` : reactId);
+function readRawData() {
+  if (typeof navigator === "undefined") {
+    return {
+      userAgent: "",
+      platform: "",
+      maxTouchPoints: 0
+    };
   }
-  return useGlobalId(idOverride, prefix);
+  return {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform ?? "",
+    maxTouchPoints: navigator.maxTouchPoints ?? 0
+  };
+}
+const {
+  userAgent,
+  platform,
+  maxTouchPoints
+} = readRawData();
+const lowerUserAgent = userAgent.toLowerCase();
+const lowerPlatform = platform.toLowerCase();
+const ios = /^i(os$|p)/.test(lowerPlatform) || lowerPlatform === "macintel" && maxTouchPoints > 1;
+const ANDROID_STRING = "android";
+const android = lowerPlatform === ANDROID_STRING || lowerUserAgent.includes(ANDROID_STRING);
+const mac = !ios && lowerPlatform.startsWith("mac");
+lowerPlatform.startsWith("win");
+const apple = mac || ios;
+const webkit = typeof CSS !== "undefined" && !!CSS.supports?.("-webkit-backdrop-filter:none");
+!webkit && lowerUserAgent.includes("firefox");
+!webkit && lowerUserAgent.includes("chrom");
+const voiceOver = apple;
+const jsdom = /jsdom|happydom/.test(lowerUserAgent);
+function addEventListener(target, type, listener, options) {
+  target.addEventListener(type, listener, options);
+  return () => {
+    target.removeEventListener(type, listener, options);
+  };
+}
+function mergeCleanups(...cleanups) {
+  return () => {
+    for (let i = 0; i < cleanups.length; i += 1) {
+      const cleanup = cleanups[i];
+      if (cleanup) {
+        cleanup();
+      }
+    }
+  };
 }
 function useValueAsRef(value) {
   const latest = useRefWithInit(createLatestRef, value).current;
@@ -238,81 +287,6 @@ function createLatestRef(value) {
   };
   return latest;
 }
-const hasNavigator = typeof navigator !== "undefined";
-const nav = getNavigatorData();
-const platform = getPlatform();
-const userAgent = getUserAgent();
-const isWebKit = typeof CSS === "undefined" || !CSS.supports ? false : CSS.supports("-webkit-backdrop-filter:none");
-const isIOS = (
-  // iPads can claim to be MacIntel
-  nav.platform === "MacIntel" && nav.maxTouchPoints > 1 ? true : /iP(hone|ad|od)|iOS/.test(nav.platform)
-);
-const isSafari = hasNavigator && /apple/i.test(navigator.vendor);
-const isAndroid = hasNavigator && /android/i.test(platform) || /android/i.test(userAgent);
-hasNavigator && platform.toLowerCase().startsWith("mac") && !navigator.maxTouchPoints;
-const isJSDOM = userAgent.includes("jsdom/");
-function getNavigatorData() {
-  if (!hasNavigator) {
-    return {
-      platform: "",
-      maxTouchPoints: -1
-    };
-  }
-  const uaData = navigator.userAgentData;
-  if (uaData?.platform) {
-    return {
-      platform: uaData.platform,
-      maxTouchPoints: navigator.maxTouchPoints
-    };
-  }
-  return {
-    platform: navigator.platform ?? "",
-    maxTouchPoints: navigator.maxTouchPoints ?? -1
-  };
-}
-function getUserAgent() {
-  if (!hasNavigator) {
-    return "";
-  }
-  const uaData = navigator.userAgentData;
-  if (uaData && Array.isArray(uaData.brands)) {
-    return uaData.brands.map(({
-      brand,
-      version
-    }) => `${brand}/${version}`).join(" ");
-  }
-  return navigator.userAgent;
-}
-function getPlatform() {
-  if (!hasNavigator) {
-    return "";
-  }
-  const uaData = navigator.userAgentData;
-  if (uaData?.platform) {
-    return uaData.platform;
-  }
-  return navigator.platform ?? "";
-}
-const visuallyHiddenBase = {
-  clipPath: "inset(50%)",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  border: 0,
-  padding: 0,
-  width: 1,
-  height: 1,
-  margin: -1
-};
-const visuallyHidden = {
-  ...visuallyHiddenBase,
-  position: "fixed",
-  top: 0,
-  left: 0
-};
-const visuallyHiddenInput = {
-  ...visuallyHiddenBase,
-  position: "absolute"
-};
 const EMPTY = null;
 class Scheduler {
   /* This implementation uses an array as a backing data-structure for frame callbacks.
@@ -401,13 +375,29 @@ function useAnimationFrame() {
 function ownerDocument(node) {
   return node?.ownerDocument || document;
 }
-createSelectorCreator({
-  memoize: lruMemoize,
-  memoizeOptions: {
-    maxSize: 1,
-    equalityCheck: Object.is
+const visuallyHiddenBase = {
+  clipPath: "inset(50%)",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  border: 0,
+  padding: 0,
+  width: 1,
+  height: 1,
+  margin: -1
+};
+const visuallyHidden = {
+  ...visuallyHiddenBase,
+  position: "fixed",
+  top: 0,
+  left: 0
+};
+function useOnFirstRender(fn) {
+  const ref = reactExports.useRef(true);
+  if (ref.current) {
+    ref.current = false;
+    fn();
   }
-});
+}
 const createSelector = (a, b, c, d, e, f, ...other) => {
   if (other.length > 0) {
     throw new Error(formatErrorMessage(1));
@@ -416,18 +406,26 @@ const createSelector = (a, b, c, d, e, f, ...other) => {
   if (a) {
     selector = a;
   } else {
-    throw new Error("Missing arguments");
+    throw (
+      /* minify-error-disabled */
+      new Error("Missing arguments")
+    );
   }
   return selector;
 };
 const canUseRawUseSyncExternalStore = isReactVersionAtLeast(19);
-const useStoreImplementation = canUseRawUseSyncExternalStore ? useStoreR19 : useStoreLegacy;
+const useStoreImplementation = canUseRawUseSyncExternalStore ? useStoreFast : useStoreLegacy;
 function useStore(store, selector, a1, a2, a3) {
   return useStoreImplementation(store, selector, a1, a2, a3);
 }
 function useStoreR19(store, selector, a1, a2, a3) {
   const getSelection = reactExports.useCallback(() => selector(store.getSnapshot(), a1, a2, a3), [store, selector, a1, a2, a3]);
   return shimExports.useSyncExternalStore(store.subscribe, getSelection, getSelection);
+}
+function useStoreFast(store, selector, a1, a2, a3) {
+  {
+    return useStoreR19(store, selector, a1, a2, a3);
+  }
 }
 function useStoreLegacy(store, selector, a1, a2, a3) {
   return withSelectorExports.useSyncExternalStoreWithSelector(store.subscribe, store.getSnapshot, store.getSnapshot, (state) => selector(state, a1, a2, a3));
@@ -492,7 +490,7 @@ class Store {
   update(changes) {
     for (const key in changes) {
       if (!Object.is(this.state[key], changes[key])) {
-        Store.prototype.setState.call(this, {
+        this.setState({
           ...this.state,
           ...changes
         });
@@ -508,7 +506,7 @@ class Store {
    */
   set(key, value) {
     if (!Object.is(this.state[key], value)) {
-      Store.prototype.setState.call(this, {
+      this.setState({
         ...this.state,
         [key]: value
       });
@@ -521,7 +519,10 @@ class Store {
     const newState = {
       ...this.state
     };
-    Store.prototype.setState.call(this, newState);
+    this.setState(newState);
+  }
+  use(selector, a1, a2, a3) {
+    return useStore(this, selector, a1, a2, a3);
   }
 }
 class ReactStore extends Store {
@@ -541,10 +542,6 @@ class ReactStore extends Store {
    * Non-reactive values such as refs, callbacks, etc.
    */
   /**
-   * Keeps track of which properties are controlled.
-   */
-  controlledValues = /* @__PURE__ */ new Map();
-  /**
    * Synchronizes a single external value into the store.
    *
    * Note that the while the value in `state` is updated immediately, the value returned
@@ -552,11 +549,12 @@ class ReactStore extends Store {
    */
   useSyncedValue(key, value) {
     reactExports.useDebugValue(key);
+    const store = this;
     useIsoLayoutEffect(() => {
-      if (this.state[key] !== value) {
-        this.set(key, value);
+      if (store.state[key] !== value) {
+        store.set(key, value);
       }
-    }, [key, value]);
+    }, [store, key, value]);
   }
   /**
    * Synchronizes a single external value into the store and
@@ -590,101 +588,30 @@ class ReactStore extends Store {
     }, [store, ...dependencies]);
   }
   /**
-   * Registers a controllable prop pair (`controlled`, `defaultValue`) for a specific key.
-   * - If `controlled` is non-undefined, the key is marked as controlled and the store's
-   *   state at `key` is updated to match `controlled`. Local writes to that key are ignored.
-   * - If `controlled` is undefined, the key is marked as uncontrolled. The store's state
-   *   is initialized to `defaultValue` on first render and can be updated with local writes.
+   * Registers a controllable prop pair (`controlled`, `defaultValue`) for a specific key. If `controlled`
+   * is non-undefined, the store's state at `key` is updated to match `controlled`.
    */
-  useControlledProp(key, controlled, defaultValue) {
+  useControlledProp(key, controlled) {
     reactExports.useDebugValue(key);
     const store = this;
     const isControlled = controlled !== void 0;
-    if (!this.controlledValues.has(key)) {
-      this.controlledValues.set(key, isControlled);
-      if (!isControlled && !Object.is(this.state[key], defaultValue)) {
-        super.setState({
-          ...this.state,
-          [key]: defaultValue
-        });
-      }
-    }
     useIsoLayoutEffect(() => {
       if (isControlled && !Object.is(store.state[key], controlled)) {
-        super.setState({
+        store.setState({
           ...store.state,
           [key]: controlled
         });
       }
-    }, [store, key, controlled, defaultValue, isControlled]);
-  }
-  /**
-   * Sets a specific key in the store's state to a new value and notifies listeners if the value has changed.
-   * If the key is controlled (registered via {@link useControlledProp} with a non-undefined value),
-   * the update is ignored and no listeners are notified.
-   *
-   * @param key The state key to update.
-   * @param value The new value to set for the specified key.
-   */
-  set(key, value) {
-    if (this.controlledValues.get(key) === true) {
-      return;
-    }
-    super.set(key, value);
-  }
-  /**
-   * Merges the provided changes into the current state and notifies listeners if there are changes.
-   * Controlled keys are filtered out and not updated.
-   *
-   * @param values An object containing the changes to apply to the current state.
-   */
-  update(values) {
-    const newValues = {
-      ...values
-    };
-    for (const key in newValues) {
-      if (!Object.hasOwn(newValues, key)) {
-        continue;
-      }
-      if (this.controlledValues.get(key) === true) {
-        delete newValues[key];
-        continue;
-      }
-    }
-    super.update(newValues);
-  }
-  /**
-   * Updates the entire store's state and notifies all registered listeners.
-   * Controlled keys are left unchanged; only uncontrolled keys from `newState` are applied.
-   *
-   * @param newState The new state to set for the store.
-   */
-  setState(newState) {
-    const newValues = {
-      ...newState
-    };
-    for (const key in newValues) {
-      if (!Object.hasOwn(newValues, key)) {
-        continue;
-      }
-      if (this.controlledValues.get(key) === true) {
-        delete newValues[key];
-        continue;
-      }
-    }
-    super.setState({
-      ...this.state,
-      ...newValues
-    });
+    }, [store, key, controlled, isControlled]);
   }
   /** Gets the current value from the store using a selector with the provided key.
    *
    * @param key Key of the selector to use.
    */
-  select = (key, a1, a2, a3) => {
+  select(key, a1, a2, a3) {
     const selector = this.selectors[key];
     return selector(this.state, a1, a2, a3);
-  };
+  }
   /**
    * Returns a value from the store's state using a selector function.
    * Used to subscribe to specific parts of the state.
@@ -692,12 +619,10 @@ class ReactStore extends Store {
    *
    * @param key Key of the selector to use.
    */
-  useState = (key, a1, a2, a3) => {
+  useState(key, a1, a2, a3) {
     reactExports.useDebugValue(key);
-    const selector = this.selectors[key];
-    const value = useStore(this, selector, a1, a2, a3);
-    return value;
-  };
+    return useStore(this, this.selectors[key], a1, a2, a3);
+  }
   /**
    * Wraps a function with `useStableCallback` to ensure it has a stable reference
    * and assigns it to the context.
@@ -774,16 +699,17 @@ function supportsStableScrollbarGutter(referenceElement) {
   }
   const doc = ownerDocument(referenceElement);
   const html = doc.documentElement;
-  const originalStyles = {
-    scrollbarGutter: html.style.scrollbarGutter,
-    overflowY: html.style.overflowY
-  };
+  const body = doc.body;
+  const scrollContainer = isOverflowElement(html) ? html : body;
+  const originalScrollContainerOverflowY = scrollContainer.style.overflowY;
+  const originalHtmlStyleGutter = html.style.scrollbarGutter;
   html.style.scrollbarGutter = "stable";
-  html.style.overflowY = "scroll";
-  const before = html.offsetWidth;
-  html.style.overflowY = "hidden";
-  const after = html.offsetWidth;
-  Object.assign(html.style, originalStyles);
+  scrollContainer.style.overflowY = "scroll";
+  const before = scrollContainer.offsetWidth;
+  scrollContainer.style.overflowY = "hidden";
+  const after = scrollContainer.offsetWidth;
+  scrollContainer.style.overflowY = originalScrollContainerOverflowY;
+  html.style.scrollbarGutter = originalHtmlStyleGutter;
   return before === after;
 }
 function preventScrollOverlayScrollbars(referenceElement) {
@@ -791,10 +717,16 @@ function preventScrollOverlayScrollbars(referenceElement) {
   const html = doc.documentElement;
   const body = doc.body;
   const elementToLock = isOverflowElement(html) ? html : body;
-  const originalOverflow = elementToLock.style.overflow;
-  elementToLock.style.overflow = "hidden";
+  const originalElementToLockStyles = {
+    overflowY: elementToLock.style.overflowY,
+    overflowX: elementToLock.style.overflowX
+  };
+  Object.assign(elementToLock.style, {
+    overflowY: "hidden",
+    overflowX: "hidden"
+  });
   return () => {
-    elementToLock.style.overflow = originalOverflow;
+    Object.assign(elementToLock.style, originalElementToLockStyles);
   };
 }
 function preventScrollInsetScrollbars(referenceElement) {
@@ -806,7 +738,7 @@ function preventScrollInsetScrollbars(referenceElement) {
   let scrollLeft = 0;
   let updateGutterOnly = false;
   const resizeFrame = AnimationFrame.create();
-  if (isWebKit && (win.visualViewport?.scale ?? 1) !== 1) {
+  if (webkit && (win.visualViewport?.scale ?? 1) !== 1) {
     return () => {
     };
   }
@@ -888,12 +820,12 @@ function preventScrollInsetScrollbars(referenceElement) {
     resizeFrame.request(lockScroll);
   }
   lockScroll();
-  win.addEventListener("resize", handleResize);
+  const unsubscribeResize = addEventListener(win, "resize", handleResize);
   return () => {
     resizeFrame.cancel();
     cleanup();
     if (typeof win.removeEventListener === "function") {
-      win.removeEventListener("resize", handleResize);
+      unsubscribeResize();
     }
   };
 }
@@ -932,7 +864,7 @@ class ScrollLocker {
       this.restore = NOOP;
       return;
     }
-    const hasOverlayScrollbars = isIOS || !hasInsetScrollbars(referenceElement);
+    const hasOverlayScrollbars = ios || !hasInsetScrollbars(referenceElement);
     this.restore = hasOverlayScrollbars ? preventScrollOverlayScrollbars(referenceElement) : preventScrollInsetScrollbars(referenceElement);
   }
 }
@@ -961,21 +893,15 @@ function useEnhancedClickHandler(handler) {
     }
     if ("pointerType" in event) {
       handler(event, event.pointerType);
+    } else {
+      handler(event, lastClickInteractionTypeRef.current);
     }
-    handler(event, lastClickInteractionTypeRef.current);
     lastClickInteractionTypeRef.current = "";
   }, [handler]);
   return {
     onClick: handleClick,
     onPointerDown: handlePointerDown
   };
-}
-function useOnFirstRender(fn) {
-  const ref = reactExports.useRef(true);
-  if (ref.current) {
-    ref.current = false;
-    fn();
-  }
 }
 function useControlled({
   controlled,
@@ -995,46 +921,38 @@ function useControlled({
   }, []);
   return [value, setValueIfUncontrolled];
 }
-function isMouseWithinBounds(event) {
-  const targetRect = event.currentTarget.getBoundingClientRect();
-  const isWithinBounds = targetRect.top + 1 <= event.clientY && event.clientY <= targetRect.bottom - 1 && targetRect.left + 1 <= event.clientX && event.clientX <= targetRect.right - 1;
-  return isWithinBounds;
-}
 export {
   AnimationFrame as A,
-  useOnFirstRender as B,
-  visuallyHiddenInput as C,
-  isWebKit as D,
+  useEnhancedClickHandler as B,
+  useControlled as C,
   EMPTY_OBJECT as E,
-  isMouseWithinBounds as F,
   NOOP as N,
   ReactStore as R,
-  Store as S,
   Timeout as T,
-  useIsoLayoutEffect as a,
+  useStableCallback as a,
   useMergedRefs as b,
   useMergedRefsN as c,
-  useTimeout as d,
-  useId as e,
+  useId as d,
+  android as e,
   formatErrorMessage as f,
   getReactElementRef as g,
-  isJSDOM as h,
-  isAndroid as i,
-  useRefWithInit as j,
-  isSafari as k,
-  useValueAsRef as l,
+  visuallyHidden as h,
+  mergeCleanups as i,
+  jsdom as j,
+  addEventListener as k,
+  useRefWithInit as l,
   mergeObjects as m,
-  useAnimationFrame as n,
-  createSelector as o,
-  EMPTY_ARRAY as p,
-  inertValue as q,
-  isIOS as r,
-  useEnhancedClickHandler as s,
-  useScrollLock as t,
-  useStableCallback as u,
-  visuallyHidden as v,
-  useOnMount as w,
-  ownerDocument as x,
-  useControlled as y,
-  useStore as z
+  useValueAsRef as n,
+  ownerDocument as o,
+  useTimeout as p,
+  useAnimationFrame as q,
+  createSelector as r,
+  useOnFirstRender as s,
+  useOnMount as t,
+  useIsoLayoutEffect as u,
+  voiceOver as v,
+  webkit as w,
+  inertValue as x,
+  useScrollLock as y,
+  ios as z
 };

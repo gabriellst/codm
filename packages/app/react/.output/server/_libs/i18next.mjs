@@ -14,9 +14,9 @@ const makeString = (object) => {
   if (object == null) return "";
   return "" + object;
 };
-const copy = (a, s, t) => {
+const copy = (a, s, t2) => {
   a.forEach((m) => {
-    if (s[m]) t[m] = s[m];
+    if (s[m]) t2[m] = s[m];
   });
 };
 const lastOfPathSeparatorRegExp = /###/g;
@@ -188,7 +188,7 @@ const deepFind = (obj, path, keySeparator = ".") => {
   }
   return current;
 };
-const getCleanedCode = (code) => code?.replace("_", "-");
+const getCleanedCode = (code) => code?.replace(/_/g, "-");
 const consoleLogger = {
   type: "logger",
   log(args) {
@@ -444,7 +444,16 @@ function keysFromSelector(selector, opts) {
   const {
     [PATH_KEY]: path
   } = selector(createProxy());
-  return path.join(opts?.keySeparator ?? ".");
+  const keySeparator = opts?.keySeparator ?? ".";
+  const nsSeparator = opts?.nsSeparator ?? ":";
+  if (path.length > 1 && nsSeparator) {
+    const ns = opts?.ns;
+    const nsArray = Array.isArray(ns) ? ns : null;
+    if (nsArray && nsArray.length > 1 && nsArray.slice(1).includes(path[0])) {
+      return `${path[0]}${nsSeparator}${path.slice(1).join(keySeparator)}`;
+    }
+  }
+  return path.join(keySeparator);
 }
 const checkedLoadedFor = {};
 const shouldHandleAsObject = (res) => !isString(res) && typeof res !== "boolean" && typeof res !== "number";
@@ -517,6 +526,10 @@ class Translator extends EventEmitter {
       ...opt
     });
     if (!Array.isArray(keys)) keys = [String(keys)];
+    keys = keys.map((k) => typeof k === "function" ? keysFromSelector(k, {
+      ...this.options,
+      ...opt
+    }) : String(k));
     const returnDetails = opt.returnDetails !== void 0 ? opt.returnDetails : this.options.returnDetails;
     const keySeparator = opt.keySeparator !== void 0 ? opt.keySeparator : this.options.keySeparator;
     const {
@@ -763,6 +776,10 @@ class Translator extends EventEmitter {
     let usedLng;
     let usedNS;
     if (isString(keys)) keys = [keys];
+    if (Array.isArray(keys)) keys = keys.map((k) => typeof k === "function" ? keysFromSelector(k, {
+      ...this.options,
+      ...opt
+    }) : k);
     keys.forEach((k) => {
       if (this.isValidLookup(found)) return;
       const extracted = this.extractFromKey(k, opt);
@@ -1021,7 +1038,7 @@ class PluralResolver {
         type
       });
     } catch (err) {
-      if (!Intl) {
+      if (typeof Intl === "undefined") {
         this.logger.error("No Intl support, please use an Intl polyfill!");
         return dummyRule;
       }
@@ -1201,13 +1218,13 @@ class Interpolator {
     const handleHasOptions = (key, inheritedOptions) => {
       const sep = this.nestingOptionsSeparator;
       if (key.indexOf(sep) < 0) return key;
-      const c = key.split(new RegExp(`${sep}[ ]*{`));
+      const c = key.split(new RegExp(`${regexEscape(sep)}[ ]*{`));
       let optionsString = `{${c[1]}`;
       key = c[0];
       optionsString = this.interpolate(optionsString, clonedOptions);
       const matchedSingleQuotes = optionsString.match(/'/g);
       const matchedDoubleQuotes = optionsString.match(/"/g);
-      if ((matchedSingleQuotes?.length ?? 0) % 2 === 0 && !matchedDoubleQuotes || matchedDoubleQuotes.length % 2 !== 0) {
+      if ((matchedSingleQuotes?.length ?? 0) % 2 === 0 && !matchedDoubleQuotes || (matchedDoubleQuotes?.length ?? 0) % 2 !== 0) {
         optionsString = optionsString.replace(/'/g, '"');
       }
       try {
@@ -1688,6 +1705,28 @@ const bindMemberFunctions = (inst) => {
     }
   });
 };
+const SUPPORT_NOTICE_KEY = "__i18next_supportNoticeShown";
+const getSupportNoticeShown = () => {
+  if (typeof globalThis !== "undefined" && !!globalThis[SUPPORT_NOTICE_KEY]) return true;
+  if (typeof process !== "undefined" && process.env && process.env.I18NEXT_NO_SUPPORT_NOTICE) return true;
+  if (typeof process !== "undefined" && process.env && true) return true;
+  return false;
+};
+const setSupportNoticeShown = () => {
+  if (typeof globalThis !== "undefined") globalThis[SUPPORT_NOTICE_KEY] = true;
+};
+const usesLocize = (inst) => {
+  if (inst?.modules?.backend?.name?.indexOf("Locize") > 0) return true;
+  if (inst?.modules?.backend?.constructor?.name?.indexOf("Locize") > 0) return true;
+  if (inst?.options?.backend?.backends) {
+    if (inst.options.backend.backends.some((b) => b?.name?.indexOf("Locize") > 0 || b?.constructor?.name?.indexOf("Locize") > 0)) return true;
+  }
+  if (inst?.options?.backend?.projectId) return true;
+  if (inst?.options?.backend?.backendOptions) {
+    if (inst.options.backend.backendOptions.some((b) => b?.projectId)) return true;
+  }
+  return false;
+};
 class I18n extends EventEmitter {
   constructor(options = {}, callback) {
     super();
@@ -1740,8 +1779,9 @@ class I18n extends EventEmitter {
     if (typeof this.options.overloadTranslationOptionHandler !== "function") {
       this.options.overloadTranslationOptionHandler = defOpts.overloadTranslationOptionHandler;
     }
-    if (this.options.debug === true) {
-      if (typeof console !== "undefined") console.warn("i18next is maintained with support from locize.com — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com");
+    if (this.options.showSupportNotice !== false && !usesLocize(this) && !getSupportNoticeShown()) {
+      if (typeof console !== "undefined" && typeof console.info !== "undefined") console.info("🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙");
+      setSupportNoticeShown();
     }
     const createClassOnDemand = (ClassOrObject) => {
       if (!ClassOrObject) return null;
@@ -1825,14 +1865,14 @@ class I18n extends EventEmitter {
     });
     const deferred = defer();
     const load = () => {
-      const finish = (err, t) => {
+      const finish = (err, t2) => {
         this.isInitializing = false;
         if (this.isInitialized && !this.initializedStoreOnce) this.logger.warn("init: i18next is already initialized. You should call init just once!");
         this.isInitialized = true;
         if (!this.options.isClone) this.logger.log("initialized", this.options);
         this.emit("initialized", this.options);
-        deferred.resolve(t);
-        callback(err, t);
+        deferred.resolve(t2);
+        callback(err, t2);
       };
       if (this.languages && !this.isInitialized) return finish(null, this.t.bind(this));
       this.changeLanguage(this.options.lng, finish);
@@ -2003,21 +2043,20 @@ class I18n extends EventEmitter {
       o.lngs = o.lngs || fixedT.lngs;
       o.ns = o.ns || fixedT.ns;
       if (o.keyPrefix !== "") o.keyPrefix = o.keyPrefix || keyPrefix || fixedT.keyPrefix;
+      const selectorOpts = {
+        ...this.options,
+        ...o
+      };
+      if (typeof o.keyPrefix === "function") o.keyPrefix = keysFromSelector(o.keyPrefix, selectorOpts);
       const keySeparator = this.options.keySeparator || ".";
       let resultKey;
       if (o.keyPrefix && Array.isArray(key)) {
         resultKey = key.map((k) => {
-          if (typeof k === "function") k = keysFromSelector(k, {
-            ...this.options,
-            ...opts
-          });
+          if (typeof k === "function") k = keysFromSelector(k, selectorOpts);
           return `${o.keyPrefix}${keySeparator}${k}`;
         });
       } else {
-        if (typeof key === "function") key = keysFromSelector(key, {
-          ...this.options,
-          ...opts
-        });
+        if (typeof key === "function") key = keysFromSelector(key, selectorOpts);
         resultKey = o.keyPrefix ? `${o.keyPrefix}${keySeparator}${key}` : key;
       }
       return this.t(resultKey, o);

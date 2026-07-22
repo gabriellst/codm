@@ -1,5 +1,5 @@
 import { r as reactExports, j as jsxRuntimeExports, R as React__default } from "./react.mjs";
-import { i as invariant, a as isDangerousProtocol, e as exactPathTest, r as removeTrailingSlash, h as hasKeys, d as deepEqual, f as functionalUpdate, B as BaseRootRoute, b as BaseRoute, c as isModuleNotFoundError, g as isNotFound, j as getScrollRestorationScriptForRouter, k as rootRouteId, l as isServer, m as isRedirect, n as createNonReactiveReadonlyStore, o as createNonReactiveMutableStore, R as RouterCore, p as escapeHtml, q as isInlinableStylesheet, s as getAssetCrossOrigin, t as resolveManifestAssetLink, u as transformReadableStreamWithRouter, v as transformPipeableStreamWithRouter } from "./tanstack__router-core.mjs";
+import { i as invariant, a as isDangerousProtocol, e as exactPathTest, r as removeTrailingSlash, h as hasKeys, d as deepEqual, f as functionalUpdate, B as BaseRootRoute, b as BaseRoute, c as isModuleNotFoundError, g as isNotFound, j as getScrollRestorationScriptForRouter, k as rootRouteId, l as isServer, m as isRedirect, n as createNonReactiveReadonlyStore, o as createNonReactiveMutableStore, R as RouterCore, p as escapeHtml, q as getAssetCrossOrigin, s as getScriptPreloadAttrs, t as appendUniqueUserTags, u as resolveManifestCssLink, v as transformReadableStreamWithRouter, w as createSsrStreamResponse, x as transformPipeableStreamWithRouter } from "./tanstack__router-core.mjs";
 import { R as ReactDOMServer } from "./react-dom.mjs";
 import { PassThrough } from "node:stream";
 import { i as isbot } from "./isbot.mjs";
@@ -119,14 +119,15 @@ var dummyMatchContext = reactExports.createContext(void 0);
 function useMatch(opts) {
   const router = useRouter();
   const nearestMatchId = reactExports.useContext(opts.from ? dummyMatchContext : matchContext);
-  const key = opts.from ?? nearestMatchId;
-  const matchStore = key ? opts.from ? router.stores.getRouteMatchStore(key) : router.stores.matchStores.get(key) : void 0;
+  const matchStore = opts.from ? router.stores.getRouteMatchStore(opts.from) : router.stores.matchStores.get(nearestMatchId);
   {
     const match = matchStore?.get();
-    if ((opts.shouldThrow ?? true) && !match) {
-      invariant();
+    if (!match) {
+      if (opts.shouldThrow ?? true) {
+        invariant();
+      }
+      return;
     }
-    if (match === void 0) return;
     return opts.select ? opts.select(match) : match;
   }
 }
@@ -135,8 +136,8 @@ function useLoaderData(opts) {
     from: opts.from,
     strict: opts.strict,
     structuralSharing: opts.structuralSharing,
-    select: (s) => {
-      return opts.select ? opts.select(s.loaderData) : s.loaderData;
+    select: (match) => {
+      return opts.select ? opts.select(match.loaderData) : match.loaderData;
     }
   });
 }
@@ -144,8 +145,8 @@ function useLoaderDeps(opts) {
   const { select, ...rest } = opts;
   return useMatch({
     ...rest,
-    select: (s) => {
-      return select ? select(s.loaderDeps) : s.loaderDeps;
+    select: (match) => {
+      return select ? select(match.loaderDeps) : match.loaderDeps;
     }
   });
 }
@@ -637,9 +638,9 @@ function MatchView({ router, matchId, resetKey, matchState }) {
         })
       })
     })
-  }), matchState.parentRouteId === rootRouteId ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [/* @__PURE__ */ jsxRuntimeExports.jsx(OnRendered, { resetKey }), router.options.scrollRestoration && isServer ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollRestoration, {}) : null] }) : null] });
+  }), matchState.parentRouteId === rootRouteId ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [/* @__PURE__ */ jsxRuntimeExports.jsx(OnRendered, {}), router.options.scrollRestoration && isServer ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollRestoration, {}) : null] }) : null] });
 }
-function OnRendered({ resetKey }) {
+function OnRendered() {
   useRouter();
   return null;
 }
@@ -744,7 +745,6 @@ function MatchesInner() {
 }
 function useMatches(opts) {
   const router = useRouter();
-  reactExports.useRef(void 0);
   {
     const matches = router.stores.matches.get();
     return matches;
@@ -796,8 +796,14 @@ function useRouterState(opts) {
     return state;
   }
 }
+var noopScriptHandler = () => {
+};
+function setScriptAttrs(script, attrs) {
+  if (!attrs) return;
+  for (const [key, value] of Object.entries(attrs)) if (key !== "suppressHydrationWarning" && value !== void 0 && value !== false) script.setAttribute(key, typeof value === "boolean" ? "" : String(value));
+}
 function Asset(asset) {
-  const { attrs, children, nonce } = asset;
+  const { attrs, children, nonce, preventScriptHoist } = asset;
   switch (asset.tag) {
     case "title":
       return /* @__PURE__ */ jsxRuntimeExports.jsx("title", {
@@ -827,13 +833,14 @@ function Asset(asset) {
     case "script":
       return /* @__PURE__ */ jsxRuntimeExports.jsx(Script, {
         attrs,
+        preventScriptHoist,
         children
       });
     default:
       return null;
   }
 }
-function Script({ attrs, children }) {
+function Script({ attrs, children, preventScriptHoist }) {
   useRouter();
   useHydrated();
   const dataScript = typeof attrs?.type === "string" && attrs.type !== "" && attrs.type !== "text/javascript" && attrs.type !== "module";
@@ -848,32 +855,26 @@ function Script({ attrs, children }) {
           return attrs.src;
         }
       })();
-      if (Array.from(document.querySelectorAll("script[src]")).find((el) => el.src === normSrc)) return;
+      for (const el of document.querySelectorAll("script[src]")) if (el.src === normSrc) return;
       const script = document.createElement("script");
-      for (const [key, value] of Object.entries(attrs)) if (key !== "suppressHydrationWarning" && value !== void 0 && value !== false) script.setAttribute(key, typeof value === "boolean" ? "" : String(value));
+      setScriptAttrs(script, attrs);
       document.head.appendChild(script);
-      return () => {
-        if (script.parentNode) script.parentNode.removeChild(script);
-      };
+      return () => script.remove();
     }
     if (typeof children === "string") {
       const typeAttr = typeof attrs?.type === "string" ? attrs.type : "text/javascript";
       const nonceAttr = typeof attrs?.nonce === "string" ? attrs.nonce : void 0;
-      if (Array.from(document.querySelectorAll("script:not([src])")).find((el) => {
-        if (!(el instanceof HTMLScriptElement)) return false;
+      for (const el of document.querySelectorAll("script:not([src])")) {
+        if (!(el instanceof HTMLScriptElement)) continue;
         const sType = el.getAttribute("type") ?? "text/javascript";
         const sNonce = el.getAttribute("nonce") ?? void 0;
-        return el.textContent === children && sType === typeAttr && sNonce === nonceAttr;
-      })) return;
+        if (el.textContent === children && sType === typeAttr && sNonce === nonceAttr) return;
+      }
       const script = document.createElement("script");
       script.textContent = children;
-      if (attrs) {
-        for (const [key, value] of Object.entries(attrs)) if (key !== "suppressHydrationWarning" && value !== void 0 && value !== false) script.setAttribute(key, typeof value === "boolean" ? "" : String(value));
-      }
+      setScriptAttrs(script, attrs);
       document.head.appendChild(script);
-      return () => {
-        if (script.parentNode) script.parentNode.removeChild(script);
-      };
+      return () => script.remove();
     }
   }, [
     attrs,
@@ -881,10 +882,17 @@ function Script({ attrs, children }) {
     dataScript
   ]);
   {
-    if (attrs?.src) return /* @__PURE__ */ jsxRuntimeExports.jsx("script", {
-      ...attrs,
-      suppressHydrationWarning: true
-    });
+    if (attrs?.src) {
+      if (!preventScriptHoist) return /* @__PURE__ */ jsxRuntimeExports.jsx("script", {
+        ...attrs,
+        suppressHydrationWarning: true
+      });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("script", {
+        ...attrs,
+        onLoad: noopScriptHandler,
+        suppressHydrationWarning: true
+      });
+    }
     if (typeof children === "string") return /* @__PURE__ */ jsxRuntimeExports.jsx("script", {
       ...attrs,
       dangerouslySetInnerHTML: { __html: children },
@@ -894,7 +902,7 @@ function Script({ attrs, children }) {
   }
 }
 function buildTagsFromMatches(router, nonce, matches, assetCrossOrigin) {
-  const routeMeta = matches.map((match) => match.meta).filter(Boolean);
+  const routeMeta = matches.map((match) => match.meta).filter((meta) => meta !== void 0);
   const resultMeta = [];
   const metaByAttribute = {};
   let title;
@@ -940,7 +948,7 @@ function buildTagsFromMatches(router, nonce, matches, assetCrossOrigin) {
     }
   });
   resultMeta.reverse();
-  const constructedLinks = matches.map((match) => match.links).filter(Boolean).flat(1).map((link) => ({
+  const constructedLinks = matches.flatMap((match) => match.links ?? []).filter((link) => link !== void 0).map((link) => ({
     tag: "link",
     attrs: {
       ...link,
@@ -948,44 +956,46 @@ function buildTagsFromMatches(router, nonce, matches, assetCrossOrigin) {
     }
   }));
   const manifest = router.ssr?.manifest;
-  const assetLinks = matches.map((match) => manifest?.routes[match.routeId]?.assets ?? []).filter(Boolean).flat(1).flatMap((asset) => {
-    if (asset.tag === "link") {
-      if (isInlinableStylesheet(manifest, asset)) return [];
-      return [{
-        tag: "link",
-        attrs: {
-          ...asset.attrs,
-          crossOrigin: getAssetCrossOrigin(assetCrossOrigin, "stylesheet") ?? asset.attrs?.crossOrigin,
-          suppressHydrationWarning: true,
-          nonce
-        }
-      }];
-    }
-    if (asset.tag === "style") return [{
+  const manifestCssTags = [];
+  if (manifest) {
+    matches.forEach((match) => {
+      manifest.routes[match.routeId]?.css?.forEach((link) => {
+        const resolvedLink = resolveManifestCssLink(link);
+        manifestCssTags.push({
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            ...resolvedLink,
+            crossOrigin: getAssetCrossOrigin(assetCrossOrigin, "stylesheet") ?? resolvedLink.crossOrigin,
+            suppressHydrationWarning: true,
+            nonce
+          }
+        });
+      });
+    });
+    if (manifest.inlineStyle) manifestCssTags.push({
       tag: "style",
       attrs: {
-        ...asset.attrs,
+        ...manifest.inlineStyle.attrs,
         nonce
       },
-      children: asset.children,
-      ...asset.inlineCss ? { inlineCss: true } : {}
-    }];
-    return [];
-  });
-  const preloadLinks = [];
-  matches.map((match) => router.looseRoutesById[match.routeId]).forEach((route) => router.ssr?.manifest?.routes[route.id]?.preloads?.filter(Boolean).forEach((preload) => {
-    const preloadLink = resolveManifestAssetLink(preload);
-    preloadLinks.push({
-      tag: "link",
-      attrs: {
-        rel: "modulepreload",
-        href: preloadLink.href,
-        crossOrigin: getAssetCrossOrigin(assetCrossOrigin, "modulepreload") ?? preloadLink.crossOrigin,
-        nonce
-      }
+      children: manifest.inlineStyle.children,
+      inlineCss: true
     });
-  }));
-  const styles = matches.map((match) => match.styles).flat(1).filter(Boolean).map(({ children, ...attrs }) => ({
+  }
+  const preloadLinks = [];
+  if (manifest) matches.forEach((match) => {
+    manifest.routes[match.routeId]?.preloads?.forEach((preload) => {
+      preloadLinks.push({
+        tag: "link",
+        attrs: {
+          ...getScriptPreloadAttrs(manifest, preload, assetCrossOrigin),
+          nonce
+        }
+      });
+    });
+  });
+  const styles = matches.flatMap((match) => match.styles ?? []).filter((style) => style !== void 0).map(({ children, ...attrs }) => ({
     tag: "style",
     attrs: {
       ...attrs,
@@ -993,7 +1003,7 @@ function buildTagsFromMatches(router, nonce, matches, assetCrossOrigin) {
     },
     children
   }));
-  const headScripts = matches.map((match) => match.headScripts).flat(1).filter(Boolean).map(({ children, ...script }) => ({
+  const headScripts = matches.flatMap((match) => match.headScripts ?? []).filter((script) => script !== void 0).map(({ children, ...script }) => ({
     tag: "script",
     attrs: {
       ...script,
@@ -1001,29 +1011,20 @@ function buildTagsFromMatches(router, nonce, matches, assetCrossOrigin) {
     },
     children
   }));
-  return uniqBy([
-    ...resultMeta,
-    ...preloadLinks,
-    ...constructedLinks,
-    ...assetLinks,
-    ...styles,
-    ...headScripts
-  ], (d) => JSON.stringify(d));
+  const tags = [];
+  appendUniqueUserTags(tags, resultMeta);
+  tags.push(...preloadLinks);
+  appendUniqueUserTags(tags, constructedLinks);
+  tags.push(...manifestCssTags);
+  appendUniqueUserTags(tags, styles);
+  appendUniqueUserTags(tags, headScripts);
+  return tags;
 }
 var useTags = (assetCrossOrigin) => {
   const router = useRouter();
   const nonce = router.options.ssr?.nonce;
   return buildTagsFromMatches(router, nonce, router.stores.matches.get(), assetCrossOrigin);
 };
-function uniqBy(arr, fn) {
-  const seen = /* @__PURE__ */ new Set();
-  return arr.filter((item) => {
-    const key = fn(item);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
 function HeadContent(props) {
   const tags = useTags(props.assetCrossOrigin);
   const nonce = useRouter().options.ssr?.nonce;
@@ -1040,16 +1041,19 @@ var Scripts = () => {
     const assetScripts = [];
     const manifest = router.ssr?.manifest;
     if (!manifest) return [];
-    matches.map((match) => router.looseRoutesById[match.routeId]).forEach((route) => manifest.routes[route.id]?.assets?.filter((d) => d.tag === "script").forEach((asset) => {
-      assetScripts.push({
+    for (const match of matches) {
+      const scripts = manifest.routes[match.routeId]?.scripts;
+      if (!scripts) continue;
+      for (const asset of scripts) assetScripts.push({
         tag: "script",
         attrs: {
           ...asset.attrs,
           nonce
         },
-        children: asset.children
+        children: asset.children,
+        ...typeof asset.attrs?.src === "string" ? { preventScriptHoist: true } : {}
       });
-    }));
+    }
     return assetScripts;
   };
   const getScripts = (matches) => matches.map((match) => match.scripts).flat(1).filter(Boolean).map(({ children, ...script }) => ({
@@ -1068,33 +1072,86 @@ var Scripts = () => {
   }
 };
 function renderScripts(router, scripts, assetScripts) {
-  let serverBufferedScript = void 0;
-  if (router.serverSsr) serverBufferedScript = router.serverSsr.takeBufferedScripts();
   const allScripts = [...scripts, ...assetScripts];
-  if (serverBufferedScript) allScripts.unshift(serverBufferedScript);
+  if (router.serverSsr) {
+    const serverBufferedScript = router.serverSsr.takeBufferedScripts();
+    if (serverBufferedScript) allScripts.unshift(serverBufferedScript);
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: allScripts.map((asset, i) => /* @__PURE__ */ reactExports.createElement(Asset, {
     ...asset,
     key: `tsr-scripts-${asset.tag}-${i}`
   })) });
 }
+var noop = () => {
+};
+async function waitForReadyOrAbort(ready, signal) {
+  let cleanup = noop;
+  try {
+    await Promise.race([ready, new Promise((resolve) => {
+      const onAbort = () => resolve();
+      cleanup = () => signal.removeEventListener("abort", onAbort);
+      signal.addEventListener("abort", onAbort, { once: true });
+      if (signal.aborted) resolve();
+    })]);
+  } finally {
+    cleanup();
+  }
+}
+var isAbortError = (request, error) => request.signal.aborted && error === request.signal.reason || error instanceof Error && error.name === "AbortError";
 var renderRouterToStream = async ({ request, router, responseHeaders, children }) => {
   if (typeof ReactDOMServer.renderToReadableStream === "function") {
     const stream = await ReactDOMServer.renderToReadableStream(children, {
       signal: request.signal,
       nonce: router.options.ssr?.nonce,
-      progressiveChunkSize: Number.POSITIVE_INFINITY
+      progressiveChunkSize: Number.POSITIVE_INFINITY,
+      onError: (error, info) => {
+        if (!isAbortError(request, error)) console.error("Error in renderToReadableStream:", error, info);
+      }
     });
-    if (isbot(request.headers.get("User-Agent"))) await stream.allReady;
-    const responseStream = transformReadableStreamWithRouter(router, stream);
-    return new Response(responseStream, {
+    if (isbot(request.headers.get("User-Agent"))) await waitForReadyOrAbort(stream.allReady, request.signal);
+    const responseStream = transformReadableStreamWithRouter(router, stream, { onAbort: () => stream.cancel().catch(() => {
+    }) });
+    return createSsrStreamResponse(router, new Response(responseStream, {
       status: router.stores.statusCode.get(),
       headers: responseHeaders
-    });
+    }));
   }
   if (typeof ReactDOMServer.renderToPipeableStream === "function") {
     const reactAppPassthrough = new PassThrough();
+    let pipeable;
+    let responseAttached = false;
+    let aborted = false;
+    let endedBeforeAttach = false;
+    let pendingAbortReason;
+    const toError = (reason) => reason instanceof Error ? reason : new Error(String(reason ?? "SSR aborted"));
+    const destroyError = (reason) => reason === void 0 ? void 0 : toError(reason);
+    const pendingDestroyError = () => pendingAbortReason === void 0 ? toError(pendingAbortReason) : destroyError(pendingAbortReason);
+    const finishPassThrough = (reason, opts) => {
+      if (reactAppPassthrough.destroyed) return;
+      if (responseAttached) reactAppPassthrough.destroy(opts?.defaultError ? toError(reason) : destroyError(reason));
+      else endedBeforeAttach = true;
+    };
+    const abortPipeable = (reason, opts) => {
+      if (aborted) return;
+      aborted = true;
+      pendingAbortReason = reason;
+      const err = toError(reason);
+      try {
+        pipeable?.abort(err);
+      } catch {
+      }
+      finishPassThrough(reason, opts);
+    };
+    if (request.signal.aborted) abortPipeable(request.signal.reason);
+    else {
+      const onRequestAbort = () => abortPipeable(request.signal.reason);
+      request.signal.addEventListener("abort", onRequestAbort, { once: true });
+      router.serverSsr?.onCleanup(() => {
+        request.signal.removeEventListener("abort", onRequestAbort);
+      });
+    }
     try {
-      const pipeable = ReactDOMServer.renderToPipeableStream(children, {
+      pipeable = ReactDOMServer.renderToPipeableStream(children, {
         nonce: router.options.ssr?.nonce,
         progressiveChunkSize: Number.POSITIVE_INFINITY,
         ...isbot(request.headers.get("User-Agent")) ? { onAllReady() {
@@ -1103,19 +1160,26 @@ var renderRouterToStream = async ({ request, router, responseHeaders, children }
           pipeable.pipe(reactAppPassthrough);
         } },
         onError: (error, info) => {
-          console.error("Error in renderToPipeableStream:", error, info);
-          if (!reactAppPassthrough.destroyed) reactAppPassthrough.destroy(error instanceof Error ? error : new Error(String(error)));
+          if (!isAbortError(request, error)) console.error("Error in renderToPipeableStream:", error, info);
+          abortPipeable(error, { defaultError: true });
         }
       });
     } catch (e) {
       console.error("Error in renderToPipeableStream:", e);
-      reactAppPassthrough.destroy(e instanceof Error ? e : new Error(String(e)));
+      router.serverSsr?.cleanup();
+      throw e;
     }
-    const responseStream = transformPipeableStreamWithRouter(router, reactAppPassthrough);
-    return new Response(responseStream, {
+    const responseStream = transformPipeableStreamWithRouter(router, reactAppPassthrough, { onAbort: abortPipeable });
+    responseAttached = true;
+    if (endedBeforeAttach) reactAppPassthrough.destroy(pendingDestroyError());
+    if (aborted && pipeable) try {
+      pipeable.abort(toError(pendingAbortReason));
+    } catch {
+    }
+    return createSsrStreamResponse(router, new Response(responseStream, {
       status: router.stores.statusCode.get(),
       headers: responseHeaders
-    });
+    }));
   }
   throw new Error("No renderToReadableStream or renderToPipeableStream found in react-dom/server. Ensure you are using a version of react-dom that supports streaming.");
 };

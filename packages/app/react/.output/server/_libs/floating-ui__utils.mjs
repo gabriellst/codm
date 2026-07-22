@@ -39,7 +39,6 @@ function isShadowRoot(value) {
   }
   return value instanceof ShadowRoot || value instanceof getWindow(value).ShadowRoot;
 }
-const invalidOverflowDisplayValues = /* @__PURE__ */ new Set(["inline", "contents"]);
 function isOverflowElement(element) {
   const {
     overflow,
@@ -47,29 +46,31 @@ function isOverflowElement(element) {
     overflowY,
     display
   } = getComputedStyle(element);
-  return /auto|scroll|overlay|hidden|clip/.test(overflow + overflowY + overflowX) && !invalidOverflowDisplayValues.has(display);
+  return /auto|scroll|overlay|hidden|clip/.test(overflow + overflowY + overflowX) && display !== "inline" && display !== "contents";
 }
-const tableElements = /* @__PURE__ */ new Set(["table", "td", "th"]);
 function isTableElement(element) {
-  return tableElements.has(getNodeName(element));
+  return /^(table|td|th)$/.test(getNodeName(element));
 }
-const topLayerSelectors = [":popover-open", ":modal"];
 function isTopLayer(element) {
-  return topLayerSelectors.some((selector) => {
-    try {
-      return element.matches(selector);
-    } catch (_e) {
-      return false;
+  try {
+    if (element.matches(":popover-open")) {
+      return true;
     }
-  });
+  } catch (_e) {
+  }
+  try {
+    return element.matches(":modal");
+  } catch (_e) {
+    return false;
+  }
 }
-const transformProperties = ["transform", "translate", "scale", "rotate", "perspective"];
-const willChangeValues = ["transform", "translate", "scale", "rotate", "perspective", "filter"];
-const containValues = ["paint", "layout", "strict", "content"];
+const willChangeRe = /transform|translate|scale|rotate|perspective|filter/;
+const containRe = /paint|layout|strict|content/;
+const isNotNone = (value) => !!value && value !== "none";
+let isWebKitValue;
 function isContainingBlock(elementOrCss) {
-  const webkit = isWebKit();
   const css = isElement(elementOrCss) ? getComputedStyle(elementOrCss) : elementOrCss;
-  return transformProperties.some((value) => css[value] ? css[value] !== "none" : false) || (css.containerType ? css.containerType !== "normal" : false) || !webkit && (css.backdropFilter ? css.backdropFilter !== "none" : false) || !webkit && (css.filter ? css.filter !== "none" : false) || willChangeValues.some((value) => (css.willChange || "").includes(value)) || containValues.some((value) => (css.contain || "").includes(value));
+  return isNotNone(css.transform) || isNotNone(css.translate) || isNotNone(css.scale) || isNotNone(css.rotate) || isNotNone(css.perspective) || !isWebKit() && (isNotNone(css.backdropFilter) || isNotNone(css.filter)) || willChangeRe.test(css.willChange || "") || containRe.test(css.contain || "");
 }
 function getContainingBlock(element) {
   let currentNode = getParentNode(element);
@@ -84,12 +85,13 @@ function getContainingBlock(element) {
   return null;
 }
 function isWebKit() {
-  if (typeof CSS === "undefined" || !CSS.supports) return false;
-  return CSS.supports("-webkit-backdrop-filter", "none");
+  if (isWebKitValue == null) {
+    isWebKitValue = typeof CSS !== "undefined" && CSS.supports && CSS.supports("-webkit-backdrop-filter", "none");
+  }
+  return isWebKitValue;
 }
-const lastTraversableNodeNames = /* @__PURE__ */ new Set(["html", "body", "#document"]);
 function isLastTraversableNode(node) {
-  return lastTraversableNodeNames.has(getNodeName(node));
+  return /^(html|body|#document)$/.test(getNodeName(node));
 }
 function getComputedStyle(element) {
   return getWindow(element).getComputedStyle(element);
@@ -122,7 +124,7 @@ function getParentNode(node) {
 function getNearestOverflowAncestor(node) {
   const parentNode = getParentNode(node);
   if (isLastTraversableNode(parentNode)) {
-    return node.ownerDocument ? node.ownerDocument.body : node.body;
+    return (node.ownerDocument || node).body;
   }
   if (isHTMLElement(parentNode) && isOverflowElement(parentNode)) {
     return parentNode;
@@ -143,8 +145,9 @@ function getOverflowAncestors(node, list, traverseIframes) {
   if (isBody) {
     const frameElement = getFrameElement(win);
     return list.concat(win, win.visualViewport || [], isOverflowElement(scrollableAncestor) ? scrollableAncestor : [], frameElement && traverseIframes ? getOverflowAncestors(frameElement) : []);
+  } else {
+    return list.concat(scrollableAncestor, getOverflowAncestors(scrollableAncestor, [], traverseIframes));
   }
-  return list.concat(scrollableAncestor, getOverflowAncestors(scrollableAncestor, [], traverseIframes));
 }
 function getFrameElement(win) {
   return win.parent && Object.getPrototypeOf(win.parent) ? win.frameElement : null;
@@ -164,10 +167,6 @@ const oppositeSideMap = {
   bottom: "top",
   top: "bottom"
 };
-const oppositeAlignmentMap = {
-  start: "end",
-  end: "start"
-};
 function clamp(start, value, end) {
   return max(start, min(value, end));
 }
@@ -186,9 +185,9 @@ function getOppositeAxis(axis) {
 function getAxisLength(axis) {
   return axis === "y" ? "height" : "width";
 }
-const yAxisSides = /* @__PURE__ */ new Set(["top", "bottom"]);
 function getSideAxis(placement) {
-  return yAxisSides.has(getSide(placement)) ? "y" : "x";
+  const firstChar = placement[0];
+  return firstChar === "t" || firstChar === "b" ? "y" : "x";
 }
 function getAlignmentAxis(placement) {
   return getOppositeAxis(getSideAxis(placement));
@@ -211,7 +210,7 @@ function getExpandedPlacements(placement) {
   return [getOppositeAlignmentPlacement(placement), oppositePlacement, getOppositeAlignmentPlacement(oppositePlacement)];
 }
 function getOppositeAlignmentPlacement(placement) {
-  return placement.replace(/start|end/g, (alignment) => oppositeAlignmentMap[alignment]);
+  return placement.includes("start") ? placement.replace("start", "end") : placement.replace("end", "start");
 }
 const lrPlacement = ["left", "right"];
 const rlPlacement = ["right", "left"];
@@ -242,15 +241,16 @@ function getOppositeAxisPlacements(placement, flipAlignment, direction, rtl) {
   return list;
 }
 function getOppositePlacement(placement) {
-  return placement.replace(/left|right|bottom|top/g, (side) => oppositeSideMap[side]);
+  const side = getSide(placement);
+  return oppositeSideMap[side] + placement.slice(side.length);
 }
 function expandPaddingObject(padding) {
+  var _padding$top, _padding$right, _padding$bottom, _padding$left;
   return {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    ...padding
+    top: (_padding$top = padding.top) != null ? _padding$top : 0,
+    right: (_padding$right = padding.right) != null ? _padding$right : 0,
+    bottom: (_padding$bottom = padding.bottom) != null ? _padding$bottom : 0,
+    left: (_padding$left = padding.left) != null ? _padding$left : 0
   };
 }
 function getPaddingObject(padding) {
@@ -280,43 +280,43 @@ function rectToClientRect(rect) {
   };
 }
 export {
-  max as A,
-  sides as B,
-  rectToClientRect as C,
-  getOppositeAxis as D,
-  getDocumentElement as E,
-  createCoords as F,
-  getFrameElement as G,
-  round as H,
-  isTopLayer as I,
-  isTableElement as J,
-  isContainingBlock as K,
-  getContainingBlock as L,
-  getNodeScroll as M,
+  getOppositeAxis as A,
+  getOverflowAncestors as B,
+  getDocumentElement as C,
+  floor as D,
+  createCoords as E,
+  round as F,
+  isTopLayer as G,
+  isTableElement as H,
+  isContainingBlock as I,
+  getContainingBlock as J,
+  getNodeScroll as K,
+  isWebKit as L,
+  getFrameElement as M,
   isHTMLElement as a,
   isShadowRoot as b,
-  getNodeName as c,
-  isNode as d,
-  getComputedStyle as e,
-  floor as f,
+  isElement as c,
+  getComputedStyle as d,
+  getNodeName as e,
+  isNode as f,
   getWindow as g,
-  isElement as h,
+  isLastTraversableNode as h,
   isOverflowElement as i,
-  isLastTraversableNode as j,
-  getParentNode as k,
-  getOverflowAncestors as l,
-  isWebKit as m,
-  evaluate as n,
-  getPaddingObject as o,
-  getAlignmentAxis as p,
-  getAlignment as q,
-  getAxisLength as r,
-  clamp as s,
-  getSide as t,
-  getSideAxis as u,
-  getOppositePlacement as v,
-  getExpandedPlacements as w,
-  getOppositeAxisPlacements as x,
-  getAlignmentSides as y,
-  min as z
+  getParentNode as j,
+  evaluate as k,
+  getPaddingObject as l,
+  getAlignmentAxis as m,
+  getAlignment as n,
+  getAxisLength as o,
+  clamp as p,
+  getSide as q,
+  getSideAxis as r,
+  getOppositePlacement as s,
+  getExpandedPlacements as t,
+  getOppositeAxisPlacements as u,
+  getAlignmentSides as v,
+  min as w,
+  max as x,
+  rectToClientRect as y,
+  sides as z
 };

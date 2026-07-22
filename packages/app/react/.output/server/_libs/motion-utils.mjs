@@ -18,9 +18,7 @@ let invariant = () => {
 };
 const MotionGlobalConfig = {};
 const isNumericalString = (v) => /^-?(?:\d+(?:\.\d+)?|\.\d+)$/u.test(v);
-function isObject(value) {
-  return typeof value === "object" && value !== null;
-}
+const isObject = (value) => typeof value === "object" && value !== null;
 const isZeroValueString = (v) => /^0[^.\s]+$/u.test(v);
 // @__NO_SIDE_EFFECTS__
 function memo(callback) {
@@ -32,11 +30,10 @@ function memo(callback) {
   };
 }
 const noop = /* @__NO_SIDE_EFFECTS__ */ (any) => any;
-const combineFunctions = (a, b) => (v) => b(a(v));
-const pipe = (...transformers) => transformers.reduce(combineFunctions);
+const pipe = (...transformers) => transformers.reduce((a, b) => (v) => b(a(v)));
 const progress = /* @__NO_SIDE_EFFECTS__ */ (from, to, value) => {
-  const toFromDifference = to - from;
-  return toFromDifference === 0 ? 1 : (value - from) / toFromDifference;
+  const range = to - from;
+  return range ? (value - from) / range : 1;
 };
 class SubscriptionManager {
   constructor() {
@@ -68,9 +65,7 @@ class SubscriptionManager {
 }
 const secondsToMilliseconds = /* @__NO_SIDE_EFFECTS__ */ (seconds) => seconds * 1e3;
 const millisecondsToSeconds = /* @__NO_SIDE_EFFECTS__ */ (milliseconds) => milliseconds / 1e3;
-function velocityPerSecond(velocity, frameDuration) {
-  return frameDuration ? velocity * (1e3 / frameDuration) : 0;
-}
+const velocityPerSecond = /* @__NO_SIDE_EFFECTS__ */ (velocity, frameDuration) => frameDuration ? velocity * (1e3 / frameDuration) : 0;
 const calcBezier = (t, a1, a2) => (((1 - 3 * a2 + 3 * a1) * t + (3 * a2 - 6 * a1)) * t + 3 * a1) * t;
 const subdivisionPrecision = 1e-7;
 const subdivisionMaxIterations = 12;
@@ -89,28 +84,29 @@ function binarySubdivide(x, lowerBound, upperBound, mX1, mX2) {
   } while (Math.abs(currentX) > subdivisionPrecision && ++i < subdivisionMaxIterations);
   return currentT;
 }
+// @__NO_SIDE_EFFECTS__
 function cubicBezier(mX1, mY1, mX2, mY2) {
   if (mX1 === mY1 && mX2 === mY2)
     return noop;
   const getTForX = (aX) => binarySubdivide(aX, 0, 1, mX1, mX2);
   return (t) => t === 0 || t === 1 ? t : calcBezier(getTForX(t), mY1, mY2);
 }
-const mirrorEasing = (easing) => (p) => p <= 0.5 ? easing(2 * p) / 2 : (2 - easing(2 * (1 - p))) / 2;
-const reverseEasing = (easing) => (p) => 1 - easing(1 - p);
+const mirrorEasing = /* @__NO_SIDE_EFFECTS__ */ (easing) => (p) => p <= 0.5 ? easing(2 * p) / 2 : (2 - easing(2 * (1 - p))) / 2;
+const reverseEasing = /* @__NO_SIDE_EFFECTS__ */ (easing) => (p) => 1 - easing(1 - p);
 const backOut = /* @__PURE__ */ cubicBezier(0.33, 1.53, 0.69, 0.99);
 const backIn = /* @__PURE__ */ reverseEasing(backOut);
 const backInOut = /* @__PURE__ */ mirrorEasing(backIn);
-const anticipate = (p) => (p *= 2) < 1 ? 0.5 * backIn(p) : 0.5 * (2 - Math.pow(2, -10 * (p - 1)));
+const anticipate = (p) => p >= 1 ? 1 : (p *= 2) < 1 ? 0.5 * backIn(p) : 0.5 * (2 - Math.pow(2, -10 * (p - 1)));
 const circIn = (p) => 1 - Math.sin(Math.acos(p));
-const circOut = reverseEasing(circIn);
-const circInOut = mirrorEasing(circIn);
+const circOut = /* @__PURE__ */ reverseEasing(circIn);
+const circInOut = /* @__PURE__ */ mirrorEasing(circIn);
 const easeIn = /* @__PURE__ */ cubicBezier(0.42, 0, 1, 1);
 const easeOut = /* @__PURE__ */ cubicBezier(0, 0, 0.58, 1);
 const easeInOut = /* @__PURE__ */ cubicBezier(0.42, 0, 0.58, 1);
-const isEasingArray = (ease) => {
+const isEasingArray = /* @__NO_SIDE_EFFECTS__ */ (ease) => {
   return Array.isArray(ease) && typeof ease[0] !== "number";
 };
-const isBezierDefinition = (easing) => Array.isArray(easing) && typeof easing[0] === "number";
+const isBezierDefinition = /* @__NO_SIDE_EFFECTS__ */ (easing) => Array.isArray(easing) && typeof easing[0] === "number";
 const easingLookup = {
   linear: noop,
   easeIn,
@@ -128,10 +124,10 @@ const isValidEasing = (easing) => {
   return typeof easing === "string";
 };
 const easingDefinitionToFunction = (definition) => {
-  if (isBezierDefinition(definition)) {
+  if (/* @__PURE__ */ isBezierDefinition(definition)) {
     invariant(definition.length === 4);
     const [x1, y1, x2, y2] = definition;
-    return cubicBezier(x1, y1, x2, y2);
+    return /* @__PURE__ */ cubicBezier(x1, y1, x2, y2);
   } else if (isValidEasing(definition)) {
     return easingLookup[definition];
   }

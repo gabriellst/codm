@@ -1,5 +1,5 @@
 import { r as reactExports, j as jsxRuntimeExports } from "./react.mjs";
-import { g as getFeatureDefinitions, s as setFeatureDefinitions, i as isControllingVariants, a as isVariantLabel, b as isMotionValue, c as isForcedMotionValue, d as buildHTMLStyles, e as buildSVGAttrs, f as isSVGTag, r as resolveMotionValue, h as isVariantNode, j as isAnimationControls, k as resolveVariantFromProps, l as scrapeMotionValuesFromProps, m as scrapeMotionValuesFromProps$1, o as optimizedAppearDataAttribute, S as SVGVisualElement, H as HTMLVisualElement, F as Feature, n as createAnimationState, p as isPrimaryPointer, q as addDomEvent, t as frameData, u as frame, v as cancelFrame, w as mixNumber, x as calcLength, y as createBox, z as eachAxis, A as measurePageBox, B as convertBoxToBoundingBox, C as convertBoundingBoxToBox, D as addValueToWillChange, E as animateMotionValue, G as setDragLock, I as percent, J as isElementKeyboardAccessible, K as microtask, L as globalProjectionState, M as HTMLProjectionNode, N as hover, O as press } from "./motion-dom.mjs";
+import { g as getFeatureDefinitions, s as setFeatureDefinitions, i as isMotionValue, a as isControllingVariants, b as isVariantLabel, c as isForcedMotionValue, d as buildHTMLStyles, e as buildSVGAttrs, f as isSVGTag, r as resolveMotionValue, h as isVariantNode, j as isAnimationControls, k as resolveVariantFromProps, l as scrapeMotionValuesFromProps, m as scrapeMotionValuesFromProps$1, o as optimizedAppearDataAttribute, S as SVGVisualElement, H as HTMLVisualElement, F as Feature, n as createAnimationState, p as resolveVariant, q as isPrimaryPointer, t as addDomEvent, u as frameData, v as frame, w as cancelFrame, x as mixNumber, y as calcLength, z as createBox, A as eachAxis, B as measurePageBox, C as convertBoxToBoundingBox, D as convertBoundingBoxToBox, E as addValueToWillChange, G as animateMotionValue, I as setDragLock, J as resize, K as percent, L as isElementTextInput, M as microtask, N as globalProjectionState, O as HTMLProjectionNode, P as hover, Q as press } from "./motion-dom.mjs";
 import { p as pipe, s as secondsToMilliseconds, m as millisecondsToSeconds, a as progress, c as clamp, n as noop } from "./motion-utils.mjs";
 const LayoutGroupContext = reactExports.createContext({});
 function useConstant(init) {
@@ -108,6 +108,7 @@ const validMotionProps = /* @__PURE__ */ new Set([
   "onViewportEnter",
   "onViewportLeave",
   "globalTapTarget",
+  "propagate",
   "ignoreStrict",
   "viewport"
 ]);
@@ -121,13 +122,16 @@ function loadExternalIsValidProp(isValidProp) {
   shouldForward = (key) => key.startsWith("on") ? !isValidMotionProp(key) : isValidProp(key);
 }
 try {
-  loadExternalIsValidProp(require("@emotion/is-prop-valid").default);
+  const emotionPkg = "@emotion/is-prop-valid";
+  loadExternalIsValidProp(require(emotionPkg).default);
 } catch {
 }
 function filterProps(props, isDom, forwardMotionProps) {
   const filteredProps = {};
   for (const key in props) {
     if (key === "values" && typeof props.values === "object")
+      continue;
+    if (isMotionValue(props[key]))
       continue;
     if (shouldForward(key) || forwardMotionProps === true && isValidMotionProp(key) || !isDom && !isValidMotionProp(key) || // If trying to use native HTML drag events, forward drag listeners
     props["draggable"] && key.startsWith("onDrag")) {
@@ -415,7 +419,7 @@ function useVisualElement(Component, visualState, props, createVisualElement, Pr
     }
   });
   const optimisedAppearId = props[optimizedAppearDataAttribute];
-  const wantsHandoff = reactExports.useRef(Boolean(optimisedAppearId) && !window.MotionHandoffIsComplete?.(optimisedAppearId) && window.MotionHasOptimisedAnimation?.(optimisedAppearId));
+  const wantsHandoff = reactExports.useRef(Boolean(optimisedAppearId) && typeof window !== "undefined" && !window.MotionHandoffIsComplete?.(optimisedAppearId) && window.MotionHasOptimisedAnimation?.(optimisedAppearId));
   useIsomorphicLayoutEffect(() => {
     hasMountedOnce.current = true;
     if (!visualElement)
@@ -445,7 +449,7 @@ function useVisualElement(Component, visualState, props, createVisualElement, Pr
   return visualElement;
 }
 function createProjectionNode(visualElement, props, ProjectionNodeConstructor, initialPromotionConfig) {
-  const { layoutId, layout: layout2, drag: drag2, dragConstraints, layoutScroll, layoutRoot, layoutCrossfade } = props;
+  const { layoutId, layout: layout2, drag: drag2, dragConstraints, layoutScroll, layoutRoot, layoutAnchor, layoutCrossfade } = props;
   visualElement.projection = new ProjectionNodeConstructor(visualElement.latestValues, props["data-framer-portal-id"] ? void 0 : getClosestProjectingNode(visualElement.parent));
   visualElement.projection.setOptions({
     layoutId,
@@ -463,7 +467,8 @@ function createProjectionNode(visualElement, props, ProjectionNodeConstructor, i
     initialPromotionConfig,
     crossfade: layoutCrossfade,
     layoutScroll,
-    layoutRoot
+    layoutRoot,
+    layoutAnchor
   });
 }
 function getClosestProjectingNode(visualElement) {
@@ -485,7 +490,7 @@ function createMotionComponent(Component, { forwardMotionProps = false, type } =
     const { isStatic } = configAndProps;
     const context = useCreateMotionContext(props);
     const visualState = useVisualState(props, isStatic);
-    if (!isStatic && isBrowser) {
+    if (!isStatic && typeof window !== "undefined") {
       useStrictMode();
       const layoutProjection = getProjectionFunctionality(configAndProps);
       MeasureLayout2 = layoutProjection.MeasureLayout;
@@ -588,6 +593,7 @@ class ExitAnimationFeature extends Feature {
   constructor() {
     super(...arguments);
     this.id = id++;
+    this.isExitComplete = false;
   }
   update() {
     if (!this.node.presenceContext)
@@ -597,9 +603,30 @@ class ExitAnimationFeature extends Feature {
     if (!this.node.animationState || isPresent === prevIsPresent) {
       return;
     }
+    if (isPresent && prevIsPresent === false) {
+      if (this.isExitComplete) {
+        const { initial, custom } = this.node.getProps();
+        if (typeof initial === "string" || typeof initial === "object" && initial !== null && !Array.isArray(initial)) {
+          const resolved = resolveVariant(this.node, initial, custom);
+          if (resolved) {
+            const { transition, transitionEnd, ...target } = resolved;
+            for (const key in target) {
+              this.node.getValue(key)?.jump(target[key]);
+            }
+          }
+        }
+        this.node.animationState.reset();
+        this.node.animationState.animateChanges();
+      } else {
+        this.node.animationState.setActive("exit", false);
+      }
+      this.isExitComplete = false;
+      return;
+    }
     const exitAnimation = this.node.animationState.setActive("exit", !isPresent);
     if (onExitComplete && !isPresent) {
       exitAnimation.then(() => {
+        this.isExitComplete = true;
         onExitComplete(this.id);
       });
     }
@@ -632,9 +659,7 @@ function extractEventInfo(event) {
     }
   };
 }
-const addPointerInfo = (handler) => {
-  return (event) => isPrimaryPointer(event) && handler(event, extractEventInfo(event));
-};
+const addPointerInfo = (handler) => (event) => isPrimaryPointer(event) && handler(event, extractEventInfo(event));
 function addPointerEvent(target, eventName, handler, options) {
   return addDomEvent(target, eventName, addPointerInfo(handler), options);
 }
@@ -653,6 +678,7 @@ class PanSession {
     this.startEvent = null;
     this.lastMoveEvent = null;
     this.lastMoveEventInfo = null;
+    this.lastRawMoveEventInfo = null;
     this.handlers = {};
     this.contextWindow = window;
     this.scrollPositions = /* @__PURE__ */ new Map();
@@ -666,6 +692,9 @@ class PanSession {
     this.updatePoint = () => {
       if (!(this.lastMoveEvent && this.lastMoveEventInfo))
         return;
+      if (this.lastRawMoveEventInfo) {
+        this.lastMoveEventInfo = transformPoint(this.lastRawMoveEventInfo, this.transformPagePoint);
+      }
       const info2 = getPanInfo(this.lastMoveEventInfo, this.history);
       const isPanStarted = this.startEvent !== null;
       const isDistancePastThreshold = distance2D(info2.offset, { x: 0, y: 0 }) >= this.distanceThreshold;
@@ -683,6 +712,7 @@ class PanSession {
     };
     this.handlePointerMove = (event2, info2) => {
       this.lastMoveEvent = event2;
+      this.lastRawMoveEventInfo = info2;
       this.lastMoveEventInfo = transformPoint(info2, this.transformPagePoint);
       frame.update(this.updatePoint, true);
     };
@@ -714,7 +744,8 @@ class PanSession {
     this.history = [{ ...point, timestamp }];
     const { onSessionStart } = handlers;
     onSessionStart && onSessionStart(event, getPanInfo(initialInfo, this.history));
-    this.removeListeners = pipe(addPointerEvent(this.contextWindow, "pointermove", this.handlePointerMove), addPointerEvent(this.contextWindow, "pointerup", this.handlePointerUp), addPointerEvent(this.contextWindow, "pointercancel", this.handlePointerUp));
+    const eventOptions = { passive: true, capture: true };
+    this.removeListeners = pipe(addPointerEvent(this.contextWindow, "pointermove", this.handlePointerMove, eventOptions), addPointerEvent(this.contextWindow, "pointerup", this.handlePointerUp, eventOptions), addPointerEvent(this.contextWindow, "pointercancel", this.handlePointerUp, eventOptions));
     if (element) {
       this.startScrollTracking(element);
     }
@@ -739,12 +770,9 @@ class PanSession {
       y: window.scrollY
     });
     window.addEventListener("scroll", this.onElementScroll, {
-      capture: true,
-      passive: true
+      capture: true
     });
-    window.addEventListener("scroll", this.onWindowScroll, {
-      passive: true
-    });
+    window.addEventListener("scroll", this.onWindowScroll);
     this.removeScrollListeners = () => {
       window.removeEventListener("scroll", this.onElementScroll, {
         capture: true
@@ -830,6 +858,9 @@ function getVelocity(history, timeDelta) {
   }
   if (!timestampedPoint) {
     return { x: 0, y: 0 };
+  }
+  if (timestampedPoint === history[0] && history.length > 2 && lastPoint.timestamp - timestampedPoint.timestamp > secondsToMilliseconds(timeDelta) * 2) {
+    timestampedPoint = history[1];
   }
   const time = millisecondsToSeconds(lastPoint.timestamp - timestampedPoint.timestamp);
   if (time === 0) {
@@ -943,14 +974,11 @@ class VisualElementDragControls {
       return;
     const onSessionStart = (event) => {
       if (snapToCursor) {
-        this.stopAnimation();
         this.snapToCursor(extractEventInfo(event).point);
-      } else {
-        this.pauseAnimation();
       }
+      this.stopAnimation();
     };
     const onStart = (event, info) => {
-      this.stopAnimation();
       const { drag: drag2, dragPropagation, onDragStart } = this.getProps();
       if (drag2 && !dragPropagation) {
         if (this.openDragLock)
@@ -983,7 +1011,7 @@ class VisualElementDragControls {
         this.originPoint[axis] = current;
       });
       if (onDragStart) {
-        frame.postRender(() => onDragStart(event, info));
+        frame.update(() => onDragStart(event, info), false, true);
       }
       addValueToWillChange(this.visualElement, "transform");
       const { animationState } = this.visualElement;
@@ -1006,7 +1034,9 @@ class VisualElementDragControls {
       this.updateAxis("x", info.point, offset);
       this.updateAxis("y", info.point, offset);
       this.visualElement.render();
-      onDrag && onDrag(event, info);
+      if (onDrag) {
+        frame.update(() => onDrag(event, info), false, true);
+      }
     };
     const onSessionEnd = (event, info) => {
       this.latestPointerEvent = event;
@@ -1015,7 +1045,12 @@ class VisualElementDragControls {
       this.latestPointerEvent = null;
       this.latestPanInfo = null;
     };
-    const resumeAnimation = () => eachAxis((axis) => this.getAnimationState(axis) === "paused" && this.getAxisMotionValue(axis).animation?.play());
+    const resumeAnimation = () => {
+      const { dragSnapToOrigin: snap } = this.getProps();
+      if (snap || this.constraints) {
+        this.startAnimation({ x: 0, y: 0 });
+      }
+    };
     const { dragSnapToOrigin } = this.getProps();
     this.panSession = new PanSession(originEvent, {
       onSessionStart,
@@ -1102,7 +1137,7 @@ class VisualElementDragControls {
       }
     }
     this.elastic = resolveDragElastic(dragElastic);
-    if (prevConstraints !== this.constraints && layout2 && this.constraints && !this.hasMutatedConstraints) {
+    if (prevConstraints !== this.constraints && !isRefObject(dragConstraints) && layout2 && this.constraints && !this.hasMutatedConstraints) {
       eachAxis((axis) => {
         if (this.constraints !== false && this.getAxisMotionValue(axis)) {
           this.constraints[axis] = rebaseAxisConstraints(layout2.layoutBox[axis], this.constraints[axis]);
@@ -1118,6 +1153,10 @@ class VisualElementDragControls {
     const { projection } = this.visualElement;
     if (!projection || !projection.layout)
       return false;
+    if (projection.root) {
+      projection.root.scroll = void 0;
+      projection.root.updateScroll();
+    }
     const constraintsBox = measurePageBox(constraintsElement, projection.root, this.visualElement.getTransformPagePoint());
     let measuredConstraints = calcViewportConstraints(projection.layout.layoutBox, constraintsBox);
     if (onMeasureDragConstraints) {
@@ -1137,7 +1176,7 @@ class VisualElementDragControls {
         return;
       }
       let transition = constraints && constraints[axis] || {};
-      if (dragSnapToOrigin)
+      if (dragSnapToOrigin === true || dragSnapToOrigin === axis)
         transition = { min: 0, max: 0 };
       const bounceStiffness = dragElastic ? 200 : 1e6;
       const bounceDamping = dragElastic ? 40 : 1e7;
@@ -1164,12 +1203,6 @@ class VisualElementDragControls {
   stopAnimation() {
     eachAxis((axis) => this.getAxisMotionValue(axis).stop());
   }
-  pauseAnimation() {
-    eachAxis((axis) => this.getAxisMotionValue(axis).animation?.pause());
-  }
-  getAnimationState(axis) {
-    return this.getAxisMotionValue(axis).animation?.state;
-  }
   /**
    * Drag works differently depending on which props are provided.
    *
@@ -1180,7 +1213,7 @@ class VisualElementDragControls {
     const dragKey = `_drag${axis.toUpperCase()}`;
     const props = this.visualElement.getProps();
     const externalMotionValue = props[dragKey];
-    return externalMotionValue ? externalMotionValue : this.visualElement.getValue(axis, (props.initial ? props.initial[axis] : void 0) || 0);
+    return externalMotionValue ? externalMotionValue : this.visualElement.getValue(axis, this.visualElement.latestValues[axis] ?? 0);
   }
   snapToCursor(point) {
     eachAxis((axis) => {
@@ -1221,6 +1254,7 @@ class VisualElementDragControls {
     this.visualElement.current.style.transform = transformTemplate ? transformTemplate({}, "") : "none";
     projection.root && projection.root.updateScroll();
     projection.updateLayout();
+    this.constraints = false;
     this.resolveConstraints();
     eachAxis((axis) => {
       if (!shouldDrag(axis, drag2, null))
@@ -1229,6 +1263,7 @@ class VisualElementDragControls {
       const { min, max } = this.constraints[axis];
       axisValue.set(mixNumber(min, max, boxProgress[axis]));
     });
+    this.visualElement.render();
   }
   addListeners() {
     if (!this.visualElement.current)
@@ -1238,15 +1273,19 @@ class VisualElementDragControls {
     const stopPointerListener = addPointerEvent(element, "pointerdown", (event) => {
       const { drag: drag2, dragListener = true } = this.getProps();
       const target = event.target;
-      const isClickingKeyboardAccessibleChild = target !== element && isElementKeyboardAccessible(target);
-      if (drag2 && dragListener && !isClickingKeyboardAccessibleChild) {
+      const isClickingTextInputChild = target !== element && isElementTextInput(target);
+      if (drag2 && dragListener && !isClickingTextInputChild) {
         this.start(event);
       }
     });
+    let stopResizeObservers;
     const measureDragConstraints = () => {
       const { dragConstraints } = this.getProps();
       if (isRefObject(dragConstraints) && dragConstraints.current) {
         this.constraints = this.resolveRefConstraints();
+        if (!stopResizeObservers) {
+          stopResizeObservers = startResizeObservers(element, dragConstraints.current, () => this.scalePositionWithinConstraints());
+        }
       }
     };
     const { projection } = this.visualElement;
@@ -1274,6 +1313,7 @@ class VisualElementDragControls {
       stopPointerListener();
       stopMeasureLayoutListener();
       stopLayoutUpdateListener && stopLayoutUpdateListener();
+      stopResizeObservers && stopResizeObservers();
     };
   }
   getProps() {
@@ -1289,6 +1329,24 @@ class VisualElementDragControls {
       dragMomentum
     };
   }
+}
+function skipFirstCall(callback) {
+  let isFirst = true;
+  return () => {
+    if (isFirst) {
+      isFirst = false;
+      return;
+    }
+    callback();
+  };
+}
+function startResizeObservers(element, constraintsElement, onResize) {
+  const stopElement = resize(element, skipFirstCall(onResize));
+  const stopContainer = resize(constraintsElement, skipFirstCall(onResize));
+  return () => {
+    stopElement();
+    stopContainer();
+  };
 }
 function shouldDrag(direction, drag2, currentDirection) {
   return (drag2 === true || drag2 === direction) && (currentDirection === null || currentDirection === direction);
@@ -1336,7 +1394,7 @@ class DragGesture extends Feature {
 }
 const asyncHandler = (handler) => (event, info) => {
   if (handler) {
-    frame.postRender(() => handler(event, info));
+    frame.update(() => handler(event, info), false, true);
   }
 };
 class PanGesture extends Feature {
@@ -1355,7 +1413,7 @@ class PanGesture extends Feature {
     return {
       onSessionStart: asyncHandler(onPanSessionStart),
       onStart: asyncHandler(onPanStart),
-      onMove: onPan,
+      onMove: asyncHandler(onPan),
       onEnd: (event, info) => {
         delete this.session;
         if (onPanEnd) {
@@ -1438,8 +1496,10 @@ class MeasureLayoutWithContext extends reactExports.Component {
     return null;
   }
   componentDidUpdate() {
-    const { projection } = this.props.visualElement;
+    const { visualElement, layoutAnchor } = this.props;
+    const { projection } = visualElement;
     if (projection) {
+      projection.options.layoutAnchor = layoutAnchor;
       projection.root.didUpdate();
       microtask.postRender(() => {
         if (!projection.currentAnimation && projection.isLead()) {
@@ -1555,10 +1615,14 @@ class PressGesture extends Feature {
     const { current } = this.node;
     if (!current)
       return;
+    const { globalTapTarget, propagate } = this.node.props;
     this.unmount = press(current, (_element, startEvent) => {
       handlePressEvent(this.node, startEvent, "Start");
       return (endEvent, { success }) => handlePressEvent(this.node, endEvent, success ? "End" : "Cancel");
-    }, { useGlobalTarget: this.node.props.globalTapTarget });
+    }, {
+      useGlobalTarget: globalTapTarget,
+      stopPropagation: propagate?.tap === false
+    });
   }
   unmount() {
   }
@@ -1604,7 +1668,7 @@ class InViewFeature extends Feature {
     this.isInView = false;
   }
   startObserver() {
-    this.unmount();
+    this.stopObserver?.();
     const { viewport = {} } = this.node.getProps();
     const { root, margin: rootMargin, amount = "some", once } = viewport;
     const options = {
@@ -1629,7 +1693,7 @@ class InViewFeature extends Feature {
       const callback = isIntersecting ? onViewportEnter : onViewportLeave;
       callback && callback(entry);
     };
-    return observeIntersection(this.node.current, options, onIntersectionUpdate);
+    this.stopObserver = observeIntersection(this.node.current, options, onIntersectionUpdate);
   }
   mount() {
     this.startObserver();
@@ -1644,6 +1708,9 @@ class InViewFeature extends Feature {
     }
   }
   unmount() {
+    this.stopObserver?.();
+    this.hasEnteredView = false;
+    this.isInView = false;
   }
 }
 function hasViewportOptionChanged({ viewport = {} }, { viewport: prevViewport = {} } = {}) {

@@ -1,4 +1,4 @@
-var stateIndexKey = "__TSR_index";
+var stateIndexKey$1 = "__TSR_index";
 function createHistory(opts) {
   let location = opts.getLocation();
   const subscribers = /* @__PURE__ */ new Set();
@@ -21,7 +21,7 @@ function createHistory(opts) {
     const blockers = opts.getBlockers?.() ?? [];
     const isPushOrReplace = actionInfo.type === "PUSH" || actionInfo.type === "REPLACE";
     if (typeof document !== "undefined" && blockers.length && isPushOrReplace) for (const blocker of blockers) {
-      const nextLocation = parseHref(actionInfo.path, actionInfo.state);
+      const nextLocation = parseHref$1(actionInfo.path, actionInfo.state);
       if (await blocker.blockerFn({
         currentLocation: location,
         nextLocation,
@@ -48,7 +48,7 @@ function createHistory(opts) {
       };
     },
     push: (path, state, navigateOpts) => {
-      const currentIndex = location.state[stateIndexKey];
+      const currentIndex = location.state[stateIndexKey$1];
       state = assignKeyAndIndex(currentIndex + 1, state);
       tryNavigation({
         task: () => {
@@ -62,7 +62,7 @@ function createHistory(opts) {
       });
     },
     replace: (path, state, navigateOpts) => {
-      const currentIndex = location.state[stateIndexKey];
+      const currentIndex = location.state[stateIndexKey$1];
       state = assignKeyAndIndex(currentIndex, state);
       tryNavigation({
         task: () => {
@@ -108,7 +108,7 @@ function createHistory(opts) {
         type: "FORWARD"
       });
     },
-    canGoBack: () => location.state[stateIndexKey] !== 0,
+    canGoBack: () => location.state[stateIndexKey$1] !== 0,
     createHref: (str) => opts.createHref(str),
     block: (blocker) => {
       if (!opts.setBlockers) return () => {
@@ -127,19 +127,19 @@ function createHistory(opts) {
 }
 function assignKeyAndIndex(index, state) {
   if (!state) state = {};
-  const key = createRandomKey();
+  const key = createRandomKey$1();
   return {
     ...state,
     key,
     __TSR_key: key,
-    [stateIndexKey]: index
+    [stateIndexKey$1]: index
   };
 }
 function createMemoryHistory(opts = { initialEntries: ["/"] }) {
   const entries = opts.initialEntries;
   let index = opts.initialIndex ? Math.min(Math.max(opts.initialIndex, 0), entries.length - 1) : entries.length - 1;
   const states = entries.map((_entry, index2) => assignKeyAndIndex(index2, void 0));
-  const getLocation = () => parseHref(entries[index], states[index]);
+  const getLocation = () => parseHref$1(entries[index], states[index]);
   let blockers = [];
   const _getBlockers = () => blockers;
   const _setBlockers = (newBlockers) => blockers = newBlockers;
@@ -173,6 +173,32 @@ function createMemoryHistory(opts = { initialEntries: ["/"] }) {
     setBlockers: _setBlockers
   });
 }
+function sanitizePath$1(path) {
+  let sanitized = path.replace(/[\x00-\x1f\x7f]/g, "");
+  if (sanitized.startsWith("//")) sanitized = "/" + sanitized.replace(/^\/+/, "");
+  return sanitized;
+}
+function parseHref$1(href, state) {
+  const sanitizedHref = sanitizePath$1(href);
+  const hashIndex = sanitizedHref.indexOf("#");
+  const searchIndex = sanitizedHref.indexOf("?");
+  const addedKey = createRandomKey$1();
+  return {
+    href: sanitizedHref,
+    pathname: sanitizedHref.substring(0, hashIndex > 0 ? searchIndex > 0 ? Math.min(hashIndex, searchIndex) : hashIndex : searchIndex > 0 ? searchIndex : sanitizedHref.length),
+    hash: hashIndex > -1 ? sanitizedHref.substring(hashIndex) : "",
+    search: searchIndex > -1 ? sanitizedHref.slice(searchIndex, hashIndex === -1 ? void 0 : hashIndex) : "",
+    state: state || {
+      [stateIndexKey$1]: 0,
+      key: addedKey,
+      __TSR_key: addedKey
+    }
+  };
+}
+function createRandomKey$1() {
+  return (Math.random() + 1).toString(36).substring(7);
+}
+var stateIndexKey = "__TSR_index";
 function sanitizePath(path) {
   let sanitized = path.replace(/[\x00-\x1f\x7f]/g, "");
   if (sanitized.startsWith("//")) sanitized = "/" + sanitized.replace(/^\/+/, "");

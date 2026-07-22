@@ -1,4 +1,4 @@
-import { f as flip$1, s as size$1, o as offset$1, h as hide$1, c as computePosition, b as shift$1, l as limitShift$1 } from "./floating-ui__dom.mjs";
+import { f as flip$1, s as size$1, c as computePosition, h as hide$1, o as offset$1, b as shift$1, l as limitShift$1 } from "./floating-ui__dom.mjs";
 import { r as reactExports } from "./react.mjs";
 import { r as reactDomExports } from "./react-dom.mjs";
 var isClient = typeof document !== "undefined";
@@ -221,30 +221,53 @@ function useFloating(options) {
     floatingStyles
   }), [data, update, refs, elements, floatingStyles]);
 }
-const offset = (options, deps) => ({
-  ...offset$1(options),
-  options: [options, deps]
-});
-const shift = (options, deps) => ({
-  ...shift$1(options),
-  options: [options, deps]
-});
-const limitShift = (options, deps) => ({
-  ...limitShift$1(options),
-  options: [options, deps]
-});
-const flip = (options, deps) => ({
-  ...flip$1(options),
-  options: [options, deps]
-});
-const size = (options, deps) => ({
-  ...size$1(options),
-  options: [options, deps]
-});
-const hide = (options, deps) => ({
-  ...hide$1(options),
-  options: [options, deps]
-});
+const offset = (options, deps) => {
+  const result = offset$1(options);
+  return {
+    name: result.name,
+    fn: result.fn,
+    options: [options, deps]
+  };
+};
+const shift = (options, deps) => {
+  const result = shift$1(options);
+  return {
+    name: result.name,
+    fn: result.fn,
+    options: [options, deps]
+  };
+};
+const limitShift = (options, deps) => {
+  const result = limitShift$1(options);
+  return {
+    fn: result.fn,
+    options: [options, deps]
+  };
+};
+const flip = (options, deps) => {
+  const result = flip$1(options);
+  return {
+    name: result.name,
+    fn: result.fn,
+    options: [options, deps]
+  };
+};
+const size = (options, deps) => {
+  const result = size$1(options);
+  return {
+    name: result.name,
+    fn: result.fn,
+    options: [options, deps]
+  };
+};
+const hide = (options, deps) => {
+  const result = hide$1(options);
+  return {
+    name: result.name,
+    fn: result.fn,
+    options: [options, deps]
+  };
+};
 export {
   shift as a,
   flip as f,

@@ -134,7 +134,12 @@ class ReportNamespaces {
 const notReadyT = (k, optsOrDefaultValue) => {
   if (isString(optsOrDefaultValue)) return optsOrDefaultValue;
   if (isObject(optsOrDefaultValue) && isString(optsOrDefaultValue.defaultValue)) return optsOrDefaultValue.defaultValue;
-  return Array.isArray(k) ? k[k.length - 1] : k;
+  if (typeof k === "function") return "";
+  if (Array.isArray(k)) {
+    const last = k[k.length - 1];
+    return typeof last === "function" ? "" : last;
+  }
+  return k;
 };
 const notReadySnapshot = {
   t: notReadyT,
@@ -263,8 +268,12 @@ const useTranslation = (ns, props = {}) => {
         wrapperLangRef.current = lang;
       }
     }
-    const arr = [t, i18nWrapper, ready];
-    arr.t = t;
+    const effectiveT = !ready && !useSuspense ? (...args) => {
+      warnOnce(i18n, "USE_T_BEFORE_READY", "useTranslation: t was called before ready. When using useSuspense: false, make sure to check the ready flag before using t.");
+      return t(...args);
+    } : t;
+    const arr = [effectiveT, i18nWrapper, ready];
+    arr.t = effectiveT;
     arr.i18n = i18nWrapper;
     arr.ready = ready;
     return arr;

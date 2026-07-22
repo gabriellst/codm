@@ -94,13 +94,11 @@ function deleteBy(obj, _path) {
   }
   return doDelete(obj);
 }
-const reLineOfOnlyDigits = /^(\d+)$/gm;
-const reDigitsBetweenDots = /\.(\d+)(?=\.)/gm;
-const reStartWithDigitThenDot = /^(\d+)\./gm;
-const reDotWithDigitsToEnd = /\.(\d+$)/gm;
-const reMultipleDots = /\.{2,}/gm;
-const intPrefix = "__int__";
-const intReplace = `${intPrefix}$1`;
+const CC_DOT = 46;
+const CC_OPEN = 91;
+const CC_CLOSE = 93;
+const CC_ZERO = 48;
+const CC_NINE = 57;
 function makePathArray(str) {
   if (Array.isArray(str)) {
     return [...str];
@@ -108,17 +106,55 @@ function makePathArray(str) {
   if (typeof str !== "string") {
     throw new Error("Path must be a string.");
   }
-  return str.replace(/(^\[)|]/gm, "").replace(/\[/g, ".").replace(reLineOfOnlyDigits, intReplace).replace(reDigitsBetweenDots, `.${intReplace}.`).replace(reStartWithDigitThenDot, `${intReplace}.`).replace(reDotWithDigitsToEnd, `.${intReplace}`).replace(reMultipleDots, ".").split(".").map((d) => {
-    if (d.startsWith(intPrefix)) {
-      const numStr = d.substring(intPrefix.length);
-      const num = parseInt(numStr, 10);
-      if (String(num) === numStr) {
-        return num;
+  const len = str.length;
+  const result = [];
+  let segStart = len > 0 && str.charCodeAt(0) === CC_OPEN ? 1 : 0;
+  let allDigits = true;
+  let prev = -1;
+  for (let i = segStart; i <= len; i++) {
+    const char = i < len ? str.charCodeAt(i) : -1;
+    if (i === len || char === CC_DOT || char === CC_OPEN || char === CC_CLOSE) {
+      const segLen = i - segStart;
+      if (segLen > 0) {
+        const treatAsNumber = (
+          // ...it must contain only digits...
+          allDigits && // ...and either be a single '0' or not start with '0'.
+          (segLen === 1 || str.charCodeAt(segStart) !== CC_ZERO)
+        );
+        const seg = str.slice(segStart, i);
+        if (treatAsNumber) {
+          const num = parseInt(seg, 10);
+          if (segLen <= 15 || String(num) === seg) {
+            result.push(num);
+          } else {
+            result.push(seg);
+          }
+        } else {
+          result.push(seg);
+        }
+      } else if (
+        // This branch, which handles empty segments, only exists to preserve
+        // the old behavior for malformed input.
+        // Push the empty segment unless this is a "phantom boundary" the
+        // old regex impl would have absorbed:
+        //   1. `]` was always stripped — `prev === ']'` means the real
+        //      boundary already happened on the previous iteration.
+        //   2. A leading `]` was stripped too (the leading `[` strip
+        //      above handles its counterpart for `[`).
+        //   3. `..` and `[[` collapse to a single boundary.
+        prev !== CC_CLOSE && !(prev === -1 && char === CC_CLOSE) && !(prev === char && (char === CC_DOT || char === CC_OPEN))
+      ) {
+        result.push("");
       }
-      return numStr;
+      segStart = i + 1;
+      allDigits = true;
+    } else if (char < CC_ZERO || char > CC_NINE) {
+      allDigits = false;
     }
-    return d;
-  });
+    prev = char;
+  }
+  if (!result.length) result.push("");
+  return result;
 }
 function isNonEmptyArray(obj) {
   return !(Array.isArray(obj) && obj.length === 0);
@@ -134,6 +170,7 @@ function getSyncValidatorArray(cause, options) {
   };
   return options.validationLogic({
     form: options.form,
+    group: options.group,
     validators: options.validators,
     event: { type: cause, fieldName: options.fieldName, async: false },
     runValidation
@@ -177,6 +214,7 @@ function getAsyncValidatorArray(cause, options) {
   };
   return options.validationLogic({
     form: options.form,
+    group: options.group,
     validators: options.validators,
     event: { type: cause, fieldName: options.fieldName, async: true },
     runValidation
@@ -332,6 +370,9 @@ function deepCopy(obj) {
   }
   return copy;
 }
+function isFieldInGroup(groupName, fieldName) {
+  return fieldName === groupName || fieldName.startsWith(`${groupName}.`) || fieldName.startsWith(`${groupName}[`);
+}
 const defaultValidationLogic = (props) => {
   if (!props.validators) {
     return props.runValidation({
@@ -438,8 +479,9 @@ const standardSchemaValidators = {
       throw new Error("async function passed to sync validator");
     }
     if (!result.issues) return;
-    if (validationSource === "field")
+    if (validationSource === "field") {
       return result.issues;
+    }
     return transformFormIssues(result.issues, value);
   },
   async validateAsync({
@@ -448,8 +490,9 @@ const standardSchemaValidators = {
   }, schema) {
     const result = await schema["~standard"].validate(value);
     if (!result.issues) return;
-    if (validationSource === "field")
+    if (validationSource === "field") {
       return result.issues;
+    }
     return transformFormIssues(result.issues, value);
   }
 };
@@ -465,7 +508,8 @@ const defaultFieldMeta = {
   errors: [],
   errorMap: {},
   errorSourceMap: {},
-  _arrayVersion: 0
+  _arrayVersion: 0,
+  _pendingValidationsCount: 0
 };
 function metaHelper(formApi) {
   function bumpArrayVersion(field) {
@@ -606,6 +650,7 @@ function getDefaultFormState(defaultState) {
     values: defaultState.values ?? {},
     errorMap: defaultState.errorMap ?? {},
     fieldMetaBase: defaultState.fieldMetaBase ?? {},
+    formGroupStateBase: defaultState.formGroupStateBase ?? {},
     isSubmitted: defaultState.isSubmitted ?? false,
     isSubmitting: defaultState.isSubmitting ?? false,
     isValidating: defaultState.isValidating ?? false,
@@ -628,6 +673,7 @@ class FormApi {
   constructor(opts) {
     this.options = {};
     this.fieldInfo = {};
+    this.formGroupApis = /* @__PURE__ */ new Set();
     this.mount = () => {
       const cleanupDevtoolBroadcast = this.store.subscribe(() => {
         throttleFormState(this);
@@ -703,6 +749,16 @@ class FormApi {
           )
         );
       });
+      if (shouldUpdateValues) {
+        const helper = metaHelper(this);
+        for (const fieldKey of Object.keys(
+          this.fieldInfo
+        )) {
+          if (Array.isArray(this.getFieldValue(fieldKey))) {
+            helper.bumpArrayVersion(fieldKey);
+          }
+        }
+      }
       formEventClient.emit("form-api", {
         id: this._formId,
         state: this.store.state,
@@ -750,10 +806,13 @@ class FormApi {
             fieldValidationPromises.push(
               // Remember, `validate` is either a sync operation or a promise
               Promise.resolve().then(
-                () => fieldInstance.validate(cause, { skipFormValidation: true })
+                () => fieldInstance.validate(cause, {
+                  skipFormValidation: true,
+                  skipGroupValidation: true
+                })
               )
             );
-            if (!field.instance.state.meta.isTouched) {
+            if (!field.instance.store.state.meta.isTouched) {
               field.instance.setMeta((prev) => ({ ...prev, isTouched: true }));
             }
           }
@@ -794,15 +853,16 @@ class FormApi {
           return this.getFieldMeta(field)?.errors ?? [];
         });
       }
-      if (!fieldInstance.state.meta.isTouched) {
+      if (!fieldInstance.store.state.meta.isTouched) {
         fieldInstance.setMeta((prev) => ({ ...prev, isTouched: true }));
       }
       return fieldInstance.validate(cause);
     };
-    this.validateSync = (cause) => {
+    this.validateSync = (cause, validateOpts) => {
       const validates = getSyncValidatorArray(cause, {
         ...this.options,
         form: this,
+        group: validateOpts?.group,
         validationLogic: this.options.validationLogic || defaultValidationLogic
       });
       let hasErrored = false;
@@ -819,12 +879,17 @@ class FormApi {
             },
             type: "validate"
           });
-          const { formError, fieldErrors } = normalizeError$1(rawError);
-          const errorMapKey = getErrorMapKey$1(validateObj.cause);
-          const allFieldsToProcess = /* @__PURE__ */ new Set([
+          const { formError, fieldErrors } = normalizeError$2(rawError);
+          const errorMapKey = getErrorMapKey$2(validateObj.cause);
+          let allFieldsToProcess = /* @__PURE__ */ new Set([
             ...Object.keys(this.state.fieldMeta),
             ...Object.keys(fieldErrors || {})
           ]);
+          if (validateOpts?.filterFieldNames) {
+            allFieldsToProcess = new Set(
+              [...allFieldsToProcess].filter(validateOpts.filterFieldNames)
+            );
+          }
           for (const field of allFieldsToProcess) {
             if (this.baseStore.state.fieldMetaBase[field] === void 0 && !fieldErrors?.[field]) {
               continue;
@@ -865,20 +930,25 @@ class FormApi {
               }));
             }
           }
-          if (this.state.errorMap?.[errorMapKey] !== formError) {
-            this.baseStore.setState((prev) => ({
-              ...prev,
-              errorMap: {
-                ...prev.errorMap,
-                [errorMapKey]: formError
-              }
-            }));
+          if (!validateOpts?.dontUpdateFormErrorMap) {
+            if (this.state.errorMap?.[errorMapKey] !== formError) {
+              this.baseStore.setState((prev) => ({
+                ...prev,
+                errorMap: {
+                  ...prev.errorMap,
+                  [errorMapKey]: formError
+                }
+              }));
+            }
           }
           if (formError || fieldErrors) {
             hasErrored = true;
           }
         }
-        const submitErrKey = getErrorMapKey$1("submit");
+        if (validateOpts?.dontUpdateFormErrorMap) {
+          return;
+        }
+        const submitErrKey = getErrorMapKey$2("submit");
         if (
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           this.state.errorMap?.[submitErrKey] && cause !== "submit" && !hasErrored
@@ -891,7 +961,7 @@ class FormApi {
             }
           }));
         }
-        const serverErrKey = getErrorMapKey$1("server");
+        const serverErrKey = getErrorMapKey$2("server");
         if (
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           this.state.errorMap?.[serverErrKey] && cause !== "server" && !hasErrored
@@ -907,10 +977,11 @@ class FormApi {
       });
       return { hasErrored, fieldsErrorMap: currentValidationErrorMap };
     };
-    this.validateAsync = async (cause) => {
+    this.validateAsync = async (cause, validateOpts) => {
       const validates = getAsyncValidatorArray(cause, {
         ...this.options,
         form: this,
+        group: validateOpts?.group,
         validationLogic: this.options.validationLogic || defaultValidationLogic
       });
       if (!this.state.isFormValidating) {
@@ -920,7 +991,7 @@ class FormApi {
       let fieldErrorsFromFormValidators;
       for (const validateObj of validates) {
         if (!validateObj.validate) continue;
-        const key = getErrorMapKey$1(validateObj.cause);
+        const key = getErrorMapKey$2(validateObj.cause);
         const fieldValidatorMeta = this.state.validationMetaMap[key];
         fieldValidatorMeta?.lastAbortController.abort();
         const controller = new AbortController();
@@ -955,22 +1026,27 @@ class FormApi {
             } catch (e) {
               rawError = e;
             }
-            const { formError, fieldErrors: fieldErrorsFromNormalizeError } = normalizeError$1(rawError);
+            const { formError, fieldErrors: fieldErrorsFromNormalizeError } = normalizeError$2(rawError);
             if (fieldErrorsFromNormalizeError) {
               fieldErrorsFromFormValidators = fieldErrorsFromFormValidators ? {
                 ...fieldErrorsFromFormValidators,
                 ...fieldErrorsFromNormalizeError
               } : fieldErrorsFromNormalizeError;
             }
-            const errorMapKey = getErrorMapKey$1(validateObj.cause);
-            for (const field of Object.keys(
-              this.state.fieldMeta
-            )) {
-              if (this.baseStore.state.fieldMetaBase[field] === void 0) {
+            const errorMapKey = getErrorMapKey$2(validateObj.cause);
+            const allFieldsToProcess = /* @__PURE__ */ new Set([
+              ...Object.keys(this.state.fieldMeta),
+              ...Object.keys(fieldErrorsFromFormValidators || {})
+            ]);
+            let fields = Array.from(allFieldsToProcess);
+            if (validateOpts?.filterFieldNames) {
+              fields = fields.filter(validateOpts.filterFieldNames);
+            }
+            for (const field of fields) {
+              if (this.baseStore.state.fieldMetaBase[field] === void 0 && !fieldErrorsFromFormValidators?.[field]) {
                 continue;
               }
-              const fieldMeta = this.getFieldMeta(field);
-              if (!fieldMeta) continue;
+              const fieldMeta = this.getFieldMeta(field) ?? defaultFieldMeta;
               const {
                 errorMap: currentErrorMap,
                 errorSourceMap: currentErrorMapSource
@@ -985,11 +1061,8 @@ class FormApi {
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 previousErrorValue: currentErrorMap?.[errorMapKey]
               });
-              if (
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                currentErrorMap?.[errorMapKey] !== newErrorValue
-              ) {
-                this.setFieldMeta(field, (prev) => ({
+              if (currentErrorMap?.[errorMapKey] !== newErrorValue) {
+                this.setFieldMeta(field, (prev = defaultFieldMeta) => ({
                   ...prev,
                   errorMap: {
                     ...prev.errorMap,
@@ -1002,13 +1075,15 @@ class FormApi {
                 }));
               }
             }
-            this.baseStore.setState((prev) => ({
-              ...prev,
-              errorMap: {
-                ...prev.errorMap,
-                [errorMapKey]: formError
-              }
-            }));
+            if (!validateOpts?.dontUpdateFormErrorMap) {
+              this.baseStore.setState((prev) => ({
+                ...prev,
+                errorMap: {
+                  ...prev.errorMap,
+                  [errorMapKey]: formError
+                }
+              }));
+            }
             resolve(
               fieldErrorsFromFormValidators ? { fieldErrors: fieldErrorsFromFormValidators, errorMapKey } : void 0
             );
@@ -1041,12 +1116,15 @@ class FormApi {
       }));
       return fieldsErrorMap;
     };
-    this.validate = (cause) => {
-      const { hasErrored, fieldsErrorMap } = this.validateSync(cause);
+    this.validate = (cause, validateOpts) => {
+      const { hasErrored, fieldsErrorMap } = this.validateSync(
+        cause,
+        validateOpts
+      );
       if (hasErrored && !this.options.asyncAlways) {
         return fieldsErrorMap;
       }
-      return this.validateAsync(cause);
+      return this.validateAsync(cause, validateOpts);
     };
     this._handleSubmit = async (submitMeta) => {
       this.baseStore.setState((old) => ({
@@ -1062,7 +1140,7 @@ class FormApi {
         void Object.values(this.fieldInfo).forEach(
           (field) => {
             if (!field.instance) return;
-            if (!field.instance.state.meta.isTouched) {
+            if (!field.instance.store.state.meta.isTouched) {
               field.instance.setMeta((prev) => ({ ...prev, isTouched: true }));
             }
           }
@@ -1070,12 +1148,14 @@ class FormApi {
       });
       const submitMetaArg = submitMeta ?? this.options.onSubmitMeta;
       if (!this.state.canSubmit && !this._devtoolsSubmissionOverride) {
-        this.options.onSubmitInvalid?.({
-          value: this.state.values,
-          formApi: this,
-          meta: submitMetaArg
-        });
-        return;
+        if (this.baseStore.state.submissionAttempts <= 1) {
+          this.options.onSubmitInvalid?.({
+            value: this.state.values,
+            formApi: this,
+            meta: submitMetaArg
+          });
+          return;
+        }
       }
       this.baseStore.setState((d) => ({ ...d, isSubmitting: true }));
       const done = () => {
@@ -1118,10 +1198,7 @@ class FormApi {
       batch(() => {
         void Object.values(this.fieldInfo).forEach(
           (field) => {
-            field.instance?.options.listeners?.onSubmit?.({
-              value: field.instance.state.value,
-              fieldApi: field.instance
-            });
+            field.instance?.triggerOnSubmitListener();
           }
         );
       });
@@ -1166,6 +1243,9 @@ class FormApi {
     this.getFieldValue = (field) => getBy(this.state.values, field);
     this.getFieldMeta = (field) => {
       return this.state.fieldMeta[field];
+    };
+    this.getFormGroupMeta = (name) => {
+      return this.formGroupMetaDerived.state[name];
     };
     this.getFieldInfo = (field) => {
       return this.fieldInfo[field] ||= {
@@ -1396,7 +1476,7 @@ class FormApi {
         Object.entries(errorMap).forEach(([key, value]) => {
           const errorMapKey = key;
           if (isGlobalFormValidationError(value)) {
-            const { formError, fieldErrors } = normalizeError$1(value);
+            const { formError, fieldErrors } = normalizeError$2(value);
             for (const fieldName of Object.keys(
               this.fieldInfo
             )) {
@@ -1495,6 +1575,7 @@ class FormApi {
             isBlurred: false,
             isDirty: false,
             _arrayVersion: 0,
+            _pendingValidationsCount: 0,
             ...existingFieldMeta ?? {},
             errorSourceMap: {
               ...existingFieldMeta?.["errorSourceMap"] ?? {},
@@ -1558,6 +1639,107 @@ class FormApi {
         }
         prevBaseStore = this.baseStore.get();
         return fieldMeta;
+      }
+    );
+    this.formGroupMetaDerived = createStore(
+      (prevVal) => {
+        const currBaseStore = this.baseStore.get();
+        const currFieldMeta = this.fieldMetaDerived.get();
+        const result = {};
+        for (const group of this.formGroupApis) {
+          const groupName = group.name;
+          const lifecycle = currBaseStore.formGroupStateBase[groupName] ?? {
+            isSubmitted: false,
+            isSubmitting: false,
+            isValidating: false,
+            submissionAttempts: 0,
+            isSubmitSuccessful: false
+          };
+          const ownFieldMeta = currFieldMeta[groupName];
+          let isFieldsValidating = false;
+          let isFieldsValid = true;
+          let aggIsTouched = false;
+          let aggIsBlurred = false;
+          let aggIsDefaultValue = true;
+          let aggIsDirty = false;
+          for (const fieldName in currFieldMeta) {
+            if (fieldName === groupName) continue;
+            if (!isFieldInGroup(groupName, fieldName)) continue;
+            const m = currFieldMeta[fieldName];
+            if (!m) continue;
+            if (m.isValidating) isFieldsValidating = true;
+            if (!m.isValid) isFieldsValid = false;
+            if (m.isTouched) aggIsTouched = true;
+            if (m.isBlurred) aggIsBlurred = true;
+            if (!m.isDefaultValue) aggIsDefaultValue = false;
+            if (m.isDirty) aggIsDirty = true;
+          }
+          const isPristine = !aggIsDirty;
+          const isValidating = !!isFieldsValidating || lifecycle.isValidating;
+          const errorMap = ownFieldMeta?.errorMap ?? {};
+          const errorSourceMap = ownFieldMeta?.errorSourceMap ?? {};
+          const hasOnMountError = Boolean(
+            errorMap.onMount || Object.entries(currFieldMeta).some(
+              ([fieldName, field]) => field && fieldName !== groupName && isFieldInGroup(groupName, fieldName) && field.errorMap.onMount
+            )
+          );
+          const prevGroupMeta = prevVal?.[groupName];
+          let errors = prevGroupMeta?.errors ?? [];
+          if (!prevGroupMeta || prevGroupMeta.__srcErrorMap !== errorMap) {
+            errors = Object.values(errorMap).reduce((acc, curr) => {
+              if (curr === void 0) return acc;
+              if (curr && typeof curr === "object" && "fields" in curr) {
+                const groupErr = curr.group;
+                if (groupErr !== void 0) acc.push(groupErr);
+                return acc;
+              }
+              acc.push(curr);
+              return acc;
+            }, []);
+          }
+          const isGroupValid = errors.length === 0;
+          const isValid = isFieldsValid && isGroupValid;
+          const submitInvalid = group.options.canSubmitWhenInvalid ?? false;
+          const canSubmit = lifecycle.submissionAttempts === 0 && !aggIsTouched && !hasOnMountError || !isValidating && !lifecycle.isSubmitting && isValid || submitInvalid;
+          if (prevGroupMeta && prevGroupMeta.errorMap === errorMap && prevGroupMeta.errorSourceMap === errorSourceMap && prevGroupMeta.errors === errors && prevGroupMeta.isFieldsValidating === isFieldsValidating && prevGroupMeta.isFieldsValid === isFieldsValid && prevGroupMeta.isGroupValid === isGroupValid && prevGroupMeta.isValid === isValid && prevGroupMeta.canSubmit === canSubmit && prevGroupMeta.isTouched === aggIsTouched && prevGroupMeta.isBlurred === aggIsBlurred && prevGroupMeta.isPristine === isPristine && prevGroupMeta.isDefaultValue === aggIsDefaultValue && prevGroupMeta.isDirty === aggIsDirty && prevGroupMeta.isValidating === isValidating && prevGroupMeta.isSubmitting === lifecycle.isSubmitting && prevGroupMeta.isSubmitted === lifecycle.isSubmitted && prevGroupMeta.submissionAttempts === lifecycle.submissionAttempts && prevGroupMeta.isSubmitSuccessful === lifecycle.isSubmitSuccessful) {
+            result[groupName] = prevGroupMeta;
+            continue;
+          }
+          const meta = {
+            // Submission lifecycle (spread first; `isValidating` below
+            // intentionally overrides `lifecycle.isValidating` with the
+            // OR of group-level + descendant-field validating).
+            ...lifecycle,
+            // Field-meta-base fields (so `setMeta` updates can roundtrip
+            // through `state.meta`).
+            errorMap,
+            errorSourceMap,
+            _arrayVersion: ownFieldMeta?._arrayVersion ?? 0,
+            // Aggregated descendant booleans (override field-level meaning
+            // for groups — a group's "field" itself never receives input).
+            isTouched: aggIsTouched,
+            isBlurred: aggIsBlurred,
+            isDirty: aggIsDirty,
+            isPristine,
+            isDefaultValue: aggIsDefaultValue,
+            // Aggregated validity
+            isValid,
+            errors,
+            isValidating,
+            // Group-only flags
+            isFieldsValidating,
+            isFieldsValid,
+            isGroupValid,
+            canSubmit
+          };
+          Object.defineProperty(meta, "__srcErrorMap", {
+            value: errorMap,
+            enumerable: false,
+            configurable: true
+          });
+          result[groupName] = meta;
+        }
+        return result;
       }
     );
     let prevBaseStoreForStore = void 0;
@@ -1656,10 +1838,10 @@ class FormApi {
     return this._handleSubmit(submitMeta);
   }
 }
-function normalizeError$1(rawError) {
+function normalizeError$2(rawError) {
   if (rawError) {
     if (isGlobalFormValidationError(rawError)) {
-      const formError = normalizeError$1(rawError.form).formError;
+      const formError = normalizeError$2(rawError.form).formError;
       const fieldErrors = rawError.fields;
       return { formError, fieldErrors };
     }
@@ -1667,7 +1849,7 @@ function normalizeError$1(rawError) {
   }
   return { formError: void 0 };
 }
-function getErrorMapKey$1(cause) {
+function getErrorMapKey$2(cause) {
   switch (cause) {
     case "submit":
       return "onSubmit";
@@ -1900,6 +2082,9 @@ class FieldApi {
       const linkedFields = [];
       for (const field of fields) {
         if (!field.instance) continue;
+        if (!(field.instance instanceof FieldApi)) {
+          continue;
+        }
         const { onChangeListenTo, onBlurListenTo } = field.instance.options.validators || {};
         if (cause === "change" && onChangeListenTo?.includes(this.name)) {
           linkedFields.push(field.instance);
@@ -1936,8 +2121,8 @@ class FieldApi {
       let hasErrored = false;
       batch(() => {
         const validateFieldFn = (field, validateObj) => {
-          const errorMapKey = getErrorMapKey(validateObj.cause);
-          const fieldLevelError = validateObj.validate ? normalizeError(
+          const errorMapKey = getErrorMapKey$1(validateObj.cause);
+          const fieldLevelError = validateObj.validate ? normalizeError$1(
             field.runValidator({
               validate: validateObj.validate,
               value: {
@@ -1978,7 +2163,7 @@ class FieldApi {
           validateFieldFn(fieldValitateObj.field, fieldValitateObj);
         }
       });
-      const submitErrKey = getErrorMapKey("submit");
+      const submitErrKey = getErrorMapKey$1("submit");
       if (
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this.state.meta.errorMap?.[submitErrKey] && cause !== "submit" && !hasErrored
@@ -2023,17 +2208,22 @@ class FieldApi {
       );
       const validatesPromises = [];
       const linkedPromises = [];
-      const hasAsyncValidators = validates.some((v) => v.validate) || linkedFieldValidates.some((v) => v.validate);
-      if (hasAsyncValidators) {
-        if (!this.state.meta.isValidating) {
-          this.setMeta((prev) => ({ ...prev, isValidating: true }));
+      const hasAsyncValidators = validates.some((v) => v.validate);
+      const linkedFieldsWithAsyncValidators = Array.from(
+        new Set(
+          linkedFieldValidates.filter((v) => v.validate).map((v) => v.field)
+        )
+      );
+      batch(() => {
+        if (hasAsyncValidators) {
+          this.startValidation();
         }
-        for (const linkedField of linkedFields) {
-          linkedField.setMeta((prev) => ({ ...prev, isValidating: true }));
+        for (const linkedField of linkedFieldsWithAsyncValidators) {
+          linkedField.startValidation();
         }
-      }
+      });
       const validateFieldAsyncFn = (field, validateObj, promises) => {
-        const errorMapKey = getErrorMapKey(validateObj.cause);
+        const errorMapKey = getErrorMapKey$1(validateObj.cause);
         const fieldInfo = field.getInfo();
         const fieldValidatorMeta = fieldInfo.validationMetaMap[errorMapKey];
         fieldValidatorMeta?.lastAbortController.abort();
@@ -2048,6 +2238,7 @@ class FieldApi {
               rawError = await new Promise((rawResolve, rawReject) => {
                 if (field.timeoutIds.validations[validateObj.cause]) {
                   clearTimeout(field.timeoutIds.validations[validateObj.cause]);
+                  field.endValidation();
                 }
                 field.timeoutIds.validations[validateObj.cause] = setTimeout(
                   async () => {
@@ -2076,7 +2267,7 @@ class FieldApi {
               rawError = e;
             }
             if (controller.signal.aborted) return resolve(void 0);
-            const fieldLevelError = normalizeError(rawError);
+            const fieldLevelError = normalizeError$1(rawError);
             const formLevelError = asyncFormValidationResults[field.name]?.[errorMapKey];
             const { newErrorValue, newSource } = determineFieldLevelErrorSourceAndValue({
               formLevelError,
@@ -2120,27 +2311,81 @@ class FieldApi {
         results = await Promise.all(validatesPromises);
         await Promise.all(linkedPromises);
       }
-      if (hasAsyncValidators) {
-        this.setMeta((prev) => ({ ...prev, isValidating: false }));
-        for (const linkedField of linkedFields) {
-          linkedField.setMeta((prev) => ({ ...prev, isValidating: false }));
+      batch(() => {
+        if (hasAsyncValidators) {
+          this.endValidation();
         }
-      }
+        for (const linkedField of linkedFieldsWithAsyncValidators) {
+          linkedField.endValidation();
+        }
+      });
       return results.filter(Boolean);
     };
     this.validate = (cause, opts2) => {
       if (!this.state.meta.isTouched) return [];
-      const { fieldsErrorMap } = opts2?.skipFormValidation ? { fieldsErrorMap: {} } : this.form.validateSync(cause);
-      const { hasErrored } = this.validateSync(
-        cause,
-        fieldsErrorMap[this.name] ?? {}
+      const encompassingGroups = opts2?.skipGroupValidation ? [] : Array.from(this.form.formGroupApis).filter(
+        (group) => this.name.startsWith(group.name)
       );
+      const formSyncResult = opts2?.skipFormValidation ? { fieldsErrorMap: {} } : this.form.validateSync(cause);
+      let fieldsErrorMap = formSyncResult.fieldsErrorMap[this.name] ?? {};
+      if (!opts2?.skipFormValidation) {
+        for (const group of encompassingGroups) {
+          if (group.state.meta.submissionAttempts === 0) continue;
+          const { fieldsErrorMap: groupFormErrors } = this.form.validateSync(
+            cause,
+            {
+              group,
+              dontUpdateFormErrorMap: true,
+              filterFieldNames: (fieldName) => isFieldInGroup(group.name, fieldName)
+            }
+          );
+          fieldsErrorMap = {
+            ...fieldsErrorMap,
+            ...groupFormErrors[this.name] ?? {}
+          };
+        }
+      }
+      const { hasErrored } = this.validateSync(cause, fieldsErrorMap);
+      const groupHasErroredWeakMap = /* @__PURE__ */ new WeakMap();
+      for (const group of encompassingGroups) {
+        const { hasErrored: groupHasErrored } = group.validateSync(
+          cause,
+          {},
+          { skipRelatedFieldValidation: true }
+        );
+        groupHasErroredWeakMap.set(group, groupHasErrored);
+      }
       if (hasErrored && !this.options.asyncAlways) {
-        this.getInfo().validationMetaMap[getErrorMapKey(cause)]?.lastAbortController.abort();
-        return this.state.meta.errors;
+        this.getInfo().validationMetaMap[getErrorMapKey$1(cause)]?.lastAbortController.abort();
+        const groupErrors = [];
+        for (const group of encompassingGroups) {
+          group.getInfo().validationMetaMap[getErrorMapKey$1(cause)]?.lastAbortController.abort();
+          groupErrors.push(group.state.meta.errors);
+        }
+        return [...this.state.meta.errors, ...groupErrors.flat()];
       }
       const formValidationResultPromise = opts2?.skipFormValidation ? Promise.resolve({}) : this.form.validateAsync(cause);
-      return this.validateAsync(cause, formValidationResultPromise);
+      const fieldAsyncResults = this.validateAsync(
+        cause,
+        formValidationResultPromise
+      );
+      const groupAsyncResults = [];
+      for (const group of encompassingGroups) {
+        if (groupHasErroredWeakMap.get(group) && !group.options.asyncAlways) {
+          continue;
+        }
+        groupAsyncResults.push(
+          group.validateAsync(cause, formValidationResultPromise, {
+            skipRelatedFieldValidation: true
+          })
+        );
+      }
+      if (groupAsyncResults.length === 0) {
+        return fieldAsyncResults;
+      }
+      return Promise.all([fieldAsyncResults, ...groupAsyncResults]).then(
+        (results) => results.flat()
+      );
     };
     this.handleChange = (updater) => {
       this.setValue(updater);
@@ -2177,6 +2422,42 @@ class FieldApi {
         schema
       );
     };
+    this.triggerOnBlurListener = () => {
+      const formDebounceMs = this.form.options.listeners?.onBlurDebounceMs;
+      if (formDebounceMs && formDebounceMs > 0) {
+        if (this.timeoutIds.formListeners.blur) {
+          clearTimeout(this.timeoutIds.formListeners.blur);
+        }
+        this.timeoutIds.formListeners.blur = setTimeout(() => {
+          this.form.options.listeners?.onBlur?.({
+            formApi: this.form,
+            fieldApi: this
+          });
+        }, formDebounceMs);
+      } else {
+        this.form.options.listeners?.onBlur?.({
+          formApi: this.form,
+          fieldApi: this
+        });
+      }
+      const fieldDebounceMs = this.options.listeners?.onBlurDebounceMs;
+      if (fieldDebounceMs && fieldDebounceMs > 0) {
+        if (this.timeoutIds.listeners.blur) {
+          clearTimeout(this.timeoutIds.listeners.blur);
+        }
+        this.timeoutIds.listeners.blur = setTimeout(() => {
+          this.options.listeners?.onBlur?.({
+            value: this.state.value,
+            fieldApi: this
+          });
+        }, fieldDebounceMs);
+      } else {
+        this.options.listeners?.onBlur?.({
+          value: this.state.value,
+          fieldApi: this
+        });
+      }
+    };
     this.triggerOnChangeListener = () => {
       const formDebounceMs = this.form.options.listeners?.onChangeDebounceMs;
       if (formDebounceMs && formDebounceMs > 0) {
@@ -2212,6 +2493,17 @@ class FieldApi {
           fieldApi: this
         });
       }
+      for (const group of this.form.formGroupApis) {
+        if (isFieldInGroup(group.name, this.name)) {
+          group.triggerOnChangeListener();
+        }
+      }
+    };
+    this.triggerOnSubmitListener = () => {
+      this.options.listeners?.onSubmit?.({
+        value: this.state.value,
+        fieldApi: this
+      });
     };
     this.form = opts.form;
     this.name = opts.name;
@@ -2260,41 +2552,845 @@ class FieldApi {
     }
     return props.validate(props.value);
   }
-  triggerOnBlurListener() {
-    const formDebounceMs = this.form.options.listeners?.onBlurDebounceMs;
-    if (formDebounceMs && formDebounceMs > 0) {
-      if (this.timeoutIds.formListeners.blur) {
-        clearTimeout(this.timeoutIds.formListeners.blur);
-      }
-      this.timeoutIds.formListeners.blur = setTimeout(() => {
-        this.form.options.listeners?.onBlur?.({
-          formApi: this.form,
-          fieldApi: this
-        });
-      }, formDebounceMs);
-    } else {
-      this.form.options.listeners?.onBlur?.({
-        formApi: this.form,
-        fieldApi: this
+  /**
+   * `@private`
+   * Starts tracking an async validation, incrementing the counter and setting isValidating if needed.
+   */
+  startValidation() {
+    this.setMeta((prev) => {
+      const newCount = prev._pendingValidationsCount + 1;
+      return {
+        ...prev,
+        _pendingValidationsCount: newCount,
+        isValidating: newCount > 0 && !prev.isValidating ? true : prev.isValidating
+      };
+    });
+  }
+  /**
+   * `@private`
+   * Ends tracking an async validation, decrementing the counter and clearing isValidating if no validations remain.
+   */
+  endValidation() {
+    this.setMeta((prev) => {
+      const newCount = Math.max(0, prev._pendingValidationsCount - 1);
+      return {
+        ...prev,
+        _pendingValidationsCount: newCount,
+        isValidating: newCount === 0 && prev.isValidating ? false : prev.isValidating
+      };
+    });
+  }
+}
+function normalizeError$1(rawError) {
+  if (rawError) {
+    return rawError;
+  }
+  return void 0;
+}
+function getErrorMapKey$1(cause) {
+  switch (cause) {
+    case "submit":
+      return "onSubmit";
+    case "blur":
+      return "onBlur";
+    case "mount":
+      return "onMount";
+    case "server":
+      return "onServer";
+    case "dynamic":
+      return "onDynamic";
+    case "change":
+    default:
+      return "onChange";
+  }
+}
+function getDefaultFormGroupState(defaultState) {
+  return {
+    isSubmitted: defaultState.isSubmitted ?? false,
+    isSubmitting: defaultState.isSubmitting ?? false,
+    isValidating: defaultState.isValidating ?? false,
+    submissionAttempts: defaultState.submissionAttempts ?? 0,
+    isSubmitSuccessful: defaultState.isSubmitSuccessful ?? false
+  };
+}
+function getDefaultFormGroupMeta(defaultMeta) {
+  return {
+    ...defaultFieldMeta,
+    ...defaultMeta,
+    errors: [],
+    isPristine: true,
+    isValid: true,
+    isDefaultValue: true,
+    isFieldsValidating: false,
+    isFieldsValid: true,
+    isGroupValid: true,
+    canSubmit: true,
+    isSubmitting: false,
+    isSubmitted: false,
+    isValidating: false,
+    submissionAttempts: 0,
+    isSubmitSuccessful: false
+  };
+}
+class FormGroupApi {
+  constructor(opts) {
+    this.options = {};
+    this.setFormGroupState = (updater) => {
+      this.form.baseStore.setState((prev) => {
+        const prevGroupState = prev.formGroupStateBase[this.name] ?? getDefaultFormGroupState({});
+        return {
+          ...prev,
+          formGroupStateBase: {
+            ...prev.formGroupStateBase,
+            [this.name]: updater(prevGroupState)
+          }
+        };
       });
-    }
-    const fieldDebounceMs = this.options.listeners?.onBlurDebounceMs;
-    if (fieldDebounceMs && fieldDebounceMs > 0) {
-      if (this.timeoutIds.listeners.blur) {
-        clearTimeout(this.timeoutIds.listeners.blur);
+    };
+    this._lastDistributedFieldNames = {};
+    this.update = (opts2) => {
+      this.options = opts2;
+      this.name = opts2.name;
+      if (!this.state.meta.isTouched && this.options.defaultValue !== void 0) {
+        const formField = this.form.getFieldValue(this.name);
+        if (!evaluate(formField, opts2.defaultValue)) {
+          this.form.setFieldValue(this.name, opts2.defaultValue, {
+            dontUpdateMeta: true,
+            dontValidate: true,
+            dontRunListeners: true
+          });
+        }
       }
-      this.timeoutIds.listeners.blur = setTimeout(() => {
-        this.options.listeners?.onBlur?.({
-          value: this.state.value,
-          fieldApi: this
+      if (!this.form.getFieldMeta(this.name)) {
+        this.form.setFieldMeta(this.name, {
+          ...defaultFieldMeta,
+          ...this.options.defaultMeta
         });
-      }, fieldDebounceMs);
-    } else {
-      this.options.listeners?.onBlur?.({
+      }
+    };
+    this.mount = () => {
+      this.update(this.options);
+      this.form.formGroupApis.add(this);
+      this.fieldInfo.instance = this;
+      this.form.baseStore.setState((prev) => ({
+        ...prev,
+        formGroupStateBase: {
+          ...prev.formGroupStateBase,
+          [this.name]: prev.formGroupStateBase[this.name] ?? getDefaultFormGroupState({
+            ...this.options.defaultState
+          })
+        }
+      }));
+      const { onMount } = this.options.validators || {};
+      if (onMount) {
+        const rawError = this.runValidator({
+          validate: onMount,
+          value: {
+            value: this.state.value,
+            groupApi: this,
+            validationSource: "form"
+          },
+          type: "validate"
+        });
+        let groupOwnRawError = rawError;
+        let groupFieldErrors = void 0;
+        if (isGlobalGroupValidationError(rawError)) {
+          groupOwnRawError = rawError.group;
+          groupFieldErrors = rawError.fields;
+        }
+        const error = normalizeError(groupOwnRawError);
+        if (error) {
+          this.setMeta(
+            (prev) => ({
+              ...prev,
+              errorMap: {
+                ...prev.errorMap,
+                onMount: error
+              },
+              errorSourceMap: {
+                ...prev.errorSourceMap,
+                onMount: "field"
+              }
+            })
+          );
+        }
+        this.distributeFieldErrors("onMount", groupFieldErrors);
+      }
+      this.options.listeners?.onMount?.({
         value: this.state.value,
-        fieldApi: this
+        groupApi: this
       });
+      return () => {
+        for (const [key, timeout] of Object.entries(
+          this.timeoutIds.validations
+        )) {
+          if (timeout) {
+            clearTimeout(timeout);
+            this.timeoutIds.validations[key] = null;
+          }
+        }
+        for (const [key, timeout] of Object.entries(this.timeoutIds.listeners)) {
+          if (timeout) {
+            clearTimeout(timeout);
+            this.timeoutIds.listeners[key] = null;
+          }
+        }
+        for (const [key, timeout] of Object.entries(
+          this.timeoutIds.formListeners
+        )) {
+          if (timeout) {
+            clearTimeout(timeout);
+            this.timeoutIds.formListeners[key] = null;
+          }
+        }
+        if (this.fieldInfo.instance !== this) return;
+        for (const [key, validationMeta] of Object.entries(
+          this.fieldInfo.validationMetaMap
+        )) {
+          validationMeta?.lastAbortController.abort();
+          this.fieldInfo.validationMetaMap[key] = void 0;
+        }
+        this.form.formGroupApis.delete(this);
+        this.form.baseStore.setState((prev) => ({
+          ...prev,
+          formGroupStateBase: {
+            ...prev.formGroupStateBase,
+            [this.name]: getDefaultFormGroupState({})
+          }
+        }));
+        this.fieldInfo.instance = null;
+        this.options.listeners?.onUnmount?.({
+          value: this.state.value,
+          groupApi: this
+        });
+      };
+    };
+    this.setValue = (updater, options) => {
+      this.form.setFieldValue(
+        this.name,
+        updater,
+        mergeOpts(options, { dontRunListeners: true, dontValidate: true })
+      );
+      if (!options?.dontRunListeners) {
+        this.triggerOnChangeListener();
+      }
+      if (!options?.dontValidate) {
+        this.validate("change");
+      }
+    };
+    this.getMeta = () => this.store.state.meta;
+    this.setMeta = (updater) => this.form.setFieldMeta(this.name, updater);
+    this.getInfo = () => this.fieldInfo;
+    this.getRelatedFields = () => {
+      const fields = Object.values(this.form.fieldInfo);
+      const relatedFields = [];
+      for (const field of fields) {
+        if (!field.instance) continue;
+        if (!(field.instance instanceof FieldApi)) continue;
+        if (field.instance.name.startsWith(this.name)) {
+          relatedFields.push(field.instance);
+        }
+      }
+      return relatedFields;
+    };
+    this.getRelatedFieldMetasDerived = () => {
+      const fields = Object.entries(this.form.fieldMetaDerived.state);
+      const relatedFieldMetas = [];
+      for (const [fieldName, fieldMeta] of fields) {
+        if (fieldName === this.name) continue;
+        if (isFieldInGroup(this.name, fieldName)) {
+          relatedFieldMetas.push({ ...fieldMeta, name: fieldName });
+        }
+      }
+      return relatedFieldMetas;
+    };
+    this.buildChildFieldName = (relativeName) => {
+      if (relativeName === "") return this.name;
+      if (relativeName.startsWith("[")) return `${this.name}${relativeName}`;
+      return `${this.name}.${relativeName}`;
+    };
+    this.distributeFieldErrors = (errorMapKey, fieldErrors) => {
+      const previousNames = this._lastDistributedFieldNames[errorMapKey] ?? /* @__PURE__ */ new Set();
+      const currentNames = /* @__PURE__ */ new Set();
+      if (fieldErrors) {
+        for (const [relativeName, err] of Object.entries(fieldErrors)) {
+          if (err === void 0 || err === null || err === false) continue;
+          currentNames.add(this.buildChildFieldName(relativeName));
+        }
+      }
+      const allNames = /* @__PURE__ */ new Set([...previousNames, ...currentNames]);
+      let hasErrored = false;
+      for (const fullName of allNames) {
+        const relativeName = fullName.startsWith(this.name + "[") ? fullName.slice(this.name.length) : fullName.slice(this.name.length + 1);
+        const newFormValidatorError = fieldErrors?.[relativeName];
+        const fieldMeta = this.form.getFieldMeta(fullName);
+        if (!fieldMeta && !newFormValidatorError) continue;
+        const previousErrorValue = fieldMeta?.errorMap[errorMapKey];
+        const isPreviousErrorFromFormValidator = fieldMeta?.errorSourceMap[errorMapKey] === "form";
+        const { newErrorValue, newSource } = determineFormLevelErrorSourceAndValue({
+          newFormValidatorError,
+          isPreviousErrorFromFormValidator,
+          previousErrorValue
+        });
+        if (newErrorValue) hasErrored = true;
+        if (previousErrorValue === newErrorValue && fieldMeta?.errorSourceMap[errorMapKey] === newSource) {
+          continue;
+        }
+        this.form.setFieldMeta(fullName, (prev = defaultFieldMeta) => ({
+          ...prev,
+          errorMap: {
+            ...prev.errorMap,
+            [errorMapKey]: newErrorValue
+          },
+          errorSourceMap: {
+            ...prev.errorSourceMap,
+            [errorMapKey]: newSource
+          }
+        }));
+      }
+      this._lastDistributedFieldNames[errorMapKey] = currentNames;
+      return hasErrored;
+    };
+    this.validateSync = (cause, errorFromForm, opts2 = {}) => {
+      const validates = getSyncValidatorArray(cause, {
+        ...this.options,
+        form: this.form,
+        group: this,
+        validationLogic: this.options.validationLogic || this.form.options.validationLogic || defaultValidationLogic
+      });
+      const relatedFields = opts2.skipRelatedFieldValidation ? [] : this.getRelatedFields();
+      const relatedFieldValidates = relatedFields.reduce(
+        (acc, field) => {
+          const fieldValidates = getSyncValidatorArray(cause, {
+            ...field.options,
+            form: field.form,
+            validationLogic: field.form.options.validationLogic || defaultValidationLogic
+          });
+          fieldValidates.forEach((validate) => {
+            validate.field = field;
+          });
+          return acc.concat(fieldValidates);
+        },
+        []
+      );
+      let hasErrored = false;
+      batch(() => {
+        const validateFieldOrGroupFn = (fieldOrGroup, validateObj) => {
+          const errorMapKey = getErrorMapKey(validateObj.cause);
+          const isGroup = fieldOrGroup === this;
+          let rawError = void 0;
+          if (validateObj.validate) {
+            rawError = fieldOrGroup.runValidator({
+              validate: validateObj.validate,
+              value: {
+                value: fieldOrGroup.store.state.value,
+                // For the group's own validators we want standard schemas to
+                // produce a `{ form, fields }` shape (with relative keys) so
+                // we can fan errors out to children. Field-level validators on
+                // related fields keep the regular field source.
+                validationSource: isGroup ? "form" : "field",
+                ...fieldOrGroup instanceof FormGroupApi ? {
+                  groupApi: fieldOrGroup
+                } : { fieldApi: fieldOrGroup }
+              },
+              type: "validate"
+            });
+          }
+          let groupOwnRawError = rawError;
+          let groupFieldErrors = void 0;
+          if (isGroup && isGlobalGroupValidationError(rawError)) {
+            groupOwnRawError = rawError.group;
+            groupFieldErrors = rawError.fields;
+          }
+          const fieldLevelError = normalizeError(
+            groupOwnRawError
+          );
+          const formLevelError = errorFromForm[errorMapKey];
+          const { newErrorValue, newSource } = determineFieldLevelErrorSourceAndValue({
+            formLevelError,
+            fieldLevelError
+          });
+          if (fieldOrGroup.state.meta.errorMap?.[errorMapKey] !== newErrorValue) {
+            fieldOrGroup.setMeta((prev) => ({
+              ...prev,
+              errorMap: {
+                ...prev.errorMap,
+                [errorMapKey]: newErrorValue
+              },
+              errorSourceMap: {
+                ...prev.errorSourceMap,
+                [errorMapKey]: newSource
+              }
+            }));
+          }
+          if (newErrorValue) {
+            hasErrored = true;
+          }
+          if (isGroup) {
+            const distributedHasErrored = this.distributeFieldErrors(
+              errorMapKey,
+              groupFieldErrors
+            );
+            if (distributedHasErrored) {
+              hasErrored = true;
+            }
+          }
+        };
+        for (const validateObj of validates) {
+          validateFieldOrGroupFn(this, validateObj);
+        }
+        for (const fieldValidateObj of relatedFieldValidates) {
+          if (!fieldValidateObj.validate) continue;
+          validateFieldOrGroupFn(fieldValidateObj.field, fieldValidateObj);
+        }
+      });
+      const submitErrKey = getErrorMapKey("submit");
+      if (
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        this.state.meta.errorMap?.[submitErrKey] && cause !== "submit" && !hasErrored
+      ) {
+        this.setMeta((prev) => ({
+          ...prev,
+          errorMap: {
+            ...prev.errorMap,
+            [submitErrKey]: void 0
+          },
+          errorSourceMap: {
+            ...prev.errorSourceMap,
+            [submitErrKey]: void 0
+          }
+        }));
+      }
+      return { hasErrored };
+    };
+    this.validateAsync = async (cause, formValidationResultPromise, opts2 = {}) => {
+      const validates = getAsyncValidatorArray(cause, {
+        ...this.options,
+        form: this.form,
+        group: this,
+        validationLogic: this.options.validationLogic || this.form.options.validationLogic || defaultValidationLogic
+      });
+      const asyncFormValidationResults = await formValidationResultPromise;
+      const relatedFields = opts2.skipRelatedFieldValidation ? [] : this.getRelatedFields();
+      const relatedFieldValidates = relatedFields.reduce(
+        (acc, field) => {
+          const fieldValidates = getAsyncValidatorArray(cause, {
+            ...field.options,
+            form: field.form,
+            validationLogic: field.form.options.validationLogic || defaultValidationLogic
+          });
+          fieldValidates.forEach((validate) => {
+            validate.field = field;
+          });
+          return acc.concat(fieldValidates);
+        },
+        []
+      );
+      const validatesPromises = [];
+      const linkedPromises = [];
+      const hasAsyncValidators = validates.some((v) => v.validate) || relatedFieldValidates.some((v) => v.validate);
+      if (hasAsyncValidators) {
+        if (!this.state.meta.isValidating) {
+          this.setMeta((prev) => ({ ...prev, isValidating: true }));
+        }
+        for (const linkedField of relatedFields) {
+          linkedField.setMeta((prev) => ({ ...prev, isValidating: true }));
+        }
+      }
+      const validateFieldOrGroupAsyncFn = (fieldOrGroup, validateObj, promises) => {
+        const errorMapKey = getErrorMapKey(validateObj.cause);
+        const fieldInfo = fieldOrGroup.getInfo();
+        const fieldValidatorMeta = fieldInfo.validationMetaMap[errorMapKey];
+        fieldValidatorMeta?.lastAbortController.abort();
+        const controller = new AbortController();
+        fieldInfo.validationMetaMap[errorMapKey] = {
+          lastAbortController: controller
+        };
+        const isGroup = fieldOrGroup === this;
+        promises.push(
+          new Promise(async (resolve) => {
+            let rawError;
+            try {
+              rawError = await new Promise((rawResolve, rawReject) => {
+                if (fieldOrGroup.timeoutIds.validations[validateObj.cause]) {
+                  clearTimeout(
+                    fieldOrGroup.timeoutIds.validations[validateObj.cause]
+                  );
+                }
+                fieldOrGroup.timeoutIds.validations[validateObj.cause] = setTimeout(async () => {
+                  if (controller.signal.aborted) return rawResolve(void 0);
+                  try {
+                    rawResolve(
+                      await this.runValidator({
+                        validate: validateObj.validate,
+                        value: {
+                          value: fieldOrGroup.store.state.value,
+                          signal: controller.signal,
+                          // See sync counterpart: produce `{ form, fields }`
+                          // from standard schemas attached to the group so we
+                          // can fan errors out to children.
+                          validationSource: isGroup ? "form" : "field",
+                          ...fieldOrGroup instanceof FormGroupApi ? {
+                            groupApi: fieldOrGroup
+                          } : { fieldApi: fieldOrGroup }
+                        },
+                        type: "validateAsync"
+                      })
+                    );
+                  } catch (e) {
+                    rawReject(e);
+                  }
+                }, validateObj.debounceMs);
+              });
+            } catch (e) {
+              rawError = e;
+            }
+            if (controller.signal.aborted) return resolve(void 0);
+            let groupOwnRawError = rawError;
+            let groupFieldErrors = void 0;
+            if (isGroup && isGlobalGroupValidationError(rawError)) {
+              groupOwnRawError = rawError.group;
+              groupFieldErrors = rawError.fields;
+            }
+            const fieldLevelError = normalizeError(groupOwnRawError);
+            const formLevelError = asyncFormValidationResults[fieldOrGroup.name]?.[errorMapKey];
+            const { newErrorValue, newSource } = determineFieldLevelErrorSourceAndValue({
+              formLevelError,
+              fieldLevelError
+            });
+            if (fieldOrGroup.getInfo().instance !== fieldOrGroup) {
+              return resolve(void 0);
+            }
+            fieldOrGroup.setMeta((prev) => {
+              return {
+                ...prev,
+                errorMap: {
+                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                  ...prev?.errorMap,
+                  [errorMapKey]: newErrorValue
+                },
+                errorSourceMap: {
+                  ...prev.errorSourceMap,
+                  [errorMapKey]: newSource
+                }
+              };
+            });
+            if (isGroup) {
+              this.distributeFieldErrors(errorMapKey, groupFieldErrors);
+            }
+            resolve(newErrorValue);
+          })
+        );
+      };
+      for (const validateObj of validates) {
+        if (!validateObj.validate) continue;
+        validateFieldOrGroupAsyncFn(this, validateObj, validatesPromises);
+      }
+      for (const fieldValitateObj of relatedFieldValidates) {
+        if (!fieldValitateObj.validate) continue;
+        validateFieldOrGroupAsyncFn(
+          fieldValitateObj.field,
+          fieldValitateObj,
+          linkedPromises
+        );
+      }
+      let results = [];
+      if (validatesPromises.length || linkedPromises.length) {
+        results = await Promise.all(validatesPromises);
+        await Promise.all(linkedPromises);
+      }
+      if (hasAsyncValidators) {
+        this.setMeta((prev) => ({ ...prev, isValidating: false }));
+        for (const linkedField of relatedFields) {
+          linkedField.setMeta((prev) => ({ ...prev, isValidating: false }));
+        }
+      }
+      return results.filter(Boolean);
+    };
+    this.validateAllFields = async (cause) => {
+      const fieldValidationPromises = [];
+      batch(() => {
+        void Object.values(this.getRelatedFields()).forEach((fieldInstance) => {
+          fieldValidationPromises.push(
+            // Remember, `validate` is either a sync operation or a promise
+            Promise.resolve().then(
+              () => fieldInstance.validate(cause, {
+                skipFormValidation: true,
+                skipGroupValidation: true
+              })
+            )
+          );
+          if (!fieldInstance.store.state.meta.isTouched) {
+            fieldInstance.setMeta((prev) => ({ ...prev, isTouched: true }));
+          }
+        });
+      });
+      const fieldErrorMapMap = await Promise.all(fieldValidationPromises);
+      return fieldErrorMapMap.flat();
+    };
+    this.validateArrayFieldsStartingFrom = (field, index, cause) => {
+      return this.form.validateArrayFieldsStartingFrom(field, index, cause);
+    };
+    this.validateField = (field, cause) => {
+      return this.form.validateField(field, cause);
+    };
+    this.getFieldValue = (field) => {
+      return this.form.getFieldValue(field);
+    };
+    this.getFieldMeta = (field) => {
+      return this.form.getFieldMeta(field);
+    };
+    this.setFieldMeta = (field, updater) => {
+      return this.form.setFieldMeta(field, updater);
+    };
+    this.setFieldValue = (field, value) => {
+      return this.form.setFieldValue(field, value);
+    };
+    this.deleteField = (field) => {
+      return this.form.deleteField(field);
+    };
+    this.pushFieldValue = (field, value) => {
+      return this.form.pushFieldValue(field, value);
+    };
+    this.insertFieldValue = (field, index, value) => {
+      return this.form.insertFieldValue(field, index, value);
+    };
+    this.replaceFieldValue = (field, index, value) => {
+      return this.form.replaceFieldValue(field, index, value);
+    };
+    this.swapFieldValues = (field, index1, index2) => {
+      return this.form.swapFieldValues(field, index1, index2);
+    };
+    this.moveFieldValues = (field, fromIndex, toIndex) => {
+      return this.form.moveFieldValues(field, fromIndex, toIndex);
+    };
+    this.clearFieldValues = (field) => {
+      return this.form.clearFieldValues(field);
+    };
+    this.resetField = (field) => {
+      return this.form.resetField(field);
+    };
+    this.removeFieldValue = (field, index) => {
+      return this.form.removeFieldValue(field, index);
+    };
+    this.areRelatedFieldsValid = () => {
+      return Object.values(this.getRelatedFields()).every(
+        (field) => field.state.meta.isValid
+      );
+    };
+    this.validate = (cause, opts2) => {
+      const { fieldsErrorMap } = opts2?.skipFormValidation ? { fieldsErrorMap: {} } : this.form.validateSync(cause, {
+        dontUpdateFormErrorMap: true,
+        filterFieldNames: (fieldName) => isFieldInGroup(this.name, fieldName)
+      });
+      const { hasErrored } = this.validateSync(
+        cause,
+        fieldsErrorMap[this.name] ?? {},
+        { skipRelatedFieldValidation: opts2?.skipRelatedFieldValidation }
+      );
+      if (hasErrored && !this.options.asyncAlways) {
+        this.getInfo().validationMetaMap[getErrorMapKey(cause)]?.lastAbortController.abort();
+        return this.state.meta.errors;
+      }
+      const formValidationResultPromise = opts2?.skipFormValidation ? Promise.resolve({}) : this.form.validateAsync(cause, {
+        dontUpdateFormErrorMap: true,
+        filterFieldNames: (fieldName) => isFieldInGroup(this.name, fieldName)
+      });
+      return this.validateAsync(cause, formValidationResultPromise, {
+        skipRelatedFieldValidation: opts2?.skipRelatedFieldValidation
+      });
+    };
+    this.triggerOnChangeListener = () => {
+      const formDebounceMs = this.form.options.listeners?.onChangeGroupDebounceMs;
+      if (formDebounceMs && formDebounceMs > 0) {
+        if (this.timeoutIds.formListeners.change) {
+          clearTimeout(this.timeoutIds.formListeners.change);
+        }
+        this.timeoutIds.formListeners.change = setTimeout(() => {
+          this.form.options.listeners?.onChangeGroup?.({
+            formApi: this.form,
+            groupApi: this
+          });
+        }, formDebounceMs);
+      } else {
+        this.form.options.listeners?.onChangeGroup?.({
+          formApi: this.form,
+          groupApi: this
+        });
+      }
+      const fieldDebounceMs = this.options.listeners?.onChangeDebounceMs;
+      if (fieldDebounceMs && fieldDebounceMs > 0) {
+        if (this.timeoutIds.listeners.change) {
+          clearTimeout(this.timeoutIds.listeners.change);
+        }
+        this.timeoutIds.listeners.change = setTimeout(() => {
+          this.options.listeners?.onChange?.({
+            value: this.state.value,
+            groupApi: this
+          });
+        }, fieldDebounceMs);
+      } else {
+        this.options.listeners?.onChange?.({
+          value: this.state.value,
+          groupApi: this
+        });
+      }
+    };
+    this.triggerOnSubmitListener = () => {
+      this.options.listeners?.onSubmit?.({
+        value: this.state.value,
+        groupApi: this
+      });
+    };
+    this._handleSubmit = async (submitMeta) => {
+      this.setFormGroupState((old) => ({
+        ...old,
+        // Submission attempts mark the form as not submitted
+        isSubmitted: false,
+        // Count submission attempts
+        submissionAttempts: old.submissionAttempts + 1,
+        isSubmitSuccessful: false
+        // Reset isSubmitSuccessful at the start of submission
+      }));
+      batch(() => {
+        void Object.values(this.getRelatedFields()).forEach((field) => {
+          if (!field.state.meta.isTouched) {
+            field.setMeta((prev) => ({ ...prev, isTouched: true }));
+          }
+        });
+      });
+      const submitMetaArg = submitMeta ?? this.options.onSubmitMeta;
+      this.setFormGroupState((d) => ({ ...d, isSubmitting: true }));
+      const done = () => {
+        this.setFormGroupState((prev) => ({ ...prev, isSubmitting: false }));
+      };
+      await this.validateAllFields("submit");
+      if (!this.areRelatedFieldsValid()) {
+        done();
+        this.options.onGroupSubmitInvalid?.({
+          value: this.state.value,
+          groupApi: this,
+          meta: submitMetaArg
+        });
+        return;
+      }
+      await this.validate("submit", {
+        // This has already happened in the previous step
+        skipRelatedFieldValidation: true
+      });
+      if (!this.areRelatedFieldsValid() || !this.state.meta.isValid) {
+        done();
+        this.options.onGroupSubmitInvalid?.({
+          value: this.state.value,
+          groupApi: this,
+          meta: submitMetaArg
+        });
+        return;
+      }
+      batch(() => {
+        void Object.values(this.getRelatedFields()).forEach((field) => {
+          field.options.listeners?.onGroupSubmit?.({
+            value: field.state.value,
+            fieldApi: field
+          });
+        });
+      });
+      this.options.listeners?.onSubmit?.({
+        groupApi: this,
+        value: this.state.value
+      });
+      try {
+        await this.options.onGroupSubmit?.({
+          value: this.state.value,
+          groupApi: this,
+          meta: submitMetaArg
+        });
+        batch(() => {
+          this.setFormGroupState((prev) => ({
+            ...prev,
+            isSubmitted: true,
+            isSubmitSuccessful: true
+            // Set isSubmitSuccessful to true on successful submission
+          }));
+          done();
+        });
+      } catch (err) {
+        this.setFormGroupState((prev) => ({
+          ...prev,
+          isSubmitSuccessful: false
+          // Ensure isSubmitSuccessful is false if an error occurs
+        }));
+        done();
+        throw err;
+      }
+    };
+    this.form = opts.form;
+    this.name = opts.name;
+    this.options = opts;
+    this.timeoutIds = {
+      validations: {},
+      listeners: {},
+      formListeners: {}
+    };
+    this.fieldInfo = {
+      instance: null,
+      validationMetaMap: {
+        onChange: void 0,
+        onBlur: void 0,
+        onSubmit: void 0,
+        onMount: void 0,
+        onServer: void 0,
+        onDynamic: void 0
+      }
+    };
+    this.store = createStore(
+      (prevVal) => {
+        this.form.formGroupMetaDerived.get();
+        this.form.baseStore.get();
+        const meta = this.form.getFormGroupMeta(this.name) ?? getDefaultFormGroupMeta(opts.defaultMeta);
+        let value = this.form.getFieldValue(this.name);
+        if (!meta.isTouched && value === void 0 && this.options.defaultValue !== void 0 && !evaluate(value, this.options.defaultValue)) {
+          value = this.options.defaultValue;
+        }
+        if (prevVal && prevVal.value === value && prevVal.meta === meta) {
+          return prevVal;
+        }
+        return {
+          value,
+          meta
+        };
+      }
+    );
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+  /**
+   * The current field state.
+   */
+  get state() {
+    return this.store.state;
+  }
+  /**
+   * @private
+   */
+  runValidator(props) {
+    if (isStandardSchemaValidator(props.validate)) {
+      const result = standardSchemaValidators[props.type](
+        props.value,
+        props.validate
+      );
+      if (props.type === "validate") {
+        return remapStandardSchemaResultForGroup(result);
+      }
+      return result.then(
+        remapStandardSchemaResultForGroup
+      );
     }
+    return props.validate(
+      props.value
+    );
+  }
+  handleSubmit(submitMeta) {
+    return this._handleSubmit(submitMeta);
   }
 }
 function normalizeError(rawError) {
@@ -2302,6 +3398,15 @@ function normalizeError(rawError) {
     return rawError;
   }
   return void 0;
+}
+function isGlobalGroupValidationError(error) {
+  return !!error && typeof error === "object" && "fields" in error;
+}
+function remapStandardSchemaResultForGroup(result) {
+  if (!result || typeof result !== "object") return result;
+  if (!("form" in result) && !("fields" in result)) return result;
+  const { form, fields, ...rest } = result;
+  return { ...rest, group: form, fields };
 }
 function getErrorMapKey(cause) {
   switch (cause) {
@@ -2336,6 +3441,7 @@ function mergeAndUpdate(form, fn) {
     values: null,
     validationMetaMap: null,
     fieldMetaBase: null,
+    formGroupStateBase: null,
     isSubmitting: null,
     isSubmitted: null,
     isValidating: null,
@@ -2362,7 +3468,8 @@ function mergeAndUpdate(form, fn) {
 }
 export {
   FieldApi as F,
-  FormApi as a,
+  FormGroupApi as a,
+  FormApi as b,
   functionalUpdate as f,
   mergeAndUpdate as m,
   uuid as u

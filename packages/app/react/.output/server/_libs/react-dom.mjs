@@ -149,7 +149,7 @@ function requireReactDom_production() {
   reactDom_production.useFormStatus = function() {
     return ReactSharedInternals.H.useHostTransitionStatus();
   };
-  reactDom_production.version = "19.2.6";
+  reactDom_production.version = "19.2.8";
   return reactDom_production;
 }
 var hasRequiredReactDom;
@@ -5052,7 +5052,7 @@ function requireReactDomServerLegacy_node_production() {
       'The server used "renderToString" which does not support Suspense. If you intended for this Suspense boundary to render the fallback content on the server consider throwing an Error somewhere within the Suspense boundary. If you intended to have the server wait for the suspended component please switch to "renderToPipeableStream" which supports Suspense on the server'
     );
   };
-  reactDomServerLegacy_node_production.version = "19.2.6";
+  reactDomServerLegacy_node_production.version = "19.2.8";
   return reactDomServerLegacy_node_production;
 }
 var reactDomServer_node_production = {};
@@ -10226,9 +10226,9 @@ function requireReactDomServer_node_production() {
   }
   function ensureCorrectIsomorphicReactVersion() {
     var isomorphicReactPackageVersion = React.version;
-    if ("19.2.6" !== isomorphicReactPackageVersion)
+    if ("19.2.8" !== isomorphicReactPackageVersion)
       throw Error(
-        'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.6\nLearn more: https://react.dev/warnings/version-mismatch")
+        'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.8\nLearn more: https://react.dev/warnings/version-mismatch")
       );
   }
   ensureCorrectIsomorphicReactVersion();
@@ -10751,7 +10751,7 @@ function requireReactDomServer_node_production() {
       }
     };
   };
-  reactDomServer_node_production.version = "19.2.6";
+  reactDomServer_node_production.version = "19.2.8";
   return reactDomServer_node_production;
 }
 var hasRequiredServer_node;

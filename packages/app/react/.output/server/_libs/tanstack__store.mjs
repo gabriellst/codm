@@ -1,4 +1,4 @@
-var ReactiveFlags = /* @__PURE__ */ ((ReactiveFlags2) => {
+let ReactiveFlags = /* @__PURE__ */ (function(ReactiveFlags2) {
   ReactiveFlags2[ReactiveFlags2["None"] = 0] = "None";
   ReactiveFlags2[ReactiveFlags2["Mutable"] = 1] = "Mutable";
   ReactiveFlags2[ReactiveFlags2["Watching"] = 2] = "Watching";
@@ -7,13 +7,9 @@ var ReactiveFlags = /* @__PURE__ */ ((ReactiveFlags2) => {
   ReactiveFlags2[ReactiveFlags2["Dirty"] = 16] = "Dirty";
   ReactiveFlags2[ReactiveFlags2["Pending"] = 32] = "Pending";
   return ReactiveFlags2;
-})(ReactiveFlags || {});
+})({});
 // @__NO_SIDE_EFFECTS__
-function createReactiveSystem({
-  update,
-  notify,
-  unwatched
-}) {
+function createReactiveSystem({ update, notify, unwatched }) {
   return {
     link: link2,
     unlink: unlink2,
@@ -23,9 +19,7 @@ function createReactiveSystem({
   };
   function link2(dep, sub, version) {
     const prevDep = sub.depsTail;
-    if (prevDep !== void 0 && prevDep.dep === dep) {
-      return;
-    }
+    if (prevDep !== void 0 && prevDep.dep === dep) return;
     const nextDep = prevDep !== void 0 ? prevDep.nextDep : sub.deps;
     if (nextDep !== void 0 && nextDep.dep === dep) {
       nextDep.version = version;
@@ -33,9 +27,7 @@ function createReactiveSystem({
       return;
     }
     const prevSub = dep.subsTail;
-    if (prevSub !== void 0 && prevSub.version === version && prevSub.sub === sub) {
-      return;
-    }
+    if (prevSub !== void 0 && prevSub.version === version && prevSub.sub === sub) return;
     const newLink = sub.depsTail = dep.subsTail = {
       version,
       dep,
@@ -45,125 +37,99 @@ function createReactiveSystem({
       prevSub,
       nextSub: void 0
     };
-    if (nextDep !== void 0) {
-      nextDep.prevDep = newLink;
-    }
-    if (prevDep !== void 0) {
-      prevDep.nextDep = newLink;
-    } else {
-      sub.deps = newLink;
-    }
-    if (prevSub !== void 0) {
-      prevSub.nextSub = newLink;
-    } else {
-      dep.subs = newLink;
-    }
+    if (nextDep !== void 0) nextDep.prevDep = newLink;
+    if (prevDep !== void 0) prevDep.nextDep = newLink;
+    else sub.deps = newLink;
+    if (prevSub !== void 0) prevSub.nextSub = newLink;
+    else dep.subs = newLink;
   }
-  function unlink2(link22, sub = link22.sub) {
-    const dep = link22.dep;
-    const prevDep = link22.prevDep;
-    const nextDep = link22.nextDep;
-    const nextSub = link22.nextSub;
-    const prevSub = link22.prevSub;
-    if (nextDep !== void 0) {
-      nextDep.prevDep = prevDep;
-    } else {
-      sub.depsTail = prevDep;
-    }
-    if (prevDep !== void 0) {
-      prevDep.nextDep = nextDep;
-    } else {
-      sub.deps = nextDep;
-    }
-    if (nextSub !== void 0) {
-      nextSub.prevSub = prevSub;
-    } else {
-      dep.subsTail = prevSub;
-    }
-    if (prevSub !== void 0) {
-      prevSub.nextSub = nextSub;
-    } else if ((dep.subs = nextSub) === void 0) {
-      unwatched(dep);
-    }
+  function unlink2(link3, sub = link3.sub) {
+    const dep = link3.dep;
+    const prevDep = link3.prevDep;
+    const nextDep = link3.nextDep;
+    const nextSub = link3.nextSub;
+    const prevSub = link3.prevSub;
+    if (nextDep !== void 0) nextDep.prevDep = prevDep;
+    else sub.depsTail = prevDep;
+    if (prevDep !== void 0) prevDep.nextDep = nextDep;
+    else sub.deps = nextDep;
+    if (nextSub !== void 0) nextSub.prevSub = prevSub;
+    else dep.subsTail = prevSub;
+    if (prevSub !== void 0) prevSub.nextSub = nextSub;
+    else if ((dep.subs = nextSub) === void 0) unwatched(dep);
     return nextDep;
   }
-  function propagate2(link22) {
-    let next = link22.nextSub;
+  function propagate2(link3) {
+    let next = link3.nextSub;
     let stack;
     top: do {
-      const sub = link22.sub;
+      const sub = link3.sub;
       let flags = sub.flags;
-      if (!(flags & (4 | 8 | 16 | 32))) {
-        sub.flags = flags | 32;
-      } else if (!(flags & (4 | 8))) {
-        flags = 0;
-      } else if (!(flags & 4)) {
-        sub.flags = flags & -9 | 32;
-      } else if (!(flags & (16 | 32)) && isValidLink(link22, sub)) {
-        sub.flags = flags | (8 | 32);
-        flags &= 1;
-      } else {
-        flags = 0;
-      }
-      if (flags & 2) {
-        notify(sub);
-      }
-      if (flags & 1) {
+      if (!(flags & (ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed | ReactiveFlags.Dirty | ReactiveFlags.Pending))) sub.flags = flags | ReactiveFlags.Pending;
+      else if (!(flags & (ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed))) flags = ReactiveFlags.None;
+      else if (!(flags & ReactiveFlags.RecursedCheck)) sub.flags = flags & ~ReactiveFlags.Recursed | ReactiveFlags.Pending;
+      else if (!(flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)) && isValidLink(link3, sub)) {
+        sub.flags = flags | (ReactiveFlags.Recursed | ReactiveFlags.Pending);
+        flags &= ReactiveFlags.Mutable;
+      } else flags = ReactiveFlags.None;
+      if (flags & ReactiveFlags.Watching) notify(sub);
+      if (flags & ReactiveFlags.Mutable) {
         const subSubs = sub.subs;
         if (subSubs !== void 0) {
-          const nextSub = (link22 = subSubs).nextSub;
+          const nextSub = (link3 = subSubs).nextSub;
           if (nextSub !== void 0) {
-            stack = { value: next, prev: stack };
+            stack = {
+              value: next,
+              prev: stack
+            };
             next = nextSub;
           }
           continue;
         }
       }
-      if ((link22 = next) !== void 0) {
-        next = link22.nextSub;
+      if ((link3 = next) !== void 0) {
+        next = link3.nextSub;
         continue;
       }
       while (stack !== void 0) {
-        link22 = stack.value;
+        link3 = stack.value;
         stack = stack.prev;
-        if (link22 !== void 0) {
-          next = link22.nextSub;
+        if (link3 !== void 0) {
+          next = link3.nextSub;
           continue top;
         }
       }
       break;
     } while (true);
   }
-  function checkDirty2(link22, sub) {
+  function checkDirty2(link3, sub) {
     let stack;
     let checkDepth = 0;
     let dirty = false;
     top: do {
-      const dep = link22.dep;
+      const dep = link3.dep;
       const flags = dep.flags;
-      if (sub.flags & 16) {
-        dirty = true;
-      } else if ((flags & (1 | 16)) === (1 | 16)) {
+      if (sub.flags & ReactiveFlags.Dirty) dirty = true;
+      else if ((flags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) === (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) {
         if (update(dep)) {
           const subs = dep.subs;
-          if (subs.nextSub !== void 0) {
-            shallowPropagate2(subs);
-          }
+          if (subs.nextSub !== void 0) shallowPropagate2(subs);
           dirty = true;
         }
-      } else if ((flags & (1 | 32)) === (1 | 32)) {
-        if (link22.nextSub !== void 0 || link22.prevSub !== void 0) {
-          stack = { value: link22, prev: stack };
-        }
-        link22 = dep.deps;
+      } else if ((flags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) === (ReactiveFlags.Mutable | ReactiveFlags.Pending)) {
+        if (link3.nextSub !== void 0 || link3.prevSub !== void 0) stack = {
+          value: link3,
+          prev: stack
+        };
+        link3 = dep.deps;
         sub = dep;
         ++checkDepth;
         continue;
       }
       if (!dirty) {
-        const nextDep = link22.nextDep;
+        const nextDep = link3.nextDep;
         if (nextDep !== void 0) {
-          link22 = nextDep;
+          link3 = nextDep;
           continue;
         }
       }
@@ -171,52 +137,42 @@ function createReactiveSystem({
         const firstSub = sub.subs;
         const hasMultipleSubs = firstSub.nextSub !== void 0;
         if (hasMultipleSubs) {
-          link22 = stack.value;
+          link3 = stack.value;
           stack = stack.prev;
-        } else {
-          link22 = firstSub;
-        }
+        } else link3 = firstSub;
         if (dirty) {
           if (update(sub)) {
-            if (hasMultipleSubs) {
-              shallowPropagate2(firstSub);
-            }
-            sub = link22.sub;
+            if (hasMultipleSubs) shallowPropagate2(firstSub);
+            sub = link3.sub;
             continue;
           }
           dirty = false;
-        } else {
-          sub.flags &= -33;
-        }
-        sub = link22.sub;
-        const nextDep = link22.nextDep;
+        } else sub.flags &= ~ReactiveFlags.Pending;
+        sub = link3.sub;
+        const nextDep = link3.nextDep;
         if (nextDep !== void 0) {
-          link22 = nextDep;
+          link3 = nextDep;
           continue top;
         }
       }
       return dirty;
     } while (true);
   }
-  function shallowPropagate2(link22) {
+  function shallowPropagate2(link3) {
     do {
-      const sub = link22.sub;
+      const sub = link3.sub;
       const flags = sub.flags;
-      if ((flags & (32 | 16)) === 32) {
-        sub.flags = flags | 16;
-        if ((flags & (2 | 4)) === 2) {
-          notify(sub);
-        }
+      if ((flags & (ReactiveFlags.Pending | ReactiveFlags.Dirty)) === ReactiveFlags.Pending) {
+        sub.flags = flags | ReactiveFlags.Dirty;
+        if ((flags & (ReactiveFlags.Watching | ReactiveFlags.RecursedCheck)) === ReactiveFlags.Watching) notify(sub);
       }
-    } while ((link22 = link22.nextSub) !== void 0);
+    } while ((link3 = link3.nextSub) !== void 0);
   }
   function isValidLink(checkLink, sub) {
-    let link22 = sub.depsTail;
-    while (link22 !== void 0) {
-      if (link22 === checkLink) {
-        return true;
-      }
-      link22 = link22.prevDep;
+    let link3 = sub.depsTail;
+    while (link3 !== void 0) {
+      if (link3 === checkLink) return true;
+      link3 = link3.prevDep;
     }
     return false;
   }
@@ -227,9 +183,7 @@ function toObserver(nextHandler, errorHandler, completionHandler) {
   return {
     next: (isObserver ? nextHandler.next : nextHandler)?.bind(self),
     error: (isObserver ? nextHandler.error : errorHandler)?.bind(self),
-    complete: (isObserver ? nextHandler.complete : completionHandler)?.bind(
-      self
-    )
+    complete: (isObserver ? nextHandler.complete : completionHandler)?.bind(self)
   };
 }
 const queuedEffects = [];
@@ -238,7 +192,6 @@ const { link, unlink, propagate, checkDirty, shallowPropagate } = /* @__PURE__ *
   update(atom) {
     return atom._update();
   },
-  // eslint-disable-next-line no-shadow
   notify(effect2) {
     queuedEffects[queuedEffectsLength++] = effect2;
     effect2.flags &= ~ReactiveFlags.Watching;
@@ -260,22 +213,16 @@ function batch(fn) {
     ++batchDepth;
     fn();
   } finally {
-    if (!--batchDepth) {
-      flush();
-    }
+    if (!--batchDepth) flush();
   }
 }
 function purgeDeps(sub) {
   const depsTail = sub.depsTail;
   let dep = depsTail !== void 0 ? depsTail.nextDep : sub.deps;
-  while (dep !== void 0) {
-    dep = unlink(dep, sub);
-  }
+  while (dep !== void 0) dep = unlink(dep, sub);
 }
 function flush() {
-  if (batchDepth > 0) {
-    return;
-  }
+  if (batchDepth > 0) return;
   while (notifyIndex < queuedEffectsLength) {
     const effect2 = queuedEffects[notifyIndex];
     queuedEffects[notifyIndex++] = void 0;
@@ -295,9 +242,7 @@ function createAtom(valueOrFn, options) {
     depsTail: void 0,
     flags: isComputed ? ReactiveFlags.None : ReactiveFlags.Mutable,
     get() {
-      if (activeSub !== void 0) {
-        link(atom, activeSub, cycle);
-      }
+      if (activeSub !== void 0) link(atom, activeSub, cycle);
       return atom._snapshot;
     },
     subscribe(observerOrFn) {
@@ -305,17 +250,12 @@ function createAtom(valueOrFn, options) {
       const observed = { current: false };
       const e = effect(() => {
         atom.get();
-        if (!observed.current) {
-          observed.current = true;
-        } else {
-          obs.next?.(atom._snapshot);
-        }
+        if (!observed.current) observed.current = true;
+        else obs.next?.(atom._snapshot);
       });
-      return {
-        unsubscribe: () => {
-          e.stop();
-        }
-      };
+      return { unsubscribe: () => {
+        e.stop();
+      } };
     },
     _update(getValue) {
       const prevSub = activeSub;
@@ -324,12 +264,8 @@ function createAtom(valueOrFn, options) {
         activeSub = atom;
         ++cycle;
         atom.depsTail = void 0;
-      } else if (getValue === void 0) {
-        return false;
-      }
-      if (isComputed) {
-        atom.flags = ReactiveFlags.Mutable | ReactiveFlags.RecursedCheck;
-      }
+      } else if (getValue === void 0) return false;
+      if (isComputed) atom.flags = ReactiveFlags.Mutable | ReactiveFlags.RecursedCheck;
       try {
         const oldValue = atom._snapshot;
         const newValue = typeof getValue === "function" ? getValue(oldValue) : getValue === void 0 && isComputed ? getter(oldValue) : getValue;
@@ -340,9 +276,7 @@ function createAtom(valueOrFn, options) {
         return false;
       } finally {
         activeSub = prevSub;
-        if (isComputed) {
-          atom.flags &= ~ReactiveFlags.RecursedCheck;
-        }
+        if (isComputed) atom.flags &= ~ReactiveFlags.RecursedCheck;
         purgeDeps(atom);
       }
     }
@@ -354,30 +288,22 @@ function createAtom(valueOrFn, options) {
       if (flags & ReactiveFlags.Dirty || flags & ReactiveFlags.Pending && checkDirty(atom.deps, atom)) {
         if (atom._update()) {
           const subs = atom.subs;
-          if (subs !== void 0) {
-            shallowPropagate(subs);
-          }
+          if (subs !== void 0) shallowPropagate(subs);
         }
-      } else if (flags & ReactiveFlags.Pending) {
-        atom.flags = flags & ~ReactiveFlags.Pending;
-      }
-      if (activeSub !== void 0) {
-        link(atom, activeSub, cycle);
-      }
+      } else if (flags & ReactiveFlags.Pending) atom.flags = flags & ~ReactiveFlags.Pending;
+      if (activeSub !== void 0) link(atom, activeSub, cycle);
       return atom._snapshot;
     };
-  } else {
-    atom.set = function(valueOrFn2) {
-      if (atom._update(valueOrFn2)) {
-        const subs = atom.subs;
-        if (subs !== void 0) {
-          propagate(subs);
-          shallowPropagate(subs);
-          flush();
-        }
+  } else atom.set = function(valueOrFn2) {
+    if (atom._update(valueOrFn2)) {
+      const subs = atom.subs;
+      if (subs !== void 0) {
+        propagate(subs);
+        shallowPropagate(subs);
+        flush();
       }
-    };
-  }
+    }
+  };
   return atom;
 }
 function effect(fn) {
@@ -403,11 +329,8 @@ function effect(fn) {
     flags: ReactiveFlags.Watching | ReactiveFlags.RecursedCheck,
     notify() {
       const flags = this.flags;
-      if (flags & ReactiveFlags.Dirty || flags & ReactiveFlags.Pending && checkDirty(this.deps, this)) {
-        run();
-      } else {
-        this.flags = ReactiveFlags.Watching;
-      }
+      if (flags & ReactiveFlags.Dirty || flags & ReactiveFlags.Pending && checkDirty(this.deps, this)) run();
+      else this.flags = ReactiveFlags.Watching;
     },
     stop() {
       this.flags = ReactiveFlags.None;
@@ -418,11 +341,13 @@ function effect(fn) {
   run();
   return effectObj;
 }
-class Store {
-  constructor(valueOrFn) {
-    this.atom = createAtom(
-      valueOrFn
-    );
+var Store = class {
+  constructor(valueOrFn, actionsFactory) {
+    this.atom = createAtom(valueOrFn);
+    this.get = this.get.bind(this);
+    this.setState = this.setState.bind(this);
+    this.subscribe = this.subscribe.bind(this);
+    if (actionsFactory) this.actions = actionsFactory(this);
   }
   setState(updater) {
     this.atom.set(updater);
@@ -436,12 +361,10 @@ class Store {
   subscribe(observerOrFn) {
     return this.atom.subscribe(toObserver(observerOrFn));
   }
-}
-class ReadonlyStore {
+};
+var ReadonlyStore = class {
   constructor(valueOrFn) {
-    this.atom = createAtom(
-      valueOrFn
-    );
+    this.atom = createAtom(valueOrFn);
   }
   get state() {
     return this.atom.get();
@@ -452,11 +375,9 @@ class ReadonlyStore {
   subscribe(observerOrFn) {
     return this.atom.subscribe(toObserver(observerOrFn));
   }
-}
-function createStore(valueOrFn) {
-  if (typeof valueOrFn === "function") {
-    return new ReadonlyStore(valueOrFn);
-  }
+};
+function createStore(valueOrFn, actions) {
+  if (typeof valueOrFn === "function") return new ReadonlyStore(valueOrFn);
   return new Store(valueOrFn);
 }
 export {

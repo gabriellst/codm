@@ -1,5 +1,5 @@
 import { r as reactExports, j as jsxRuntimeExports } from "./react.mjs";
-import { s as shouldThrowError, n as notifyManager, a as noop, i as isServer, Q as QueryObserver, M as MutationObserver } from "./tanstack__query-core.mjs";
+import { s as shouldThrowError, n as notifyManager, a as noop, e as environmentManager, Q as QueryObserver } from "./tanstack__query-core.mjs";
 var QueryClientContext = reactExports.createContext(
   void 0
 );
@@ -94,7 +94,8 @@ function useBaseQuery(options, Observer, queryClient) {
     defaultedOptions
   );
   const query = client.getQueryCache().get(defaultedOptions.queryHash);
-  defaultedOptions._optimisticResults = isRestoring ? "isRestoring" : "optimistic";
+  const subscribed = options.subscribed !== false;
+  defaultedOptions._optimisticResults = isRestoring ? "isRestoring" : subscribed ? "optimistic" : void 0;
   ensureSuspenseTimers(defaultedOptions);
   ensurePreventErrorBoundaryRetry(defaultedOptions, errorResetBoundary, query);
   useClearResetErrorBoundary(errorResetBoundary);
@@ -106,7 +107,7 @@ function useBaseQuery(options, Observer, queryClient) {
     )
   );
   const result = observer.getOptimisticResult(defaultedOptions);
-  const shouldSubscribe = !isRestoring && options.subscribed !== false;
+  const shouldSubscribe = !isRestoring && subscribed;
   reactExports.useSyncExternalStore(
     reactExports.useCallback(
       (onStoreChange) => {
@@ -138,7 +139,7 @@ function useBaseQuery(options, Observer, queryClient) {
     defaultedOptions,
     result
   );
-  if (defaultedOptions.experimental_prefetchInRender && !isServer && willFetch(result, isRestoring)) {
+  if (defaultedOptions.experimental_prefetchInRender && !environmentManager.isServer() && willFetch(result, isRestoring)) {
     const promise = isNewCacheEntry ? (
       // Fetch immediately on render in order to ensure `.promise` is resolved even if the component is unmounted
       fetchOptimistic(defaultedOptions, observer, errorResetBoundary)
@@ -158,44 +159,8 @@ function useQuery(options, queryClient) {
 function queryOptions(options) {
   return options;
 }
-function useMutation(options, queryClient) {
-  const client = useQueryClient(queryClient);
-  const [observer] = reactExports.useState(
-    () => new MutationObserver(
-      client,
-      options
-    )
-  );
-  reactExports.useEffect(() => {
-    observer.setOptions(options);
-  }, [observer, options]);
-  const result = reactExports.useSyncExternalStore(
-    reactExports.useCallback(
-      (onStoreChange) => observer.subscribe(notifyManager.batchCalls(onStoreChange)),
-      [observer]
-    ),
-    () => observer.getCurrentResult(),
-    () => observer.getCurrentResult()
-  );
-  const mutate = reactExports.useCallback(
-    (variables, mutateOptions) => {
-      observer.mutate(variables, mutateOptions).catch(noop);
-    },
-    [observer]
-  );
-  if (result.error && shouldThrowError(observer.options.throwOnError, [result.error])) {
-    throw result.error;
-  }
-  return { ...result, mutate, mutateAsync: result.mutate };
-}
-function mutationOptions(options) {
-  return options;
-}
 export {
   QueryClientProvider as Q,
-  useQueryClient as a,
-  useMutation as b,
-  mutationOptions as m,
   queryOptions as q,
   useQuery as u
 };
