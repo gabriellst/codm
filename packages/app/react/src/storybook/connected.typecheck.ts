@@ -2,7 +2,7 @@
 // Compile-time smoke for the connected-stories helpers — NO runtime, NO test runner. `bun x tsc` is
 // the check. This is intentionally NOT a *.test.ts (those are excluded from the workspace tsconfig),
 // so tsc type-checks every call here; if an SDK response/param shape drifts, the build fails here.
-import { getMyAccountQueryOptions, updateProfileMutationOptions } from '@template/client-typescript/typescript'
+import { getMyAccountQueryOptions, updateOwnerSettingsMutationOptions } from '@template/client-typescript/typescript'
 
 import { connected, errorQuery, loadingQuery, mockMutation, mockMutationError, mockQuery, mockSession } from '.'
 
@@ -14,10 +14,10 @@ export function connectedTypecheck() {
 	void loadingQuery(account)
 	void errorQuery(account, 400)
 
-	const updateProfile = updateProfileMutationOptions()
+	const updateOwnerSettings = updateOwnerSettingsMutationOptions()
 	// AC-6: mutation url + response inferred; method is an explicit write verb.
-	void mockMutation('patch', updateProfile, {})
-	void mockMutationError('patch', updateProfile, 409)
+	void mockMutation('patch', updateOwnerSettings, {})
+	void mockMutationError('patch', updateOwnerSettings, 409)
 
 	// AC-7: session typed off the app's own useSession. After the operator collapse the session is
 	// a non-null constant, so the mock takes the operator-shaped session (no unauthenticated case).

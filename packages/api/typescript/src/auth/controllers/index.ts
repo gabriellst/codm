@@ -1,5 +1,2 @@
 export { GetSessionController } from './GetSession'
-export { UpdateProfileController } from './UpdateProfile'
-export { RegisterFcmTokenController } from './RegisterFcmToken'
-export { UnregisterFcmTokenController } from './UnregisterFcmToken'
 export { UploadAvatarController } from './UploadAvatar'
