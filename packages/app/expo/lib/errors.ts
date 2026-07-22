@@ -1,5 +1,4 @@
 import { Alert } from 'react-native'
-import { router } from 'expo-router'
 import { ApiErrorsEnum } from '@template/client-typescript/typescript'
 import i18n from './i18n'
 
@@ -28,10 +27,8 @@ const defaultErrorHandler: ErrorHandler = ctx => {
 	Alert.alert(t('errors.title'), message)
 }
 
-const customErrorHandlers: Partial<Record<string, ErrorHandler>> = {
-	SESSION_EXPIRED: () => router.replace('/(auth)/login'),
-	UNAUTHORIZED: () => router.replace('/(auth)/login'),
-}
+// Single operator, no login screen — auth error codes fall through to the default alert handler.
+const customErrorHandlers: Partial<Record<string, ErrorHandler>> = {}
 
 export function isValidErrorCode(code: string): code is ErrorCode {
 	return code in errorsEnum

@@ -19,8 +19,12 @@ export function connectedTypecheck() {
 	void mockMutation('patch', updateProfile, {})
 	void mockMutationError('patch', updateProfile, 409)
 
-	// AC-7: session typed off the app's own useSession.
-	void mockSession(null)
+	// AC-7: session typed off the app's own useSession. After the operator collapse the session is
+	// a non-null constant, so the mock takes the operator-shaped session (no unauthenticated case).
+	void mockSession({
+		user: { id: 'operator', email: 'operator@codedm.local', name: 'Operator', image: null, emailVerified: true },
+		session: { id: 'operator', userId: 'operator', expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId: 'operator' },
+	})
 
 	// AC-10: route is required; stores is the (currently empty) typed StoresParam.
 	void connected({ route: { id: '/(app)/dashboard/' } })

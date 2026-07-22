@@ -27,9 +27,8 @@ export function avatarInitialFor(user: { name?: string | null } | null | undefin
 }
 
 /**
- * React hook returning the authenticated session via better-auth's React
- * client. Persistence is owned by `@better-auth/expo` (SecureStore-backed
- * cookie jar).
+ * React hook returning the current session. After the operator collapse this is the constant
+ * operator (founder decision 2) — always authenticated, never pending.
  */
 export function useSession() {
 	const query = auth.useSession()
@@ -51,14 +50,14 @@ export function useCurrentUser(): AuthUser | null {
 }
 
 /**
- * Returns a sign-out handler that clears the better-auth cookie (in
- * SecureStore), drops session caches, and navigates back to login.
+ * Sign-out handler. There are no accounts to sign out of (single operator), so this just drops
+ * cached queries and returns to the home tab — kept so the profile CTA still compiles.
  */
 export function useSignOut() {
 	const queryClient = useQueryClient()
 	return async () => {
 		await auth.signOut()
 		queryClient.clear()
-		router.replace('/(auth)/login')
+		router.replace('/(tabs)/home')
 	}
 }

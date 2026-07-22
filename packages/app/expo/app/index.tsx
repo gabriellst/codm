@@ -1,18 +1,6 @@
 import { Redirect } from 'expo-router'
-import { ActivityIndicator, View } from 'react-native'
-import { useSession } from '@/lib/auth'
-import { fg } from '@/lib/tokens'
 
+// Single operator, no login screen — the entry always lands on the home tab (founder decision 2).
 export default function Index() {
-	const { isLoading, isAuthenticated } = useSession()
-
-	if (isLoading) {
-		return (
-			<View className="flex-1 items-center justify-center bg-background">
-				<ActivityIndicator color={fg.fg0} />
-			</View>
-		)
-	}
-
-	return <Redirect href={isAuthenticated ? '/(tabs)/home' : '/(auth)/login'} />
+	return <Redirect href="/(tabs)/home" />
 }

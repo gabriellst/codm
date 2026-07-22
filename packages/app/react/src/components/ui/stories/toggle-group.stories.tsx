@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import * as React from 'react'
-import { NotificationCategoryEnum } from '@template/client-typescript/typescript'
-import type { NotificationCategoryEnumKey } from '@template/client-typescript/typescript'
+import { CurrencyCodeEnum } from '@template/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@template/client-typescript/typescript'
 
 import { ToggleGroup, ToggleGroupItem } from '../toggle-group'
 
@@ -24,14 +24,14 @@ export const Default: Story = {
 }
 
 export const Enum: Story = {
-	name: 'Enum mode (NotificationCategory)',
+	name: 'Enum mode (CurrencyCode)',
 	render: () => {
-		const [value, setValue] = React.useState<NotificationCategoryEnumKey | undefined>(undefined)
+		const [value, setValue] = React.useState<CurrencyCodeEnumKey | undefined>(undefined)
 		return (
 			<div className="flex flex-col gap-3">
 				<ToggleGroup
-					enum={NotificationCategoryEnum}
-					i18nPrefix="enums.NotificationCategory"
+					enum={CurrencyCodeEnum}
+					i18nPrefix="enums.CurrencyCode"
 					value={value}
 					onValueChange={setValue}
 				/>
@@ -44,12 +44,12 @@ export const Enum: Story = {
 export const EnumPreselected: Story = {
 	name: 'Enum mode preselected',
 	render: () => {
-		const [value, setValue] = React.useState<NotificationCategoryEnumKey | undefined>(NotificationCategoryEnum.ORDER_RECEIVED)
+		const [value, setValue] = React.useState<CurrencyCodeEnumKey | undefined>(CurrencyCodeEnum.USD)
 		return (
 			<div className="flex flex-col gap-3">
 				<ToggleGroup
-					enum={NotificationCategoryEnum}
-					i18nPrefix="enums.NotificationCategory"
+					enum={CurrencyCodeEnum}
+					i18nPrefix="enums.CurrencyCode"
 					value={value}
 					onValueChange={setValue}
 				/>
@@ -63,9 +63,9 @@ export const EnumDisabled: Story = {
 	name: 'Enum mode disabled',
 	render: () => (
 		<ToggleGroup
-			enum={NotificationCategoryEnum}
-			i18nPrefix="enums.NotificationCategory"
-			value={NotificationCategoryEnum.INVITATION}
+			enum={CurrencyCodeEnum}
+			i18nPrefix="enums.CurrencyCode"
+			value={CurrencyCodeEnum.EUR}
 			onValueChange={() => {}}
 			disabled
 		/>

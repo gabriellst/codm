@@ -79,7 +79,7 @@ export function Sidebar({ className }: SidebarProps) {
 
 	const handleLogout = async () => {
 		await auth.signOut()
-		window.location.href = '/sign-in'
+		window.location.href = '/app/dashboard'
 	}
 
 	const items = getNavigationItems(t)
