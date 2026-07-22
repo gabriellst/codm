@@ -27,7 +27,7 @@ export function getSessionSuspenseQueryOptions(config: Partial<RequestConfig> & 
 }
 
 /**
- * @description Get current authenticated session
+ * @description Get the current operator session
  * {@link /v1/session}
  */
 export function useGetSessionSuspense<TData = GetSessionQueryResponse, TQueryKey extends QueryKey = GetSessionSuspenseQueryKey>(options: 

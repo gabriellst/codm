@@ -8,17 +8,15 @@ export interface ApiSession {
 	token: string
 	cookies: { name: string; value: string; domain: string; path: string; httpOnly?: boolean }[]
 	/**
-	 * Pre-configured SDK client that injects session cookies automatically.
-	 * Pass as: `await createPatient({ data }, { client: session.client })`
+	 * Pre-configured SDK client. After the operator collapse there is a single operator and no
+	 * session cookie — OperatorMiddleware stamps the operator on every request — so this only adds
+	 * the Origin header. Pass as: `await createOwner({ data }, { client: session.client })`.
 	 */
 	client: <TData, _TError = unknown, TVariables = unknown>(config: RequestConfig<TVariables>) => Promise<ResponseConfig<TData>>
 }
 
-/**
- * Creates an SDK-compatible client function that injects the session cookie
- * and Origin header into every request.
- */
-function createAuthenticatedClient(token: string) {
+/** SDK client that injects the Origin header (no auth cookie — the server runs as the operator). */
+function createOperatorClient() {
 	return <TData, _TError = unknown, TVariables = unknown>(config: RequestConfig<TVariables>): Promise<ResponseConfig<TData>> => {
 		const existingHeaders =
 			config.headers instanceof Headers ? Object.fromEntries(config.headers.entries()) : ((config.headers as Record<string, string>) ?? {})
@@ -27,7 +25,6 @@ function createAuthenticatedClient(token: string) {
 			...config,
 			headers: {
 				...existingHeaders,
-				Cookie: `better-auth.session_token=${token}`,
 				Origin: API_BASE_URL,
 			},
 		})
@@ -35,65 +32,18 @@ function createAuthenticatedClient(token: string) {
 }
 
 /**
- * Signs up via Better Auth API, returns session with authenticated client.
+ * Returns the operator session — no sign-up, no cookies. CodeDM is single-operator (founder
+ * decision 2); the API stamps the operator identity server-side via OperatorMiddleware.
  */
-export async function apiSignUp(params: { name: string; email: string; password: string }): Promise<ApiSession> {
-	const response = await fetch(`${API_BASE_URL}/v1/authentication/sign-up/email`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Origin: API_BASE_URL,
-		},
-		body: JSON.stringify({
-			...params,
-			confirmPassword: params.password,
-		}),
-	})
-
-	if (!response.ok) {
-		const body = await response.text()
-		throw new Error(`Sign-up failed (${response.status}): ${body}`)
-	}
-
-	const setCookies = response.headers.getSetCookie()
-	let token = ''
-	const cookies: ApiSession['cookies'] = []
-
-	for (const cookie of setCookies) {
-		const [nameValue, ...attrs] = cookie.split(';').map(s => s.trim())
-		const eqIdx = nameValue.indexOf('=')
-		const name = nameValue.slice(0, eqIdx)
-		const value = decodeURIComponent(nameValue.slice(eqIdx + 1))
-
-		let path = '/'
-		let domain = 'localhost'
-		let httpOnly = false
-
-		for (const attr of attrs) {
-			const [key, val] = attr.split('=')
-			const lk = key.toLowerCase()
-			if (lk === 'path' && val) path = val
-			if (lk === 'domain' && val) domain = val
-			if (lk === 'httponly') httpOnly = true
-		}
-
-		cookies.push({ name, value, domain, path, httpOnly })
-
-		if (name === 'better-auth.session_token') {
-			token = value
-		}
-	}
-
+export function apiOperatorSession(): ApiSession {
 	return {
-		token,
-		cookies,
-		client: createAuthenticatedClient(token),
+		token: 'operator',
+		cookies: [],
+		client: createOperatorClient(),
 	}
 }
 
-/**
- * Injects session cookies into a Playwright browser context.
- */
-export async function injectSession(context: BrowserContext, session: ApiSession) {
-	await context.addCookies(session.cookies)
+/** No-op kept for call-site compatibility — the operator model carries no session cookie to inject. */
+export async function injectSession(_context: BrowserContext, _session: ApiSession): Promise<void> {
+	return
 }

@@ -1,5 +1,5 @@
 {
-  "id": "5a7dadbe-dd42-477a-aca8-3df73da669fd",
+  "id": "98226a4d-03be-4993-8294-f8adc2c694b0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -106,89 +106,56 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "billing.billing_profiles": {
-      "name": "billing_profiles",
-      "schema": "billing",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document": {
-          "name": "document",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "language": {
-          "name": "language",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "billing.billing_charges": {
-      "name": "billing_charges",
-      "schema": "billing",
+    "activity.activity_entries": {
+      "name": "activity_entries",
+      "schema": "activity",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "event_name": {
+          "name": "event_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_occurred_at": {
+          "name": "first_occurred_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": true
         },
-        "updated_at": {
-          "name": "updated_at",
+        "last_occurred_at": {
+          "name": "last_occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurrence_count": {
+          "name": "occurrence_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "recorded_at": {
+          "name": "recorded_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -200,382 +167,26 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "invoice_id": {
-          "name": "invoice_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "platform": {
-          "name": "platform",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "method": {
-          "name": "method",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount_cents": {
-          "name": "amount_cents",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "attempt_no": {
-          "name": "attempt_no",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "gateway_tx_id": {
-          "name": "gateway_tx_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decline_code": {
-          "name": "decline_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "billing.billing_checkout_sessions": {
-      "name": "billing_checkout_sessions",
-      "schema": "billing",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "session_ref": {
-          "name": "session_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "platform": {
-          "name": "platform",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "intent": {
-          "name": "intent",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "engine_invoice_id": {
-          "name": "engine_invoice_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "minted_at": {
-          "name": "minted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
-        "billing_checkout_sessions_session_ref_idx": {
-          "name": "billing_checkout_sessions_session_ref_idx",
+        "activity_entries_owner_event_entity_unq": {
+          "name": "activity_entries_owner_event_entity_unq",
           "columns": [
             {
-              "expression": "session_ref",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "billing.billing_credit_notes": {
-      "name": "billing_credit_notes",
-      "schema": "billing",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "invoice_id": {
-          "name": "invoice_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount_cents": {
-          "name": "amount_cents",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "gateway_ref": {
-          "name": "gateway_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "finalized_at": {
-          "name": "finalized_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "billing_credit_notes_invoice_id_billing_invoices_invoice_id_fk": {
-          "name": "billing_credit_notes_invoice_id_billing_invoices_invoice_id_fk",
-          "tableFrom": "billing_credit_notes",
-          "tableTo": "billing_invoices",
-          "schemaTo": "billing",
-          "columnsFrom": [
-            "invoice_id"
-          ],
-          "columnsTo": [
-            "invoice_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "billing_credit_notes_number_unique": {
-          "name": "billing_credit_notes_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "billing.billing_disputes": {
-      "name": "billing_disputes",
-      "schema": "billing",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "gateway_dispute_ref": {
-          "name": "gateway_dispute_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "platform": {
-          "name": "platform",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "gateway_tx_id": {
-          "name": "gateway_tx_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "invoice_id": {
-          "name": "invoice_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount_cents": {
-          "name": "amount_cents",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "opened_at": {
-          "name": "opened_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "closed_at": {
-          "name": "closed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "billing_disputes_ref_platform_idx": {
-          "name": "billing_disputes_ref_platform_idx",
-          "columns": [
-            {
-              "expression": "gateway_dispute_ref",
+              "expression": "owner_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "platform",
+              "expression": "event_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -586,11 +197,17 @@
           "method": "btree",
           "with": {}
         },
-        "billing_disputes_invoice_id_idx": {
-          "name": "billing_disputes_invoice_id_idx",
+        "activity_entries_owner_last_occurred_at_idx": {
+          "name": "activity_entries_owner_last_occurred_at_idx",
           "columns": [
             {
-              "expression": "invoice_id",
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "last_occurred_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -628,7 +245,7 @@
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -926,454 +543,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "billing.billing_invoices": {
-      "name": "billing_invoices",
-      "schema": "billing",
-      "columns": {
-        "invoice_id": {
-          "name": "invoice_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pdf_url": {
-          "name": "pdf_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount_cents": {
-          "name": "amount_cents",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "due_date": {
-          "name": "due_date",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "our_number": {
-          "name": "our_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "plan_name": {
-          "name": "plan_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "period_start": {
-          "name": "period_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "period_end": {
-          "name": "period_end",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "voided_at": {
-          "name": "voided_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "line_items": {
-          "name": "line_items",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "billing_invoices_our_number_unique": {
-          "name": "billing_invoices_our_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "our_number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "billing.billing_invoice_sequences": {
-      "name": "billing_invoice_sequences",
-      "schema": "billing",
-      "columns": {
-        "prefix": {
-          "name": "prefix",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "next_number": {
-          "name": "next_number",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "notifications.notification_deliveries": {
-      "name": "notification_deliveries",
-      "schema": "notifications",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "notification_id": {
-          "name": "notification_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "channel": {
-          "name": "channel",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "delivered_at": {
-          "name": "delivered_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "read_at": {
-          "name": "read_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        }
-      },
-      "indexes": {
-        "notification_deliveries_notification_user_channel_unq": {
-          "name": "notification_deliveries_notification_user_channel_unq",
-          "columns": [
-            {
-              "expression": "notification_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "channel",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notification_deliveries_user_read_at_idx": {
-          "name": "notification_deliveries_user_read_at_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "read_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notification_deliveries_notification_id_idx": {
-          "name": "notification_deliveries_notification_id_idx",
-          "columns": [
-            {
-              "expression": "notification_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "notification_deliveries_notification_id_notifications_id_fk": {
-          "name": "notification_deliveries_notification_id_notifications_id_fk",
-          "tableFrom": "notification_deliveries",
-          "tableTo": "notifications",
-          "schemaTo": "notifications",
-          "columnsFrom": [
-            "notification_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "notifications.notifications": {
-      "name": "notifications",
-      "schema": "notifications",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "origin": {
-          "name": "origin",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "important": {
-          "name": "important",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "content_type": {
-          "name": "content_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'text/plain'"
-        },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        }
-      },
-      "indexes": {
-        "notifications_owner_id_idx": {
-          "name": "notifications_owner_id_idx",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notifications_created_at_idx": {
-          "name": "notifications_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notifications_category_idx": {
-          "name": "notifications_category_idx",
-          "columns": [
-            {
-              "expression": "category",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notifications_origin_idx": {
-          "name": "notifications_origin_idx",
-          "columns": [
-            {
-              "expression": "origin",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "shared.outbox": {
       "name": "outbox",
       "schema": "shared",
@@ -1393,7 +562,7 @@
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -1593,277 +762,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "billing.billing_payment_methods": {
-      "name": "billing_payment_methods",
-      "schema": "billing",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "platform": {
-          "name": "platform",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "pm_ref": {
-          "name": "pm_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "supports_off_session": {
-          "name": "supports_off_session",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "capture_origin": {
-          "name": "capture_origin",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "origin_gateway_tx_id": {
-          "name": "origin_gateway_tx_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "brand": {
-          "name": "brand",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last4": {
-          "name": "last4",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "exp_month": {
-          "name": "exp_month",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "exp_year": {
-          "name": "exp_year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "network": {
-          "name": "network",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mandate_accepted_at": {
-          "name": "mandate_accepted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mandate_ip": {
-          "name": "mandate_ip",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mandate_user_agent": {
-          "name": "mandate_user_agent",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mandate_consent_version": {
-          "name": "mandate_consent_version",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {
-        "billing_payment_methods_default_owner_idx": {
-          "name": "billing_payment_methods_default_owner_idx",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"billing\".\"billing_payment_methods\".\"is_default\" AND \"billing\".\"billing_payment_methods\".\"status\" = 'ACTIVE'",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "quota.pending_selections": {
-      "name": "pending_selections",
-      "schema": "quota",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quota_key": {
-          "name": "quota_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kept_ids": {
-          "name": "kept_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "pending_selections_owner_id_quota_key_pk": {
-          "name": "pending_selections_owner_id_quota_key_pk",
-          "columns": [
-            "owner_id",
-            "quota_key"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "quota.quota_overrides": {
-      "name": "quota_overrides",
-      "schema": "quota",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meter": {
-          "name": "meter",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "delta": {
-          "name": "delta",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "idem_key": {
-          "name": "idem_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "quota_overrides_idem_key_unique": {
-          "name": "quota_overrides_idem_key_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "idem_key"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "shared.scheduled_commands": {
       "name": "scheduled_commands",
       "schema": "shared",
@@ -2056,178 +954,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "billing.billing_subscriptions": {
-      "name": "billing_subscriptions",
-      "schema": "billing",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "engine_subscription_id": {
-          "name": "engine_subscription_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "plan_name": {
-          "name": "plan_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "current_period_end": {
-          "name": "current_period_end",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "current_period_start": {
-          "name": "current_period_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "trial_end": {
-          "name": "trial_end",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "canceled_at": {
-          "name": "canceled_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cancel_at_period_end": {
-          "name": "cancel_at_period_end",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "scheduled_plan_name": {
-          "name": "scheduled_plan_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "billing.billing_usage_rollups": {
-      "name": "billing_usage_rollups",
-      "schema": "billing",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meter": {
-          "name": "meter",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "period_start": {
-          "name": "period_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "period_end": {
-          "name": "period_end",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "billing_usage_rollups_owner_meter_period_uq": {
-          "name": "billing_usage_rollups_owner_meter_period_uq",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "meter",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "period_start",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "authentication.user_profiles": {
       "name": "user_profiles",
       "schema": "authentication",
@@ -2250,12 +976,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "lead_token": {
-          "name": "lead_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2278,23 +998,7 @@
           "default": 1
         }
       },
-      "indexes": {
-        "user_profiles_lead_token_idx": {
-          "name": "user_profiles_lead_token_idx",
-          "columns": [
-            {
-              "expression": "lead_token",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "user_profiles_id_users_id_fk": {
           "name": "user_profiles_id_users_id_fk",
@@ -2342,12 +1046,6 @@
         },
         "name": {
           "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phone": {
-          "name": "phone",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2443,11 +1141,9 @@
   },
   "enums": {},
   "schemas": {
+    "activity": "activity",
     "authentication": "authentication",
-    "billing": "billing",
-    "notifications": "notifications",
     "owner": "owner",
-    "quota": "quota",
     "shared": "shared"
   },
   "sequences": {},

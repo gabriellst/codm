@@ -2,7 +2,6 @@ import { test as base, expect } from '@playwright/test'
 import type { FileRouteTypes } from '../../app/react/src/routeTree.gen'
 import { createNetworkLogger } from './diagnostics'
 import { givenFreshUser } from './given'
-import { t } from './i18n'
 
 type AppRoute = FileRouteTypes['to']
 
@@ -25,7 +24,6 @@ type DropFirst<T extends (...args: any[]) => any> = T extends (first: any, ...re
 
 export const test = base.extend<{
 	goto: <T extends AppRoute>(...args: GotoArgs<T>) => Promise<any>
-	loginAs: (credentials: { email: string; password: string }) => Promise<void>
 	given: {
 		freshUser: DropFirst<typeof givenFreshUser>
 	}
@@ -51,16 +49,6 @@ export const test = base.extend<{
 	given: async ({ context }, use) => {
 		await use({
 			freshUser: params => givenFreshUser(context, params),
-		})
-	},
-
-	loginAs: async ({ page, network }, use) => {
-		await use(async credentials => {
-			await page.goto('/sign-in')
-			await page.getByLabel(t('auth.signIn.email')).fill(credentials.email)
-			await page.getByLabel(t('auth.signIn.password'), { exact: true }).fill(credentials.password)
-			await page.getByRole('button', { name: t('auth.signIn.submit') }).click()
-			await Promise.race([page.waitForURL(url => !url.pathname.includes('/sign-in'), { timeout: 15_000 }), network.waitForFailure()])
 		})
 	},
 })

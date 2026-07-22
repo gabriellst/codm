@@ -16,144 +16,6 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for BillingPlatform.
-const (
-	ASAAS       BillingPlatform = "ASAAS"
-	GETNET      BillingPlatform = "GETNET"
-	INFINITEPAY BillingPlatform = "INFINITEPAY"
-	MERCADOPAGO BillingPlatform = "MERCADOPAGO"
-	PAGARME     BillingPlatform = "PAGARME"
-	PAGBANK     BillingPlatform = "PAGBANK"
-	REDE        BillingPlatform = "REDE"
-	STRIPE      BillingPlatform = "STRIPE"
-)
-
-// Valid indicates whether the value is a known member of the BillingPlatform enum.
-func (e BillingPlatform) Valid() bool {
-	switch e {
-	case ASAAS:
-		return true
-	case GETNET:
-		return true
-	case INFINITEPAY:
-		return true
-	case MERCADOPAGO:
-		return true
-	case PAGARME:
-		return true
-	case PAGBANK:
-		return true
-	case REDE:
-		return true
-	case STRIPE:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ChargeStatus.
-const (
-	ChargeStatusFAILED    ChargeStatus = "FAILED"
-	ChargeStatusPENDING   ChargeStatus = "PENDING"
-	ChargeStatusSUCCEEDED ChargeStatus = "SUCCEEDED"
-)
-
-// Valid indicates whether the value is a known member of the ChargeStatus enum.
-func (e ChargeStatus) Valid() bool {
-	switch e {
-	case ChargeStatusFAILED:
-		return true
-	case ChargeStatusPENDING:
-		return true
-	case ChargeStatusSUCCEEDED:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CheckoutIntent.
-const (
-	PAYMENT CheckoutIntent = "PAYMENT"
-	SETUP   CheckoutIntent = "SETUP"
-)
-
-// Valid indicates whether the value is a known member of the CheckoutIntent enum.
-func (e CheckoutIntent) Valid() bool {
-	switch e {
-	case PAYMENT:
-		return true
-	case SETUP:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CheckoutSessionStatus.
-const (
-	CheckoutSessionStatusCOMPLETED CheckoutSessionStatus = "COMPLETED"
-	CheckoutSessionStatusEXPIRED   CheckoutSessionStatus = "EXPIRED"
-	CheckoutSessionStatusPENDING   CheckoutSessionStatus = "PENDING"
-)
-
-// Valid indicates whether the value is a known member of the CheckoutSessionStatus enum.
-func (e CheckoutSessionStatus) Valid() bool {
-	switch e {
-	case CheckoutSessionStatusCOMPLETED:
-		return true
-	case CheckoutSessionStatusEXPIRED:
-		return true
-	case CheckoutSessionStatusPENDING:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreditNoteReason.
-const (
-	CHARGEBACK CreditNoteReason = "CHARGEBACK"
-	CORRECTION CreditNoteReason = "CORRECTION"
-	REFUND     CreditNoteReason = "REFUND"
-)
-
-// Valid indicates whether the value is a known member of the CreditNoteReason enum.
-func (e CreditNoteReason) Valid() bool {
-	switch e {
-	case CHARGEBACK:
-		return true
-	case CORRECTION:
-		return true
-	case REFUND:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreditNoteStatus.
-const (
-	ISSUED   CreditNoteStatus = "ISSUED"
-	REVERSED CreditNoteStatus = "REVERSED"
-	SETTLED  CreditNoteStatus = "SETTLED"
-)
-
-// Valid indicates whether the value is a known member of the CreditNoteStatus enum.
-func (e CreditNoteStatus) Valid() bool {
-	switch e {
-	case ISSUED:
-		return true
-	case REVERSED:
-		return true
-	case SETTLED:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CurrencyCode.
 const (
 	AED CurrencyCode = "AED"
@@ -406,54 +268,6 @@ func (e CurrencyCode) Valid() bool {
 	}
 }
 
-// Defines values for DeclineReason.
-const (
-	AUTHENTICATIONREQUIRED DeclineReason = "AUTHENTICATION_REQUIRED"
-	CARDDECLINED           DeclineReason = "CARD_DECLINED"
-	CARDEXPIRED            DeclineReason = "CARD_EXPIRED"
-	INSUFFICIENTFUNDS      DeclineReason = "INSUFFICIENT_FUNDS"
-	PROCESSINGERROR        DeclineReason = "PROCESSING_ERROR"
-)
-
-// Valid indicates whether the value is a known member of the DeclineReason enum.
-func (e DeclineReason) Valid() bool {
-	switch e {
-	case AUTHENTICATIONREQUIRED:
-		return true
-	case CARDDECLINED:
-		return true
-	case CARDEXPIRED:
-		return true
-	case INSUFFICIENTFUNDS:
-		return true
-	case PROCESSINGERROR:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for DisputeStatus.
-const (
-	LOST DisputeStatus = "LOST"
-	OPEN DisputeStatus = "OPEN"
-	WON  DisputeStatus = "WON"
-)
-
-// Valid indicates whether the value is a known member of the DisputeStatus enum.
-func (e DisputeStatus) Valid() bool {
-	switch e {
-	case LOST:
-		return true
-	case OPEN:
-		return true
-	case WON:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ErrorCode.
 const (
 	BADREQUEST                 ErrorCode = "BAD_REQUEST"
@@ -547,81 +361,6 @@ func (e Language) Valid() bool {
 	}
 }
 
-// Defines values for NotificationCategory.
-const (
-	DAILYDIGEST             NotificationCategory = "DAILY_DIGEST"
-	FEATUREANNOUNCEMENT     NotificationCategory = "FEATURE_ANNOUNCEMENT"
-	INTEGRATIONDISCONNECTED NotificationCategory = "INTEGRATION_DISCONNECTED"
-	INVITATION              NotificationCategory = "INVITATION"
-	ORDERRECEIVED           NotificationCategory = "ORDER_RECEIVED"
-	OTHER                   NotificationCategory = "OTHER"
-	SYNCERROR               NotificationCategory = "SYNC_ERROR"
-)
-
-// Valid indicates whether the value is a known member of the NotificationCategory enum.
-func (e NotificationCategory) Valid() bool {
-	switch e {
-	case DAILYDIGEST:
-		return true
-	case FEATUREANNOUNCEMENT:
-		return true
-	case INTEGRATIONDISCONNECTED:
-		return true
-	case INVITATION:
-		return true
-	case ORDERRECEIVED:
-		return true
-	case OTHER:
-		return true
-	case SYNCERROR:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for NotificationChannel.
-const (
-	EMAIL NotificationChannel = "EMAIL"
-	INAPP NotificationChannel = "IN_APP"
-	PUSH  NotificationChannel = "PUSH"
-)
-
-// Valid indicates whether the value is a known member of the NotificationChannel enum.
-func (e NotificationChannel) Valid() bool {
-	switch e {
-	case EMAIL:
-		return true
-	case INAPP:
-		return true
-	case PUSH:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for NotificationOrigin.
-const (
-	NotificationOriginADMIN     NotificationOrigin = "ADMIN"
-	NotificationOriginSCHEDULER NotificationOrigin = "SCHEDULER"
-	NotificationOriginSYSTEM    NotificationOrigin = "SYSTEM"
-)
-
-// Valid indicates whether the value is a known member of the NotificationOrigin enum.
-func (e NotificationOrigin) Valid() bool {
-	switch e {
-	case NotificationOriginADMIN:
-		return true
-	case NotificationOriginSCHEDULER:
-		return true
-	case NotificationOriginSYSTEM:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for OwnerKind.
 const (
 	INDIVIDUAL   OwnerKind = "INDIVIDUAL"
@@ -640,165 +379,21 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
-// Defines values for PaymentMethodStatus.
-const (
-	PaymentMethodStatusACTIVE  PaymentMethodStatus = "ACTIVE"
-	PaymentMethodStatusEXPIRED PaymentMethodStatus = "EXPIRED"
-	PaymentMethodStatusREMOVED PaymentMethodStatus = "REMOVED"
-)
-
-// Valid indicates whether the value is a known member of the PaymentMethodStatus enum.
-func (e PaymentMethodStatus) Valid() bool {
-	switch e {
-	case PaymentMethodStatusACTIVE:
-		return true
-	case PaymentMethodStatusEXPIRED:
-		return true
-	case PaymentMethodStatusREMOVED:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PaymentMethodType.
-const (
-	APPLEPAY  PaymentMethodType = "APPLE_PAY"
-	BOLETO    PaymentMethodType = "BOLETO"
-	CARD      PaymentMethodType = "CARD"
-	GOOGLEPAY PaymentMethodType = "GOOGLE_PAY"
-	PIX       PaymentMethodType = "PIX"
-)
-
-// Valid indicates whether the value is a known member of the PaymentMethodType enum.
-func (e PaymentMethodType) Valid() bool {
-	switch e {
-	case APPLEPAY:
-		return true
-	case BOLETO:
-		return true
-	case CARD:
-		return true
-	case GOOGLEPAY:
-		return true
-	case PIX:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PlanName.
-const (
-	FREE    PlanName = "FREE"
-	PRO     PlanName = "PRO"
-	STARTER PlanName = "STARTER"
-)
-
-// Valid indicates whether the value is a known member of the PlanName enum.
-func (e PlanName) Valid() bool {
-	switch e {
-	case FREE:
-		return true
-	case PRO:
-		return true
-	case STARTER:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PlanPeriod.
-const (
-	ANNUAL    PlanPeriod = "ANNUAL"
-	MONTHLY   PlanPeriod = "MONTHLY"
-	QUARTERLY PlanPeriod = "QUARTERLY"
-)
-
-// Valid indicates whether the value is a known member of the PlanPeriod enum.
-func (e PlanPeriod) Valid() bool {
-	switch e {
-	case ANNUAL:
-		return true
-	case MONTHLY:
-		return true
-	case QUARTERLY:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PlanTier.
-const (
-	ADVANCED     PlanTier = "ADVANCED"
-	BASIC        PlanTier = "BASIC"
-	INTERMEDIATE PlanTier = "INTERMEDIATE"
-	UNLIMITED    PlanTier = "UNLIMITED"
-)
-
-// Valid indicates whether the value is a known member of the PlanTier enum.
-func (e PlanTier) Valid() bool {
-	switch e {
-	case ADVANCED:
-		return true
-	case BASIC:
-		return true
-	case INTERMEDIATE:
-		return true
-	case UNLIMITED:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for Role.
 const (
-	RoleADMIN  Role = "ADMIN"
-	RoleMEMBER Role = "MEMBER"
-	RoleOWNER  Role = "OWNER"
+	ADMIN  Role = "ADMIN"
+	MEMBER Role = "MEMBER"
+	OWNER  Role = "OWNER"
 )
 
 // Valid indicates whether the value is a known member of the Role enum.
 func (e Role) Valid() bool {
 	switch e {
-	case RoleADMIN:
+	case ADMIN:
 		return true
-	case RoleMEMBER:
+	case MEMBER:
 		return true
-	case RoleOWNER:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SubscriptionStatus.
-const (
-	SubscriptionStatusACTIVE            SubscriptionStatus = "ACTIVE"
-	SubscriptionStatusCANCELED          SubscriptionStatus = "CANCELED"
-	SubscriptionStatusINCOMPLETE        SubscriptionStatus = "INCOMPLETE"
-	SubscriptionStatusINCOMPLETEEXPIRED SubscriptionStatus = "INCOMPLETE_EXPIRED"
-	SubscriptionStatusPASTDUE           SubscriptionStatus = "PAST_DUE"
-	SubscriptionStatusTRIALING          SubscriptionStatus = "TRIALING"
-)
-
-// Valid indicates whether the value is a known member of the SubscriptionStatus enum.
-func (e SubscriptionStatus) Valid() bool {
-	switch e {
-	case SubscriptionStatusACTIVE:
-		return true
-	case SubscriptionStatusCANCELED:
-		return true
-	case SubscriptionStatusINCOMPLETE:
-		return true
-	case SubscriptionStatusINCOMPLETEEXPIRED:
-		return true
-	case SubscriptionStatusPASTDUE:
-		return true
-	case SubscriptionStatusTRIALING:
+	case OWNER:
 		return true
 	default:
 		return false
@@ -1760,32 +1355,8 @@ type ActivityEntryDTO struct {
 	OccurrenceCount int       `json:"occurrenceCount"`
 }
 
-// BillingPlatform defines model for BillingPlatform.
-type BillingPlatform string
-
-// ChargeStatus defines model for ChargeStatus.
-type ChargeStatus string
-
-// CheckoutIntent defines model for CheckoutIntent.
-type CheckoutIntent string
-
-// CheckoutSessionStatus defines model for CheckoutSessionStatus.
-type CheckoutSessionStatus string
-
-// CreditNoteReason defines model for CreditNoteReason.
-type CreditNoteReason string
-
-// CreditNoteStatus defines model for CreditNoteStatus.
-type CreditNoteStatus string
-
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
-
-// DeclineReason defines model for DeclineReason.
-type DeclineReason string
-
-// DisputeStatus defines model for DisputeStatus.
-type DisputeStatus string
 
 // ErrorCode defines model for ErrorCode.
 type ErrorCode string
@@ -1808,38 +1379,11 @@ type ListActivityOutput struct {
 	Entries []ActivityEntryDTO `json:"entries"`
 }
 
-// NotificationCategory defines model for NotificationCategory.
-type NotificationCategory string
-
-// NotificationChannel defines model for NotificationChannel.
-type NotificationChannel string
-
-// NotificationOrigin defines model for NotificationOrigin.
-type NotificationOrigin string
-
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
 
-// PaymentMethodStatus defines model for PaymentMethodStatus.
-type PaymentMethodStatus string
-
-// PaymentMethodType defines model for PaymentMethodType.
-type PaymentMethodType string
-
-// PlanName defines model for PlanName.
-type PlanName string
-
-// PlanPeriod defines model for PlanPeriod.
-type PlanPeriod string
-
-// PlanTier defines model for PlanTier.
-type PlanTier string
-
 // Role defines model for Role.
 type Role string
-
-// SubscriptionStatus defines model for SubscriptionStatus.
-type SubscriptionStatus string
 
 // Timezone defines model for Timezone.
 type Timezone string

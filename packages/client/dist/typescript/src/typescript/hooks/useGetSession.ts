@@ -27,7 +27,7 @@ export function getSessionQueryOptions(config: Partial<RequestConfig> & { client
 }
 
 /**
- * @description Get current authenticated session
+ * @description Get the current operator session
  * {@link /v1/session}
  */
 export function useGetSession<TData = GetSessionQueryResponse, TQueryData = GetSessionQueryResponse, TQueryKey extends QueryKey = GetSessionQueryKey>(options: 

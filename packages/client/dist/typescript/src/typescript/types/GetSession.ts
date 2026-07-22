@@ -5,7 +5,7 @@
 
 
 /**
- * @description Get current authenticated session
+ * @description Get the current operator session
 */
 export type GetSession200 = {
     /**

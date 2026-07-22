@@ -1,1 +1,0 @@
-ALTER TABLE "authentication"."users" DROP COLUMN "phone";

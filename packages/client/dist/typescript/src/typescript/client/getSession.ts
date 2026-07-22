@@ -13,7 +13,7 @@ function getGetSessionUrl() {
 }
 
 /**
- * @description Get current authenticated session
+ * @description Get the current operator session
  * {@link /v1/session}
  */
 export async function getSession(config: Partial<RequestConfig> & { client?: Client } = {}) {

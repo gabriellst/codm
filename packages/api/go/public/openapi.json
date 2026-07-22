@@ -94,92 +94,6 @@
         ],
         "type": "object"
       },
-      "BillingPlatform": {
-        "enum": [
-          "PAGARME",
-          "STRIPE",
-          "ASAAS",
-          "GETNET",
-          "MERCADOPAGO",
-          "PAGBANK",
-          "INFINITEPAY",
-          "REDE"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "BillingPlatformPAGARME",
-          "BillingPlatformSTRIPE",
-          "BillingPlatformASAAS",
-          "BillingPlatformGETNET",
-          "BillingPlatformMERCADOPAGO",
-          "BillingPlatformPAGBANK",
-          "BillingPlatformINFINITEPAY",
-          "BillingPlatformREDE"
-        ]
-      },
-      "ChargeStatus": {
-        "enum": [
-          "PENDING",
-          "SUCCEEDED",
-          "FAILED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "ChargeStatusPENDING",
-          "ChargeStatusSUCCEEDED",
-          "ChargeStatusFAILED"
-        ]
-      },
-      "CheckoutIntent": {
-        "enum": [
-          "SETUP",
-          "PAYMENT"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "CheckoutIntentSETUP",
-          "CheckoutIntentPAYMENT"
-        ]
-      },
-      "CheckoutSessionStatus": {
-        "enum": [
-          "PENDING",
-          "COMPLETED",
-          "EXPIRED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "CheckoutSessionStatusPENDING",
-          "CheckoutSessionStatusCOMPLETED",
-          "CheckoutSessionStatusEXPIRED"
-        ]
-      },
-      "CreditNoteReason": {
-        "enum": [
-          "REFUND",
-          "CHARGEBACK",
-          "CORRECTION"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "CreditNoteReasonREFUND",
-          "CreditNoteReasonCHARGEBACK",
-          "CreditNoteReasonCORRECTION"
-        ]
-      },
-      "CreditNoteStatus": {
-        "enum": [
-          "ISSUED",
-          "SETTLED",
-          "REVERSED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "CreditNoteStatusISSUED",
-          "CreditNoteStatusSETTLED",
-          "CreditNoteStatusREVERSED"
-        ]
-      },
       "CurrencyCode": {
         "enum": [
           "AED",
@@ -347,36 +261,6 @@
           "CurrencyCodeZMW"
         ]
       },
-      "DeclineReason": {
-        "enum": [
-          "INSUFFICIENT_FUNDS",
-          "CARD_EXPIRED",
-          "AUTHENTICATION_REQUIRED",
-          "PROCESSING_ERROR",
-          "CARD_DECLINED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "DeclineReasonINSUFFICIENT_FUNDS",
-          "DeclineReasonCARD_EXPIRED",
-          "DeclineReasonAUTHENTICATION_REQUIRED",
-          "DeclineReasonPROCESSING_ERROR",
-          "DeclineReasonCARD_DECLINED"
-        ]
-      },
-      "DisputeStatus": {
-        "enum": [
-          "OPEN",
-          "WON",
-          "LOST"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "DisputeStatusOPEN",
-          "DisputeStatusWON",
-          "DisputeStatusLOST"
-        ]
-      },
       "ErrorCode": {
         "enum": [
           "INVALID_ENTITY",
@@ -468,53 +352,6 @@
         ],
         "type": "object"
       },
-      "NotificationCategory": {
-        "enum": [
-          "ORDER_RECEIVED",
-          "SYNC_ERROR",
-          "FEATURE_ANNOUNCEMENT",
-          "DAILY_DIGEST",
-          "INTEGRATION_DISCONNECTED",
-          "INVITATION",
-          "OTHER"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "NotificationCategoryORDER_RECEIVED",
-          "NotificationCategorySYNC_ERROR",
-          "NotificationCategoryFEATURE_ANNOUNCEMENT",
-          "NotificationCategoryDAILY_DIGEST",
-          "NotificationCategoryINTEGRATION_DISCONNECTED",
-          "NotificationCategoryINVITATION",
-          "NotificationCategoryOTHER"
-        ]
-      },
-      "NotificationChannel": {
-        "enum": [
-          "PUSH",
-          "EMAIL",
-          "IN_APP"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "NotificationChannelPUSH",
-          "NotificationChannelEMAIL",
-          "NotificationChannelIN_APP"
-        ]
-      },
-      "NotificationOrigin": {
-        "enum": [
-          "SYSTEM",
-          "ADMIN",
-          "SCHEDULER"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "NotificationOriginSYSTEM",
-          "NotificationOriginADMIN",
-          "NotificationOriginSCHEDULER"
-        ]
-      },
       "OwnerKind": {
         "enum": [
           "ORGANIZATION",
@@ -524,77 +361,6 @@
         "x-tpl-enum-varnames": [
           "OwnerKindORGANIZATION",
           "OwnerKindINDIVIDUAL"
-        ]
-      },
-      "PaymentMethodStatus": {
-        "enum": [
-          "ACTIVE",
-          "EXPIRED",
-          "REMOVED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "PaymentMethodStatusACTIVE",
-          "PaymentMethodStatusEXPIRED",
-          "PaymentMethodStatusREMOVED"
-        ]
-      },
-      "PaymentMethodType": {
-        "enum": [
-          "CARD",
-          "APPLE_PAY",
-          "GOOGLE_PAY",
-          "PIX",
-          "BOLETO"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "PaymentMethodTypeCARD",
-          "PaymentMethodTypeAPPLE_PAY",
-          "PaymentMethodTypeGOOGLE_PAY",
-          "PaymentMethodTypePIX",
-          "PaymentMethodTypeBOLETO"
-        ]
-      },
-      "PlanName": {
-        "enum": [
-          "FREE",
-          "STARTER",
-          "PRO"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "PlanNameFREE",
-          "PlanNameSTARTER",
-          "PlanNamePRO"
-        ]
-      },
-      "PlanPeriod": {
-        "enum": [
-          "MONTHLY",
-          "QUARTERLY",
-          "ANNUAL"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "PlanPeriodMONTHLY",
-          "PlanPeriodQUARTERLY",
-          "PlanPeriodANNUAL"
-        ]
-      },
-      "PlanTier": {
-        "enum": [
-          "BASIC",
-          "INTERMEDIATE",
-          "ADVANCED",
-          "UNLIMITED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "PlanTierBASIC",
-          "PlanTierINTERMEDIATE",
-          "PlanTierADVANCED",
-          "PlanTierUNLIMITED"
         ]
       },
       "Role": {
@@ -608,25 +374,6 @@
           "RoleOWNER",
           "RoleADMIN",
           "RoleMEMBER"
-        ]
-      },
-      "SubscriptionStatus": {
-        "enum": [
-          "TRIALING",
-          "INCOMPLETE",
-          "ACTIVE",
-          "PAST_DUE",
-          "CANCELED",
-          "INCOMPLETE_EXPIRED"
-        ],
-        "type": "string",
-        "x-tpl-enum-varnames": [
-          "SubscriptionStatusTRIALING",
-          "SubscriptionStatusINCOMPLETE",
-          "SubscriptionStatusACTIVE",
-          "SubscriptionStatusPAST_DUE",
-          "SubscriptionStatusCANCELED",
-          "SubscriptionStatusINCOMPLETE_EXPIRED"
         ]
       },
       "Timezone": {

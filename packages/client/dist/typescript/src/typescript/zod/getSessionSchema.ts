@@ -6,7 +6,7 @@
 import { z } from "zod/v4";
 
 /**
- * @description Get current authenticated session
+ * @description Get the current operator session
  */
 export const getSession200Schema = z.object({
     "user": z.object({
