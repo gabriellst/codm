@@ -24,15 +24,15 @@ interface Step {
 export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQueryResponse }) {
 	const { t } = useTranslation()
 	const steps: Step[] = [
-		{ n: 1, title: 'Connect a channel', description: 'WhatsApp, Instagram or Telegram', to: '/channels', done: checklist.channelDone },
+		{ n: 1, title: t('home.setupChannelTitle'), description: t('home.setupChannelDesc'), to: '/channels', done: checklist.channelDone },
 		{
 			n: 2,
-			title: 'Add a workspace',
-			description: 'Point at a project folder on this Mac',
+			title: t('home.setupWorkspaceTitle'),
+			description: t('home.setupWorkspaceDesc'),
 			to: '/workspaces',
 			done: checklist.workspaceDone,
 		},
-		{ n: 3, title: 'Attach your first thread', description: 'Contact + folder + agent', to: '/attach', done: checklist.threadDone },
+		{ n: 3, title: t('home.setupThreadTitle'), description: t('home.setupThreadDesc'), to: '/attach', done: checklist.threadDone },
 	]
 
 	return (
@@ -60,16 +60,15 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 								<span className="text-xs text-muted-foreground">{step.description}</span>
 							</div>
 							<Button size="sm" variant={step.done ? 'outline' : 'default'} render={<Link to={step.to} />}>
-								{String(step.done ? 'Done' : 'Set up')}
+								{step.done ? t('home.setupDone') : t('home.setupCta')}
 							</Button>
 						</div>
 					))}
 				</CardContent>
-				<CardFooter className="justify-end gap-4 border-t border-border pt-4 text-sm">
+				<CardFooter className="justify-end border-t border-border pt-4 text-sm">
 					<Link to="/onboarding" className="font-medium text-foreground underline-offset-4 hover:underline">
 						{t('home.replayIntro')}
 					</Link>
-					<span className="font-medium text-muted-foreground">{t('home.exploreDemo')}</span>
 				</CardFooter>
 			</Card>
 		</div>

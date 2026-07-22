@@ -440,8 +440,15 @@
 		"WORKSPACE_NOT_FOUND": "Workspace não encontrado."
 	},
 	"home": {
-		"exploreDemo": "Explorar com dados de demonstração",
 		"replayIntro": "Rever introdução",
+		"setupChannelDesc": "WhatsApp, Instagram ou Telegram",
+		"setupChannelTitle": "Conecte um canal",
+		"setupCta": "Configurar",
+		"setupDone": "Concluído",
+		"setupThreadDesc": "Contato + pasta + agente",
+		"setupThreadTitle": "Vincule sua primeira conversa",
+		"setupWorkspaceDesc": "Aponte para uma pasta de projeto neste Mac",
+		"setupWorkspaceTitle": "Adicione um espaço de trabalho",
 		"welcome": "Bem-vindo ao CodeDM",
 		"welcomeSubtitle": "Três passos rápidos e seus contatos podem colocar agentes de código para trabalhar neste Mac."
 	},
