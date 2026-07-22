@@ -94,6 +94,97 @@
         ],
         "type": "object"
       },
+      "ArtifactKind": {
+        "enum": [
+          "IMAGE",
+          "FILE",
+          "LINK"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ArtifactKindIMAGE",
+          "ArtifactKindFILE",
+          "ArtifactKindLINK"
+        ]
+      },
+      "AttachFlowStyle": {
+        "enum": [
+          "FULLSCREEN",
+          "SIDE_PANEL"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "AttachFlowStyleFULLSCREEN",
+          "AttachFlowStyleSIDE_PANEL"
+        ]
+      },
+      "BufferSize": {
+        "enum": [
+          "25",
+          "50",
+          "100",
+          "200"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "BufferSize25",
+          "BufferSize50",
+          "BufferSize100",
+          "BufferSize200"
+        ]
+      },
+      "ChannelKind": {
+        "enum": [
+          "WHATSAPP",
+          "INSTAGRAM_DM",
+          "TELEGRAM"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ChannelKindWHATSAPP",
+          "ChannelKindINSTAGRAM_DM",
+          "ChannelKindTELEGRAM"
+        ]
+      },
+      "ChannelStatus": {
+        "enum": [
+          "DISCONNECTED",
+          "PAIRING",
+          "CONNECTED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ChannelStatusDISCONNECTED",
+          "ChannelStatusPAIRING",
+          "ChannelStatusCONNECTED"
+        ]
+      },
+      "ClassificationMethod": {
+        "enum": [
+          "REPLY_QUOTE",
+          "CONTEXT_MATCH",
+          "NEW_ISSUE",
+          "CLARIFIED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ClassificationMethodREPLY_QUOTE",
+          "ClassificationMethodCONTEXT_MATCH",
+          "ClassificationMethodNEW_ISSUE",
+          "ClassificationMethodCLARIFIED"
+        ]
+      },
+      "ContactKind": {
+        "enum": [
+          "CONTACT",
+          "GROUP"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ContactKindCONTACT",
+          "ContactKindGROUP"
+        ]
+      },
       "CurrencyCode": {
         "enum": [
           "AED",
@@ -327,6 +418,32 @@
           "FcmPlatformWEB"
         ]
       },
+      "IssueArchiveReason": {
+        "enum": [
+          "MANUAL",
+          "AUTO_24H",
+          "THREAD_DETACHED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "IssueArchiveReasonMANUAL",
+          "IssueArchiveReasonAUTO_24H",
+          "IssueArchiveReasonTHREAD_DETACHED"
+        ]
+      },
+      "IssueStatus": {
+        "enum": [
+          "NEEDS_INPUT",
+          "WORKING",
+          "COMPLETED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "IssueStatusNEEDS_INPUT",
+          "IssueStatusWORKING",
+          "IssueStatusCOMPLETED"
+        ]
+      },
       "Language": {
         "enum": [
           "pt-BR",
@@ -363,6 +480,30 @@
           "OwnerKindINDIVIDUAL"
         ]
       },
+      "ProviderKind": {
+        "enum": [
+          "CLAUDE_CODE",
+          "CODEX",
+          "OPENCODE"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ProviderKindCLAUDE_CODE",
+          "ProviderKindCODEX",
+          "ProviderKindOPENCODE"
+        ]
+      },
+      "ProviderStatus": {
+        "enum": [
+          "DETECTED",
+          "NOT_INSTALLED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ProviderStatusDETECTED",
+          "ProviderStatusNOT_INSTALLED"
+        ]
+      },
       "Role": {
         "enum": [
           "OWNER",
@@ -374,6 +515,77 @@
           "RoleOWNER",
           "RoleADMIN",
           "RoleMEMBER"
+        ]
+      },
+      "SenderIdentity": {
+        "enum": [
+          "AGENT",
+          "ROUTER",
+          "OPERATOR"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "SenderIdentityAGENT",
+          "SenderIdentityROUTER",
+          "SenderIdentityOPERATOR"
+        ]
+      },
+      "StopKind": {
+        "enum": [
+          "SERVER_ERROR",
+          "BLOCKED_BY_CLASSIFICATION",
+          "HUMAN_REQUESTED",
+          "APPROVAL_NEEDED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "StopKindSERVER_ERROR",
+          "StopKindBLOCKED_BY_CLASSIFICATION",
+          "StopKindHUMAN_REQUESTED",
+          "StopKindAPPROVAL_NEEDED"
+        ]
+      },
+      "StopResolution": {
+        "enum": [
+          "RETRY",
+          "REVIEW_AND_SEND",
+          "TAKE_OVER",
+          "APPROVE",
+          "DENY"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "StopResolutionRETRY",
+          "StopResolutionREVIEW_AND_SEND",
+          "StopResolutionTAKE_OVER",
+          "StopResolutionAPPROVE",
+          "StopResolutionDENY"
+        ]
+      },
+      "ThreadMode": {
+        "enum": [
+          "STEER",
+          "DIRECT"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ThreadModeSTEER",
+          "ThreadModeDIRECT"
+        ]
+      },
+      "ThreadStatus": {
+        "enum": [
+          "RUNNING",
+          "IDLE",
+          "NEEDS_ATTENTION",
+          "PAUSED"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "ThreadStatusRUNNING",
+          "ThreadStatusIDLE",
+          "ThreadStatusNEEDS_ATTENTION",
+          "ThreadStatusPAUSED"
         ]
       },
       "Timezone": {
@@ -1003,6 +1215,34 @@
           "TimezonePACIFIC_TARAWA",
           "TimezonePACIFIC_TONGATAPU",
           "TimezoneUTC"
+        ]
+      },
+      "TranscriptKind": {
+        "enum": [
+          "CONTACT",
+          "AGENT",
+          "OPERATOR_DIRECT",
+          "WHISPER",
+          "ACTION"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "TranscriptKindCONTACT",
+          "TranscriptKindAGENT",
+          "TranscriptKindOPERATOR_DIRECT",
+          "TranscriptKindWHISPER",
+          "TranscriptKindACTION"
+        ]
+      },
+      "WorkspaceBadge": {
+        "enum": [
+          "GIT",
+          "CLAUDE_PROJECT"
+        ],
+        "type": "string",
+        "x-tpl-enum-varnames": [
+          "WorkspaceBadgeGIT",
+          "WorkspaceBadgeCLAUDE_PROJECT"
         ]
       }
     }

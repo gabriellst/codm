@@ -7,11 +7,8 @@ import {
 	getSession,
 	getUserInfo,
 	listenEvents,
-	registerFcmToken,
 	setActiveOwner,
-	unregisterFcmToken,
 	updateOwnerSettings,
-	updateProfile,
 	uploadAvatar,
 } from './client/index.ts'
 
@@ -55,24 +52,12 @@ export class TypescriptClient {
 		return (listenEvents as (...a: any[]) => ReturnType<typeof listenEvents>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
-	registerFcmToken(...args: Parameters<typeof registerFcmToken>): ReturnType<typeof registerFcmToken> {
-		return (registerFcmToken as (...a: any[]) => ReturnType<typeof registerFcmToken>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
-	}
-
 	setActiveOwner(...args: Parameters<typeof setActiveOwner>): ReturnType<typeof setActiveOwner> {
 		return (setActiveOwner as (...a: any[]) => ReturnType<typeof setActiveOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
-	unregisterFcmToken(...args: Parameters<typeof unregisterFcmToken>): ReturnType<typeof unregisterFcmToken> {
-		return (unregisterFcmToken as (...a: any[]) => ReturnType<typeof unregisterFcmToken>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
-	}
-
 	updateOwnerSettings(...args: Parameters<typeof updateOwnerSettings>): ReturnType<typeof updateOwnerSettings> {
 		return (updateOwnerSettings as (...a: any[]) => ReturnType<typeof updateOwnerSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
-	}
-
-	updateProfile(...args: Parameters<typeof updateProfile>): ReturnType<typeof updateProfile> {
-		return (updateProfile as (...a: any[]) => ReturnType<typeof updateProfile>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	uploadAvatar(...args: Parameters<typeof uploadAvatar>): ReturnType<typeof uploadAvatar> {

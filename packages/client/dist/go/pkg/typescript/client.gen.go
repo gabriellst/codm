@@ -403,27 +403,6 @@ func (e CurrencyCode) Valid() bool {
 	}
 }
 
-// Defines values for FcmPlatform.
-const (
-	ANDROID FcmPlatform = "ANDROID"
-	IOS     FcmPlatform = "IOS"
-	WEB     FcmPlatform = "WEB"
-)
-
-// Valid indicates whether the value is a known member of the FcmPlatform enum.
-func (e FcmPlatform) Valid() bool {
-	switch e {
-	case ANDROID:
-		return true
-	case IOS:
-		return true
-	case WEB:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for Language.
 const (
 	EnUS Language = "en-US"
@@ -466,33 +445,11 @@ type ApiErrors string
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
 
-// FcmPlatform defines model for FcmPlatform.
-type FcmPlatform string
-
 // Language defines model for Language.
 type Language string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
-
-// UnregisterFcmTokenJSONBody defines parameters for UnregisterFcmToken.
-type UnregisterFcmTokenJSONBody struct {
-	Token string `json:"token"`
-}
-
-// RegisterFcmTokenJSONBody defines parameters for RegisterFcmToken.
-type RegisterFcmTokenJSONBody struct {
-	Platform FcmPlatform `json:"platform"`
-	Token    string      `json:"token"`
-}
-
-// UpdateProfileJSONBody defines parameters for UpdateProfile.
-type UpdateProfileJSONBody struct {
-	Language   *Language                 `json:"language,omitempty"`
-	Name       *string                   `json:"name,omitempty"`
-	PictureUrl nullable.Nullable[string] `json:"pictureUrl,omitempty"`
-	Timezone   *string                   `json:"timezone,omitempty"`
-}
 
 // CreateOwnerJSONBody defines parameters for CreateOwner.
 type CreateOwnerJSONBody struct {
@@ -513,15 +470,6 @@ type UpdateOwnerSettingsJSONBody struct {
 	PictureUrl nullable.Nullable[string] `json:"pictureUrl,omitempty"`
 	Timezone   *string                   `json:"timezone,omitempty"`
 }
-
-// UnregisterFcmTokenJSONRequestBody defines body for UnregisterFcmToken for application/json ContentType.
-type UnregisterFcmTokenJSONRequestBody UnregisterFcmTokenJSONBody
-
-// RegisterFcmTokenJSONRequestBody defines body for RegisterFcmToken for application/json ContentType.
-type RegisterFcmTokenJSONRequestBody RegisterFcmTokenJSONBody
-
-// UpdateProfileJSONRequestBody defines body for UpdateProfile for application/json ContentType.
-type UpdateProfileJSONRequestBody UpdateProfileJSONBody
 
 // CreateOwnerJSONRequestBody defines body for CreateOwner for application/json ContentType.
 type CreateOwnerJSONRequestBody CreateOwnerJSONBody
@@ -608,21 +556,6 @@ type ClientInterface interface {
 	// UploadAvatar request
 	UploadAvatar(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// UnregisterFcmTokenWithBody request with any body
-	UnregisterFcmTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	UnregisterFcmToken(ctx context.Context, body UnregisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RegisterFcmTokenWithBody request with any body
-	RegisterFcmTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	RegisterFcmToken(ctx context.Context, body RegisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateProfileWithBody request with any body
-	UpdateProfileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	UpdateProfile(ctx context.Context, body UpdateProfileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// CreateOwnerWithBody request with any body
 	CreateOwnerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -659,78 +592,6 @@ type ClientInterface interface {
 
 func (c *Client) UploadAvatar(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUploadAvatarRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UnregisterFcmTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUnregisterFcmTokenRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UnregisterFcmToken(ctx context.Context, body UnregisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUnregisterFcmTokenRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterFcmTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegisterFcmTokenRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterFcmToken(ctx context.Context, body RegisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegisterFcmTokenRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UpdateProfileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProfileRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UpdateProfile(ctx context.Context, body UpdateProfileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProfileRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -908,126 +769,6 @@ func NewUploadAvatarRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return req, nil
-}
-
-// NewUnregisterFcmTokenRequest calls the generic UnregisterFcmToken builder with application/json body
-func NewUnregisterFcmTokenRequest(server string, body UnregisterFcmTokenJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUnregisterFcmTokenRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewUnregisterFcmTokenRequestWithBody generates requests for UnregisterFcmToken with any type of body
-func NewUnregisterFcmTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/me/fcm-tokens")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewRegisterFcmTokenRequest calls the generic RegisterFcmToken builder with application/json body
-func NewRegisterFcmTokenRequest(server string, body RegisterFcmTokenJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRegisterFcmTokenRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewRegisterFcmTokenRequestWithBody generates requests for RegisterFcmToken with any type of body
-func NewRegisterFcmTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/me/fcm-tokens")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewUpdateProfileRequest calls the generic UpdateProfile builder with application/json body
-func NewUpdateProfileRequest(server string, body UpdateProfileJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateProfileRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewUpdateProfileRequestWithBody generates requests for UpdateProfile with any type of body
-func NewUpdateProfileRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/me/profile")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -1367,21 +1108,6 @@ type ClientWithResponsesInterface interface {
 	// UploadAvatarWithResponse request
 	UploadAvatarWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error)
 
-	// UnregisterFcmTokenWithBodyWithResponse request with any body
-	UnregisterFcmTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnregisterFcmTokenResponse, error)
-
-	UnregisterFcmTokenWithResponse(ctx context.Context, body UnregisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*UnregisterFcmTokenResponse, error)
-
-	// RegisterFcmTokenWithBodyWithResponse request with any body
-	RegisterFcmTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterFcmTokenResponse, error)
-
-	RegisterFcmTokenWithResponse(ctx context.Context, body RegisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterFcmTokenResponse, error)
-
-	// UpdateProfileWithBodyWithResponse request with any body
-	UpdateProfileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProfileResponse, error)
-
-	UpdateProfileWithResponse(ctx context.Context, body UpdateProfileJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProfileResponse, error)
-
 	// CreateOwnerWithBodyWithResponse request with any body
 	CreateOwnerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOwnerResponse, error)
 
@@ -1442,96 +1168,6 @@ func (r UploadAvatarResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r UploadAvatarResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type UnregisterFcmTokenResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *interface{}
-}
-
-// Status returns HTTPResponse.Status
-func (r UnregisterFcmTokenResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UnregisterFcmTokenResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UnregisterFcmTokenResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type RegisterFcmTokenResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *interface{}
-}
-
-// Status returns HTTPResponse.Status
-func (r RegisterFcmTokenResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RegisterFcmTokenResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r RegisterFcmTokenResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type UpdateProfileResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *interface{}
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateProfileResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateProfileResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r UpdateProfileResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -1872,57 +1508,6 @@ func (c *ClientWithResponses) UploadAvatarWithResponse(ctx context.Context, reqE
 	return ParseUploadAvatarResponse(rsp)
 }
 
-// UnregisterFcmTokenWithBodyWithResponse request with arbitrary body returning *UnregisterFcmTokenResponse
-func (c *ClientWithResponses) UnregisterFcmTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UnregisterFcmTokenResponse, error) {
-	rsp, err := c.UnregisterFcmTokenWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUnregisterFcmTokenResponse(rsp)
-}
-
-func (c *ClientWithResponses) UnregisterFcmTokenWithResponse(ctx context.Context, body UnregisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*UnregisterFcmTokenResponse, error) {
-	rsp, err := c.UnregisterFcmToken(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUnregisterFcmTokenResponse(rsp)
-}
-
-// RegisterFcmTokenWithBodyWithResponse request with arbitrary body returning *RegisterFcmTokenResponse
-func (c *ClientWithResponses) RegisterFcmTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterFcmTokenResponse, error) {
-	rsp, err := c.RegisterFcmTokenWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterFcmTokenResponse(rsp)
-}
-
-func (c *ClientWithResponses) RegisterFcmTokenWithResponse(ctx context.Context, body RegisterFcmTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterFcmTokenResponse, error) {
-	rsp, err := c.RegisterFcmToken(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterFcmTokenResponse(rsp)
-}
-
-// UpdateProfileWithBodyWithResponse request with arbitrary body returning *UpdateProfileResponse
-func (c *ClientWithResponses) UpdateProfileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProfileResponse, error) {
-	rsp, err := c.UpdateProfileWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateProfileResponse(rsp)
-}
-
-func (c *ClientWithResponses) UpdateProfileWithResponse(ctx context.Context, body UpdateProfileJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProfileResponse, error) {
-	rsp, err := c.UpdateProfile(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateProfileResponse(rsp)
-}
-
 // CreateOwnerWithBodyWithResponse request with arbitrary body returning *CreateOwnerResponse
 func (c *ClientWithResponses) CreateOwnerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOwnerResponse, error) {
 	rsp, err := c.CreateOwnerWithBody(ctx, contentType, body, reqEditors...)
@@ -2046,84 +1631,6 @@ func ParseUploadAvatarResponse(rsp *http.Response) (*UploadAvatarResponse, error
 		var dest struct {
 			PictureUrl string `json:"pictureUrl"`
 		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUnregisterFcmTokenResponse parses an HTTP response from a UnregisterFcmTokenWithResponse call
-func ParseUnregisterFcmTokenResponse(rsp *http.Response) (*UnregisterFcmTokenResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UnregisterFcmTokenResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest interface{}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRegisterFcmTokenResponse parses an HTTP response from a RegisterFcmTokenWithResponse call
-func ParseRegisterFcmTokenResponse(rsp *http.Response) (*RegisterFcmTokenResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RegisterFcmTokenResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest interface{}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdateProfileResponse parses an HTTP response from a UpdateProfileWithResponse call
-func ParseUpdateProfileResponse(rsp *http.Response) (*UpdateProfileResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateProfileResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

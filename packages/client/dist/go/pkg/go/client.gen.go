@@ -16,6 +16,153 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for ArtifactKind.
+const (
+	FILE  ArtifactKind = "FILE"
+	IMAGE ArtifactKind = "IMAGE"
+	LINK  ArtifactKind = "LINK"
+)
+
+// Valid indicates whether the value is a known member of the ArtifactKind enum.
+func (e ArtifactKind) Valid() bool {
+	switch e {
+	case FILE:
+		return true
+	case IMAGE:
+		return true
+	case LINK:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttachFlowStyle.
+const (
+	FULLSCREEN AttachFlowStyle = "FULLSCREEN"
+	SIDEPANEL  AttachFlowStyle = "SIDE_PANEL"
+)
+
+// Valid indicates whether the value is a known member of the AttachFlowStyle enum.
+func (e AttachFlowStyle) Valid() bool {
+	switch e {
+	case FULLSCREEN:
+		return true
+	case SIDEPANEL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BufferSize.
+const (
+	N100 BufferSize = "100"
+	N200 BufferSize = "200"
+	N25  BufferSize = "25"
+	N50  BufferSize = "50"
+)
+
+// Valid indicates whether the value is a known member of the BufferSize enum.
+func (e BufferSize) Valid() bool {
+	switch e {
+	case N100:
+		return true
+	case N200:
+		return true
+	case N25:
+		return true
+	case N50:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelKind.
+const (
+	INSTAGRAMDM ChannelKind = "INSTAGRAM_DM"
+	TELEGRAM    ChannelKind = "TELEGRAM"
+	WHATSAPP    ChannelKind = "WHATSAPP"
+)
+
+// Valid indicates whether the value is a known member of the ChannelKind enum.
+func (e ChannelKind) Valid() bool {
+	switch e {
+	case INSTAGRAMDM:
+		return true
+	case TELEGRAM:
+		return true
+	case WHATSAPP:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelStatus.
+const (
+	CONNECTED    ChannelStatus = "CONNECTED"
+	DISCONNECTED ChannelStatus = "DISCONNECTED"
+	PAIRING      ChannelStatus = "PAIRING"
+)
+
+// Valid indicates whether the value is a known member of the ChannelStatus enum.
+func (e ChannelStatus) Valid() bool {
+	switch e {
+	case CONNECTED:
+		return true
+	case DISCONNECTED:
+		return true
+	case PAIRING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClassificationMethod.
+const (
+	CLARIFIED    ClassificationMethod = "CLARIFIED"
+	CONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
+	NEWISSUE     ClassificationMethod = "NEW_ISSUE"
+	REPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+)
+
+// Valid indicates whether the value is a known member of the ClassificationMethod enum.
+func (e ClassificationMethod) Valid() bool {
+	switch e {
+	case CLARIFIED:
+		return true
+	case CONTEXTMATCH:
+		return true
+	case NEWISSUE:
+		return true
+	case REPLYQUOTE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactKind.
+const (
+	ContactKindCONTACT ContactKind = "CONTACT"
+	ContactKindGROUP   ContactKind = "GROUP"
+)
+
+// Valid indicates whether the value is a known member of the ContactKind enum.
+func (e ContactKind) Valid() bool {
+	switch e {
+	case ContactKindCONTACT:
+		return true
+	case ContactKindGROUP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CurrencyCode.
 const (
 	AED CurrencyCode = "AED"
@@ -343,6 +490,48 @@ func (e FcmPlatform) Valid() bool {
 	}
 }
 
+// Defines values for IssueArchiveReason.
+const (
+	AUTO24H        IssueArchiveReason = "AUTO_24H"
+	MANUAL         IssueArchiveReason = "MANUAL"
+	THREADDETACHED IssueArchiveReason = "THREAD_DETACHED"
+)
+
+// Valid indicates whether the value is a known member of the IssueArchiveReason enum.
+func (e IssueArchiveReason) Valid() bool {
+	switch e {
+	case AUTO24H:
+		return true
+	case MANUAL:
+		return true
+	case THREADDETACHED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueStatus.
+const (
+	COMPLETED  IssueStatus = "COMPLETED"
+	NEEDSINPUT IssueStatus = "NEEDS_INPUT"
+	WORKING    IssueStatus = "WORKING"
+)
+
+// Valid indicates whether the value is a known member of the IssueStatus enum.
+func (e IssueStatus) Valid() bool {
+	switch e {
+	case COMPLETED:
+		return true
+	case NEEDSINPUT:
+		return true
+	case WORKING:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Language.
 const (
 	EnUS Language = "en-US"
@@ -379,6 +568,45 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for ProviderKind.
+const (
+	CLAUDECODE ProviderKind = "CLAUDE_CODE"
+	CODEX      ProviderKind = "CODEX"
+	OPENCODE   ProviderKind = "OPENCODE"
+)
+
+// Valid indicates whether the value is a known member of the ProviderKind enum.
+func (e ProviderKind) Valid() bool {
+	switch e {
+	case CLAUDECODE:
+		return true
+	case CODEX:
+		return true
+	case OPENCODE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderStatus.
+const (
+	DETECTED     ProviderStatus = "DETECTED"
+	NOTINSTALLED ProviderStatus = "NOT_INSTALLED"
+)
+
+// Valid indicates whether the value is a known member of the ProviderStatus enum.
+func (e ProviderStatus) Valid() bool {
+	switch e {
+	case DETECTED:
+		return true
+	case NOTINSTALLED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Role.
 const (
 	ADMIN  Role = "ADMIN"
@@ -394,6 +622,120 @@ func (e Role) Valid() bool {
 	case MEMBER:
 		return true
 	case OWNER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SenderIdentity.
+const (
+	AGENT    SenderIdentity = "AGENT"
+	OPERATOR SenderIdentity = "OPERATOR"
+	ROUTER   SenderIdentity = "ROUTER"
+)
+
+// Valid indicates whether the value is a known member of the SenderIdentity enum.
+func (e SenderIdentity) Valid() bool {
+	switch e {
+	case AGENT:
+		return true
+	case OPERATOR:
+		return true
+	case ROUTER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StopKind.
+const (
+	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	SERVERERROR             StopKind = "SERVER_ERROR"
+)
+
+// Valid indicates whether the value is a known member of the StopKind enum.
+func (e StopKind) Valid() bool {
+	switch e {
+	case APPROVALNEEDED:
+		return true
+	case BLOCKEDBYCLASSIFICATION:
+		return true
+	case HUMANREQUESTED:
+		return true
+	case SERVERERROR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StopResolution.
+const (
+	APPROVE       StopResolution = "APPROVE"
+	DENY          StopResolution = "DENY"
+	RETRY         StopResolution = "RETRY"
+	REVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
+	TAKEOVER      StopResolution = "TAKE_OVER"
+)
+
+// Valid indicates whether the value is a known member of the StopResolution enum.
+func (e StopResolution) Valid() bool {
+	switch e {
+	case APPROVE:
+		return true
+	case DENY:
+		return true
+	case RETRY:
+		return true
+	case REVIEWANDSEND:
+		return true
+	case TAKEOVER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ThreadMode.
+const (
+	DIRECT ThreadMode = "DIRECT"
+	STEER  ThreadMode = "STEER"
+)
+
+// Valid indicates whether the value is a known member of the ThreadMode enum.
+func (e ThreadMode) Valid() bool {
+	switch e {
+	case DIRECT:
+		return true
+	case STEER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ThreadStatus.
+const (
+	IDLE           ThreadStatus = "IDLE"
+	NEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
+	PAUSED         ThreadStatus = "PAUSED"
+	RUNNING        ThreadStatus = "RUNNING"
+)
+
+// Valid indicates whether the value is a known member of the ThreadStatus enum.
+func (e ThreadStatus) Valid() bool {
+	switch e {
+	case IDLE:
+		return true
+	case NEEDSATTENTION:
+		return true
+	case PAUSED:
+		return true
+	case RUNNING:
 		return true
 	default:
 		return false
@@ -1345,6 +1687,51 @@ func (e Timezone) Valid() bool {
 	}
 }
 
+// Defines values for TranscriptKind.
+const (
+	TranscriptKindACTION         TranscriptKind = "ACTION"
+	TranscriptKindAGENT          TranscriptKind = "AGENT"
+	TranscriptKindCONTACT        TranscriptKind = "CONTACT"
+	TranscriptKindOPERATORDIRECT TranscriptKind = "OPERATOR_DIRECT"
+	TranscriptKindWHISPER        TranscriptKind = "WHISPER"
+)
+
+// Valid indicates whether the value is a known member of the TranscriptKind enum.
+func (e TranscriptKind) Valid() bool {
+	switch e {
+	case TranscriptKindACTION:
+		return true
+	case TranscriptKindAGENT:
+		return true
+	case TranscriptKindCONTACT:
+		return true
+	case TranscriptKindOPERATORDIRECT:
+		return true
+	case TranscriptKindWHISPER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceBadge.
+const (
+	CLAUDEPROJECT WorkspaceBadge = "CLAUDE_PROJECT"
+	GIT           WorkspaceBadge = "GIT"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceBadge enum.
+func (e WorkspaceBadge) Valid() bool {
+	switch e {
+	case CLAUDEPROJECT:
+		return true
+	case GIT:
+		return true
+	default:
+		return false
+	}
+}
+
 // ActivityEntryDTO defines model for ActivityEntryDTO.
 type ActivityEntryDTO struct {
 	EntityId        string    `json:"entityId"`
@@ -1354,6 +1741,27 @@ type ActivityEntryDTO struct {
 	LastOccurredAt  time.Time `json:"lastOccurredAt"`
 	OccurrenceCount int       `json:"occurrenceCount"`
 }
+
+// ArtifactKind defines model for ArtifactKind.
+type ArtifactKind string
+
+// AttachFlowStyle defines model for AttachFlowStyle.
+type AttachFlowStyle string
+
+// BufferSize defines model for BufferSize.
+type BufferSize string
+
+// ChannelKind defines model for ChannelKind.
+type ChannelKind string
+
+// ChannelStatus defines model for ChannelStatus.
+type ChannelStatus string
+
+// ClassificationMethod defines model for ClassificationMethod.
+type ClassificationMethod string
+
+// ContactKind defines model for ContactKind.
+type ContactKind string
 
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
@@ -1371,6 +1779,12 @@ type ErrorResponse struct {
 // FcmPlatform defines model for FcmPlatform.
 type FcmPlatform string
 
+// IssueArchiveReason defines model for IssueArchiveReason.
+type IssueArchiveReason string
+
+// IssueStatus defines model for IssueStatus.
+type IssueStatus string
+
 // Language defines model for Language.
 type Language string
 
@@ -1382,11 +1796,38 @@ type ListActivityOutput struct {
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
 
+// ProviderKind defines model for ProviderKind.
+type ProviderKind string
+
+// ProviderStatus defines model for ProviderStatus.
+type ProviderStatus string
+
 // Role defines model for Role.
 type Role string
 
+// SenderIdentity defines model for SenderIdentity.
+type SenderIdentity string
+
+// StopKind defines model for StopKind.
+type StopKind string
+
+// StopResolution defines model for StopResolution.
+type StopResolution string
+
+// ThreadMode defines model for ThreadMode.
+type ThreadMode string
+
+// ThreadStatus defines model for ThreadStatus.
+type ThreadStatus string
+
 // Timezone defines model for Timezone.
 type Timezone string
+
+// TranscriptKind defines model for TranscriptKind.
+type TranscriptKind string
+
+// WorkspaceBadge defines model for WorkspaceBadge.
+type WorkspaceBadge string
 
 // ListActivityParams defines parameters for ListActivity.
 type ListActivityParams struct {

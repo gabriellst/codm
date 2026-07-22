@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const fcmPlatformSchema = z.enum(["IOS", "ANDROID", "WEB"])
+export const channelKindSchema = z.enum(["WHATSAPP", "INSTAGRAM_DM", "TELEGRAM"])

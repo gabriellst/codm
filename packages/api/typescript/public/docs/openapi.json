@@ -122,156 +122,6 @@
         }
       }
     },
-    "/v1/me/fcm-tokens": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "description": "Register an FCM push token for the current user device",
-        "operationId": "RegisterFcmToken",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "platform": {
-                    "$ref": "#/components/schemas/FcmPlatform"
-                  }
-                },
-                "required": [
-                  "token",
-                  "platform"
-                ]
-              },
-              "examples": {
-                "default": {
-                  "value": {
-                    "token": "fcm-token-abc",
-                    "platform": "IOS"
-                  },
-                  "summary": "Example"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Register an FCM push token for the current user device",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "auth"
-        ],
-        "description": "Unregister an FCM push token for the current user device",
-        "operationId": "UnregisterFcmToken",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                },
-                "required": [
-                  "token"
-                ]
-              },
-              "examples": {
-                "default": {
-                  "value": {
-                    "token": "fcm-token-abc"
-                  },
-                  "summary": "Example"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Unregister an FCM push token for the current user device",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/me/profile": {
-      "patch": {
-        "tags": [
-          "auth"
-        ],
-        "description": "Update current user profile (name, pictureUrl)",
-        "operationId": "UpdateProfile",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "pictureUrl": {
-                    "nullable": true,
-                    "type": "string",
-                    "format": "uri"
-                  },
-                  "timezone": {
-                    "type": "string"
-                  },
-                  "language": {
-                    "$ref": "#/components/schemas/Language"
-                  }
-                }
-              },
-              "examples": {
-                "default": {
-                  "value": {
-                    "name": "Alice",
-                    "pictureUrl": "https://cdn.example.com/avatar.png"
-                  },
-                  "summary": "Example"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Update current user profile (name, pictureUrl)",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/identity/account/avatar": {
       "post": {
         "tags": [
@@ -933,12 +783,12 @@
         ],
         "description": "All possible error codes"
       },
-      "FcmPlatform": {
+      "OwnerKind": {
+        "default": "ORGANIZATION",
         "type": "string",
         "enum": [
-          "IOS",
-          "ANDROID",
-          "WEB"
+          "ORGANIZATION",
+          "INDIVIDUAL"
         ]
       },
       "Language": {
@@ -946,14 +796,6 @@
         "enum": [
           "pt-BR",
           "en-US"
-        ]
-      },
-      "OwnerKind": {
-        "default": "ORGANIZATION",
-        "type": "string",
-        "enum": [
-          "ORGANIZATION",
-          "INDIVIDUAL"
         ]
       },
       "CurrencyCode": {
