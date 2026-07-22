@@ -7,7 +7,7 @@
 // Adapted from: dev:packages/api/src/shared/index.ts
 // ref: .claude/skills/bounded-context/SKILL.md
 
-import { BoundedContext, OutboxDispatcher, ExternalMediator, openapi } from '@template/core-typescript'
+import { BoundedContext, OutboxDispatcher, ExternalMediator, DrizzleDatabaseDriver, LoggingService, openapi } from '@template/core-typescript'
 import { CONTEXTS } from './contexts'
 import { ALL_REGISTRIES } from './registry'
 // Context-local (non-wire) enums: spread each context's enum barrel so any
@@ -28,6 +28,20 @@ const ctx = await BoundedContext.create({
 	controllers: {}, // root has no controllers; child contexts supply them
 	registry: ALL_REGISTRIES,
 	setup: async container => {
+		// Spec emission (bun sdk / emit-openapi) imports the composition root ONLY to collect routers —
+		// booting infra there would spin up the embedded PGlite (WASM + data dir) and poll an empty DB.
+		// Same guard as BoundedContext.registerJobs.
+		if (process.env.EMIT_OPENAPI === 'true') return
+
+		// Migrations apply ON BOOT, before any context serves a request or the outbox polls: the real
+		// driver is embedded file-backed PGlite (see shared/registry.ts) whose runMigrations() is
+		// idempotent + ordered. This is the daemon's only migration step — there is no external Postgres
+		// to `bun migrate` against.
+		const databaseDriver = container.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
+		await databaseDriver.runMigrations()
+		const loggingService = container.resolve(LoggingService as any) as LoggingService
+		loggingService.info({ content: { message: 'Migrations applied (embedded PGlite)' } })
+
 		const externalMediator = container.resolve(ExternalMediator as any) as ExternalMediator
 		const outboxDispatcher = container.resolve(OutboxDispatcher as any) as OutboxDispatcher
 		await externalMediator.start()
