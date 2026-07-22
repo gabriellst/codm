@@ -19,14 +19,6 @@ body {
 	padding-right: env(safe-area-inset-right);
 }
 
-/* Body spans breathe on a comfortable ramp — a blanket line-height:1 crushed every stacked
-   title→description pair (the cramped ListRows). Tight, single-line atoms (badges, pills, the
-   display heading) set their own leading via their component classes / .heading-display, which win
-   over this element rule. */
-span {
-	line-height: 1.4;
-}
-
 *:not(input):not(textarea):not(select) {
 	-webkit-touch-callout: none;
 }
@@ -116,6 +108,14 @@ span {
 	}
 	html {
 		@apply font-sans;
+	}
+	/* Body spans breathe on a comfortable ramp — a blanket line-height:1 crushed every stacked
+	   title→description pair (the cramped ListRows). Layered in `base` so tight, single-line atoms
+	   (badges, pills, the display heading) keep their own leading: `.heading-display` lives in
+	   `@layer utilities` and Tailwind `leading-*` are utilities too — both outrank this base rule,
+	   so classed spans win while unclassed body spans get the comfortable 1.4. */
+	span {
+		line-height: 1.4;
 	}
 	@media (max-width: 1512px) {
 		html {
