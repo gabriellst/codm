@@ -12,7 +12,7 @@ interface GlobalRegistry {
 	[key: symbol]: ServiceBaseUrls | undefined
 }
 
-const SYMBOL = Symbol.for('@template/client-typescript:baseUrls')
+const SYMBOL = Symbol.for('@codedm/client-typescript:baseUrls')
 
 const globalRegistry = globalThis as unknown as GlobalRegistry
 

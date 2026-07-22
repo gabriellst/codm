@@ -4,8 +4,8 @@
 */
 
 import type { RestoreIssueMutationResponse, RestoreIssuePathParams } from "../types/RestoreIssue.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { restoreIssue } from "../client/restoreIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 

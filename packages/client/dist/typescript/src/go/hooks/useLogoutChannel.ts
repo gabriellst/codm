@@ -4,8 +4,8 @@
 */
 
 import type { LogoutChannelMutationResponse, LogoutChannelPathParams } from "../types/LogoutChannel.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/go/_http";
 import { logoutChannel } from "../client/logoutChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 

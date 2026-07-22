@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/go/_http";
+import fetch from "@codedm/client-typescript/go/_http";
 import type { LogoutChannelMutationResponse, LogoutChannelPathParams } from "../types/LogoutChannel.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 
 function getLogoutChannelUrl(id: LogoutChannelPathParams["id"]) {
   const res = { method: 'POST', url: `/channel/${id}/logout` as const }

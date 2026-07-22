@@ -4,8 +4,8 @@
 */
 
 import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../types/ListArtifacts.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { listArtifacts } from "../client/listArtifacts.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const listArtifactsSuspenseQueryKey = (threadId: ListArtifactsPathParams[
 
 export type ListArtifactsSuspenseQueryKey = ReturnType<typeof listArtifactsSuspenseQueryKey>
 
-export function listArtifactsSuspenseQueryOptions(threadId: ListArtifactsPathParams["threadId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function listArtifactsSuspenseQueryOptions(threadId: ListArtifactsPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = listArtifactsSuspenseQueryKey(threadId)
         return queryOptions<ListArtifactsQueryResponse, ResponseErrorConfig<Error>, ListArtifactsQueryResponse, typeof queryKey>({
-         enabled: !!(threadId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return listArtifacts(threadId!, { ...config, signal: config.signal ?? signal })
+            return listArtifacts(threadId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function listArtifactsSuspenseQueryOptions(threadId: ListArtifactsPathPar
  * @description The non-code outputs of a thread (T13)
  * {@link /v1/threads/:threadId/artifacts}
  */
-export function useListArtifactsSuspense<TData = ListArtifactsQueryResponse, TQueryKey extends QueryKey = ListArtifactsSuspenseQueryKey>(threadId: ListArtifactsPathParams["threadId"] | undefined, options: 
+export function useListArtifactsSuspense<TData = ListArtifactsQueryResponse, TQueryKey extends QueryKey = ListArtifactsSuspenseQueryKey>(threadId: ListArtifactsPathParams["threadId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<ListArtifactsQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }

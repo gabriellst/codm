@@ -1,5 +1,5 @@
 /**
- * @template/client-typescript runtime entrypoint.
+ * @codedm/client-typescript runtime entrypoint.
  *
  * Public exports for consumers (frontend apps + backend Client class):
  *  - configureClient({ <service>: baseUrl, ... }) — set per-service base URLs once at boot

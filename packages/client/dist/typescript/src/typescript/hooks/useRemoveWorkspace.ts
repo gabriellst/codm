@@ -4,8 +4,8 @@
 */
 
 import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "../types/RemoveWorkspace.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { removeWorkspace } from "../client/removeWorkspace.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 

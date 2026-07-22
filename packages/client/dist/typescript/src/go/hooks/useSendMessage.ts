@@ -4,8 +4,8 @@
 */
 
 import type { SendMessageMutationRequest, SendMessageMutationResponse } from "../types/SendMessage.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/go/_http";
 import { sendMessage } from "../client/sendMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 

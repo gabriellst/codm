@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/typescript/_http";
+import fetch from "@codedm/client-typescript/typescript/_http";
 import type { PauseThreadMutationResponse, PauseThreadPathParams } from "../types/PauseThread.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getPauseThreadUrl(threadId: PauseThreadPathParams["threadId"]) {
   const res = { method: 'POST', url: `/v1/threads/${threadId}/pause` as const }

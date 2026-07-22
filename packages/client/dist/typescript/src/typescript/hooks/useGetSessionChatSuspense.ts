@@ -4,8 +4,8 @@
 */
 
 import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../types/GetSessionChat.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getSessionChat } from "../client/getSessionChat.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const getSessionChatSuspenseQueryKey = (threadId: GetSessionChatPathParam
 
 export type GetSessionChatSuspenseQueryKey = ReturnType<typeof getSessionChatSuspenseQueryKey>
 
-export function getSessionChatSuspenseQueryOptions(threadId: GetSessionChatPathParams["threadId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getSessionChatSuspenseQueryOptions(threadId: GetSessionChatPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = getSessionChatSuspenseQueryKey(threadId)
         return queryOptions<GetSessionChatQueryResponse, ResponseErrorConfig<Error>, GetSessionChatQueryResponse, typeof queryKey>({
-         enabled: !!(threadId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return getSessionChat(threadId!, { ...config, signal: config.signal ?? signal })
+            return getSessionChat(threadId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getSessionChatSuspenseQueryOptions(threadId: GetSessionChatPathP
  * @description Full thread conversation + control-plane state + active stops (T09)
  * {@link /v1/threads/:threadId/chat}
  */
-export function useGetSessionChatSuspense<TData = GetSessionChatQueryResponse, TQueryKey extends QueryKey = GetSessionChatSuspenseQueryKey>(threadId: GetSessionChatPathParams["threadId"] | undefined, options: 
+export function useGetSessionChatSuspense<TData = GetSessionChatQueryResponse, TQueryKey extends QueryKey = GetSessionChatSuspenseQueryKey>(threadId: GetSessionChatPathParams["threadId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetSessionChatQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }

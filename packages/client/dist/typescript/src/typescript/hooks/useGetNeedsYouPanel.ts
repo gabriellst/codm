@@ -4,8 +4,8 @@
 */
 
 import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 

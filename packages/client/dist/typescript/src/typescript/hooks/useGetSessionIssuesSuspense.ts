@@ -4,8 +4,8 @@
 */
 
 import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "../types/GetSessionIssues.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getSessionIssues } from "../client/getSessionIssues.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const getSessionIssuesSuspenseQueryKey = (threadId: GetSessionIssuesPathP
 
 export type GetSessionIssuesSuspenseQueryKey = ReturnType<typeof getSessionIssuesSuspenseQueryKey>
 
-export function getSessionIssuesSuspenseQueryOptions(threadId: GetSessionIssuesPathParams["threadId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getSessionIssuesSuspenseQueryOptions(threadId: GetSessionIssuesPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = getSessionIssuesSuspenseQueryKey(threadId)
         return queryOptions<GetSessionIssuesQueryResponse, ResponseErrorConfig<Error>, GetSessionIssuesQueryResponse, typeof queryKey>({
-         enabled: !!(threadId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return getSessionIssues(threadId!, { ...config, signal: config.signal ?? signal })
+            return getSessionIssues(threadId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getSessionIssuesSuspenseQueryOptions(threadId: GetSessionIssuesP
  * @description Issues of one thread grouped by status + auto-archive note (T11)
  * {@link /v1/threads/:threadId/issues}
  */
-export function useGetSessionIssuesSuspense<TData = GetSessionIssuesQueryResponse, TQueryKey extends QueryKey = GetSessionIssuesSuspenseQueryKey>(threadId: GetSessionIssuesPathParams["threadId"] | undefined, options: 
+export function useGetSessionIssuesSuspense<TData = GetSessionIssuesQueryResponse, TQueryKey extends QueryKey = GetSessionIssuesSuspenseQueryKey>(threadId: GetSessionIssuesPathParams["threadId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetSessionIssuesQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }

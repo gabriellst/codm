@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/typescript/_http";
+import fetch from "@codedm/client-typescript/typescript/_http";
 import type { SetParticipantInvocationMutationRequest, SetParticipantInvocationMutationResponse, SetParticipantInvocationPathParams } from "../types/SetParticipantInvocation.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getSetParticipantInvocationUrl(threadId: SetParticipantInvocationPathParams["threadId"], participantId: SetParticipantInvocationPathParams["participantId"]) {
   const res = { method: 'PUT', url: `/v1/threads/${threadId}/participants/${participantId}` as const }

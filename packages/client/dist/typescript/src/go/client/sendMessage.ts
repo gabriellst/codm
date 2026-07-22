@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/go/_http";
+import fetch from "@codedm/client-typescript/go/_http";
 import type { SendMessageMutationRequest, SendMessageMutationResponse } from "../types/SendMessage.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 
 function getSendMessageUrl() {
   const res = { method: 'POST', url: `/channel/send` as const }

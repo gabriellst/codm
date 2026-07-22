@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/typescript/_http";
+import fetch from "@codedm/client-typescript/typescript/_http";
 import type { SteerThreadMutationRequest, SteerThreadMutationResponse, SteerThreadPathParams } from "../types/SteerThread.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getSteerThreadUrl(threadId: SteerThreadPathParams["threadId"]) {
   const res = { method: 'POST', url: `/v1/threads/${threadId}/steer` as const }

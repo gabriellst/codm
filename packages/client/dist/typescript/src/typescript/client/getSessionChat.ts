@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/typescript/_http";
+import fetch from "@codedm/client-typescript/typescript/_http";
 import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../types/GetSessionChat.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getGetSessionChatUrl(threadId: GetSessionChatPathParams["threadId"]) {
   const res = { method: 'GET', url: `/v1/threads/${threadId}/chat` as const }

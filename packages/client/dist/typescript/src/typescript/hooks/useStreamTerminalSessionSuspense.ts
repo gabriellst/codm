@@ -4,8 +4,8 @@
 */
 
 import type { StreamTerminalSessionQueryResponse, StreamTerminalSessionPathParams } from "../types/StreamTerminalSession.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { streamTerminalSession } from "../client/streamTerminalSession.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const streamTerminalSessionSuspenseQueryKey = (issueId: StreamTerminalSes
 
 export type StreamTerminalSessionSuspenseQueryKey = ReturnType<typeof streamTerminalSessionSuspenseQueryKey>
 
-export function streamTerminalSessionSuspenseQueryOptions(issueId: StreamTerminalSessionPathParams["issueId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function streamTerminalSessionSuspenseQueryOptions(issueId: StreamTerminalSessionPathParams["issueId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = streamTerminalSessionSuspenseQueryKey(issueId)
         return queryOptions<StreamTerminalSessionQueryResponse, ResponseErrorConfig<Error>, StreamTerminalSessionQueryResponse, typeof queryKey>({
-         enabled: !!(issueId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return streamTerminalSession(issueId!, { ...config, signal: config.signal ?? signal })
+            return streamTerminalSession(issueId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function streamTerminalSessionSuspenseQueryOptions(issueId: StreamTermina
  * @description Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
  * {@link /v1/terminal/sessions/:issueId/stream}
  */
-export function useStreamTerminalSessionSuspense<TData = StreamTerminalSessionQueryResponse, TQueryKey extends QueryKey = StreamTerminalSessionSuspenseQueryKey>(issueId: StreamTerminalSessionPathParams["issueId"] | undefined, options: 
+export function useStreamTerminalSessionSuspense<TData = StreamTerminalSessionQueryResponse, TQueryKey extends QueryKey = StreamTerminalSessionSuspenseQueryKey>(issueId: StreamTerminalSessionPathParams["issueId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<StreamTerminalSessionQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }

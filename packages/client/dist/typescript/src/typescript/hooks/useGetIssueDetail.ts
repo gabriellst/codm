@@ -4,8 +4,8 @@
 */
 
 import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../types/GetIssueDetail.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getIssueDetail } from "../client/getIssueDetail.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 

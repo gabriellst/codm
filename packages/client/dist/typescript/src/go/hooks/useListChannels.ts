@@ -4,8 +4,8 @@
 */
 
 import type { ListChannelsQueryResponse, ListChannelsQueryParams } from "../types/ListChannels.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/go/_http";
 import { listChannels } from "../client/listChannels.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 

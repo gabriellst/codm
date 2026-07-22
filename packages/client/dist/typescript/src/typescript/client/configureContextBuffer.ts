@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/typescript/_http";
+import fetch from "@codedm/client-typescript/typescript/_http";
 import type { ConfigureContextBufferMutationRequest, ConfigureContextBufferMutationResponse, ConfigureContextBufferPathParams } from "../types/ConfigureContextBuffer.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getConfigureContextBufferUrl(threadId: ConfigureContextBufferPathParams["threadId"]) {
   const res = { method: 'PUT', url: `/v1/threads/${threadId}/buffer` as const }

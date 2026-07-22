@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/go/_http";
+import fetch from "@codedm/client-typescript/go/_http";
 import type { ConnectChannelMutationRequest, ConnectChannelMutationResponse } from "../types/ConnectChannel.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
 
 function getConnectChannelUrl() {
   const res = { method: 'POST', url: `/channel/connect` as const }

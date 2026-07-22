@@ -4,8 +4,8 @@
 */
 
 import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../types/RecordArtifact.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { recordArtifact } from "../client/recordArtifact.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 

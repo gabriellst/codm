@@ -4,8 +4,8 @@
 */
 
 import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const getNeedsYouPanelSuspenseQueryKey = (threadId: GetNeedsYouPanelPathP
 
 export type GetNeedsYouPanelSuspenseQueryKey = ReturnType<typeof getNeedsYouPanelSuspenseQueryKey>
 
-export function getNeedsYouPanelSuspenseQueryOptions(threadId: GetNeedsYouPanelPathParams["threadId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getNeedsYouPanelSuspenseQueryOptions(threadId: GetNeedsYouPanelPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = getNeedsYouPanelSuspenseQueryKey(threadId)
         return queryOptions<GetNeedsYouPanelQueryResponse, ResponseErrorConfig<Error>, GetNeedsYouPanelQueryResponse, typeof queryKey>({
-         enabled: !!(threadId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return getNeedsYouPanel(threadId!, { ...config, signal: config.signal ?? signal })
+            return getNeedsYouPanel(threadId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getNeedsYouPanelSuspenseQueryOptions(threadId: GetNeedsYouPanelP
  * @description Active stops on a thread with per-kind resolution actions (T14)
  * {@link /v1/threads/:threadId/needs-you}
  */
-export function useGetNeedsYouPanelSuspense<TData = GetNeedsYouPanelQueryResponse, TQueryKey extends QueryKey = GetNeedsYouPanelSuspenseQueryKey>(threadId: GetNeedsYouPanelPathParams["threadId"] | undefined, options: 
+export function useGetNeedsYouPanelSuspense<TData = GetNeedsYouPanelQueryResponse, TQueryKey extends QueryKey = GetNeedsYouPanelSuspenseQueryKey>(threadId: GetNeedsYouPanelPathParams["threadId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetNeedsYouPanelQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }

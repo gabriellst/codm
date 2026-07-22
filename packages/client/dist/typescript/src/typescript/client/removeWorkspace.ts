@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@template/client-typescript/typescript/_http";
+import fetch from "@codedm/client-typescript/typescript/_http";
 import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "../types/RemoveWorkspace.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 
 function getRemoveWorkspaceUrl(workspaceId: RemoveWorkspacePathParams["workspaceId"]) {
   const res = { method: 'DELETE', url: `/v1/workspaces/${workspaceId}` as const }

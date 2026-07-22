@@ -4,8 +4,8 @@
 */
 
 import type { DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "../types/DisableOwner.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { disableOwner } from "../client/disableOwner.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 

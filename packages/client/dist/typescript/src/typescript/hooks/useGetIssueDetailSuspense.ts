@@ -4,8 +4,8 @@
 */
 
 import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../types/GetIssueDetail.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getIssueDetail } from "../client/getIssueDetail.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const getIssueDetailSuspenseQueryKey = (issueId: GetIssueDetailPathParams
 
 export type GetIssueDetailSuspenseQueryKey = ReturnType<typeof getIssueDetailSuspenseQueryKey>
 
-export function getIssueDetailSuspenseQueryOptions(issueId: GetIssueDetailPathParams["issueId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getIssueDetailSuspenseQueryOptions(issueId: GetIssueDetailPathParams["issueId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = getIssueDetailSuspenseQueryKey(issueId)
         return queryOptions<GetIssueDetailQueryResponse, ResponseErrorConfig<Error>, GetIssueDetailQueryResponse, typeof queryKey>({
-         enabled: !!(issueId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return getIssueDetail(issueId!, { ...config, signal: config.signal ?? signal })
+            return getIssueDetail(issueId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getIssueDetailSuspenseQueryOptions(issueId: GetIssueDetailPathPa
  * @description One issue drill-down: terminal log, routed messages, stops (T12)
  * {@link /v1/issues/:issueId}
  */
-export function useGetIssueDetailSuspense<TData = GetIssueDetailQueryResponse, TQueryKey extends QueryKey = GetIssueDetailSuspenseQueryKey>(issueId: GetIssueDetailPathParams["issueId"] | undefined, options: 
+export function useGetIssueDetailSuspense<TData = GetIssueDetailQueryResponse, TQueryKey extends QueryKey = GetIssueDetailSuspenseQueryKey>(issueId: GetIssueDetailPathParams["issueId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetIssueDetailQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }

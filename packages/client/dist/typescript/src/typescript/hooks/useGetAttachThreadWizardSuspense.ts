@@ -4,8 +4,8 @@
 */
 
 import type { GetAttachThreadWizardQueryResponse } from "../types/GetAttachThreadWizard.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 

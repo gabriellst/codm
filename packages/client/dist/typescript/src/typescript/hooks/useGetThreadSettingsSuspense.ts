@@ -4,8 +4,8 @@
 */
 
 import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../types/GetThreadSettings.ts";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@template/client-typescript/typescript/_http";
 import { getThreadSettings } from "../client/getThreadSettings.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
@@ -13,14 +13,14 @@ export const getThreadSettingsSuspenseQueryKey = (threadId: GetThreadSettingsPat
 
 export type GetThreadSettingsSuspenseQueryKey = ReturnType<typeof getThreadSettingsSuspenseQueryKey>
 
-export function getThreadSettingsSuspenseQueryOptions(threadId: GetThreadSettingsPathParams["threadId"] | undefined, config: Partial<RequestConfig> & { client?: Client } = {}) {
+export function getThreadSettingsSuspenseQueryOptions(threadId: GetThreadSettingsPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
 
         const queryKey = getThreadSettingsSuspenseQueryKey(threadId)
         return queryOptions<GetThreadSettingsQueryResponse, ResponseErrorConfig<Error>, GetThreadSettingsQueryResponse, typeof queryKey>({
-         enabled: !!(threadId),
+         
          queryKey,
          queryFn: async ({ signal }) => {
-            return getThreadSettings(threadId!, { ...config, signal: config.signal ?? signal })
+            return getThreadSettings(threadId, { ...config, signal: config.signal ?? signal })
          },
         })
 
@@ -30,7 +30,7 @@ export function getThreadSettingsSuspenseQueryOptions(threadId: GetThreadSetting
  * @description Per-thread behavior: mention gate, participants + invocation, buffer size (T10)
  * {@link /v1/threads/:threadId/settings}
  */
-export function useGetThreadSettingsSuspense<TData = GetThreadSettingsQueryResponse, TQueryKey extends QueryKey = GetThreadSettingsSuspenseQueryKey>(threadId: GetThreadSettingsPathParams["threadId"] | undefined, options: 
+export function useGetThreadSettingsSuspense<TData = GetThreadSettingsQueryResponse, TQueryKey extends QueryKey = GetThreadSettingsSuspenseQueryKey>(threadId: GetThreadSettingsPathParams["threadId"], options: 
 {
   query?: Partial<UseSuspenseQueryOptions<GetThreadSettingsQueryResponse, ResponseErrorConfig<Error>, TData, TQueryKey>> & { client?: QueryClient },
   client?: Partial<RequestConfig> & { client?: Client }
