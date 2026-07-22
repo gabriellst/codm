@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, relative, resolve, dirname } from 'node:path'
-import { CONTEXTS, FOREIGN_PGSCHEMAS } from '@shared/contexts'
+import { CONTEXTS, FOREIGN_PGSCHEMAS, PENDING_PGSCHEMAS } from '@shared/contexts'
 import { CONTEXT_MAP, CROSS_CONTEXT_POLICY, AMBIENT, POLICY_EXCEPTIONS, ANNOTATED_CYCLES, BOOTSTRAP_FILES } from '@shared/context-map'
 
 /**
@@ -158,6 +158,8 @@ describe('context-map (declared intent map + global surface policy over real imp
 			...Object.values(CONTEXTS).flatMap(c => (c.pgSchema === null ? [] : [c.pgSchema as string])),
 			// Schemas owned by non-TS backends — declared in the same spine (intent precedes derivation).
 			...FOREIGN_PGSCHEMAS,
+			// TS-owned schemas forward-declared by the contract lock, ahead of their context build-out.
+			...PENDING_PGSCHEMAS,
 		].sort()
 		const inContracts = readdirSync(CONTRACTS_SCHEMA)
 			.filter(f => f.endsWith('.ts') && f !== 'index.ts')

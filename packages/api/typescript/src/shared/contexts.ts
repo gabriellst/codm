@@ -40,6 +40,16 @@ export interface ContextDecl {
  */
 export const FOREIGN_PGSCHEMAS: readonly string[] = ['activity']
 
+/**
+ * TS-owned Postgres schemas FORWARD-DECLARED by the Phase-0 contract lock: the schema exists in
+ * contracts (packages/contracts/db/schema) AHEAD of its bounded-context implementation. Intent
+ * precedes derivation — the schema is claimed here so the context-map parity rail stays green
+ * until each context (its `src/<module>/` folder + router + registry) is built and PROMOTED into
+ * CONTEXTS. When a context lands, move its schema OUT of this list and INTO CONTEXTS.pgSchema.
+ * (CodeDM new contexts: workspace / thread / issue / artifact.)
+ */
+export const PENDING_PGSCHEMAS: readonly string[] = ['workspace', 'thread', 'issue', 'artifact']
+
 /** Folder/import identity — matches `src/<module>/` exactly (e.g. keys used by `@<module>/*` path aliases). */
 export type ContextModule = keyof typeof CONTEXTS
 
