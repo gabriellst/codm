@@ -217,7 +217,7 @@ export const REPO = {
 	// ── STAMP-MANAGED: env — create-template keeps a key iff at least one KEPT consumer remains (set algebra over `consumers`); the stamped .env.example is re-rendered from the pruned registry so `bun env:generate --check` stays green inside a stamp ──
 	env: {
 		// ── compose / identity ──
-		PROJECT: { consumers: ['compose'], example: 'template', doc: 'docker-compose prefix + Config.name; DATABASE_URL db name must match' },
+		PROJECT: { consumers: ['compose'], example: 'codedm', doc: 'docker-compose prefix + Config.name; DATABASE_URL db name must match' },
 		SERVICE: { consumers: ['compose'], example: 'backend', doc: 'docker-compose container prefix (${PROJECT}-${SERVICE})' },
 		NODE_ENV: { consumers: ['apiTs'], schema: 'kernel', example: 'development' },
 		PRODUCT_NAME: {
@@ -238,7 +238,7 @@ export const REPO = {
 		DATABASE_URL: {
 			consumers: ['apiTs', 'apiGo'],
 			schema: 'kernel',
-			example: 'postgres://postgres:postgres@localhost:5432/template?sslmode=disable',
+			example: 'postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable',
 		},
 		CODEDM_DATA_DIR: {
 			consumers: ['apiTs', 'apiGo'],
