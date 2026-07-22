@@ -1,26 +1,46 @@
 {
-	"brand": "App",
-	"getStarted": "Começar",
-	"openApp": "Abrir app",
-	"hero": {
-		"title": "Construa seu próximo produto mais rápido.",
-		"subtitle": "Boilerplate fullstack em TypeScript com DDD, Clean Architecture, CQRS e um template de agentic-coding embutido.",
-		"primaryCta": "Crie sua conta",
-		"secondaryCta": "Entrar"
+	"nav": {
+		"docs": "Docs",
+		"download": "Baixar"
 	},
-	"features": {
-		"fast": {
-			"title": "Rápido por padrão",
-			"description": "Bun, Vite, React Query e Drizzle entregam um loop de feedback imediato do dev à produção."
-		},
-		"typesafe": {
-			"title": "Tipado de ponta a ponta",
-			"description": "Schemas Zod alimentam a API, o banco, a SDK e os formulários — uma única fonte de verdade."
-		},
-		"domain": {
-			"title": "Domínio em primeiro lugar",
-			"description": "Bounded contexts, agregados, eventos e outbox já conectados para modelar regras de negócio com clareza."
+	"hero": {
+		"eyebrow": "Open source · roda localmente · sem conta",
+		"title": "MANDE DM PRO SEU CÓDIGO",
+		"subtitle": "O CodeDM conecta WhatsApp, Instagram e Telegram a agentes de código rodando neste Mac — mande DM pro seu código como se fosse qualquer conversa. Nada sai da sua máquina.",
+		"primaryCta": "Baixar",
+		"secondaryCta": "Ler a documentação",
+		"flow": {
+			"channels": ["WhatsApp", "Instagram", "Telegram"],
+			"target": "Agentes no terminal"
 		}
 	},
-	"footer": { "copyright": "Monorepo boilerplate · MIT" }
+	"featuresHeading": "COMO FUNCIONA",
+	"features": {
+		"channels": {
+			"title": "Canais viram agentes no terminal",
+			"description": "Pareie WhatsApp, Instagram ou Telegram uma vez. Cada mensagem cai direto num agente de código rodando numa sessão de terminal no seu Mac — Claude Code, Codex, o que você apontar."
+		},
+		"issues": {
+			"title": "Issues escritas a partir de uma mensagem",
+			"description": "\"O campo de cupom está quebrado no mobile\" vira uma issue classificada, escopada numa pasta de projeto e entregue a um agente. Sem board, sem formulário de ticket — só a conversa que você já mandou."
+		},
+		"human": {
+			"title": "Pausas com humano no loop",
+			"description": "Os agentes param e te chamam no instante em que precisam de uma decisão. Abra a sessão, decida, retome — ou deixe uma thread autônoma pra respostas seguirem sem revisão. Você controla cada merge."
+		},
+		"local": {
+			"title": "Local-first, sempre",
+			"description": "Sem conta, sem nuvem, sem telemetria. Os agentes rodam contra pastas de projeto na sua própria máquina e tudo — mensagens, sessões, artefatos — fica local. Open source, licença MIT."
+		}
+	},
+	"cta": {
+		"title": "COLOQUE SEUS CONTATOS PRA TRABALHAR",
+		"subtitle": "Conecte um canal, aponte pra uma pasta de projeto, anexe uma thread. Seu primeiro agente de código está a três passos.",
+		"primary": "Baixar",
+		"secondary": "Ler a documentação",
+		"note": "macOS · open source · roda inteiro no seu Mac"
+	},
+	"footer": {
+		"copyright": "CodeDM · Open source · MIT"
+	}
 }

@@ -1,0 +1,116 @@
+---
+import { getEntry } from 'astro:content'
+import type { Locale } from '~/i18n'
+
+interface Props {
+	locale: Locale
+}
+
+const { locale } = Astro.props
+const entry = await getEntry('landing', `${locale}/landing`)
+const t = entry!.data
+
+const docsHref = '/docs'
+const downloadHref = '/download'
+
+const featureKeys = ['channels', 'issues', 'human', 'local'] as const
+---
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<section class="relative overflow-hidden border-b border-[var(--border)] px-6 pb-24 pt-24 md:px-20 md:pt-32">
+	<div class="mx-auto flex max-w-[880px] flex-col items-center gap-8 text-center">
+		<span
+			class="rounded-full border border-[var(--border)] bg-[var(--muted)] px-4 py-1.5 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-[var(--muted-foreground)]"
+		>
+			{t.hero.eyebrow}
+		</span>
+
+		<!-- channel → agent flow -->
+		<div class="flex flex-wrap items-center justify-center gap-3">
+			{
+				t.hero.flow.channels.map(channel => (
+					<span class="rounded-full border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm font-medium">
+						{channel}
+					</span>
+				))
+			}
+			<span aria-hidden="true" class="px-1 text-lg font-semibold text-[var(--muted-foreground)]">&rarr;</span>
+			<span
+				class="rounded-full bg-[var(--primary)] px-4 py-2 font-mono text-sm font-medium text-[var(--primary-foreground)]"
+			>
+				&gt;_ {t.hero.flow.target}
+			</span>
+		</div>
+
+		<h1 class="text-5xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-7xl">
+			{t.hero.title}
+		</h1>
+		<p class="max-w-[620px] text-base leading-relaxed text-[var(--muted-foreground)] md:text-lg">
+			{t.hero.subtitle}
+		</p>
+
+		<div class="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+			<a
+				href={downloadHref}
+				class="inline-flex items-center justify-center rounded-full bg-[var(--primary)] px-7 py-3 text-base font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+			>
+				{t.hero.primaryCta}
+			</a>
+			<a
+				href={docsHref}
+				class="inline-flex items-center justify-center rounded-full border border-[var(--border)] px-7 py-3 text-base font-semibold transition-colors hover:bg-[var(--muted)]"
+			>
+				{t.hero.secondaryCta}
+			</a>
+		</div>
+	</div>
+</section>
+
+<!-- ── Features ─────────────────────────────────────────── -->
+<section class="px-6 py-20 md:px-20 md:py-28">
+	<div class="mx-auto max-w-[1120px]">
+		<h2 class="mb-12 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+			{t.featuresHeading}
+		</h2>
+		<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+			{
+				featureKeys.map((key, i) => (
+					<article class="flex flex-col gap-4 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-8 transition-colors hover:border-[var(--foreground)]">
+						<span class="font-mono text-sm font-medium text-[var(--muted-foreground)]">
+							{String(i + 1).padStart(2, '0')}
+						</span>
+						<h3 class="text-xl font-bold uppercase tracking-tight">{t.features[key].title}</h3>
+						<p class="text-sm leading-relaxed text-[var(--muted-foreground)]">{t.features[key].description}</p>
+					</article>
+				))
+			}
+		</div>
+	</div>
+</section>
+
+<!-- ── Closing CTA ──────────────────────────────────────── -->
+<section class="px-6 pb-28 md:px-20">
+	<div
+		class="mx-auto flex max-w-[1120px] flex-col items-center gap-6 rounded-[calc(var(--radius)*1.5)] bg-[var(--primary)] px-6 py-20 text-center text-[var(--primary-foreground)]"
+	>
+		<h2 class="max-w-[680px] text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl">
+			{t.cta.title}
+		</h2>
+		<p class="max-w-[540px] text-base leading-relaxed opacity-80">{t.cta.subtitle}</p>
+		<div class="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+			<a
+				href={downloadHref}
+				class="inline-flex items-center justify-center rounded-full bg-[var(--primary-foreground)] px-7 py-3 text-base font-semibold text-[var(--primary)] transition-opacity hover:opacity-90"
+			>
+				{t.cta.primary}
+			</a>
+			<a
+				href={docsHref}
+				class="inline-flex items-center justify-center rounded-full border border-[var(--primary-foreground)]/30 px-7 py-3 text-base font-semibold transition-colors hover:bg-[var(--primary-foreground)]/10"
+			>
+				{t.cta.secondary}
+			</a>
+		</div>
+		<span class="mt-2 text-xs uppercase tracking-[0.12em] opacity-60">{t.cta.note}</span>
+	</div>
+</section>

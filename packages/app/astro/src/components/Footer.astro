@@ -7,6 +7,12 @@ const entry = await getEntry('landing', `${locale}/landing`)
 const t = entry!.data
 ---
 
-<footer class="flex items-center justify-between border-t border-[var(--border)] bg-[var(--background)] px-8 py-6 md:px-20">
-	<span class="text-xs text-[var(--muted-foreground)]">{t.footer.copyright}</span>
+<footer
+	class="flex flex-col items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--background)] px-6 py-8 sm:flex-row md:px-20"
+>
+	<span class="flex items-center gap-1 text-sm font-extrabold tracking-tight" aria-label="CodeDM">
+		<span>Code</span>
+		<span class="rounded-md bg-[var(--primary)] px-1.5 py-0.5 text-[var(--primary-foreground)]">DM</span>
+	</span>
+	<span class="text-xs uppercase tracking-[0.12em] text-[var(--muted-foreground)]">{t.footer.copyright}</span>
 </footer>

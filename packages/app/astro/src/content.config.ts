@@ -17,22 +17,36 @@ const blog = defineCollection({
 		}),
 })
 
+const feature = z.object({ title: z.string(), description: z.string() })
+
 const landing = defineCollection({
 	loader: glob({ pattern: '**/landing.json', base: './src/content/i18n' }),
 	schema: z.object({
-		brand: z.string(),
-		getStarted: z.string(),
-		openApp: z.string(),
+		nav: z.object({ docs: z.string(), download: z.string() }),
 		hero: z.object({
+			eyebrow: z.string(),
 			title: z.string(),
 			subtitle: z.string(),
 			primaryCta: z.string(),
 			secondaryCta: z.string(),
+			flow: z.object({
+				channels: z.array(z.string()),
+				target: z.string(),
+			}),
 		}),
+		featuresHeading: z.string(),
 		features: z.object({
-			fast: z.object({ title: z.string(), description: z.string() }),
-			typesafe: z.object({ title: z.string(), description: z.string() }),
-			domain: z.object({ title: z.string(), description: z.string() }),
+			channels: feature,
+			issues: feature,
+			human: feature,
+			local: feature,
+		}),
+		cta: z.object({
+			title: z.string(),
+			subtitle: z.string(),
+			primary: z.string(),
+			secondary: z.string(),
+			note: z.string(),
 		}),
 		footer: z.object({ copyright: z.string() }),
 	}),

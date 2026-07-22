@@ -1,26 +1,46 @@
 {
-	"brand": "App",
-	"getStarted": "Get started",
-	"openApp": "Open app",
-	"hero": {
-		"title": "Build your next product faster.",
-		"subtitle": "A fullstack TypeScript boilerplate with DDD, Clean Architecture, CQRS, and an opinionated agentic-coding template baked in.",
-		"primaryCta": "Create your account",
-		"secondaryCta": "Sign in"
+	"nav": {
+		"docs": "Docs",
+		"download": "Download"
 	},
-	"features": {
-		"fast": {
-			"title": "Fast by default",
-			"description": "Bun, Vite, React Query, and Drizzle deliver instant feedback loops from dev to prod."
-		},
-		"typesafe": {
-			"title": "Type-safe end to end",
-			"description": "Zod schemas drive the API, the database, the SDK, and the frontend forms — one source of truth."
-		},
-		"domain": {
-			"title": "Domain-first",
-			"description": "Bounded contexts, aggregates, events, and an outbox already wired so you can model business rules cleanly."
+	"hero": {
+		"eyebrow": "Open source · runs locally · no account",
+		"title": "DM YOUR CODEBASE",
+		"subtitle": "CodeDM connects WhatsApp, Instagram and Telegram to coding agents running on this Mac — DM your codebase like it's any other chat. Nothing leaves your machine.",
+		"primaryCta": "Download",
+		"secondaryCta": "Read the docs",
+		"flow": {
+			"channels": ["WhatsApp", "Instagram", "Telegram"],
+			"target": "Terminal agents"
 		}
 	},
-	"footer": { "copyright": "Monorepo boilerplate · MIT" }
+	"featuresHeading": "HOW IT WORKS",
+	"features": {
+		"channels": {
+			"title": "Channels become terminal agents",
+			"description": "Pair WhatsApp, Instagram or Telegram once. Every message routes straight to a coding agent running in a terminal session on your Mac — Claude Code, Codex, whichever you point it at."
+		},
+		"issues": {
+			"title": "Issues, written from a message",
+			"description": "\"The coupon field is broken on mobile\" gets classified into a tracked issue, scoped to a workspace folder, and handed to an agent. No board, no ticket forms — just the chat you already sent."
+		},
+		"human": {
+			"title": "Human-in-the-loop stops",
+			"description": "Agents pause and ping you the moment they need a call. Open the session, decide, resume — or leave a thread autonomous so replies ship without review. You stay in control of every merge."
+		},
+		"local": {
+			"title": "Local-first, always",
+			"description": "No account, no cloud, no telemetry. Agents run against project folders on your own machine and everything — messages, sessions, artifacts — stays local. Open source, MIT licensed."
+		}
+	},
+	"cta": {
+		"title": "PUT YOUR CONTACTS TO WORK",
+		"subtitle": "Connect a channel, point at a project folder, attach a thread. Your first coding agent is three steps away.",
+		"primary": "Download",
+		"secondary": "Read the docs",
+		"note": "macOS · open source · runs entirely on your Mac"
+	},
+	"footer": {
+		"copyright": "CodeDM · Open source · MIT"
+	}
 }
