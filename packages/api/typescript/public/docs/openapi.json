@@ -478,6 +478,144 @@
         }
       }
     },
+    "/v1/terminal/providers": {
+      "get": {
+        "tags": [
+          "terminal"
+        ],
+        "description": "Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status",
+        "operationId": "DetectProviders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "refresh",
+            "schema": {
+              "$ref": "#/components/schemas/Refresh"
+            },
+            "required": false,
+            "example": "false"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "$ref": "#/components/schemas/ProviderKind"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/ProviderStatus"
+                          },
+                          "binaryPath": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "status"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "providers"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "providers": [
+                        {
+                          "name": "CLAUDE_CODE",
+                          "status": "DETECTED",
+                          "binaryPath": "/usr/local/bin/claude",
+                          "version": "1.0.0"
+                        },
+                        {
+                          "name": "CODEX",
+                          "status": "NOT_INSTALLED"
+                        },
+                        {
+                          "name": "OPENCODE",
+                          "status": "NOT_INSTALLED"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "providers": [
+                        {
+                          "name": "CLAUDE_CODE",
+                          "status": "DETECTED",
+                          "binaryPath": "/usr/local/bin/claude",
+                          "version": "1.0.0"
+                        },
+                        {
+                          "name": "CODEX",
+                          "status": "NOT_INSTALLED"
+                        },
+                        {
+                          "name": "OPENCODE",
+                          "status": "NOT_INSTALLED"
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/terminal/sessions/{issueId}/stream": {
+      "get": {
+        "tags": [
+          "terminal"
+        ],
+        "description": "Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)",
+        "operationId": "StreamTerminalSession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "x-tpl-unknown": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/ui/account": {
       "get": {
         "tags": [
@@ -805,6 +943,7 @@
         "type": "string",
         "enum": [
           "CANNOT_CONVERT_INPUT",
+          "CLASSIFICATION_FAILED",
           "COMMAND_HANDLER_NOT_FOUND",
           "COMMAND_QUEUE_NOT_FOUND",
           "CREDENTIAL_DECRYPT_FAILED",
@@ -837,7 +976,12 @@
           "OWNER_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
+          "PROVIDER_NOT_DETECTED",
           "RATE_LIMITED",
+          "SESSION_ALREADY_STREAMING",
+          "TERMINAL_ALREADY_RUNNING",
+          "TERMINAL_SPAWN_FAILED",
+          "TOO_MANY_TERMINAL_STREAMS",
           "UNAUTHORIZED",
           "USER_NOT_FOUND",
           "VALIDATION_ERROR",
@@ -851,6 +995,28 @@
         "enum": [
           "ORGANIZATION",
           "INDIVIDUAL"
+        ]
+      },
+      "Refresh": {
+        "type": "string",
+        "enum": [
+          "true",
+          "false"
+        ]
+      },
+      "ProviderKind": {
+        "type": "string",
+        "enum": [
+          "CLAUDE_CODE",
+          "CODEX",
+          "OPENCODE"
+        ]
+      },
+      "ProviderStatus": {
+        "type": "string",
+        "enum": [
+          "DETECTED",
+          "NOT_INSTALLED"
         ]
       },
       "Language": {
@@ -967,6 +1133,7 @@
   },
   "x-error-codes": [
     "CANNOT_CONVERT_INPUT",
+    "CLASSIFICATION_FAILED",
     "COMMAND_HANDLER_NOT_FOUND",
     "COMMAND_QUEUE_NOT_FOUND",
     "CREDENTIAL_DECRYPT_FAILED",
@@ -999,7 +1166,12 @@
     "OWNER_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",
+    "PROVIDER_NOT_DETECTED",
     "RATE_LIMITED",
+    "SESSION_ALREADY_STREAMING",
+    "TERMINAL_ALREADY_RUNNING",
+    "TERMINAL_SPAWN_FAILED",
+    "TOO_MANY_TERMINAL_STREAMS",
     "UNAUTHORIZED",
     "USER_NOT_FOUND",
     "VALIDATION_ERROR",

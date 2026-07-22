@@ -22,6 +22,7 @@ import (
 // Defines values for ApiErrors.
 const (
 	CANNOTCONVERTINPUT         ApiErrors = "CANNOT_CONVERT_INPUT"
+	CLASSIFICATIONFAILED       ApiErrors = "CLASSIFICATION_FAILED"
 	COMMANDHANDLERNOTFOUND     ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
 	COMMANDQUEUENOTFOUND       ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
 	CREDENTIALDECRYPTFAILED    ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
@@ -54,7 +55,12 @@ const (
 	OWNERNOTFOUND              ApiErrors = "OWNER_NOT_FOUND"
 	PASSWORDSDONTMATCH         ApiErrors = "PASSWORDS_DONT_MATCH"
 	PASSWORDTOOWEAK            ApiErrors = "PASSWORD_TOO_WEAK"
+	PROVIDERNOTDETECTED        ApiErrors = "PROVIDER_NOT_DETECTED"
 	RATELIMITED                ApiErrors = "RATE_LIMITED"
+	SESSIONALREADYSTREAMING    ApiErrors = "SESSION_ALREADY_STREAMING"
+	TERMINALALREADYRUNNING     ApiErrors = "TERMINAL_ALREADY_RUNNING"
+	TERMINALSPAWNFAILED        ApiErrors = "TERMINAL_SPAWN_FAILED"
+	TOOMANYTERMINALSTREAMS     ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
 	UNAUTHORIZED               ApiErrors = "UNAUTHORIZED"
 	USERNOTFOUND               ApiErrors = "USER_NOT_FOUND"
 	VALIDATIONERROR            ApiErrors = "VALIDATION_ERROR"
@@ -65,6 +71,8 @@ const (
 func (e ApiErrors) Valid() bool {
 	switch e {
 	case CANNOTCONVERTINPUT:
+		return true
+	case CLASSIFICATIONFAILED:
 		return true
 	case COMMANDHANDLERNOTFOUND:
 		return true
@@ -130,7 +138,17 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case PASSWORDTOOWEAK:
 		return true
+	case PROVIDERNOTDETECTED:
+		return true
 	case RATELIMITED:
+		return true
+	case SESSIONALREADYSTREAMING:
+		return true
+	case TERMINALALREADYRUNNING:
+		return true
+	case TERMINALSPAWNFAILED:
+		return true
+	case TOOMANYTERMINALSTREAMS:
 		return true
 	case UNAUTHORIZED:
 		return true
@@ -433,6 +451,63 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for ProviderKind.
+const (
+	CLAUDECODE ProviderKind = "CLAUDE_CODE"
+	CODEX      ProviderKind = "CODEX"
+	OPENCODE   ProviderKind = "OPENCODE"
+)
+
+// Valid indicates whether the value is a known member of the ProviderKind enum.
+func (e ProviderKind) Valid() bool {
+	switch e {
+	case CLAUDECODE:
+		return true
+	case CODEX:
+		return true
+	case OPENCODE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderStatus.
+const (
+	DETECTED     ProviderStatus = "DETECTED"
+	NOTINSTALLED ProviderStatus = "NOT_INSTALLED"
+)
+
+// Valid indicates whether the value is a known member of the ProviderStatus enum.
+func (e ProviderStatus) Valid() bool {
+	switch e {
+	case DETECTED:
+		return true
+	case NOTINSTALLED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Refresh.
+const (
+	False Refresh = "false"
+	True  Refresh = "true"
+)
+
+// Valid indicates whether the value is a known member of the Refresh enum.
+func (e Refresh) Valid() bool {
+	switch e {
+	case False:
+		return true
+	case True:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StopKind.
 const (
 	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
@@ -493,6 +568,15 @@ type Language string
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
 
+// ProviderKind defines model for ProviderKind.
+type ProviderKind string
+
+// ProviderStatus defines model for ProviderStatus.
+type ProviderStatus string
+
+// Refresh defines model for Refresh.
+type Refresh string
+
 // StopKind defines model for StopKind.
 type StopKind string
 
@@ -517,6 +601,11 @@ type UpdateOwnerSettingsJSONBody struct {
 	Name       *string                   `json:"name,omitempty"`
 	PictureUrl nullable.Nullable[string] `json:"pictureUrl,omitempty"`
 	Timezone   *string                   `json:"timezone,omitempty"`
+}
+
+// DetectProvidersParams defines parameters for DetectProviders.
+type DetectProvidersParams struct {
+	Refresh *Refresh `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
 
 // CreateOwnerJSONRequestBody defines body for CreateOwner for application/json ContentType.
@@ -627,6 +716,12 @@ type ClientInterface interface {
 
 	// GetSession request
 	GetSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DetectProviders request
+	DetectProviders(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// StreamTerminalSession request
+	StreamTerminalSession(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetMyAccount request
 	GetMyAccount(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -748,6 +843,30 @@ func (c *Client) SetActiveOwner(ctx context.Context, ownerId string, reqEditors 
 
 func (c *Client) GetSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSessionRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DetectProviders(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDetectProvidersRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) StreamTerminalSession(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStreamTerminalSessionRequest(c.Server, issueId)
 	if err != nil {
 		return nil, err
 	}
@@ -1029,6 +1148,94 @@ func NewGetSessionRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewDetectProvidersRequest generates requests for DetectProviders
+func NewDetectProvidersRequest(server string, params *DetectProvidersParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/terminal/providers")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Refresh != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refresh", *params.Refresh, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewStreamTerminalSessionRequest generates requests for StreamTerminalSession
+func NewStreamTerminalSessionRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/terminal/sessions/%s/stream", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetMyAccountRequest generates requests for GetMyAccount
 func NewGetMyAccountRequest(server string) (*http.Request, error) {
 	var err error
@@ -1179,6 +1386,12 @@ type ClientWithResponsesInterface interface {
 
 	// GetSessionWithResponse request
 	GetSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSessionResponse, error)
+
+	// DetectProvidersWithResponse request
+	DetectProvidersWithResponse(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*DetectProvidersResponse, error)
+
+	// StreamTerminalSessionWithResponse request
+	StreamTerminalSessionWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*StreamTerminalSessionResponse, error)
 
 	// GetMyAccountWithResponse request
 	GetMyAccountWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyAccountResponse, error)
@@ -1425,6 +1638,72 @@ func (r GetSessionResponse) ContentType() string {
 	return ""
 }
 
+type DetectProvidersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Providers []struct {
+			BinaryPath *string        `json:"binaryPath,omitempty"`
+			Name       ProviderKind   `json:"name"`
+			Status     ProviderStatus `json:"status"`
+			Version    *string        `json:"version,omitempty"`
+		} `json:"providers"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r DetectProvidersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DetectProvidersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DetectProvidersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type StreamTerminalSessionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r StreamTerminalSessionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r StreamTerminalSessionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r StreamTerminalSessionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetMyAccountResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1632,6 +1911,24 @@ func (c *ClientWithResponses) GetSessionWithResponse(ctx context.Context, reqEdi
 		return nil, err
 	}
 	return ParseGetSessionResponse(rsp)
+}
+
+// DetectProvidersWithResponse request returning *DetectProvidersResponse
+func (c *ClientWithResponses) DetectProvidersWithResponse(ctx context.Context, params *DetectProvidersParams, reqEditors ...RequestEditorFn) (*DetectProvidersResponse, error) {
+	rsp, err := c.DetectProviders(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDetectProvidersResponse(rsp)
+}
+
+// StreamTerminalSessionWithResponse request returning *StreamTerminalSessionResponse
+func (c *ClientWithResponses) StreamTerminalSessionWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*StreamTerminalSessionResponse, error) {
+	rsp, err := c.StreamTerminalSession(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseStreamTerminalSessionResponse(rsp)
 }
 
 // GetMyAccountWithResponse request returning *GetMyAccountResponse
@@ -1863,6 +2160,55 @@ func ParseGetSessionResponse(rsp *http.Response) (*GetSessionResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseDetectProvidersResponse parses an HTTP response from a DetectProvidersWithResponse call
+func ParseDetectProvidersResponse(rsp *http.Response) (*DetectProvidersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DetectProvidersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Providers []struct {
+				BinaryPath *string        `json:"binaryPath,omitempty"`
+				Name       ProviderKind   `json:"name"`
+				Status     ProviderStatus `json:"status"`
+				Version    *string        `json:"version,omitempty"`
+			} `json:"providers"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseStreamTerminalSessionResponse parses an HTTP response from a StreamTerminalSessionWithResponse call
+func ParseStreamTerminalSessionResponse(rsp *http.Response) (*StreamTerminalSessionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &StreamTerminalSessionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil

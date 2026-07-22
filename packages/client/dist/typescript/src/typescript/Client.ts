@@ -1,6 +1,7 @@
 // AUTO-GENERATED — do not edit.
 import {
 	createOwner,
+	detectProviders,
 	disableOwner,
 	enableOwner,
 	getMyAccount,
@@ -8,6 +9,7 @@ import {
 	getUserInfo,
 	listenEvents,
 	setActiveOwner,
+	streamTerminalSession,
 	updateOwnerSettings,
 	uploadAvatar,
 } from './client/index.ts'
@@ -26,6 +28,10 @@ export class TypescriptClient {
 
 	createOwner(...args: Parameters<typeof createOwner>): ReturnType<typeof createOwner> {
 		return (createOwner as (...a: any[]) => ReturnType<typeof createOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	detectProviders(...args: Parameters<typeof detectProviders>): ReturnType<typeof detectProviders> {
+		return (detectProviders as (...a: any[]) => ReturnType<typeof detectProviders>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	disableOwner(...args: Parameters<typeof disableOwner>): ReturnType<typeof disableOwner> {
@@ -54,6 +60,10 @@ export class TypescriptClient {
 
 	setActiveOwner(...args: Parameters<typeof setActiveOwner>): ReturnType<typeof setActiveOwner> {
 		return (setActiveOwner as (...a: any[]) => ReturnType<typeof setActiveOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	streamTerminalSession(...args: Parameters<typeof streamTerminalSession>): ReturnType<typeof streamTerminalSession> {
+		return (streamTerminalSession as (...a: any[]) => ReturnType<typeof streamTerminalSession>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	updateOwnerSettings(...args: Parameters<typeof updateOwnerSettings>): ReturnType<typeof updateOwnerSettings> {
