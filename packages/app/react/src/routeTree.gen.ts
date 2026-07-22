@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
+import { Route as StyleguideIndexRouteImport } from './routes/styleguide/index'
 import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
 import { Route as appSettingsAccountIndexRouteImport } from './routes/(app)/settings/account/index'
 
@@ -21,6 +22,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StyleguideIndexRoute = StyleguideIndexRouteImport.update({
+  id: '/styleguide/',
+  path: '/styleguide/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appDashboardIndexRoute = appDashboardIndexRouteImport.update({
@@ -36,11 +42,13 @@ const appSettingsAccountIndexRoute = appSettingsAccountIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/styleguide/': typeof StyleguideIndexRoute
   '/dashboard/': typeof appDashboardIndexRoute
   '/settings/account/': typeof appSettingsAccountIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/styleguide': typeof StyleguideIndexRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/settings/account': typeof appSettingsAccountIndexRoute
 }
@@ -48,18 +56,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
+  '/styleguide/': typeof StyleguideIndexRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
   '/(app)/settings/account/': typeof appSettingsAccountIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard/' | '/settings/account/'
+  fullPaths: '/' | '/styleguide/' | '/dashboard/' | '/settings/account/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/settings/account'
+  to: '/' | '/styleguide' | '/dashboard' | '/settings/account'
   id:
     | '__root__'
     | '/'
     | '/(app)'
+    | '/styleguide/'
     | '/(app)/dashboard/'
     | '/(app)/settings/account/'
   fileRoutesById: FileRoutesById
@@ -67,6 +77,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
+  StyleguideIndexRoute: typeof StyleguideIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -83,6 +94,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof appRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/styleguide/': {
+      id: '/styleguide/'
+      path: '/styleguide'
+      fullPath: '/styleguide/'
+      preLoaderRoute: typeof StyleguideIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(app)/dashboard/': {
@@ -119,6 +137,7 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
+  StyleguideIndexRoute: StyleguideIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
