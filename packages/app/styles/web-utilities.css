@@ -1,5 +1,5 @@
 /* Web-only Tailwind 4 utilities — shared by @codedm/app-react and @codedm/app-astro.
-   NOT for expo: React Native (uniwind) has no CSS gradients / background-clip / @property.
+   NOT for React Native targets (uniwind): they have no CSS gradients / background-clip / @property.
    Import AFTER `@import "tailwindcss"` so the @utility directives register with the engine. */
 
 @property --tw-gradient-bg {

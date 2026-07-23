@@ -10,7 +10,7 @@
 
 | Repo | Role | Layout |
 |---|---|---|
-| **template-fullstack** (`~/Desktop/Projetos/pessoal/template-fullstack`) | **Canon / single source of truth.** Every shared surface's authoritative copy lives here. | Polyglot: `packages/{api/{typescript,go},app/{react,expo,astro},contracts,client,e2e}` |
+| **template-fullstack** (`~/Desktop/Projetos/pessoal/template-fullstack`) | **Canon / single source of truth.** Every shared surface's authoritative copy lives here. | Polyglot: `packages/{api/{typescript,go},app/{react,astro},contracts,client,e2e}` |
 | **berzerk-club** (`~/Desktop/Projetos/pessoal/berzerk-club`) | Product fork, **shares git history** with template. Mobile/Expo exemplar. | Same polyglot layout, `@berzerk/*` scope |
 | **medscall** (`~/Desktop/Projetos/medscall/software/monorepo`) | Production product, **diverged layout** (pre-polyglot). Battle-testing ground. **Settled 2026-07-11: it keeps its layout — sync happens at file granularity via the manifest's path map, never via a layout migration.** | `packages/api` (TS, core at `src/shared`), `packages/channel` (Go), `@medscall/*` scope |
 | bk-dash legacy (`~/Desktop/Projetos/bk-company/bk-dash-backend`) | Frozen source system. Read-only provenance; port branches live in template (`feat/bk-dash-*`). | legacy |
