@@ -259,6 +259,14 @@ components:
     layer: presentation
     note: "Single-flavor skill — same Zustand patterns on react and expo. Not applicable to astro."
 
+  desktop-shell:
+    skill: desktop-shell
+    patterns:
+      - "packages/app/tauri/**/*"
+      - "packages/app/react/src/lib/native/*.ts"
+    layer: presentation
+    note: "Flat skill — Tauri v2 shell (src-tauri, sidecars, tauri.conf.json) + the react NativeShell seam (lib/native). @tauri-apps/* is eslint-forbidden outside the seam."
+
   # ─── Backend: Cross-Cutting ──────────────────────────────────────────
   bounded-context:
     skill: bounded-context

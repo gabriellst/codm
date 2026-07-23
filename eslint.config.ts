@@ -66,6 +66,28 @@ export default tseslint.config([
 			'@typescript-eslint/no-empty-function': 'warn',
 		},
 	},
+	// Desktop-shell seam (.claude/skills/desktop-shell): the react console reaches the
+	// Tauri runtime ONLY through src/lib/native/ — its tauri.ts impl is the single file
+	// allowed to touch @tauri-apps/*. Everywhere else (components, routes, stores,
+	// backends) must import the seam (`@/lib/native`), never the shell API.
+	{
+		files: ['packages/**/*.ts', 'packages/**/*.tsx'],
+		ignores: ['packages/app/react/src/lib/native/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							group: ['@tauri-apps/*'],
+							message:
+								'@tauri-apps/* is forbidden outside packages/app/react/src/lib/native/ — go through the NativeShell seam (@/lib/native). See .claude/skills/desktop-shell/SKILL.md.',
+						},
+					],
+				},
+			],
+		},
+	},
 	// TS files OUTSIDE tsconfig projects (tests, stories, config, storybook): syntactic
 	// TS parsing only — typed rules don't apply; biome + tsc own their correctness.
 	{
