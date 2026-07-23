@@ -1,29 +1,45 @@
 ---
-import '~/styles/global.css'
-import Nav from '~/components/Nav.astro'
 import Footer from '~/components/Footer.astro'
-import { alternateUrls, getLocale } from '~/i18n'
+import Nav from '~/components/Nav.astro'
+import { type Locale, localizedPath } from '~/i18n'
+import '~/styles/global.css'
 
 interface Props {
+	locale: Locale
 	title: string
 	description: string
 	ogImage?: string
 	canonical?: string
 	jsonLd?: Record<string, unknown>
+	/**
+	 * Per-page locale alternates as in-site paths, keyed by locale. Drives both
+	 * the `<link rel="alternate" hreflang>` tags AND the LocaleSwitcher. Defaults
+	 * to BOTH locales at the equivalent path (home, blog list, static pages).
+	 * Blog posts pass only the locales that actually have a translation — an
+	 * untranslated post therefore emits a single self hreflang and hides the
+	 * switcher (see rule 4).
+	 */
+	localeLinks?: Partial<Record<Locale, string>>
 }
 
-const { title, description, ogImage, canonical, jsonLd } = Astro.props
-const locale = getLocale(Astro.url)
+const { locale, title, description, ogImage, canonical, jsonLd, localeLinks } = Astro.props
 const canonicalUrl = canonical ?? Astro.url.href
 const site = Astro.site ?? new URL('http://localhost:4321')
-const alternates = alternateUrls(Astro.url, site)
+
+const links: Partial<Record<Locale, string>> =
+	localeLinks ?? { pt: localizedPath(Astro.url, 'pt'), en: localizedPath(Astro.url, 'en') }
+const alternateEntries = (Object.entries(links) as [Locale, string][]).filter(([, href]) => Boolean(href))
+const hreflang = (loc: Locale) => (loc === 'pt' ? 'pt-BR' : 'en-US')
+// x-default points at the pt alternate when present, else the first available.
+const xDefault = links.pt ?? alternateEntries[0]?.[1]
+
 const ogLocale = locale === 'pt' ? 'pt_BR' : 'en_US'
 const ogLocaleAlternate = locale === 'pt' ? 'en_US' : 'pt_BR'
-const rssHref = locale === 'pt' ? '/blog/rss.xml' : '/en/blog/rss.xml'
+const rssHref = `/${locale}/blog/rss.xml`
 ---
 
 <!doctype html>
-<html lang={locale === 'pt' ? 'pt-BR' : 'en'}>
+<html lang={hreflang(locale)}>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,9 +48,8 @@ const rssHref = locale === 'pt' ? '/blog/rss.xml' : '/en/blog/rss.xml'
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<link rel="canonical" href={canonicalUrl} />
-		<link rel="alternate" hreflang="pt-BR" href={alternates.pt} />
-		<link rel="alternate" hreflang="en-US" href={alternates.en} />
-		<link rel="alternate" hreflang="x-default" href={alternates.pt} />
+		{alternateEntries.map(([loc, href]) => <link rel="alternate" hreflang={hreflang(loc)} href={new URL(href, site).href} />)}
+		{xDefault && <link rel="alternate" hreflang="x-default" href={new URL(xDefault, site).href} />}
 		<link rel="alternate" type="application/rss+xml" title="CodeDM Blog" href={rssHref} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
@@ -51,10 +66,10 @@ const rssHref = locale === 'pt' ? '/blog/rss.xml' : '/en/blog/rss.xml'
 		<slot name="head" />
 	</head>
 	<body class="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-		<Nav />
+		<Nav locale={locale} localeLinks={links} />
 		<main>
 			<slot />
 		</main>
-		<Footer />
+		<Footer locale={locale} />
 	</body>
 </html>

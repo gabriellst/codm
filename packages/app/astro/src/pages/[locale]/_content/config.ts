@@ -14,14 +14,22 @@ const termLine = z.object({ key: z.string(), tone: z.enum(['dim', 'mid', 'faint'
 const routerRow = z.object({ key: z.string(), text: z.string() })
 
 /**
- * Landing slice content — definition, content, and consumers are colocated under
- * `src/pages/_landing/` (vertical slice; `_` keeps it out of the file router).
+ * Home (landing) content — definition, content, and consumers are colocated under
+ * `src/pages/[locale]/_content/` (the `_content` prefix keeps it out of the file
+ * router; `[locale]` is a literal on-disk folder). One JSON per locale:
+ * `home.pt.json` / `home.en.json`, yielding collection ids `home.pt` / `home.en`.
  * Shared components outside the slice (Nav, Footer) consume this collection via
- * `getEntry('landing', ...)` — they depend on the collection NAME + schema, never
- * on slice file paths.
+ * getEntry('landing', `home.${locale}`) — they depend on the collection NAME +
+ * schema, never on slice file paths.
  */
 export const landing = defineCollection({
-	loader: glob({ pattern: '**/landing.json', base: './src/pages/_landing/content/i18n' }),
+	loader: glob({
+		pattern: 'home.*.json',
+		base: './src/pages/[locale]/_content',
+		// Astro's default slug generator strips dots (`home.pt.json` → `homept`).
+		// Pin the id to the dotted filename stem so consumers read `home.${locale}`.
+		generateId: ({ entry }) => entry.replace(/\.json$/, ''),
+	}),
 	schema: z.object({
 		nav: z.object({
 			links: z.object({

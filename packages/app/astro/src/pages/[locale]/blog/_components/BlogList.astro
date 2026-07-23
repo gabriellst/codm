@@ -1,0 +1,35 @@
+---
+import { getCollection } from 'astro:content'
+import type { Locale } from '~/i18n'
+import BlogCard from './BlogCard.astro'
+
+interface Props {
+	locale: Locale
+}
+
+const { locale } = Astro.props
+const copy = locale === 'pt' ? { empty: 'Nenhum post ainda.' } : { empty: 'No posts yet.' }
+
+// Only posts authored in THIS locale (id is `<locale>/<slug>`). A pt-only post
+// therefore never appears on `/en/blog`, and vice-versa.
+const posts = (
+	await getCollection('blog', ({ id, data }) => id.startsWith(`${locale}/`) && (import.meta.env.DEV || !data.draft))
+).sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
+
+const slugOf = (id: string) => id.replace(new RegExp(`^${locale}/`), '').replace(/\.mdx?$/, '')
+---
+
+<section class="mx-auto flex max-w-[1280px] flex-col gap-10 px-5 py-16 md:px-20">
+	<h1 class="text-4xl font-bold tracking-tight">Blog</h1>
+	{
+		posts.length === 0 ? (
+			<p class="text-[var(--muted-foreground)]">{copy.empty}</p>
+		) : (
+			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+				{posts.map(post => (
+					<BlogCard post={post} href={`/${locale}/blog/${slugOf(post.id)}`} />
+				))}
+			</div>
+		)
+	}
+</section>

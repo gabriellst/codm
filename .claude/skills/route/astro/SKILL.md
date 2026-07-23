@@ -20,7 +20,54 @@ An astro route is a `.astro` file under `src/pages/` whose path mirrors the URL.
 | Static section page    | `src/pages/[locale]/about.astro`                 | `/pt/about` or `/en/about`           |
 | API route (rare)       | `src/pages/api/og.png.ts`                        | `/api/og.png` (dynamic OG image)     |
 
-The `[locale]` folder pattern is the canonical i18n approach. The site default locale (`pt`) may redirect from `/` via `astro.config.mjs`.
+The `[locale]` folder pattern is the canonical i18n approach (**Option B**): there is **no** unprefixed default locale — `/pt/…` **and** `/en/…` are both prefixed, and the whole home + blog live under one physical `src/pages/[locale]/` tree (`[locale]` is a *literal* on-disk folder — Astro's dynamic segment). `getStaticPaths` returns `[{params:{locale:'pt'}},{params:{locale:'en'}}]` and validates the segment with an `isLocale()` guard.
+
+`/` is a **static client-side redirect shell** (`src/pages/index.astro`): `noindex`, detects locale in the browser (locale cookie → `navigator.language` → fallback `/pt/`) via `location.replace`, with a `<meta http-equiv="refresh">` + `<noscript>` fallback. Upgrade path (documented follow-up): move the decision to an **edge function / middleware** that reads `Accept-Language` + cookie at the CDN and 302s before any HTML ships.
+
+> **Gotcha — do NOT set `i18n.routing.prefixDefaultLocale: true`.** With it `true`, Astro auto-generates its *own* redirect template at `/` and **clobbers** the hand-written client-side shell (you lose cookie/`navigator.language` detection). Keep it `false`: the `[locale]/` routes are file-based and don't rely on Astro's i18n routing at all.
+
+## Colocation layout (Option B)
+
+Everything a page needs lives inside its scope; nothing sits loose at the scope root:
+
+```
+src/
+├── content.config.ts          # root aggregator — glob loaders point at the colocated _content
+│                              #   (base: './src/pages/[locale]/_content', '.../blog/_content'; [locale] literal)
+├── components/                # GLOBAL chrome only: Nav, Footer, LocaleSwitcher
+├── layouts/BaseLayout.astro   # <html lang>, hreflang (pt-BR/en-US/x-default), og:locale, takes `locale` + `localeLinks`
+└── pages/
+    ├── index.astro            # /  → client-side redirect shell
+    └── [locale]/
+        ├── index.astro        # /pt/ /en/ — thin shell → _components/Home.astro
+        ├── _components/       # Home.astro (composition) + sections (.astro)
+        ├── _islands/          # interactive React (.tsx, client:*)
+        ├── _content/          # config.ts (schema) + home.pt.json / home.en.json
+        └── blog/
+            ├── index.astro        # thin shell → _components/BlogList.astro
+            ├── [...slug].astro    # getStaticPaths per-locale → _components/BlogPost.astro
+            ├── rss.xml.ts         # RSS per locale
+            ├── _components/       # BlogList / BlogPost / BlogCard (.astro)
+            └── _content/{pt,en}/  # MDX per locale + _assets/ per locale
+```
+
+> **Gotcha — Astro's default slug generator eats dots** (`home.pt.json` → id `homept`, not `home.pt`). When a filename carries a meaningful dotted stem, pin the id in the glob loader: `generateId: ({ entry }) => entry.replace(/\.json$/, '')` → `home.pt`.
+
+## Blog i18n (per-`translationKey` pairing)
+
+- MDX is split per locale under `[locale]/blog/_content/{pt,en}/`; `translationKey` in the frontmatter links siblings.
+- `[...slug].astro` `getStaticPaths` emits **one path per real `(locale, slug)` pair** — a pt-only post generates only `/pt/blog/<slug>`, **never** a phantom `/en/blog/<slug>`. A missing translation is normal, not an error.
+- `hreflang` is emitted **only for translated pairs** (drive it from a per-page `localeLinks` prop on `BaseLayout`); the per-post LocaleSwitcher renders only when ≥2 alternates exist, so it **disappears** on an untranslated post.
+- RSS is per locale (`/pt/blog/rss.xml`, `/en/blog/rss.xml`), each filtered to its locale with the right `<language>`.
+
+## Asset policy (ratified)
+
+- **`src/` vs `public/`** — assets under `src/` go through `astro:assets` (optimized, content-hashed, cache-busted; reference via `import`/`<Image>`/`getImage`). Assets in `public/` are served **raw** at a stable path (no transform) — use for `favicon`, `robots.txt`, and OG PNGs referenced by absolute URL.
+- **Shared by default** — most logos/icons/illustrations are locale-agnostic; store them **once** and reference from both locales. Do **not** duplicate per locale.
+- **Per-locale only when the image carries text** — a screenshot of localized UI, a diagram with baked-in labels. Then keep one file per locale.
+- **Blog covers are colocated per locale** in `[locale]/blog/_content/{pt,en}/_assets/` — each post belongs to one language, so its cover is per-locale by nature.
+- **External image-CDN / DAM trigger** — reach for one only when the library is large **and** you need on-the-fly transformations; build-time `astro:assets` stops scaling there.
+- **OG images** — static `public/og/og-{pt,en}.png` today; per-locale OG generated at build (Satori / `@vercel/og`) is a documented follow-up, not a launch requirement.
 
 ## Anatomy of a page route
 

@@ -10,9 +10,24 @@ description: Create an Astro component for the landing/blog app (packages/app/as
 
 Creates a server-rendered component for `packages/app/astro/`. Astro components render once at build time (or per-request in SSR) and **emit zero JavaScript** by default. Reach for a React island only when the UI genuinely needs interactivity that can't be done with CSS or progressive enhancement.
 
-## Placement — vertical slice vs shared
+## Placement — colocation under `[locale]/` (Option B)
 
-Components that belong to **one page** live inside that page's vertical slice under `src/pages/_<page>/` (the `_` prefix keeps the folder out of the file router). The landing is the exemplar: `src/pages/_landing/{Landing.astro,sections/*,DotWave.tsx,content/{config.ts,i18n,plans,loaders}}` — components, islands, collection **definition** and **content** all colocated; `src/content.config.ts` only aggregates the slice's re-exported collections, and the route files (`index.astro`, `en/index.astro`) stay thin shells importing the slice's composition root. `src/components/` is reserved for **genuinely shared** components (Nav, Footer, LocaleSwitcher, BlogCard). Boundary rules: shared components may consume a slice's collection by **name + schema** (`getEntry('landing', ...)`) but must never path-import from `_<page>/`; slice files may import shared modules freely. See `src/pages/_landing/README.md` for the worked boundary table.
+Components that belong to **one page** live inside that page's scope, colocated with the route (the `_` prefix keeps the folder out of the file router). The whole site lives under one dynamic `src/pages/[locale]/` tree (`[locale]` is a *literal* on-disk folder — Astro's dynamic segment):
+
+- `[locale]/_components/*.astro` — the page's `.astro` sections + its composition root (`Home.astro`). Composition roots (`Home`, `BlogList`, `BlogPost`) live **in** `_components/`, never loose at the scope root. Imports between sibling sections are **relative** (`./ChatMock.astro`).
+- `[locale]/_islands/*.tsx` — interactive React islands (mounted `client:*`). Reference from a sibling section with a relative import (`../_islands/DotWave.tsx`). No astro/react folder split — `.astro` vs `.tsx` **is** the split.
+- `[locale]/_content/` — the collection **definition** (`config.ts`) + content (`home.pt.json` / `home.en.json`); blog content is per-locale under `[locale]/blog/_content/{pt,en}/`.
+
+`src/components/` is reserved for **genuinely shared, global chrome**: `Nav`, `Footer`, `LocaleSwitcher`. `src/content.config.ts` (repo root of `src/`) only aggregates the colocated collections via glob loaders whose `base` points at the `_content` folders. Route files (`[locale]/index.astro`, `[locale]/blog/index.astro`, …) stay **thin shells** importing the scope's composition root and passing `locale`. Boundary rules: shared chrome may consume a collection by **name + schema** (`getEntry('landing', `home.${locale}`)`) but must never path-import from a page scope; scope files may import shared modules freely.
+
+## Asset policy (ratified)
+
+- **`src/` vs `public/`** — `src/` assets go through `astro:assets` (optimized, content-hashed, cache-busted; use `import` + `<Image>`/`getImage`). `public/` assets are served **raw** at a stable path — favicon, robots, absolute-URL OG PNGs.
+- **Shared by default** — logos/icons/illustrations are usually locale-agnostic: store once, reference from both locales. Never duplicate per locale reflexively.
+- **Per-locale only when the image carries text** — localized-UI screenshots, label-baked diagrams. Then one file per locale.
+- **Blog covers colocated per locale** in `[locale]/blog/_content/{pt,en}/_assets/` — each post is one language, so its cover is per-locale by nature.
+- **External image-CDN / DAM** — only when the library is large **and** needs on-the-fly transforms (build-time `astro:assets` stops scaling); otherwise keep it in-repo.
+- **OG per-locale generated at build** (Satori / `@vercel/og`) is a documented follow-up — static `public/og/og-{pt,en}.png` is the launch default.
 
 ## Core mental model
 

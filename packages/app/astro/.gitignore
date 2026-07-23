@@ -1,0 +1,4 @@
+# Astro generated content cache + type sync — regenerated on every build/sync.
+.astro/
+# Build output.
+dist/

@@ -1,9 +1,13 @@
 ---
 import { getEntry } from 'astro:content'
-import { getLocale } from '~/i18n'
+import type { Locale } from '~/i18n'
 
-const locale = getLocale(Astro.url)
-const entry = await getEntry('landing', `${locale}/landing`)
+interface Props {
+	locale: Locale
+}
+
+const { locale } = Astro.props
+const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
 // Footer GitHub label = nav label minus the external-arrow glyph (single copy source).

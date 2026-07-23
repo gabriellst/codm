@@ -1,0 +1,22 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro'
+import { isLocale, type Locale, LOCALES } from '~/i18n'
+import BlogList from './_components/BlogList.astro'
+
+export function getStaticPaths() {
+	return LOCALES.map(locale => ({ params: { locale } }))
+}
+
+const { locale } = Astro.params as { locale: string }
+if (!isLocale(locale)) return Astro.redirect('/404')
+const loc: Locale = locale
+
+const meta =
+	loc === 'pt'
+		? { title: 'Blog', description: 'Últimas notícias e atualizações.' }
+		: { title: 'Blog', description: 'Latest news and updates.' }
+---
+
+<BaseLayout locale={loc} title={meta.title} description={meta.description}>
+	<BlogList locale={loc} />
+</BaseLayout>

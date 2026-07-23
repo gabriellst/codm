@@ -15,6 +15,9 @@ export default defineConfig({
 				defaultLocale: 'pt',
 				locales: { pt: 'pt-BR', en: 'en-US' },
 			},
+			// `/` is a noindex client-side redirect shell (Option B) — keep it out of
+			// the sitemap; only the localized trees are canonical.
+			filter: page => new URL(page).pathname !== '/',
 		}),
 	],
 	vite: {
@@ -24,6 +27,11 @@ export default defineConfig({
 		defaultLocale: 'pt',
 		locales: ['pt', 'en'],
 		routing: {
+			// Option B routes every locale under a file-based `[locale]/` folder, so we
+			// do NOT use Astro's built-in i18n routing. Keep `prefixDefaultLocale: false`
+			// so Astro does NOT auto-generate its own `/` → `/pt/` redirect template —
+			// that would clobber our hand-written client-side locale-detecting shell at
+			// `src/pages/index.astro` (rule 3: cookie + navigator.language detection).
 			prefixDefaultLocale: false,
 		},
 	},

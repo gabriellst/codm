@@ -1,30 +1,50 @@
 ---
-import { getEntry } from 'astro:content'
-import Landing from '~/pages/_landing/Landing.astro'
-import BaseLayout from '~/layouts/BaseLayout.astro'
+// `/` is a static redirect shell (Option B). There is no unprefixed content —
+// every page lives under `/pt/…` or `/en/…`. Locale detection runs CLIENT-SIDE
+// (cookie → navigator.language → fallback /pt/) because the site is statically
+// output (no SSR). A <meta refresh> + <noscript> link guarantee the fallback
+// even with JS disabled.
+//
+// UPGRADE PATH (documented in BUILD-LOG): move this decision to an edge function
+// / middleware that reads the Accept-Language header + locale cookie at the CDN
+// and issues a 302 before any HTML ships — removing the client-side flash and
+// making the redirect crawlable. Requires switching this route (only) to SSR or
+// deploying an edge redirect rule.
+import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALES } from '~/i18n'
 
-const entry = await getEntry('landing', 'pt/landing')
-const t = entry!.data
-
-const jsonLd = {
-	'@context': 'https://schema.org',
-	'@type': 'SoftwareApplication',
-	name: 'CodeDM',
-	applicationCategory: 'DeveloperApplication',
-	operatingSystem: 'macOS, Windows, Linux',
-	offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-	license: 'https://opensource.org/licenses/MIT',
-	description: t.hero.subtitle,
-	url: Astro.site?.href,
-}
-const ogImage = new URL('/og/og-pt.png', Astro.site).href
+const fallback = `/${DEFAULT_LOCALE}/`
 ---
 
-<BaseLayout
-	title={`CodeDM — ${t.hero.titleBold} ${t.hero.titleLight}`}
-	description={t.hero.subtitle}
-	ogImage={ogImage}
-	jsonLd={jsonLd}
->
-	<Landing locale="pt" />
-</BaseLayout>
+<!doctype html>
+<html lang="pt-BR">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<link rel="canonical" href={fallback} />
+		<meta http-equiv="refresh" content={`0; url=${fallback}`} />
+		<title>CodeDM</title>
+		<script
+			is:inline
+			define:vars={{ locales: LOCALES as unknown as string[], fallback, cookieName: LOCALE_COOKIE }}
+		>
+			;(() => {
+				const match = (list, tag) => {
+					const lower = (tag || '').toLowerCase()
+					for (const loc of list) if (lower === loc || lower.startsWith(loc + '-')) return loc
+					return null
+				}
+				const cookie = document.cookie.match(new RegExp('(?:^|; )' + cookieName + '=([^;]+)'))
+				const fromCookie = cookie && locales.includes(cookie[1]) ? cookie[1] : null
+				const nav = (navigator.languages && navigator.languages[0]) || navigator.language || ''
+				const loc = fromCookie || match(locales, nav)
+				window.location.replace(loc ? '/' + loc + '/' : fallback)
+			})()
+		</script>
+	</head>
+	<body>
+		<noscript>
+			<a href={fallback}>Continuar / Continue</a>
+		</noscript>
+	</body>
+</html>

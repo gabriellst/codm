@@ -1,10 +1,15 @@
 ---
 import { getEntry } from 'astro:content'
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro'
-import { getLocale, routeFor } from '~/i18n'
+import { type Locale, routeFor } from '~/i18n'
 
-const locale = getLocale(Astro.url)
-const entry = await getEntry('landing', `${locale}/landing`)
+interface Props {
+	locale: Locale
+	localeLinks: Partial<Record<Locale, string>>
+}
+
+const { locale, localeLinks } = Astro.props
+const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
 const homeHref = routeFor(locale, '/')
@@ -31,7 +36,7 @@ const pill =
 	{anchors.map(anchor => <a href={anchor.href} class:list={['hidden sm:inline', pill]}>{anchor.label}</a>)}
 	<a href={githubHref} class={pill}>{t.nav.links.github}</a>
 	<a href={blogHref} class={pill}>{t.nav.links.blog}</a>
-	<LocaleSwitcher />
+	<LocaleSwitcher localeLinks={localeLinks} />
 	<a
 		href={downloadHref}
 		class="ml-3 whitespace-nowrap rounded-full bg-[var(--primary)] px-[18px] py-[9px] text-[13px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"

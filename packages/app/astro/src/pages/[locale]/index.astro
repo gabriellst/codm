@@ -1,0 +1,42 @@
+---
+import { getEntry } from 'astro:content'
+import BaseLayout from '~/layouts/BaseLayout.astro'
+import { isLocale, type Locale, LOCALES } from '~/i18n'
+import Home from './_components/Home.astro'
+
+export function getStaticPaths() {
+	return LOCALES.map(locale => ({ params: { locale } }))
+}
+
+const { locale } = Astro.params as { locale: string }
+// Validate the dynamic segment — getStaticPaths only emits pt|en, so this guards
+// against a hand-typed `/fr/` in dev and narrows the type for everything below.
+if (!isLocale(locale)) return Astro.redirect('/404')
+const loc: Locale = locale
+
+const entry = await getEntry('landing', `home.${loc}`)
+const t = entry!.data
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'SoftwareApplication',
+	name: 'CodeDM',
+	applicationCategory: 'DeveloperApplication',
+	operatingSystem: 'macOS, Windows, Linux',
+	offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+	license: 'https://opensource.org/licenses/MIT',
+	description: t.hero.subtitle,
+	url: Astro.url.href,
+}
+const ogImage = new URL(`/og/og-${loc}.png`, Astro.site).href
+---
+
+<BaseLayout
+	locale={loc}
+	title={`CodeDM — ${t.hero.titleBold} ${t.hero.titleLight}`}
+	description={t.hero.subtitle}
+	ogImage={ogImage}
+	jsonLd={jsonLd}
+>
+	<Home locale={loc} />
+</BaseLayout>

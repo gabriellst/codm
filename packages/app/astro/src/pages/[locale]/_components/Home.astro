@@ -1,21 +1,23 @@
 ---
 import { getEntry } from 'astro:content'
-import ClosingCta from '~/pages/_landing/sections/ClosingCta.astro'
-import DemoSection from '~/pages/_landing/sections/DemoSection.astro'
-import FeaturesSection from '~/pages/_landing/sections/FeaturesSection.astro'
-import Hero from '~/pages/_landing/sections/Hero.astro'
-import Marquee from '~/pages/_landing/sections/Marquee.astro'
-import RouterSection from '~/pages/_landing/sections/RouterSection.astro'
 import type { Locale } from '~/i18n'
+import ClosingCta from './ClosingCta.astro'
+import DemoSection from './DemoSection.astro'
+import FeaturesSection from './FeaturesSection.astro'
+import Hero from './Hero.astro'
+import Marquee from './Marquee.astro'
+import RouterSection from './RouterSection.astro'
 
 interface Props {
 	locale: Locale
 }
 
-// Composition root: one getEntry, typed slices down (§4.3). PricingSection is
-// built (landing/PricingSection.astro) but intentionally NOT mounted — D8.
+// Composition root for the home page: one getEntry, typed slices down. Sibling
+// sections live next to this file in `_components/`; the interactive island lives
+// in `../_islands/`. PricingSection is built (PricingSection.astro) but
+// intentionally NOT mounted — D8.
 const { locale } = Astro.props
-const entry = await getEntry('landing', `${locale}/landing`)
+const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
 const githubHref = t.footer.links.github
