@@ -35,44 +35,6 @@ import {
 } from '@codedm/core-typescript'
 import * as schema from '@codedm/contracts/db'
 import { migrationsDir } from '@codedm/contracts/db/migrations'
-import { Client } from '@codedm/client-typescript'
-import type { RequestConfig, ResponseConfig } from '@codedm/client-typescript/http'
-
-/**
- * Test request stub for the SDK `Client`. The generated operations call
- * `client(config)` and expect a `{ data, status, statusText }` envelope;
- * for hermetic mock/integration tests we short-circuit with an empty 204
- * so cross-service calls never touch the network. Real mode uses the
- * default ky transport via the configured base URLs.
- */
-const stubRequest = async <TData>(_config: RequestConfig): Promise<ResponseConfig<TData>> => ({
-	data: undefined as TData,
-	status: 204,
-	statusText: 'No Content',
-})
-
-function mockSdkClient(): Client {
-	const fetchStub = stubRequest as unknown as typeof fetch
-	return Client.create({
-		go: { baseUrl: 'http://stub.local', fetch: fetchStub },
-		typescript: { baseUrl: 'http://stub.local', fetch: fetchStub },
-	})
-}
-
-function realSdkClient(): Client {
-	return Client.create({
-		// The kernel Config has no GO_* topology key yet (the first Go BC landed in parallel);
-		// until the kernel env seam grows one, mirror .env.example's API_GO_PORT default.
-		go: { baseUrl: Config.env.API_GO_URL },
-		typescript: { baseUrl: Config.env.API_URL },
-	})
-}
-
-// `Client` has a private constructor (built via `Client.create`), so the class
-// object isn't directly assignable to RegistryToken's `abstract new (...)`.
-// The runtime reference is still the DI key use cases resolve by type, so cast
-// it to a usable token shape — same object, satisfies the registry typing.
-const ClientToken = Client as unknown as abstract new (...args: any[]) => Client
 
 import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
@@ -153,7 +115,6 @@ const realExternalMediator = process.env.CODEDM_E2E === 'true' ? EventEmitter2Me
 
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
 const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }
-const stubSdkClient = { useFactory: () => mockSdkClient() }
 
 // Kernel bindings — one declaration per token, envs as columns (divergence is visible, absence is
 // a declared null, `integration` omitted mirrors `real`).
@@ -199,8 +160,6 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// In-memory queue in tests; Postgres-backed in production (origin-faithful: medscall runs the
 	// Postgres poller — no broker dependency).
 	{ token: CommandQueue, mock: MockCommandQueue, real: PostgresCommandQueue },
-	// Hermetic SDK client stub outside real (no network in tests) — see stubRequest above.
-	{ token: ClientToken, mock: stubSdkClient, integration: stubSdkClient, real: { useFactory: () => realSdkClient() } },
 ])
 
 // One entry PER CONTEXT, compile-checked against the CONTEXTS spine — forgetting a context here is

@@ -832,24 +832,6 @@ func (e ProviderStatus) Valid() bool {
 	}
 }
 
-// Defines values for Refresh.
-const (
-	False Refresh = "false"
-	True  Refresh = "true"
-)
-
-// Valid indicates whether the value is a known member of the Refresh enum.
-func (e Refresh) Valid() bool {
-	switch e {
-	case False:
-		return true
-	case True:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SenderIdentity.
 const (
 	AGENT    SenderIdentity = "AGENT"
@@ -1063,9 +1045,6 @@ type ProviderKind string
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
 
-// Refresh defines model for Refresh.
-type Refresh string
-
 // SenderIdentity defines model for SenderIdentity.
 type SenderIdentity string
 
@@ -1135,7 +1114,7 @@ type ResolveStopJSONBody struct {
 
 // DetectProvidersParams defines parameters for DetectProviders.
 type DetectProvidersParams struct {
-	Refresh *Refresh `form:"refresh,omitempty" json:"refresh,omitempty"`
+	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
 
 // AttachThreadJSONBody defines parameters for AttachThread.
@@ -2896,7 +2875,7 @@ func NewDetectProvidersRequest(server string, params *DetectProvidersParams) (*h
 
 		if params.Refresh != nil {
 
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refresh", *params.Refresh, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "refresh", *params.Refresh, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {

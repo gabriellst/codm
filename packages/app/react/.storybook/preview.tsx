@@ -4,6 +4,7 @@ import type { Preview } from '@storybook/react'
 import { configureClient } from '@codedm/client-typescript/http'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 import i18n from '../src/lib/i18n'
+import { serviceBaseUrls } from '../src/lib/config'
 import { withConnected } from '../src/storybook'
 import '../src/index.css'
 
@@ -12,7 +13,7 @@ import '../src/index.css'
 // the client is unconfigured and resolveURL returns paths relative to the Storybook origin (:6006) —
 // which is the correct default for mock-driven stories. Mocked stories still intercept regardless.
 const apiUrl = import.meta.env.VITE_API_URL
-if (apiUrl) configureClient({ typescript: apiUrl, go: apiUrl, rust: apiUrl })
+if (apiUrl) configureClient(serviceBaseUrls)
 
 // Start the MSW worker once for all stories. Unhandled requests pass through so non-mocked
 // stories are unaffected; stories opt into network mocking via `parameters.msw.handlers`.

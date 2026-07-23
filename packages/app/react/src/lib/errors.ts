@@ -1,18 +1,21 @@
 import { toast } from 'sonner'
-import { ApiErrorsEnum } from '@codedm/client-typescript/typescript'
+import { ERROR_CODES } from '@codedm/client-typescript/error-codes'
 import i18n from './i18n'
 
-// Frontend-only error codes that the API doesn't emit.
+// Frontend-only error codes that no backend emits.
 const frontendErrorsEnum = {
 	NETWORK_ERROR: 'NETWORK_ERROR',
 	UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 	SESSION_EXPIRED: 'SESSION_EXPIRED',
 } as const
 
-// Closed set of known error codes — anything else is treated as a free-form
-// message (e.g. an already-translated zod default) and rendered as-is.
+// Closed set of known error codes — the CROSS-BACKEND union (openapi x-error-codes of every
+// service, generated at @codedm/client-typescript/error-codes — the same union the locales gate
+// checks) + the frontend-only codes. Anything else is treated as a free-form message (e.g. an
+// already-translated zod default) and rendered as-is. NEVER the per-service ApiErrorsEnum: that
+// blinds the console to every other backend's vocabulary.
 export const errorsEnum = {
-	...ApiErrorsEnum,
+	...(Object.fromEntries(ERROR_CODES.map(code => [code, code])) as { [K in (typeof ERROR_CODES)[number]]: K }),
 	...frontendErrorsEnum,
 } as const
 

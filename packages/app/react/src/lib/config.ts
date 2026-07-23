@@ -12,3 +12,13 @@ export const Config = {
 	 */
 	gatewayBaseUrl: `${baseUrl}/v1/external/channel`,
 } as const
+
+/**
+ * The CANONICAL per-service SDK base-url map — the one registry every `configureClient` call site
+ * (router, storybook preview) spreads. Keys are the generated client subpaths; `go` rides the
+ * ChannelProxy shape (see Config.gatewayBaseUrl), never :3032 directly.
+ */
+export const serviceBaseUrls = {
+	typescript: Config.baseUrl,
+	go: Config.gatewayBaseUrl,
+} as const

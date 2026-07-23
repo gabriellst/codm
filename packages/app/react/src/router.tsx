@@ -1,7 +1,7 @@
 import { configureClient } from '@codedm/client-typescript/http'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
-import { Config, configureZod, handleApiError } from './lib'
+import { configureZod, handleApiError, serviceBaseUrls } from './lib'
 import { routeTree } from './routeTree.gen'
 
 configureZod()
@@ -10,11 +10,7 @@ configureZod()
 // resolves through this ONE registry (`createClient('<service>')` in the generated `_http.ts`), so
 // declaring the URL here IS the per-service declaration. `go` — the gateway — points at the api-ts
 // external/ChannelProxy route, never at :3032 directly (see Config.gatewayBaseUrl).
-configureClient({
-	typescript: Config.baseUrl,
-	rust: Config.baseUrl,
-	go: Config.gatewayBaseUrl,
-})
+configureClient(serviceBaseUrls)
 
 export function getRouter() {
 	const queryClient = new QueryClient({
