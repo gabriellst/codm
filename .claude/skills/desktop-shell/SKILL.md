@@ -58,55 +58,61 @@ The react console NEVER knows the tauri surface. `packages/app/react/src/service
 small DI container (the frontend analogue of the backend's per-context `registry.ts →
 InstanceRegistry → child container`, minus tsyringe/decorators — reflect-metadata is
 friction under Vite and a code-split hazard) organized as **ports → platform services →
-environment registration → composition-root injection**:
+declarative per-env registry → composition-root injection**:
 
 ```
 services/
 ├── core/
 │   ├── token.ts         # Token<T> = { key: symbol; _t?: T }; token(desc) mints one
-│   └── container.ts     # Container: #factories + #cache; register / resolve (SINGLETON default, throws naming the token)
+│   └── container.ts     # Container: #bindings + #cache; load(bindings) / resolve — SINGLETON default,
+│   │                    #   RECURSIVE static deps, `new` lives ONLY here, throws naming the token (unbound + cycle).
+│   │                    #   Exports type Ctor + type Bindings = readonly [Token, Class][]
 ├── tokens.ts            # one token per port: FilePickerToken, NotificationToken, …
 ├── <Cap>Service/        # colocated per capability:
 │   ├── <Cap>Service.ts  #   the PORT (pure-type interface)
 │   ├── Tauri<Cap>Service.ts   # tauri impl — the ONLY concrete-class home (+ browser)
 │   └── Browser<Cap>Service.ts # browser impl — HONEST degradation
-├── environments/        # the code-split lives here (lazy dynamic import):
-│   ├── browser.ts       #   registerBrowser(c) — the ONLY place `new Browser*Service()` is legal
-│   ├── tauri.ts         #   registerTauri(c)   — the ONLY place `new Tauri*Service()` is legal
-│   ├── test.ts          #   registerTest(c) + Fake*Service (backend `mock`-env analogue)
-│   └── index.ts         #   Environment, ENVIRONMENTS (import('./browser'|'./tauri')), detectEnvironment
+├── registry/            # DECLARATIVE `[Token, Class]` records, ZERO `new` (code-split lives here):
+│   ├── browser.ts       #   default export: Bindings of Browser*Service class references
+│   ├── tauri.ts         #   default export: Bindings of Tauri*Service class references
+│   ├── test.ts          #   default export: Bindings of Fake*Service + the Fake classes (backend `mock`-env analogue)
+│   └── index.ts         #   Environment, ENVIRONMENTS (import('./browser'|'./tauri') → default), detectEnvironment
 ├── utils/tauri/         # invoke.ts (the ONE window.__TAURI__ touchpoint) + isTauri.ts
 ├── providers/
-│   └── ServicesProvider.tsx  # owns the Container; detect → dynamic-import env → register → context (splash while loading)
+│   └── ServicesProvider.tsx  # owns the Container; detect → dynamic-import env record → container.load → context (splash while loading)
 ├── hooks/index.ts       # useService(Token) + typed hooks (useFilePicker, useNotification, …)
-└── index.ts             # public surface: ServicesProvider, hooks, tokens, port types
+└── index.ts             # public surface: ServicesProvider, hooks, tokens, port types, Bindings/Ctor
 ```
 
 - **Ports**: each `<Cap>Service/<Cap>Service.ts` holds pure types only — no platform SDK, no
   react. The ports are the future `@codedm/native-contract` package: an **expo app implements
-  the same ports** (colocated `Expo<Cap>Service` + an `environments/expo.ts`) against identical
+  the same ports** (colocated `Expo<Cap>Service` + a `registry/expo.ts`) against identical
   types; extraction is a verbatim move once a second consumer exists.
-- **Services**: one concrete class per port per platform. Tauri services go through
-  `utils/tauri/invoke.ts`; the permissions each needs are DECLARED in `REPO.desktop.services`
-  (capabilities JSON is generated — never hand-edit it).
+- **Services**: one concrete class per port per platform, constructed ONLY by the Container.
+  A service with a dependency declares `static deps = [OtherToken] as const` and the Container
+  resolves + injects it recursively — no factory closures, no `new` in the registry. Tauri
+  services go through `utils/tauri/invoke.ts`; the permissions each needs are DECLARED in
+  `REPO.desktop.services` (capabilities JSON is generated — never hand-edit it).
 - **DI**: `ServicesProvider` mounts at the composition root (`routes/__root.tsx`), calls
-  `detectEnvironment()` once, DYNAMIC-imports that env's register fn (the browser entry never
-  fetches the tauri chunk — that async boundary is the code-split), builds a `Container`,
-  registers, and publishes it on context (splash while loading). Components consume ports via
-  `useService(Token)` / the typed hooks — never an environment or a `*Service` class.
-  Tests/storybook inject a ready Container (built from `environments/test.ts` fakes) through
-  the `container` prop (see `ServicesProvider.test.tsx` — the DI proof runs with zero tauri).
+  `detectEnvironment()` once, DYNAMIC-imports that env's DECLARATIVE bindings record (the browser
+  entry never fetches the tauri chunk — that async boundary is the code-split), builds a
+  `Container`, `load`s the record, and publishes it on context (splash while loading). Components
+  consume ports via `useService(Token)` / the typed hooks — never an environment or a `*Service`
+  class. Tests/storybook inject a ready Container (`c.load(testBindings)` from `registry/test.ts`
+  fakes) through the `container` prop (see `ServicesProvider.test.tsx` — DI proof, zero tauri).
 
 ## Direction rules (non-negotiable)
 
 - **tauri → react**: build config only (`devUrl`/`frontendDist` + nx `dependsOn`
   `app-react:build-spa`). The shell never imports console source.
 - **react → tauri**: only through the tauri touchpoints — `services/**/Tauri*Service.ts`,
-  `services/environments/tauri.ts`, `services/utils/tauri/`. `@tauri-apps/*` (or
+  `services/registry/tauri.ts`, `services/utils/tauri/`. `@tauri-apps/*` (or
   `window.__TAURI__`) anywhere else — including the ports and the browser services — is an
   eslint error (`no-restricted-imports` block in the root `eslint.config.ts`).
-- **`new *Service()` only inside an `environments/` register fn** (the composition root) —
-  never in a component, hook, or the provider.
+- **`new <Something>Service` appears NOWHERE by hand** — the registry is declarative class
+  references and the Container's generic `new K(...)` in `resolve` is the single construction
+  site. Never `new` a service in a component, hook, the provider, the registry, or a test
+  (seed a fake with a tiny `class Seeded extends Fake…` subclass instead).
 - **UI never branches on the host.** If a screen needs "desktop-only" behavior, add a
   capability to the relevant port (or a new port) and let the UI branch on what the port
   REPORTS (`supportsFolderPicker()`), degrading honestly in the browser services — never
@@ -128,13 +134,15 @@ are the two readiness URLs + platform service bindings; the console does not mov
    in `src-tauri/src/lib.rs`. Declare the permissions in `REPO.desktop.services` +
    `bun desktop:generate` (+ plugin in `Cargo.toml`/`lib.rs` if new).
 3. Implement `Browser<Cap>Service` colocated in `services/<Cap>Service/` — never fake success.
-4. Register both in `environments/tauri.ts` and `environments/browser.ts`
-   (`c.register(<Cap>Token, () => new <Plat><Cap>Service())`) and add a `Fake<Cap>Service` +
-   `registerTest` binding in `environments/test.ts`; expose a `use<Cap>()` hook in `hooks/`.
+4. Add the `[<Cap>Token, <Plat><Cap>Service]` pair to the DECLARATIVE record in
+   `registry/tauri.ts` and `registry/browser.ts` (class references, ZERO `new`), and a
+   `[<Cap>Token, Fake<Cap>Service]` pair + the `Fake<Cap>Service` class in `registry/test.ts`;
+   expose a `use<Cap>()` hook in `hooks/`.
 5. Consume the port in the component that owns the interaction (via the typed hook),
    branching only on reported capability.
-6. Prove the flow with a fake injected through a test `Container`
-   (`registerTest(c)` + a token override) passed to `ServicesProvider container={...}`.
+6. Prove the flow with a fake bound through a test `Container`
+   (`c.load(testBindings)` + a one-entry `[<Cap>Token, SeededFake]` override) passed to
+   `ServicesProvider container={...}`.
 
 ## Commands
 

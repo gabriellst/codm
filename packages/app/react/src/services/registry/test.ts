@@ -1,4 +1,4 @@
-import type { Container } from '../core/container'
+import type { Bindings } from '../core/container'
 import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
@@ -10,11 +10,18 @@ import type { SecretsService } from '../SecretsService/SecretsService'
 /**
  * Test composition root — in-memory fakes, no host present. The frontend analogue
  * of the backend's `mock` env (MockUnitOfWorkFactory & friends): a Container +
- * registerTest gives a suite the exact DI wiring the app uses, and a test overrides
- * any single token (e.g. FilePickerToken) with a purpose-built fake before resolving.
+ * the default bindings below gives a suite the exact DI wiring the app uses, and a
+ * test overrides any single token (e.g. FilePickerToken) with a purpose-built fake
+ * by `load`-ing a one-entry record after the defaults.
  *
- * NOT in ENVIRONMENTS — `detectEnvironment` never picks it; tests import it directly,
- * mirroring how the backend picks `mock`/`integration` explicitly per suite.
+ * NOT in ENVIRONMENTS — `detectEnvironment` never picks it; tests import the default
+ * bindings directly, mirroring how the backend picks `mock`/`integration` explicitly.
+ *
+ * DECLARATIVE like the other envs: the default export is a `[Token, Class]` record,
+ * ZERO `new` (the Container constructs). The Fakes take OPTIONAL ctor args (seed
+ * values) so the default `new Fake()` is valid; a test that needs a seeded fake binds
+ * a tiny seeded subclass — `class SeededPicker extends FakeFilePickerService { constructor(){ super('/seed') } }`
+ * — via a one-entry `load`, keeping `new` out of the test too (see ServicesProvider.test.tsx).
  */
 
 export class FakeFilePickerService implements FilePickerService {
@@ -81,11 +88,11 @@ export class FakeHostInfoService implements HostInfoService {
 	}
 }
 
-export const registerTest = (c: Container): void => {
-	c.register(FilePickerToken, () => new FakeFilePickerService())
-	c.register(NotificationToken, () => new FakeNotificationService())
-	c.register(BadgeToken, () => new FakeBadgeService())
-	c.register(SecretsToken, () => new FakeSecretsService())
-	c.register(AutostartToken, () => new FakeAutostartService())
-	c.register(HostInfoToken, () => new FakeHostInfoService())
-}
+export default [
+	[FilePickerToken, FakeFilePickerService],
+	[NotificationToken, FakeNotificationService],
+	[BadgeToken, FakeBadgeService],
+	[SecretsToken, FakeSecretsService],
+	[AutostartToken, FakeAutostartService],
+	[HostInfoToken, FakeHostInfoService],
+] as const satisfies Bindings

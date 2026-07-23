@@ -4,18 +4,18 @@
  * just native ones). Mounted once in routes/__root.tsx.
  *
  * Bootstrap: pick the environment ONCE (`detectEnvironment`), DYNAMIC-import that
- * env's register fn (the code-split seam — the browser entry never fetches the
- * tauri chunk), build a fresh Container, register, and publish it on context.
- * While that async load is in flight the tree shows a splash — the analogue of
- * the backend resolving its per-env InstanceRegistry before serving.
+ * env's DECLARATIVE bindings record (the code-split seam — the browser entry never
+ * fetches the tauri chunk), build a fresh Container, `load` the record, and publish
+ * it on context. While that async load is in flight the tree shows a splash — the
+ * analogue of the backend resolving its per-env InstanceRegistry before serving.
  *
  * Tests/storybook inject a ready Container through the `container` prop (built from
- * environments/test.ts fakes) — that override is the DI seam that proves the console
- * runs against any binding with zero host present (see ServicesProvider.test.tsx).
+ * registry/test.ts fakes) — that override is the DI seam that proves the console runs
+ * against any binding with zero host present (see ServicesProvider.test.tsx).
  */
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
 import { Container } from '../core/container'
-import { detectEnvironment, ENVIRONMENTS } from '../environments'
+import { detectEnvironment, ENVIRONMENTS } from '../registry'
 
 const ContainerContext = createContext<Container | null>(null)
 
@@ -26,10 +26,10 @@ export function ServicesProvider({ children, container: injected }: { children: 
 		if (injected) return
 		let cancelled = false
 		const env = detectEnvironment()
-		ENVIRONMENTS[env]().then(register => {
+		ENVIRONMENTS[env]().then(bindings => {
 			if (cancelled) return
 			const built = new Container()
-			register(built)
+			built.load(bindings)
 			setContainer(built)
 		})
 		return () => {

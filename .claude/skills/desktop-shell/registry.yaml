@@ -9,13 +9,13 @@ registry:
     - id: DSK-01
       name: "Ports consumed via DI, bound once"
       when: always
-      rule: "React code consumes OS capabilities via the service ports — useService(Token) / typed hooks (useFilePicker, useNotification, …) from '@/services', resolved from the DI Container. The environment is detected and bound ONCE by ServicesProvider at the composition root (routes/__root.tsx) via dynamic import of environments/<env>."
-      wrong: "importing an environment (environments/tauri) or a Tauri*Service directly, calling window.__TAURI__ outside services/utils/tauri, or module-level platform selection in a component"
+      rule: "React code consumes OS capabilities via the service ports — useService(Token) / typed hooks (useFilePicker, useNotification, …) from '@/services', resolved from the DI Container. The environment is detected and bound ONCE by ServicesProvider at the composition root (routes/__root.tsx) via dynamic import of the declarative registry/<env> bindings record (container.load)."
+      wrong: "importing a registry env record (registry/tauri) or a Tauri*Service directly, calling window.__TAURI__ outside services/utils/tauri, or module-level platform selection in a component"
     - id: DSK-02
       name: "Capability = port + platform services + declared permissions"
       when: "the console needs a new OS integration"
-      rule: "Declare the port in services/<Capability>Service/<Capability>Service.ts (pure types, promise-based), add a token in services/tokens.ts, implement Tauri<Cap>Service AND Browser<Cap>Service colocated, register both in environments/{tauri,browser}.ts (+ a Fake in environments/test.ts), declare tauri permissions in REPO.desktop.services (+ bun desktop:generate), expose a typed hook, consume via the hook."
-      wrong: "ad-hoc invoke() call sites sprinkled through components, `new *Service()` outside an environments/ register fn, or hand-editing capabilities/default.json"
+      rule: "Declare the port in services/<Capability>Service/<Capability>Service.ts (pure types, promise-based), add a token in services/tokens.ts, implement Tauri<Cap>Service AND Browser<Cap>Service colocated, add the [Token, Class] pair to the declarative record in registry/{tauri,browser}.ts (+ a Fake pair in registry/test.ts), declare tauri permissions in REPO.desktop.services (+ bun desktop:generate), expose a typed hook, consume via the hook."
+      wrong: "ad-hoc invoke() call sites sprinkled through components, a hand-written `new *Service()` anywhere (the Container is the only construction site), or hand-editing capabilities/default.json"
     - id: DSK-03
       name: "Honest browser degradation"
       when: always
@@ -38,13 +38,13 @@ registry:
     - id: DSK-07
       name: "Ports stay platform-pure (future expo home)"
       when: always
-      rule: "Each services/<Cap>Service/<Cap>Service.ts port holds pure types only — no platform SDK, no react, no DOM globals. The ports are the future @codedm/native-contract package: an expo host implements the same ports (colocated Expo<Cap>Service + an environments/expo.ts) against identical types."
+      rule: "Each services/<Cap>Service/<Cap>Service.ts port holds pure types only — no platform SDK, no react, no DOM globals. The ports are the future @codedm/native-contract package: an expo host implements the same ports (colocated Expo<Cap>Service + a registry/expo.ts record) against identical types."
       wrong: "importing @tauri-apps types (or react) inside a port file, or leaking a platform type through a port signature"
 
   bad_practices:
     - id: bp-01
       name: "@tauri-apps/* outside the tauri touchpoints"
-      rule: "The shell API is quarantined to the tauri touchpoints — services/**/Tauri*Service.ts, services/environments/tauri.ts, services/utils/tauri/ — eslint no-restricted-imports enforces it repo-wide (ports and Browser*Service included)."
+      rule: "The shell API is quarantined to the tauri touchpoints — services/**/Tauri*Service.ts, services/registry/tauri.ts, services/utils/tauri/ — eslint no-restricted-imports enforces it repo-wide (ports and Browser*Service included)."
       wrong: "import { open } from '@tauri-apps/plugin-dialog' inside a component"
       right: "const filePicker = useFilePicker(); const path = await filePicker.pickFolder()"
       mechanical: true
@@ -68,9 +68,9 @@ registry:
       mechanical: false
     - id: bp-05
       name: "Untestable native consumption"
-      rule: "Flows that use a port must be provable with a fake injected via a test Container (registerTest + a token override) passed to ServicesProvider container={...} — no tauri required to test the DI (see ServicesProvider.test.tsx)."
-      wrong: "component reaching an environment/Tauri*Service directly, so the flow only runs inside the desktop shell"
-      right: "const c = new Container(); registerTest(c); c.register(FilePickerToken, () => fake); renderToString(<ServicesProvider container={c}>…</ServicesProvider>) exercising the flow against a FakeFilePickerService"
+      rule: "Flows that use a port must be provable with a fake bound via a test Container (c.load(testBindings) + a one-entry [Token, SeededFake] override) passed to ServicesProvider container={...} — no tauri required to test the DI (see ServicesProvider.test.tsx)."
+      wrong: "component reaching a registry env record/Tauri*Service directly, so the flow only runs inside the desktop shell"
+      right: "class SeededPicker extends FakeFilePickerService { constructor(){ super('/path') } } const c = new Container(); c.load(testBindings); c.load([[FilePickerToken, SeededPicker]]); renderToString(<ServicesProvider container={c}>…</ServicesProvider>) exercising the flow against the fake"
       mechanical: false
 
   canonical_snippet: |

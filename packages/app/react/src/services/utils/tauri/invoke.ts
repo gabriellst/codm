@@ -6,7 +6,7 @@
  * bundle stays host-agnostic: no desktop-only dependency in the browser build.
  *
  * If this ever migrates to `@tauri-apps/api` imports, they are legal ONLY under
- * services/utils/tauri/, the Tauri*Service.ts files, and services/environments/tauri.ts
+ * services/utils/tauri/, the Tauri*Service.ts files, and services/registry/tauri.ts
  * (eslint `no-restricted-imports`, root config — see .claude/skills/desktop-shell/SKILL.md).
  */
 

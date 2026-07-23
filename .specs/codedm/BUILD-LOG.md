@@ -401,6 +401,44 @@ Fechamento do WIP parkeado do founder (`8a53c348`/`f99497d2`): o skeleton `src/s
 
 ---
 
+## FRONTEND DI — obs2 REVISÃO ratificada: records DECLARATIVOS + resolução recursiva (23 jul)
+
+O founder **ratificou uma revisão** do DI shipado na obs2 (`3862d0ce`): os environments eram **imperativos** (`registerBrowser(c){ c.register(Token, () => new X()) }`) com `new` espalhado por cada composition root. A revisão troca isso por **records DECLARATIVOS por-env + resolução recursiva**, com `new` de implementação confinado a UM único site (o `new K(...)` genérico do container). Design aplicado exatamente como ratificado.
+
+**1. CONTAINER — `load(bindings)` + `resolve` recursivo.** `services/core/container.ts` troca `register(token, factory)`/`#factories` por `load(bindings: Iterable<[Token, Ctor]>)`/`#bindings: Map<symbol, Ctor>` — o container guarda **a classe**, não uma closure. `resolve<T>` lê `K.deps ?? []` (o `static deps` da classe), **resolve cada dep recursivamente** e faz `new K(...deps)` — o **único `new` de implementação** do sistema. Mantém SINGLETON via `#cache` (mesma instância por token/lifetime). Ganha guarda de **ciclo** via `#resolving: Set<symbol>` → `throw "Dependência circular: …"` (nomeando o token) em vez de estourar a stack; unbound continua `throw "Sem binding para …"` nomeando o token. Exporta `type Ctor = (new (...args:any[]) => unknown) & { deps?: readonly Token[] }` (o `any[]` é deliberado — deixa uma classe de ctor TIPADO caber num tipo de ctor uniforme; `unknown[]` quebraria sob strictFunctionTypes) + `type Bindings = readonly (readonly [Token<unknown>, Ctor])[]` (o lugar compartilhado do shape). `container.test.ts` **6/6**: load+resolve constrói instância da classe; singleton (ctor 1×); **resolução recursiva de `static deps`** (fixture `Car { static deps=[EngineToken] }` → engine injetada é o MESMO singleton); throw-nomeando-unbound; **throw-ciclo** (`A.deps=[B], B.deps=[A]` → `/circular/i`); isolamento entre 2 containers.
+
+**2. RECORDS DECLARATIVOS + rename `environments/` → `registry/`** (casa com o `registry.ts` do backend; `git mv` preservou história). Cada `registry/{browser,tauri,test}.ts` é **DEFAULT-EXPORT de um array `[Token, Classe] as const satisfies Bindings`** — **ZERO `new`, ZERO `registerX`, só referências de classe**. `browser.ts` → as 6 `Browser*Service`; `tauri.ts` → as 6 `Tauri*Service`; `test.ts` → as 6 `Fake*Service` (as classes Fake continuam exportadas p/ os testes; sumiu o `registerTest`). Serviços folha continuam sem deps; o header documenta o padrão: **se um serviço passar a depender de outro, declara `static deps = [OutroToken] as const`** e o container faz o wiring recursivo — o record continua uma lista chata de classes.
+
+**3. INDEX lazy (code-split PRESERVADO).** `registry/index.ts` → `ENVIRONMENTS: Record<Environment, () => Promise<Bindings>>` = `{ browser: () => import('./browser').then(m => m.default), tauri: idem }` (o `.default` é o record). `detectEnvironment` inalterado (`VITE_FORCE_ENV ?? isTauri`). `test` segue **fora** do `ENVIRONMENTS`.
+
+**4. PROVIDER.** `ServicesProvider` bootstrap: `detectEnvironment()` → `const bindings = await ENVIRONMENTS[env]()` → `new Container(); c.load(bindings)` → context (splash enquanto carrega); prop `container` mantida p/ injeção nos testes.
+
+**5. TESTES rewired sem `new *Service`.** `ServicesProvider.test.tsx` **5/5**: `c.load(testBindings)` + override de token via `[[FilePickerToken, SeededPicker]]`, onde `SeededPicker extends FakeFilePickerService { constructor(){ super('/path') } }` — o **fake semeado nasce de uma subclasse construída pelo container**, mantendo `new *Service` fora do teste também. Identidade agora prova "hook resolve o MESMO singleton que `container.resolve`"; fluxo AddWorkspace + honest-null preservados. `bun test src/services` **11/11** (6 container + 5 provider).
+
+**6. SEAM + skill repontados.** `eslint.config.ts`: o ignore path do tauri touchpoint `services/environments/tauri.ts` → `services/registry/tauri.ts` (3 ocorrências: comentário + ignore + mensagem). Skill `desktop-shell` (SKILL.md + registry.yaml) repontada em peso: árvore `environments/` → `registry/` declarativa, `container.ts` `#bindings`+`load`+recursão+`Ctor`/`Bindings`, "adding a capability" agora ADICIONA um par `[Token, Class]` ao record (não `register(…, () => new …)`), bp-05 e o snippet de teste usam `c.load(testBindings)` + subclasse semeada. Grep audit: **zero `new [A-Za-z]*Service` literais em TODA a `src`** (o único `new` de impl é o `new K(...)` do resolve), **zero `registerX` vivo**, **zero `environments` vivo** (dir renomeado + comentários repontados).
+
+**Paridade com o backend (atualizada — o motivo do design revisado):**
+
+| Backend (api-ts, por contexto) | Frontend (app-react, `src/services`) |
+|---|---|
+| `RegistryToken` (abstract class / string) | `Token<T>` (`symbol` + phantom `_t`) |
+| tsyringe child container | `Container` (`#bindings` + `#cache` + `#resolving`, decorator-free) |
+| `registerSingleton` (default) | singleton via `#cache` no `resolve` (default) |
+| `container.resolve(Token)` | `container.resolve(token)` (deps recursivas via `static deps`) |
+| `InstanceRegistry { mock, integration, real }` | `registry { test, browser, tauri }` (records `[Token, Class]`) |
+| `expandBindings([...])` DECLARATIVO no `registry.ts` | `[Token, Class] as const satisfies Bindings` por env |
+| `@injectable` + ctor deps resolvidas pelo container | `static deps = [Token] as const` + `new K(...deps)` recursivo |
+| env escolhido por TestBed / bootstrap mode | `detectEnvironment()` (`VITE_FORCE_ENV ?? isTauri`) |
+| `BoundedContext.create` lê `INSTANCE_REGISTRY[env]` | `ServicesProvider` faz `container.load(await ENVIRONMENTS[env]())` |
+| child container por suite de teste | `new Container()` por teste / bootstrap |
+| `MockX` bindings | `Fake*Service` (`registry/test.ts`) |
+
+**Gates (exit codes):** `app-react:tsc` **0** · `app-react:build` **0** (7.82s; **code-split PROVADO** — chunk async **nomeado** `tauri-B1Y1PF5p.js` 1216 B é o ÚNICO com `plugin:dialog|open`/`secret_get`/`pickFolder`; `browser-DTAM76ON.js` 841 B separado; o entry `index-B1BASm6N.js` 840 KB **referencia ambos por filename** (dynamic import) + carrega `isTauri`/`__TAURI__` estático mas **inlineia ZERO** comando runtime tauri) · `app-react:lint` **0** (seam rule repontado p/ `registry/tauri.ts`) · `bun test src/services` **11/11** (Container 6 + ServicesProvider 5) · root `bun tsc` **7/7 verdes** · `test:tooling` **290/0** · `bun sdk` **2× diff 0** · `bun env:generate --check` **0** · **e2e 5 passed / 2 skipped** (`06-onboarding-attach`/AddWorkspace não regride) · grep audits: **zero `new *Service` literal fora do `new K` do container**, **zero `registerX`/`environments` vivo** · `git diff --stat -- packages/api/go packages/app/astro` **vazio** (obs1/obs3 intocadas). **Sem `--no-verify`** — todos os gates verdes à máquina.
+
+**CANDIDATO A UPSTREAM (template-fullstack):** o DI revisado — container `load`/`resolve` recursivo com `static deps` + records `[Token, Class]` declarativos por-env (lazy dynamic-import = code-split) + `new` num único site — é ainda mais fiel à DI do backend (bindings declarativos, deps resolvidas pelo container, zero factory boilerplate) e sobe pro template no lugar da versão imperativa da obs2, junto do padrão nativo/`REPO.desktop`.
+
+---
+
 ## ASTRO RESTRUCTURE — obs3: Opção B (`[locale]/` dinâmico) + blog i18n rico + política de assets (23 jul)
 
 Fechamento do WIP parkeado do founder (`8a53c348`) no `packages/app/astro`. O tree estava **vermelho e meio-migrado**: `content.config.ts` importava `~/pages/_landing/content/config` e `Landing.astro`/sections importavam `~/pages/_landing/sections/*` — pastas **que nunca existiram no disco** (o founder renomeou-para na cabeça, não no FS). obs3 transformou o WIP na estrutura ratificada **Opção B** e a deixou verde. Zero arquivo de obs1 (`api/go`) ou obs2 (`app/react/src/services`) tocado.

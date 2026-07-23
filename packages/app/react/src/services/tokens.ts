@@ -1,7 +1,7 @@
 /**
- * One typed token per native-capability PORT. Tokens are the DI keys the
- * environments bind and the hooks resolve — the frontend analogue of the
- * backend's abstract-class tokens in each context's registry.ts.
+ * One typed token per native-capability PORT. Tokens are the DI keys the per-env
+ * registry records bind (to classes) and the hooks resolve — the frontend analogue
+ * of the backend's abstract-class tokens in each context's registry.ts.
  */
 import { token } from './core/token'
 import type { AutostartService } from './AutostartService/AutostartService'

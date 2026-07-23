@@ -1,7 +1,7 @@
 /**
  * OS file-picker capability — folder/file pickers. PORT (interface) only: platform
  * implementations are the colocated {Tauri,Browser}FilePickerService in this folder,
- * bound per environment in services/environments and injected by the ServicesProvider.
+ * bound per environment in services/registry and injected by the ServicesProvider.
  */
 export interface FilePickerService {
 	/**

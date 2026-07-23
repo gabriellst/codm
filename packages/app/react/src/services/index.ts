@@ -8,14 +8,15 @@
  *   core/         Container + Token (decorator-free DI primitives)
  *   tokens.ts     one token per port
  *   <Name>Service/  port interface + {Tauri,Browser}<Name>Service impls (colocated)
- *   environments/ per-env registration (browser | tauri | test) — the ONLY `new *Service()`
+ *   registry/     per-env DECLARATIVE `[Token, Class]` records (browser | tauri | test) — ZERO `new`
  *   providers/    ServicesProvider (composition root)
  *   hooks/        useService + typed capability hooks
  */
 export { Container } from './core/container'
+export type { Bindings, Ctor } from './core/container'
 export type { Token } from './core/token'
-export type { Environment } from './environments'
-export { detectEnvironment, ENVIRONMENTS } from './environments'
+export type { Environment } from './registry'
+export { detectEnvironment, ENVIRONMENTS } from './registry'
 export {
 	useAutostart,
 	useBadge,

@@ -68,14 +68,14 @@ export default tseslint.config([
 	// Client-side services (.claude/skills/desktop-shell): the react console consumes capability
 	// PORTS (services/<Name>Service) resolved from the DI Container injected by the ServicesProvider.
 	// The tauri runtime (@tauri-apps/* or window.__TAURI__) is legal ONLY in the tauri touchpoints:
-	// the Tauri*Service.ts impls, the tauri environment root, and services/utils/tauri/. Everywhere
+	// the Tauri*Service.ts impls, the tauri registry record, and services/utils/tauri/. Everywhere
 	// else (components, routes, stores, ports, browser impls, backends) must consume the ports via
 	// `@/services`, never the shell API.
 	{
 		files: ['packages/**/*.ts', 'packages/**/*.tsx'],
 		ignores: [
 			'packages/app/react/src/services/**/Tauri*Service.ts',
-			'packages/app/react/src/services/environments/tauri.ts',
+			'packages/app/react/src/services/registry/tauri.ts',
 			'packages/app/react/src/services/utils/tauri/**',
 		],
 		rules: {
@@ -86,7 +86,7 @@ export default tseslint.config([
 						{
 							group: ['@tauri-apps/*'],
 							message:
-								'@tauri-apps/* is forbidden outside the tauri touchpoints (services/**/Tauri*Service.ts, services/environments/tauri.ts, services/utils/tauri/) — consume the service ports (@/services) instead. See .claude/skills/desktop-shell/SKILL.md.',
+								'@tauri-apps/* is forbidden outside the tauri touchpoints (services/**/Tauri*Service.ts, services/registry/tauri.ts, services/utils/tauri/) — consume the service ports (@/services) instead. See .claude/skills/desktop-shell/SKILL.md.',
 						},
 					],
 				},
