@@ -190,10 +190,94 @@ export function emitTsEvents(events: ParsedEvent[]): Record<string, string> {
 	return files
 }
 
+const camel = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
+
+/**
+ * The MATERIALIZED wire-event surface (union-slots spec §2.4) — the manifest×aggregate join done
+ * ONCE, at the wire-processing layer (founder direction 23-jul: the union arrives pre-materialized
+ * from the generated layer, like the medscall monorepo; re-emitting controllers only compose).
+ *
+ * For every contract event this emits a `<Model>MaterializedSchema`:
+ *   - event WITH a `<Model>Unions` manifest → the contract schema with `payload` swapped for the
+ *     OWNER workspace's generated aggregate payload schema (`<camel(model)>PayloadSchema`, imported
+ *     from the owner's client subpath) — the COMPLETE materialized oneOf;
+ *   - event WITHOUT a manifest → the pure contract schema, aliased.
+ * Plus the deterministic (wire-name-sorted) tuple + discriminated union over the whole surface.
+ *
+ * A manifest whose variants span MORE than one owner cannot materialize a single aggregate payload
+ * — that is a contract error and the generator fails loud.
+ */
+export function emitTsMaterialized(events: ParsedEvent[], workspaces: Record<string, { alias: string }>, sdkPackage: string): string {
+	interface Entry {
+		modelName: string
+		wireName: string
+		ownerAlias?: string
+		payloadSchemaId?: string
+	}
+	const entries: Entry[] = events.map(ev => {
+		if (ev.unionSlots.length === 0) return { modelName: ev.modelName, wireName: ev.wireName }
+		const owners = new Set(ev.unionSlots.flatMap(s => s.variants.map(v => v.owner)))
+		if (owners.size !== 1) {
+			throw new Error(
+				`${ev.modelName}: union-slot variants span ${owners.size} owners (${[...owners].join(', ')}) — a materialized payload needs exactly one owner`,
+			)
+		}
+		const owner = [...owners][0]!
+		const ws = workspaces[owner]
+		if (!ws) throw new Error(`${ev.modelName}: union-slot owner "${owner}" is not a WORKSPACES id`)
+		const model = ev.modelName.replace(/Event$/, '')
+		return { modelName: ev.modelName, wireName: ev.wireName, ownerAlias: ws.alias, payloadSchemaId: `${camel(model)}PayloadSchema` }
+	})
+
+	// Deterministic wire-name ordering — the daemon's SSE output union (and therefore its emitted
+	// openapi) is derived from this tuple's order.
+	const sorted = [...entries].sort((a, b) => a.wireName.localeCompare(b.wireName))
+
+	const byAlias = new Map<string, string[]>()
+	for (const e of entries) {
+		if (!e.ownerAlias || !e.payloadSchemaId) continue
+		const ids = byAlias.get(e.ownerAlias) ?? []
+		if (!ids.includes(e.payloadSchemaId)) ids.push(e.payloadSchemaId)
+		byAlias.set(e.ownerAlias, ids)
+	}
+	const clientImports = [...byAlias.entries()]
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([alias, ids]) => `import { ${ids.sort().join(', ')} } from '${sdkPackage}/${alias}'`)
+
+	const schemaLines = entries.map(e =>
+		e.payloadSchemaId
+			? `export const ${e.modelName}MaterializedSchema = ${e.modelName}Schema.extend({ payload: ${e.payloadSchemaId} })`
+			: `export const ${e.modelName}MaterializedSchema = ${e.modelName}Schema`,
+	)
+
+	const tuple = sorted.map(e => `\t${e.modelName}MaterializedSchema,`).join('\n')
+
+	return (
+		HEADER +
+		'//\n' +
+		'// REGENERATION ORDER (build-graph note): this module lives in the CONTRACTS bindings but\n' +
+		`// imports the owner services' generated client schemas (${sdkPackage}/<service>) — the\n` +
+		'// pipeline is contracts → owner openapi → client (kubb) → this surface type-checks. After\n' +
+		'// adding a union-slot manifest to the contract, run `bun sdk` so the owner client exports\n' +
+		'// the aggregate payload schema these imports resolve against; until then tsc fails LOUD\n' +
+		'// (a broken codegen chain must never emit an opaque frame).\n' +
+		`import { z } from '${REPO.corePackage}/schema'\n` +
+		`import Z from 'zod'\n` +
+		`import {\n${events.map(e => `\t${e.modelName}Schema,`).join('\n')}\n} from './_imports'\n` +
+		clientImports.join('\n') +
+		'\n\n' +
+		schemaLines.join('\n') +
+		'\n\n' +
+		'/** Every materialized event schema, sorted by wire name (deterministic emission order). */\n' +
+		`export const materializedIntegrationEventSchemas = [\n${tuple}\n] as const\n\n` +
+		`export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [\n${tuple}\n])\n` +
+		`export type MaterializedIntegrationEvent = Z.infer<typeof MaterializedIntegrationEventSchema>\n`
+	)
+}
+
 export function emitTsBarrel(events: ParsedEvent[]): string {
 	const names = events.map(e => e.modelName)
-	const reExports = events
-		.map(e => `export * from './${kebab(e.modelName.replace(/Event$/, ''))}'`)
+	const reExports = [...events.map(e => `export * from './${kebab(e.modelName.replace(/Event$/, ''))}'`), `export * from './materialized'`]
 		.sort()
 		.join('\n')
 	const schemaImports = names.map(n => `\t${n}Schema,`).join('\n')
@@ -254,6 +338,11 @@ async function run() {
 			.join('\n') +
 		'\n'
 	await writeFile(join(eventDir, '_imports.ts'), importsRe)
+
+	await writeFile(
+		join(eventDir, 'materialized.ts'),
+		emitTsMaterialized(parsed.events, REPO.workspaces as unknown as Record<string, { alias: string }>, REPO.sdkPackage),
+	)
 
 	await writeFile(join(eventDir, 'index.ts'), emitTsBarrel(parsed.events))
 

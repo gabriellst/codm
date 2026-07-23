@@ -261,6 +261,7 @@
       "name": "@codedm/contracts-typescript",
       "version": "0.0.1",
       "dependencies": {
+        "@codedm/client-typescript": "workspace:*",
         "@codedm/core-typescript": "workspace:*",
         "zod": "^4.0.0",
       },

@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@codedm/core-typescript": "workspace:*",
-		"zod": "^4.0.0"
+		"zod": "^4.0.0",
+		"@codedm/client-typescript": "workspace:*"
 	}
 }

@@ -285,6 +285,34 @@ describe('union-parity check 2 — every emitting surface publishes the COMPLETE
 	}
 })
 
+describe('union-parity check 2.5 — the WIRE layer pre-materializes the union (founder 23-jul: never a controller)', () => {
+	// The manifest×aggregate join lives in the GENERATED materialized surface
+	// (contracts/generated/typescript/src/wire/events/materialized.ts) — re-emitting controllers
+	// only compose. Manifest-driven: a new union-slot event auto-extends this check.
+	const materializedSrc = readFileSync(join(ROOT, 'packages/contracts/generated/typescript/src/wire/events/materialized.ts'), 'utf-8')
+
+	for (const m of MANIFESTS) {
+		const model = m.eventModel.slice(0, -'Event'.length)
+		test(`${m.eventModel}: materialized surface swaps the payload for the owner aggregate schema`, () => {
+			const owners = new Set(Object.values(m.slots).flatMap(s => s.variants.map(v => v.owner)))
+			expect(owners.size, `${m.eventModel} manifest must have exactly one owner`).toBe(1)
+			const ownerAlias = (workspaces[[...owners][0]!] as unknown as { alias: string }).alias
+			expect(materializedSrc).toContain(
+				`export const ${m.eventModel}MaterializedSchema = ${m.eventModel}Schema.extend({ payload: ${camel(model)}PayloadSchema })`,
+			)
+			expect(materializedSrc).toContain(`from '@codedm/client-typescript/${ownerAlias}'`)
+		})
+	}
+
+	test('the daemon controller composes the PRE-materialized surface — it never joins manifests itself', () => {
+		const listenEvents = readFileSync(join(ROOT, 'packages/api/typescript/src/ui/controllers/ListenEvents.ts'), 'utf-8')
+		expect(listenEvents).toContain('materializedIntegrationEventSchemas')
+		// The join primitives must not reappear at the controller layer.
+		expect(listenEvents).not.toContain('PayloadSchema')
+		expect(listenEvents).not.toContain("from '@codedm/client-typescript")
+	})
+})
+
 describe('union-parity check 3 — no redeclaration outside the owner; consumption only via generated bindings', () => {
 	const backendWorkspaces = Object.entries(workspaces).filter(([, ws]) => ws.kind === 'backend')
 

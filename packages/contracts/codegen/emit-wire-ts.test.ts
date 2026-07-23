@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { REPO } from '../../../template.config'
-import { emitTsEnums, emitTsEvents, emitTsBarrel, emitTsUnions } from './emit-wire-ts'
+import { emitTsEnums, emitTsEvents, emitTsBarrel, emitTsMaterialized, emitTsUnions } from './emit-wire-ts'
 import type { ParsedEnum, ParsedEvent, ParsedUnion } from './lib/parse-openapi'
 
 describe('emitTsEnums', () => {
@@ -224,5 +224,88 @@ describe('emitTsEvents — union-slot manifest + verbatim payload', () => {
 	test('an event without union slots exports no manifest', () => {
 		const f = emitTsEvents([withDerived({ ...slotted, unionSlots: [] })])['channel-message-received.ts']!
 		expect(f).not.toContain('Unions')
+	})
+})
+
+describe('emitTsMaterialized — the manifest×aggregate join at the wire layer (union-slots §2.4)', () => {
+	const workspaces = { apiGo: { alias: 'go' }, apiTs: { alias: 'typescript' } }
+	const sdkPackage = '@codedm/client-typescript'
+
+	const plain: ParsedEvent = withDerived({
+		modelName: 'VideoUploadedEvent',
+		wireName: 'integration.video.uploaded',
+		fields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.video.uploaded' }, required: true },
+			{ name: 'videoId', type: { kind: 'string' }, required: true },
+		],
+	})
+	const slotted: ParsedEvent = withDerived({
+		modelName: 'ChannelMessageReceivedEvent',
+		wireName: 'integration.channel_message.received',
+		fields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.received' }, required: true },
+			{ name: 'content', type: { kind: 'unknown' }, required: false },
+			{ name: 'platform', type: { kind: 'string' }, required: true },
+		],
+		unionSlots: [
+			{
+				field: 'content',
+				discriminators: ['platform'],
+				variants: [{ values: ['WHATSAPP'], typeName: 'WhatsAppTextContent', owner: 'apiGo' }],
+			},
+		],
+	})
+
+	test('manifest event → payload swapped for the OWNER aggregate schema from the owner client subpath', () => {
+		const out = emitTsMaterialized([slotted], workspaces, sdkPackage)
+		expect(out).toContain("import { channelMessageReceivedPayloadSchema } from '@codedm/client-typescript/go'")
+		expect(out).toContain(
+			'export const ChannelMessageReceivedEventMaterializedSchema = ChannelMessageReceivedEventSchema.extend({ payload: channelMessageReceivedPayloadSchema })',
+		)
+	})
+
+	test('manifest-less event → the pure contract schema, aliased (no client import)', () => {
+		const out = emitTsMaterialized([plain], workspaces, sdkPackage)
+		expect(out).toContain('export const VideoUploadedEventMaterializedSchema = VideoUploadedEventSchema')
+		expect(out).not.toContain("from '@codedm/client-typescript")
+	})
+
+	test('tuple + union are wire-name sorted (deterministic openapi emission)', () => {
+		// wire names: integration.channel_message.received < integration.video.uploaded
+		const out = emitTsMaterialized([plain, slotted], workspaces, sdkPackage)
+		const tupleBlock = out.slice(out.indexOf('materializedIntegrationEventSchemas'))
+		expect(tupleBlock.indexOf('ChannelMessageReceivedEventMaterializedSchema')).toBeLessThan(
+			tupleBlock.indexOf('VideoUploadedEventMaterializedSchema'),
+		)
+		expect(out).toContain("export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [")
+	})
+
+	test('a manifest spanning two owners fails LOUD (no single aggregate payload exists)', () => {
+		const twoOwners: ParsedEvent = {
+			...slotted,
+			unionSlots: [
+				{
+					field: 'content',
+					discriminators: ['platform'],
+					variants: [
+						{ values: ['WHATSAPP'], typeName: 'WhatsAppTextContent', owner: 'apiGo' },
+						{ values: ['INTERNAL'], typeName: 'InternalTextContent', owner: 'apiTs' },
+					],
+				},
+			],
+		}
+		expect(() => emitTsMaterialized([twoOwners], workspaces, sdkPackage)).toThrow(/span 2 owners/)
+	})
+
+	test('an unknown owner id fails LOUD', () => {
+		const badOwner: ParsedEvent = {
+			...slotted,
+			unionSlots: [{ field: 'content', discriminators: ['platform'], variants: [{ values: ['X'], typeName: 'T', owner: 'ghost' }] }],
+		}
+		expect(() => emitTsMaterialized([badOwner], workspaces, sdkPackage)).toThrow(/not a WORKSPACES id/)
+	})
+
+	test('the barrel re-exports the materialized surface', () => {
+		expect(emitTsBarrel([plain])).toContain("export * from './materialized'")
 	})
 })

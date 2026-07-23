@@ -1,5 +1,4 @@
 import { injectable } from 'tsyringe-neo'
-import type { ZodObject, ZodType } from 'zod'
 import {
 	Controller,
 	z,
@@ -10,83 +9,14 @@ import {
 	encodeSSEFrame,
 	BaseIntegrationEvent,
 } from '@codedm/core-typescript'
-// The event surface, imported WHOLESALE from the contract (founder ratification 23-jul: the contract
-// is the single source — no allowlist, no hand-rolled per-event schemas). Every generated event class
-// carries a `schema` whose `name` is a baked-in z.literal, so the output union composes directly.
-import * as WireEvents from '@codedm/contracts-typescript/wire/events'
-// Generated zod schemas from the OWNER service's client subpath (types/schemas ONLY — never the HTTP
-// client): union-slot payloads are materialized from the owner's generated aggregate schema so this
-// surface re-emits them with FULL narrowing, without redeclaring a single shape (union-slots §2.4).
-import * as goClientSchemas from '@codedm/client-typescript/go'
+// The event surface, imported WHOLESALE from the contract bindings (founder ratification 23-jul:
+// the contract is the single source — no allowlist, no hand-rolled per-event schemas). The
+// MATERIALIZED surface arrives pre-joined from the generated wire layer (wire/events/materialized —
+// union-slot payloads already swapped for the owner client's aggregate schemas, union-slots §2.4);
+// this controller only COMPOSES and re-emits, medscall-style.
+import { materializedIntegrationEventSchemas } from '@codedm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { BrowserFrameEnricher, BrowserSseFrameSchema } from '../services/BrowserFrameEnricher'
-
-/**
- * Describes the static side of a generated integration event class. Every event in
- * `@codedm/contracts-typescript/wire/events` exports a class with a `schema` (ZodObject whose `name`
- * is a z.literal) and a `name` (the frozen wire discriminator).
- */
-interface IntegrationEventClass {
-	// biome-ignore lint/suspicious/noExplicitAny: each event has a different shape
-	schema: ZodObject<any>
-	name: string
-}
-
-function isIntegrationEventClass(e: unknown): e is IntegrationEventClass {
-	return e != null && typeof e === 'function' && 'schema' in e && 'name' in e
-}
-
-/**
- * Union-slot payload materialization (union-slots spec §2.4) — driven by the generated MANIFESTS, not
- * by event names: every event whose `<Model>Unions` manifest declares union slots has its contract
- * payload (opaque `z.unknown()` slots) swapped for the OWNER workspace's generated aggregate payload
- * schema (`<model>PayloadSchema` in the owner's client subpath), so the daemon re-emits the frame
- * with the COMPLETE materialized oneOf. A new manifest event auto-materializes; a manifest whose
- * owner client lacks the aggregate schema fails loud (broken codegen must not emit an opaque frame).
- */
-const OWNER_CLIENT_SCHEMAS: Record<string, Record<string, unknown>> = {
-	apiGo: goClientSchemas as unknown as Record<string, unknown>,
-}
-
-const camel = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
-
-function materializedPayloadSchemas(): Map<string, ZodType> {
-	const out = new Map<string, ZodType>()
-	for (const [exportName, manifest] of Object.entries(WireEvents)) {
-		if (!exportName.endsWith('Unions') || typeof manifest !== 'object' || manifest === null) continue
-		const model = exportName.slice(0, -'Unions'.length)
-		const eventClass = (WireEvents as Record<string, unknown>)[`${model}Event`]
-		if (!isIntegrationEventClass(eventClass)) throw new Error(`manifest ${exportName} has no matching event class ${model}Event`)
-		const owners = new Set(
-			Object.values(manifest as Record<string, { variants: ReadonlyArray<{ owner: string }> }>).flatMap(slot =>
-				slot.variants.map(v => v.owner),
-			),
-		)
-		for (const owner of owners) {
-			const clientSchemas = OWNER_CLIENT_SCHEMAS[owner]
-			if (!clientSchemas) throw new Error(`union-slot owner "${owner}" has no client schema namespace registered`)
-			const schema = clientSchemas[`${camel(model)}PayloadSchema`]
-			if (!schema) throw new Error(`owner "${owner}" client does not export ${camel(model)}PayloadSchema for manifest ${exportName}`)
-			out.set(eventClass.name, schema as ZodType)
-		}
-	}
-	return out
-}
-
-const MATERIALIZED_PAYLOADS = materializedPayloadSchemas()
-
-/**
- * Every integration event schema from the contract barrel — the whole surface, no allowlist —
- * with union-slot payloads materialized from the owner's generated client. Sorted by wire name for
- * deterministic openapi emission.
- */
-const integrationFrameSchemas = (Object.values(WireEvents) as unknown[])
-	.filter(isIntegrationEventClass)
-	.sort((a, b) => a.name.localeCompare(b.name))
-	.map(e => {
-		const materialized = MATERIALIZED_PAYLOADS.get(e.name)
-		return materialized ? e.schema.extend({ payload: materialized }) : e.schema
-	})
 
 export const ListenEventsControllerInputSchema = z.object({
 	ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
@@ -97,19 +27,15 @@ export const ListenEventsControllerInputSchema = z.object({
  * the frontend `useServerEvents` hook. Two surfaces coexist, both DECLARED elsewhere and only
  * COMPOSED here:
  *   - every `integration.*` event of the contract barrel (all of them — the broadcaster forwards the
- *     whole surface, filtered only by envelope-`ownerId` tenancy), each arm the generated schema
- *     with its baked-in literal `name`;
+ *     whole surface, filtered only by envelope-`ownerId` tenancy), each arm the generated
+ *     MATERIALIZED schema (wire-name-sorted, baked-in literal `name`, union-slot payloads
+ *     materialized at the wire layer — never here);
  *   - the enriched `browser.*` frames, declared at their synthesizer (`BrowserFrameEnricher`).
- *
- * Accepted deviation (cc-bp-04): the tuple cast for discriminatedUnion is unavoidable — Zod requires
- * a `[T, ...T[]]` tuple, but Array.map() returns T[]; TS cannot infer a non-empty tuple from a
- * runtime-composed array.
  */
 export const ListenEventsControllerOutputSchema = z.discriminatedUnion('name', [
-	...integrationFrameSchemas,
+	...materializedIntegrationEventSchemas,
 	...BrowserSseFrameSchema.options,
-	// biome-ignore lint/suspicious/noExplicitAny: runtime-composed union arms have per-event shapes
-] as unknown as [ZodObject<any>, ZodObject<any>, ...ZodObject<any>[]])
+])
 
 /**
  * The owner an integration event fans out to on the browser SSE surface. ALL integration events are
