@@ -92,7 +92,7 @@ func (r *HttpRouter) RegisterDocsRoutes(openapiJSON []byte) {
 //
 // NOTE(core-adequation): the template's core HttpRouter has no SPA surface —
 // this is a codedm extension (sanção #4). At pairing convergence it becomes
-// an api-go-local extension registered from internal/app, not a core method.
+// an api-go-local extension registered from internal/shared, not a core method.
 func (r *HttpRouter) RegisterSPA(fsys fs.FS) {
 	fileServer := http.FileServerFS(fsys)
 

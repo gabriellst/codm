@@ -8,9 +8,9 @@ import (
 	"github.com/lmittmann/tint"
 	"go.uber.org/fx"
 
-	"template/api-go/internal/app"
 	"template/api-go/internal/channel"
-	shared "template/core-go"
+	"template/api-go/internal/shared"
+	core "template/core-go"
 )
 
 func main() {
@@ -24,18 +24,18 @@ func main() {
 	fx.New(
 		fx.StopTimeout(30*time.Second),
 
-		// Shared infrastructure (core): DB, mediators, outbox dispatcher, HTTP router.
-		shared.Module,
+		// Framework infrastructure (core): DB, mediators, outbox dispatcher, HTTP router.
+		core.Module,
 
 		// api-go-local wiring: auth middlewares, SSE controller, docs + SPA.
-		// Must come after shared.Module so middleware order stays
+		// Must come after core.Module so middleware order stays
 		// Recovery → Logging → Session → APIKey.
-		app.Module,
+		shared.Module,
 
 		// Single bounded context module — channel absorbs messaging and remote.
 		channel.Module,
 
 		// Start HTTP server
-		fx.Invoke(shared.StartHTTPServer),
+		fx.Invoke(core.StartHTTPServer),
 	).Run()
 }

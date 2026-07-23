@@ -1,17 +1,18 @@
-// Package app is the api-go-local fx module: everything the codedm gateway
+// Package shared is the api-go-local fx module: everything the codedm gateway
 // wires on top of the generic core (template/core-go) module.
 //
-// Split out of the old internal/shared/module.go by the core-adequation plan
-// (Lote 6): the core keeps context-agnostic infrastructure; auth middlewares,
-// the SSE ListenEvents controller and the docs routes are domain decisions and
-// live here (template core/module.go: "auth middlewares are domain decisions").
+// Auth middlewares, the SSE ListenEvents controller and the docs routes are
+// domain decisions and live here (template core/module.go: "auth middlewares
+// are domain decisions"); the core keeps context-agnostic infrastructure. This
+// module was briefly split into an internal/app package by the core-adequation
+// plan (Lote 6) and folded back here — the extra folder bought nothing.
 //
 // Auth is contributed through the core's "app_middlewares" value group (NOT a
 // local fx.Invoke calling router.Use): Use is registration-time, so the core
 // consumes the group inside registerMiddlewares before registerControllers
 // bakes the per-route chains. Final order: Recovery → Logging → Session →
 // APIKey, byte-compatible with the pre-split module.
-package app
+package shared
 
 import (
 	stdsql "database/sql"
@@ -27,7 +28,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var Module = fx.Module("app",
+var Module = fx.Module("shared",
 	// SSE Events Controller
 	fx.Provide(fx.Annotate(
 		sharedcontrollers.NewListenEventsController,
