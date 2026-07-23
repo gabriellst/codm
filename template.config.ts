@@ -113,7 +113,7 @@ export type WorkspaceId = keyof typeof WORKSPACES
 export interface Workspace {
 	pkgRoot: string
 	srcRoot: string
-	lang: 'typescript' | 'go' | 'react' | 'expo' | 'astro'
+	lang: 'typescript' | 'go' | 'react' | 'astro'
 	kind: 'backend' | 'frontend' | 'shared'
 	alias: string
 	/** nx project name (`project.json` "name") — null = workspace not registered with nx (contracts). */
