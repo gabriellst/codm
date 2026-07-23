@@ -3,10 +3,10 @@ package events_test
 // Wire-identity proof for the flat-events migration (.specs/codedm — flat-events phase).
 //
 // THE INVARIANT: swapping an integration event's declaration source (hand-rolled
-// envelope in internal/shared/events + hand-rolled payload struct in
-// internal/channel/events → generated binding in template/contracts-go/wire) MUST NOT
-// change its marshaled wire JSON — field names, casing, omitempty behavior, value
-// sets and envelope shape all byte-identical.
+// envelope + hand-rolled payload struct, both in internal/channel/events →
+// generated binding in template/contracts-go/wire) MUST NOT change its marshaled
+// wire JSON — field names, casing, omitempty behavior, value sets and envelope
+// shape all byte-identical.
 //
 // The goldens in testdata/wire_identity.golden.json were captured at the pre-swap
 // HEAD (hand-rolled declarations). Each case constructs the event with fixed
@@ -17,7 +17,7 @@ package events_test
 //
 // Regenerate (ONLY for legitimately new cases, never to absorb a swap diff):
 //
-//	go test ./internal/shared/events/ -run TestWireIdentity -update
+//	go test ./internal/channel/events/ -run TestWireIdentity -update
 
 import (
 	"encoding/json"
@@ -29,7 +29,6 @@ import (
 	"time"
 
 	channelevents "template/api-go/internal/channel/events"
-	sharedevents "template/api-go/internal/shared/events"
 	"template/contracts-go/wire"
 	"template/core-go/types"
 
@@ -147,7 +146,7 @@ func cases() map[string]any {
 			}),
 
 		// ── remotes cluster ──────────────────────────────────────────────
-		"channel.remote_created": envelope(sharedevents.ChannelRemoteCreatedEventName,
+		"channel.remote_created": envelope(channelevents.ChannelRemoteCreatedEventName,
 			channelevents.ChannelRemoteCreatedPayload{
 				ChannelID:  channelID,
 				RemoteID:   "5511999999999@s.whatsapp.net",
@@ -155,7 +154,7 @@ func cases() map[string]any {
 				OwnerID:    fixedOwner,
 				Platform:   channelenums.PlatformWhatsApp,
 			}),
-		"channel.remote_updated": envelope(sharedevents.ChannelRemoteUpdatedEventName,
+		"channel.remote_updated": envelope(channelevents.ChannelRemoteUpdatedEventName,
 			channelevents.ChannelRemoteUpdatedPayload{
 				ChannelID:   channelID,
 				RemoteID:    "123456789@g.us",
@@ -165,7 +164,7 @@ func cases() map[string]any {
 				ObservedAt:  t1,
 				OwnerID:     fixedOwner,
 			}),
-		"channel.remote_updated/no-description": envelope(sharedevents.ChannelRemoteUpdatedEventName,
+		"channel.remote_updated/no-description": envelope(channelevents.ChannelRemoteUpdatedEventName,
 			channelevents.ChannelRemoteUpdatedPayload{
 				ChannelID:  channelID,
 				RemoteID:   "5511999999999@s.whatsapp.net",
@@ -274,8 +273,8 @@ func cases() map[string]any {
 // swap commits change the publishers' const SOURCE, so value equality is load-bearing.
 func TestWireIdentityNameConsts(t *testing.T) {
 	pairs := map[string][2]string{
-		"remote_created": {sharedevents.ChannelRemoteCreatedEventName, wire.ChannelRemoteCreatedEventName},
-		"remote_updated": {sharedevents.ChannelRemoteUpdatedEventName, wire.ChannelRemoteUpdatedEventName},
+		"remote_created": {channelevents.ChannelRemoteCreatedEventName, wire.ChannelRemoteCreatedEventName},
+		"remote_updated": {channelevents.ChannelRemoteUpdatedEventName, wire.ChannelRemoteUpdatedEventName},
 	}
 	for id, pair := range pairs {
 		if pair[0] != pair[1] {

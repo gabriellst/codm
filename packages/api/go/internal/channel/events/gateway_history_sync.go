@@ -12,8 +12,8 @@ import (
 // `integration.channel.sync_progress` integration event via the domain→integration
 // handler. Only the two user-facing SyncType variants are surfaced; whatsmeow's
 // FULL, PUSH_NAME, NON_BLOCKING_DATA, and ON_DEMAND are dropped at the mapper.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
+// Owned by the channel domain; the integration wrapper in this package
+// consumes this type.
 type ChannelGatewayHistorySyncPayload struct {
 	ChannelID       uuid.UUID                    `json:"channelId" validate:"required"`
 	OwnerID         string                       `json:"ownerId" validate:"required"`

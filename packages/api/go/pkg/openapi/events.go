@@ -15,7 +15,7 @@ type eventMapping struct {
 	Payload     *types.Named
 }
 
-// registerEvents walks channel/internal/shared/events/*.go, pairs each
+// registerEvents walks internal/channel/events/*.go, pairs each
 // `XxxEventName` const with the payload type embedded in the `XxxEvent` type
 // alias (IntegrationEvent[PayloadType]), and registers:
 //  1. The payload component (with @union handling)
@@ -24,24 +24,24 @@ type eventMapping struct {
 //  4. A synthesized `ServerEventName` enum component (listed in eventname order)
 //
 // After Task 3 (payload ownership inversion), payload structs live in
-// channel/events/* and remote/events/*. shared/events only holds thin wrappers:
-// a Name const + a type alias `= types.IntegrationEvent[domainevents.XxxPayload]`
-// + a constructor. The emitter now resolves the payload type by unwrapping the
-// generic type argument from the alias's RHS.
+// channel/events/*. The surviving hand-rolled integration envelopes are thin
+// wrappers in that same package: a Name const + a type alias
+// `= types.IntegrationEvent[XxxPayload]` + a constructor. The emitter resolves
+// the payload type by unwrapping the generic type argument from the alias's RHS.
 //
 // Mirrors client/scripts/channel/sse.ts.
 func registerEvents(spec *Spec, w *walker, unions map[string][]UnionAnnotation) error {
 	ctx := &schemaCtx{spec: spec, w: w, unions: unions}
 
 	// Two mapping sources (flat-events migration):
-	//  1. Hand-rolled envelope aliases surviving in internal/shared/events (the
+	//  1. Hand-rolled envelope aliases surviving in internal/channel/events (the
 	//     BLOCKED events awaiting enum harmonization).
 	//  2. Generated wire bindings: every `wire.<X>EventName` const REFERENCED from
 	//     api-go code marks <X> as published by this service; its payload struct
 	//     comes from the binding. "Published = referenced" keeps the SSE ServerEvent
 	//     surface identical across swaps without a hand-maintained list.
 	var mappings []eventMapping
-	if eventsPkg, ok := w.byPath["template/api-go/internal/shared/events"]; ok {
+	if eventsPkg, ok := w.byPath["template/api-go/internal/channel/events"]; ok {
 		mappings = collectEventMappings(eventsPkg)
 	}
 	seen := map[string]bool{}
@@ -132,10 +132,10 @@ func registerEvents(spec *Spec, w *walker, unions map[string][]UnionAnnotation) 
 	return nil
 }
 
-// collectEventMappings pairs XxxEventName constants in shared/events with the
+// collectEventMappings pairs XxxEventName constants in channel/events with the
 // payload type resolved from the corresponding XxxEvent type alias.
 //
-// After payload ownership inversion (Task 3), each shared/events file has:
+// After payload ownership inversion (Task 3), each surviving envelope file has:
 //   - const XxxEventName = "integration...."
 //   - type XxxEvent = types.IntegrationEvent[domainevents.XxxPayload]
 //

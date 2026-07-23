@@ -13,8 +13,8 @@ import (
 // to a remote entity (user rename, group attribute change). Type discriminates:
 // users carry Name only; groups carry Name (subject) + optional Description.
 // Membership changes go through channel.membership_updated.
-// Owned by the remote domain; shared/events imports this type for the
-// integration wrapper.
+// Owned by the remote domain; the integration wrapper in this package
+// consumes this type.
 type ChannelRemoteUpdatedPayload struct {
 	ChannelID   uuid.UUID               `json:"channelId" validate:"required"`
 	RemoteID    string                  `json:"remoteId" validate:"required"`

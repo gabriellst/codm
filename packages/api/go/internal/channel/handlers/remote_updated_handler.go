@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	ctxevents "template/api-go/internal/channel/events"
-	sharedevents "template/api-go/internal/shared/events"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -34,7 +33,7 @@ func (h *RemoteUpdatedHandler) Handle(ctx context.Context, event types.DomainEve
 		return err
 	}
 
-	integrationEvent := sharedevents.NewChannelRemoteUpdatedEvent(e.OwnerID, e.Payload)
+	integrationEvent := ctxevents.NewChannelRemoteUpdatedEvent(e.OwnerID, e.Payload)
 	if err := h.externalMediator.Publish(ctx, integrationEvent); err != nil {
 		slog.Error("failed to publish remote updated integration event",
 			"error", err,

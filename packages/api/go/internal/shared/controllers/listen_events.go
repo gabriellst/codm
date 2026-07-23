@@ -13,7 +13,6 @@ import (
 	"template/api-go/internal/channel/services/gateway"
 	whatsapp "template/api-go/internal/channel/services/gateway/whatsapp"
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
-	sharedevents "template/api-go/internal/shared/events"
 	"template/core-go/pkg/httputil"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
@@ -80,7 +79,7 @@ type EventPayloads struct {
 	// projection replay. Payloads below without corresponding SSE whitelist
 	// entries are projection-only: they flow in-process via InternalMediator
 	// and land in shared.events but are NOT pushed to SSE clients.
-	ChannelEvent *sharedevents.ChannelEvent `json:"channelEvent,omitempty"`
+	ChannelEvent *channelevents.ChannelEvent `json:"channelEvent,omitempty"`
 
 	// ── Domain event payload variants (projection-only, no SSE) ──
 	MessageSent        *channelevents.ChannelMessageSentPayload          `json:"messageSent,omitempty"`

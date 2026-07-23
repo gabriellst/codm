@@ -320,7 +320,7 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 	//   - SWAPPED: api-go must reference `wire.<Model>EventName` (publisher constructs
 	//     the envelope from the binding) and must NOT redeclare `type <Model>Payload
 	//     struct` (declaration lives in the generated binding only).
-	//   - BLOCKED: the hand-rolled envelope must still exist in internal/shared/events
+	//   - BLOCKED: the hand-rolled envelope must still exist in internal/channel/events
 	//     (else the entry is stale — move it to SWAPPED when the enum harmonizes).
 	describe('flat-events: every swapped event consumes its generated binding', () => {
 		const SWAPPED_EVENT_MODELS = [
@@ -376,7 +376,7 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 		test('BLOCKED envelopes still exist (stale-entry guard)', () => {
 			for (const file of BLOCKED_ENVELOPES) {
 				expect(
-					existsSync(join(goSrcRoot, 'shared/events', file)),
+					existsSync(join(goSrcRoot, 'channel/events', file)),
 					`${file} no longer exists — its event was swapped; move it out of BLOCKED_ENVELOPES and into SWAPPED_EVENT_MODELS`,
 				).toBe(true)
 			}

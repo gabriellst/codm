@@ -9,14 +9,13 @@
 package events
 
 import (
-	channelevents "template/api-go/internal/channel/events"
 	"template/core-go/types"
 )
 
 const ChannelRemoteUpdatedEventName = "integration.channel.remote_updated"
 
-type ChannelRemoteUpdatedEvent = types.IntegrationEvent[channelevents.ChannelRemoteUpdatedPayload]
+type ChannelRemoteUpdatedEvent = types.IntegrationEvent[ChannelRemoteUpdatedPayload]
 
-func NewChannelRemoteUpdatedEvent(ownerID string, payload channelevents.ChannelRemoteUpdatedPayload) ChannelRemoteUpdatedEvent {
+func NewChannelRemoteUpdatedEvent(ownerID string, payload ChannelRemoteUpdatedPayload) ChannelRemoteUpdatedEvent {
 	return types.NewIntegrationEvent(ChannelRemoteUpdatedEventName, ownerID, payload)
 }
