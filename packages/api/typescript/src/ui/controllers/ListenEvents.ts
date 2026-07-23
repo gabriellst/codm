@@ -61,8 +61,9 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	{ name: 'integration.message.classified' },
 	{ name: 'integration.agent.reply_drafted' },
 	// Thread + channel health (T03 / T05 / T06). The pairing QR is delivered SYNCHRONOUSLY by the
-	// gateway's connect call (proxied by ui/ConnectChannel), not streamed — so there is no
-	// pairing_qr SSE frame; only the connect/disconnect health transitions ride this surface.
+	// gateway's connect call (the console drives the gateway SDK through the external/ChannelProxy
+	// wildcard), not streamed here — live QR rotation rides the gateway's own /events stream, also
+	// reachable through the proxy. Only the connect/disconnect health transitions ride this surface.
 	{ name: 'integration.thread.attached' },
 	{ name: 'integration.channel.connected' },
 	{ name: 'integration.channel.disconnected' },

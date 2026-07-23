@@ -4,11 +4,9 @@ import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, Base
 export type UiDomainErrors = never
 export type DomainErrors = BaseDomainErrors | UiDomainErrors
 
-// GATEWAY_UNAVAILABLE — the api-ts channel proxy (ConnectChannel) could not reach the Go channel
-// gateway: connection refused (gateway not running), timeout, or an upstream 5xx. Mapped to 502 Bad
-// Gateway — api-ts IS a proxy to the Go pairing service, so an honest "upstream down" surfaces as a
-// named error the console can translate, NOT the proxy's own 500 soup.
-export type UiApplicationErrors = 'GATEWAY_UNAVAILABLE'
+// GATEWAY_UNAVAILABLE moved to external/errors — the wildcard ChannelProxy (external context) is
+// the only artifact that talks to the Go channel gateway since the per-endpoint ui proxies died.
+export type UiApplicationErrors = never
 export type ApplicationErrors = BaseApplicationErrors | UiApplicationErrors
 
 export type UiInfrastructureErrors = never
@@ -19,6 +17,4 @@ export type InterfaceErrors = BaseInterfaceErrors | UiInterfaceErrors
 
 export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
 
-registerErrorCodes({
-	GATEWAY_UNAVAILABLE: HttpStatusCode.BAD_GATEWAY,
-})
+registerErrorCodes({})

@@ -4,5 +4,3 @@ export { GetHomeDashboard, GetHomeDashboardInputSchema, GetHomeDashboardOutputSc
 export { GetAttachThreadWizard, GetAttachThreadWizardInputSchema, GetAttachThreadWizardOutputSchema } from './GetAttachThreadWizard'
 export { GetSettings, GetSettingsInputSchema, GetSettingsOutputSchema } from './GetSettings'
 export { GetSetupChecklist, GetSetupChecklistInputSchema, GetSetupChecklistOutputSchema } from './GetSetupChecklist'
-export { ConnectChannel, ConnectChannelInputSchema, ConnectChannelOutputSchema } from './ConnectChannel'
-export { GetChannelPairingStatus, GetChannelPairingStatusInputSchema, GetChannelPairingStatusOutputSchema } from './GetChannelPairingStatus'
