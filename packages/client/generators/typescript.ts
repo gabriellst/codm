@@ -12,11 +12,12 @@ import { pluginZod } from '@kubb/plugin-zod'
 import { pluginReactQuery } from '@kubb/plugin-react-query'
 import { pluginClient } from '@kubb/plugin-client'
 import { discoverApis, type ApiSource } from '../lib/discover'
+import { assertClientDistRoot } from '../lib/output-root'
 import { preprocessSpec } from '../lib/preprocess'
 import { renderServiceClient, renderAggregateClient, type ServiceMeta } from '../lib/render/typescript'
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..')
-const distRoot = path.resolve(import.meta.dirname, '../dist/typescript/src')
+const distRoot = assertClientDistRoot(path.resolve(import.meta.dirname, '../dist/typescript/src'))
 
 interface Plan {
 	source: ApiSource

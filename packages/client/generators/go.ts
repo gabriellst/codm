@@ -7,12 +7,13 @@ import fs from 'node:fs'
 import os from 'node:os'
 import { writeFile, mkdir } from 'node:fs/promises'
 import { discoverApis, type ApiSource } from '../lib/discover'
+import { assertClientDistRoot } from '../lib/output-root'
 import { preprocessSpec } from '../lib/preprocess'
 import { renderAggregateClientGo, type ServiceMeta } from '../lib/render/go'
 import { goPackageIdent } from '../lib/sanitize'
 
 const repoRoot = path.resolve(import.meta.dir, '../../..')
-const distRoot = path.resolve(import.meta.dir, '../dist/go')
+const distRoot = assertClientDistRoot(path.resolve(import.meta.dir, '../dist/go'))
 
 interface Plan {
 	source: ApiSource
