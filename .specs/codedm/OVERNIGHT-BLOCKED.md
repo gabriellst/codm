@@ -84,3 +84,10 @@ dialog/notification/autostart, feature flags do keyring). Nada estrutural: a top
 
 **Pendência menor associada:** ícones do bundle (`src-tauri/icons/`) não commitados —
 rodar `bun x tauri icon <png-1024>` antes do primeiro `desktop:bundle`.
+
+## Fase F (go-domain) — ADIADA POR DECISÃO DO FOUNDER (23-jul, manhã)
+Primeira tentativa morreu em usage-limit (branch vazia — juízes flagaram a não-entrega, worst=6);
+retry lançado e então o founder redirecionou: "Deixe para fazer o dominio go depois, vamos
+organizar o typescript atualmente". Workflow parado; branch `go-domain` + worktree ficam como
+ponteiro em main para quando a fase disparar. Nada foi entregue nem parkeado como feito — a fase
+inteira move para a fila pós-organização-TS.
