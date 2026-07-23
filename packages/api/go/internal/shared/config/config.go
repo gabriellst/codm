@@ -26,14 +26,17 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	// Load root .env first (monorepo single source of truth), then local override
+	// Load root .env first (monorepo single source of truth), then local override.
+	// The service runs from packages/api/go, so the repo root is three levels up;
+	// the two-level path is kept for callers launched from a nested cmd/ dir.
+	_ = godotenv.Load("../../../.env")
 	_ = godotenv.Load("../../.env")
 	_ = godotenv.Overload(".env")
 
 	cfg := &Config{
-		Port:                 getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3031")),
-		DatabaseURL:          getEnvOrDefault("DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable"),
-		WhatsmeowDatabaseURL: getEnvOrDefault("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable"),
+		Port:                 getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3032")),
+		DatabaseURL:          getEnvOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable"),
+		WhatsmeowDatabaseURL: getEnvOrDefault("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable"),
 		RedisURL:             getEnvOrDefault("REDIS_URL", "redis://localhost:6379"),
 		ChannelEventGroupID:  getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codedm-gateway"),
 		Environment:          enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),

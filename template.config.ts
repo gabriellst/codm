@@ -344,11 +344,8 @@ export const REPO = {
 		// (CODEDM_GATEWAY_API_KEY removed: its only consumers were the deleted per-endpoint ui
 		// proxies. The gateway's own guard is CHANNEL_GLOBAL_API_KEY — empty/allow-all in proxied
 		// deployments, since auth lives on the api-ts external/ChannelProxy hop.)
-		CODEDM_GATEWAY_WHATSMEOW_URL: {
-			consumers: ['apiGo'],
-			example: '',
-			doc: 'postgres URL for the whatsmeow session store; empty falls back to DATABASE_URL',
-		},
+		// (CODEDM_GATEWAY_WHATSMEOW_URL removed: dead key — config.go reads
+		// WHATSMEOW_DATABASE_URL; nothing ever consumed the CODEDM_* spelling.)
 		// ── misc ──
 		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
 		// ── frontend (only VITE_* reach the browser) ──

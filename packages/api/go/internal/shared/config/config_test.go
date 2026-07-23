@@ -6,21 +6,21 @@ import (
 
 func TestLoad_DatabaseURLDefault(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
+	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if cfg.DatabaseURL != "postgres://channel:channel@localhost:5432/channel?sslmode=disable" {
-		t.Errorf("expected DatabaseURL to be default postgres URL, got %q", cfg.DatabaseURL)
+	if cfg.DatabaseURL != "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable" {
+		t.Errorf("expected DatabaseURL to fall back to the codedm default, got %q", cfg.DatabaseURL)
 	}
 }
 
 func TestLoad_DatabaseURLCustom(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://custom:custom@remotehost:5432/mydb?sslmode=require")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
+	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
 
 	cfg, err := Load()
 	if err != nil {
@@ -34,8 +34,8 @@ func TestLoad_DatabaseURLCustom(t *testing.T) {
 
 func TestLoad_EnvironmentDefault(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "")
-	t.Setenv("DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
+	t.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
+	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
 
 	cfg, err := Load()
 	if err != nil {
@@ -54,8 +54,8 @@ func TestLoad_ServiceNameDefault(t *testing.T) {
 	// the code default.
 	t.Setenv("CHANNEL_SERVICE_NAME", "")
 	t.Setenv("SERVICE_NAME", "")
-	t.Setenv("DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable")
+	t.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
+	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
 
 	cfg, err := Load()
 	if err != nil {
