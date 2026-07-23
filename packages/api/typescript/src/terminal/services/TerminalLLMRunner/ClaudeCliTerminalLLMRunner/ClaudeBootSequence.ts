@@ -1,5 +1,5 @@
 import type { PtyHandle } from './spawner'
-import { stripAnsi, shouldAutoAcceptTrustPrompt } from './ansi'
+import { stripAnsi, shouldAutoAcceptTrustPrompt, isMainUiReady } from './ansi'
 import type { RunnerLogger } from './logger/RunnerLogger'
 
 export class BootExitError extends Error {
@@ -75,9 +75,14 @@ export class ClaudeBootSequence {
 		const subs: Array<{ dispose(): void }> = []
 		let bootBuf = ''
 		let trustHandled = false
+		let uiReady = false
 		let firstByteResolve: (() => void) | null = null
 		const firstByte = new Promise<void>(resolve => {
 			firstByteResolve = resolve
+		})
+		let uiReadyResolve: (() => void) | null = null
+		const uiReadySeen = new Promise<void>(resolve => {
+			uiReadyResolve = resolve
 		})
 
 		const dataSub = this.pty.onData((data: string) => {
@@ -86,8 +91,8 @@ export class ClaudeBootSequence {
 				firstByteResolve = null
 			}
 			bootBuf = (bootBuf + data).slice(-4096)
+			const window = stripAnsi(bootBuf).slice(-2048)
 			if (!trustHandled) {
-				const window = stripAnsi(bootBuf).slice(-2048)
 				if (shouldAutoAcceptTrustPrompt(window)) {
 					trustHandled = true
 					try {
@@ -100,6 +105,13 @@ export class ClaudeBootSequence {
 						message: 'auto-accepted trust banner',
 					})
 				}
+			}
+			// Main-TUI readiness (Step-5 smoke finding): writing the priming paste before the input
+			// box is up loses the turn. Resolve the marker promise the moment the UI shows.
+			if (!uiReady && isMainUiReady(window)) {
+				uiReady = true
+				uiReadyResolve?.()
+				uiReadyResolve = null
 			}
 		})
 		subs.push(dataSub)
@@ -124,7 +136,20 @@ export class ClaudeBootSequence {
 				// chance to render before proceeding.
 				const minT = setTimeout(() => {
 					if (bootBuf.length > 0) {
-						resolve()
+						// Bytes are flowing. Prefer to hand over only once the main TUI is up —
+						// wait for the marker up to maxSettleMs, falling back to a time-based
+						// handover (marker wording drifts across claude releases; the fake-PTY
+						// suites never print it).
+						if (uiReady) {
+							resolve()
+							return
+						}
+						const uiDeadline = setTimeout(() => resolve(), Math.max(0, this.maxSettleMs - this.settleMs))
+						;(uiDeadline as { unref?: () => void }).unref?.()
+						void uiReadySeen.then(() => {
+							clearTimeout(uiDeadline)
+							resolve()
+						})
 						return
 					}
 					this.logger.line({

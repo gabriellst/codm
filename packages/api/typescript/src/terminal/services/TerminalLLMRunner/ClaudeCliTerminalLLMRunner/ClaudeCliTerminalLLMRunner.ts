@@ -32,17 +32,14 @@ import { ACTION_REGISTRY } from './tui/actionRegistry'
 // Session eviction (idle for this long → kill the PTY).
 const DEFAULT_IDLE_TIMEOUT_MS = 15 * 60 * 1000
 const DEFAULT_QUEUE_DEPTH = 4
-// Initial delay between writing the bracketed-paste body and the first ESC+Enter submission
-// attempt. claude's TUI takes time to render the paste placeholder + any overlays it triggers
-// (file-ref autocomplete, MCP auth banners, "paste again to expand" hints); 250ms is conservative
-// enough that the first dismissal+submit lands after the placeholder is on screen.
-// Read lazily so tests can override.
+// Initial delay between writing the bracketed-paste body and the first Enter submission attempt.
+// claude's TUI takes time to render the paste placeholder; 250ms is conservative enough that the
+// first submit lands after the placeholder is on screen. Read lazily so tests can override.
 const submitDelayMs = () => Number(process.env.CODEDM_SUBMIT_DELAY_MS ?? 250)
-// Submission retry offsets (after the initial submitDelayMs). claude's TUI can pop multiple
-// overlays at different times — file-reference scan fires 200-800ms after paste, MCP-failure
-// banners can appear 1-30s after spawn, "paste again to expand" hints persist with the
-// placeholder. Each shot is ESC (dismiss any active overlay) + \r (submit). Once claude starts
-// processing the turn the input box is empty; later shots become harmless no-ops.
+// Submission retry offsets (after the initial submitDelayMs) for the PRIMING turn — a slow first
+// render can eat the first Enter. Each shot is a plain \r (NEVER ESC: claude 2.1.218 clears the
+// input box on ESC — Step-5 smoke finding). Once claude starts processing the turn the input box
+// is empty; later shots become harmless no-ops.
 const SUBMIT_RETRY_OFFSETS_MS = [600, 1400, 3000, 6500, 15000]
 // Poll interval for the JSONL tail's internal loop. Also handles ENOENT (file not yet created).
 const filePollMs = () => Number(process.env.CODEDM_JSONL_POLL_MS ?? 50)
@@ -59,7 +56,7 @@ const MAX_TURN_MS = 5 * 60 * 1000
 // doesn't help — killing the PTY is what unsticks it, so we fail fast and let spawnSession's
 // retry-once loop respawn.
 const PRIMING_TURN_MS = 60 * 1000
-// Window to see claude's first `⏺` after a submit before we fire one fallback `ESC+\r`.
+// Window to see claude's first `⏺` after a submit before we fire one fallback `\r`.
 const SUBMIT_VERIFICATION_MS = 5_000
 // claude's TUI enables bracketed paste mode at startup. We wrap each prompt in these markers so
 // claude treats the payload as a paste, then send Enter to submit.
@@ -544,7 +541,7 @@ export class ClaudeCliTerminalLLMRunner extends TerminalLLMRunner {
 	 *
 	 * `submitMode`:
 	 * - `single` (default): one `\r` at `submitDelayMs()`. Used for regular turns.
-	 * - `multi-shot`: ESC+\r fired at multiple offsets to defeat TUI overlays that intercept the
+	 * - `multi-shot`: \r re-fired at multiple offsets so a slow first render can't eat the
 	 *   submit during a fresh spawn. Priming turn only.
 	 */
 	private runTurn(
@@ -588,10 +585,9 @@ export class ClaudeCliTerminalLLMRunner extends TerminalLLMRunner {
 					tier: 'info',
 					severity: 'warn',
 					label: 'submit-retry',
-					message: `no ⏺ within ${SUBMIT_VERIFICATION_MS}ms — firing one fallback ESC+\\r`,
+					message: `no ⏺ within ${SUBMIT_VERIFICATION_MS}ms — firing one fallback \\r`,
 				})
 				try {
-					session.pty.write('\x1b')
 					session.pty.write('\r')
 				} catch {}
 			}, SUBMIT_VERIFICATION_MS)
@@ -608,13 +604,17 @@ export class ClaudeCliTerminalLLMRunner extends TerminalLLMRunner {
 					// claude's TUI enables bracketed paste mode (\x1b[?2004h) at startup. Plain
 					// `flat + \r` lands as typed characters + an in-box newline — NOT a submit. We
 					// wrap the text in bracketed paste markers, then send Enter to submit.
-					const ESC = '\x1b'
 					session.pty.write(BRACKET_START + flat + BRACKET_END)
 					const offsets = submitMode === 'multi-shot' ? [delayMs, ...SUBMIT_RETRY_OFFSETS_MS.map(o => delayMs + o)] : [delayMs]
 					for (const offsetMs of offsets) {
 						const t = setTimeout(() => {
 							try {
-								if (submitMode === 'multi-shot') session.pty.write(ESC)
+								// Plain \r ONLY — never ESC. The Step-5 smoke against claude 2.1.218
+								// showed ESC CLEARS the input box (destroying the pasted prompt), so
+								// whatscode's ESC+\r overlay-dismissal pattern un-submits the turn.
+								// Overlay avoidance now comes from ClaudeBootSequence waiting for the
+								// main-TUI marker before the paste is written. Once claude starts
+								// processing, later \r shots land on an empty box and are no-ops.
 								session.pty.write('\r')
 							} catch {}
 						}, offsetMs)

@@ -15,7 +15,7 @@
  * for rapid same-file appends.
  */
 import { homedir } from 'node:os'
-import { createReadStream } from 'node:fs'
+import { createReadStream, realpathSync } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
@@ -25,9 +25,20 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
  * `claude` encodes the absolute cwd as a folder name under `~/.claude/projects/`.
  * Both `/` and `.` are replaced with `-` — past bugs in our runner replaced
  * only `/` and cwds with dots resolved to the wrong projects directory.
+ *
+ * The cwd is REALPATH'd first (Step-5 smoke finding): claude canonicalizes symlinks before
+ * encoding — on macOS `/var/folders/...` becomes `/private/var/folders/...`, so a non-canonical
+ * encoding tails a directory claude never writes to. Falls back to `resolve` when the path
+ * doesn't exist yet (tests build paths before creating them).
  */
 export function encodeCwd(cwd: string): string {
-	return resolve(cwd).replace(/[/.]/g, '-')
+	let canonical: string
+	try {
+		canonical = realpathSync(cwd)
+	} catch {
+		canonical = resolve(cwd)
+	}
+	return canonical.replace(/[/.]/g, '-')
 }
 
 /**

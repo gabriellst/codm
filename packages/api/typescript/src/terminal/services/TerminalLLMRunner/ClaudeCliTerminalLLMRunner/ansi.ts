@@ -55,3 +55,16 @@ export function shouldAutoAcceptTrustPrompt(plainOutput: string): boolean {
 	const squashed = squashWhitespace(plainOutput)
 	return TRUST_PROMPT_PATTERNS_SQUASHED.some(p => p.test(squashed))
 }
+
+/**
+ * Main-TUI readiness markers (whitespace-squashed, same D2 rationale as the trust patterns).
+ * `ClaudeBootSequence` waits for one of these before the runner writes the priming prompt —
+ * pasting into a still-initializing REPL is what loses turns. Wording drifts across releases,
+ * so boot falls back to the time-based settle when none matches.
+ */
+const MAIN_UI_PATTERNS_SQUASHED = [/forshortcuts/i, /esctointerrupt/i, /bypasspermissions/i, /ctrl\+gtoeditinVim/i, /Try"/i]
+
+export function isMainUiReady(plainOutput: string): boolean {
+	const squashed = squashWhitespace(plainOutput)
+	return MAIN_UI_PATTERNS_SQUASHED.some(p => p.test(squashed))
+}
