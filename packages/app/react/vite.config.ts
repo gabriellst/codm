@@ -5,12 +5,17 @@ import react from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 
+// Desktop (Tauri shell) build: `nx run app-react:build-spa` sets CODEDM_DESKTOP=true.
+// The webview serves the SPA from tauri://localhost root, so the '/app' basepath and
+// the node-server preset both switch off: static SPA shell into .output/public.
+const desktop = process.env.CODEDM_DESKTOP === 'true'
+
 export default defineConfig({
-	base: '/app/',
+	base: desktop ? '/' : '/app/',
 	envDir: '..',
 	plugins: [
 		tanstackStart({
-			router: { basepath: '/app' },
+			...(desktop ? { spa: { enabled: true } } : { router: { basepath: '/app' } }),
 			tsr: {
 				routesDirectory: './src/routes',
 				generatedRouteTree: './src/routeTree.gen.ts',
@@ -19,7 +24,7 @@ export default defineConfig({
 				autoCodeSplitting: true,
 			},
 		}),
-		nitro({ config: { preset: 'node-server' } }),
+		...(desktop ? [] : [nitro({ config: { preset: 'node-server' } })]),
 		tailwindcss(),
 		react(),
 	],

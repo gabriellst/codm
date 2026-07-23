@@ -1,0 +1,27 @@
+# CodeDM desktop shell — Tauri v2 host.
+# UNVERIFIED-COMPILE: no Rust toolchain is present on the machine that authored this
+# (see .specs/codedm/OVERNIGHT-BLOCKED.md — `tauri dev`/`tauri build` acceptance parked).
+# First `cargo build` may need minor version/API adjustments.
+[package]
+name = "codedm-desktop"
+version = "0.1.0"
+description = "CodeDM desktop shell (react console webview + TS daemon / Go gateway sidecars)"
+edition = "2021"
+
+[lib]
+name = "codedm_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-autostart = "2"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

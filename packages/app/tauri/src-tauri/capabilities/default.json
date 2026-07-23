@@ -1,0 +1,15 @@
+{
+	"$schema": "../gen/schemas/desktop-schema.json",
+	"identifier": "default",
+	"description": "Capabilities the react console's lib/native seam invokes on the main window.",
+	"windows": ["main"],
+	"permissions": [
+		"core:default",
+		"core:window:allow-set-badge-count",
+		"dialog:allow-open",
+		"notification:default",
+		"autostart:allow-is-enabled",
+		"autostart:allow-enable",
+		"autostart:allow-disable"
+	]
+}

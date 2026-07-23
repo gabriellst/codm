@@ -1,0 +1,24 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "app-tauri",
+	"projectType": "application",
+	"targets": {
+		"sidecars": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": { "command": "bun scripts/build-sidecars.ts", "cwd": "packages/app/tauri" }
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": ["sidecars"],
+			"options": { "command": "bun x tauri dev", "cwd": "packages/app/tauri" }
+		},
+		"bundle": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": ["sidecars", { "projects": "app-react", "target": "build-spa" }],
+			"options": { "command": "bun x tauri build", "cwd": "packages/app/tauri" }
+		}
+	}
+}

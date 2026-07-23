@@ -19,6 +19,7 @@
 		"packages/app/astro",
 		"packages/app/react",
 		"packages/app/styles",
+		"packages/app/tauri",
 		"packages/client",
 		"packages/client/dist/typescript",
 		"packages/e2e"
@@ -31,6 +32,9 @@
 		"dev:api:go": "nx run api-go:dev",
 		"dev:app:react": "nx run app-react:dev",
 		"dev:app:astro": "nx run app-astro:dev",
+		"desktop:dev": "nx run app-tauri:dev",
+		"desktop:sidecars": "nx run app-tauri:sidecars",
+		"desktop:bundle": "nx run app-tauri:bundle",
 		"tsc": "nx run-many -t tsc",
 		"test": "nx run-many -t test --exclude=e2e",
 		"lint": "nx run-many -t lint",
