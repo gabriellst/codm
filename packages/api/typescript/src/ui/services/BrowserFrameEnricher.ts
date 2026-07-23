@@ -1,19 +1,44 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import type { z } from 'zod'
-import { BaseIntegrationEvent, DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import type Z from 'zod'
+import { BaseIntegrationEvent, DrizzleClient, tryCatchAsync, z } from '@codedm/core-typescript'
 import { issues, stops, threads } from '@codedm/contracts/db'
-import { IssueStatus, ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStatus, StopKind, ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
 import {
 	IssueOpenedEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
 	IssueStopResolvedEvent,
 } from '@codedm/contracts-typescript/wire/events'
-import type { BrowserThreadStatusChangedFrameSchema, BrowserStopRaisedFrameSchema } from '../controllers/ListenEvents'
 
-type ThreadStatusChangedFrame = z.infer<typeof BrowserThreadStatusChangedFrameSchema>
-type StopRaisedFrame = z.infer<typeof BrowserStopRaisedFrameSchema>
+/**
+ * The `browser.*` SSE frames — DECLARED HERE, at their synthesizer. These are UI-only enriched views
+ * (denormalized display fields computed at broadcast time), never wire facts: they ride no outbox,
+ * cross no service, and are therefore correctly OUTSIDE `packages/contracts` (the codegen only emits
+ * models that `extends IntegrationEvent`). This module is their single declared source; the SSE
+ * controller composes `BrowserSseFrameSchema` into its output union and never redeclares a frame.
+ * Field vocabulary stays contract-typed (`ThreadStatus` / `StopKind` from the wire enums).
+ */
+export const BrowserThreadStatusChangedFrameSchema = z.object({
+	name: z.literal('browser.thread_status_changed'),
+	threadId: z.string(),
+	status: z.enum(ThreadStatus),
+	agentsRunningNow: z.number().int(),
+})
+
+export const BrowserStopRaisedFrameSchema = z.object({
+	name: z.literal('browser.stop_raised'),
+	threadId: z.string(),
+	threadDisplayName: z.string(),
+	issueId: z.string(),
+	issueKey: z.string(),
+	stopKind: z.enum(StopKind),
+})
+
+export const BrowserSseFrameSchema = z.discriminatedUnion('name', [BrowserThreadStatusChangedFrameSchema, BrowserStopRaisedFrameSchema])
+
+type ThreadStatusChangedFrame = Z.infer<typeof BrowserThreadStatusChangedFrameSchema>
+type StopRaisedFrame = Z.infer<typeof BrowserStopRaisedFrameSchema>
 export type BrowserFrame = ThreadStatusChangedFrame | StopRaisedFrame
 
 /**
@@ -99,7 +124,10 @@ export class BrowserFrameEnricher {
 		if (await this.isPaused(threadId)) return ThreadStatus.PAUSED
 
 		const openStops = await tryCatchAsync(async () =>
-			this.db.select({ id: stops.id }).from(stops).where(and(eq(stops.threadId, threadId), isNull(stops.resolvedAt))),
+			this.db
+				.select({ id: stops.id })
+				.from(stops)
+				.where(and(eq(stops.threadId, threadId), isNull(stops.resolvedAt))),
 		)
 		if (openStops.success && openStops.data.some(s => s.id !== exclude.excludeStopId)) return ThreadStatus.NEEDS_ATTENTION
 

@@ -6,12 +6,14 @@
  * `name`-narrowing stops yielding the typed payload, the accesses below become TS2339/TS2322 and
  * the `tsc` gate goes red.
  *
- * The daemon-origin regression this pins: `ListenEvents200`'s generic passthrough arm used to
- * declare `name: string`, which swallowed the typed frames' literal names — narrowing
+ * The daemon-origin regression this pins: `ListenEvents200`'s passthrough arm once declared
+ * `name: string`, which swallowed the typed frames' literal names — narrowing
  * `'integration.channel_message.received'` could not exclude the passthrough arm, so `payload`
- * stayed the loose `{ ownerId }` envelope. The passthrough arm now carries the CLOSED
- * `BrowserIntegrationEventName` enum (disjoint from the typed frame names), restoring exact
- * narrowing. The gateway origin (`ServerEvent`) narrows through its discriminated oneOf.
+ * stayed the loose `{ ownerId }` envelope. The declarative surface has NO open passthrough arm at
+ * all: every union arm is a generated contract event schema with a baked-in literal `name`
+ * (union-slot payloads materialized from the owner client), so literal-name narrowing is exact by
+ * construction — and this pin keeps it that way. The gateway origin (`ServerEvent`) narrows through
+ * its discriminated oneOf.
  */
 import type { ServerEvent } from '@codedm/client-typescript/go'
 import type { ListenEvents200 } from '@codedm/client-typescript/typescript'

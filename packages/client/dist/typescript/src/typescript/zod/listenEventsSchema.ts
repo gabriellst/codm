@@ -3,8 +3,18 @@
 * Do not edit manually.
 */
 
-import { browserIntegrationEventNameSchema } from "./browserIntegrationEventNameSchema.ts";
+import { artifactKindSchema } from "./artifactKindSchema.ts";
+import { channelKindSchema } from "./channelKindSchema.ts";
+import { chatPresenceTypeSchema } from "./chatPresenceTypeSchema.ts";
+import { classificationMethodSchema } from "./classificationMethodSchema.ts";
+import { contactKindSchema } from "./contactKindSchema.ts";
+import { historySyncTypeSchema } from "./historySyncTypeSchema.ts";
+import { issueArchiveReasonSchema } from "./issueArchiveReasonSchema.ts";
+import { messageTypeSchema } from "./messageTypeSchema.ts";
+import { providerKindSchema } from "./providerKindSchema.ts";
+import { senderIdentitySchema } from "./senderIdentitySchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
+import { stopResolutionSchema } from "./stopResolutionSchema.ts";
 import { threadStatusSchema } from "./threadStatusSchema.ts";
 import { z } from "zod/v4";
 
@@ -12,25 +22,77 @@ import { z } from "zod/v4";
  * @description Owner-scoped real-time integration events via SSE
  */
 export const listenEvents200Schema = z.union([z.object({
-    "name": z.enum(["browser.thread_status_changed"]),
+    "ownerId": z.string(),
+"name": z.enum(["integration.agent.reply_drafted"]),
+"payload": z.object({
+    "issueId": z.string(),
 "threadId": z.string(),
-get "status"(){
-                return threadStatusSchema
+"labelIssueKey": z.string(),
+"labelThreadId": z.string(),
+"text": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.artifact.recorded"]),
+"payload": z.object({
+    "artifactId": z.string(),
+"threadId": z.string(),
+"issueId": z.optional(z.string()),
+get "kind"(){
+                return artifactKindSchema
               },
-"agentsRunningNow": z.int().min(-9007199254740991).max(9007199254740991)
+"artifactName": z.string()
+    })
     }), z.object({
-    "name": z.enum(["browser.stop_raised"]),
-"threadId": z.string(),
-"threadDisplayName": z.string(),
-"issueId": z.string(),
-"issueKey": z.string(),
-get "stopKind"(){
-                return stopKindSchema
+    "ownerId": z.string(),
+"name": z.enum(["integration.billing.subscription_changed"]),
+"payload": z.object({
+    
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_message.deleted"]),
+"payload": z.object({
+    "channelId": z.string(),
+"messageId": z.string(),
+"remoteId": z.string(),
+get "platform"(){
+                return channelKindSchema
               }
+    })
     }), z.object({
-    "name": z.enum(["integration.channel_message.received"]),
-"ownerId": z.string(),
-"payload": z.union([z.union([z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_message.delivered"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"remoteId": z.string(),
+"senderId": z.string(),
+"messageIds": z.array(z.string()),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991),
+"platform": z.string(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_message.edited"]),
+"payload": z.object({
+    "channelId": z.string(),
+"messageId": z.string(),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991),
+get "messageType"(){
+                return messageTypeSchema
+              },
+"contentJson": z.string(),
+get "platform"(){
+                return channelKindSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_message.received"]),
+"payload": z.union([z.object({
     "channelId": z.uuid(),
 "content": z.optional(z.object({
     "contextInfo": z.object({
@@ -335,7 +397,7 @@ get "stopKind"(){
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
-    })]), z.object({
+    }), z.object({
     "channelId": z.uuid(),
 "content": z.optional(z.object({
     "text": z.string()
@@ -359,13 +421,351 @@ get "stopKind"(){
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     })])
     }), z.object({
-    get "name"(){
-                return browserIntegrationEventNameSchema
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_message.seen"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"remoteId": z.string(),
+"senderId": z.string(),
+"messageIds": z.array(z.string()),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991),
+"self": z.boolean(),
+"platform": z.string(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_message.sent"]),
+"payload": z.object({
+    "channelId": z.string(),
+"messageId": z.string(),
+"internalMessageId": z.string(),
+"remoteId": z.string(),
+"senderId": z.string(),
+"isGroup": z.boolean(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991),
+"observedAt": z.iso.datetime(),
+get "messageType"(){
+                return messageTypeSchema
               },
+"contentJson": z.string(),
+get "platform"(){
+                return channelKindSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel_special_platform_event.received"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"eventName": z.string(),
+"eventType": z.enum(["qr_code_updated"]),
 "ownerId": z.string(),
 "payload": z.object({
-    "ownerId": z.uuid()
-    }).catchall(z.any())
+    "code": z.string()
+    }),
+"platform": z.enum(["WHATSAPP"])
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.chat_presence_updated"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"chatId": z.string(),
+"senderId": z.string(),
+get "state"(){
+                return chatPresenceTypeSchema
+              },
+"observedAt": z.iso.datetime(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.connected"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"platform": z.string(),
+"platformData": z.optional(z.any()),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.delivery_requested"]),
+"payload": z.object({
+    "channelId": z.string(),
+"contactExternalId": z.string(),
+"contactDisplayName": z.string(),
+get "contactKind"(){
+                return contactKindSchema
+              },
+"text": z.string(),
+"labelIssueKey": z.optional(z.string()),
+"labelThreadId": z.optional(z.string()),
+get "senderIdentity"(){
+                return senderIdentitySchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.disconnected"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"platform": z.string(),
+"platformData": z.optional(z.any()),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.logged_out"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"reason": z.string(),
+"platform": z.string(),
+"platformData": z.optional(z.any()),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.membership_added"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"groupId": z.string(),
+"memberId": z.string(),
+"isAdmin": z.boolean(),
+"joinedAt": z.iso.datetime(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.membership_removed"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"groupId": z.string(),
+"memberId": z.string(),
+"removedAt": z.iso.datetime(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.messages_synced"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"ownerId": z.string(),
+"total": z.int().min(-9007199254740991).max(9007199254740991),
+"inserted": z.int().min(-9007199254740991).max(9007199254740991)
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.outbound_delivered"]),
+"payload": z.object({
+    "channelId": z.string(),
+"contactExternalId": z.string(),
+"contactDisplayName": z.string(),
+get "contactKind"(){
+                return contactKindSchema
+              },
+"labelIssueKey": z.optional(z.string()),
+"labelThreadId": z.optional(z.string()),
+get "senderIdentity"(){
+                return senderIdentitySchema
+              },
+"deliveredAt": z.iso.datetime()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.pairing_qr_updated"]),
+"payload": z.object({
+    "channelId": z.string(),
+get "kind"(){
+                return channelKindSchema
+              },
+"qrPayload": z.string(),
+"qrExpiresAt": z.iso.datetime()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.presence_updated"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"remoteId": z.string(),
+"unavailable": z.boolean(),
+"lastSeen": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"observedAt": z.iso.datetime(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.remote_created"]),
+"payload": z.object({
+    "channelId": z.string(),
+"remoteId": z.string(),
+get "contactKind"(){
+                return contactKindSchema
+              },
+get "platform"(){
+                return channelKindSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.remote_deleted"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"remoteId": z.string(),
+"at": z.iso.datetime(),
+"ownerId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.remote_updated"]),
+"payload": z.object({
+    "channelId": z.string(),
+"remoteId": z.string(),
+get "contactKind"(){
+                return contactKindSchema
+              },
+"displayName": z.string(),
+"description": z.optional(z.string()),
+"observedAt": z.iso.datetime()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.remotes_synced"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"ownerId": z.string(),
+"total": z.int().min(-9007199254740991).max(9007199254740991),
+"inserted": z.int().min(-9007199254740991).max(9007199254740991)
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.sync_completed"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"ownerId": z.string(),
+"completedAt": z.iso.datetime()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.sync_progress"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"ownerId": z.string(),
+get "historySyncType"(){
+                return historySyncTypeSchema
+              },
+"percent": z.int().min(-9007199254740991).max(9007199254740991)
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.channel.sync_started"]),
+"payload": z.object({
+    "channelId": z.uuid(),
+"ownerId": z.string(),
+"startedAt": z.iso.datetime()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.issue.archived"]),
+"payload": z.object({
+    "issueId": z.string(),
+"threadId": z.string(),
+get "reason"(){
+                return issueArchiveReasonSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.issue.completed"]),
+"payload": z.object({
+    "issueId": z.string(),
+"threadId": z.string(),
+"key": z.string(),
+"completedAt": z.iso.datetime()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.issue.opened"]),
+"payload": z.object({
+    "issueId": z.string(),
+"threadId": z.string(),
+"key": z.string(),
+"title": z.string(),
+get "provider"(){
+                return providerKindSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.issue.stop_raised"]),
+"payload": z.object({
+    "stopId": z.string(),
+"issueId": z.string(),
+"threadId": z.string(),
+get "kind"(){
+                return stopKindSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.issue.stop_resolved"]),
+"payload": z.object({
+    "stopId": z.string(),
+"issueId": z.string(),
+get "resolution"(){
+                return stopResolutionSchema
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.message.classified"]),
+"payload": z.object({
+    "threadId": z.string(),
+"entryId": z.string(),
+get "method"(){
+                return classificationMethodSchema
+              },
+"issueId": z.optional(z.string())
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.thread.attached"]),
+"payload": z.object({
+    "threadId": z.string(),
+"channelId": z.string(),
+"contactExternalId": z.string(),
+"contactDisplayName": z.string(),
+get "contactKind"(){
+                return contactKindSchema
+              },
+"workspaceId": z.string(),
+get "providers"(){
+                return z.array(providerKindSchema)
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.workspace.removed"]),
+"payload": z.object({
+    "workspaceId": z.string(),
+"path": z.string()
+    })
+    }), z.object({
+    "name": z.enum(["browser.thread_status_changed"]),
+"threadId": z.string(),
+get "status"(){
+                return threadStatusSchema
+              },
+"agentsRunningNow": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "name": z.enum(["browser.stop_raised"]),
+"threadId": z.string(),
+"threadDisplayName": z.string(),
+"issueId": z.string(),
+"issueKey": z.string(),
+get "stopKind"(){
+                return stopKindSchema
+              }
     })])
 
 export const listenEventsQueryResponseSchema = z.lazy(() => listenEvents200Schema)

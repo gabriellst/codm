@@ -243,64 +243,19 @@ func (e ApiErrors) Valid() bool {
 
 // Defines values for ArtifactKind.
 const (
-	FILE  ArtifactKind = "FILE"
-	IMAGE ArtifactKind = "IMAGE"
-	LINK  ArtifactKind = "LINK"
+	ArtifactKindFILE  ArtifactKind = "FILE"
+	ArtifactKindIMAGE ArtifactKind = "IMAGE"
+	ArtifactKindLINK  ArtifactKind = "LINK"
 )
 
 // Valid indicates whether the value is a known member of the ArtifactKind enum.
 func (e ArtifactKind) Valid() bool {
 	switch e {
-	case FILE:
+	case ArtifactKindFILE:
 		return true
-	case IMAGE:
+	case ArtifactKindIMAGE:
 		return true
-	case LINK:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BrowserIntegrationEventName.
-const (
-	IntegrationAgentReplyDrafted    BrowserIntegrationEventName = "integration.agent.reply_drafted"
-	IntegrationChannelConnected     BrowserIntegrationEventName = "integration.channel.connected"
-	IntegrationChannelDisconnected  BrowserIntegrationEventName = "integration.channel.disconnected"
-	IntegrationChannelRemotesSynced BrowserIntegrationEventName = "integration.channel.remotes_synced"
-	IntegrationIssueArchived        BrowserIntegrationEventName = "integration.issue.archived"
-	IntegrationIssueCompleted       BrowserIntegrationEventName = "integration.issue.completed"
-	IntegrationIssueOpened          BrowserIntegrationEventName = "integration.issue.opened"
-	IntegrationIssueStopRaised      BrowserIntegrationEventName = "integration.issue.stop_raised"
-	IntegrationIssueStopResolved    BrowserIntegrationEventName = "integration.issue.stop_resolved"
-	IntegrationMessageClassified    BrowserIntegrationEventName = "integration.message.classified"
-	IntegrationThreadAttached       BrowserIntegrationEventName = "integration.thread.attached"
-)
-
-// Valid indicates whether the value is a known member of the BrowserIntegrationEventName enum.
-func (e BrowserIntegrationEventName) Valid() bool {
-	switch e {
-	case IntegrationAgentReplyDrafted:
-		return true
-	case IntegrationChannelConnected:
-		return true
-	case IntegrationChannelDisconnected:
-		return true
-	case IntegrationChannelRemotesSynced:
-		return true
-	case IntegrationIssueArchived:
-		return true
-	case IntegrationIssueCompleted:
-		return true
-	case IntegrationIssueOpened:
-		return true
-	case IntegrationIssueStopRaised:
-		return true
-	case IntegrationIssueStopResolved:
-		return true
-	case IntegrationMessageClassified:
-		return true
-	case IntegrationThreadAttached:
+	case ArtifactKindLINK:
 		return true
 	default:
 		return false
@@ -367,6 +322,27 @@ func (e ChannelStatus) Valid() bool {
 	case DISCONNECTED:
 		return true
 	case PAIRING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChatPresenceType.
+const (
+	Composing ChatPresenceType = "composing"
+	Paused    ChatPresenceType = "paused"
+	Recording ChatPresenceType = "recording"
+)
+
+// Valid indicates whether the value is a known member of the ChatPresenceType enum.
+func (e ChatPresenceType) Valid() bool {
+	switch e {
+	case Composing:
+		return true
+	case Paused:
+		return true
+	case Recording:
 		return true
 	default:
 		return false
@@ -670,6 +646,45 @@ func (e CurrencyCode) Valid() bool {
 	}
 }
 
+// Defines values for HistorySyncType.
+const (
+	Initial HistorySyncType = "initial"
+	Recent  HistorySyncType = "recent"
+)
+
+// Valid indicates whether the value is a known member of the HistorySyncType enum.
+func (e HistorySyncType) Valid() bool {
+	switch e {
+	case Initial:
+		return true
+	case Recent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueArchiveReason.
+const (
+	AUTO24H        IssueArchiveReason = "AUTO_24H"
+	MANUAL         IssueArchiveReason = "MANUAL"
+	THREADDETACHED IssueArchiveReason = "THREAD_DETACHED"
+)
+
+// Valid indicates whether the value is a known member of the IssueArchiveReason enum.
+func (e IssueArchiveReason) Valid() bool {
+	switch e {
+	case AUTO24H:
+		return true
+	case MANUAL:
+		return true
+	case THREADDETACHED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueStatus.
 const (
 	COMPLETED  IssueStatus = "COMPLETED"
@@ -703,6 +718,57 @@ func (e Language) Valid() bool {
 	case EnUS:
 		return true
 	case PtBR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessageType.
+const (
+	MessageTypeAUDIO    MessageType = "AUDIO"
+	MessageTypeBUTTON   MessageType = "BUTTON"
+	MessageTypeCONTACT  MessageType = "CONTACT"
+	MessageTypeDOCUMENT MessageType = "DOCUMENT"
+	MessageTypeIMAGE    MessageType = "IMAGE"
+	MessageTypeLIST     MessageType = "LIST"
+	MessageTypeLOCATION MessageType = "LOCATION"
+	MessageTypePOLL     MessageType = "POLL"
+	MessageTypeREACTION MessageType = "REACTION"
+	MessageTypeSTATUS   MessageType = "STATUS"
+	MessageTypeSTICKER  MessageType = "STICKER"
+	MessageTypeTEXT     MessageType = "TEXT"
+	MessageTypeVIDEO    MessageType = "VIDEO"
+)
+
+// Valid indicates whether the value is a known member of the MessageType enum.
+func (e MessageType) Valid() bool {
+	switch e {
+	case MessageTypeAUDIO:
+		return true
+	case MessageTypeBUTTON:
+		return true
+	case MessageTypeCONTACT:
+		return true
+	case MessageTypeDOCUMENT:
+		return true
+	case MessageTypeIMAGE:
+		return true
+	case MessageTypeLIST:
+		return true
+	case MessageTypeLOCATION:
+		return true
+	case MessageTypePOLL:
+		return true
+	case MessageTypeREACTION:
+		return true
+	case MessageTypeSTATUS:
+		return true
+	case MessageTypeSTICKER:
+		return true
+	case MessageTypeTEXT:
+		return true
+	case MessageTypeVIDEO:
 		return true
 	default:
 		return false
@@ -778,6 +844,27 @@ func (e Refresh) Valid() bool {
 	case False:
 		return true
 	case True:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SenderIdentity.
+const (
+	AGENT    SenderIdentity = "AGENT"
+	OPERATOR SenderIdentity = "OPERATOR"
+	ROUTER   SenderIdentity = "ROUTER"
+)
+
+// Valid indicates whether the value is a known member of the SenderIdentity enum.
+func (e SenderIdentity) Valid() bool {
+	switch e {
+	case AGENT:
+		return true
+	case OPERATOR:
+		return true
+	case ROUTER:
 		return true
 	default:
 		return false
@@ -931,9 +1018,6 @@ type ApiErrors string
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
-// BrowserIntegrationEventName defines model for BrowserIntegrationEventName.
-type BrowserIntegrationEventName string
-
 // BufferSize defines model for BufferSize.
 type BufferSize string
 
@@ -942,6 +1026,9 @@ type ChannelKind string
 
 // ChannelStatus defines model for ChannelStatus.
 type ChannelStatus string
+
+// ChatPresenceType defines model for ChatPresenceType.
+type ChatPresenceType string
 
 // ClassificationMethod defines model for ClassificationMethod.
 type ClassificationMethod string
@@ -952,11 +1039,20 @@ type ContactKind string
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
 
+// HistorySyncType defines model for HistorySyncType.
+type HistorySyncType string
+
+// IssueArchiveReason defines model for IssueArchiveReason.
+type IssueArchiveReason string
+
 // IssueStatus defines model for IssueStatus.
 type IssueStatus string
 
 // Language defines model for Language.
 type Language string
+
+// MessageType defines model for MessageType.
+type MessageType string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
@@ -969,6 +1065,9 @@ type ProviderStatus string
 
 // Refresh defines model for Refresh.
 type Refresh string
+
+// SenderIdentity defines model for SenderIdentity.
+type SenderIdentity string
 
 // StopKind defines model for StopKind.
 type StopKind string

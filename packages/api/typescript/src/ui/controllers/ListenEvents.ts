@@ -1,152 +1,92 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, z, MimeTypes, ExternalMediator, SSE_CONNECTED_FRAME, createSSEResponse, encodeSSEFrame } from '@codedm/core-typescript'
-import { BaseIntegrationEvent } from '@codedm/core-typescript'
-import { ThreadStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
-// Generated zod variant schemas from the OWNER service's client subpath (types/schemas ONLY — never
-// the HTTP client): the composed union below is how this surface re-emits the gateway's
-// channel_message.received with FULL narrowing, without redeclaring a single shape (union-slots
-// spec §2.4 — one shape, N surfaces, zero redeclaration).
+import type { ZodObject, ZodType } from 'zod'
 import {
-	channelMessageReceivedPayloadInternalTextSchema,
-	channelMessageReceivedPayloadWhatsappAudioSchema,
-	channelMessageReceivedPayloadWhatsappContactSchema,
-	channelMessageReceivedPayloadWhatsappDocumentSchema,
-	channelMessageReceivedPayloadWhatsappImageSchema,
-	channelMessageReceivedPayloadWhatsappLocationSchema,
-	channelMessageReceivedPayloadWhatsappPollSchema,
-	channelMessageReceivedPayloadWhatsappReactionSchema,
-	channelMessageReceivedPayloadWhatsappStickerSchema,
-	channelMessageReceivedPayloadWhatsappTextSchema,
-	channelMessageReceivedPayloadWhatsappVideoSchema,
-} from '@codedm/client-typescript/go'
+	Controller,
+	z,
+	MimeTypes,
+	ExternalMediator,
+	SSE_CONNECTED_FRAME,
+	createSSEResponse,
+	encodeSSEFrame,
+	BaseIntegrationEvent,
+} from '@codedm/core-typescript'
+// The event surface, imported WHOLESALE from the contract (founder ratification 23-jul: the contract
+// is the single source — no allowlist, no hand-rolled per-event schemas). Every generated event class
+// carries a `schema` whose `name` is a baked-in z.literal, so the output union composes directly.
+import * as WireEvents from '@codedm/contracts-typescript/wire/events'
+// Generated zod schemas from the OWNER service's client subpath (types/schemas ONLY — never the HTTP
+// client): union-slot payloads are materialized from the owner's generated aggregate schema so this
+// surface re-emits them with FULL narrowing, without redeclaring a single shape (union-slots §2.4).
+import * as goClientSchemas from '@codedm/client-typescript/go'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { BrowserFrameEnricher } from '../services/BrowserFrameEnricher'
+import { BrowserFrameEnricher, BrowserSseFrameSchema } from '../services/BrowserFrameEnricher'
 
 /**
- * The curated browser-facing event union — the dashboard operator-scoped SSE surface.
- *
- * These are the CodeDM integration events (frozen in the Phase-0 contract lock,
- * `packages/contracts/wire/events/*.tsp`) that drive the live operator console: the Needs-You
- * callout + dock badge, live issue lists, transcript action lines + chat bubbles, and channel
- * health / live QR. They subsume the modeling's `browser.*` frames:
- *   - `browser.stop_raised`            ← integration.issue.stop_raised
- *   - `browser.thread_status_changed`  ← derived from the issue lifecycle events below
- *   - `browser.terminal_output_appended` is the two-stream TRANSPORT frame (not an outbox fact)
- *     and is delivered by the terminal-session stream, NOT this owner-scoped broadcaster.
- *
- * Names are the frozen wire discriminators (the codegen gates every one to the `integration.`
- * prefix), so they are listed as string literals — the contract, not a runtime import.
- *
- * FROZEN SSE FRAMES — the two enriched `browser.*` frames are materialized as executable, typed Zod
- * schemas (`BrowserThreadStatusChangedFrameSchema` / `BrowserStopRaisedFrameSchema` below) and folded
- * into `ListenEventsControllerOutputSchema`, so the frozen shapes — with their denormalized display
- * fields (agentsRunningNow / threadDisplayName / issueKey) — are LOCKED at the contract. Delivery is
- * now LIVE (phase-6b): the `BrowserFrameEnricher` synthesizes these frames from the corresponding
- * integration facts (needs-you / stop raised / live status) at broadcast time and the broadcaster
- * fans them out ALONGSIDE the raw envelope. The fields are computed at broadcast time, not carried on
- * any outbox fact, so they never become `integration.*` wire events (the codegen only emits models
- * that `extends IntegrationEvent`); the enrichment happens in this broadcaster, not on the wire.
- *
- * `browser.terminal_output_appended` stays a comment on purpose — per the draft it is the two-stream
- * TRANSPORT frame (NOT a domain / outbox fact) and belongs to the terminal-session stream, not this
- * owner-scoped outbox broadcaster, so it is intentionally NOT part of this endpoint's SSE union:
- *   - browser.terminal_output_appended { issueId: string; line: string; at: string }
- *
- * WIRING NOTE: the broadcaster below filters each client by the ENVELOPE `ownerId`
- * (`browserDeliveryOwnerId`) — the CodeDM lock carries `ownerId` on the envelope only, which is also
- * what each emitted frame carries — so generic `integration.*` frames are delivered to their owner's
- * connected clients today. The two enriched `browser.*` frames are synthesized + delivered by the
- * `BrowserFrameEnricher` (see the FROZEN SSE FRAMES note above).
+ * Describes the static side of a generated integration event class. Every event in
+ * `@codedm/contracts-typescript/wire/events` exports a class with a `schema` (ZodObject whose `name`
+ * is a z.literal) and a `name` (the frozen wire discriminator).
  */
-const BROWSER_EVENTS = [
-	// Human-in-the-loop control plane (T03 Home callout / T14 Needs-You / dock badge)
-	{ name: 'integration.issue.stop_raised' },
-	{ name: 'integration.issue.stop_resolved' },
-	// Issue lifecycle → live issue lists + thread status (T04 / T11 / T03)
-	{ name: 'integration.issue.opened' },
-	{ name: 'integration.issue.completed' },
-	{ name: 'integration.issue.archived' },
-	// Routing + agent output → live transcript (T09)
-	{ name: 'integration.message.classified' },
-	{ name: 'integration.agent.reply_drafted' },
-	// Thread + channel health (T03 / T05 / T06). The pairing QR is delivered SYNCHRONOUSLY by the
-	// gateway's connect call (the console drives the gateway SDK through the external/ChannelProxy
-	// wildcard), not streamed here — live QR rotation rides the gateway's own /events stream, also
-	// reachable through the proxy. Only the connect/disconnect health transitions ride this surface.
-	{ name: 'integration.thread.attached' },
-	{ name: 'integration.channel.connected' },
-	{ name: 'integration.channel.disconnected' },
-	// Contact directory sync (T15 attach wizard): a bootstrap remotes-sync pass finished → the browser
-	// invalidates its attach-wizard contacts read. Paired with the load-bearing ConsumeChannelRemotesSynced.
-	{ name: 'integration.channel.remotes_synced' },
-	// Inbound message (union-slots pilot): the gateway's verbatim payload re-emitted with FULL typed
-	// narrowing — the frame schema below composes the generated variant schemas from the owner's client.
-	{ name: 'integration.channel_message.received' },
-] as const satisfies ReadonlyArray<{ name: string }>
+interface IntegrationEventClass {
+	// biome-ignore lint/suspicious/noExplicitAny: each event has a different shape
+	schema: ZodObject<any>
+	name: string
+}
 
-const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))
-
-/**
- * Frames with a DEDICATED typed schema in the output union. They are excluded from the generic
- * passthrough arm's `name` enum: a passthrough arm whose `name` is an open `z.string()` absorbs the
- * typed frames in the emitted SDK union (narrowing on a literal name can't exclude a `string` arm,
- * so the payload degrades to the loose envelope — TS2322 on daemon-origin consumers). Keeping the
- * discriminant sets disjoint makes `name`-narrowing on the daemon SDK yield the SAME typed payload
- * as the gateway-origin SDK (union-slots spec §2.4 — identical narrowing on every surface).
- */
-const TYPED_FRAME_NAMES = ['integration.channel_message.received'] as const
-type TypedFrameName = (typeof TYPED_FRAME_NAMES)[number]
-type GenericFrameName = Exclude<(typeof BROWSER_EVENTS)[number]['name'], TypedFrameName>
-const GENERIC_FRAME_NAMES = BROWSER_EVENTS.map(e => e.name).filter(
-	(n): n is GenericFrameName => !(TYPED_FRAME_NAMES as readonly string[]).includes(n),
-)
-
-/**
- * Enum-object export of the generic frame names, re-exported by `@ui/enums` so the root context's
- * `openapi.registerEnums` names the emitted component `BrowserIntegrationEventName` (the emitter
- * matches registered enums by sorted value list; unregistered enums fall back to a path-derived
- * component name — here the property name `name` → component `Name`).
- */
-export const BrowserIntegrationEventName = Object.fromEntries(GENERIC_FRAME_NAMES.map(n => [n, n])) as {
-	[K in GenericFrameName]: K
+function isIntegrationEventClass(e: unknown): e is IntegrationEventClass {
+	return e != null && typeof e === 'function' && 'schema' in e && 'name' in e
 }
 
 /**
- * The owner an integration event should fan out to on the browser SSE surface — or `undefined` when
- * the event is not part of that surface. Tenancy is the ENVELOPE `ownerId` (what the emitted frame
- * carries via `event.ownerId`), matching every `integration.*` event: the bridge handlers set
- * `ownerId` on the envelope, never inside the payload. Extracted as a pure predicate so the
- * broadcaster's filtering (BROWSER_EVENT_NAMES + owner match) is unit-testable without the SSE
- * transport.
+ * Union-slot payload materialization (union-slots spec §2.4) — driven by the generated MANIFESTS, not
+ * by event names: every event whose `<Model>Unions` manifest declares union slots has its contract
+ * payload (opaque `z.unknown()` slots) swapped for the OWNER workspace's generated aggregate payload
+ * schema (`<model>PayloadSchema` in the owner's client subpath), so the daemon re-emits the frame
+ * with the COMPLETE materialized oneOf. A new manifest event auto-materializes; a manifest whose
+ * owner client lacks the aggregate schema fails loud (broken codegen must not emit an opaque frame).
  */
-export function browserDeliveryOwnerId(event: BaseIntegrationEvent): string | undefined {
-	if (!BROWSER_EVENT_NAMES.has(event.name)) return undefined
-	return event.ownerId || undefined
+const OWNER_CLIENT_SCHEMAS: Record<string, Record<string, unknown>> = {
+	apiGo: goClientSchemas as unknown as Record<string, unknown>,
 }
 
+const camel = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
+
+function materializedPayloadSchemas(): Map<string, ZodType> {
+	const out = new Map<string, ZodType>()
+	for (const [exportName, manifest] of Object.entries(WireEvents)) {
+		if (!exportName.endsWith('Unions') || typeof manifest !== 'object' || manifest === null) continue
+		const model = exportName.slice(0, -'Unions'.length)
+		const eventClass = (WireEvents as Record<string, unknown>)[`${model}Event`]
+		if (!isIntegrationEventClass(eventClass)) throw new Error(`manifest ${exportName} has no matching event class ${model}Event`)
+		const owners = new Set(
+			Object.values(manifest as Record<string, { variants: ReadonlyArray<{ owner: string }> }>).flatMap(slot =>
+				slot.variants.map(v => v.owner),
+			),
+		)
+		for (const owner of owners) {
+			const clientSchemas = OWNER_CLIENT_SCHEMAS[owner]
+			if (!clientSchemas) throw new Error(`union-slot owner "${owner}" has no client schema namespace registered`)
+			const schema = clientSchemas[`${camel(model)}PayloadSchema`]
+			if (!schema) throw new Error(`owner "${owner}" client does not export ${camel(model)}PayloadSchema for manifest ${exportName}`)
+			out.set(eventClass.name, schema as ZodType)
+		}
+	}
+	return out
+}
+
+const MATERIALIZED_PAYLOADS = materializedPayloadSchemas()
+
 /**
- * Frozen `browser.*` SSE frames (Phase-0 contract lock) — the enriched, denormalized views the
- * operator console subscribes to, distinct from the raw `integration.*` outbox facts above. Locked
- * as typed schema now; broadcast-time enrichment (populating the denormalized fields) lands in the
- * gateway phase (see the docblock's FROZEN SSE FRAMES note). Discriminated by the frame `name`.
+ * Every integration event schema from the contract barrel — the whole surface, no allowlist —
+ * with union-slot payloads materialized from the owner's generated client. Sorted by wire name for
+ * deterministic openapi emission.
  */
-export const BrowserThreadStatusChangedFrameSchema = z.object({
-	name: z.literal('browser.thread_status_changed'),
-	threadId: z.string(),
-	status: z.enum(ThreadStatus),
-	agentsRunningNow: z.number().int(),
-})
-
-export const BrowserStopRaisedFrameSchema = z.object({
-	name: z.literal('browser.stop_raised'),
-	threadId: z.string(),
-	threadDisplayName: z.string(),
-	issueId: z.string(),
-	issueKey: z.string(),
-	stopKind: z.enum(StopKind),
-})
-
-export const BrowserSseFrameSchema = z.discriminatedUnion('name', [BrowserThreadStatusChangedFrameSchema, BrowserStopRaisedFrameSchema])
+const integrationFrameSchemas = (Object.values(WireEvents) as unknown[])
+	.filter(isIntegrationEventClass)
+	.sort((a, b) => a.name.localeCompare(b.name))
+	.map(e => {
+		const materialized = MATERIALIZED_PAYLOADS.get(e.name)
+		return materialized ? e.schema.extend({ payload: materialized }) : e.schema
+	})
 
 export const ListenEventsControllerInputSchema = z.object({
 	ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
@@ -154,59 +94,34 @@ export const ListenEventsControllerInputSchema = z.object({
 
 /**
  * The endpoint's SSE frame union — the SDK derives the typed `ServerEventName` union from this for
- * the frontend `useServerEvents` hook. Two surfaces coexist:
- *   - the generic `integration.*` envelope, the transport reality today: discriminated by the event
- *     `name` — a CLOSED enum of the browser-surface events that have no dedicated typed frame (the
- *     broadcaster only re-emits BROWSER_EVENT_NAMES, so the closed set IS the transport reality;
- *     an open `z.string()` here would swallow the typed frames' literal names in the SDK union and
- *     break daemon-origin narrowing) — carrying an open `ownerId`-scoped `payload`;
- *   - the two frozen enriched `browser.*` frames, locked here so their denormalized shapes ship at
- *     the contract even though broadcast-time delivery is wired in the gateway phase.
+ * the frontend `useServerEvents` hook. Two surfaces coexist, both DECLARED elsewhere and only
+ * COMPOSED here:
+ *   - every `integration.*` event of the contract barrel (all of them — the broadcaster forwards the
+ *     whole surface, filtered only by envelope-`ownerId` tenancy), each arm the generated schema
+ *     with its baked-in literal `name`;
+ *   - the enriched `browser.*` frames, declared at their synthesizer (`BrowserFrameEnricher`).
+ *
+ * Accepted deviation (cc-bp-04): the tuple cast for discriminatedUnion is unavoidable — Zod requires
+ * a `[T, ...T[]]` tuple, but Array.map() returns T[]; TS cannot infer a non-empty tuple from a
+ * runtime-composed array.
  */
-const GenericIntegrationFrameSchema = z.object({
-	name: z.enum(GENERIC_FRAME_NAMES),
-	ownerId: z.string(),
-	payload: z.object({ ownerId: z.uuid() }).loose(),
-})
+export const ListenEventsControllerOutputSchema = z.discriminatedUnion('name', [
+	...integrationFrameSchemas,
+	...BrowserSseFrameSchema.options,
+	// biome-ignore lint/suspicious/noExplicitAny: runtime-composed union arms have per-event shapes
+] as unknown as [ZodObject<any>, ZodObject<any>, ...ZodObject<any>[]])
 
 /**
- * The gateway's channel_message.received payload — the COMPLETE discriminated union composed from
- * the generated variant schemas of the owner's client (`@codedm/client-typescript/go`), never
- * redeclared here (union-slots spec §2.4). Composite discriminator (platform, messageType) nests:
- * the outer union narrows by `platform`, the WHATSAPP branch narrows by `messageType`. The TS
- * openapi emitter publishes this as the full oneOf in the daemon spec, so console narrowing is
- * identical whether the frame arrives from the gateway's own /events stream or from this re-emitting
- * surface.
+ * The owner an integration event fans out to on the browser SSE surface. ALL integration events are
+ * forwarded (founder ratification 23-jul — no allowlist, no per-event exceptions); the ONLY filter is
+ * tenancy: the ENVELOPE `ownerId` (the bridge handlers set `ownerId` on the envelope, never inside
+ * the payload) must match the client's session owner. An event without an envelope owner is withheld
+ * (nothing to scope it to). Extracted as a pure predicate so the broadcaster's filtering is
+ * unit-testable without the SSE transport.
  */
-export const ChannelMessageReceivedPayloadUnionSchema = z.discriminatedUnion('platform', [
-	z.discriminatedUnion('messageType', [
-		channelMessageReceivedPayloadWhatsappTextSchema,
-		channelMessageReceivedPayloadWhatsappImageSchema,
-		channelMessageReceivedPayloadWhatsappVideoSchema,
-		channelMessageReceivedPayloadWhatsappAudioSchema,
-		channelMessageReceivedPayloadWhatsappDocumentSchema,
-		channelMessageReceivedPayloadWhatsappStickerSchema,
-		channelMessageReceivedPayloadWhatsappLocationSchema,
-		channelMessageReceivedPayloadWhatsappContactSchema,
-		channelMessageReceivedPayloadWhatsappPollSchema,
-		channelMessageReceivedPayloadWhatsappReactionSchema,
-	]),
-	channelMessageReceivedPayloadInternalTextSchema,
-])
-
-/** Typed frame for the re-emitted gateway inbound message (union-slots pilot). */
-export const ChannelMessageReceivedFrameSchema = z.object({
-	name: z.literal('integration.channel_message.received'),
-	ownerId: z.string(),
-	payload: ChannelMessageReceivedPayloadUnionSchema,
-})
-
-export const ListenEventsControllerOutputSchema = z.union([
-	BrowserThreadStatusChangedFrameSchema,
-	BrowserStopRaisedFrameSchema,
-	ChannelMessageReceivedFrameSchema,
-	GenericIntegrationFrameSchema,
-])
+export function deliveryOwnerId(event: BaseIntegrationEvent): string | undefined {
+	return event.ownerId || undefined
+}
 
 interface SSEClient {
 	ownerId: string
@@ -242,21 +157,21 @@ export class ListenEventsController extends Controller<
 	}
 
 	/**
-	 * One mediator callback per process, fanned out to every connected client. Tenancy filter: an
-	 * event reaches a client ONLY when it is on the browser surface (BROWSER_EVENT_NAMES) and its
-	 * ENVELOPE ownerId matches the client's session owner (see `browserDeliveryOwnerId`).
+	 * One mediator callback per process, fanned out to every connected client. EVERY integration
+	 * event is forwarded — the only filter is tenancy (`deliveryOwnerId`: envelope owner must match
+	 * the client's session owner).
 	 *
-	 * Two frames coexist on the wire: the raw `integration.*` envelope is re-emitted for EVERY
-	 * browser-surface fact (unchanged), and the `BrowserFrameEnricher` synthesizes the enriched
-	 * `browser.thread_status_changed` / `browser.stop_raised` frames from the corresponding facts
-	 * (needs-you / stop raised / live status) — ADDITIVE, so no existing consumer loses its envelope.
+	 * Two frames coexist on the wire: the raw `integration.*` envelope is re-emitted for every fact
+	 * (unchanged), and the `BrowserFrameEnricher` synthesizes the enriched `browser.*` frames from
+	 * the facts it maps (needs-you / stop raised / live status) — ADDITIVE, so no consumer loses its
+	 * envelope.
 	 */
 	private ensureBroadcaster(): void {
 		if (this.broadcasterRegistered) return
 		this.broadcasterRegistered = true
 		this.externalMediator.registerCallback(async event => {
 			if (!(event instanceof BaseIntegrationEvent)) return
-			const targetOwnerId = browserDeliveryOwnerId(event)
+			const targetOwnerId = deliveryOwnerId(event)
 			if (!targetOwnerId) return
 			const recipients = [...this.clients].filter(client => client.ownerId === targetOwnerId)
 			if (recipients.length === 0) return
