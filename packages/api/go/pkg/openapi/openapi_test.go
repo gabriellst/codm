@@ -151,6 +151,47 @@ func TestEmitterHappyPath(t *testing.T) {
 	if got["PAIRING"] {
 		t.Error("ChannelStatus enum contaminated by contracts-go tier (PAIRING leaked in) — two-tier precedence broken")
 	}
+
+	// 10. EVERY stamped @union slot materializes — not just the primary. The
+	//     ChannelMessageReceivedPayload stamps TWO slots (content: 11 variants,
+	//     platformData: 2 variants); each variant component must resolve its
+	//     platformData to the platform-matched *PlatformData component ($ref,
+	//     narrowed by the pinned platform const), never an opaque x-unknown.
+	//     13/13 variants across the two slots (union-slots judge finding 1).
+	prefix := "ChannelMessageReceivedPayload_"
+	variantCount := 0
+	for name, raw := range schemas {
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		variantCount++
+		s := raw.(map[string]any)
+		props := s["properties"].(map[string]any)
+		pd, ok := props["platformData"].(map[string]any)
+		if !ok {
+			t.Errorf("%s missing platformData property", name)
+			continue
+		}
+		if _, unknown := pd["x-unknown"]; unknown {
+			t.Errorf("%s.platformData is x-unknown — secondary union slot not materialized", name)
+			continue
+		}
+		wantRef := "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
+		if strings.HasPrefix(name, prefix+"Internal_") {
+			wantRef = "#/components/schemas/InternalChannelMessageReceivedPlatformData"
+		}
+		if got := pd["$ref"]; got != wantRef {
+			t.Errorf("%s.platformData: got %v, want $ref %s (narrowed by pinned platform)", name, got, wantRef)
+		}
+	}
+	if variantCount != 11 {
+		t.Errorf("expected 11 ChannelMessageReceivedPayload variant components, got %d", variantCount)
+	}
+	for _, name := range []string{"WhatsAppChannelMessageReceivedPlatformData", "InternalChannelMessageReceivedPlatformData"} {
+		if _, ok := schemas[name]; !ok {
+			t.Errorf("missing platformData variant component: %s", name)
+		}
+	}
 }
 
 // TestEmitterIsIdempotent verifies two back-to-back emissions produce byte-identical

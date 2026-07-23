@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { WhatsAppChannelMessageSentPlatformData } from "./WhatsAppChannelMessageSentPlatformData.ts";
 import type { WhatsAppDocumentContent } from "./WhatsAppDocumentContent.ts";
 
 export const ChannelMessageSentPayloadWhatsappDocumentMessageTypeEnum = {
@@ -58,7 +59,10 @@ export type ChannelMessageSentPayloadWhatsappDocument = {
      * @type string
     */
     platform: ChannelMessageSentPayloadWhatsappDocumentPlatformEnumKey;
-    platformData?: any;
+    /**
+     * @type object | undefined
+    */
+    platformData?: WhatsAppChannelMessageSentPlatformData;
     /**
      * @type string
     */

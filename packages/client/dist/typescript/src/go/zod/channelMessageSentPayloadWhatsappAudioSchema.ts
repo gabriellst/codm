@@ -4,6 +4,7 @@
 */
 
 import { whatsAppAudioContentSchema } from "./whatsAppAudioContentSchema.ts";
+import { whatsAppChannelMessageSentPlatformDataSchema } from "./whatsAppChannelMessageSentPlatformDataSchema.ts";
 import { z } from "zod/v4";
 
 export const channelMessageSentPayloadWhatsappAudioSchema = z.object({
@@ -19,7 +20,9 @@ get "content"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+get "platformData"(){
+                return whatsAppChannelMessageSentPlatformDataSchema.optional()
+              },
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int()

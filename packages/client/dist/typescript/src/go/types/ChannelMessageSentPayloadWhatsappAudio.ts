@@ -4,6 +4,7 @@
 */
 
 import type { WhatsAppAudioContent } from "./WhatsAppAudioContent.ts";
+import type { WhatsAppChannelMessageSentPlatformData } from "./WhatsAppChannelMessageSentPlatformData.ts";
 
 export const ChannelMessageSentPayloadWhatsappAudioMessageTypeEnum = {
     AUDIO: "AUDIO"
@@ -58,7 +59,10 @@ export type ChannelMessageSentPayloadWhatsappAudio = {
      * @type string
     */
     platform: ChannelMessageSentPayloadWhatsappAudioPlatformEnumKey;
-    platformData?: any;
+    /**
+     * @type object | undefined
+    */
+    platformData?: WhatsAppChannelMessageSentPlatformData;
     /**
      * @type string
     */

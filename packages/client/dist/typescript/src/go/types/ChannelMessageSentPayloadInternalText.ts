@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { InternalChannelMessageSentPlatformData } from "./InternalChannelMessageSentPlatformData.ts";
 import type { InternalTextContent } from "./InternalTextContent.ts";
 
 export const ChannelMessageSentPayloadInternalTextMessageTypeEnum = {
@@ -58,7 +59,10 @@ export type ChannelMessageSentPayloadInternalText = {
      * @type string
     */
     platform: ChannelMessageSentPayloadInternalTextPlatformEnumKey;
-    platformData?: any;
+    /**
+     * @type object | undefined
+    */
+    platformData?: InternalChannelMessageSentPlatformData;
     /**
      * @type string
     */

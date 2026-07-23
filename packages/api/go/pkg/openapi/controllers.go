@@ -10,7 +10,7 @@ import (
 
 // registerControllers discovers controllers and registers their operations +
 // component schemas.
-func registerControllers(spec *Spec, w *walker, unions map[string]*UnionAnnotation) error {
+func registerControllers(spec *Spec, w *walker, unions map[string][]UnionAnnotation) error {
 	ctx := &schemaCtx{spec: spec, w: w, unions: unions}
 
 	// Collect first so we can sort deterministically.

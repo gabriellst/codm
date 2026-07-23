@@ -58,7 +58,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -84,7 +89,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -109,7 +119,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -133,7 +148,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -158,7 +178,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -182,7 +207,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -206,7 +236,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -233,7 +268,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -254,7 +294,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -280,7 +325,12 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "isEphemeral": z.boolean(),
+"isGroup": z.boolean(),
+"isViewOnce": z.boolean(),
+"pushName": z.string()
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
@@ -298,7 +348,11 @@ get "stopKind"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["INTERNAL"]),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.object({
+    "metadata": z.object({
+    
+    }).catchall(z.any())
+    })),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)

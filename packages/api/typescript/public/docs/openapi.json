@@ -3405,7 +3405,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -3525,7 +3548,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -3640,7 +3686,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -3747,7 +3816,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -3860,7 +3952,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -3970,7 +4085,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -4078,7 +4216,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -4195,7 +4356,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -4296,7 +4480,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -4409,7 +4616,30 @@
                                       "type": "string",
                                       "const": "WHATSAPP"
                                     },
-                                    "platformData": {},
+                                    "platformData": {
+                                      "type": "object",
+                                      "properties": {
+                                        "isEphemeral": {
+                                          "type": "boolean"
+                                        },
+                                        "isGroup": {
+                                          "type": "boolean"
+                                        },
+                                        "isViewOnce": {
+                                          "type": "boolean"
+                                        },
+                                        "pushName": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "isEphemeral",
+                                        "isGroup",
+                                        "isViewOnce",
+                                        "pushName"
+                                      ],
+                                      "additionalProperties": false
+                                    },
                                     "remoteId": {
                                       "type": "string"
                                     },
@@ -4496,7 +4726,20 @@
                                   "type": "string",
                                   "const": "INTERNAL"
                                 },
-                                "platformData": {},
+                                "platformData": {
+                                  "type": "object",
+                                  "properties": {
+                                    "metadata": {
+                                      "type": "object",
+                                      "properties": {},
+                                      "additionalProperties": {}
+                                    }
+                                  },
+                                  "required": [
+                                    "metadata"
+                                  ],
+                                  "additionalProperties": false
+                                },
                                 "remoteId": {
                                   "type": "string"
                                 },

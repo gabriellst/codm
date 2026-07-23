@@ -11,7 +11,7 @@ import (
 type schemaCtx struct {
 	spec   *Spec
 	w      *walker
-	unions map[string]*UnionAnnotation // key: named.Obj().Name()
+	unions map[string][]UnionAnnotation // key: named.Obj().Name() — ALL stamped slots, declaration order
 }
 
 // ensureComponent emits a named schema for the given named struct (or enum)
@@ -50,9 +50,18 @@ func (c *schemaCtx) ensureComponent(named *types.Named) map[string]any {
 func (c *schemaCtx) structSchema(named *types.Named, st *types.Struct) map[string]any {
 	structName := named.Obj().Name()
 
-	// If this struct has a @union annotation, emit a oneOf + discriminator instead.
-	if union, ok := c.unions[structName]; ok && len(union.Variants) > 0 {
-		return c.unionSchema(structName, st, union)
+	// If this struct has @union annotations, emit a oneOf + discriminator instead.
+	// The slot with the most variants drives the top-level oneOf; every OTHER
+	// stamped slot is materialized inside each variant (narrowed by the pinned
+	// discriminator values) — see unionSchema/secondarySlotSchema.
+	if slots := c.unions[structName]; len(slots) > 0 {
+		primary := &slots[0]
+		for i := range slots {
+			if len(slots[i].Variants) > len(primary.Variants) {
+				primary = &slots[i]
+			}
+		}
+		return c.unionSchema(structName, st, primary, slots)
 	}
 
 	props := map[string]any{}
@@ -108,7 +117,10 @@ func (c *schemaCtx) structSchema(named *types.Named, st *types.Struct) map[strin
 // unionSchema emits the oneOf + discriminator + mapping form.
 // Per design §3.5: single-property discriminator uses `discriminator`; multi-property
 // falls back to `oneOf` with `const` on each discriminator field (no `discriminator` block).
-func (c *schemaCtx) unionSchema(structName string, st *types.Struct, u *UnionAnnotation) map[string]any {
+// `slots` carries EVERY @union annotation stamped on the struct: `u` (the primary,
+// most variants) drives the top-level oneOf, and each remaining slot materializes
+// inside every variant via secondarySlotSchema — no stamped slot is ever dropped.
+func (c *schemaCtx) unionSchema(structName string, st *types.Struct, u *UnionAnnotation, slots []UnionAnnotation) map[string]any {
 	// For each variant, synthesize a named component `<structName>_<Values...>`.
 	variantRefs := make([]map[string]any, 0, len(u.Variants))
 	mapping := map[string]any{}
@@ -154,6 +166,11 @@ func (c *schemaCtx) unionSchema(structName string, st *types.Struct, u *UnionAnn
 					// Fallback: leave as unknown marker with a clear hint.
 					fieldSchema = map[string]any{"x-unknown": true, "x-union-variant-missing": v.TypeName}
 				}
+			} else if sec := slotForField(slots, u, f.Name()); sec != nil {
+				// A NON-primary union slot → materialize it, narrowed by the pinned
+				// discriminator values of this variant (union-slots: every stamped
+				// slot reaches every emitting surface, never an opaque x-unknown).
+				fieldSchema = c.secondarySlotSchema(st, sec, v)
 			} else {
 				fieldSchema = c.typeSchema(f.Type())
 			}
@@ -204,6 +221,80 @@ func (c *schemaCtx) unionSchema(structName string, st *types.Struct, u *UnionAnn
 		discJSON := jsonNameForField(st, u.Discriminators[0])
 		out["discriminator"] = map[string]any{
 			"propertyName": discJSON,
+			"mapping":      mapping,
+		}
+	}
+	return out
+}
+
+// slotForField returns the non-primary union slot whose union field matches the
+// given Go field name, or nil when the field belongs to no other stamped slot.
+func slotForField(slots []UnionAnnotation, primary *UnionAnnotation, field string) *UnionAnnotation {
+	for i := range slots {
+		if slots[i].Field == field && slots[i].Field != primary.Field {
+			return &slots[i]
+		}
+	}
+	return nil
+}
+
+// secondarySlotSchema materializes a NON-primary union slot inside a primary
+// variant. The primary variant pins const values for its discriminators, so any
+// secondary variant whose discriminator values contradict a pinned value is
+// excluded. Exactly one variant left → a direct $ref (fully narrowed, mirroring
+// how the primary slot's variant field refs its type); several → the complete
+// oneOf with x-discriminators metadata (+ a discriminator mapping when the slot
+// has a single discriminator).
+func (c *schemaCtx) secondarySlotSchema(st *types.Struct, sec *UnionAnnotation, pinned UnionVariant) map[string]any {
+	var matching []UnionVariant
+	for _, sv := range sec.Variants {
+		ok := true
+		for dk, dv := range sv.DiscriminatorValues {
+			if pv, has := pinned.DiscriminatorValues[dk]; has && pv != dv {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			matching = append(matching, sv)
+		}
+	}
+	if len(matching) == 0 {
+		// No shared discriminators narrowed anything away — emit the full slot union.
+		matching = sec.Variants
+	}
+
+	resolve := func(v UnionVariant) map[string]any {
+		if named := c.w.findTypeByName(v.TypeName); named != nil {
+			return c.ensureComponent(named)
+		}
+		return map[string]any{"x-unknown": true, "x-union-variant-missing": v.TypeName}
+	}
+
+	if len(matching) == 1 {
+		return resolve(matching[0])
+	}
+
+	oneOf := make([]map[string]any, 0, len(matching))
+	mapping := map[string]any{}
+	for _, sv := range matching {
+		r := resolve(sv)
+		oneOf = append(oneOf, r)
+		if len(sec.Discriminators) == 1 {
+			if refStr, ok := r["$ref"].(string); ok {
+				mapping[sv.DiscriminatorValues[sec.Discriminators[0]]] = refStr
+			}
+		}
+	}
+	out := map[string]any{"oneOf": oneOf}
+	xDiscriminators := make([]any, 0, len(sec.Discriminators))
+	for _, goField := range sec.Discriminators {
+		xDiscriminators = append(xDiscriminators, jsonNameForField(st, goField))
+	}
+	out["x-discriminators"] = xDiscriminators
+	if len(sec.Discriminators) == 1 && len(mapping) == len(matching) {
+		out["discriminator"] = map[string]any{
+			"propertyName": jsonNameForField(st, sec.Discriminators[0]),
 			"mapping":      mapping,
 		}
 	}

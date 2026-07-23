@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { whatsAppChannelMessageReceivedPlatformDataSchema } from "./whatsAppChannelMessageReceivedPlatformDataSchema.ts";
 import { whatsAppContactContentSchema } from "./whatsAppContactContentSchema.ts";
 import { z } from "zod/v4";
 
@@ -20,7 +21,9 @@ get "content"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["WHATSAPP"]),
-"platformData": z.optional(z.any()),
+get "platformData"(){
+                return whatsAppChannelMessageReceivedPlatformDataSchema.optional()
+              },
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int()

@@ -253,7 +253,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -353,7 +373,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -447,7 +487,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -537,7 +597,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -629,7 +709,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -717,7 +817,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -803,7 +923,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -898,7 +1038,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -972,7 +1132,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -1063,7 +1243,27 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnumKey;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type boolean
+            */
+            isEphemeral: boolean;
+            /**
+             * @type boolean
+            */
+            isGroup: boolean;
+            /**
+             * @type boolean
+            */
+            isViewOnce: boolean;
+            /**
+             * @type string
+            */
+            pushName: string;
+        };
         /**
          * @type string
         */
@@ -1128,7 +1328,17 @@ export type ListenEvents200 = ({
          * @type string
         */
         platform: PayloadPlatformEnum2Key;
-        platformData?: any;
+        /**
+         * @type object | undefined
+        */
+        platformData?: {
+            /**
+             * @type object
+            */
+            metadata: {
+                [key: string]: any;
+            };
+        };
         /**
          * @type string
         */

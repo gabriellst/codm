@@ -28,11 +28,14 @@ var (
 	kvRE          = regexp.MustCompile(`(\w+)=(\S+)`)
 )
 
-// collectUnions walks every named struct in the loaded packages and returns the
-// primary annotation for each (the one with the most variants, mirroring the
-// selection rule in client/scripts/channel/unions.ts).
-func collectUnions(w *walker) (map[string]*UnionAnnotation, error) {
-	primary := map[string]*UnionAnnotation{}
+// collectUnions walks every named struct in the loaded packages and returns
+// EVERY @union annotation stamped on it, in declaration order. A struct may
+// declare several union slots (e.g. ChannelMessageReceivedPayload stamps both
+// `content` and `platformData`); all of them must materialize in the emitted
+// spec — the emitter picks the slot with the most variants as the top-level
+// oneOf driver and narrows the remaining slots inside each variant (schema.go).
+func collectUnions(w *walker) (map[string][]UnionAnnotation, error) {
+	all := map[string][]UnionAnnotation{}
 
 	for _, ppath := range w.sortedPkgPaths() {
 		// Own module + the generated contracts bindings: union annotations are STAMPED
@@ -61,24 +64,19 @@ func collectUnions(w *walker) (map[string]*UnionAnnotation, error) {
 				continue
 			}
 			unions := parseUnionBlock(name, cg.Text())
-			if len(unions) == 0 {
-				continue
-			}
-			var best *UnionAnnotation
-			for i := range unions {
-				u := unions[i]
-				if best == nil || len(u.Variants) > len(best.Variants) {
-					b := u
-					best = &b
+			var kept []UnionAnnotation
+			for _, u := range unions {
+				if len(u.Variants) > 0 {
+					kept = append(kept, u)
 				}
 			}
-			if best != nil {
-				primary[name] = best
+			if len(kept) > 0 {
+				all[name] = kept
 			}
 		}
 	}
 
-	return primary, nil
+	return all, nil
 }
 
 // parseUnionBlock parses a comment block into UnionAnnotations.

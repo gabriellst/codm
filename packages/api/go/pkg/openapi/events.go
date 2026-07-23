@@ -30,7 +30,7 @@ type eventMapping struct {
 // generic type argument from the alias's RHS.
 //
 // Mirrors client/scripts/channel/sse.ts.
-func registerEvents(spec *Spec, w *walker, unions map[string]*UnionAnnotation) error {
+func registerEvents(spec *Spec, w *walker, unions map[string][]UnionAnnotation) error {
 	ctx := &schemaCtx{spec: spec, w: w, unions: unions}
 
 	eventsPkg, ok := w.byPath["template/api-go/internal/shared/events"]

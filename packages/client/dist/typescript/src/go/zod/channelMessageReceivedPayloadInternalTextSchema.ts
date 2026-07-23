@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { internalChannelMessageReceivedPlatformDataSchema } from "./internalChannelMessageReceivedPlatformDataSchema.ts";
 import { internalTextContentSchema } from "./internalTextContentSchema.ts";
 import { z } from "zod/v4";
 
@@ -20,7 +21,9 @@ get "content"(){
 "occurredAt": z.iso.datetime(),
 "ownerId": z.string(),
 "platform": z.enum(["INTERNAL"]),
-"platformData": z.optional(z.any()),
+get "platformData"(){
+                return internalChannelMessageReceivedPlatformDataSchema.optional()
+              },
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int()
