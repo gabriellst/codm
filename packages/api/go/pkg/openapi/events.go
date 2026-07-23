@@ -33,12 +33,28 @@ type eventMapping struct {
 func registerEvents(spec *Spec, w *walker, unions map[string][]UnionAnnotation) error {
 	ctx := &schemaCtx{spec: spec, w: w, unions: unions}
 
-	eventsPkg, ok := w.byPath["template/api-go/internal/shared/events"]
-	if !ok {
-		return nil // no events package; skip.
+	// Two mapping sources (flat-events migration):
+	//  1. Hand-rolled envelope aliases surviving in internal/shared/events (the
+	//     BLOCKED events awaiting enum harmonization).
+	//  2. Generated wire bindings: every `wire.<X>EventName` const REFERENCED from
+	//     api-go code marks <X> as published by this service; its payload struct
+	//     comes from the binding. "Published = referenced" keeps the SSE ServerEvent
+	//     surface identical across swaps without a hand-maintained list.
+	var mappings []eventMapping
+	if eventsPkg, ok := w.byPath["template/api-go/internal/shared/events"]; ok {
+		mappings = collectEventMappings(eventsPkg)
 	}
-
-	mappings := collectEventMappings(eventsPkg)
+	seen := map[string]bool{}
+	for _, m := range mappings {
+		seen[m.EventName] = true
+	}
+	for _, m := range collectWireEventMappings(w) {
+		if !seen[m.EventName] {
+			mappings = append(mappings, m)
+			seen[m.EventName] = true
+		}
+	}
+	sort.Slice(mappings, func(i, j int) bool { return mappings[i].EventName < mappings[j].EventName })
 	if len(mappings) == 0 {
 		return nil
 	}
@@ -204,6 +220,66 @@ func collectEventMappings(pkg *packages.Package) []eventMapping {
 	}
 
 	// Sort for determinism.
+	sort.Slice(mappings, func(i, j int) bool { return mappings[i].EventName < mappings[j].EventName })
+	return mappings
+}
+
+// collectWireEventMappings pairs generated wire `<X>EventName` consts with the
+// binding's `<X>Payload` struct — for every const the api-go module actually
+// REFERENCES (a publisher constructing `types.NewIntegrationEvent(wire.<X>EventName,
+// …)` after its flat-events swap). Unreferenced bindings (events this service does
+// not publish) never enter the SSE surface.
+func collectWireEventMappings(w *walker) []eventMapping {
+	const wirePath = "template/contracts-go/wire"
+	wirePkg, ok := w.byPath[wirePath]
+	if !ok {
+		return nil
+	}
+
+	used := map[string]bool{}
+	for path, pkg := range w.byPath {
+		if !strings.HasPrefix(path, "template/api-go/") || pkg.TypesInfo == nil {
+			continue
+		}
+		for _, obj := range pkg.TypesInfo.Uses {
+			c, ok := obj.(*types.Const)
+			if !ok || c.Pkg() == nil || c.Pkg().Path() != wirePath {
+				continue
+			}
+			if strings.HasSuffix(c.Name(), "EventName") {
+				used[c.Name()] = true
+			}
+		}
+	}
+
+	scope := wirePkg.Types.Scope()
+	var mappings []eventMapping
+	for constName := range used {
+		obj := scope.Lookup(constName)
+		c, ok := obj.(*types.Const)
+		if !ok {
+			continue
+		}
+		value := strings.Trim(c.Val().String(), `"`)
+		// const <Model>EventName pairs with type <Model>Payload.
+		payloadName := strings.TrimSuffix(constName, "EventName") + "Payload"
+		tn, ok := scope.Lookup(payloadName).(*types.TypeName)
+		if !ok {
+			continue
+		}
+		named, ok := tn.Type().(*types.Named)
+		if !ok {
+			continue
+		}
+		if _, ok := named.Underlying().(*types.Struct); !ok {
+			continue
+		}
+		mappings = append(mappings, eventMapping{
+			PayloadName: payloadName,
+			EventName:   value,
+			Payload:     named,
+		})
+	}
 	sort.Slice(mappings, func(i, j int) bool { return mappings[i].EventName < mappings[j].EventName })
 	return mappings
 }
