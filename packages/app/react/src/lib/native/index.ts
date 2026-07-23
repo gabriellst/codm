@@ -1,17 +1,21 @@
-import { browserShell } from './browser'
-import { isTauri } from './isTauri'
-import { tauriShell } from './tauri'
-import type { NativeShell } from './types'
-
 /**
- * The NativeShell seam — single entry point for OS integration.
+ * The native seam — single entry point for OS integration.
  *
- * Import `native` (or `useNative()` semantics via plain import — the selection is
- * static per page load) anywhere in the console; NEVER import `./tauri` /
- * `./browser` directly outside this folder, and NEVER import `@tauri-apps/*`
- * outside `lib/native/` (eslint-enforced — see .claude/skills/desktop-shell/).
+ * Components consume capability PORTS (contract/) through hooks bound ONCE at
+ * the composition root (NativeProvider in routes/__root.tsx). Platform
+ * implementations live in platforms/<name>/services/ — `@tauri-apps/*` (and the
+ * tauri runtime in any form) is legal ONLY under platforms/tauri/
+ * (eslint-enforced — see .claude/skills/desktop-shell/SKILL.md).
  */
-export const native: NativeShell = isTauri() ? tauriShell : browserShell
-
-export { isTauri } from './isTauri'
-export type { NativeShell } from './types'
+export type {
+	AutostartService,
+	BadgeService,
+	DialogService,
+	HostInfoService,
+	NativePlatform,
+	NativeServices,
+	NotificationService,
+	SecretsService,
+} from './contract'
+export { NativeProvider, useDialogService, useNative } from './NativeProvider'
+export { useFolderPicker } from './useFolderPicker'
