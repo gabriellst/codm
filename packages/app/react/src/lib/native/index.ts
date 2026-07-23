@@ -10,12 +10,12 @@
 export type {
 	AutostartService,
 	BadgeService,
-	DialogService,
+	FilePickerService,
 	HostInfoService,
 	NativePlatform,
 	NativeServices,
 	NotificationService,
 	SecretsService,
 } from './contract'
-export { NativeProvider, useDialogService, useNative } from './NativeProvider'
+export { NativeProvider, useFilePickerService, useNative } from './NativeProvider'
 export { useFolderPicker } from './useFolderPicker'

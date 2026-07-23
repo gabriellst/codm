@@ -60,7 +60,7 @@ is organized as **ports → platform services → composition-root injection**:
 ```
 lib/native/
 ├── contract/            # PURE TYPES — one port (interface) per capability:
-│   │                    # DialogService, NotificationService, BadgeService,
+│   │                    # FilePickerService, NotificationService, BadgeService,
 │   │                    # SecretsService, AutostartService, HostInfoService (+ NativeServices)
 ├── platforms/
 │   ├── tauri/           # the ONLY path allowed to touch the tauri runtime
@@ -72,7 +72,7 @@ lib/native/
 │                        # the browser bundle never fetches the tauri chunk); lazy facade
 │                        # is legal because every port method is Promise-based
 ├── useFolderPicker.ts   # flow hooks composing ports (capability-gated UI affordances)
-└── index.ts             # public surface: NativeProvider, useNative(), useDialogService(), types
+└── index.ts             # public surface: NativeProvider, useNative(), useFilePickerService(), types
 ```
 
 - **Contract**: `contract/` holds pure types only — no platform SDK imports, no react.
@@ -85,7 +85,7 @@ lib/native/
   `REPO.desktop.services` (capabilities JSON is generated — never hand-edit it).
 - **DI**: `NativeProvider` mounts at the composition root (`routes/__root.tsx`) and picks
   the platform module once per page load via dynamic import. Components consume ports via
-  `useNative()` / `useDialogService()` — never a platform module. Tests/storybook inject
+  `useNative()` / `useFilePickerService()` — never a platform module. Tests/storybook inject
   fakes through the `services` prop (see `NativeProvider.test.tsx` — the DI proof runs
   with zero tauri present).
 

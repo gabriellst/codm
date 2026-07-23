@@ -1,5 +1,5 @@
-/** OS dialog capability — folder/file pickers. */
-export interface DialogService {
+/** OS file-picker capability — folder/file pickers. */
+export interface FilePickerService {
 	/**
 	 * True when the host picker can hand back an ABSOLUTE filesystem path.
 	 * UI branches on THIS (capability), never on the platform name — when false,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { renderToString } from 'react-dom/server'
-import type { DialogService, NativeServices } from './contract'
+import type { FilePickerService, NativeServices } from './contract'
 import { NativeProvider, useNative } from './NativeProvider'
 import { useFolderPicker } from './useFolderPicker'
 
@@ -9,10 +9,10 @@ import { useFolderPicker } from './useFolderPicker'
  * with ZERO tauri present — a fake NativeServices injected through the
  * NativeProvider `services` prop reaches consumers via useNative()/the
  * capability hooks, and the AddWorkspace folder-pick flow (useFolderPicker)
- * fills the path from whatever the bound DialogService returns.
+ * fills the path from whatever the bound FilePickerService returns.
  */
 
-class FakeDialogService implements DialogService {
+class FakeFilePickerService implements FilePickerService {
 	calls: Array<{ title?: string } | undefined> = []
 	constructor(private readonly result: string | null) {}
 
@@ -26,12 +26,12 @@ class FakeDialogService implements DialogService {
 	}
 }
 
-function fakeServices(dialog: DialogService): NativeServices {
+function fakeServices(filePicker: FilePickerService): NativeServices {
 	const unused = () => {
 		throw new Error('port not under test')
 	}
 	return {
-		dialog,
+		filePicker,
 		notification: { notify: unused },
 		badge: { set: unused },
 		secrets: { get: unused, set: unused, delete: unused },
@@ -42,7 +42,7 @@ function fakeServices(dialog: DialogService): NativeServices {
 
 describe('NativeProvider DI', () => {
 	it('injects the fake services instance — consumers get EXACTLY what the composition root bound', () => {
-		const services = fakeServices(new FakeDialogService('/tmp/fake'))
+		const services = fakeServices(new FakeFilePickerService('/tmp/fake'))
 		let captured: NativeServices | null = null
 		function Probe() {
 			captured = useNative()
@@ -64,8 +64,8 @@ describe('NativeProvider DI', () => {
 		expect(() => renderToString(<Orphan />)).toThrow(/outside <NativeProvider>/)
 	})
 
-	it('folder-pick flow fills the path from the fake DialogService — no tauri anywhere', async () => {
-		const dialog = new FakeDialogService('/Users/dev/acme-storefront')
+	it('folder-pick flow fills the path from the fake FilePickerService — no tauri anywhere', async () => {
+		const filePicker = new FakeFilePickerService('/Users/dev/acme-storefront')
 		const picked: string[] = []
 		let flow: ReturnType<typeof useFolderPicker> | null = null
 		function Probe() {
@@ -73,18 +73,18 @@ describe('NativeProvider DI', () => {
 			return null
 		}
 		renderToString(
-			<NativeProvider services={fakeServices(dialog)}>
+			<NativeProvider services={fakeServices(filePicker)}>
 				<Probe />
 			</NativeProvider>,
 		)
 
 		await flow!.pick()
 		expect(picked).toEqual(['/Users/dev/acme-storefront'])
-		expect(dialog.calls).toEqual([{ title: 'Add a workspace' }])
+		expect(filePicker.calls).toEqual([{ title: 'Add a workspace' }])
 	})
 
 	it('folder-pick flow does NOT fill the path on cancel/unsupported (honest null)', async () => {
-		const dialog = new FakeDialogService(null)
+		const filePicker = new FakeFilePickerService(null)
 		const picked: string[] = []
 		let flow: ReturnType<typeof useFolderPicker> | null = null
 		function Probe() {
@@ -92,7 +92,7 @@ describe('NativeProvider DI', () => {
 			return null
 		}
 		renderToString(
-			<NativeProvider services={fakeServices(dialog)}>
+			<NativeProvider services={fakeServices(filePicker)}>
 				<Probe />
 			</NativeProvider>,
 		)

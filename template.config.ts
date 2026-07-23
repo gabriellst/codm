@@ -211,7 +211,9 @@ const DESKTOP = {
 	 *  (capabilities/default.json is generated). Key = service port name in the contract;
 	 *  empty list = backed by custom shell commands or webview APIs (core:default covers invoke). */
 	services: {
-		dialog: ['dialog:allow-open'],
+		// filePicker (contract: FilePickerService) is backed by the tauri plugin-dialog `open`
+		// command — the permission name keeps the tauri plugin's own spelling (`dialog:*`).
+		filePicker: ['dialog:allow-open'],
 		notification: ['notification:default'],
 		badge: ['core:window:allow-set-badge-count'],
 		secrets: [],

@@ -1,4 +1,4 @@
-import type { DialogService } from '../../../contract'
+import type { FilePickerService } from '../../../contract'
 
 /**
  * Browsers cannot hand a filesystem PATH to a web page (the File System Access
@@ -6,7 +6,7 @@ import type { DialogService } from '../../../contract'
  * Honest degradation: `supportsFolderPicker()` is false and the UI keeps its
  * manual path input as the only affordance.
  */
-export class BrowserDialogService implements DialogService {
+export class BrowserFilePickerService implements FilePickerService {
 	async supportsFolderPicker(): Promise<boolean> {
 		return false
 	}

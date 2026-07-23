@@ -7,14 +7,14 @@
 import type { NativeServices } from '../../contract'
 import { TauriAutostartService } from './services/TauriAutostartService'
 import { TauriBadgeService } from './services/TauriBadgeService'
-import { TauriDialogService } from './services/TauriDialogService'
+import { TauriFilePickerService } from './services/TauriFilePickerService'
 import { TauriHostInfoService } from './services/TauriHostInfoService'
 import { TauriNotificationService } from './services/TauriNotificationService'
 import { TauriSecretsService } from './services/TauriSecretsService'
 
 export function createTauriServices(): NativeServices {
 	return {
-		dialog: new TauriDialogService(),
+		filePicker: new TauriFilePickerService(),
 		notification: new TauriNotificationService(),
 		badge: new TauriBadgeService(),
 		secrets: new TauriSecretsService(),

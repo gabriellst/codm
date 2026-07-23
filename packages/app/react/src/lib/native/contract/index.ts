@@ -5,8 +5,8 @@
  * PURE TYPES ONLY. Nothing in `contract/` may import a platform SDK (`@tauri-apps/*`,
  * expo modules, DOM-only globals) — implementations live in `../platforms/<platform>/services/`
  * and are bound ONCE at bootstrap by the NativeProvider (see ../NativeProvider.tsx).
- * Components consume ports via `useNative()` / `useDialogService()` etc. and never know
- * which host they run in.
+ * Components consume ports via `useNative()` / `useFilePickerService()` etc. and never
+ * know which host they run in.
  *
  * EXTRACTION PATH (documented intent, founder-ratified): this folder is the future
  * `@codedm/native-contract` package — a shared home so an expo app (or any other host)
@@ -28,14 +28,14 @@
 
 export type { AutostartService } from './autostart'
 export type { BadgeService } from './badge'
-export type { DialogService } from './dialog'
+export type { FilePickerService } from './file-picker'
 export type { HostInfoService, NativePlatform } from './host-info'
 export type { NotificationService } from './notification'
 export type { SecretsService } from './secrets'
 
 import type { AutostartService } from './autostart'
 import type { BadgeService } from './badge'
-import type { DialogService } from './dialog'
+import type { FilePickerService } from './file-picker'
 import type { HostInfoService } from './host-info'
 import type { NotificationService } from './notification'
 import type { SecretsService } from './secrets'
@@ -51,7 +51,7 @@ import type { SecretsService } from './secrets'
  * means extending the desktop contract, not hand-editing capability JSON.
  */
 export interface NativeServices {
-	dialog: DialogService
+	filePicker: FilePickerService
 	notification: NotificationService
 	badge: BadgeService
 	secrets: SecretsService

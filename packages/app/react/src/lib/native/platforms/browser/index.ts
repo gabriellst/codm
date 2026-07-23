@@ -6,14 +6,14 @@
 import type { NativeServices } from '../../contract'
 import { BrowserAutostartService } from './services/BrowserAutostartService'
 import { BrowserBadgeService } from './services/BrowserBadgeService'
-import { BrowserDialogService } from './services/BrowserDialogService'
+import { BrowserFilePickerService } from './services/BrowserFilePickerService'
 import { BrowserHostInfoService } from './services/BrowserHostInfoService'
 import { BrowserNotificationService } from './services/BrowserNotificationService'
 import { BrowserSecretsService } from './services/BrowserSecretsService'
 
 export function createBrowserServices(): NativeServices {
 	return {
-		dialog: new BrowserDialogService(),
+		filePicker: new BrowserFilePickerService(),
 		notification: new BrowserNotificationService(),
 		badge: new BrowserBadgeService(),
 		secrets: new BrowserSecretsService(),

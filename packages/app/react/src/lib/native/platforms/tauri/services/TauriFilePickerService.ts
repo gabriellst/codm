@@ -1,9 +1,9 @@
-import type { DialogService } from '../../../contract'
+import type { FilePickerService } from '../../../contract'
 import { invoke } from '../invoke'
 
 /** Folder picker via tauri plugin-dialog (`dialog:allow-open` — declared in
- *  template.config.ts REPO.desktop.services.dialog, capability JSON is generated). */
-export class TauriDialogService implements DialogService {
+ *  template.config.ts REPO.desktop.services.filePicker, capability JSON is generated). */
+export class TauriFilePickerService implements FilePickerService {
 	async supportsFolderPicker(): Promise<boolean> {
 		return true
 	}

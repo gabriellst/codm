@@ -9,7 +9,7 @@ registry:
     - id: DSK-01
       name: "Ports consumed via DI, bound once"
       when: always
-      rule: "React code consumes OS capabilities via the contract ports — useNative() / useDialogService() (or a flow hook like useFolderPicker) from '@/lib/native'. The platform binding is decided ONCE by NativeProvider at the composition root (routes/__root.tsx) via dynamic import."
+      rule: "React code consumes OS capabilities via the contract ports — useNative() / useFilePickerService() (or a flow hook like useFolderPicker) from '@/lib/native'. The platform binding is decided ONCE by NativeProvider at the composition root (routes/__root.tsx) via dynamic import."
       wrong: "importing 'platforms/tauri' / 'platforms/browser' directly, calling window.__TAURI__ outside platforms/tauri, or module-level platform selection in a component"
     - id: DSK-02
       name: "Capability = port + platform services + declared permissions"
@@ -46,7 +46,7 @@ registry:
       name: "@tauri-apps/* outside platforms/tauri"
       rule: "The shell API is quarantined to packages/app/react/src/lib/native/platforms/tauri/ — eslint no-restricted-imports enforces it repo-wide (contract/ and platforms/browser/ included)."
       wrong: "import { open } from '@tauri-apps/plugin-dialog' inside a component"
-      right: "const dialog = useDialogService(); const path = await dialog.pickFolder()"
+      right: "const filePicker = useFilePickerService(); const path = await filePicker.pickFolder()"
       mechanical: true
     - id: bp-02
       name: "UI branching on the host"
@@ -70,7 +70,7 @@ registry:
       name: "Untestable native consumption"
       rule: "Flows that use a port must be provable with a fake injected via NativeProvider services={...} — no tauri required to test the DI (see NativeProvider.test.tsx)."
       wrong: "component reaching a platform module directly, so the flow only runs inside the desktop shell"
-      right: "renderToString(<NativeProvider services={fakeServices}>…</NativeProvider>) exercising the flow hook against a FakeDialogService"
+      right: "renderToString(<NativeProvider services={fakeServices}>…</NativeProvider>) exercising the flow hook against a FakeFilePickerService"
       mechanical: false
 
   canonical_snippet: |

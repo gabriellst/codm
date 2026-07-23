@@ -13,7 +13,7 @@
  * contract with zero tauri present (see NativeProvider.test.tsx).
  */
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { DialogService, NativeServices } from './contract'
+import type { FilePickerService, NativeServices } from './contract'
 import { isTauri } from './isTauri'
 
 const NativeContext = createContext<NativeServices | null>(null)
@@ -31,9 +31,9 @@ function loadPlatformServices(): Promise<NativeServices> {
 /** Synchronous facade over the async platform binding — legal because every port method returns a Promise. */
 function lazyServices(load: () => Promise<NativeServices>): NativeServices {
 	return {
-		dialog: {
-			supportsFolderPicker: () => load().then(s => s.dialog.supportsFolderPicker()),
-			pickFolder: options => load().then(s => s.dialog.pickFolder(options)),
+		filePicker: {
+			supportsFolderPicker: () => load().then(s => s.filePicker.supportsFolderPicker()),
+			pickFolder: options => load().then(s => s.filePicker.pickFolder(options)),
 		},
 		notification: {
 			notify: input => load().then(s => s.notification.notify(input)),
@@ -71,6 +71,6 @@ export function useNative(): NativeServices {
 	return services
 }
 
-export function useDialogService(): DialogService {
-	return useNative().dialog
+export function useFilePickerService(): FilePickerService {
+	return useNative().filePicker
 }
