@@ -32,6 +32,14 @@ const ChannelConnectedBody = z.object({
 	accountDetail: z.string().default('e2e-account'),
 })
 
+// SINGLE INTENTIONAL SHIM — NOT a second contract. The union-slots pilot (§4) moved the wire
+// event `integration.channel_message.received` to the VERBATIM gateway shape (remoteId/senderId/
+// timestamp/observedAt + opaque content/platformData slots). This spec-facing body deliberately
+// keeps the OLD normalized vocabulary (contactExternalId/contactDisplayName/text/quotedEntryId)
+// because it is what Playwright givens speak; handle() below is the ONE place that maps it onto
+// the verbatim payload, exactly like the Go gateway's whatsmeow mapper does. Do not copy this
+// normalized shape anywhere else, and do not accept it on any real ingress surface — if the
+// givens ever migrate to the verbatim shape, delete this mapping rather than growing it.
 const InboundMessageBody = z.object({
 	kind: z.literal('inbound-message'),
 	channelId: z.uuid(),

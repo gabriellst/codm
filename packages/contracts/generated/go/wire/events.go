@@ -287,8 +287,8 @@ type ChannelMessageReceivedPayload struct {
 	InternalMessageID uuid.UUID `json:"internalMessageId" validate:"required"`
 	RemoteID string `json:"remoteId" validate:"required"`
 	SenderID string `json:"senderId" validate:"required"`
-	FromMe bool `json:"fromMe" validate:"required"`
-	IsGroup bool `json:"isGroup" validate:"required"`
+	FromMe bool `json:"fromMe"`
+	IsGroup bool `json:"isGroup"`
 	Timestamp int64 `json:"timestamp" validate:"required"`
 	OccurredAt time.Time `json:"occurredAt" validate:"required"`
 	ObservedAt time.Time `json:"observedAt" validate:"required"`

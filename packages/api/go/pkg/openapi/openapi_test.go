@@ -123,6 +123,34 @@ func TestEmitterHappyPath(t *testing.T) {
 	if err := validateInlineEnums(spec); err != nil {
 		t.Errorf("inline enum check: %v", err)
 	}
+
+	// 9. Two-tier enum precedence rail (union-slots spec §2.2): scanning the stamped
+	//    contracts-go binding must NOT contaminate a same-named own-module enum. The
+	//    gateway-local ChannelStatus (CREATED/CONNECTING/CONNECTED/DISCONNECTED/DELETED)
+	//    owns the component outright; the contracts ChannelStatus (DISCONNECTED/PAIRING/
+	//    CONNECTED) must never merge into it. A regen that reorders tiers or drops the
+	//    name-scoped precedence surfaces here as a PAIRING value leaking in.
+	channelStatus, ok := schemas["ChannelStatus"].(map[string]any)
+	if !ok {
+		t.Fatal("ChannelStatus component missing")
+	}
+	rawValues, _ := channelStatus["enum"].([]any)
+	got := map[string]bool{}
+	for _, v := range rawValues {
+		got[v.(string)] = true
+	}
+	want := []string{"CREATED", "CONNECTING", "CONNECTED", "DISCONNECTED", "DELETED"}
+	if len(got) != len(want) {
+		t.Errorf("ChannelStatus enum: got %d values %v, want exactly %v (own-module tier must win)", len(got), rawValues, want)
+	}
+	for _, v := range want {
+		if !got[v] {
+			t.Errorf("ChannelStatus enum missing own-module value %q", v)
+		}
+	}
+	if got["PAIRING"] {
+		t.Error("ChannelStatus enum contaminated by contracts-go tier (PAIRING leaked in) — two-tier precedence broken")
+	}
 }
 
 // TestEmitterIsIdempotent verifies two back-to-back emissions produce byte-identical

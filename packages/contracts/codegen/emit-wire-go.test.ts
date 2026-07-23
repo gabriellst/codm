@@ -105,6 +105,7 @@ describe('emitGoEvents — union-slot payload struct (stamped binding)', () => {
 			{ name: 'ownerId', type: { kind: 'string' }, required: true },
 			{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
 			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+			{ name: 'isGroup', type: { kind: 'boolean' }, required: true },
 			{ name: 'messageType', type: { kind: 'enum-ref', ref: 'MessageType' }, required: true },
 			{ name: 'content', type: { kind: 'unknown' }, required: false },
 			{ name: 'platform', type: { kind: 'string' }, required: true },
@@ -113,6 +114,7 @@ describe('emitGoEvents — union-slot payload struct (stamped binding)', () => {
 		ownFields: [
 			{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.received' }, required: true },
 			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+			{ name: 'isGroup', type: { kind: 'boolean' }, required: true },
 			{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
 			{ name: 'messageType', type: { kind: 'enum-ref', ref: 'MessageType' }, required: true },
 			{ name: 'content', type: { kind: 'unknown' }, required: false },
@@ -168,6 +170,15 @@ describe('emitGoEvents — union-slot payload struct (stamped binding)', () => {
 		expect(out).not.toContain('*json.RawMessage')
 		expect(out).toContain('ChannelID uuid.UUID `json:"channelId" validate:"required"`')
 		expect(out).toContain('"github.com/google/uuid"')
+	})
+
+	test('required bool flags carry NO validate:"required" — go-playground required rejects the zero value false', () => {
+		const out = emitGoEvents([slotted])
+		const payloadStruct = out.slice(out.indexOf('type ChannelMessageReceivedPayload struct {'))
+		// Verbatim medscall parity: IsGroup=false (a non-group message) must stay valid under a
+		// future validator.Struct call, so the tag is bare `json:"isGroup"` — never validate:"required".
+		expect(payloadStruct).toContain('IsGroup bool `json:"isGroup"`')
+		expect(payloadStruct).not.toContain('IsGroup bool `json:"isGroup" validate:"required"`')
 	})
 
 	test('an event without union slots emits no payload struct (scoped: other events untouched)', () => {

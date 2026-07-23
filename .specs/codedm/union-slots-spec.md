@@ -52,8 +52,20 @@ Regras:
 O codegen ts+go dos contracts, ao emitir o binding Go do evento
 (`packages/contracts/generated/go/wire/events.go`), **estampa os comentários** `// @union ...` /
 `// @variant ...` no struct gerado — sintaxe idêntica à do medscall. Consequência: o scanner AST
-verbatim (`pkg/openapi`) funciona **sem alteração**; encontra as anotações no binding gerado em vez
-de num struct manual. Zero redeclaração: o Go importa o binding, as formas moram no adapter.
+verbatim (`pkg/openapi`) encontra as anotações no binding gerado em vez de num struct manual,
+com **duas adaptações de infra confinadas ao scanner** (o binding estampado vive num módulo Go
+distinto — `template/contracts-go/` — que o scanner verbatim nunca visitava):
+
+- `unions.go` — o filtro de pacotes inclui, além de `template/api-go/`, o módulo do binding
+  gerado (`template/contracts-go/`), senão as anotações estampadas nunca são vistas.
+- `enums.go` — coleta em **dois tiers com precedência por NOME de enum**: o módulo próprio vence
+  integralmente; um enum declarado no tier próprio nunca é mesclado com um homônimo dos contracts
+  cujo value-set diverge (ex.: o `ChannelStatus` local do gateway — CREATED/CONNECTING/… — vs o
+  `ChannelStatus` de contracts — DISCONNECTED/PAIRING/CONNECTED). Sem o tiering, escanear o módulo
+  de contracts contamina o componente com valores estranhos. A precedência é pinada por rail em
+  `pkg/openapi/openapi_test.go` (asserção sobre o value-set emitido de `ChannelStatus`).
+
+Zero redeclaração: o Go importa o binding, as formas moram no adapter.
 
 No lado TS, o binding gerado exporta além do schema do evento um **manifest de união**
 (`ChannelMessageReceivedUnions`: slot → discriminadores → [{valores, nomeDoTipo, owner}]) para

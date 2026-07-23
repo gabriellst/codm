@@ -210,7 +210,12 @@ export function emitGoEvents(events: ParsedEvent[]): string {
 				const goField = pascalToGoField(f.name)
 				const ty = goType(f.type)
 				const ptr = f.required || f.type.kind === 'array' || f.type.kind === 'unknown' ? '' : '*'
-				const tag = f.required ? `json:"${f.name}" validate:"required"` : `json:"${f.name},omitempty"`
+				// go-playground `required` on a bool rejects the legitimate zero value `false`
+				// (a non-group message with isGroup=false would fail struct validation), so
+				// boolean flags never carry the tag — verbatim medscall parity: the hand-written
+				// payload struct deliberately omitted `required` on IsGroup/FromMe.
+				const validated = f.required && f.type.kind !== 'boolean'
+				const tag = validated ? `json:"${f.name}" validate:"required"` : f.required ? `json:"${f.name}"` : `json:"${f.name},omitempty"`
 				lines.push(`\t${goField} ${ptr}${ty} \`${tag}\``)
 			}
 			lines.push('}')
