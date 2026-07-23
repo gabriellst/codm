@@ -140,58 +140,133 @@ describe('union-parity check 1 — every @variant resolves to a real type in its
 	}
 })
 
-describe('union-parity check 2 — every emitting surface publishes the COMPLETE oneOf', () => {
+describe('union-parity check 2 — every emitting surface publishes the COMPLETE oneOf for EVERY slot', () => {
 	const goSpecPath = join(ROOT, 'packages/api/go/public/docs/openapi.json')
 
-	test('gateway (Go): payload component carries all declared content variants, no missing-variant markers', () => {
-		const pilot = MANIFESTS.find(m => m.wireName === 'integration.channel_message.received')!
-		const contentVariants = pilot.slots.content!.variants
-		if (existsSync(goSpecPath)) {
-			const spec = readFileSync(goSpecPath, 'utf-8')
-			expect(spec.includes('x-union-variant-missing'), 'gateway spec contains x-union-variant-missing markers').toBe(false)
-			const doc = JSON.parse(spec) as { components: { schemas: Record<string, unknown> } }
-			const payloadName = `${pilot.eventModel.slice(0, -'Event'.length)}Payload`
-			const payload = doc.components.schemas[payloadName] as { oneOf?: Array<{ $ref: string }> } | undefined
-			expect(payload?.oneOf, `${payloadName} must be a oneOf in the gateway spec`).toBeDefined()
-			expect(payload!.oneOf!.length).toBe(contentVariants.length)
-			// Each declared variant maps to the scanner's synthesized component name: <Payload>_<Pascal(values)>.
-			for (const v of contentVariants) {
-				const suffix = v.values.map(x => x.charAt(0) + x.slice(1).toLowerCase()).join('_')
-				const refName = `${payloadName}_${suffix}`
-				expect(
-					payload!.oneOf!.some(r => r.$ref.endsWith(`/${refName}`)),
-					`gateway oneOf is missing declared variant ${refName}`,
-				).toBe(true)
-			}
-		} else {
-			// Build artifact absent (fresh clone): the committed /go SDK is generated FROM that spec —
-			// one variant zod schema file per declared variant proves the emitted union was complete.
-			const zodDir = join(ROOT, 'packages/client/dist/typescript/src/go/zod')
-			const payloadCamel = camel(`${pilot.eventModel.slice(0, -'Event'.length)}Payload`)
-			for (const v of contentVariants) {
-				const suffix = v.values.map(x => x.charAt(0) + x.slice(1).toLowerCase()).join('')
-				const file = join(zodDir, `${payloadCamel}${suffix}Schema.ts`)
-				expect(existsSync(file), `committed /go SDK lacks variant schema ${file}`).toBe(true)
-			}
+	/** Recursively collect every `$ref` component name reachable from a schema fragment. */
+	function collectRefNames(node: unknown, acc = new Set<string>()): Set<string> {
+		if (!node || typeof node !== 'object') return acc
+		if (Array.isArray(node)) {
+			for (const child of node) collectRefNames(child, acc)
+			return acc
 		}
-	})
+		const obj = node as Record<string, unknown>
+		if (typeof obj.$ref === 'string') acc.add(obj.$ref.split('/').at(-1)!)
+		for (const value of Object.values(obj)) collectRefNames(value, acc)
+		return acc
+	}
 
-	test('daemon (TS): the re-emitting SSE response carries every declared content variant pair', () => {
-		const pilot = MANIFESTS.find(m => m.wireName === 'integration.channel_message.received')!
-		const spec = readFileSync(join(ROOT, 'packages/api/typescript/public/docs/openapi.json'), 'utf-8')
-		const doc = JSON.parse(spec) as { paths: Record<string, Record<string, unknown>> }
-		const flat = JSON.stringify(doc.paths)
-		// The daemon re-emits the event on its SSE surface: the frame with the wire-name const must
-		// exist, and every declared (platform, messageType) const pair must appear in the spec.
-		expect(flat.includes(`"${pilot.wireName}"`), 'daemon spec does not carry the re-emitted frame').toBe(true)
-		for (const v of pilot.slots.content!.variants) {
-			const [platform, messageType] = v.values
-			const pair = `"platform":{"type":"string","const":"${platform}"`
-			const typePair = `"messageType":{"type":"string","const":"${messageType}"`
-			expect(flat.includes(pair), `daemon spec union lacks a platform const ${platform}`).toBe(true)
-			expect(flat.includes(typePair), `daemon spec union lacks a messageType const ${messageType}`).toBe(true)
+	/** A slot field schema is materialized when it resolves to real shape(s) — never opaque. */
+	function isMaterialized(schema: unknown): boolean {
+		if (!schema || typeof schema !== 'object') return false
+		const obj = schema as Record<string, unknown>
+		if ('x-unknown' in obj) return false
+		return (
+			typeof obj.$ref === 'string' ||
+			Array.isArray(obj.oneOf) ||
+			Array.isArray(obj.allOf) ||
+			(typeof obj.properties === 'object' && obj.properties !== null && Object.keys(obj.properties).length > 0)
+		)
+	}
+
+	/** The single-value const of a property schema (`const` or 1-element `enum`), if any. */
+	function constOf(prop: unknown): string | undefined {
+		if (!prop || typeof prop !== 'object') return undefined
+		const obj = prop as Record<string, unknown>
+		if (typeof obj.const === 'string') return obj.const
+		if (Array.isArray(obj.enum) && obj.enum.length === 1 && typeof obj.enum[0] === 'string') return obj.enum[0]
+		return undefined
+	}
+
+	/** Every object schema (a node carrying `properties`) anywhere in the document. */
+	function collectObjectSchemas(node: unknown, acc: Record<string, unknown>[] = []): Record<string, unknown>[] {
+		if (!node || typeof node !== 'object') return acc
+		if (Array.isArray(node)) {
+			for (const child of node) collectObjectSchemas(child, acc)
+			return acc
 		}
-	})
+		const obj = node as Record<string, unknown>
+		if (typeof obj.properties === 'object' && obj.properties !== null) acc.push(obj)
+		for (const value of Object.values(obj)) collectObjectSchemas(value, acc)
+		return acc
+	}
+
+	for (const m of MANIFESTS) {
+		const payloadName = `${m.eventModel.slice(0, -'Event'.length)}Payload`
+
+		for (const [slotName, slot] of Object.entries(m.slots)) {
+			const declared = slot.variants.map(v => v.typeName).sort()
+
+			test(`gateway (Go): ${payloadName}.${slotName} materializes all ${slot.variants.length} declared variants`, () => {
+				if (existsSync(goSpecPath)) {
+					const spec = readFileSync(goSpecPath, 'utf-8')
+					expect(spec.includes('x-union-variant-missing'), 'gateway spec contains x-union-variant-missing markers').toBe(false)
+					const doc = JSON.parse(spec) as { components: { schemas: Record<string, unknown> } }
+					const payload = doc.components.schemas[payloadName] as { oneOf?: Array<{ $ref: string }> } | undefined
+					expect(payload?.oneOf, `${payloadName} must be a oneOf in the gateway spec`).toBeDefined()
+					// Across the payload's variant components, the slot field must resolve — directly or
+					// through a nested oneOf — to EXACTLY the declared variant types, and never be opaque.
+					const seen = new Set<string>()
+					for (const arm of payload!.oneOf!) {
+						const armName = arm.$ref.split('/').at(-1)!
+						const armSchema = doc.components.schemas[armName] as { properties?: Record<string, unknown> } | undefined
+						expect(armSchema?.properties, `gateway component ${armName} missing properties`).toBeDefined()
+						const slotField = armSchema!.properties![slotName]
+						expect(isMaterialized(slotField), `gateway ${armName}.${slotName} is opaque (x-unknown or empty) — slot not materialized`).toBe(
+							true,
+						)
+						for (const name of collectRefNames(slotField)) seen.add(name)
+					}
+					expect([...seen].sort(), `gateway ${payloadName}.${slotName} union does not cover the declared variants`).toEqual(declared)
+				} else {
+					// Build artifact absent (fresh clone): the committed /go SDK is generated FROM that spec —
+					// every declared variant type has a zod schema, and some payload-variant schema wires the
+					// slot field to it (proves the emitted union carried the slot, not just the type).
+					const zodDir = join(ROOT, 'packages/client/dist/typescript/src/go/zod')
+					const payloadCamel = camel(payloadName)
+					const payloadVariantFiles = walk(zodDir, '.ts').filter(f => f.includes(`/${payloadCamel}`))
+					for (const v of slot.variants) {
+						const schemaId = `${camel(v.typeName)}Schema`
+						expect(existsSync(join(zodDir, `${schemaId}.ts`)), `committed /go SDK lacks variant schema ${schemaId}.ts`).toBe(true)
+						expect(
+							payloadVariantFiles.some(f => {
+								const src = readFileSync(f, 'utf-8')
+								return src.includes(`${slotName}:`) && src.includes(schemaId)
+							}),
+							`no committed /go payload-variant schema wires slot "${slotName}" to ${schemaId}`,
+						).toBe(true)
+					}
+				}
+			})
+
+			test(`daemon (TS): the re-emitting response materializes ${payloadName}.${slotName} for every declared variant`, () => {
+				const spec = readFileSync(join(ROOT, 'packages/api/typescript/public/docs/openapi.json'), 'utf-8')
+				const doc = JSON.parse(spec) as { paths: Record<string, Record<string, unknown>> }
+				expect(JSON.stringify(doc.paths).includes(`"${m.wireName}"`), 'daemon spec does not carry the re-emitted frame').toBe(true)
+				// Every object schema carrying the slot field AND all of its discriminators is a payload
+				// arm; for each declared variant there must be an arm whose discriminator consts match the
+				// variant's values and whose slot field is materialized (never `{}` / x-unknown).
+				const arms = collectObjectSchemas(doc.paths).filter(o => {
+					const props = o.properties as Record<string, unknown>
+					return slotName in props && slot.discriminators.every(d => constOf(props[d]) !== undefined)
+				})
+				for (const v of slot.variants) {
+					const matching = arms.filter(o => {
+						const props = o.properties as Record<string, unknown>
+						return slot.discriminators.every((d, i) => constOf(props[d]) === v.values[i])
+					})
+					expect(
+						matching.length,
+						`daemon spec has no payload arm pinning (${slot.discriminators.join(', ')}) = (${v.values.join(', ')}) for slot "${slotName}"`,
+					).toBeGreaterThan(0)
+					expect(
+						matching.some(o => isMaterialized((o.properties as Record<string, unknown>)[slotName])),
+						`daemon spec arm for (${v.values.join(', ')}) leaves slot "${slotName}" opaque — union not materialized on this surface`,
+					).toBe(true)
+				}
+			})
+		}
+	}
 })
 
 describe('union-parity check 3 — no redeclaration outside the owner; consumption only via generated bindings', () => {
