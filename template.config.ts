@@ -188,6 +188,12 @@ const DESKTOP = {
 			bootEnv: {
 				API_PORT: { from: 'example' },
 				CODEDM_DATA_DIR: { from: 'dataDir' },
+				// The Drizzle migrations directory. A `bun build --compile` binary has no node_modules
+				// and the drizzle migrator reads the folder via node fs (which cannot walk `/$bunfs`),
+				// so the migrations are STAGED as a bundle resource (build-sidecars copies them; the
+				// shell resolves resource_dir/<subpath> at runtime) rather than embedded. Without this
+				// the daemon dies in migrateEmbeddedDatabase before it ever listens.
+				CODEDM_MIGRATIONS_DIR: { from: 'resourceDir', subpath: 'migrations' },
 				API_GO_URL: { from: 'example' },
 				NODE_ENV: { value: 'production' },
 			},
@@ -248,7 +254,12 @@ export interface SidecarDecl {
 	build: { kind: 'bun-compile' | 'go-build'; entry: string }
 	bootEnv: Readonly<Record<string, BootEnvSource>>
 }
-export type BootEnvSource = { from: 'example' | 'dataDir' | 'desktopOrigins' } | { value: string }
+export type BootEnvSource =
+	| { from: 'example' | 'dataDir' | 'desktopOrigins' }
+	// A file/dir STAGED into the bundle's resource dir (build-sidecars copies it); the shell resolves
+	// `resource_dir/<subpath>` at runtime. For assets a compiled binary can't inline (the migrations dir).
+	| { from: 'resourceDir'; subpath: string }
+	| { value: string }
 
 export const REPO = {
 	/** npm scope every workspace package lives under (`<scope>/core-typescript`, …). */

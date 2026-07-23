@@ -158,7 +158,11 @@ pub fn run() {
                 .expect("app data dir resolvable")
                 .join("data");
 
-            for sidecar in sidecars(&data_dir.to_string_lossy()) {
+            // Bundle resource dir — staged sidecar assets (e.g. the Drizzle migrations copied by
+            // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.
+            let resource_dir = app.path().resource_dir().expect("resource dir resolvable");
+
+            for sidecar in sidecars(&data_dir.to_string_lossy(), &resource_dir) {
                 boot_sidecar(app.handle(), sidecar);
             }
             Ok(())

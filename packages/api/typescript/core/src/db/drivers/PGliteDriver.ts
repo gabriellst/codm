@@ -1,4 +1,12 @@
+import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
+// Embed pglite's WASM runtime + FS bundle as files so `bun build --compile` (the Tauri daemon
+// sidecar) inlines them into the single binary at /$bunfs. Imported via the `core/node_modules`
+// symlink (a relative path, since pglite's package `exports` does NOT expose `./dist/*`). Resolves
+// to the real on-disk asset in interpreter mode and to a /$bunfs path inside the compiled binary —
+// see `compiledPgliteAssets` for why only the compiled path uses them.
+import pgliteWasmPath from '../../../node_modules/@electric-sql/pglite/dist/pglite.wasm' with { type: 'file' }
+import pgliteFsBundlePath from '../../../node_modules/@electric-sql/pglite/dist/pglite.data' with { type: 'file' }
 import { UnitOfWork, UnitOfWorkFactory } from '../../services/UnitOfWork/UnitOfWork'
 import type { DrizzleTransaction } from '../../services/UnitOfWork/DrizzleUnitOfWork'
 import type { DrizzleClient } from '../client'
@@ -47,6 +55,31 @@ export interface PGliteDriverOptions {
 	dataDir?: string
 }
 
+/**
+ * PGlite asset options for a compiled single-file binary — or `undefined` in interpreter mode.
+ *
+ * `bun build --compile` (the Tauri `codedm-daemon` sidecar) produces a self-contained binary that
+ * has NO node_modules at runtime, so pglite cannot lazily read `pglite.wasm` / `pglite.data` next to
+ * its module — construction dies with `ENOENT: open '/$bunfs/root/pglite.data'`. The fix (proven by
+ * the D2 spike, .specs/codedm/2026-07-23-fork-d2-spike.md) is to embed the two dist assets as files
+ * and hand pglite pre-built handles. Adapted to the installed pglite 0.3.16, whose constructor
+ * options are `wasmModule` (a `WebAssembly.Module`) + `fsBundle` (a `Blob`) — there is no separate
+ * `initdb` asset here (0.5.4's `initdbWasmModule` does not exist in 0.3.16).
+ *
+ * GATED to the compiled binary: the imported paths start with `/$bunfs/` ONLY inside a compiled
+ * binary; under bun dev / `bun:test` / the e2e webServer they resolve to the real on-disk asset and
+ * this returns `undefined`, so PGlite is constructed EXACTLY as before — zero behavior change on the
+ * interpreter path every test layer runs on. `new WebAssembly.Module(bytes)` compiles synchronously,
+ * keeping the driver constructor synchronous (no async boot step).
+ */
+function compiledPgliteAssets(): { wasmModule: WebAssembly.Module; fsBundle: Blob } | undefined {
+	if (!pgliteWasmPath.startsWith('/$bunfs/')) return undefined
+	return {
+		wasmModule: new WebAssembly.Module(readFileSync(pgliteWasmPath)),
+		fsBundle: new Blob([readFileSync(pgliteFsBundlePath)]),
+	}
+}
+
 export class PGliteDriver extends DrizzleDatabaseDriver {
 	readonly db: DrizzleClient
 	readonly unitOfWorkFactory: UnitOfWorkFactory
@@ -67,7 +100,16 @@ export class PGliteDriver extends DrizzleDatabaseDriver {
 		// no OS advisory lock, so two daemons on one data dir would silently diverge — this fails the
 		// second one loudly with DataDirLockedError. In-memory (tests) skip it.
 		if (options.dataDir) acquireDataDirLock(options.dataDir)
-		this.pg = options.dataDir ? new PGlite(options.dataDir) : new PGlite()
+		// `embedded` is undefined in interpreter mode → construct PGlite exactly as before. It is the
+		// embedded {wasmModule,fsBundle} only inside a compiled binary (see compiledPgliteAssets).
+		const embedded = compiledPgliteAssets()
+		this.pg = embedded
+			? options.dataDir
+				? new PGlite(options.dataDir, embedded)
+				: new PGlite(embedded)
+			: options.dataDir
+				? new PGlite(options.dataDir)
+				: new PGlite()
 		const db = drizzle({ client: this.pg, schema: options.schema })
 		this.migratorDb = db
 		this.db = db as unknown as DrizzleClient

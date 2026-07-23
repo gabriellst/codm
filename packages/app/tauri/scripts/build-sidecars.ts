@@ -10,7 +10,7 @@
  * PGlite inside a bun single-binary was proven by the D2 spike —
  * .specs/codedm/2026-07-23-fork-d2-spike.md
  */
-import { existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { REPO, type SidecarDecl } from '../../../../template.config'
 
@@ -71,4 +71,30 @@ for (const name of outputs) {
 		process.exit(1)
 	}
 }
+
+// Stage assets a compiled sidecar can't inline. Today that's the Drizzle migrations: a
+// `bun build --compile` binary has no node_modules and the drizzle migrator reads the folder via
+// node fs (which can't walk the `/$bunfs` virtual FS), so the migrations must travel as a bundle
+// resource. Every `resourceDir` boot-env `subpath` is materialized under `binaries/<subpath>`;
+// tauri.conf `bundle.resources` (generated) copies it to the app resource dir, and the daemon's
+// CODEDM_MIGRATIONS_DIR resolves `resource_dir/<subpath>` at runtime. The standalone daemon boot is
+// pointed straight at this staged dir. Source is the canonical contracts migrations output.
+const contractsMigrations = join(repoRoot, REPO.workspaces.contracts.pkgRoot, 'db', 'migrations')
+const stagedSubpaths = new Set<string>()
+for (const sidecar of REPO.desktop.sidecars) {
+	for (const source of Object.values(sidecar.bootEnv)) {
+		if ('from' in source && source.from === 'resourceDir') stagedSubpaths.add(source.subpath)
+	}
+}
+for (const subpath of stagedSubpaths) {
+	const dest = join(outDir, subpath)
+	rmSync(dest, { recursive: true, force: true })
+	cpSync(contractsMigrations, dest, { recursive: true })
+	if (!existsSync(dest)) {
+		console.error(`[sidecars] failed to stage migrations resource: ${subpath}`)
+		process.exit(1)
+	}
+	console.log(`[sidecars] staged migrations → src-tauri/binaries/${subpath}/`)
+}
+
 console.log(`[sidecars] done → src-tauri/binaries/ (${triple})`)

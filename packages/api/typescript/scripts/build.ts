@@ -25,7 +25,7 @@
  *     the fallback correct without any env override. (`CODEDM_MIGRATIONS_DIR` remains an escape hatch
  *     for images that stage them elsewhere.)
  */
-import { cp, mkdir, rm } from 'node:fs/promises'
+import { cp, mkdir, readdir, rm } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -48,6 +48,15 @@ async function main(): Promise<void> {
 
 	// Node target, PGlite kept external (see header). `spawnSync` keeps the exit code honest so a
 	// bundler error fails the gate instead of being swallowed.
+	//
+	// `--outdir` (not `--outfile`): PGliteDriver statically imports pglite.wasm/pglite.data as `file`
+	// assets so the `bun build --compile` Tauri sidecar can EMBED them (a compiled binary can't lazily
+	// read them from node_modules). Under `--target=node` bun would emit those same two assets as
+	// sidecar files, which `--outfile` can't do ("cannot write multiple output files without an output
+	// directory"). We emit to a dir (entry pinned to `server.js`) and then DELETE the orphaned asset
+	// copies below — the node path never reads them (PGliteDriver only uses the embedded handles when
+	// its imported path is a `/$bunfs/…` one, i.e. inside the compiled binary), it resolves pglite +
+	// its assets from `dist/node_modules/@electric-sql/pglite` instead.
 	const build = Bun.spawnSync(
 		[
 			'bun',
@@ -55,13 +64,21 @@ async function main(): Promise<void> {
 			'--target=node',
 			'--external',
 			'@electric-sql/pglite',
-			'--outfile',
-			join(distDir, 'server.js'),
+			'--outdir',
+			distDir,
+			'--entry-naming',
+			'server.js',
 			join(pkgRoot, 'src/index.ts'),
 		],
 		{ cwd: pkgRoot, stdout: 'inherit', stderr: 'inherit' },
 	)
 	if (build.exitCode !== 0) process.exit(build.exitCode ?? 1)
+
+	// Drop the emitted pglite asset copies (`pglite-<hash>.wasm/.data`) — see above: unread on the node
+	// path, and pglite's real assets travel in dist/node_modules. Keeps dist/ (and the Docker image) lean.
+	for (const name of await readdir(distDir)) {
+		if (/^pglite-.*\.(wasm|data)$/.test(name)) await rm(join(distDir, name))
+	}
 
 	// Stage the migrations next to the bundle so the rewritten `import.meta.url` fallback resolves.
 	await cp(contractsMigrations, join(distDir, 'migrations'), { recursive: true })

@@ -54,7 +54,22 @@ function resolveBootEnv(key: string, source: BootEnvSource): { literal: string }
 			return { literal: desktopOrigins() }
 		case 'dataDir':
 			return { rust: 'data_dir.into()' }
+		case 'resourceDir':
+			// Resolved at runtime relative to the bundle's resource dir (build-sidecars stages the asset
+			// under `binaries/<subpath>`; tauri.conf `bundle.resources` copies it to `resource_dir/<subpath>`).
+			return { rust: `resource_dir.join(${JSON.stringify(source.subpath)}).to_string_lossy().into_owned()` }
 	}
+}
+
+/** subpaths of every `resourceDir` boot-env value across all sidecars (drives resources + the rust param). */
+function resourceDirSubpaths(): string[] {
+	const subpaths: string[] = []
+	for (const sidecar of REPO.desktop.sidecars) {
+		for (const source of Object.values(sidecar.bootEnv)) {
+			if ('from' in source && source.from === 'resourceDir') subpaths.push(source.subpath)
+		}
+	}
+	return subpaths
 }
 
 // ── renderers ────────────────────────────────────────────────────────────────
@@ -106,6 +121,10 @@ export function renderTauriConf(): string {
 			targets: 'all',
 			externalBin: REPO.desktop.sidecars.map(s => `binaries/${binName(s)}`),
 			icon: ['icons/icon.icns', 'icons/icon.ico', 'icons/32x32.png', 'icons/128x128.png'],
+			// Assets a compiled sidecar can't inline (the Drizzle migrations) are staged by
+			// build-sidecars under `binaries/<subpath>` and copied into the app resource dir at
+			// `<subpath>`; the sidecar's `resourceDir` boot-env resolves `resource_dir/<subpath>`.
+			resources: Object.fromEntries(resourceDirSubpaths().map(sub => [`binaries/${sub}`, sub])),
 		},
 	}
 	return `${JSON.stringify(conf, null, '\t')}\n`
@@ -134,9 +153,10 @@ export function renderGeneratedRs(): string {
 		`pub const IDENTIFIER: &str = "${REPO.desktop.identifier}";`,
 		'',
 		'/// Supervised sidecars — one entry per REPO.desktop.sidecars[]. Ports/env resolve from',
-		'/// REPO.env examples at generation time; `data_dir` is the runtime app-data subdir the',
-		'/// shell computes (the only boot-env value that cannot be a generation-time literal).',
-		'pub fn sidecars(data_dir: &str) -> Vec<Sidecar> {',
+		'/// REPO.env examples at generation time; `data_dir` (app-data subdir) and `resource_dir`',
+		'/// (bundle resource dir, for staged assets like the migrations) are the runtime paths the',
+		'/// shell computes — the only boot-env values that cannot be generation-time literals.',
+		`pub fn sidecars(data_dir: &str, ${resourceDirSubpaths().length > 0 ? 'resource_dir' : '_resource_dir'}: &std::path::Path) -> Vec<Sidecar> {`,
 		'    vec![',
 	]
 	for (const sidecar of REPO.desktop.sidecars) {
