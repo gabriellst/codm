@@ -1,17 +1,16 @@
+// Package shared exposes the framework fx.Module that wires every
+// context-agnostic infrastructure service. Bounded contexts compose
+// this with their own modules in their app's fx.New() call.
 package shared
 
 import (
 	"context"
-	stdsql "database/sql"
-	"io/fs"
 	"log/slog"
 	"net/http"
-	sharedcontrollers "template/api-go/internal/shared/controllers"
-	"template/api-go/internal/shared/middleware"
-	"template/api-go/public"
+
 	"template/core-go/config"
 	"template/core-go/db/sql"
-	coremw "template/core-go/middleware"
+	"template/core-go/middleware"
 	"template/core-go/repositories"
 	"template/core-go/services/httprouter"
 	"template/core-go/services/mediator"
@@ -48,51 +47,42 @@ var Module = fx.Module("shared",
 	// HTTP Router
 	fx.Provide(httprouter.NewHttpRouter),
 
-	// SSE Events Controller
-	fx.Provide(fx.Annotate(
-		sharedcontrollers.NewListenEventsController,
-		fx.As(new(types.Controller)),
-		fx.ResultTags(`group:"controllers"`),
-	)),
-
 	// Lifecycle hooks
-	fx.Invoke(registerMiddlewares),
+	fx.Invoke(
+		fx.Annotate(
+			registerMiddlewares,
+			fx.ParamTags(``, `group:"app_middlewares"`),
+		),
+	),
 	fx.Invoke(
 		fx.Annotate(
 			registerControllers,
 			fx.ParamTags(``, `group:"controllers"`),
 		),
 	),
-	fx.Invoke(registerDocsRoutes),
-	fx.Invoke(registerSPA),
 	fx.Invoke(startMediators),
 	fx.Invoke(startOutboxDispatcher),
 )
 
-func registerMiddlewares(router *httprouter.HttpRouter, cfg *config.Config, db *stdsql.DB) {
-	router.Use(coremw.Recovery)
-	router.Use(coremw.Logging)
-	router.Use(middleware.Session(db))
-	if cfg.GlobalAPIKey != "" {
-		router.Use(middleware.APIKey(cfg.GlobalAPIKey))
+// registerMiddlewares installs the framework middlewares and then every
+// app-contributed middleware (value group "app_middlewares").
+//
+// Auth middlewares (session, api-key) are domain decisions, not framework
+// defaults (template core/module.go) — each app contributes them through the
+// group instead of calling router.Use from its own fx.Invoke: Use is
+// registration-time, and an app invoke would only run AFTER
+// registerControllers has already baked the per-route chains, silently
+// dropping auth from every route (core-adequation plan, risk #6).
+func registerMiddlewares(router *httprouter.HttpRouter, appMiddlewares []types.Middleware) {
+	router.Use(middleware.Recovery)
+	router.Use(middleware.Logging)
+	for _, mw := range appMiddlewares {
+		router.Use(mw)
 	}
 }
 
 func registerControllers(router *httprouter.HttpRouter, controllers []types.Controller) {
 	router.RegisterControllers(controllers)
-}
-
-func registerDocsRoutes(router *httprouter.HttpRouter) {
-	router.RegisterDocsRoutes(public.OpenAPIJSON)
-}
-
-func registerSPA(router *httprouter.HttpRouter) {
-	appFS, err := fs.Sub(public.AppFS, "app")
-	if err != nil {
-		slog.Error("failed to access embedded app filesystem", "error", err)
-		return
-	}
-	router.RegisterSPA(appFS)
 }
 
 type mediatorParams struct {
@@ -144,10 +134,13 @@ func startOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.OutboxDispatcher)
 }
 
 // StartHTTPServer starts the HTTP server as an fx lifecycle hook.
+//
+// NOTE(core-adequation): unlike the template's core, the handler is wrapped in
+// the CORS middleware — codedm's console talks to the gateway cross-origin.
 func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config) {
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: coremw.CORS(cfg.AllowedOrigins, router.Handler()),
+		Handler: middleware.CORS(cfg.AllowedOrigins, router.Handler()),
 	}
 
 	lc.Append(fx.Hook{
