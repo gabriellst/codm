@@ -53,8 +53,9 @@ O codegen ts+go dos contracts, ao emitir o binding Go do evento
 (`packages/contracts/generated/go/wire/events.go`), **estampa os comentários** `// @union ...` /
 `// @variant ...` no struct gerado — sintaxe idêntica à do medscall. Consequência: o scanner AST
 verbatim (`pkg/openapi`) encontra as anotações no binding gerado em vez de num struct manual,
-com **duas adaptações de infra confinadas ao scanner** (o binding estampado vive num módulo Go
-distinto — `template/contracts-go/` — que o scanner verbatim nunca visitava):
+com **quatro adaptações de infra confinadas ao scanner** (o binding estampado vive num módulo Go
+distinto — `template/contracts-go/` — que o scanner verbatim nunca visitava; a lista abaixo é
+exata e completa):
 
 - `unions.go` — o filtro de pacotes inclui, além de `template/api-go/`, o módulo do binding
   gerado (`template/contracts-go/`), senão as anotações estampadas nunca são vistas.
@@ -64,6 +65,20 @@ distinto — `template/contracts-go/` — que o scanner verbatim nunca visitava)
   `ChannelStatus` de contracts — DISCONNECTED/PAIRING/CONNECTED). Sem o tiering, escanear o módulo
   de contracts contamina o componente com valores estranhos. A precedência é pinada por rail em
   `pkg/openapi/openapi_test.go` (asserção sobre o value-set emitido de `ChannelStatus`).
+- `events.go` / `schema.go` — **plumbing de `types.Unalias`** na fronteira de alias criada pela
+  troca de binding (`type ChannelMessageReceivedPayload = wire.ChannelMessageReceivedPayload`):
+  a resolução do payload do evento (o type-arg de `IntegrationEvent[T]` em `events.go`), a
+  conversão de tipos em `typeSchema` e a resolução de nomes de variante em `findTypeByName`
+  desembrulham `*types.Alias` antes do switch em `*types.Named` — sem isso, todo payload/variante
+  atrás de um alias `= wire.X` silenciosamente vira `x-unknown`.
+- `unions.go` / `schema.go` — **coleta e materialização de TODOS os slots estampados por struct**
+  (correção do judge do piloto): o verbatim guardava só a anotação "primária" (a de mais
+  variantes), então o segundo slot de um struct (`platformData` em `message_received`) emitia
+  `x-unknown` em toda superfície. `collectUnions` devolve a lista completa por struct; o slot com
+  mais variantes segue dirigindo o `oneOf` top-level e cada slot restante materializa dentro de
+  cada variante, **estreitado pelos consts pinados dos discriminadores compartilhados** (1 match →
+  `$ref` direto; >1 → `oneOf` + `x-discriminators`). Pinado em `pkg/openapi/openapi_test.go`
+  (check 10: 13/13 variantes nos dois slots) e no rail union-parity (check 2 itera todos os slots).
 
 Zero redeclaração: o Go importa o binding, as formas moram no adapter.
 
@@ -126,7 +141,13 @@ primeiro (o mais rico), depois `gateway_platform_event`, `connected/disconnected
 
 1. Decorators TypeSpec (`@unionSlot`, `@variant`) + validação de owner contra o manifest.
 2. Codegen: estampagem Go + manifest de união TS (+ testes de regressão no codegen, padrão dos
-   testes de arrays/digit-enums).
+   testes de arrays/digit-enums). **Efeito colateral sancionado do piloto** (divulgado,
+   regression-testado, zero diff nos demais eventos): `emit-wire-go.ts` passou a pular
+   `validate:"required"` em campos bool obrigatórios **em todo o codegen wire** — o `required` do
+   go-playground rejeita o `false` legítimo (paridade verbatim de `IsGroup`/`FromMe`). A derivação
+   de `required` no OpenAPI não muda (json tag sem `omitempty` continua contando); a regressão está
+   pinada em `emit-wire-go.test.ts` e o regen só alterou as duas linhas bool do
+   `ChannelMessageReceivedPayload`.
 3. Migração do `message_received` (piloto ponta a ponta: contrato → binding → openapi → SDK).
 4. Composição TS do `ListenEvents` com schemas gerados.
 5. Rail union-parity (3 checks) em tests/architecture + entrada no test:tooling.
