@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-template-fullstack is a polyglot fullstack platform template built across **TypeScript + Bun** and **Go**, with three frontends — **React web (TanStack Start + Vite)**, **Astro 5 landing/blog**, **React Native + Expo** — backed by a **single Postgres** with **Drizzle migrations** and **TypeSpec-sourced contracts** generating cross-language SDKs.
+template-fullstack is a polyglot fullstack platform template built across **TypeScript + Bun** and **Go**, with two frontends — **React web (TanStack Start + Vite)** and **Astro 5 landing/blog** — backed by a **single Postgres** with **Drizzle migrations** and **TypeSpec-sourced contracts** generating cross-language SDKs. The desktop surface is the react console hosted inside a **Tauri v2** shell (`packages/app/tauri`).
 
 Domain-agnostic: the base ships **auth, multi-tenancy (single `ownerId` axis), billing + quota, notifications** — a product grafts its own bounded contexts on top. Membership/roles live as a Tier-3 exemplar in `examples/tenant-membership`.
 
@@ -16,8 +16,8 @@ Domain-agnostic: the base ships **auth, multi-tenancy (single `ownerId` axis), b
 | `packages/api/go` | Go + database/sql + fx + net/http | Workers, indexers, schedulers |
 | `packages/app/react` | React + Vite + TanStack Router/Start | App (`/app/...`) — auth, dashboards, mutations |
 | `packages/app/astro` | Astro 5 + MDX + Tailwind 4 | Landing pages + blog + SEO (served at `/`, with locale prefixes) |
-| `packages/app/expo` | React Native + Expo Router + Uniwind | Native mobile (iOS + Android) |
-| `packages/app/styles` | CSS (design tokens) | Shared tokens consumed by `app-react` + `app-astro` (`@codedm/app-styles/tokens.css`). Expo keeps its own `global.css` (uniwind) for now. |
+| `packages/app/tauri` | Tauri v2 (Rust shell) | Desktop shell hosting the react console + TS/Go sidecars (see `.claude/skills/desktop-shell/SKILL.md`) |
+| `packages/app/styles` | CSS (design tokens) | Shared tokens consumed by `app-react` + `app-astro` (`@codedm/app-styles/tokens.css`). |
 | `packages/client/{ts,go}` | Kubb / oapi-codegen | Symmetric SDKs (each consumes all 2 backends) |
 | `packages/e2e` | Playwright | Cross-stack E2E |
 
@@ -86,7 +86,6 @@ bun dev:api:typescript   # api-ts only
 bun dev:api:go           # api-go only
 bun dev:app:react        # app-react only (TanStack Start, served under /app)
 bun dev:app:astro        # app-astro only (landing + blog, served at /)
-bun dev:app:expo         # app-expo only (Expo dev server)
 
 # Build / qualidade
 bun run build        # task graph completo (cacheado)
@@ -414,7 +413,7 @@ E há dois registries de mais alto nível:
 
 ### Skill dispatch by language / target
 
-A maioria das skills de backend tem **duas variantes** (uma por backend) e a maioria das skills de frontend tem **até três variantes** (uma por target — react/expo/astro). O layout é:
+A maioria das skills de backend tem **duas variantes** (uma por backend) e a maioria das skills de frontend tem **até três variantes** (uma por target — react/astro, mais uma variante `expo/` **dormente**: o workspace expo foi removido — sem workspace, sem dispatch — e as pastas de skill ficam como referência caso um target mobile volte). O layout é:
 
 ```
 .claude/skills/<skill>/
@@ -426,7 +425,7 @@ A maioria das skills de backend tem **duas variantes** (uma por backend) e a mai
 │   ├── SKILL.md
 │   └── registry.yaml
 ├── react/              # frontend variant — packages/app/react/
-├── expo/               # frontend variant — packages/app/expo/
+├── expo/               # DORMANT — no expo workspace in this repo; kept as reference only
 └── astro/              # frontend variant — packages/app/astro/ (component, primitive, route only)
 ```
 
@@ -437,8 +436,9 @@ A maioria das skills de backend tem **duas variantes** (uma por backend) e a mai
 | `.ts` / `.tsx` em `packages/api/typescript/` | `typescript` | `<skill>/typescript/{SKILL,registry}` |
 | `.go` em `packages/api/go/` | `go` | `<skill>/go/{SKILL,registry}` |
 | `.tsx` em `packages/app/react/` | `react` | `<skill>/react/{SKILL,registry}` |
-| `.tsx` em `packages/app/expo/` | `expo` | `<skill>/expo/{SKILL,registry}` |
 | `.astro` ou `.tsx` em `packages/app/astro/` | `astro` | `<skill>/astro/{SKILL,registry}` |
+
+(A linha `expo` da matriz é dormente: sem workspace `packages/app/expo`, nenhum arquivo resolve para ela.)
 
 Quando uma skill ainda não tem variantes (por exemplo `bounded-context`, `db-modelling`, `migrate`, `sdk`, `sheet`, `store`), o dispatcher cai no `<skill>/SKILL.md` + `<skill>/registry.yaml` flat na raiz.
 
@@ -448,14 +448,14 @@ Quando uma skill ainda não tem variantes (por exemplo `bounded-context`, `db-mo
 
 **Quais skills têm variantes de frontend:**
 
-| Skill | react | expo | astro |
+| Skill | react | expo (dormant) | astro |
 |---|---|---|---|
 | `component` | ✅ | ✅ | ✅ |
 | `primitive` | ✅ | ✅ | ✅ |
 | `route` | ✅ | ✅ | ✅ |
 | `form` | ✅ | ✅ | — (use a react island on astro) |
 
-**Frontend single-flavor (no variants):** `store` (react/expo only — Zustand identical on both; n/a on astro), `sheet` (expo-only), `prototype`, `design-system`, `storybook` (react-only — `*.stories.tsx`: dumb→`args`, connected→typed SDK mocks via `@/storybook`).
+**Frontend single-flavor (no variants):** `store` (react only — n/a on astro), `sheet` (expo-only, dormant), `prototype`, `design-system`, `storybook` (react-only — `*.stories.tsx`: dumb→`args`, connected→typed SDK mocks via `@/storybook`), `desktop-shell` (flat — `packages/app/tauri` + the react `lib/native` seam).
 
 **Lang-agnostic (no variants):** `bounded-context`, `db-modelling`, `migrate`, `sdk`, `commit`, `review`, `prd`, `user-stories`, `task-breakdown`, `spec-review`, `ddd-modeling`, `trace-analysis`, `clean-branch`, `e2e`.
 

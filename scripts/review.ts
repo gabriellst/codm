@@ -511,12 +511,12 @@ export function classifyFile(
 	// Context filter — scope-aware. Path layouts (roots from template.config.ts):
 	//   backend ts:  <workspaceRoots.apiTs>/<ctx>/...
 	//   backend go:  <workspaceRoots.apiGo>/<ctx>/...
-	//   frontend:    packages/app/{react,expo}/src/routes/<ctx>/...
+	//   frontend:    packages/app/react/src/routes/<ctx>/...
 	//                <workspaceRoots.appAstro>/pages/<ctx>/...
 	if (contextFilter) {
 		if (scope === 'frontend') {
 			const ok =
-				new RegExp(`packages/app/(?:react|expo)/(?:src/)?(?:routes|app)/${contextFilter}/`).test(file) ||
+				new RegExp(`packages/app/react/src/routes/${contextFilter}/`).test(file) ||
 				new RegExp(`${REPO.workspaceRoots.appAstro}/pages/${contextFilter}/`).test(file)
 			if (!ok) return null
 		} else if (scope === 'backend') {
@@ -1499,16 +1499,12 @@ function sourcePathToImportAliases(filePath: string): string[] {
 		return patterns
 	}
 
-	// Frontend targets differ in both alias and whether they nest under src/:
-	//   react → '@/*' = ./src/*   ·   astro → '~/*' = ./src/*   ·   expo → '@/*' = ./*
+	// Frontend targets differ in alias: react → '@/*' = ./src/*  ·  astro → '~/*' = ./src/*
 	const reactMatch = filePath.match(/^packages\/app\/react\/src\/(.+)\.tsx?$/)
 	if (reactMatch) return [`'@/${reactMatch[1]}'`]
 
 	const astroMatch = filePath.match(/^packages\/app\/astro\/src\/(.+)\.tsx?$/)
 	if (astroMatch) return [`'~/${astroMatch[1]}'`]
-
-	const expoMatch = filePath.match(/^packages\/app\/expo\/(.+)\.tsx?$/)
-	if (expoMatch) return [`'@/${expoMatch[1]}'`]
 
 	return []
 }

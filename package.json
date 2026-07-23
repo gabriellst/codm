@@ -1,6 +1,6 @@
 {
 	"name": "codedm",
-	"description": "Polyglot fullstack monorepo template (TS+Rust+Go backends, React web + Expo, contracts-driven SDKs).",
+	"description": "Polyglot fullstack monorepo template (TS+Go backends, React web + Astro landing + Tauri desktop shell, contracts-driven SDKs).",
 	"author": "Template Authors",
 	"license": "MIT",
 	"keywords": [

@@ -85,16 +85,6 @@ export const WORKSPACES: readonly Workspace[] = [
 		routes: { anchor: 'routes', extensions: ['.tsx', '.ts'] },
 	},
 	{
-		id: 'app-expo',
-		role: 'app',
-		lang: 'typescript',
-		root: PKG.appExpo,
-		src: SRC.appExpo,
-		tsconfig: `${PKG.appExpo}/tsconfig.json`,
-		locales: `${PKG.appExpo}/locales`,
-		routes: { anchor: 'app', extensions: ['.tsx', '.ts'] },
-	},
-	{
 		id: 'app-astro',
 		role: 'app',
 		lang: 'typescript',
@@ -257,7 +247,6 @@ export const EXTERNAL_JSX_MODULES: readonly string[] = [
 	'@base-ui-components',
 	'@assistant-ui',
 	'@ag-ui',
-	'expo-router',
 	'astro',
 ]
 

@@ -134,9 +134,9 @@ export function ruleInventory(): { skill: string; id: string; regexCount: number
 
 /**
  * git ls-files under packages/ filtered through the engine's scope rules.
- * maxBuffer is bumped to 64 MiB — the tracked file list exceeds the 1 MiB default
- * (packages/app/expo alone commits ~22k paths), and the default silently ENOBUFS-crashes
- * the whole `bun detect` gate.
+ * maxBuffer is bumped to 64 MiB — the tracked file list can exceed the 1 MiB default
+ * (large committed trees have hit ~22k paths historically), and the default silently
+ * ENOBUFS-crashes the whole `bun detect` gate.
  */
 export function defaultTargets(): string[] {
 	return execSync('git ls-files -- packages', { cwd: SCAN_ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })

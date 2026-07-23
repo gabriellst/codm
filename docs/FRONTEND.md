@@ -1,16 +1,15 @@
 # Frontend Architecture
 
-> Full architectural reference for the three frontend workspaces. The **why** behind the patterns. For **how** to implement each artifact, load the matching `.claude/skills/<name>/SKILL.md` (or its `react`/`expo`/`astro` variant).
+> Full architectural reference for the frontend workspaces. The **why** behind the patterns. For **how** to implement each artifact, load the matching `.claude/skills/<name>/SKILL.md` (or its `react`/`astro` variant).
 
-## The three frontends
+## The two frontends
 
 | Workspace | Path | Stack | URL space | Purpose |
 |---|---|---|---|---|
 | **react** | `packages/app/react/` | React 19 + Vite + **TanStack Start** + Router/Query/Form + Zustand + Base UI + Tailwind 4 | `/app/...` (basepath) | The app — auth, dashboards, mutations, anything stateful |
 | **astro** | `packages/app/astro/` | Astro 5 + MDX + Tailwind 4 + `@astrojs/sitemap` + content collections | `/`, `/pt`, `/en`, `/blog/...` | Public-facing landing + blog + SEO |
-| **expo** | `packages/app/expo/` | Expo SDK 55 + Expo Router + Uniwind + better-auth + native modules | iOS / Android | Native mobile (first-class citizen) |
 
-A fourth workspace, **`packages/app/styles/`**, ships `@codedm/app-styles/tokens.css` — design tokens consumed by `react` and `astro` so the landing page and the app look identical. `expo` keeps its own `global.css` (uniwind theme) for now; aligning expo tokens with the shared sheet is a deferred follow-up.
+A third workspace, **`packages/app/styles/`**, ships `@codedm/app-styles/tokens.css` — design tokens consumed by `react` and `astro` so the landing page and the app look identical. A fourth, **`packages/app/tauri/`**, is the desktop shell: a Tauri v2 host that serves the react console as its webview and supervises the TS daemon + Go gateway sidecars (see `.claude/skills/desktop-shell/SKILL.md`).
 
 **Routing handoff.** In production, nginx splits the request: `/` and `/blog/...` go to the astro build; `/app/...` goes to the TanStack Start server (with SSR on auth routes, hydrated app otherwise). Locally, `bun dev` runs both servers in parallel and you switch by URL prefix.
 
@@ -18,15 +17,15 @@ The **react app** is a **composition pipeline**: routes are thin shells that dec
 
 The **astro app** is **render-time**: pages and components run at build/SSR time, emit zero JavaScript by default, and reach for React islands (`client:*`) only when interactivity is genuinely needed. The styles workspace ensures dark mode / theme tokens line up with the react app.
 
-The **expo app** mirrors the react app's mental model — components own their data, URL params drive state, mutations live close to the consumer — adapted to Expo Router's `useLocalSearchParams` / `useTypedSearchParams` and React Native primitives via Uniwind.
+The rest of this document covers the **react app** in depth. For the astro specifics, load the matching skill variant:
 
-The rest of this document covers the **react app** in depth. For the astro / expo specifics, load the matching skill variant:
+- `.claude/skills/component/{react,astro}/SKILL.md`
+- `.claude/skills/route/{react,astro}/SKILL.md`
+- `.claude/skills/primitive/{react,astro}/SKILL.md`
+- `.claude/skills/form/react/SKILL.md` (no astro variant — use a React island)
+- `.claude/skills/desktop-shell/SKILL.md` (flat — Tauri shell + `lib/native` seam)
 
-- `.claude/skills/component/{react,expo,astro}/SKILL.md`
-- `.claude/skills/route/{react,expo,astro}/SKILL.md`
-- `.claude/skills/primitive/{react,expo,astro}/SKILL.md`
-- `.claude/skills/form/{react,expo}/SKILL.md` (no astro variant — use a React island)
-- `.claude/skills/sheet/SKILL.md` (expo-only)
+(`expo` skill variants still exist on disk but are **dormant** — the expo workspace was removed; no workspace = no dispatch.)
 
 ---
 
@@ -374,7 +373,7 @@ Three form shapes covered by the `/form` skill:
 
 ## Data Loading & Prefetch (react)
 
-> React platform only (TanStack Router/Start). Expo/Astro fetch differently — see their route skills.
+> React platform only (TanStack Router/Start). Astro fetches differently — see its route skill.
 
 Duas máquinas de cache com papéis distintos: o **TanStack Router** decide *quando* vale buscar
 (navegação, hover, focus — ciclo de vida da navegação); o **React Query** decide *se* precisa

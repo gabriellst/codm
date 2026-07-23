@@ -38,7 +38,6 @@ describe('full graph integration (polyglot)', () => {
 		const result = buildOnce()
 		const byWs = result.graph.stats.nodesByWorkspace
 		expect(byWs['app-react'] ?? 0).toBeGreaterThan(0)
-		expect(byWs['app-expo'] ?? 0).toBeGreaterThan(0)
 		// app-astro is currently sparse; not required to be > 0.
 	})
 

@@ -38,7 +38,6 @@ COPY ./packages/client/dist/typescript ./packages/client/dist/typescript
 COPY ./packages/client/package.json ./packages/client/package.json
 COPY ./packages/app/react/package.json ./packages/app/react/package.json
 COPY ./packages/app/astro/package.json ./packages/app/astro/package.json
-COPY ./packages/app/expo/package.json ./packages/app/expo/package.json
 COPY ./packages/app/styles/package.json ./packages/app/styles/package.json
 COPY ./packages/e2e/package.json ./packages/e2e/package.json
 

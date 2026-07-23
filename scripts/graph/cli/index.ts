@@ -386,7 +386,7 @@ NODE ID FORMAT (polyglot):
 
 WORKSPACES (matrix):
   api-typescript | api-go                         backends
-  app-react | app-expo | app-astro                frontends
+  app-react | app-astro                           frontends
   contracts                                       wire + db source of truth
   client-typescript | client-go                   generated SDKs
   contracts-generated-{ts,go}                     generated wire bindings
