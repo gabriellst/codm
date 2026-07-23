@@ -17,7 +17,7 @@ get "badges"(){
     })
 
 export const addWorkspaceMutationRequestSchema = z.object({
-    "path": z.string().min(1)
+    "path": z.string().min(1).max(1024).regex(/^\/.*/)
     })
 
 export const addWorkspaceMutationResponseSchema = z.lazy(() => addWorkspace200Schema)

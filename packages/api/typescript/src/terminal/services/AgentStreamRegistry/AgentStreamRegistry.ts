@@ -1,6 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, tryCatchAsync } from '@codedm/core-typescript'
-import type { TuiActionType } from '../../enums'
+import { BaseError, tryCatchAsync, z } from '@codedm/core-typescript'
+import type Z from 'zod'
+import { TuiActionType } from '../../enums'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 
 /**
@@ -10,24 +11,31 @@ import type { ApplicationErrors, DomainErrors } from '../../errors'
  *   - `browser.terminal_output_appended` — one line of terminal output (T12 panel).
  *   - `browser.terminal_action_detected` — one structured claude TUI action line (wave-0
  *     AMENDMENT: action_detected is an SSE frame ONLY — no wire event).
+ *
+ * Declared as ZOD (types inferred) so the emitting surface (`StreamTerminalSession`) publishes the
+ * MATERIALIZED discriminated union on the wire — never z.unknown().
  */
-export interface TerminalOutputFrame {
-	name: 'browser.terminal_output_appended'
-	issueId: string
-	line: string
-	at: string
-	stream: 'stdout' | 'stderr'
-}
+export const TerminalOutputFrameSchema = z.object({
+	name: z.literal('browser.terminal_output_appended'),
+	issueId: z.uuid(),
+	line: z.string(),
+	at: z.iso.datetime(),
+	stream: z.enum(['stdout', 'stderr']),
+})
 
-export interface TerminalActionFrame {
-	name: 'browser.terminal_action_detected'
-	issueId: string
-	action: TuiActionType
-	value: string
-	at: string
-}
+export const TerminalActionFrameSchema = z.object({
+	name: z.literal('browser.terminal_action_detected'),
+	issueId: z.uuid(),
+	action: z.enum(TuiActionType),
+	value: z.string(),
+	at: z.iso.datetime(),
+})
 
-export type TerminalSseFrame = TerminalOutputFrame | TerminalActionFrame
+export const TerminalSseFrameSchema = z.discriminatedUnion('name', [TerminalOutputFrameSchema, TerminalActionFrameSchema])
+
+export type TerminalOutputFrame = Z.infer<typeof TerminalOutputFrameSchema>
+export type TerminalActionFrame = Z.infer<typeof TerminalActionFrameSchema>
+export type TerminalSseFrame = Z.infer<typeof TerminalSseFrameSchema>
 
 export type TerminalStreamWriter = (frame: TerminalSseFrame) => void | Promise<void>
 

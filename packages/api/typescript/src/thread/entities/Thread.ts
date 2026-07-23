@@ -2,6 +2,7 @@ import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
 import type Z from 'zod'
 import { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import type { ApplicationErrors, DomainErrors } from '../errors'
+import { MentionGateSchema } from '../schemas'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
 export const ContactRefSchema = z.object({
@@ -9,12 +10,6 @@ export const ContactRefSchema = z.object({
 	displayName: z.string().min(1),
 	kind: z.enum(ContactKind),
 })
-
-// MentionGate discriminated-union VO — a tag is required exactly when the gate is enabled.
-export const MentionGateSchema = z.discriminatedUnion('enabled', [
-	z.object({ enabled: z.literal(false) }),
-	z.object({ enabled: z.literal(true), tag: z.string().trim().min(1) }),
-])
 
 // Participant VO — everyone in the conversation; `canInvoke` gates who may trigger agents.
 export const ParticipantSchema = z.object({

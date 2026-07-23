@@ -1,4 +1,5 @@
 import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { TerminalSessionKillReason } from '../enums'
 
 /**
  * Context-private fact: a terminal session's PTY died — explicitly killed, evicted for idleness,
@@ -11,7 +12,7 @@ export const TerminalSessionKilledEventSchema = z.domainEvent({
 	issueId: z.string(),
 	threadId: z.string().optional(),
 	terminalSessionId: z.string(),
-	reason: z.enum(['idle', 'shutdown', 'crash', 'explicit']),
+	reason: z.enum(TerminalSessionKillReason),
 })
 
 export class TerminalSessionKilledEvent extends BaseDomainEvent<typeof TerminalSessionKilledEventSchema> {

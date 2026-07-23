@@ -22,6 +22,8 @@ export type AddWorkspace200 = {
 export type AddWorkspaceMutationRequest = {
     /**
      * @minLength 1
+     * @maxLength 1024
+     * @pattern ^\/.*
      * @type string
     */
     path: string;

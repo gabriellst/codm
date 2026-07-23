@@ -1,13 +1,9 @@
-export {
-	ArchiveIssueController,
-	RestoreIssueController,
-	SteerIssueController,
-	ResolveStopController,
-	UpdateStopCriteriaController,
-} from './IssueCommands'
-export {
-	GetIssuesOverviewController,
-	GetSessionIssuesController,
-	GetIssueDetailController,
-	GetNeedsYouPanelController,
-} from './IssueReads'
+export { ArchiveIssueController } from './ArchiveIssue'
+export { GetIssueDetailController } from './GetIssueDetail'
+export { GetIssuesOverviewController } from './GetIssuesOverview'
+export { GetNeedsYouPanelController } from './GetNeedsYouPanel'
+export { GetSessionIssuesController } from './GetSessionIssues'
+export { ResolveStopController } from './ResolveStop'
+export { RestoreIssueController } from './RestoreIssue'
+export { SteerIssueController } from './SteerIssue'
+export { UpdateStopCriteriaController } from './UpdateStopCriteria'

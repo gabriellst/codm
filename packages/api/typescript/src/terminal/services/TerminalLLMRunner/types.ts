@@ -16,7 +16,10 @@ export interface TerminalLine {
 }
 
 /** Why a live session's PTY died. */
-export type SessionKillReason = 'idle' | 'shutdown' | 'crash' | 'explicit'
+import type { TerminalSessionKillReason } from '../../enums'
+
+/** Engine-side literal union — DERIVED from the named enum (one vocabulary, zero drift). */
+export type SessionKillReason = `${TerminalSessionKillReason}`
 
 /**
  * Everything a runner yields during one interactive session turn — the WIDE seam (Fork A1,

@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import { actionSchema } from "./actionSchema.ts";
+import { streamSchema } from "./streamSchema.ts";
 import { z } from "zod/v4";
 
 export const streamTerminalSessionPathParamsSchema = z.object({
@@ -12,6 +14,22 @@ export const streamTerminalSessionPathParamsSchema = z.object({
 /**
  * @description Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
  */
-export const streamTerminalSession200Schema = z.any()
+export const streamTerminalSession200Schema = z.union([z.object({
+    "name": z.enum(["browser.terminal_output_appended"]),
+"issueId": z.uuid(),
+"line": z.string(),
+"at": z.iso.datetime(),
+get "stream"(){
+                return streamSchema
+              }
+    }), z.object({
+    "name": z.enum(["browser.terminal_action_detected"]),
+"issueId": z.uuid(),
+get "action"(){
+                return actionSchema
+              },
+"value": z.string(),
+"at": z.iso.datetime()
+    })])
 
 export const streamTerminalSessionQueryResponseSchema = z.lazy(() => streamTerminalSession200Schema)

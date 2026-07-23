@@ -3,14 +3,13 @@ import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetSettings, GetSettingsOutputSchema } from '../usecases/GetSettings'
 
-export const GetSettingsControllerInputSchema = z.object({ ctx: z.object({ ownerId: z.uuid() }) })
+export const GetSettingsControllerInputSchema = z
+	.object({ ctx: z.object({ ownerId: z.uuid() }) })
+	.example([{ ctx: { ownerId: '00000000-0000-4000-8000-000000000001' } }])
 export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema
 
 @injectable()
-export class GetSettingsController extends Controller<
-	typeof GetSettingsControllerInputSchema,
-	typeof GetSettingsControllerOutputSchema
-> {
+export class GetSettingsController extends Controller<typeof GetSettingsControllerInputSchema, typeof GetSettingsControllerOutputSchema> {
 	readonly path = '/ui/settings'
 	readonly method = 'get' as const
 	readonly description = 'Settings — providers, stop criteria, general, app version (T08)'

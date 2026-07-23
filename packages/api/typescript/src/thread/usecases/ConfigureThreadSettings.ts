@@ -3,7 +3,7 @@ import { Handler, z, BaseError } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { MentionGateSchema } from '../entities/Thread'
+import { MentionGateSchema } from '../schemas'
 import type { ApplicationErrors } from '../errors'
 
 // C12 ConfigureMentionGate — enabling requires a non-empty tag (enforced by the discriminated-union VO).
@@ -20,7 +20,8 @@ export class ConfigureMentionGate extends Handler<typeof ConfigureMentionGateInp
 	}
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.configureMentionGate(input.mentionGate)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}
@@ -48,7 +49,8 @@ export class SetParticipantInvocation extends Handler<
 	}
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.setParticipantInvocation(input.participantId, input.canInvoke)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}
@@ -68,7 +70,8 @@ export class ConfigureContextBuffer extends Handler<typeof ConfigureContextBuffe
 	}
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.configureContextBuffer(input.bufferSize)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}

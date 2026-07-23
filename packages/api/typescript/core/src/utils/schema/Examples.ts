@@ -61,6 +61,15 @@ const SCHEMA_METHODS = [
 	'nonoptional',
 	'or',
 	'and',
+	// Object-composition methods — a derived envelope (ThreadParam.extend({...}), a .pick()/.omit()
+	// body) must keep .example(): schema-reuse composition is the house controller shape.
+	'extend',
+	'pick',
+	'omit',
+	'partial',
+	'required',
+	'merge',
+	'safeExtend',
 ]
 
 export function patchExample<T>(schema: T): T {

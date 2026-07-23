@@ -3,12 +3,21 @@ import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetMyAccount, GetMyAccountOutputSchema } from '../usecases/GetMyAccount'
 
-export const GetMyAccountControllerInputSchema = z.object({
-	ctx: z.object({
-		user: z.object({ id: z.string(), name: z.string(), email: z.string() }),
-		session: z.object({ ownerId: z.uuid().nullable() }),
-	}),
-})
+export const GetMyAccountControllerInputSchema = z
+	.object({
+		ctx: z.object({
+			user: z.object({ id: z.string(), name: z.string(), email: z.string() }),
+			session: z.object({ ownerId: z.uuid().nullable() }),
+		}),
+	})
+	.example([
+		{
+			ctx: {
+				user: { id: 'operator', name: 'Operator', email: 'operator@codedm.local' },
+				session: { ownerId: '00000000-0000-4000-8000-000000000001' },
+			},
+		},
+	])
 
 export const GetMyAccountControllerOutputSchema = GetMyAccountOutputSchema
 

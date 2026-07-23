@@ -607,7 +607,74 @@
             "content": {
               "text/event-stream": {
                 "schema": {
-                  "x-tpl-unknown": true
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "const": "browser.terminal_output_appended"
+                        },
+                        "issueId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "line": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        "stream": {
+                          "$ref": "#/components/schemas/Stream"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "issueId",
+                        "line",
+                        "at",
+                        "stream"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "const": "browser.terminal_action_detected"
+                        },
+                        "issueId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "action": {
+                          "$ref": "#/components/schemas/Action"
+                        },
+                        "value": {
+                          "type": "string"
+                        },
+                        "at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "issueId",
+                        "action",
+                        "value",
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
                 }
               }
             }
@@ -630,7 +697,9 @@
                 "properties": {
                   "path": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "pattern": "^\\/.*"
                   }
                 },
                 "required": [
@@ -855,6 +924,23 @@
                   "workspaceId",
                   "providers"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "contactRef": {
+                      "channelId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "externalId": "5511999999999@s.whatsapp.net",
+                      "displayName": "Ada",
+                      "kind": "CONTACT"
+                    },
+                    "workspaceId": "019e4d24-6524-7041-9e1c-8108180cddb0",
+                    "providers": [
+                      "CLAUDE_CODE"
+                    ]
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -877,7 +963,20 @@
                   "required": [
                     "threadId"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "threadId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "threadId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    },
+                    "summary": "Example"
+                  }
                 }
               }
             }
@@ -905,6 +1004,14 @@
                 "required": [
                   "bufferSize"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "bufferSize": "50"
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -916,7 +1023,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -981,6 +1089,17 @@
                 "required": [
                   "mentionGate"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "mentionGate": {
+                      "enabled": true,
+                      "tag": "@dev"
+                    }
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -992,7 +1111,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1021,7 +1141,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1224,7 +1345,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1333,7 +1455,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1362,7 +1485,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1398,6 +1522,14 @@
                 "required": [
                   "text"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "text": "I will take this one from here"
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -1409,7 +1541,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1429,7 +1562,20 @@
                   "required": [
                     "entryId"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "entryId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "entryId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                    },
+                    "summary": "Example"
+                  }
                 }
               }
             }
@@ -1457,6 +1603,14 @@
                 "required": [
                   "canInvoke"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "canInvoke": true
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -1468,7 +1622,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           },
           {
             "in": "path",
@@ -1476,7 +1631,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "5511999999999"
           }
         ],
         "responses": {
@@ -1512,6 +1668,14 @@
                 "required": [
                   "text"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "text": "focus on the failing tests first"
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -1523,7 +1687,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -1543,7 +1708,20 @@
                   "required": [
                     "entryId"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "entryId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "entryId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                    },
+                    "summary": "Example"
+                  }
                 }
               }
             }
@@ -1565,7 +1743,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
           }
         ],
         "responses": {
@@ -1594,7 +1773,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
           }
         ],
         "responses": {
@@ -1934,7 +2114,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -2021,7 +2202,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -2184,6 +2366,14 @@
                 "required": [
                   "resolution"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "resolution": "RETRY"
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -2195,7 +2385,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb1"
           }
         ],
         "responses": {
@@ -2224,7 +2415,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
           }
         ],
         "responses": {
@@ -2260,6 +2452,14 @@
                 "required": [
                   "text"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "text": "prefer the smaller refactor"
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -2271,7 +2471,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
           }
         ],
         "responses": {
@@ -2291,7 +2492,20 @@
                   "required": [
                     "entryId"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "entryId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "entryId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                    },
+                    "summary": "Example"
+                  }
                 }
               }
             }
@@ -2343,6 +2557,20 @@
                 "required": [
                   "stopCriteria"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "stopCriteria": {
+                      "serverErrors": true,
+                      "blockedByClassification": true,
+                      "humanRequested": true,
+                      "approvalNeeded": true,
+                      "authRequired": true
+                    }
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -2374,7 +2602,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -2456,11 +2685,13 @@
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "ref": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 2048
                   },
                   "meta": {
                     "type": "string"
@@ -2472,6 +2703,17 @@
                   "ref",
                   "meta"
                 ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "kind": "LINK",
+                    "name": "Preview deploy",
+                    "ref": "https://preview.example.com",
+                    "meta": "{}"
+                  },
+                  "summary": "Example"
+                }
               }
             }
           }
@@ -2483,7 +2725,8 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
           }
         ],
         "responses": {
@@ -2503,7 +2746,20 @@
                   "required": [
                     "artifactId"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "artifactId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "artifactId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                    },
+                    "summary": "Example"
+                  }
                 }
               }
             }
@@ -2525,7 +2781,8 @@
             "schema": {
               "type": "string"
             },
-            "required": false
+            "required": false,
+            "example": "ada"
           },
           {
             "in": "query",
@@ -6599,6 +6856,28 @@
         "enum": [
           "DETECTED",
           "NOT_INSTALLED"
+        ]
+      },
+      "Stream": {
+        "type": "string",
+        "enum": [
+          "stdout",
+          "stderr"
+        ]
+      },
+      "Action": {
+        "type": "string",
+        "enum": [
+          "BASH",
+          "EDIT",
+          "UPDATE",
+          "WRITE",
+          "READ",
+          "GREP",
+          "GLOB",
+          "TASK",
+          "TODO_WRITE",
+          "UNKNOWN"
         ]
       },
       "WorkspaceBadge": {

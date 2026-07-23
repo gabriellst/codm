@@ -19,6 +19,48 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for Action.
+const (
+	BASH      Action = "BASH"
+	EDIT      Action = "EDIT"
+	GLOB      Action = "GLOB"
+	GREP      Action = "GREP"
+	READ      Action = "READ"
+	TASK      Action = "TASK"
+	TODOWRITE Action = "TODO_WRITE"
+	UNKNOWN   Action = "UNKNOWN"
+	UPDATE    Action = "UPDATE"
+	WRITE     Action = "WRITE"
+)
+
+// Valid indicates whether the value is a known member of the Action enum.
+func (e Action) Valid() bool {
+	switch e {
+	case BASH:
+		return true
+	case EDIT:
+		return true
+	case GLOB:
+		return true
+	case GREP:
+		return true
+	case READ:
+		return true
+	case TASK:
+		return true
+	case TODOWRITE:
+		return true
+	case UNKNOWN:
+		return true
+	case UPDATE:
+		return true
+	case WRITE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApiErrors.
 const (
 	CANNOTCONVERTINPUT          ApiErrors = "CANNOT_CONVERT_INPUT"
@@ -907,6 +949,24 @@ func (e StopResolution) Valid() bool {
 	}
 }
 
+// Defines values for Stream.
+const (
+	Stderr Stream = "stderr"
+	Stdout Stream = "stdout"
+)
+
+// Valid indicates whether the value is a known member of the Stream enum.
+func (e Stream) Valid() bool {
+	switch e {
+	case Stderr:
+		return true
+	case Stdout:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ThreadMode.
 const (
 	DIRECT ThreadMode = "DIRECT"
@@ -994,6 +1054,9 @@ func (e WorkspaceBadge) Valid() bool {
 	}
 }
 
+// Action defines model for Action.
+type Action string
+
 // ApiErrors All possible error codes
 type ApiErrors string
 
@@ -1053,6 +1116,9 @@ type StopKind string
 
 // StopResolution defines model for StopResolution.
 type StopResolution string
+
+// Stream defines model for Stream.
+type Stream string
 
 // ThreadMode defines model for ThreadMode.
 type ThreadMode string

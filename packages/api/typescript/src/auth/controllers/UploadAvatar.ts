@@ -3,12 +3,14 @@ import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { UploadAvatar, UploadAvatarOutputSchema } from '../usecases/UploadAvatar'
 
-export const UploadAvatarControllerInputSchema = z.object({
-	ctx: z.object({
-		user: z.object({ id: z.string() }),
-		session: z.object({ ownerId: z.uuid() }),
-	}),
-})
+export const UploadAvatarControllerInputSchema = z
+	.object({
+		ctx: z.object({
+			user: z.object({ id: z.string() }),
+			session: z.object({ ownerId: z.uuid() }),
+		}),
+	})
+	.example([{ ctx: { user: { id: 'operator' }, session: { ownerId: '00000000-0000-4000-8000-000000000001' } } }])
 
 export const UploadAvatarControllerOutputSchema = UploadAvatarOutputSchema
 

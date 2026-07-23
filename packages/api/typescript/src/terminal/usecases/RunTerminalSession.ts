@@ -16,6 +16,7 @@ import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
 import { TerminalSessionResumedEvent } from '../events/TerminalSessionResumedEvent'
 import { TerminalSessionKilledEvent } from '../events/TerminalSessionKilledEvent'
 import type { TerminalApplicationErrors } from '../errors'
+import { TerminalRunOutcome, TerminalSessionKillReason } from '../enums'
 
 export const RunTerminalSessionInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -30,7 +31,7 @@ export const RunTerminalSessionInputSchema = z.object({
 
 export const RunTerminalSessionOutputSchema = z.object({
 	issueId: z.uuid(),
-	outcome: z.enum(['COMPLETED', 'STOPPED']),
+	outcome: z.enum(TerminalRunOutcome),
 	replyText: z.string().optional(),
 	stopId: z.string().optional(),
 })
@@ -109,7 +110,7 @@ export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSc
 
 			return {
 				issueId: input.issueId,
-				outcome: observed.outcome.kind,
+				outcome: observed.outcome.kind === 'COMPLETED' ? TerminalRunOutcome.COMPLETED : TerminalRunOutcome.STOPPED,
 				replyText: observed.outcome.kind === 'COMPLETED' ? observed.outcome.replyText : undefined,
 				stopId,
 			}
@@ -182,7 +183,8 @@ export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSc
 						issueId: input.issueId,
 						threadId: input.threadId,
 						terminalSessionId: observed.terminalSessionId ?? 'unknown',
-						reason: observed.killedReason,
+						// Value-identical by construction: the engine union derives from the enum (types.ts).
+						reason: observed.killedReason as TerminalSessionKillReason,
 					},
 				}),
 				tx,

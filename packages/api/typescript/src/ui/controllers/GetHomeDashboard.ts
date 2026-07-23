@@ -3,7 +3,9 @@ import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetHomeDashboard, GetHomeDashboardOutputSchema } from '../usecases/GetHomeDashboard'
 
-export const GetHomeDashboardControllerInputSchema = z.object({ ctx: z.object({ ownerId: z.uuid() }) })
+export const GetHomeDashboardControllerInputSchema = z
+	.object({ ctx: z.object({ ownerId: z.uuid() }) })
+	.example([{ ctx: { ownerId: '00000000-0000-4000-8000-000000000001' } }])
 export const GetHomeDashboardControllerOutputSchema = GetHomeDashboardOutputSchema
 
 @injectable()

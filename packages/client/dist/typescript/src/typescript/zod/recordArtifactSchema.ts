@@ -22,8 +22,8 @@ export const recordArtifactMutationRequestSchema = z.object({
 get "kind"(){
                 return artifactKindSchema
               },
-"name": z.string().min(1),
-"ref": z.string().min(1),
+"name": z.string().min(1).max(200),
+"ref": z.string().min(1).max(2048),
 "meta": z.string()
     })
 

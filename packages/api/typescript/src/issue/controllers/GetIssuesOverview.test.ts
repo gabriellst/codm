@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { GetIssuesOverviewControllerInputSchema } from './IssueReads'
+import { GetIssuesOverviewControllerInputSchema } from './GetIssuesOverview'
 
 const ctx = { ownerId: '00000000-0000-4000-8000-000000000001' }
 

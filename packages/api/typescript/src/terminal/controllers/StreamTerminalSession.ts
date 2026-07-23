@@ -1,20 +1,21 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, MimeTypes, z, SSE_CONNECTED_FRAME, createSSEResponse, encodeSSEFrame } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { AgentStreamRegistry, type TerminalStreamWriter } from '../services/AgentStreamRegistry'
+import { AgentStreamRegistry, TerminalSseFrameSchema, type TerminalStreamWriter } from '../services/AgentStreamRegistry'
 
 export const StreamTerminalSessionInputSchema = z
 	.object({
 		params: z.object({ issueId: z.uuid() }),
-		ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
+		ctx: z.object({ ownerId: z.uuid() }),
 	})
-	.example([{ params: { issueId: '019e4d24-6524-7041-9e1c-8108180cddae' }, ctx: { session: { ownerId: '00000000-0000-4000-8000-000000000001' } } }])
+	.example([{ params: { issueId: '019e4d24-6524-7041-9e1c-8108180cddae' }, ctx: { ownerId: '00000000-0000-4000-8000-000000000001' } }])
 
 /**
- * Output is the raw SSE stream — the browser terminal panel (T12) consumes `data: <json>\n\n`
- * frames, each a `browser.terminal_output_appended` view, so we don't model a JSON body here.
+ * The SSE frame union the browser terminal panel (T12) consumes (`data: <json>\n\n`) — the
+ * MATERIALIZED TerminalSseFrame union declared at its synthesizer (AgentStreamRegistry), never
+ * z.unknown(): the SDK derives full narrowing for both frame kinds.
  */
-export const StreamTerminalSessionOutputSchema = z.unknown()
+export const StreamTerminalSessionOutputSchema = TerminalSseFrameSchema
 
 /**
  * The two-stream TRANSPORT endpoint — the CodeDM descendant of whatscode's SSE Completion controller,
@@ -28,7 +29,10 @@ export const StreamTerminalSessionOutputSchema = z.unknown()
  * → close → teardown, and the returned unregister frees the observer slot.
  */
 @injectable()
-export class StreamTerminalSessionController extends Controller<typeof StreamTerminalSessionInputSchema, typeof StreamTerminalSessionOutputSchema> {
+export class StreamTerminalSessionController extends Controller<
+	typeof StreamTerminalSessionInputSchema,
+	typeof StreamTerminalSessionOutputSchema
+> {
 	readonly path = '/terminal/sessions/:issueId/stream'
 	readonly method = 'get' as const
 	readonly description = 'Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)'
@@ -44,7 +48,7 @@ export class StreamTerminalSessionController extends Controller<typeof StreamTer
 
 	async handle(request: this['input']): Promise<this['output']> {
 		const { issueId } = request.params
-		const { ownerId } = request.ctx.session
+		const { ownerId } = request.ctx
 
 		// Observer half of the single-active invariant — only one browser tails a given issue.
 		if (this.registry.has(issueId)) {

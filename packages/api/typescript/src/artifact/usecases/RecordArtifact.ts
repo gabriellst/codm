@@ -14,8 +14,8 @@ export const RecordArtifactInputSchema = z.object({
 	threadId: z.uuid(),
 	issueId: z.uuid().optional(),
 	kind: z.enum(ArtifactKind),
-	name: z.string().trim().min(1),
-	ref: z.string().trim().min(1),
+	name: z.string().trim().min(1).max(200),
+	ref: z.string().trim().min(1).max(2048),
 	meta: z.string(),
 })
 

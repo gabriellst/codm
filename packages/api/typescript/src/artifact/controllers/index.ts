@@ -1,1 +1,2 @@
-export { RecordArtifactController, ListArtifactsController } from './ArtifactControllers'
+export { ListArtifactsController } from './ListArtifacts'
+export { RecordArtifactController } from './RecordArtifact'

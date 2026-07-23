@@ -9,9 +9,9 @@ export const DetectProvidersInputSchema = z
 		// `?refresh=true` forces a re-probe (C07 RescanProviders); otherwise the cached catalog is served.
 		// z.stringToBoolean() (z.stringbool) is the house boolean-query shape — no string enum + manual compare.
 		query: z.object({ refresh: z.stringToBoolean().optional() }).optional(),
-		ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
+		ctx: z.object({ ownerId: z.uuid() }),
 	})
-	.example([{ query: { refresh: false }, ctx: { session: { ownerId: '00000000-0000-4000-8000-000000000001' } } }])
+	.example([{ query: { refresh: false }, ctx: { ownerId: '00000000-0000-4000-8000-000000000001' } }])
 
 export const DetectProvidersOutputSchema = z
 	.object({

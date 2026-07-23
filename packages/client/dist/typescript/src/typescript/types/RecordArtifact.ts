@@ -33,11 +33,13 @@ export type RecordArtifactMutationRequest = {
     kind: ArtifactKind;
     /**
      * @minLength 1
+     * @maxLength 200
      * @type string
     */
     name: string;
     /**
      * @minLength 1
+     * @maxLength 2048
      * @type string
     */
     ref: string;

@@ -5,6 +5,7 @@ import { ClassificationMethod, ProviderKind } from '@codedm/contracts-typescript
 import { TerminalLLMRunner } from '../TerminalLLMRunner'
 import type { TerminalApplicationErrors } from '../../errors'
 import { uniqueSlugKey } from './slug'
+import { ClassificationVerdict } from '../../enums'
 
 /** An open issue the classifier may route an inbound message to. */
 export interface OpenIssueRef {
@@ -44,7 +45,7 @@ export type ClassificationDecision =
 /** The structured shape the runner's `generate()` returns. Nullish fields since the LLM omits the
  *  ones that don't apply to its chosen decision. */
 const LlmDecisionSchema = z.object({
-	decision: z.enum(['MATCH_ISSUE', 'NEW_ISSUE', 'CLARIFY']),
+	decision: z.enum(ClassificationVerdict),
 	issueId: z.string().nullish(),
 	confidence: z.number().min(0).max(1).nullish(),
 	title: z.string().nullish(),
@@ -82,7 +83,7 @@ export class IssueClassifier {
 		const threshold = input.threshold ?? IssueClassifier.DEFAULT_THRESHOLD
 		const decision = await this.generateDecision(input)
 
-		if (decision.decision === 'MATCH_ISSUE') {
+		if (decision.decision === ClassificationVerdict.MATCH_ISSUE) {
 			const matched = decision.issueId ? input.openIssues.find(issue => issue.issueId === decision.issueId) : undefined
 			const confidence = decision.confidence ?? 0
 			if (matched && confidence >= threshold) {
@@ -92,7 +93,7 @@ export class IssueClassifier {
 			return this.clarify(input, decision.question)
 		}
 
-		if (decision.decision === 'NEW_ISSUE') {
+		if (decision.decision === ClassificationVerdict.NEW_ISSUE) {
 			const title = decision.title?.trim() || defaultTitle(input.message)
 			const slugKey = uniqueSlugKey(
 				title,

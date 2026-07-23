@@ -10,8 +10,8 @@ import type { ApplicationErrors } from '../errors'
 
 export const AddWorkspaceInputSchema = z.object({
 	ownerId: z.uuid(),
-	// Absolute path selected via the native folder picker.
-	path: z.string().trim().min(1),
+	// Absolute path selected via the native folder picker — bounded and shape-checked at the edge.
+	path: z.string().trim().min(1).max(1024).startsWith('/'),
 })
 
 export const AddWorkspaceOutputSchema = z.object({

@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { Action } from "./Action.ts";
+import type { Stream } from "./Stream.ts";
 
 export type StreamTerminalSessionPathParams = {
     /**
@@ -11,10 +13,64 @@ export type StreamTerminalSessionPathParams = {
     issueId: string;
 };
 
+export const StreamTerminalSession200NameEnum = {
+    "browser.terminal_output_appended": "browser.terminal_output_appended"
+} as const;
+
+export type StreamTerminalSession200NameEnumKey = (typeof StreamTerminalSession200NameEnum)[keyof typeof StreamTerminalSession200NameEnum];
+
+export const StreamTerminalSession200NameEnum2 = {
+    "browser.terminal_action_detected": "browser.terminal_action_detected"
+} as const;
+
+export type StreamTerminalSession200NameEnum2Key = (typeof StreamTerminalSession200NameEnum2)[keyof typeof StreamTerminalSession200NameEnum2];
+
 /**
  * @description Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
 */
-export type StreamTerminalSession200 = any;
+export type StreamTerminalSession200 = ({
+    /**
+     * @type string
+    */
+    name: StreamTerminalSession200NameEnumKey;
+    /**
+     * @type string, uuid
+    */
+    issueId: string;
+    /**
+     * @type string
+    */
+    line: string;
+    /**
+     * @type string, date-time
+    */
+    at: string;
+    /**
+     * @type string
+    */
+    stream: Stream;
+} | {
+    /**
+     * @type string
+    */
+    name: StreamTerminalSession200NameEnum2Key;
+    /**
+     * @type string, uuid
+    */
+    issueId: string;
+    /**
+     * @type string
+    */
+    action: Action;
+    /**
+     * @type string
+    */
+    value: string;
+    /**
+     * @type string, date-time
+    */
+    at: string;
+});
 
 export type StreamTerminalSessionQueryResponse = StreamTerminalSession200;
 

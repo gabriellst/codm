@@ -3,15 +3,17 @@ import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetAttachThreadWizard, GetAttachThreadWizardOutputSchema } from '../usecases/GetAttachThreadWizard'
 
-export const GetAttachThreadWizardControllerInputSchema = z.object({
-	ctx: z.object({ ownerId: z.uuid() }),
-	query: z.object({
-		// Case-insensitive contact-name search over the gateway remote directory.
-		search: z.string().optional(),
-		// Opaque keyset cursor from a previous page's `contactsNextCursor`.
-		cursor: z.string().optional(),
-	}),
-})
+export const GetAttachThreadWizardControllerInputSchema = z
+	.object({
+		ctx: z.object({ ownerId: z.uuid() }),
+		query: z.object({
+			// Case-insensitive contact-name search over the gateway remote directory.
+			search: z.string().optional(),
+			// Opaque keyset cursor from a previous page's `contactsNextCursor`.
+			cursor: z.string().optional(),
+		}),
+	})
+	.example([{ ctx: { ownerId: '00000000-0000-4000-8000-000000000001' }, query: { search: 'ada' } }])
 export const GetAttachThreadWizardControllerOutputSchema = GetAttachThreadWizardOutputSchema
 
 @injectable()
