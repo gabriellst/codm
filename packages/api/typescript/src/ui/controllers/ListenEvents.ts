@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import {
-	Controller,
 	z,
+	Controller,
 	MimeTypes,
 	ExternalMediator,
 	SSE_CONNECTED_FRAME,

@@ -61,16 +61,3 @@ export function NativeProvider({ children, services }: { children: ReactNode; se
 	const value = useMemo(() => services ?? lazyServices(loadPlatformServices), [services])
 	return <NativeContext.Provider value={value}>{children}</NativeContext.Provider>
 }
-
-/** All ports. Prefer the per-capability hooks in components — they document what is consumed. */
-export function useNative(): NativeServices {
-	const services = useContext(NativeContext)
-	if (!services) {
-		throw new Error('useNative() outside <NativeProvider> — mount it at the composition root (routes/__root.tsx)')
-	}
-	return services
-}
-
-export function useFilePickerService(): FilePickerService {
-	return useNative().filePicker
-}

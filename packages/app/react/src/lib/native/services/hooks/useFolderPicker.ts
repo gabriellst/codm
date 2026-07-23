@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useFilePickerService } from './NativeProvider'
+import { useFilePickerService } from '../NativeProvider'
 
 /**
  * The pick-a-folder flow over the FilePickerService port. Capability-driven, never
