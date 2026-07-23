@@ -28,6 +28,15 @@ type AgentReplyDraftedEvent struct {
 
 func (e AgentReplyDraftedEvent) EventName() string { return AgentReplyDraftedEventName }
 
+// AgentReplyDraftedPayload — payload of integration.agent.reply_drafted, generated from the contract declaration.
+type AgentReplyDraftedPayload struct {
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	LabelIssueKey string `json:"labelIssueKey" validate:"required"`
+	LabelThreadID string `json:"labelThreadId" validate:"required"`
+	Text string `json:"text" validate:"required"`
+}
+
 // ArtifactRecordedEventName is the wire discriminator for ArtifactRecordedEvent.
 const ArtifactRecordedEventName = "integration.artifact.recorded"
 
@@ -46,6 +55,15 @@ type ArtifactRecordedEvent struct {
 }
 
 func (e ArtifactRecordedEvent) EventName() string { return ArtifactRecordedEventName }
+
+// ArtifactRecordedPayload — payload of integration.artifact.recorded, generated from the contract declaration.
+type ArtifactRecordedPayload struct {
+	ArtifactID string `json:"artifactId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	IssueID *string `json:"issueId,omitempty"`
+	Kind ArtifactKind `json:"kind" validate:"required"`
+	ArtifactName string `json:"artifactName" validate:"required"`
+}
 
 // ChannelChatPresenceUpdatedEventName is the wire discriminator for ChannelChatPresenceUpdatedEvent.
 const ChannelChatPresenceUpdatedEventName = "integration.channel.chat_presence_updated"
@@ -66,6 +84,15 @@ type ChannelChatPresenceUpdatedEvent struct {
 
 func (e ChannelChatPresenceUpdatedEvent) EventName() string { return ChannelChatPresenceUpdatedEventName }
 
+// ChannelChatPresenceUpdatedPayload — payload of integration.channel.chat_presence_updated, generated from the contract declaration.
+type ChannelChatPresenceUpdatedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	ChatID string `json:"chatId" validate:"required"`
+	SenderID string `json:"senderId" validate:"required"`
+	State ChatPresenceType `json:"state" validate:"required"`
+	ObservedAt time.Time `json:"observedAt" validate:"required"`
+}
+
 // ChannelConnectedEventName is the wire discriminator for ChannelConnectedEvent.
 const ChannelConnectedEventName = "integration.channel.connected"
 
@@ -83,6 +110,14 @@ type ChannelConnectedEvent struct {
 }
 
 func (e ChannelConnectedEvent) EventName() string { return ChannelConnectedEventName }
+
+// ChannelConnectedPayload — payload of integration.channel.connected, generated from the contract declaration.
+type ChannelConnectedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	Kind ChannelKind `json:"kind" validate:"required"`
+	AccountDetail string `json:"accountDetail" validate:"required"`
+	PairedAt time.Time `json:"pairedAt" validate:"required"`
+}
 
 // ChannelDeliveryRequestedEventName is the wire discriminator for ChannelDeliveryRequestedEvent.
 const ChannelDeliveryRequestedEventName = "integration.channel.delivery_requested"
@@ -106,6 +141,18 @@ type ChannelDeliveryRequestedEvent struct {
 
 func (e ChannelDeliveryRequestedEvent) EventName() string { return ChannelDeliveryRequestedEventName }
 
+// ChannelDeliveryRequestedPayload — payload of integration.channel.delivery_requested, generated from the contract declaration.
+type ChannelDeliveryRequestedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	ContactExternalID string `json:"contactExternalId" validate:"required"`
+	ContactDisplayName string `json:"contactDisplayName" validate:"required"`
+	ContactKind ContactKind `json:"contactKind" validate:"required"`
+	Text string `json:"text" validate:"required"`
+	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
+	LabelThreadID *string `json:"labelThreadId,omitempty"`
+	SenderIdentity SenderIdentity `json:"senderIdentity" validate:"required"`
+}
+
 // ChannelDisconnectedEventName is the wire discriminator for ChannelDisconnectedEvent.
 const ChannelDisconnectedEventName = "integration.channel.disconnected"
 
@@ -118,10 +165,17 @@ type ChannelDisconnectedEvent struct {
 	OccurredAt time.Time `json:"occurredAt"`
 	ChannelID string `json:"channelId"`
 	Kind ChannelKind `json:"kind"`
-	AffectedThreadIds []string `json:"affectedThreadIds"`
+	AffectedThreadIDs []string `json:"affectedThreadIds"`
 }
 
 func (e ChannelDisconnectedEvent) EventName() string { return ChannelDisconnectedEventName }
+
+// ChannelDisconnectedPayload — payload of integration.channel.disconnected, generated from the contract declaration.
+type ChannelDisconnectedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	Kind ChannelKind `json:"kind" validate:"required"`
+	AffectedThreadIDs []string `json:"affectedThreadIds" validate:"required"`
+}
 
 // ChannelLoggedOutEventName is the wire discriminator for ChannelLoggedOutEvent.
 const ChannelLoggedOutEventName = "integration.channel.logged_out"
@@ -139,6 +193,13 @@ type ChannelLoggedOutEvent struct {
 }
 
 func (e ChannelLoggedOutEvent) EventName() string { return ChannelLoggedOutEventName }
+
+// ChannelLoggedOutPayload — payload of integration.channel.logged_out, generated from the contract declaration.
+type ChannelLoggedOutPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	Reason string `json:"reason" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
 
 // ChannelMembershipAddedEventName is the wire discriminator for ChannelMembershipAddedEvent.
 const ChannelMembershipAddedEventName = "integration.channel.membership_added"
@@ -159,6 +220,15 @@ type ChannelMembershipAddedEvent struct {
 
 func (e ChannelMembershipAddedEvent) EventName() string { return ChannelMembershipAddedEventName }
 
+// ChannelMembershipAddedPayload — payload of integration.channel.membership_added, generated from the contract declaration.
+type ChannelMembershipAddedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	GroupID string `json:"groupId" validate:"required"`
+	MemberID string `json:"memberId" validate:"required"`
+	IsAdmin bool `json:"isAdmin"`
+	JoinedAt time.Time `json:"joinedAt" validate:"required"`
+}
+
 // ChannelMembershipRemovedEventName is the wire discriminator for ChannelMembershipRemovedEvent.
 const ChannelMembershipRemovedEventName = "integration.channel.membership_removed"
 
@@ -176,6 +246,14 @@ type ChannelMembershipRemovedEvent struct {
 }
 
 func (e ChannelMembershipRemovedEvent) EventName() string { return ChannelMembershipRemovedEventName }
+
+// ChannelMembershipRemovedPayload — payload of integration.channel.membership_removed, generated from the contract declaration.
+type ChannelMembershipRemovedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	GroupID string `json:"groupId" validate:"required"`
+	MemberID string `json:"memberId" validate:"required"`
+	RemovedAt time.Time `json:"removedAt" validate:"required"`
+}
 
 // ChannelMessageDeletedEventName is the wire discriminator for ChannelMessageDeletedEvent.
 const ChannelMessageDeletedEventName = "integration.channel_message.deleted"
@@ -195,6 +273,14 @@ type ChannelMessageDeletedEvent struct {
 
 func (e ChannelMessageDeletedEvent) EventName() string { return ChannelMessageDeletedEventName }
 
+// ChannelMessageDeletedPayload — payload of integration.channel_message.deleted, generated from the contract declaration.
+type ChannelMessageDeletedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	MessageID string `json:"messageId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
+
 // ChannelMessageDeliveredEventName is the wire discriminator for ChannelMessageDeliveredEvent.
 const ChannelMessageDeliveredEventName = "integration.channel_message.delivered"
 
@@ -208,12 +294,22 @@ type ChannelMessageDeliveredEvent struct {
 	ChannelID string `json:"channelId"`
 	RemoteID string `json:"remoteId"`
 	SenderID string `json:"senderId"`
-	MessageIds []string `json:"messageIds"`
+	MessageIDs []string `json:"messageIds"`
 	Timestamp int64 `json:"timestamp"`
 	Platform ChannelKind `json:"platform"`
 }
 
 func (e ChannelMessageDeliveredEvent) EventName() string { return ChannelMessageDeliveredEventName }
+
+// ChannelMessageDeliveredPayload — payload of integration.channel_message.delivered, generated from the contract declaration.
+type ChannelMessageDeliveredPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	SenderID string `json:"senderId" validate:"required"`
+	MessageIDs []string `json:"messageIds" validate:"required"`
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
 
 // ChannelMessageEditedEventName is the wire discriminator for ChannelMessageEditedEvent.
 const ChannelMessageEditedEventName = "integration.channel_message.edited"
@@ -236,6 +332,18 @@ type ChannelMessageEditedEvent struct {
 }
 
 func (e ChannelMessageEditedEvent) EventName() string { return ChannelMessageEditedEventName }
+
+// ChannelMessageEditedPayload — payload of integration.channel_message.edited, generated from the contract declaration.
+type ChannelMessageEditedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	MessageID string `json:"messageId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	SenderID string `json:"senderId" validate:"required"`
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	MessageType MessageType `json:"messageType" validate:"required"`
+	ContentJson string `json:"contentJson" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
 
 // ChannelMessageReceivedEventName is the wire discriminator for ChannelMessageReceivedEvent.
 const ChannelMessageReceivedEventName = "integration.channel_message.received"
@@ -312,13 +420,24 @@ type ChannelMessageSeenEvent struct {
 	ChannelID string `json:"channelId"`
 	RemoteID string `json:"remoteId"`
 	SenderID string `json:"senderId"`
-	MessageIds []string `json:"messageIds"`
+	MessageIDs []string `json:"messageIds"`
 	Timestamp int64 `json:"timestamp"`
 	Self bool `json:"self"`
 	Platform ChannelKind `json:"platform"`
 }
 
 func (e ChannelMessageSeenEvent) EventName() string { return ChannelMessageSeenEventName }
+
+// ChannelMessageSeenPayload — payload of integration.channel_message.seen, generated from the contract declaration.
+type ChannelMessageSeenPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	SenderID string `json:"senderId" validate:"required"`
+	MessageIDs []string `json:"messageIds" validate:"required"`
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	Self bool `json:"self"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
 
 // ChannelMessageSentEventName is the wire discriminator for ChannelMessageSentEvent.
 const ChannelMessageSentEventName = "integration.channel_message.sent"
@@ -345,6 +464,21 @@ type ChannelMessageSentEvent struct {
 
 func (e ChannelMessageSentEvent) EventName() string { return ChannelMessageSentEventName }
 
+// ChannelMessageSentPayload — payload of integration.channel_message.sent, generated from the contract declaration.
+type ChannelMessageSentPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	MessageID string `json:"messageId" validate:"required"`
+	InternalMessageID string `json:"internalMessageId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	SenderID string `json:"senderId" validate:"required"`
+	IsGroup bool `json:"isGroup"`
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	ObservedAt time.Time `json:"observedAt" validate:"required"`
+	MessageType MessageType `json:"messageType" validate:"required"`
+	ContentJson string `json:"contentJson" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
+
 // ChannelMessagesSyncedEventName is the wire discriminator for ChannelMessagesSyncedEvent.
 const ChannelMessagesSyncedEventName = "integration.channel.messages_synced"
 
@@ -361,6 +495,13 @@ type ChannelMessagesSyncedEvent struct {
 }
 
 func (e ChannelMessagesSyncedEvent) EventName() string { return ChannelMessagesSyncedEventName }
+
+// ChannelMessagesSyncedPayload — payload of integration.channel.messages_synced, generated from the contract declaration.
+type ChannelMessagesSyncedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	Total int32 `json:"total" validate:"required"`
+	Inserted int32 `json:"inserted" validate:"required"`
+}
 
 // ChannelOutboundDeliveredEventName is the wire discriminator for ChannelOutboundDeliveredEvent.
 const ChannelOutboundDeliveredEventName = "integration.channel.outbound_delivered"
@@ -384,6 +525,18 @@ type ChannelOutboundDeliveredEvent struct {
 
 func (e ChannelOutboundDeliveredEvent) EventName() string { return ChannelOutboundDeliveredEventName }
 
+// ChannelOutboundDeliveredPayload — payload of integration.channel.outbound_delivered, generated from the contract declaration.
+type ChannelOutboundDeliveredPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	ContactExternalID string `json:"contactExternalId" validate:"required"`
+	ContactDisplayName string `json:"contactDisplayName" validate:"required"`
+	ContactKind ContactKind `json:"contactKind" validate:"required"`
+	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
+	LabelThreadID *string `json:"labelThreadId,omitempty"`
+	SenderIdentity SenderIdentity `json:"senderIdentity" validate:"required"`
+	DeliveredAt time.Time `json:"deliveredAt" validate:"required"`
+}
+
 // ChannelPairingQrUpdatedEventName is the wire discriminator for ChannelPairingQrUpdatedEvent.
 const ChannelPairingQrUpdatedEventName = "integration.channel.pairing_qr_updated"
 
@@ -401,6 +554,14 @@ type ChannelPairingQrUpdatedEvent struct {
 }
 
 func (e ChannelPairingQrUpdatedEvent) EventName() string { return ChannelPairingQrUpdatedEventName }
+
+// ChannelPairingQrUpdatedPayload — payload of integration.channel.pairing_qr_updated, generated from the contract declaration.
+type ChannelPairingQrUpdatedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	Kind ChannelKind `json:"kind" validate:"required"`
+	QrPayload string `json:"qrPayload" validate:"required"`
+	QrExpiresAt time.Time `json:"qrExpiresAt" validate:"required"`
+}
 
 // ChannelPresenceUpdatedEventName is the wire discriminator for ChannelPresenceUpdatedEvent.
 const ChannelPresenceUpdatedEventName = "integration.channel.presence_updated"
@@ -421,6 +582,15 @@ type ChannelPresenceUpdatedEvent struct {
 
 func (e ChannelPresenceUpdatedEvent) EventName() string { return ChannelPresenceUpdatedEventName }
 
+// ChannelPresenceUpdatedPayload — payload of integration.channel.presence_updated, generated from the contract declaration.
+type ChannelPresenceUpdatedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	Unavailable bool `json:"unavailable"`
+	LastSeen *int64 `json:"lastSeen,omitempty"`
+	ObservedAt time.Time `json:"observedAt" validate:"required"`
+}
+
 // ChannelRemoteCreatedEventName is the wire discriminator for ChannelRemoteCreatedEvent.
 const ChannelRemoteCreatedEventName = "integration.channel.remote_created"
 
@@ -439,6 +609,14 @@ type ChannelRemoteCreatedEvent struct {
 
 func (e ChannelRemoteCreatedEvent) EventName() string { return ChannelRemoteCreatedEventName }
 
+// ChannelRemoteCreatedPayload — payload of integration.channel.remote_created, generated from the contract declaration.
+type ChannelRemoteCreatedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	ContactKind ContactKind `json:"contactKind" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+}
+
 // ChannelRemoteDeletedEventName is the wire discriminator for ChannelRemoteDeletedEvent.
 const ChannelRemoteDeletedEventName = "integration.channel.remote_deleted"
 
@@ -455,6 +633,13 @@ type ChannelRemoteDeletedEvent struct {
 }
 
 func (e ChannelRemoteDeletedEvent) EventName() string { return ChannelRemoteDeletedEventName }
+
+// ChannelRemoteDeletedPayload — payload of integration.channel.remote_deleted, generated from the contract declaration.
+type ChannelRemoteDeletedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	DeletedAt time.Time `json:"deletedAt" validate:"required"`
+}
 
 // ChannelRemoteUpdatedEventName is the wire discriminator for ChannelRemoteUpdatedEvent.
 const ChannelRemoteUpdatedEventName = "integration.channel.remote_updated"
@@ -476,6 +661,16 @@ type ChannelRemoteUpdatedEvent struct {
 
 func (e ChannelRemoteUpdatedEvent) EventName() string { return ChannelRemoteUpdatedEventName }
 
+// ChannelRemoteUpdatedPayload — payload of integration.channel.remote_updated, generated from the contract declaration.
+type ChannelRemoteUpdatedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	ContactKind ContactKind `json:"contactKind" validate:"required"`
+	DisplayName string `json:"displayName" validate:"required"`
+	Description *string `json:"description,omitempty"`
+	ObservedAt time.Time `json:"observedAt" validate:"required"`
+}
+
 // ChannelRemotesSyncedEventName is the wire discriminator for ChannelRemotesSyncedEvent.
 const ChannelRemotesSyncedEventName = "integration.channel.remotes_synced"
 
@@ -492,6 +687,13 @@ type ChannelRemotesSyncedEvent struct {
 }
 
 func (e ChannelRemotesSyncedEvent) EventName() string { return ChannelRemotesSyncedEventName }
+
+// ChannelRemotesSyncedPayload — payload of integration.channel.remotes_synced, generated from the contract declaration.
+type ChannelRemotesSyncedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	Total int32 `json:"total" validate:"required"`
+	Inserted int32 `json:"inserted" validate:"required"`
+}
 
 // ChannelSpecialPlatformEventReceivedEventName is the wire discriminator for ChannelSpecialPlatformEventReceivedEvent.
 const ChannelSpecialPlatformEventReceivedEventName = "integration.channel_special_platform_event.received"
@@ -512,6 +714,15 @@ type ChannelSpecialPlatformEventReceivedEvent struct {
 
 func (e ChannelSpecialPlatformEventReceivedEvent) EventName() string { return ChannelSpecialPlatformEventReceivedEventName }
 
+// ChannelSpecialPlatformEventReceivedPayload — payload of integration.channel_special_platform_event.received, generated from the contract declaration.
+type ChannelSpecialPlatformEventReceivedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	PlatformEventName string `json:"platformEventName" validate:"required"`
+	EventType SpecialPlatformEventType `json:"eventType" validate:"required"`
+	Platform ChannelKind `json:"platform" validate:"required"`
+	PayloadJson string `json:"payloadJson" validate:"required"`
+}
+
 // ChannelSyncCompletedEventName is the wire discriminator for ChannelSyncCompletedEvent.
 const ChannelSyncCompletedEventName = "integration.channel.sync_completed"
 
@@ -527,6 +738,12 @@ type ChannelSyncCompletedEvent struct {
 }
 
 func (e ChannelSyncCompletedEvent) EventName() string { return ChannelSyncCompletedEventName }
+
+// ChannelSyncCompletedPayload — payload of integration.channel.sync_completed, generated from the contract declaration.
+type ChannelSyncCompletedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	CompletedAt time.Time `json:"completedAt" validate:"required"`
+}
 
 // ChannelSyncProgressEventName is the wire discriminator for ChannelSyncProgressEvent.
 const ChannelSyncProgressEventName = "integration.channel.sync_progress"
@@ -545,6 +762,13 @@ type ChannelSyncProgressEvent struct {
 
 func (e ChannelSyncProgressEvent) EventName() string { return ChannelSyncProgressEventName }
 
+// ChannelSyncProgressPayload — payload of integration.channel.sync_progress, generated from the contract declaration.
+type ChannelSyncProgressPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	HistorySyncType HistorySyncType `json:"historySyncType" validate:"required"`
+	Percent int32 `json:"percent" validate:"required"`
+}
+
 // ChannelSyncStartedEventName is the wire discriminator for ChannelSyncStartedEvent.
 const ChannelSyncStartedEventName = "integration.channel.sync_started"
 
@@ -560,6 +784,12 @@ type ChannelSyncStartedEvent struct {
 }
 
 func (e ChannelSyncStartedEvent) EventName() string { return ChannelSyncStartedEventName }
+
+// ChannelSyncStartedPayload — payload of integration.channel.sync_started, generated from the contract declaration.
+type ChannelSyncStartedPayload struct {
+	ChannelID string `json:"channelId" validate:"required"`
+	StartedAt time.Time `json:"startedAt" validate:"required"`
+}
 
 // IssueArchivedEventName is the wire discriminator for IssueArchivedEvent.
 const IssueArchivedEventName = "integration.issue.archived"
@@ -578,6 +808,13 @@ type IssueArchivedEvent struct {
 
 func (e IssueArchivedEvent) EventName() string { return IssueArchivedEventName }
 
+// IssueArchivedPayload — payload of integration.issue.archived, generated from the contract declaration.
+type IssueArchivedPayload struct {
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Reason IssueArchiveReason `json:"reason" validate:"required"`
+}
+
 // IssueCompletedEventName is the wire discriminator for IssueCompletedEvent.
 const IssueCompletedEventName = "integration.issue.completed"
 
@@ -595,6 +832,14 @@ type IssueCompletedEvent struct {
 }
 
 func (e IssueCompletedEvent) EventName() string { return IssueCompletedEventName }
+
+// IssueCompletedPayload — payload of integration.issue.completed, generated from the contract declaration.
+type IssueCompletedPayload struct {
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Key string `json:"key" validate:"required"`
+	CompletedAt time.Time `json:"completedAt" validate:"required"`
+}
 
 // IssueOpenedEventName is the wire discriminator for IssueOpenedEvent.
 const IssueOpenedEventName = "integration.issue.opened"
@@ -615,6 +860,15 @@ type IssueOpenedEvent struct {
 
 func (e IssueOpenedEvent) EventName() string { return IssueOpenedEventName }
 
+// IssueOpenedPayload — payload of integration.issue.opened, generated from the contract declaration.
+type IssueOpenedPayload struct {
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Key string `json:"key" validate:"required"`
+	Title string `json:"title" validate:"required"`
+	Provider ProviderKind `json:"provider" validate:"required"`
+}
+
 // IssueStopRaisedEventName is the wire discriminator for IssueStopRaisedEvent.
 const IssueStopRaisedEventName = "integration.issue.stop_raised"
 
@@ -633,6 +887,14 @@ type IssueStopRaisedEvent struct {
 
 func (e IssueStopRaisedEvent) EventName() string { return IssueStopRaisedEventName }
 
+// IssueStopRaisedPayload — payload of integration.issue.stop_raised, generated from the contract declaration.
+type IssueStopRaisedPayload struct {
+	StopID string `json:"stopId" validate:"required"`
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Kind StopKind `json:"kind" validate:"required"`
+}
+
 // IssueStopResolvedEventName is the wire discriminator for IssueStopResolvedEvent.
 const IssueStopResolvedEventName = "integration.issue.stop_resolved"
 
@@ -649,6 +911,13 @@ type IssueStopResolvedEvent struct {
 }
 
 func (e IssueStopResolvedEvent) EventName() string { return IssueStopResolvedEventName }
+
+// IssueStopResolvedPayload — payload of integration.issue.stop_resolved, generated from the contract declaration.
+type IssueStopResolvedPayload struct {
+	StopID string `json:"stopId" validate:"required"`
+	IssueID string `json:"issueId" validate:"required"`
+	Resolution StopResolution `json:"resolution" validate:"required"`
+}
 
 // MessageClassifiedEventName is the wire discriminator for MessageClassifiedEvent.
 const MessageClassifiedEventName = "integration.message.classified"
@@ -668,6 +937,14 @@ type MessageClassifiedEvent struct {
 
 func (e MessageClassifiedEvent) EventName() string { return MessageClassifiedEventName }
 
+// MessageClassifiedPayload — payload of integration.message.classified, generated from the contract declaration.
+type MessageClassifiedPayload struct {
+	ThreadID string `json:"threadId" validate:"required"`
+	EntryID string `json:"entryId" validate:"required"`
+	Method ClassificationMethod `json:"method" validate:"required"`
+	IssueID *string `json:"issueId,omitempty"`
+}
+
 // SubscriptionChangedEventName is the wire discriminator for SubscriptionChangedEvent.
 const SubscriptionChangedEventName = "integration.billing.subscription_changed"
 
@@ -681,6 +958,10 @@ type SubscriptionChangedEvent struct {
 }
 
 func (e SubscriptionChangedEvent) EventName() string { return SubscriptionChangedEventName }
+
+// SubscriptionChangedPayload — payload of integration.billing.subscription_changed, generated from the contract declaration.
+type SubscriptionChangedPayload struct {
+}
 
 // ThreadAttachedEventName is the wire discriminator for ThreadAttachedEvent.
 const ThreadAttachedEventName = "integration.thread.attached"
@@ -703,6 +984,17 @@ type ThreadAttachedEvent struct {
 
 func (e ThreadAttachedEvent) EventName() string { return ThreadAttachedEventName }
 
+// ThreadAttachedPayload — payload of integration.thread.attached, generated from the contract declaration.
+type ThreadAttachedPayload struct {
+	ThreadID string `json:"threadId" validate:"required"`
+	ChannelID string `json:"channelId" validate:"required"`
+	ContactExternalID string `json:"contactExternalId" validate:"required"`
+	ContactDisplayName string `json:"contactDisplayName" validate:"required"`
+	ContactKind ContactKind `json:"contactKind" validate:"required"`
+	WorkspaceID string `json:"workspaceId" validate:"required"`
+	Providers []ProviderKind `json:"providers" validate:"required"`
+}
+
 // WorkspaceRemovedEventName is the wire discriminator for WorkspaceRemovedEvent.
 const WorkspaceRemovedEventName = "integration.workspace.removed"
 
@@ -718,3 +1010,9 @@ type WorkspaceRemovedEvent struct {
 }
 
 func (e WorkspaceRemovedEvent) EventName() string { return WorkspaceRemovedEventName }
+
+// WorkspaceRemovedPayload — payload of integration.workspace.removed, generated from the contract declaration.
+type WorkspaceRemovedPayload struct {
+	WorkspaceID string `json:"workspaceId" validate:"required"`
+	Path string `json:"path" validate:"required"`
+}

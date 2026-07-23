@@ -65,7 +65,7 @@ describe('emitGoEvents / emitGoEnvelope — wire-name gate', () => {
 			fields: [...sample.fields, { name: 'affectedMonitorIds', type: { kind: 'array', items: { kind: 'string' } }, required: true }],
 		})
 		const out = emitGoEvents([ev])
-		expect(out).toContain('AffectedMonitorIds []string `json:"affectedMonitorIds"`')
+		expect(out).toContain('AffectedMonitorIDs []string `json:"affectedMonitorIds"`')
 		expect(out).not.toContain('*[]string')
 	})
 })
@@ -180,9 +180,49 @@ describe('emitGoEvents — union-slot payload struct (stamped binding)', () => {
 		expect(payloadStruct).toContain('IsGroup bool `json:"isGroup"`')
 		expect(payloadStruct).not.toContain('IsGroup bool `json:"isGroup" validate:"required"`')
 	})
+})
 
-	test('an event without union slots emits no payload struct (scoped: other events untouched)', () => {
-		const out = emitGoEvents([slotted])
-		expect(out).not.toContain('type VideoUploadedPayload struct')
+describe('emitGoEvents — payload struct for EVERY event (flat-events generalization)', () => {
+	// The union-slots pilot emitted payload structs only for slotted events; the
+	// flat-events swap needs the `types.IntegrationEvent[wire.<X>Payload]`-compatible
+	// binding for every hand-rolled envelope it replaces.
+	const flat: ParsedEvent = withDerived({
+		modelName: 'ChannelMessageDeliveredEvent',
+		wireName: 'integration.channel_message.delivered',
+		fields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.delivered' }, required: true },
+			{ name: 'entityId', type: { kind: 'string' }, required: true },
+			{ name: 'ownerId', type: { kind: 'string' }, required: true },
+			{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
+			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+			{ name: 'messageIds', type: { kind: 'array', items: { kind: 'string' } }, required: true },
+			{ name: 'timestamp', type: { kind: 'integer', format: 'int64' }, required: true },
+			{ name: 'platform', type: { kind: 'string' }, required: true },
+		],
+		ownFields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.delivered' }, required: true },
+			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+			{ name: 'messageIds', type: { kind: 'array', items: { kind: 'string' } }, required: true },
+			{ name: 'timestamp', type: { kind: 'integer', format: 'int64' }, required: true },
+			{ name: 'platform', type: { kind: 'string' }, required: true },
+			{ name: 'ownerId', type: { kind: 'string' }, required: true },
+		],
+	})
+
+	test('a slot-less event emits a payload struct (no @union stamps), envelope-compatible', () => {
+		const out = emitGoEvents([flat])
+		const payloadStruct = out.slice(out.indexOf('type ChannelMessageDeliveredPayload struct {'))
+		expect(payloadStruct).toContain('ChannelID uuid.UUID `json:"channelId" validate:"required"`')
+		expect(payloadStruct).toContain('Timestamp int64 `json:"timestamp" validate:"required"`')
+		// Redeclared ownerId rides INSIDE the payload (verbatim parity with the hand-rolled envelope).
+		expect(payloadStruct).toContain('OwnerID string `json:"ownerId" validate:"required"`')
+		// No union machinery on flat events.
+		expect(payloadStruct).not.toContain('@union')
+	})
+
+	test('plural id arrays use the Go IDs initialism — alias-compatible with the hand-rolled field spelling', () => {
+		const out = emitGoEvents([flat])
+		expect(out).toContain('MessageIDs []string `json:"messageIds"`')
+		expect(out).not.toContain('MessageIds')
 	})
 })
