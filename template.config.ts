@@ -341,13 +341,9 @@ export const REPO = {
 			doc: 'per-service override; go sets its own',
 		},
 		// ── channel gateway (BC1, api-go) ──
-		CODEDM_GATEWAY_API_KEY: {
-			consumers: ['apiTs', 'apiGo'],
-			schema: 'kernel',
-			example: '',
-			secret: true,
-			doc: "api-key guarding the Go channel-gateway HTTP surface (S2S 'apikey' header); empty = allow all (local single-operator)",
-		},
+		// (CODEDM_GATEWAY_API_KEY removed: its only consumers were the deleted per-endpoint ui
+		// proxies. The gateway's own guard is CHANNEL_GLOBAL_API_KEY — empty/allow-all in proxied
+		// deployments, since auth lives on the api-ts external/ChannelProxy hop.)
 		CODEDM_GATEWAY_WHATSMEOW_URL: {
 			consumers: ['apiGo'],
 			example: '',
