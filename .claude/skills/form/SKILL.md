@@ -12,7 +12,7 @@ A **form** is the interactive surface between the user and an SDK mutation. It o
 | Working file path                       | Use                                                                                                                                                                   |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/app/react/**`                 | [`./react/SKILL.md`](./react/SKILL.md) + [`./react/registry.yaml`](./react/registry.yaml) — TanStack Form + Base UI primitives, Maskito masks, Dialog forms          |
-| `packages/app/expo/**`                  | [`./expo/SKILL.md`](./expo/SKILL.md) + [`./expo/registry.yaml`](./expo/registry.yaml) — TanStack Form + RN `Input` / `NumField` / `KeyboardAware`, sheet-as-form     |
+| `packages/app/expo/**`                  | **DORMANT** — no expo workspace in this repo (`packages/app/expo` removed); no file resolves here. [`./expo/`](./expo/SKILL.md) kept as reference only, in case a mobile target returns.     |
 | `packages/app/astro/**`                 | **No astro variant.** Forms are an interactive concern; landing pages aren't where they belong. If a form genuinely needs to live on a marketing page (newsletter signup, contact form), implement it as a React island inside `packages/app/astro/src/components/<Name>.tsx` and follow the `react/` child below — but most forms should live in `packages/app/react/`. |
 
 If the path is **ambiguous**, ask the user once and don't proceed until they answer.

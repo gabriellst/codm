@@ -12,7 +12,7 @@ A **route** is the URL contract for a page: it declares the path, validates path
 | Working file path                            | Use                                                                                                                              |
 | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/app/react/**`                      | [`./react/SKILL.md`](./react/SKILL.md) + [`./react/registry.yaml`](./react/registry.yaml) — TanStack Router + Start (file-based via `bun tsr generate`) |
-| `packages/app/expo/**`                       | [`./expo/SKILL.md`](./expo/SKILL.md) + [`./expo/registry.yaml`](./expo/registry.yaml) — Expo Router file-based routing            |
+| `packages/app/expo/**`                       | **DORMANT** — no expo workspace in this repo (`packages/app/expo` removed); no file resolves here. [`./expo/`](./expo/SKILL.md) kept as reference only, in case a mobile target returns. |
 | `packages/app/astro/**/*.astro`              | [`./astro/SKILL.md`](./astro/SKILL.md) + [`./astro/registry.yaml`](./astro/registry.yaml) — Astro pages + content collections + sitemap |
 
 If the path is **ambiguous**, ask the user once and don't proceed until they answer.
