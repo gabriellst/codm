@@ -3,7 +3,6 @@
 * Do not edit manually.
 */
 
-import type { Platform } from "./Platform.ts";
 
 export type ChannelMessageSeenPayload = {
     /**
@@ -21,7 +20,7 @@ export type ChannelMessageSeenPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: string;
     /**
      * @type string
     */

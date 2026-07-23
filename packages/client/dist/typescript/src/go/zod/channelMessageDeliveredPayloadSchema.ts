@@ -3,16 +3,13 @@
 * Do not edit manually.
 */
 
-import { platformSchema } from "./platformSchema.ts";
 import { z } from "zod/v4";
 
 export const channelMessageDeliveredPayloadSchema = z.object({
     "channelId": z.uuid(),
 "messageIds": z.array(z.string()),
 "ownerId": z.string(),
-get "platform"(){
-                return platformSchema
-              },
+"platform": z.string(),
 "remoteId": z.string(),
 "senderId": z.string(),
 "timestamp": z.int()

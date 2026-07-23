@@ -3,12 +3,12 @@
 * Do not edit manually.
 */
 
-import { gatewayDisconnectedPayloadSchema } from "./gatewayDisconnectedPayloadSchema.ts";
+import { channelDisconnectedPayloadSchema } from "./channelDisconnectedPayloadSchema.ts";
 import { z } from "zod/v4";
 
 export const channelEventChannelGatewayDisconnectedSchema = z.object({
     "name": z.enum(["channel.gateway_disconnected"]),
 get "payload"(){
-                return gatewayDisconnectedPayloadSchema
+                return channelDisconnectedPayloadSchema
               }
     })

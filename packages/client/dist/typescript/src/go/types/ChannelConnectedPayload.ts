@@ -3,9 +3,8 @@
 * Do not edit manually.
 */
 
-import type { Platform } from "./Platform.ts";
 
-export type GatewayDisconnectedPayload = {
+export type ChannelConnectedPayload = {
     /**
      * @type string, uuid
     */
@@ -17,6 +16,6 @@ export type GatewayDisconnectedPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: string;
     platformData?: any;
 };

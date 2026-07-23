@@ -3,15 +3,12 @@
 * Do not edit manually.
 */
 
-import { platformSchema } from "./platformSchema.ts";
 import { z } from "zod/v4";
 
 export const channelLoggedOutPayloadSchema = z.object({
     "channelId": z.uuid(),
 "ownerId": z.string(),
-get "platform"(){
-                return platformSchema
-              },
+"platform": z.string(),
 "platformData": z.optional(z.any()),
 "reason": z.string()
     })

@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { GatewayDisconnectedPayload } from "./GatewayDisconnectedPayload.ts";
+import type { ChannelDisconnectedPayload } from "./ChannelDisconnectedPayload.ts";
 
 export const IntegrationChannelDisconnectedEventNameEnum = {
     "integration.channel.disconnected": "integration.channel.disconnected"
@@ -27,7 +27,7 @@ export type IntegrationChannelDisconnectedEvent = {
     /**
      * @type object
     */
-    payload: GatewayDisconnectedPayload;
+    payload: ChannelDisconnectedPayload;
     /**
      * @type string, date-time
     */

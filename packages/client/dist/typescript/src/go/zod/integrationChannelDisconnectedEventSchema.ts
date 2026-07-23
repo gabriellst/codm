@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import { gatewayDisconnectedPayloadSchema } from "./gatewayDisconnectedPayloadSchema.ts";
+import { channelDisconnectedPayloadSchema } from "./channelDisconnectedPayloadSchema.ts";
 import { z } from "zod/v4";
 
 export const integrationChannelDisconnectedEventSchema = z.object({
@@ -11,7 +11,7 @@ export const integrationChannelDisconnectedEventSchema = z.object({
 "name": z.enum(["integration.channel.disconnected"]),
 "ownerId": z.string(),
 get "payload"(){
-                return gatewayDisconnectedPayloadSchema
+                return channelDisconnectedPayloadSchema
               },
 "time": z.iso.datetime()
     })

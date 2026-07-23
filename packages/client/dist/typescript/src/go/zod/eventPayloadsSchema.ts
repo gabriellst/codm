@@ -4,6 +4,8 @@
 */
 
 import { channelChatPresenceUpdatedPayloadSchema } from "./channelChatPresenceUpdatedPayloadSchema.ts";
+import { channelConnectedPayloadSchema } from "./channelConnectedPayloadSchema.ts";
+import { channelDisconnectedPayloadSchema } from "./channelDisconnectedPayloadSchema.ts";
 import { channelEventSchema } from "./channelEventSchema.ts";
 import { channelLoggedOutPayloadSchema } from "./channelLoggedOutPayloadSchema.ts";
 import { channelMembershipAddedPayloadSchema } from "./channelMembershipAddedPayloadSchema.ts";
@@ -28,12 +30,10 @@ import { channelRemoteUnmutedPayloadSchema } from "./channelRemoteUnmutedPayload
 import { channelRemoteUnpinnedPayloadSchema } from "./channelRemoteUnpinnedPayloadSchema.ts";
 import { channelRemoteUpdatedPayloadSchema } from "./channelRemoteUpdatedPayloadSchema.ts";
 import { channelRemotesSyncedPayloadSchema } from "./channelRemotesSyncedPayloadSchema.ts";
-import { channelSpecialPlatformEventPayloadSchema } from "./channelSpecialPlatformEventPayloadSchema.ts";
+import { channelSpecialPlatformEventReceivedPayloadSchema } from "./channelSpecialPlatformEventReceivedPayloadSchema.ts";
 import { channelSyncCompletedPayloadSchema } from "./channelSyncCompletedPayloadSchema.ts";
 import { channelSyncProgressPayloadSchema } from "./channelSyncProgressPayloadSchema.ts";
 import { channelSyncStartedPayloadSchema } from "./channelSyncStartedPayloadSchema.ts";
-import { gatewayConnectedPayloadSchema } from "./gatewayConnectedPayloadSchema.ts";
-import { gatewayDisconnectedPayloadSchema } from "./gatewayDisconnectedPayloadSchema.ts";
 import { internalChannelMessageReceivedPlatformDataSchema } from "./internalChannelMessageReceivedPlatformDataSchema.ts";
 import { internalChannelMessageSentPlatformDataSchema } from "./internalChannelMessageSentPlatformDataSchema.ts";
 import { internalTextContentSchema } from "./internalTextContentSchema.ts";
@@ -70,10 +70,10 @@ get "WhatsAppChannelMessageSentPlatformData"(){
                 return whatsAppChannelMessageSentPlatformDataSchema.nullish()
               },
 get "channelConnected"(){
-                return gatewayConnectedPayloadSchema.nullish()
+                return channelConnectedPayloadSchema.nullish()
               },
 get "channelDisconnected"(){
-                return gatewayDisconnectedPayloadSchema.nullish()
+                return channelDisconnectedPayloadSchema.nullish()
               },
 get "channelEvent"(){
                 return channelEventSchema.nullish()
@@ -151,7 +151,7 @@ get "remotesSynced"(){
                 return channelRemotesSyncedPayloadSchema.nullish()
               },
 get "specialPlatformEvent"(){
-                return channelSpecialPlatformEventPayloadSchema.nullish()
+                return channelSpecialPlatformEventReceivedPayloadSchema.nullish()
               },
 get "syncCompleted"(){
                 return channelSyncCompletedPayloadSchema.nullish()

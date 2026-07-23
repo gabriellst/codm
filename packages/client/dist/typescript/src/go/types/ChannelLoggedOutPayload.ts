@@ -3,7 +3,6 @@
 * Do not edit manually.
 */
 
-import type { Platform } from "./Platform.ts";
 
 export type ChannelLoggedOutPayload = {
     /**
@@ -17,7 +16,7 @@ export type ChannelLoggedOutPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: string;
     platformData?: any;
     /**
      * @type string

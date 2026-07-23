@@ -6,7 +6,7 @@
 import { whatsAppQRCodeUpdatedSchema } from "./whatsAppQRCodeUpdatedSchema.ts";
 import { z } from "zod/v4";
 
-export const channelSpecialPlatformEventPayloadWhatsappQrCodeUpdatedSchema = z.object({
+export const channelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedSchema = z.object({
     "channelId": z.uuid(),
 "eventName": z.string(),
 "eventType": z.enum(["qr_code_updated"]),

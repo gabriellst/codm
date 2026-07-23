@@ -4,6 +4,8 @@
 */
 
 import type { ChannelChatPresenceUpdatedPayload } from "./ChannelChatPresenceUpdatedPayload.ts";
+import type { ChannelConnectedPayload } from "./ChannelConnectedPayload.ts";
+import type { ChannelDisconnectedPayload } from "./ChannelDisconnectedPayload.ts";
 import type { ChannelEvent } from "./ChannelEvent.ts";
 import type { ChannelLoggedOutPayload } from "./ChannelLoggedOutPayload.ts";
 import type { ChannelMembershipAddedPayload } from "./ChannelMembershipAddedPayload.ts";
@@ -28,12 +30,10 @@ import type { ChannelRemoteUnmutedPayload } from "./ChannelRemoteUnmutedPayload.
 import type { ChannelRemoteUnpinnedPayload } from "./ChannelRemoteUnpinnedPayload.ts";
 import type { ChannelRemoteUpdatedPayload } from "./ChannelRemoteUpdatedPayload.ts";
 import type { ChannelRemotesSyncedPayload } from "./ChannelRemotesSyncedPayload.ts";
-import type { ChannelSpecialPlatformEventPayload } from "./ChannelSpecialPlatformEventPayload.ts";
+import type { ChannelSpecialPlatformEventReceivedPayload } from "./ChannelSpecialPlatformEventReceivedPayload.ts";
 import type { ChannelSyncCompletedPayload } from "./ChannelSyncCompletedPayload.ts";
 import type { ChannelSyncProgressPayload } from "./ChannelSyncProgressPayload.ts";
 import type { ChannelSyncStartedPayload } from "./ChannelSyncStartedPayload.ts";
-import type { GatewayConnectedPayload } from "./GatewayConnectedPayload.ts";
-import type { GatewayDisconnectedPayload } from "./GatewayDisconnectedPayload.ts";
 import type { InternalChannelMessageReceivedPlatformData } from "./InternalChannelMessageReceivedPlatformData.ts";
 import type { InternalChannelMessageSentPlatformData } from "./InternalChannelMessageSentPlatformData.ts";
 import type { InternalTextContent } from "./InternalTextContent.ts";
@@ -58,8 +58,8 @@ export type EventPayloads = {
     InternalTextContent?: InternalTextContent | null;
     WhatsAppChannelMessageReceivedPlatformData?: WhatsAppChannelMessageReceivedPlatformData | null;
     WhatsAppChannelMessageSentPlatformData?: WhatsAppChannelMessageSentPlatformData | null;
-    channelConnected?: GatewayConnectedPayload | null;
-    channelDisconnected?: GatewayDisconnectedPayload | null;
+    channelConnected?: ChannelConnectedPayload | null;
+    channelDisconnected?: ChannelDisconnectedPayload | null;
     channelEvent?: ChannelEvent | null;
     channelLoggedOut?: ChannelLoggedOutPayload | null;
     chatPresenceUpdated?: ChannelChatPresenceUpdatedPayload | null;
@@ -85,7 +85,7 @@ export type EventPayloads = {
     remoteUnpinned?: ChannelRemoteUnpinnedPayload | null;
     remoteUpdated?: ChannelRemoteUpdatedPayload | null;
     remotesSynced?: ChannelRemotesSyncedPayload | null;
-    specialPlatformEvent?: ChannelSpecialPlatformEventPayload | null;
+    specialPlatformEvent?: ChannelSpecialPlatformEventReceivedPayload | null;
     syncCompleted?: ChannelSyncCompletedPayload | null;
     syncProgress?: ChannelSyncProgressPayload | null;
     syncStarted?: ChannelSyncStartedPayload | null;

@@ -2277,12 +2277,28 @@ type ChannelChatPresenceUpdatedPayload struct {
 	State      ChatPresenceType   `json:"state"`
 }
 
+// ChannelConnectedPayload defines model for ChannelConnectedPayload.
+type ChannelConnectedPayload struct {
+	ChannelId    openapi_types.UUID `json:"channelId"`
+	OwnerId      string             `json:"ownerId"`
+	Platform     string             `json:"platform"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
+}
+
 // ChannelCreatedPayload defines model for ChannelCreatedPayload.
 type ChannelCreatedPayload struct {
 	ChannelId openapi_types.UUID `json:"channelId"`
 	Name      string             `json:"name"`
 	OwnerId   string             `json:"ownerId"`
 	Platform  Platform           `json:"platform"`
+}
+
+// ChannelDisconnectedPayload defines model for ChannelDisconnectedPayload.
+type ChannelDisconnectedPayload struct {
+	ChannelId    openapi_types.UUID `json:"channelId"`
+	OwnerId      string             `json:"ownerId"`
+	Platform     string             `json:"platform"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
 }
 
 // ChannelEvent defines model for ChannelEvent.
@@ -2299,13 +2315,13 @@ type ChannelEventChannelChannelCreated struct {
 // ChannelEventChannelGatewayConnected defines model for ChannelEvent_ChannelGatewayConnected.
 type ChannelEventChannelGatewayConnected struct {
 	Name    string                  `json:"name"`
-	Payload GatewayConnectedPayload `json:"payload"`
+	Payload ChannelConnectedPayload `json:"payload"`
 }
 
 // ChannelEventChannelGatewayDisconnected defines model for ChannelEvent_ChannelGatewayDisconnected.
 type ChannelEventChannelGatewayDisconnected struct {
 	Name    string                     `json:"name"`
-	Payload GatewayDisconnectedPayload `json:"payload"`
+	Payload ChannelDisconnectedPayload `json:"payload"`
 }
 
 // ChannelEventChannelMembershipAdded defines model for ChannelEvent_ChannelMembershipAdded.
@@ -2441,7 +2457,7 @@ type ChannelKind string
 type ChannelLoggedOutPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
-	Platform     Platform           `json:"platform"`
+	Platform     string             `json:"platform"`
 	PlatformData interface{}        `json:"platformData,omitempty"`
 	Reason       string             `json:"reason"`
 }
@@ -2479,7 +2495,7 @@ type ChannelMessageDeliveredPayload struct {
 	ChannelId  openapi_types.UUID `json:"channelId"`
 	MessageIds []string           `json:"messageIds"`
 	OwnerId    string             `json:"ownerId"`
-	Platform   Platform           `json:"platform"`
+	Platform   string             `json:"platform"`
 	RemoteId   string             `json:"remoteId"`
 	SenderId   string             `json:"senderId"`
 	Timestamp  int                `json:"timestamp"`
@@ -2717,7 +2733,7 @@ type ChannelMessageSeenPayload struct {
 	ChannelId  openapi_types.UUID `json:"channelId"`
 	MessageIds []string           `json:"messageIds"`
 	OwnerId    string             `json:"ownerId"`
-	Platform   Platform           `json:"platform"`
+	Platform   string             `json:"platform"`
 	RemoteId   string             `json:"remoteId"`
 	Self       bool               `json:"self"`
 	SenderId   string             `json:"senderId"`
@@ -3047,13 +3063,13 @@ type ChannelRemotesSyncedPayload struct {
 	Total     int                `json:"total"`
 }
 
-// ChannelSpecialPlatformEventPayload defines model for ChannelSpecialPlatformEventPayload.
-type ChannelSpecialPlatformEventPayload struct {
+// ChannelSpecialPlatformEventReceivedPayload defines model for ChannelSpecialPlatformEventReceivedPayload.
+type ChannelSpecialPlatformEventReceivedPayload struct {
 	union json.RawMessage
 }
 
-// ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated defines model for ChannelSpecialPlatformEventPayload_Whatsapp_QrCodeUpdated.
-type ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated struct {
+// ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated defines model for ChannelSpecialPlatformEventReceivedPayload_Whatsapp_QrCodeUpdated.
+type ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated struct {
 	ChannelId openapi_types.UUID    `json:"channelId"`
 	EventName string                `json:"eventName"`
 	EventType string                `json:"eventType"`
@@ -3200,8 +3216,8 @@ type EventPayloads struct {
 	InternalTextContent                        nullable.Nullable[InternalTextContent]                        `json:"InternalTextContent,omitempty"`
 	WhatsAppChannelMessageReceivedPlatformData nullable.Nullable[WhatsAppChannelMessageReceivedPlatformData] `json:"WhatsAppChannelMessageReceivedPlatformData,omitempty"`
 	WhatsAppChannelMessageSentPlatformData     nullable.Nullable[WhatsAppChannelMessageSentPlatformData]     `json:"WhatsAppChannelMessageSentPlatformData,omitempty"`
-	ChannelConnected                           nullable.Nullable[GatewayConnectedPayload]                    `json:"channelConnected,omitempty"`
-	ChannelDisconnected                        nullable.Nullable[GatewayDisconnectedPayload]                 `json:"channelDisconnected,omitempty"`
+	ChannelConnected                           nullable.Nullable[ChannelConnectedPayload]                    `json:"channelConnected,omitempty"`
+	ChannelDisconnected                        nullable.Nullable[ChannelDisconnectedPayload]                 `json:"channelDisconnected,omitempty"`
 	ChannelEvent                               nullable.Nullable[ChannelEvent]                               `json:"channelEvent,omitempty"`
 	ChannelLoggedOut                           nullable.Nullable[ChannelLoggedOutPayload]                    `json:"channelLoggedOut,omitempty"`
 	ChatPresenceUpdated                        nullable.Nullable[ChannelChatPresenceUpdatedPayload]          `json:"chatPresenceUpdated,omitempty"`
@@ -3227,7 +3243,7 @@ type EventPayloads struct {
 	RemoteUnpinned                             nullable.Nullable[ChannelRemoteUnpinnedPayload]               `json:"remoteUnpinned,omitempty"`
 	RemoteUpdated                              nullable.Nullable[ChannelRemoteUpdatedPayload]                `json:"remoteUpdated,omitempty"`
 	RemotesSynced                              nullable.Nullable[ChannelRemotesSyncedPayload]                `json:"remotesSynced,omitempty"`
-	SpecialPlatformEvent                       nullable.Nullable[ChannelSpecialPlatformEventPayload]         `json:"specialPlatformEvent,omitempty"`
+	SpecialPlatformEvent                       nullable.Nullable[ChannelSpecialPlatformEventReceivedPayload] `json:"specialPlatformEvent,omitempty"`
 	SyncCompleted                              nullable.Nullable[ChannelSyncCompletedPayload]                `json:"syncCompleted,omitempty"`
 	SyncProgress                               nullable.Nullable[ChannelSyncProgressPayload]                 `json:"syncProgress,omitempty"`
 	SyncStarted                                nullable.Nullable[ChannelSyncStartedPayload]                  `json:"syncStarted,omitempty"`
@@ -3256,22 +3272,6 @@ type ExtendedTextData struct {
 type ForwardMessageOutput struct {
 	MessageId string `json:"messageId"`
 	Timestamp int    `json:"timestamp"`
-}
-
-// GatewayConnectedPayload defines model for GatewayConnectedPayload.
-type GatewayConnectedPayload struct {
-	ChannelId    openapi_types.UUID `json:"channelId"`
-	OwnerId      string             `json:"ownerId"`
-	Platform     Platform           `json:"platform"`
-	PlatformData interface{}        `json:"platformData,omitempty"`
-}
-
-// GatewayDisconnectedPayload defines model for GatewayDisconnectedPayload.
-type GatewayDisconnectedPayload struct {
-	ChannelId    openapi_types.UUID `json:"channelId"`
-	OwnerId      string             `json:"ownerId"`
-	Platform     Platform           `json:"platform"`
-	PlatformData interface{}        `json:"platformData,omitempty"`
 }
 
 // GetChannelOutput defines model for GetChannelOutput.
@@ -3327,7 +3327,7 @@ type IntegrationChannelConnectedEvent struct {
 	Id      string                  `json:"id"`
 	Name    string                  `json:"name"`
 	OwnerId string                  `json:"ownerId"`
-	Payload GatewayConnectedPayload `json:"payload"`
+	Payload ChannelConnectedPayload `json:"payload"`
 	Time    time.Time               `json:"time"`
 }
 
@@ -3336,7 +3336,7 @@ type IntegrationChannelDisconnectedEvent struct {
 	Id      string                     `json:"id"`
 	Name    string                     `json:"name"`
 	OwnerId string                     `json:"ownerId"`
-	Payload GatewayDisconnectedPayload `json:"payload"`
+	Payload ChannelDisconnectedPayload `json:"payload"`
 	Time    time.Time                  `json:"time"`
 }
 
@@ -3450,11 +3450,11 @@ type IntegrationChannelRemotesSyncedEvent struct {
 
 // IntegrationChannelSpecialPlatformEventReceivedEvent defines model for IntegrationChannelSpecialPlatformEventReceivedEvent.
 type IntegrationChannelSpecialPlatformEventReceivedEvent struct {
-	Id      string                             `json:"id"`
-	Name    string                             `json:"name"`
-	OwnerId string                             `json:"ownerId"`
-	Payload ChannelSpecialPlatformEventPayload `json:"payload"`
-	Time    time.Time                          `json:"time"`
+	Id      string                                     `json:"id"`
+	Name    string                                     `json:"name"`
+	OwnerId string                                     `json:"ownerId"`
+	Payload ChannelSpecialPlatformEventReceivedPayload `json:"payload"`
+	Time    time.Time                                  `json:"time"`
 }
 
 // IntegrationChannelSyncCompletedEvent defines model for IntegrationChannelSyncCompletedEvent.
@@ -5525,22 +5525,22 @@ func (t *ChannelMessageSentPayload) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-// AsChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated returns the union data inside the ChannelSpecialPlatformEventPayload as a ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
-func (t ChannelSpecialPlatformEventPayload) AsChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated() (ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated, error) {
-	var body ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
+// AsChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated returns the union data inside the ChannelSpecialPlatformEventReceivedPayload as a ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated
+func (t ChannelSpecialPlatformEventReceivedPayload) AsChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated() (ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated, error) {
+	var body ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated overwrites any union data inside the ChannelSpecialPlatformEventPayload as the provided ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
-func (t *ChannelSpecialPlatformEventPayload) FromChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated(v ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated) error {
+// FromChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated overwrites any union data inside the ChannelSpecialPlatformEventReceivedPayload as the provided ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated
+func (t *ChannelSpecialPlatformEventReceivedPayload) FromChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated(v ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated performs a merge with any union data inside the ChannelSpecialPlatformEventPayload, using the provided ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated
-func (t *ChannelSpecialPlatformEventPayload) MergeChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated(v ChannelSpecialPlatformEventPayloadWhatsappQrCodeUpdated) error {
+// MergeChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated performs a merge with any union data inside the ChannelSpecialPlatformEventReceivedPayload, using the provided ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated
+func (t *ChannelSpecialPlatformEventReceivedPayload) MergeChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated(v ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -5551,12 +5551,12 @@ func (t *ChannelSpecialPlatformEventPayload) MergeChannelSpecialPlatformEventPay
 	return err
 }
 
-func (t ChannelSpecialPlatformEventPayload) MarshalJSON() ([]byte, error) {
+func (t ChannelSpecialPlatformEventReceivedPayload) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *ChannelSpecialPlatformEventPayload) UnmarshalJSON(b []byte) error {
+func (t *ChannelSpecialPlatformEventReceivedPayload) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

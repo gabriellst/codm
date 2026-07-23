@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import { channelSpecialPlatformEventPayloadSchema } from "./channelSpecialPlatformEventPayloadSchema.ts";
+import { channelSpecialPlatformEventReceivedPayloadSchema } from "./channelSpecialPlatformEventReceivedPayloadSchema.ts";
 import { z } from "zod/v4";
 
 export const integrationChannelSpecialPlatformEventReceivedEventSchema = z.object({
@@ -11,7 +11,7 @@ export const integrationChannelSpecialPlatformEventReceivedEventSchema = z.objec
 "name": z.enum(["integration.channel_special_platform_event.received"]),
 "ownerId": z.string(),
 get "payload"(){
-                return channelSpecialPlatformEventPayloadSchema
+                return channelSpecialPlatformEventReceivedPayloadSchema
               },
 "time": z.iso.datetime()
     })

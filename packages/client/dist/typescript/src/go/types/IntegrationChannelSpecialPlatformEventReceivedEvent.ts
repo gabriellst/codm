@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { ChannelSpecialPlatformEventPayload } from "./ChannelSpecialPlatformEventPayload.ts";
+import type { ChannelSpecialPlatformEventReceivedPayload } from "./ChannelSpecialPlatformEventReceivedPayload.ts";
 
 export const IntegrationChannelSpecialPlatformEventReceivedEventNameEnum = {
     "integration.channel_special_platform_event.received": "integration.channel_special_platform_event.received"
@@ -24,7 +24,7 @@ export type IntegrationChannelSpecialPlatformEventReceivedEvent = {
      * @type string
     */
     ownerId: string;
-    payload: ChannelSpecialPlatformEventPayload;
+    payload: ChannelSpecialPlatformEventReceivedPayload;
     /**
      * @type string, date-time
     */

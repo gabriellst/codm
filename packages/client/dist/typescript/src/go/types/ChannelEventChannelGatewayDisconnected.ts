@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { GatewayDisconnectedPayload } from "./GatewayDisconnectedPayload.ts";
+import type { ChannelDisconnectedPayload } from "./ChannelDisconnectedPayload.ts";
 
 export const ChannelEventChannelGatewayDisconnectedNameEnum = {
     "channel.gateway_disconnected": "channel.gateway_disconnected"
@@ -19,5 +19,5 @@ export type ChannelEventChannelGatewayDisconnected = {
     /**
      * @type object
     */
-    payload: GatewayDisconnectedPayload;
+    payload: ChannelDisconnectedPayload;
 };
