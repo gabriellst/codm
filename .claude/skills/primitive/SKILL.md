@@ -1,6 +1,6 @@
 ---
 name: primitive
-description: Create a primitive UI component (design system entry point). Stateless, reusable, variant-driven via CVA. Routes through a react / expo / astro child based on the working directory.
+description: Create a primitive UI component (design system entry point). Stateless, reusable, variant-driven via CVA. Routes through a react / astro child based on the working directory.
 ---
 
 # Create Primitive (parent)
@@ -12,7 +12,6 @@ A **primitive** is a small, reusable visual unit shared across routes — `Butto
 | Working file path                            | Use                                                                                                                          |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `packages/app/react/**`                      | [`./react/SKILL.md`](./react/SKILL.md) + [`./react/registry.yaml`](./react/registry.yaml) — Base UI + Tailwind + HTML        |
-| `packages/app/expo/**`                       | [`./expo/SKILL.md`](./expo/SKILL.md) + [`./expo/registry.yaml`](./expo/registry.yaml) — React Native + Uniwind                |
 | `packages/app/astro/**/*.astro` or `*.tsx`   | [`./astro/SKILL.md`](./astro/SKILL.md) + [`./astro/registry.yaml`](./astro/registry.yaml) — Astro components + React islands |
 
 If the path is **ambiguous**, ask the user once and don't proceed until they answer.
@@ -31,18 +30,18 @@ A primitive is:
 1. **CVA for variants.** Declare `variant` and `size` once via `class-variance-authority` and compose with the `cn()` helper so consumer `className` overrides win.
 2. **One primitive per family.** A button family is **one** `Button` with `variant: 'chrome' | 'ghost' | 'destructive' | 'link' | ...`. Same for `Card`, `Sheet`/`Dialog`, `Input`, `Pill`.
 3. **Named exports, no dot-notation.** Subcomponents export individually (`export { Card, CardHeader, CardBody }`) — never `Card.Header`.
-4. **PascalCase** for component names and (on expo / astro) file names.
-5. **Tokens come from the design system.** Colors / spacing / radius / type scales come from `@codedm/app-styles/tokens.css` (react + astro) or `packages/app/expo/lib/tokens.ts` (expo). Never hardcode hex values or arbitrary pixel sizes.
-6. **`cn()` everywhere a className is composed** — react/expo import from `@/lib/utils`; astro authors the same helper inline or imports from a local `lib/utils.ts`.
+4. **PascalCase** for component names and (on astro) file names.
+5. **Tokens come from the design system.** Colors / spacing / radius / type scales come from `@codedm/app-styles/tokens.css` (react + astro). Never hardcode hex values or arbitrary pixel sizes.
+6. **`cn()` everywhere a className is composed** — react imports from `@/lib/utils`; astro authors the same helper inline or imports from a local `lib/utils.ts`.
 
 ## When to use this skill
 
 - Building a reusable visual unit that doesn't own data or business logic.
-- Wrapping a Base UI / RN / Astro element with project styling.
+- Wrapping a Base UI / Astro element with project styling.
 
 ## When NOT to use this skill
 
-- Route-scoped feature component → `/component` (in its react / expo / astro variant).
+- Route-scoped feature component → `/component` (in its react / astro variant).
 - Page route → `/route`.
 - Form input with state → `/form` (the form composes primitives; this skill builds the primitives).
 

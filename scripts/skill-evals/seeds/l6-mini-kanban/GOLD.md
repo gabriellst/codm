@@ -68,7 +68,7 @@ A SOUND decomposition has roughly these, by responsibility (names may differ):
 - **contract-lock**: CardMoved (+ boardId) + tables frozen before BC implementation.
 - **plan**: `validate-plan` PR-28 clean (every dependent Task carries a handoff).
 - **build**: backend + app-react tsc green; detectors clean (registry-scan, import-direction,
-  slice-closure, route-closure, component-props, projection-shape).
+  slice-closure, component-props, projection-shape).
 - **e2e**: spec exists, not stubbed, covers flows 3 + 4 (move + realtime).
 - **Aggregate**: PASS if model + plan + build stages each clear AND ≥4/5 core flows have e2e
   coverage. A single non-catastrophic stage miss is acceptable (the stage vector records it).

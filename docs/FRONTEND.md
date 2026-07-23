@@ -25,8 +25,6 @@ The rest of this document covers the **react app** in depth. For the astro speci
 - `.claude/skills/form/react/SKILL.md` (no astro variant — use a React island)
 - `.claude/skills/desktop-shell/SKILL.md` (flat — Tauri shell + `lib/native` seam)
 
-(`expo` skill variants still exist on disk but are **dormant** — the expo workspace was removed; no workspace = no dispatch.)
-
 ---
 
 ## First-Class Citizens

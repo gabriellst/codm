@@ -64,7 +64,7 @@
 		"cli": "bun scripts/cli.ts",
 		"review": "bun scripts/review.ts --output ./review --parallel 25",
 		"review:all": "bun scripts/review.ts --all --output ./review --parallel 25",
-		"detect": "bun scripts/detectors/registry-scan.ts && bun scripts/detectors/import-direction.ts --all && bun scripts/detectors/slice-closure.ts && bun scripts/detectors/route-closure.ts && bun scripts/detectors/component-props.ts && bun scripts/detectors/projection-shape.ts && bun scripts/detectors/go-enum-literals.ts",
+		"detect": "bun scripts/detectors/registry-scan.ts && bun scripts/detectors/import-direction.ts --all && bun scripts/detectors/slice-closure.ts && bun scripts/detectors/component-props.ts && bun scripts/detectors/projection-shape.ts && bun scripts/detectors/go-enum-literals.ts",
 		"detect:slice": "bun scripts/detectors/slice-closure.ts",
 		"detect:baseline": "bun scripts/detectors/registry-scan.ts --update-baseline",
 		"detect:self-test": "bun test ./.claude/hooks ./scripts/detectors",

@@ -328,8 +328,8 @@ notes: >-
   registerSchemas under src/finance/**) close that hole. Glob notes:
   Bun.Glob supports directory-level braces ({controllers,usecases} verified
   matching 31 files at HEAD) as long as no '/' sits inside a brace branch;
-  the dist file-absence must-nots use the '::[\s\S]*' idiom from the expo
-  exemplar (any matching file fails regardless of content); '**' matches
+  the dist file-absence must-nots use the '::[\s\S]*' idiom (any
+  matching file fails regardless of content); '**' matches
   zero segments. Migration filenames are drizzle-generated (random words
   unless --name), so the migration grader greps migrations/*.sql for the
   table name instead of pinning a filename. Runner caveats: a missing root

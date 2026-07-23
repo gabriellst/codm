@@ -113,7 +113,7 @@ notes: >-
   First Go projector probe. CRITICAL CONDITION: zero live Go projectors exist in this repo
   (census 2026-06-11: 'projector' matches 0 files) — the carrier is the projection/go +
   projector/go SKILL.md variants alone, named FIRST in the prompt. This probe therefore
-  measures SKILL-VARIANT transfer without exemplar support — the expo sheet-params lesson
+  measures SKILL-VARIANT transfer without exemplar support — the sheet-params lesson
   says imitation needs exemplars, so a fail here localizes to the carrier gap (the fix
   would be a live exemplar or scaffold, not louder docs). Free real estate verified:
   IntegrationActivity token 0 matches repo-wide; projections/ dir absent under

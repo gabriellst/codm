@@ -2,7 +2,7 @@
 # Every artifact type maps to a skill, file patterns, a layer, and a language.
 # Skill playbooks are split per language:
 #   .claude/skills/<skill>/{typescript,go}/{SKILL.md,registry.yaml}       (backend)
-#   .claude/skills/<skill>/{react,expo,astro}/{SKILL.md,registry.yaml}    (frontend)
+#   .claude/skills/<skill>/{react,astro}/{SKILL.md,registry.yaml}         (frontend)
 # Language dispatch lives in scripts/lib/repo-model.ts (detectLang): the file's containing
 # workspace (template.config.ts REPO.workspaces) decides the lang; extension is only a fallback
 # outside declared workspaces. A per-lang variant is used iff
@@ -180,8 +180,8 @@ components:
     note: "HTTP middleware — single-concern, lang-specific shapes in <skill>/<lang>/SKILL.md."
 
   # ─── Frontend: Presentation Layer ─────────────────────────────────────
-  # scripts/review.ts routes each match to <skill>/{react,expo,astro}/registry.yaml
-  # based on the matched file's path (packages/app/{react,expo,astro}/) and extension
+  # scripts/review.ts routes each match to <skill>/{react,astro}/registry.yaml
+  # based on the matched file's path (packages/app/{react,astro}/) and extension
   # (.tsx vs .astro). The per-component `skill:` line below names the top-level skill
   # directory; the variant subfolder is resolved at review time.
 
@@ -190,7 +190,6 @@ components:
     patterns:
       - "packages/app/react/src/routes/*/index.tsx"
       - "packages/app/react/src/routes/*/*/index.tsx"
-      - "packages/app/expo/app/**/*.tsx"
       - "packages/app/astro/src/pages/**/*.astro"
     layer: presentation
 
@@ -198,9 +197,8 @@ components:
     skill: component
     patterns:
       - "packages/app/react/src/routes/**/-components/*Section*/index.tsx"
-      - "packages/app/expo/**/-components/*Section*/index.tsx"
     layer: presentation
-    note: "Sections live in -components/ with Section suffix (react/expo only)."
+    note: "Sections live in -components/ with Section suffix (react only)."
 
   component:
     skill: component
@@ -210,7 +208,6 @@ components:
       # (so component rules — fetch-ban, enum casts — reach them):
       - "packages/app/react/src/routes/**/-components/**/*.ts"
       - "packages/app/react/src/routes/**/-components/**/*.tsx"
-      - "packages/app/expo/**/-components/*/index.tsx"
       - "packages/app/astro/src/components/*.astro"
       - "packages/app/astro/src/components/*.tsx"
       - "!**/stories/*"
@@ -228,7 +225,6 @@ components:
     skill: primitive
     patterns:
       - "packages/app/react/src/components/ui/*.tsx"
-      - "packages/app/expo/components/ui/*.tsx"
       - "packages/app/astro/src/components/ui/*.astro"
       - "packages/app/astro/src/components/ui/*.tsx"
     layer: presentation
@@ -238,26 +234,16 @@ components:
     skill: form
     patterns:
       - "packages/app/react/src/routes/**/-components/**/*Form*/index.tsx"
-      - "packages/app/expo/**/-components/**/*Form*/index.tsx"
     layer: presentation
-    note: "Forms live in -components/ with Form suffix (react/expo only). Astro has no form variant — author a React island and follow the react form variant."
-
-  sheet:
-    skill: sheet
-    patterns:
-      - "packages/app/expo/app/(sheets)/**/*.tsx"
-    layer: presentation
-    note: "Expo-only artifact — modal sheets implemented as routes under (sheets)/."
+    note: "Forms live in -components/ with Form suffix (react only). Astro has no form variant — author a React island and follow the react form variant."
 
   store:
     skill: store
     patterns:
       - "packages/app/react/src/**/-stores/*.ts"
       - "packages/app/react/src/stores/*.ts"
-      - "packages/app/expo/**/-stores/*.ts"
-      - "packages/app/expo/stores/*.ts"
     layer: presentation
-    note: "Single-flavor skill — same Zustand patterns on react and expo. Not applicable to astro."
+    note: "Single-flavor skill — react-only Zustand patterns. Not applicable to astro."
 
   desktop-shell:
     skill: desktop-shell
@@ -710,7 +696,7 @@ cross_cutting_bad_practices:
       - '\b(?:bg|text|border)-accent-(?:danger|success|warning|cashback|promo)\b'
     always_flag_when: >
       A className references pre-harmonization Berzerk token names (bg-bg-0, bg-surface-1,
-      text-fg-2, text-accent-danger, …). global.css (expo) and tokens.css (web) define only the
+      text-fg-2, text-accent-danger, …). tokens.css (web) defines only the
       shadcn-harmonized set — the old utilities compile to NOTHING and the style silently
       disappears. Map: bg-0→background, bg-1→route-background, surface-1→card,
       surface-2→popover/secondary, surface-3→muted, fg-0→foreground, fg-1→muted-foreground,

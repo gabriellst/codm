@@ -257,7 +257,7 @@ notes: >-
   (validateSearch typed by the SDK enum + .default()s, one section owning the
   query, dispatch-by-map variant components, enums.ChartType i18n catalog,
   useMoney/useLocale) is what the graders measure — hence the prompt's "the
-  registry wins" sentence (same device as the expo exemplar). Correlated-union
+  registry wins" sentence. Correlated-union
   note: TS cannot correlate VIEWS[kind] with a union-typed prop, so the judge
   blesses both cast-free shapes (uniform-prop views guarding their own kind
   with an early return, or Extract-typed props); switch is banned dir-wide and

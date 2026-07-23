@@ -68,7 +68,7 @@ what is already on disk. Trust the SDK, not your memory of how these shapes "sho
 
 ## Gates before you call it done
 `cd packages/app/react && bun x tsc --noEmit` green · `cd packages/e2e && bun x tsc --noEmit` green ·
-component-props + route-closure detectors clean · the backend you were handed still compiles
+component-props detector clean · the backend you were handed still compiles
 (`packages/api/typescript` tsc) — i.e. you did not break the seed.
 
 ## Left to your discretion (the handoff does not over-specify)

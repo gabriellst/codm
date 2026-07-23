@@ -215,7 +215,6 @@ describe('detectLang', () => {
 			typescript: 'src/sample/entities/Sample.ts',
 			go: 'internal/sample/usecases/run.go',
 			react: 'src/lib/sample.ts',
-			expo: 'app/index.tsx',
 			astro: 'src/components/Hero.tsx',
 		}
 		for (const ws of Object.values(REPO.workspaces) as { pkgRoot: string; lang: string }[]) {
@@ -255,9 +254,9 @@ describe('globToRegExp', () => {
 	})
 
 	test('regex metacharacters in globs are escaped', () => {
-		const re = globToRegExp('packages/app/expo/app/(sheets)/**/*.tsx')!
-		expect(re.test('packages/app/expo/app/(sheets)/profile/edit.tsx')).toBe(true)
-		expect(re.test('packages/app/expo/app/sheets/profile/edit.tsx')).toBe(false)
+		const re = globToRegExp('packages/app/react/src/routes/(app)/**/*.tsx')!
+		expect(re.test('packages/app/react/src/routes/(app)/profile/edit.tsx')).toBe(true)
+		expect(re.test('packages/app/react/src/routes/app/profile/edit.tsx')).toBe(false)
 	})
 
 	test('end-anchored but not start-anchored (absolute paths match)', () => {

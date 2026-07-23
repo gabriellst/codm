@@ -22,7 +22,7 @@ If you're tempted to make every primitive a React island, stop. The astro worksp
 
 ## Variant approach
 
-Astro primitives use **class-variance-authority (CVA)** the same way the react/expo primitives do. Author the CVA recipe inside the `.astro` file's frontmatter and emit `class={variants({ variant, size })}` on the rendered element.
+Astro primitives use **class-variance-authority (CVA)** the same way the react primitives do. Author the CVA recipe inside the `.astro` file's frontmatter and emit `class={variants({ variant, size })}` on the rendered element.
 
 ```astro
 ---
@@ -107,7 +107,7 @@ Otherwise, keep it static.
 - [ ] Single file per primitive; PascalCase name.
 - [ ] Forwards `<slot />` for content.
 - [ ] Accessibility props (`aria-label`) where icon-only.
-- [ ] No imports from `@codedm/app-react` / `@codedm/app-expo`.
+- [ ] No imports from `@codedm/app-react`.
 
 ## References
 

@@ -3,8 +3,8 @@ import { getGenerators, resolvePlatform, CROSS_PLATFORM_VERBS } from './resolve'
 
 describe('resolvePlatform', () => {
 	it('honors an explicit platform flag', () => {
-		expect(resolvePlatform('expo')).toBe('expo')
 		expect(resolvePlatform('astro')).toBe('astro')
+		expect(resolvePlatform('react')).toBe('react')
 	})
 	it('defaults to react', () => {
 		expect(resolvePlatform(undefined)).toBe('react')
@@ -17,11 +17,11 @@ describe('getGenerators', () => {
 		expect(typeof g.component).toBe('function') // react component generator
 		expect(typeof g.entity).toBe('function') // backend still available
 	})
-	it('routes a cross-platform verb to expo when platform=expo', () => {
+	it('routes a cross-platform verb to a hard astro stub when platform=astro', () => {
 		const react = getGenerators('typescript', 'react', 'component').component
-		const expo = getGenerators('typescript', 'expo', 'component').component
-		expect(typeof expo).toBe('function')
-		expect(expo).not.toBe(react) // distinct generator
+		const astro = getGenerators('typescript', 'astro', 'component').component
+		expect(typeof astro).toBe('function')
+		expect(astro).not.toBe(react) // distinct generator (astro not-implemented stub)
 	})
 	it('exposes single-platform verbs (store, form) regardless', () => {
 		const g = getGenerators('typescript', 'react', 'store')

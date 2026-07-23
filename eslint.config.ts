@@ -10,7 +10,6 @@ export default tseslint.config([
 		ignores: [
 			'**/.astro/**',
 			'**/.claude/**',
-			'**/.expo/**',
 			'**/.next/**',
 			'**/.nuxt/**',
 			'**/.nx/**',

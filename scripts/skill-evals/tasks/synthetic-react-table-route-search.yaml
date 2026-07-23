@@ -15,8 +15,8 @@ prompt: >
   DataTable whose page / limit / search / platform-filter / sort all live in the
   URL via validateSearch. The backend endpoint already exists in the SDK
   (GET /v1/ui/products/ad-campaigns → useListProductAdCampaigns); this is a
-  frontend-only, app-react-only task — do NOT touch the backend, the SDK, the
-  astro app, or the expo app, and do NOT regenerate the SDK (you consume it as
+  frontend-only, app-react-only task — do NOT touch the backend, the SDK, or
+  the astro app, and do NOT regenerate the SDK (you consume it as
   shipped). Before writing code, read the react skill variants
   .claude/skills/route/react/{SKILL.md,registry.yaml} and
   .claude/skills/component/react/{SKILL.md,registry.yaml} and
@@ -223,8 +223,6 @@ graders:
     id: i18n#campaignstatus-en
   # ── detectors ──────────────────────────────────────────────────────
   - kind: detect
-    spec: route-closure
-  - kind: detect
     spec: component-props
   # ── judge (the ONE rich rubric, with scope notes) ──────────────────
   - kind: judge
@@ -335,7 +333,7 @@ notes: >-
   CampaignTableSection / useCampaignSelectionStore anywhere, enums.CampaignStatus
   absent from BOTH locale files (the agent must add it — enums.MarketingPlatform
   already exists in both, so its labels are reused not re-authored), tsc green
-  at HEAD, route-closure + component-props detectors green at HEAD. The
+  at HEAD, component-props detector green at HEAD. The
   no-locale-hardcode grep-must-not is scoped to the new subtree only so it never
   blames pre-existing 'pt-BR' literals elsewhere; same for as-string,
   raw-fetch, setQueryData (all scoped to marketing/campaigns/**). The judge is

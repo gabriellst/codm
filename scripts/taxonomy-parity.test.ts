@@ -23,7 +23,6 @@ const DISPOSITIONS: Record<string, string> = {
 	section: 'reviewed as `component` — sections live in -components/ and match the component rule',
 	'projection-repository': 'reviewed as `repository` — lives under repositories/, the repository rule claims it',
 	storybook: '*.stories.tsx is intentionally skipped by review (dumb stories carry no reviewable logic)',
-	sheet: 'expo sheets are .tsx under components surfaces — reviewed as `component`',
 	'bounded-context': 'composition roots (index.ts / module.go) are intentionally skipped by review',
 	e2e: 'Playwright *.spec.ts files match the test-file skip guard — e2e review runs through the e2e skill, not batch review',
 }
@@ -82,7 +81,6 @@ describe('taxonomy-parity (.claude/registry.yaml components ⇔ review.ts CLASSI
 			typescript: 'src/billing/entities/Invoice.ts',
 			go: 'internal/notifications/handlers/handler.go',
 			react: 'src/routes/app/index.tsx',
-			expo: 'app/(tabs)/index.tsx',
 			astro: 'src/components/Island.tsx',
 		}
 		for (const ws of Object.values(REPO.workspaces)) {

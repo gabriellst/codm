@@ -413,7 +413,7 @@ E há dois registries de mais alto nível:
 
 ### Skill dispatch by language / target
 
-A maioria das skills de backend tem **duas variantes** (uma por backend) e a maioria das skills de frontend tem **até três variantes** (uma por target — react/astro, mais uma variante `expo/` **dormente**: o workspace expo foi removido — sem workspace, sem dispatch — e as pastas de skill ficam como referência caso um target mobile volte). O layout é:
+A maioria das skills de backend tem **duas variantes** (uma por backend) e a maioria das skills de frontend tem **duas variantes** (uma por target — react/astro). O layout é:
 
 ```
 .claude/skills/<skill>/
@@ -425,7 +425,6 @@ A maioria das skills de backend tem **duas variantes** (uma por backend) e a mai
 │   ├── SKILL.md
 │   └── registry.yaml
 ├── react/              # frontend variant — packages/app/react/
-├── expo/               # DORMANT — no expo workspace in this repo; kept as reference only
 └── astro/              # frontend variant — packages/app/astro/ (component, primitive, route only)
 ```
 
@@ -438,9 +437,7 @@ A maioria das skills de backend tem **duas variantes** (uma por backend) e a mai
 | `.tsx` em `packages/app/react/` | `react` | `<skill>/react/{SKILL,registry}` |
 | `.astro` ou `.tsx` em `packages/app/astro/` | `astro` | `<skill>/astro/{SKILL,registry}` |
 
-(A linha `expo` da matriz é dormente: sem workspace `packages/app/expo`, nenhum arquivo resolve para ela.)
-
-Quando uma skill ainda não tem variantes (por exemplo `bounded-context`, `db-modelling`, `migrate`, `sdk`, `sheet`, `store`), o dispatcher cai no `<skill>/SKILL.md` + `<skill>/registry.yaml` flat na raiz.
+Quando uma skill ainda não tem variantes (por exemplo `bounded-context`, `db-modelling`, `migrate`, `sdk`, `store`), o dispatcher cai no `<skill>/SKILL.md` + `<skill>/registry.yaml` flat na raiz.
 
 **Onde isso é implementado:** a detecção de linguagem vive em `scripts/lib/repo-model.ts` (`detectLang` — o workspace que contém o arquivo decide, derivado de `template.config.ts` `REPO.workspaces`; extensão só como fallback fora de workspaces), consumida por `scripts/review.ts` e pelo hook classify-edit. O `getCompiledChecklist(skill, lang, artifact)` carrega o `registry.yaml` específico via `resolveRegistryPath()` (existsSync no variant — sem listas de variantes). Cada batch é chaveado por `(skill, lang, artifact)` — `component-react` nunca é misturado com `component-astro` no mesmo prompt.
 
@@ -448,14 +445,14 @@ Quando uma skill ainda não tem variantes (por exemplo `bounded-context`, `db-mo
 
 **Quais skills têm variantes de frontend:**
 
-| Skill | react | expo (dormant) | astro |
-|---|---|---|---|
-| `component` | ✅ | ✅ | ✅ |
-| `primitive` | ✅ | ✅ | ✅ |
-| `route` | ✅ | ✅ | ✅ |
-| `form` | ✅ | ✅ | — (use a react island on astro) |
+| Skill | react | astro |
+|---|---|---|
+| `component` | ✅ | ✅ |
+| `primitive` | ✅ | ✅ |
+| `route` | ✅ | ✅ |
+| `form` | ✅ | — (use a react island on astro) |
 
-**Frontend single-flavor (no variants):** `store` (react only — n/a on astro), `sheet` (expo-only, dormant), `prototype`, `design-system`, `storybook` (react-only — `*.stories.tsx`: dumb→`args`, connected→typed SDK mocks via `@/storybook`), `desktop-shell` (flat — `packages/app/tauri` + the react `lib/native` seam).
+**Frontend single-flavor (no variants):** `store` (react only — n/a on astro), `prototype`, `design-system`, `storybook` (react-only — `*.stories.tsx`: dumb→`args`, connected→typed SDK mocks via `@/storybook`), `desktop-shell` (flat — `packages/app/tauri` + the react `lib/native` seam).
 
 **Lang-agnostic (no variants):** `bounded-context`, `db-modelling`, `migrate`, `sdk`, `commit`, `review`, `prd`, `user-stories`, `task-breakdown`, `spec-review`, `ddd-modeling`, `trace-analysis`, `clean-branch`, `e2e`.
 

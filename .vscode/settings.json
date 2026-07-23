@@ -26,7 +26,6 @@
 	"files.watcherExclude": {
 		"**/.astro/**": true,
 		"**/.claude/**": true,
-		"**/.expo/**": true,
 		"**/.git/**": true,
 		"**/.nx/**": true,
 		"**/.output/**": true,

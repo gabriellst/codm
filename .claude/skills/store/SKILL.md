@@ -13,7 +13,7 @@ Creates a Zustand store for managing interactive state following project pattern
 
 ## Platform applicability
 
-This skill is **single-flavor**: the same Zustand patterns work identically in `packages/app/react/` and `packages/app/expo/`. Same import (`import { create } from 'zustand'`), same `persist` middleware shape, same selector ergonomics. The only difference is where the store file lives — `packages/app/react/src/stores/` or `packages/app/expo/lib/stores/` (or a route's `-stores/` folder for route-private state).
+This skill is **single-flavor**: react-only. Stores live in `packages/app/react/src/stores/` (or a route's `-stores/` folder for route-private state).
 
 **Not applicable to `packages/app/astro/`.** Astro is render-time; if you find yourself needing a Zustand store on an astro page, the work probably belongs in the react app — link out to `/app/...` instead of replicating interactive state on the landing page.
 

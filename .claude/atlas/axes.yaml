@@ -166,8 +166,6 @@ axes:
     notes: "slice-closure SCW-03 catches silent-registration failures; scaffolder auto-wiring (Phase 2) removes the cause where the CLI is used."
     scenarios:
       - "react: route-private code lives in -components/<Name>/index.tsx (TanStack '-' folders are genuinely router-excluded); new routes registered via bun x tsr generate"
-      - "expo: SAME -components/<Name>/index.tsx shape (registry#components routes it) but NOTHING under app/ is router-excluded — colocated files use named exports ONLY so the phantom route node stays inert (component/expo bp-18); stores in -stores/, never _stores/"
-      - "expo: screens/layouts default-export; a (sheets) route folder and its root Stack.Screen registration land in the same change (NAV-MODAL)"
   - id: DISC-UNION
     name: Discriminated-union handling end-to-end
     family: cross
@@ -184,7 +182,7 @@ axes:
     family: frontend
     owner: form#FRM-P03
     rung: docs
-    notes: "form.Subscribe with a NARROW selector is the only reactive read of form state — primitive-returning selectors stop re-renders on unrelated fields (expo list-row 3-mode discriminant); submit button gated by safeParse over selected values (FRM-P03); never raw form.state.values in a render body (not reactive). Reference corpora: medscall onboarding (web), berzerk-club sheets (expo)."
+    notes: "form.Subscribe with a NARROW selector is the only reactive read of form state — primitive-returning selectors stop re-renders on unrelated fields; submit button gated by safeParse over selected values (FRM-P03); never raw form.state.values in a render body (not reactive). Reference corpus: medscall onboarding (web)."
     scenarios:
       - "submit button disable is driven by a form.Subscribe selector + schema safeParse — not by reading form.state in the body"
       - "a subscriber on one field does not re-render when an unrelated field changes (primitive selector)"
@@ -194,7 +192,7 @@ axes:
     family: frontend
     owner: form#FRM-C05
     rung: docs
-    notes: "Step schema = a SLICE of the generated SDK mutation schema obtained via the @/lib/union helpers — pickUnionVariantField(union, { type: 'X' }, 'section') (a valid TanStack validators.onChange), unionVariantValues(union, 'type') for the selector options, pickUnionVariant(union, match).safeParse for the whole-member submit gate; NEVER raw positional access (.def.options[0].shape.x — silent breakage on member reorder) and never a re-typed parallel schema. StepData inferred from the slice (z.output); the shared form prop typed by function inference (export type XForm = ReturnType<typeof _inferXForm>) — no hand-written aggregate type anywhere; steps render via a dispatch map keyed by the step enum; final payload safeParsed against the FULL discriminated union before the mutation. Helpers exist on BOTH platforms (react + expo lib/union.ts). Scaffold: bun cli onboarding-step --from=<sdk.path>. Reference: medscall onboarding flow (its raw .shape access is the pre-helper spelling — ours supersedes it)."
+    notes: "Step schema = a SLICE of the generated SDK mutation schema obtained via the @/lib/union helpers — pickUnionVariantField(union, { type: 'X' }, 'section') (a valid TanStack validators.onChange), unionVariantValues(union, 'type') for the selector options, pickUnionVariant(union, match).safeParse for the whole-member submit gate; NEVER raw positional access (.def.options[0].shape.x — silent breakage on member reorder) and never a re-typed parallel schema. StepData inferred from the slice (z.output); the shared form prop typed by function inference (export type XForm = ReturnType<typeof _inferXForm>) — no hand-written aggregate type anywhere; steps render via a dispatch map keyed by the step enum; final payload safeParsed against the FULL discriminated union before the mutation. Helpers live in the react lib/union.ts. Scaffold: bun cli onboarding-step --from=<sdk.path>. Reference: medscall onboarding flow (its raw .shape access is the pre-helper spelling — ours supersedes it)."
     scenarios:
       - "every step schema comes from pickUnionVariantField / pickUnionVariant on the SDK union — zero hand-rolled field lists, zero positional .def.options[N] access"
       - "no hand-written aggregate form type: the form/result types are inferred (ReturnType<typeof _inferXForm> / z.output)"
@@ -222,9 +220,6 @@ axes:
       - "derived state over form values reads via form.Subscribe narrow selectors — never mirrored into useState/store on onChange (FORM-SUBSCRIBE handshake)"
       - "zero useState mirroring server data or mutation pending flags"
       - "state read by 2+ components lives in a store, not lifted useState + prop drilling"
-      - "expo: screen filter/tab/pagination state round-trips through useTypedSearchParams(schema) from @/lib/typed-route with EVERY field .default()-ed — a garbage deep link renders defaults, never crashes (route/expo RTE-03/RTE-04)"
-      - "expo: ephemeral sheet/overlay open state is local useState — the web URL-first canon is intentionally softened on mobile (route/expo bp-09); deep-linkable modals are routes (NAV-MODAL)"
-      - "expo: wizard step/draft state lives in a route-scoped -stores/<flow>-store.ts consumed by ONE route — never a form-mirror store (form/expo bp-13), never one sheet route per step"
   - id: DATA-OWNERSHIP
     name: Component data ownership
     family: frontend
@@ -244,8 +239,6 @@ axes:
     notes: "packages/app/react/CLAUDE.md is the prose owner; component bp-15 / route bp-11 detect hardcoded ptBR."
     scenarios:
       - "react: every Intl/toLocale* call takes the locale from useLocale(); money renders via useMoney() over SDK Money (cents+currency) — zero pt-BR / en-US / ptBR literals"
-      - "expo: money/dates format via @/lib/format + @/lib/format-date (locale resolved from i18n inside the helper) — useLocale/useMoney DO NOT EXIST on mobile (component/expo CMP-P13); SDK Money is CENTS, lib formatMoney takes UNITS — convert before rendering"
-      - "expo: no per-component format* wrapper functions (component/expo bp-16) and no hardcoded date-fns ptBR — the i18n-driven lib helper is the only formatter"
   - id: DIALOG-OWNERSHIP
     name: Dialog state ownership
     family: frontend
@@ -255,7 +248,6 @@ axes:
     scenarios:
       - "web: dialogs open via useDialogStore.show(<Dialog item={…} />) / hide(); drawers/side-panels via the twin useDrawerStore — no open/onOpenChange props, no bespoke open-state stores (form react bp-18)"
       - "web: the opener passes the subject INTO the shown content as a prop — selected item never mirrored into useState"
-      - "expo: the platform INVERTS this axis — no Dialog primitive and no modal store exists; the modal is a (sheets) route or an ephemeral Sheet primitive (see NAV-MODAL) — porting web code must not carry useDialogStore/useDrawerStore across"
   - id: CENTRALIZE-MAPS
     name: Enum → label/color rendering
     family: frontend
@@ -269,28 +261,14 @@ axes:
     rung: docs
     notes: "No onError (global MutationCache), no try/catch, hook's own isPending — component bp-05b aligned in Phase 3."
     scenarios:
-      - "success feedback is platform-idiomatic: web toast.success, expo Haptics.notification('success') — a toast import on mobile is a defect (no toast primitive exists)"
-      - "invalidation uses the SDK queryKey helper on settled — never a hand-rolled ['items'] literal key (form/expo bp-07)"
-      - "errors stay with the global MutationCache (web toast handler / expo Alert via lib/errors.ts customErrorHandlers, incl. SESSION_EXPIRED → login redirect) — no try/catch around mutateAsync, no per-mutation onError"
+      - "success feedback is web toast.success"
+      - "invalidation uses the SDK queryKey helper on settled — never a hand-rolled ['items'] literal key"
+      - "errors stay with the global MutationCache (web toast handler via lib/errors.ts customErrorHandlers, incl. SESSION_EXPIRED → login redirect) — no try/catch around mutateAsync, no per-mutation onError"
   - id: PRIMITIVES-A11Y
     name: Primitive composition + accessibility
     family: frontend
     owner: primitive#react
     rung: docs
-  - id: NAV-MODAL
-    name: Modal surface & lifecycle on mobile (router-as-modal-state)
-    family: frontend
-    owner: sheet#SHT-01
-    rung: detector
-    notes: "Expo inverts web DIALOG-OWNERSHIP: no Dialog primitive, no open/close store (route/expo bp-11) — the router IS the modal state machine. Deep-linkable modal = (sheets)/<name> route + root-_layout Stack.Screen with EXPLICIT presentation (sheet SHT-03); ephemeral in-page overlay = Sheet primitive + local useState. Dialog-import (sheet bp-04), ungrouped push path (sheet bp-07) and fullScreenModal-without-headerLeft (route/expo bp-12) are mechanical; the route↔registration coupling (sheet bp-02) is NOT — slice-closure SCW-04 is the Phase-3 candidate (HEAD has the dangling game-form registration proving both drift directions)."
-    scenarios:
-      - "porting a web dialog/drawer yields a (sheets)/<name>/ route + root Stack.Screen registration with explicit presentation, landed in the SAME change (no folder without registration, no dangling registration)"
-      - "dismissal pairs with presentation: router.back() for pageSheet/formSheet, router.dismiss() for fullScreenModal; sheet-as-form success = Haptics.notification('success') THEN dismiss, invalidateQueries on settled"
-      - "the sheet receives at most ids via typed params and fetches its own data (sheet SHT-P05) — deep-linking straight to /(sheets)/<name>?id=… renders with zero prior in-app navigation"
-      - "ephemeral filter overlay = Sheet primitive + local useState — no URL change, no Zustand open/close store, no Dialog import"
-      - "fullScreenModal ships an inner Stack with an explicit headerLeft back affordance (route/expo bp-12); pageSheet inner layout is at most a bare <Slot />"
-      - "multi-step flow = ONE (sheets)/<flow>/ route with inner Stack sub-routes + -stores/<flow>-store.ts — never N top-level sheet routes stacking modals"
-
   # ── e2e ───────────────────────────────────────────────────────────────
   - id: E2E-DISCIPLINE
     name: Cross-stack E2E authoring discipline

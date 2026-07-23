@@ -142,7 +142,7 @@ The astro app imports `@codedm/app-styles/tokens.css` once from `src/styles/glob
 
 ## Open/Closed Principle — derive lists from data
 
-Same as react/expo: never hardcode lists in JSX. Source from `getCollection()`, from a frontmatter array, or from a typed constant in `src/lib/`.
+Same as react: never hardcode lists in JSX. Source from `getCollection()`, from a frontmatter array, or from a typed constant in `src/lib/`.
 
 ```astro
 ---
@@ -188,7 +188,7 @@ Every Astro page-level component should:
 - [ ] Colors come from CSS variables / Tailwind utility classes that map to `tokens.css`.
 - [ ] If a React island was used, the directive is the smallest viable (`client:visible` ≥ `client:load`).
 - [ ] Semantic HTML; icon-only links have `aria-label`.
-- [ ] No imports from `@codedm/app-react/*` or `@codedm/app-expo/*` — astro is its own workspace.
+- [ ] No imports from `@codedm/app-react/*` — astro is its own workspace.
 
 ## References
 
