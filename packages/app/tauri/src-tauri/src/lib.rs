@@ -4,7 +4,8 @@
 //! 1. Serve the react SPA (frontendDist / devUrl in tauri.conf.json).
 //! 2. Supervise the two sidecars (TS daemon + Go gateway, `bundle.externalBin`)
 //!    with a bootstrap HTTP health-check per service.
-//! 3. Expose the keychain-backed `secret_*` commands the `lib/native` seam invokes.
+//! 3. Expose the keychain-backed `secret_*` commands the native contract's tauri
+//!    platform services invoke (lib/native/platforms/tauri).
 //!
 //! Transport is the INTERIM local-HTTP one (console → daemon :3030 → gateway :3032),
 //! documented as reversible in BUILD-LOG — the shell only needs the two readiness

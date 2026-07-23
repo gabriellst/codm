@@ -2,6 +2,7 @@ import '@/index.css'
 import '@/lib/i18n'
 import { Toaster } from '@/components/ui/sonner'
 import { RouteError } from '@/components/RouteError'
+import { NativeProvider } from '@/lib/native'
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
@@ -39,8 +40,11 @@ function RootComponent() {
 	const { queryClient } = Route.useRouteContext()
 	return (
 		<QueryClientProvider client={queryClient}>
-			<Outlet />
-			<Toaster />
+			{/* Native contract binding — decided ONCE here, at the composition root (see lib/native). */}
+			<NativeProvider>
+				<Outlet />
+				<Toaster />
+			</NativeProvider>
 			<TanStackRouterDevtools />
 			<ReactQueryDevtools />
 		</QueryClientProvider>
