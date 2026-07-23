@@ -31,22 +31,22 @@ func NewSetPresenceHandler(
 	return &SetPresenceHandler{repo: repo, registry: registry}
 }
 
-func (h *SetPresenceHandler) Name() string { return "SetPresence" }
+func (h *SetPresenceHandler) Name() string { return "set_presence" }
 
 func (h *SetPresenceHandler) Execute(ctx context.Context, input SetPresenceInput) (SetPresenceOutput, error) {
-	instance, err := h.repo.Find(ctx, input.ID)
+	channel, err := h.repo.Find(ctx, input.ID)
 	if err != nil {
 		return SetPresenceOutput{}, err
 	}
-	if instance == nil {
-		return SetPresenceOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SetPresenceOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	instanceUUID, _ := uuid.Parse(input.ID)
+	channelUUID, _ := uuid.Parse(input.ID)
 
-	ch, ok := h.registry.Get(instanceUUID)
+	ch, ok := h.registry.Get(channelUUID)
 	if !ok || ch.Status() != gateway.ConnectionStatusConnected {
-		return SetPresenceOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotConnected, "instance is not connected")
+		return SetPresenceOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
 	if err := ch.SetPresence(ctx, input.Presence); err != nil {

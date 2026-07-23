@@ -28,40 +28,40 @@ func NewChannelRegistry(factory gateway.ChannelFactory) *ChannelRegistryImpl {
 	}
 }
 
-func (r *ChannelRegistryImpl) Register(ctx context.Context, instanceID uuid.UUID, config gateway.ChannelConfig) (gateway.Channel, error) {
+func (r *ChannelRegistryImpl) Register(ctx context.Context, channelID uuid.UUID, config gateway.ChannelConfig) (gateway.Channel, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if ch, ok := r.channels[instanceID]; ok {
+	if ch, ok := r.channels[channelID]; ok {
 		return ch, nil
 	}
 
-	ch, err := r.factory.Create(instanceID, config)
+	ch, err := r.factory.Create(channelID, config)
 	if err != nil {
 		return nil, err
 	}
 
-	r.channels[instanceID] = ch
+	r.channels[channelID] = ch
 
-	slog.Info("instance registered in registry", "instanceId", instanceID)
+	slog.Info("channel registered in registry", "channelId", channelID)
 	return ch, nil
 }
 
-func (r *ChannelRegistryImpl) Get(instanceID uuid.UUID) (gateway.Channel, bool) {
+func (r *ChannelRegistryImpl) Get(channelID uuid.UUID) (gateway.Channel, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	ch, ok := r.channels[instanceID]
+	ch, ok := r.channels[channelID]
 	return ch, ok
 }
 
-func (r *ChannelRegistryImpl) Remove(instanceID uuid.UUID) {
+func (r *ChannelRegistryImpl) Remove(channelID uuid.UUID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if ch, ok := r.channels[instanceID]; ok {
+	if ch, ok := r.channels[channelID]; ok {
 		ch.Disconnect()
-		delete(r.channels, instanceID)
-		slog.Info("instance removed from registry", "instanceId", instanceID)
+		delete(r.channels, channelID)
+		slog.Info("channel removed from registry", "channelId", channelID)
 	}
 }
 
@@ -69,7 +69,7 @@ func (r *ChannelRegistryImpl) DisconnectAll() {
 	r.mu.Lock()
 	for id, ch := range r.channels {
 		ch.Disconnect()
-		slog.Info("disconnected instance", "instanceId", id)
+		slog.Info("disconnected channel", "channelId", id)
 	}
 	r.channels = make(map[uuid.UUID]gateway.Channel)
 	r.mu.Unlock()

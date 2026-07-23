@@ -39,23 +39,23 @@ func NewSendAudioHandler(
 	}
 }
 
-func (h *SendAudioHandler) Name() string { return "SendAudio" }
+func (h *SendAudioHandler) Name() string { return "send_audio" }
 
 func (h *SendAudioHandler) Execute(ctx context.Context, input SendAudioInput) (SendAudioOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendAudioOutput{}, err
 	}
-	if instance == nil {
-		return SendAudioOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendAudioOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendAudioOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendAudioOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendAudioOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendAudioOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	sendContent := gateway.SendAudioContent{MediaURL: input.AudioURL}

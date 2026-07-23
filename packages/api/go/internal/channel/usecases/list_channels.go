@@ -18,7 +18,7 @@ type ListChannelsInput struct {
 
 type ListChannelsItem struct {
 	ID          string               `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	Name        string               `json:"name" example:"my-instance"`
+	Name        string               `json:"name" example:"my-channel"`
 	Platform    sharedenums.Platform `json:"platform" example:"WHATSAPP"`
 	Credentials json.RawMessage      `json:"credentials"`
 	Status      enums.ChannelStatus  `json:"status" example:"CREATED"`
@@ -38,7 +38,7 @@ func NewListChannelsHandler(repo channelrepo.ChannelRepository) *ListChannelsHan
 	return &ListChannelsHandler{repo: repo}
 }
 
-func (h *ListChannelsHandler) Name() string { return "ListChannels" }
+func (h *ListChannelsHandler) Name() string { return "list_channels" }
 
 func (h *ListChannelsHandler) Execute(ctx context.Context, input ListChannelsInput) (ListChannelsOutput, error) {
 	if input.Limit == 0 {

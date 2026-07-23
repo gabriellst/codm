@@ -42,23 +42,23 @@ func NewSendLinkHandler(
 	}
 }
 
-func (h *SendLinkHandler) Name() string { return "SendLink" }
+func (h *SendLinkHandler) Name() string { return "send_link" }
 
 func (h *SendLinkHandler) Execute(ctx context.Context, input SendLinkInput) (SendLinkOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendLinkOutput{}, err
 	}
-	if instance == nil {
-		return SendLinkOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendLinkOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendLinkOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendLinkOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendLinkOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendLinkOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	content := gateway.SendTextContent{

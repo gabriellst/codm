@@ -45,7 +45,7 @@ func NewSendPollHandler(
 	}
 }
 
-func (h *SendPollHandler) Name() string { return "SendPoll" }
+func (h *SendPollHandler) Name() string { return "send_poll" }
 
 func (h *SendPollHandler) Execute(ctx context.Context, input SendPollInput) (SendPollOutput, error) {
 	if len(input.Options) < 2 {
@@ -55,20 +55,20 @@ func (h *SendPollHandler) Execute(ctx context.Context, input SendPollInput) (Sen
 		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeTooManyPollOptions, "poll cannot have more than 12 options")
 	}
 
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendPollOutput{}, err
 	}
-	if instance == nil {
-		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendPollOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	options := make([]gateway.SendPollOption, len(input.Options))

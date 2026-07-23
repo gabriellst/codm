@@ -41,23 +41,23 @@ func NewSendImageHandler(
 	}
 }
 
-func (h *SendImageHandler) Name() string { return "SendImage" }
+func (h *SendImageHandler) Name() string { return "send_image" }
 
 func (h *SendImageHandler) Execute(ctx context.Context, input SendImageInput) (SendImageOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendImageOutput{}, err
 	}
-	if instance == nil {
-		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	sendContent := gateway.SendImageContent{MediaURL: input.MediaURL, Caption: input.Caption, Mentioned: input.Mentioned}

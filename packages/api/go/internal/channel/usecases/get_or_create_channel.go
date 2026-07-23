@@ -40,7 +40,7 @@ func NewGetOrCreateChannelHandler(
 	return &GetOrCreateChannelHandler{repo: repo, uow: uow}
 }
 
-func (h *GetOrCreateChannelHandler) Name() string { return "GetOrCreateChannel" }
+func (h *GetOrCreateChannelHandler) Name() string { return "get_or_create_channel" }
 
 func (h *GetOrCreateChannelHandler) Execute(ctx context.Context, input GetOrCreateChannelInput) (GetOrCreateChannelOutput, error) {
 	existing, err := h.repo.FindByOwnerAndPlatform(ctx, input.OwnerID, string(input.Platform))

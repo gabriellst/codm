@@ -1,4 +1,4 @@
-// Package openapi is the Go OpenAPI 3.1 emitter for the channel backend.
+// Package openapi is the Go OpenAPI emitter for the gateway backend.
 //
 // It reads Go source (controllers, events, enums, @union/@variant annotations)
 // and produces an openapi.json file that drives SDK generation via Kubb.
@@ -89,11 +89,11 @@ func marshalStable(spec *Spec) ([]byte, error) {
 // we use raw maps keyed by strings since the emitter is append-only and we
 // don't rely on key ordering for correctness — `encoding/json` sorts maps.
 type Spec struct {
-	OpenAPI    string            `json:"openapi"`
-	Info       map[string]any    `json:"info"`
-	Paths      map[string]any    `json:"paths"`
-	Components map[string]any    `json:"components"`
-	Tags       []map[string]any  `json:"tags,omitempty"`
+	OpenAPI    string           `json:"openapi"`
+	Info       map[string]any   `json:"info"`
+	Paths      map[string]any   `json:"paths"`
+	Components map[string]any   `json:"components"`
+	Tags       []map[string]any `json:"tags,omitempty"`
 }
 
 func newSpec() *Spec {
@@ -104,8 +104,8 @@ func newSpec() *Spec {
 		// `nullable: true` keyword, never 3.1 `type: "null"` forms (see makeNullable).
 		OpenAPI: "3.0.3",
 		Info: map[string]any{
-			"title":       "Channel API",
-			"description": "Channel service API — emitted by channel/pkg/openapi",
+			"title":       "Gateway API",
+			"description": "Gateway service API — emitted by api-go/pkg/openapi",
 			"version":     "1.0.0",
 		},
 		Paths: map[string]any{},

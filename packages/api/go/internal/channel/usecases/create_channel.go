@@ -19,7 +19,7 @@ type CreateChannelInput struct {
 
 type CreateChannelOutput struct {
 	ID        string               `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	Name      string               `json:"name" example:"my-instance"`
+	Name      string               `json:"name" example:"my-channel"`
 	Platform  sharedenums.Platform `json:"platform" example:"WHATSAPP"`
 	Status    enums.ChannelStatus  `json:"status" example:"CREATED"`
 	CreatedAt string               `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
@@ -37,13 +37,13 @@ func NewCreateChannelHandler(
 	return &CreateChannelHandler{repo: repo, uow: uow}
 }
 
-func (h *CreateChannelHandler) Name() string { return "CreateInstance" }
+func (h *CreateChannelHandler) Name() string { return "create_channel" }
 
 func (h *CreateChannelHandler) Execute(ctx context.Context, input CreateChannelInput) (CreateChannelOutput, error) {
 	// Check name uniqueness
 	existing, _ := h.repo.FindByName(ctx, input.Name)
 	if existing != nil {
-		return CreateChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNameAlreadyExists, "instance name already exists")
+		return CreateChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNameAlreadyExists, "channel name already exists")
 	}
 
 	integration, err := entities.NewChannel(entities.NewChannelParams{

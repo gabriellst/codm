@@ -34,7 +34,7 @@ func NewMarkRemoteAsUnreadHandler(
 	return &MarkRemoteAsUnreadHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *MarkRemoteAsUnreadHandler) Name() string { return "MarkRemoteAsUnread" }
+func (h *MarkRemoteAsUnreadHandler) Name() string { return "mark_remote_as_unread" }
 
 func (h *MarkRemoteAsUnreadHandler) Execute(ctx context.Context, input MarkRemoteAsUnreadInput) (MarkRemoteAsUnreadOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

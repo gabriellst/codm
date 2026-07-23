@@ -1,4 +1,4 @@
-package instance
+package channel
 
 import (
 	"context"
@@ -165,7 +165,7 @@ func (r *PgChannelRepository) FindAll(
 }
 
 // FindAllActive returns every non-deleted channel that has a stored session
-// (owner_remote_id != ''). Used on startup to reconnect live sessions.
+// (owner_remote_id != ”). Used on startup to reconnect live sessions.
 func (r *PgChannelRepository) FindAllActive(ctx context.Context) ([]*entities.Channel, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, owner_id, platform, name, owner_remote_id, credentials,

@@ -34,7 +34,7 @@ func NewArchiveRemoteHandler(
 	return &ArchiveRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *ArchiveRemoteHandler) Name() string { return "ArchiveRemote" }
+func (h *ArchiveRemoteHandler) Name() string { return "archive_remote" }
 
 func (h *ArchiveRemoteHandler) Execute(ctx context.Context, input ArchiveRemoteInput) (ArchiveRemoteOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

@@ -25,7 +25,7 @@ func (h *GatewayPlatformEventHandler) Handle(ctx context.Context, event types.Do
 	if err != nil {
 		return err
 	}
-	integrationEvent := sharedevents.ChannelNewSpecialPlatformEvent(e.OwnerID, e.Payload)
+	integrationEvent := sharedevents.NewChannelSpecialPlatformEvent(e.OwnerID, e.Payload)
 	if err := h.ext.Publish(ctx, integrationEvent); err != nil {
 		slog.Error("failed to publish platform event integration event", "eventType", e.Payload.EventType, "error", err)
 		return err

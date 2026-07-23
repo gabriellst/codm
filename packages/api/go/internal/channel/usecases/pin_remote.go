@@ -40,7 +40,7 @@ func NewPinRemoteHandler(
 	return &PinRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *PinRemoteHandler) Name() string { return "PinRemote" }
+func (h *PinRemoteHandler) Name() string { return "pin_remote" }
 
 func (h *PinRemoteHandler) Execute(ctx context.Context, input PinRemoteInput) (PinRemoteOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

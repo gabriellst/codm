@@ -54,27 +54,27 @@ func NewSendListHandler(
 	}
 }
 
-func (h *SendListHandler) Name() string { return "SendList" }
+func (h *SendListHandler) Name() string { return "send_list" }
 
 func (h *SendListHandler) Execute(ctx context.Context, input SendListInput) (SendListOutput, error) {
 	if len(input.Sections) == 0 {
 		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeEmptySections, "sections list cannot be empty")
 	}
 
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendListOutput{}, err
 	}
-	if instance == nil {
-		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendListOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	sections := make([]gateway.SendListSection, len(input.Sections))

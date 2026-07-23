@@ -37,7 +37,7 @@ func NewMuteRemoteHandler(
 	return &MuteRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *MuteRemoteHandler) Name() string { return "MuteRemote" }
+func (h *MuteRemoteHandler) Name() string { return "mute_remote" }
 
 func (h *MuteRemoteHandler) Execute(ctx context.Context, input MuteRemoteInput) (MuteRemoteOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

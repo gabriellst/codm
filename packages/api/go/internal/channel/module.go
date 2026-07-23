@@ -3,7 +3,6 @@ package channel
 import (
 	"context"
 	"log/slog"
-	"time"
 	"template/api-go/internal/channel/controllers"
 	"template/api-go/internal/channel/handlers"
 	projectors "template/api-go/internal/channel/projections/projectors"
@@ -18,6 +17,7 @@ import (
 	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/internal/shared/types"
+	"time"
 
 	"go.uber.org/fx"
 

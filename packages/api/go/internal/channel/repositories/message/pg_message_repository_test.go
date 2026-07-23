@@ -26,7 +26,7 @@ import (
 )
 
 // newMessageTestDB opens an isolated schema and runs migrations.
-// Skips if DATABASE_URL is not set.
+// Skips if CHANNEL_TEST_DATABASE_URL is not set.
 func newMessageTestDB(t *testing.T) (*sql.DB, func()) {
 	t.Helper()
 

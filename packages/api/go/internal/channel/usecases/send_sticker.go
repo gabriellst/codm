@@ -39,23 +39,23 @@ func NewSendStickerHandler(
 	}
 }
 
-func (h *SendStickerHandler) Name() string { return "SendSticker" }
+func (h *SendStickerHandler) Name() string { return "send_sticker" }
 
 func (h *SendStickerHandler) Execute(ctx context.Context, input SendStickerInput) (SendStickerOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendStickerOutput{}, err
 	}
-	if instance == nil {
-		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	sendContent := gateway.SendStickerContent{MediaURL: input.StickerURL}

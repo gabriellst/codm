@@ -67,7 +67,7 @@ func (f *WhatsmeowChannelFactory) Create(integrationID uuid.UUID, config gateway
 }
 
 // CreateWithJID creates a Channel for an existing session identified by its JID string.
-// This is used when reconnecting an instance that was previously paired.
+// This is used when reconnecting a channel that was previously paired.
 //
 // jidStr should be the full AD-JID (with device suffix) for an exact device lookup.
 // For legacy records where only the normalized JID (without device suffix) was stored,
@@ -98,7 +98,7 @@ func (f *WhatsmeowChannelFactory) CreateWithJID(integrationID uuid.UUID, jidStr 
 	}
 
 	if device == nil {
-		// Device not found in store at all — instance will need re-pairing via QR code.
+		// Device not found in store at all — channel will need re-pairing via QR code.
 		slog.Warn("device not found for JID, creating new device",
 			"channelId", integrationID,
 			"jid", jidStr,

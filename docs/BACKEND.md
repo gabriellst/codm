@@ -566,10 +566,10 @@ bindings.
 
 ## SDK Generation
 
-Both backends emit **OpenAPI 3.1**; the SDK is regenerated from those specs:
+Both backends emit an OpenAPI spec (TS: 3.1, Go: 3.0.3 — the Kubb pipeline validates a 3.0-flavored spec); the SDK is regenerated from those specs:
 
 - **TS api** — `packages/api/typescript/public/docs/openapi.json` (built by the boot path when `EMIT_OPENAPI=true`).
-- **Go worker** — `packages/api/go/public/openapi.json` (via `nx run api-go:emit-openapi`).
+- **Go worker** — `packages/api/go/public/docs/openapi.json` (via `nx run api-go:emit-openapi`, `cmd/openapi`).
 
 Pipeline: `bun sdk` (`nx run client:generate`) depends on both `emit-openapi` targets, then runs
 the generators in `packages/client` (`generators/typescript.ts` + `generators/go.ts`, Kubb-based)

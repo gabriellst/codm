@@ -9,6 +9,6 @@ const ChannelSpecialPlatformEventName = "integration.channel_special_platform_ev
 
 type ChannelSpecialPlatformEvent = types.IntegrationEvent[channelevents.ChannelSpecialPlatformEventPayload]
 
-func ChannelNewSpecialPlatformEvent(ownerID string, payload channelevents.ChannelSpecialPlatformEventPayload) ChannelSpecialPlatformEvent {
+func NewChannelSpecialPlatformEvent(ownerID string, payload channelevents.ChannelSpecialPlatformEventPayload) ChannelSpecialPlatformEvent {
 	return types.NewIntegrationEvent(ChannelSpecialPlatformEventName, ownerID, payload)
 }

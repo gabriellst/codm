@@ -34,7 +34,7 @@ func NewUnarchiveRemoteHandler(
 	return &UnarchiveRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *UnarchiveRemoteHandler) Name() string { return "UnarchiveRemote" }
+func (h *UnarchiveRemoteHandler) Name() string { return "unarchive_remote" }
 
 func (h *UnarchiveRemoteHandler) Execute(ctx context.Context, input UnarchiveRemoteInput) (UnarchiveRemoteOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

@@ -34,7 +34,7 @@ func NewUnpinRemoteHandler(
 	return &UnpinRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *UnpinRemoteHandler) Name() string { return "UnpinRemote" }
+func (h *UnpinRemoteHandler) Name() string { return "unpin_remote" }
 
 func (h *UnpinRemoteHandler) Execute(ctx context.Context, input UnpinRemoteInput) (UnpinRemoteOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

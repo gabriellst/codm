@@ -33,23 +33,23 @@ func NewLogoutChannelHandler(
 	return &LogoutChannelHandler{repo: repo, registry: registry}
 }
 
-func (h *LogoutChannelHandler) Name() string { return "LogoutChannel" }
+func (h *LogoutChannelHandler) Name() string { return "logout_channel" }
 
 func (h *LogoutChannelHandler) Execute(ctx context.Context, input LogoutChannelInput) (LogoutChannelOutput, error) {
-	instance, err := h.repo.Find(ctx, input.ID)
+	channel, err := h.repo.Find(ctx, input.ID)
 	if err != nil {
 		return LogoutChannelOutput{}, err
 	}
-	if instance == nil {
-		return LogoutChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return LogoutChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	instanceUUID, _ := uuid.Parse(input.ID)
+	channelUUID, _ := uuid.Parse(input.ID)
 
 	// Get channel from registry
-	ch, ok := h.registry.Get(instanceUUID)
+	ch, ok := h.registry.Get(channelUUID)
 	if !ok {
-		return LogoutChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotConnected, "instance is not connected")
+		return LogoutChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
 	// Logout from WhatsApp (clears session)
@@ -58,7 +58,7 @@ func (h *LogoutChannelHandler) Execute(ctx context.Context, input LogoutChannelI
 	}
 
 	// Remove from registry
-	h.registry.Remove(instanceUUID)
+	h.registry.Remove(channelUUID)
 
 	return LogoutChannelOutput{
 		ID:    input.ID,

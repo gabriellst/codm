@@ -1,10 +1,10 @@
 package config
 
 import (
-	"template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/errors"
 	"os"
 	"strings"
+	"template/api-go/internal/shared/enums"
+	"template/api-go/internal/shared/errors"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -35,7 +35,7 @@ func Load() (*Config, error) {
 		DatabaseURL:          getEnvOrDefault("DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable"),
 		WhatsmeowDatabaseURL: getEnvOrDefault("WHATSMEOW_DATABASE_URL", "postgres://channel:channel@localhost:5432/channel?sslmode=disable"),
 		RedisURL:             getEnvOrDefault("REDIS_URL", "redis://localhost:6379"),
-		ChannelEventGroupID:  getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "medscall-channel"),
+		ChannelEventGroupID:  getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codedm-gateway"),
 		Environment:          enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
 
 		// Schema-namespace retarget (classification §D.0/§E.1): channel projections

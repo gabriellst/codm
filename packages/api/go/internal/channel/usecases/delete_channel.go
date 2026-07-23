@@ -31,33 +31,33 @@ func NewDeleteChannelHandler(
 	return &DeleteChannelHandler{repo: repo, registry: registry}
 }
 
-func (h *DeleteChannelHandler) Name() string { return "DeleteInstance" }
+func (h *DeleteChannelHandler) Name() string { return "delete_channel" }
 
 func (h *DeleteChannelHandler) Execute(ctx context.Context, input DeleteChannelInput) (DeleteChannelOutput, error) {
-	instance, err := h.repo.Find(ctx, input.ID)
+	channel, err := h.repo.Find(ctx, input.ID)
 	if err != nil {
 		return DeleteChannelOutput{}, err
 	}
-	if instance == nil {
-		return DeleteChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return DeleteChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
 	// Remove from registry (disconnects if connected)
-	instanceUUID, _ := uuid.Parse(input.ID)
-	h.registry.Remove(instanceUUID)
+	channelUUID, _ := uuid.Parse(input.ID)
+	h.registry.Remove(channelUUID)
 
 	// Raise the ChannelDeletedEvent so ChannelDeletedHandler fires via outbox.
 	// Save must happen BEFORE the physical DELETE so the event log is written
 	// while the projection row still exists.
-	instance.AddDomainEvent(ctxevents.NewChannelDeletedEvent(
-		instance.ID.UUID(),
-		instance.OwnerID,
+	channel.AddDomainEvent(ctxevents.NewChannelDeletedEvent(
+		channel.ID.UUID(),
+		channel.OwnerID,
 		ctxevents.ChannelDeletedPayload{
-			ChannelID: instance.ID.UUID(),
-			OwnerID:   instance.OwnerID,
+			ChannelID: channel.ID.UUID(),
+			OwnerID:   channel.OwnerID,
 		},
 	))
-	if err := h.repo.Save(ctx, instance); err != nil {
+	if err := h.repo.Save(ctx, channel); err != nil {
 		return DeleteChannelOutput{}, err
 	}
 

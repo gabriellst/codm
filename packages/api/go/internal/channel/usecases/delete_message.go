@@ -43,23 +43,23 @@ func NewDeleteMessageHandler(
 	}
 }
 
-func (h *DeleteMessageHandler) Name() string { return "DeleteMessage" }
+func (h *DeleteMessageHandler) Name() string { return "delete_message" }
 
 func (h *DeleteMessageHandler) Execute(ctx context.Context, input DeleteMessageInput) (DeleteMessageOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return DeleteMessageOutput{}, err
 	}
-	if instance == nil {
-		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != enums.ChannelStatusConnected {
-		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != enums.ChannelStatusConnected {
+		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	if err := ch.DeleteMessage(ctx, input.RemoteID, input.MessageID); err != nil {
@@ -69,14 +69,14 @@ func (h *DeleteMessageHandler) Execute(ctx context.Context, input DeleteMessageI
 	// Tombstone event — the read model hides any MessageID that has
 	// at least one channel.message_deleted row.
 	evt := channelevents.NewMessageDeletedEvent(
-		instance.ID.UUID(),
-		instance.OwnerID,
+		channel.ID.UUID(),
+		channel.OwnerID,
 		channelevents.ChannelMessageDeletedPayload{
-			ChannelID: instance.ID.UUID(),
+			ChannelID: channel.ID.UUID(),
 			MessageID: input.MessageID,
 			RemoteID:  input.RemoteID,
-			Platform:  instance.Platform,
-			OwnerID:   instance.OwnerID,
+			Platform:  channel.Platform,
+			OwnerID:   channel.OwnerID,
 		},
 	)
 	if err := h.uow.Execute(ctx, func(txCtx context.Context) error {

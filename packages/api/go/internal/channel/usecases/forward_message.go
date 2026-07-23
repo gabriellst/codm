@@ -40,23 +40,23 @@ func NewForwardMessageHandler(
 	}
 }
 
-func (h *ForwardMessageHandler) Name() string { return "ForwardMessage" }
+func (h *ForwardMessageHandler) Name() string { return "forward_message" }
 
 func (h *ForwardMessageHandler) Execute(ctx context.Context, input ForwardMessageInput) (ForwardMessageOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return ForwardMessageOutput{}, err
 	}
-	if instance == nil {
-		return ForwardMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return ForwardMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return ForwardMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return ForwardMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return ForwardMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return ForwardMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	content := gateway.SendForwardContent{RemoteID: input.SourceRemoteID, MessageID: input.MessageID}

@@ -8,7 +8,7 @@ import (
 	"template/api-go/pkg/httputil"
 )
 
-type ListInstancesRequest struct {
+type ListChannelsRequest struct {
 	Limit    int    `from:"query" name:"limit" validate:"omitempty,min=1,max=100"`
 	Offset   int    `from:"query" name:"offset" validate:"omitempty,min=0"`
 	OwnerID  string `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
@@ -30,7 +30,7 @@ func (c *ListChannelsController) Metadata() types.ControllerMetadata {
 		Description: "List channels",
 		Tags:        []string{"Channel"},
 	
-		Request:     ListInstancesRequest{},
+		Request:     ListChannelsRequest{},
 		Response:    usecases.ListChannelsOutput{},
 		Status:      http.StatusOK,
 	}
@@ -38,7 +38,7 @@ func (c *ListChannelsController) Metadata() types.ControllerMetadata {
 
 // Owner ID is resolved from session cookie automatically
 func (c *ListChannelsController) Handle(w http.ResponseWriter, r *http.Request) {
-	req, err := httputil.DecodeRequest[ListInstancesRequest](r)
+	req, err := httputil.DecodeRequest[ListChannelsRequest](r)
 	if err != nil {
 		httputil.RespondError(w, err)
 		return

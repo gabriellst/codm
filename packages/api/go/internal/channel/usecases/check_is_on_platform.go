@@ -40,27 +40,27 @@ func NewCheckIsOnPlatformHandler(
 	}
 }
 
-func (h *CheckIsOnPlatformHandler) Name() string { return "CheckIsOnPlatform" }
+func (h *CheckIsOnPlatformHandler) Name() string { return "check_is_on_platform" }
 
 func (h *CheckIsOnPlatformHandler) Execute(ctx context.Context, input CheckIsOnPlatformInput) (CheckIsOnPlatformOutput, error) {
 	if len(input.Identifiers) == 0 {
 		return CheckIsOnPlatformOutput{}, errors.NewBaseError(msgerrors.CodeEmptyNumberList, "identifiers list cannot be empty")
 	}
 
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return CheckIsOnPlatformOutput{}, err
 	}
-	if instance == nil {
-		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != enums.ChannelStatusConnected {
-		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != enums.ChannelStatusConnected {
+		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	validations, err := ch.CheckIsOnPlatform(ctx, input.Identifiers)

@@ -47,27 +47,27 @@ func NewSendButtonHandler(
 	}
 }
 
-func (h *SendButtonHandler) Name() string { return "SendButton" }
+func (h *SendButtonHandler) Name() string { return "send_button" }
 
 func (h *SendButtonHandler) Execute(ctx context.Context, input SendButtonInput) (SendButtonOutput, error) {
 	if len(input.Buttons) > 3 {
 		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeTooManyButtons, "buttons cannot exceed 3 items")
 	}
 
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendButtonOutput{}, err
 	}
-	if instance == nil {
-		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendButtonOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	buttons := make([]gateway.SendButtonItem, len(input.Buttons))

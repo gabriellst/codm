@@ -34,23 +34,23 @@ func NewSendChatPresenceHandler(
 	}
 }
 
-func (h *SendChatPresenceHandler) Name() string { return "SendChatPresence" }
+func (h *SendChatPresenceHandler) Name() string { return "send_chat_presence" }
 
 func (h *SendChatPresenceHandler) Execute(ctx context.Context, input SendChatPresenceInput) (SendChatPresenceOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendChatPresenceOutput{}, err
 	}
-	if instance == nil {
-		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	err = ch.SendChatPresence(ctx, input.RemoteID, input.Presence)

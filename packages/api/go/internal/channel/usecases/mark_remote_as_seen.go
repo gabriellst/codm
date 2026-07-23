@@ -39,7 +39,7 @@ func NewMarkRemoteAsSeenHandler(
 	return &MarkRemoteAsSeenHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
 }
 
-func (h *MarkRemoteAsSeenHandler) Name() string { return "MarkRemoteAsSeen" }
+func (h *MarkRemoteAsSeenHandler) Name() string { return "mark_remote_as_seen" }
 
 func (h *MarkRemoteAsSeenHandler) Execute(ctx context.Context, input MarkRemoteAsSeenInput) (MarkRemoteAsSeenOutput, error) {
 	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)

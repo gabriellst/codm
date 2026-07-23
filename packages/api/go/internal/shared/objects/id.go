@@ -37,14 +37,13 @@ func IDFromString(s string) (ID, error) {
 
 func (id ID) UUID() uuid.UUID { return id.value }
 
-
 func (id ID) Value() string { return id.value.String() }
 
-func (id ID) String() string       { return id.value.String() }
+func (id ID) String() string { return id.value.String() }
 
 func (id ID) Equals(other ID) bool { return id.value == other.value }
 
-func (id ID) IsZero() bool         { return id.value == uuid.Nil }
+func (id ID) IsZero() bool { return id.value == uuid.Nil }
 
 // Bytes returns the raw 16 bytes of the underlying UUID.
 

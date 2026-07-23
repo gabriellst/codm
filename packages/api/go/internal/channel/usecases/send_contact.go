@@ -46,27 +46,27 @@ func NewSendContactHandler(
 	}
 }
 
-func (h *SendContactHandler) Name() string { return "SendContact" }
+func (h *SendContactHandler) Name() string { return "send_contact" }
 
 func (h *SendContactHandler) Execute(ctx context.Context, input SendContactInput) (SendContactOutput, error) {
 	if len(input.Contacts) == 0 {
 		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeEmptyContactList, "contacts list cannot be empty")
 	}
 
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return SendContactOutput{}, err
 	}
-	if instance == nil {
-		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != msgenums.ChannelStatusConnected {
-		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return SendContactOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	contacts := make([]gateway.SendContactInfo, len(input.Contacts))

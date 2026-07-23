@@ -27,7 +27,7 @@ const (
 
 // OutboxSource discriminates rows produced by this service inside the shared
 // outbox table. Each service polls only its own slice.
-const OutboxSource = "channel"
+const OutboxSource = "gateway"
 
 // outboxRow holds a single claimed outbox row plus its decoded event data.
 type outboxRow struct {

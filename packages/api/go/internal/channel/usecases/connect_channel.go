@@ -37,22 +37,22 @@ func NewConnectChannelHandler(
 	return &ConnectChannelHandler{repo: repo, registry: registry}
 }
 
-func (h *ConnectChannelHandler) Name() string { return "ConnectInstance" }
+func (h *ConnectChannelHandler) Name() string { return "connect_channel" }
 
 func (h *ConnectChannelHandler) Execute(ctx context.Context, input ConnectChannelInput) (ConnectChannelOutput, error) {
-	instance, err := h.repo.Find(ctx, input.ID)
+	channel, err := h.repo.Find(ctx, input.ID)
 	if err != nil {
 		return ConnectChannelOutput{}, err
 	}
-	if instance == nil {
-		return ConnectChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return ConnectChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	instanceUUID, _ := uuid.Parse(input.ID)
+	channelUUID, _ := uuid.Parse(input.ID)
 
-	ch, err := h.registry.Register(ctx, instanceUUID, gateway.ChannelConfig{
-		OwnerID:       instance.OwnerID,
-		OwnerRemoteID: instance.OwnerRemoteID,
+	ch, err := h.registry.Register(ctx, channelUUID, gateway.ChannelConfig{
+		OwnerID:       channel.OwnerID,
+		OwnerRemoteID: channel.OwnerRemoteID,
 	})
 	if err != nil {
 		return ConnectChannelOutput{}, err
@@ -73,7 +73,7 @@ func (h *ConnectChannelHandler) Execute(ctx context.Context, input ConnectChanne
 		if connectErr := ch.Connect(ctx); connectErr != nil {
 			return ConnectChannelOutput{}, connectErr
 		}
-		h.persistConnecting(ctx, instance)
+		h.persistConnecting(ctx, channel)
 		return ConnectChannelOutput{ID: input.ID, State: string(enums.ChannelStatusConnecting)}, nil
 	}
 
@@ -87,15 +87,15 @@ func (h *ConnectChannelHandler) Execute(ctx context.Context, input ConnectChanne
 		return ConnectChannelOutput{}, ctx.Err()
 	}
 
-	h.persistConnecting(ctx, instance)
+	h.persistConnecting(ctx, channel)
 	return ConnectChannelOutput{ID: input.ID, State: string(enums.ChannelStatusConnecting), QRCode: qrCode}, nil
 }
 
 // persistConnecting marks the entity as CONNECTING and upserts it. Errors are
 // non-fatal — the gateway is already connecting regardless of projection state.
-func (h *ConnectChannelHandler) persistConnecting(ctx context.Context, instance *entities.Channel) {
-	instance.SetConnecting()
-	if err := h.repo.Save(ctx, instance); err != nil {
-		slog.Warn("failed to persist CONNECTING status", "channelId", instance.ID.String(), "error", err)
+func (h *ConnectChannelHandler) persistConnecting(ctx context.Context, channel *entities.Channel) {
+	channel.SetConnecting()
+	if err := h.repo.Save(ctx, channel); err != nil {
+		slog.Warn("failed to persist CONNECTING status", "channelId", channel.ID.String(), "error", err)
 	}
 }

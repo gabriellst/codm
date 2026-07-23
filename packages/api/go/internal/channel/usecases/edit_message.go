@@ -35,23 +35,23 @@ func NewEditMessageHandler(
 	}
 }
 
-func (h *EditMessageHandler) Name() string { return "EditMessage" }
+func (h *EditMessageHandler) Name() string { return "edit_message" }
 
 func (h *EditMessageHandler) Execute(ctx context.Context, input EditMessageInput) (EditMessageOutput, error) {
-	instance, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
 	if err != nil {
 		return EditMessageOutput{}, err
 	}
-	if instance == nil {
-		return EditMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return EditMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	if instance.Status != enums.ChannelStatusConnected {
-		return EditMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance is not connected")
+	if channel.Status != enums.ChannelStatusConnected {
+		return EditMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(instance.ID.UUID())
+	ch, ok := h.registry.Get(channel.ID.UUID())
 	if !ok {
-		return EditMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "instance channel not available")
+		return EditMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}
 
 	err = ch.EditMessage(ctx, input.RemoteID, input.MessageID, input.Text)

@@ -18,7 +18,7 @@ type GetChannelInput struct {
 
 type GetChannelOutput struct {
 	ID            string               `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	Name          string               `json:"name" example:"my-instance"`
+	Name          string               `json:"name" example:"my-channel"`
 	Platform      sharedenums.Platform `json:"platform" example:"WHATSAPP"`
 	OwnerRemoteID string               `json:"ownerRemoteId" example:""`
 	Credentials   json.RawMessage      `json:"credentials"`
@@ -34,24 +34,24 @@ func NewGetChannelHandler(repo channelrepo.ChannelRepository) *GetChannelHandler
 	return &GetChannelHandler{repo: repo}
 }
 
-func (h *GetChannelHandler) Name() string { return "GetInstance" }
+func (h *GetChannelHandler) Name() string { return "get_channel" }
 
 func (h *GetChannelHandler) Execute(ctx context.Context, input GetChannelInput) (GetChannelOutput, error) {
-	instance, err := h.repo.Find(ctx, input.ID)
+	channel, err := h.repo.Find(ctx, input.ID)
 	if err != nil {
 		return GetChannelOutput{}, err
 	}
-	if instance == nil {
-		return GetChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "instance not found")
+	if channel == nil {
+		return GetChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
 	return GetChannelOutput{
-		ID:            instance.ID.String(),
-		Name:          instance.Name,
-		Platform:      instance.Platform,
-		OwnerRemoteID: instance.OwnerRemoteID,
-		Credentials:   instance.Credentials,
-		Status:        instance.Status,
-		CreatedAt:     instance.CreatedAt.UTC().Format(time.RFC3339),
+		ID:            channel.ID.String(),
+		Name:          channel.Name,
+		Platform:      channel.Platform,
+		OwnerRemoteID: channel.OwnerRemoteID,
+		Credentials:   channel.Credentials,
+		Status:        channel.Status,
+		CreatedAt:     channel.CreatedAt.UTC().Format(time.RFC3339),
 	}, nil
 }
