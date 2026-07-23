@@ -32,7 +32,15 @@ func Session(db *sql.DB) func(next http.Handler) http.Handler {
 				token = token[:idx]
 			}
 
-			slog.Debug("session middleware", "token", token, "raw", rawToken)
+			// NOTE(template-parity debt): the template Dels X-Owner-Id here as a
+			// spoof guard and re-sets it from the session lookup. codedm cannot
+			// do that yet — identity arrives via the api-ts pairing proxy
+			// (external/utils/forwardToChannel stamps X-Owner-Id server-side,
+			// overwriting any client value) and this cookie lookup queries a
+			// table/column that doesn't exist in the contracts schema
+			// (authentication.session/owner_id vs sessions/active_owner_id), so
+			// a Del would leave every proxied request anonymous. Direct :3032
+			// access is CORS-gated + single-operator. Revisit in tenancy phase.
 
 			var ownerId sql.NullString
 			err = db.QueryRowContext(r.Context(),
@@ -41,7 +49,8 @@ func Session(db *sql.DB) func(next http.Handler) http.Handler {
 			).Scan(&ownerId)
 
 			if err != nil {
-				slog.Debug("session middleware: DB query failed", "error", err, "token", token)
+				// Never log the session token — it is a bearer credential.
+				slog.Debug("session middleware: DB query failed", "error", err)
 			}
 
 			if ownerId.Valid && ownerId.String != "" {

@@ -67,7 +67,9 @@ func (h *ChannelLoggedOutHandler) Handle(ctx context.Context, event types.Domain
 
 	// Publish integration event AFTER transaction commits
 	if inst != nil {
-		h.externalMediator.Publish(ctx, sharedevents.NewChannelLoggedOutEvent(inst.OwnerID, e.Payload))
+		if err := h.externalMediator.Publish(ctx, sharedevents.NewChannelLoggedOutEvent(inst.OwnerID, e.Payload)); err != nil {
+			slog.Error("failed to publish channel logged out integration event", "channelId", e.Payload.ChannelID, "error", err)
+		}
 	}
 
 	return nil

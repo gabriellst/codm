@@ -47,7 +47,10 @@ func (h *RestartChannelHandler) Execute(ctx context.Context, input RestartChanne
 		return RestartChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	channelUUID, _ := uuid.Parse(input.ID)
+	channelUUID, err := uuid.Parse(input.ID)
+	if err != nil {
+		return RestartChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
+	}
 
 	// Remove existing connection
 	h.registry.Remove(channelUUID)

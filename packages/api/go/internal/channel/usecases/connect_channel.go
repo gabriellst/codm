@@ -48,7 +48,10 @@ func (h *ConnectChannelHandler) Execute(ctx context.Context, input ConnectChanne
 		return ConnectChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	channelUUID, _ := uuid.Parse(input.ID)
+	channelUUID, err := uuid.Parse(input.ID)
+	if err != nil {
+		return ConnectChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
+	}
 
 	ch, err := h.registry.Register(ctx, channelUUID, gateway.ChannelConfig{
 		OwnerID:       channel.OwnerID,

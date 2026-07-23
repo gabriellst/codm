@@ -42,7 +42,10 @@ func (h *SetPresenceHandler) Execute(ctx context.Context, input SetPresenceInput
 		return SetPresenceOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	channelUUID, _ := uuid.Parse(input.ID)
+	channelUUID, err := uuid.Parse(input.ID)
+	if err != nil {
+		return SetPresenceOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
+	}
 
 	ch, ok := h.registry.Get(channelUUID)
 	if !ok || ch.Status() != gateway.ConnectionStatusConnected {

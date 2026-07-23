@@ -41,7 +41,10 @@ func (h *CreateChannelHandler) Name() string { return "create_channel" }
 
 func (h *CreateChannelHandler) Execute(ctx context.Context, input CreateChannelInput) (CreateChannelOutput, error) {
 	// Check name uniqueness
-	existing, _ := h.repo.FindByName(ctx, input.Name)
+	existing, err := h.repo.FindByName(ctx, input.Name)
+	if err != nil {
+		return CreateChannelOutput{}, err
+	}
 	if existing != nil {
 		return CreateChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNameAlreadyExists, "channel name already exists")
 	}

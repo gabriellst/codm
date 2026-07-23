@@ -16,6 +16,7 @@ import (
 	sharedevents "template/api-go/internal/shared/events"
 	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/types"
+	"template/api-go/pkg/httputil"
 )
 
 // sseEventWhitelist defines which domain events are forwarded directly to SSE clients.
@@ -165,7 +166,7 @@ func (c *ListenEventsController) Handle(w http.ResponseWriter, r *http.Request) 
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		httputil.RespondError(w, fmt.Errorf("streaming not supported"))
 		return
 	}
 

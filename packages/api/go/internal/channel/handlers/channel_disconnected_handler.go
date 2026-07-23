@@ -67,7 +67,9 @@ func (h *ChannelDisconnectedHandler) Handle(ctx context.Context, event types.Dom
 
 	// Publish integration event AFTER transaction commits
 	if inst != nil {
-		h.externalMediator.Publish(ctx, sharedevents.NewChannelDisconnectedEvent(inst.OwnerID, e.Payload))
+		if err := h.externalMediator.Publish(ctx, sharedevents.NewChannelDisconnectedEvent(inst.OwnerID, e.Payload)); err != nil {
+			slog.Error("failed to publish channel disconnected integration event", "channelId", e.Payload.ChannelID, "error", err)
+		}
 	}
 
 	return nil

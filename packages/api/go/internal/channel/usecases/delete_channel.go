@@ -43,7 +43,10 @@ func (h *DeleteChannelHandler) Execute(ctx context.Context, input DeleteChannelI
 	}
 
 	// Remove from registry (disconnects if connected)
-	channelUUID, _ := uuid.Parse(input.ID)
+	channelUUID, err := uuid.Parse(input.ID)
+	if err != nil {
+		return DeleteChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
+	}
 	h.registry.Remove(channelUUID)
 
 	// Raise the ChannelDeletedEvent so ChannelDeletedHandler fires via outbox.

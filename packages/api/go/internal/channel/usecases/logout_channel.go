@@ -44,7 +44,10 @@ func (h *LogoutChannelHandler) Execute(ctx context.Context, input LogoutChannelI
 		return LogoutChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	channelUUID, _ := uuid.Parse(input.ID)
+	channelUUID, err := uuid.Parse(input.ID)
+	if err != nil {
+		return LogoutChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
+	}
 
 	// Get channel from registry
 	ch, ok := h.registry.Get(channelUUID)
