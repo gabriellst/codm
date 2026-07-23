@@ -31,6 +31,7 @@ import ThreadRouter from '@thread/index'
 import IssueRouter from '@issue/index'
 import ArtifactRouter from '@artifact/index'
 import UiRouter from '@ui/index'
+import ExternalRouter from '@external/index'
 
 const ROUTERS = {
 	shared: SharedRouter,
@@ -42,6 +43,7 @@ const ROUTERS = {
 	issue: IssueRouter,
 	artifact: ArtifactRouter,
 	ui: UiRouter,
+	external: ExternalRouter,
 } satisfies Record<ContextModule, Router>
 
 /**

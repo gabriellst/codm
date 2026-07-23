@@ -82,6 +82,7 @@ import { INSTANCE_REGISTRY as threadRegistry } from '@thread/registry'
 import { INSTANCE_REGISTRY as issueRegistry } from '@issue/registry'
 import { INSTANCE_REGISTRY as artifactRegistry } from '@artifact/registry'
 import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
+import { INSTANCE_REGISTRY as externalRegistry } from '@external/registry'
 
 // Lazy singleton resolver for the `real` LoggingService binding below — see LoggingBinding.ts for why
 // this can't be a plain `{ instance: OtlpLoggingService }` binding (constructor args come from Config,
@@ -215,6 +216,7 @@ const CONTEXT_REGISTRIES = {
 	issue: issueRegistry,
 	artifact: artifactRegistry,
 	ui: uiRegistry,
+	external: externalRegistry,
 } satisfies Record<ContextModule, InstanceRegistry>
 
 // Mechanical merge — shared (core) first so context bindings may override kernel defaults.

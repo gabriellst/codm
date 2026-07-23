@@ -35,6 +35,9 @@ export const CONTEXTS = {
 	// BC6 Artifact Registry (Support, TS-owned) — the `artifact` schema, promoted out of PENDING_PGSCHEMAS.
 	artifact: { pgSchema: 'artifact' },
 	ui: { pgSchema: null },
+	// external (reverse proxy) — the browser-facing door to the Go channel gateway (medscall
+	// pattern): ONE wildcard ChannelProxy controller, no domain, no tables. pgSchema null like ui.
+	external: { pgSchema: null },
 } as const satisfies Record<string, ContextDecl>
 
 /** Contract of one bounded-context declaration. `pgSchema` names the Postgres schema this context
