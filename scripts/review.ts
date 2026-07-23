@@ -87,7 +87,7 @@ const PROJECT_ROOT = process.env.REVIEW_PROJECT_ROOT || resolve(SCRIPT_DIR, '..'
 // them, so a bare 'api/src' / 'app/src' would silently match nothing and
 // leave every support file un-inlined (the dead-inlining bug this layout fixes).
 const BACKEND_TS_ROOT = REPO.workspaceRoots.apiTs
-const APP_SRC_ROOTS = [REPO.workspaceRoots.appReact, `${REPO.packageRoots.appExpo}/src`, REPO.workspaceRoots.appAstro]
+const APP_SRC_ROOTS = [REPO.workspaceRoots.appReact, REPO.workspaceRoots.appAstro]
 
 // ─── Types ──────────────────────────────────────────────────────────
 
