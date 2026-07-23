@@ -54,8 +54,20 @@ describe('emitTsEnums', () => {
 	})
 })
 
+// Envelope names — mirrors what tryParseEvent derives: `ownFields` is the model's own
+// declarations (payload source), `fields` the envelope+own merge. Tests declare `fields`
+// and derive ownFields unless a case exercises redeclared envelope fields explicitly.
+const ENVELOPE_NAMES = new Set(['name', 'entityId', 'ownerId', 'occurredAt'])
+function withDerived(ev: Omit<ParsedEvent, 'ownFields' | 'unionSlots'> & Partial<ParsedEvent>): ParsedEvent {
+	return {
+		...ev,
+		ownFields: ev.ownFields ?? ev.fields.filter(f => !ENVELOPE_NAMES.has(f.name) || f.name === 'name'),
+		unionSlots: ev.unionSlots ?? [],
+	}
+}
+
 describe('emitTsEvents', () => {
-	const sample: ParsedEvent = {
+	const sample: ParsedEvent = withDerived({
 		modelName: 'VideoUploadedEvent',
 		wireName: 'integration.video.uploaded',
 		doc: 'Triggers transcoding.',
@@ -69,7 +81,7 @@ describe('emitTsEvents', () => {
 			{ name: 'optional', type: { kind: 'string' }, required: false },
 			{ name: 'status', type: { kind: 'enum-ref', ref: 'VideoStatus' }, required: true },
 		],
-	}
+	})
 
 	test('emits schema using z.integrationEvent with payload-only fields', () => {
 		const out = emitTsEvents([sample])
@@ -97,22 +109,23 @@ describe('emitTsEvents', () => {
 	test('throws (teaching, naming the event) when a wire name lacks the "integration." prefix', () => {
 		// The outbox routes internal-vs-external by `name.startsWith('integration.')` — an unprefixed
 		// wire name would be delivered in-process and never reach the other backend.
-		const bad: ParsedEvent = {
+		const bad: ParsedEvent = withDerived({
 			...sample,
 			wireName: 'video.uploaded',
 			fields: sample.fields.map(f => (f.name === 'name' ? { ...f, type: { kind: 'literal' as const, value: 'video.uploaded' } } : f)),
-		}
+		})
 		expect(() => emitTsEvents([bad])).toThrow(/VideoUploadedEvent.*"video\.uploaded".*must start with "integration\."/)
 	})
 
 	test('an array field emits z.array of the element schema', () => {
-		const ev = {
+		const ev = withDerived({
 			...sample,
+			ownFields: undefined,
 			fields: [
 				...sample.fields,
 				{ name: 'affectedMonitorIds', type: { kind: 'array' as const, items: { kind: 'string' as const } }, required: true },
 			],
-		}
+		})
 		const f = emitTsEvents([ev])['video-uploaded.ts']!
 		expect(f).toContain('affectedMonitorIds: z.array(z.string()),')
 	})
@@ -120,23 +133,25 @@ describe('emitTsEvents', () => {
 	test('an array-of-enum field imports the element enum (recursion into array items)', () => {
 		// Regression: a top-level-only import filter would emit z.array(z.enum(ProviderKind))
 		// without importing ProviderKind. The collector descends into array element types.
-		const ev = {
+		const ev = withDerived({
 			...sample,
+			ownFields: undefined,
 			fields: [
 				...sample.fields,
 				{ name: 'providers', type: { kind: 'array' as const, items: { kind: 'enum-ref' as const, ref: 'ProviderKind' } }, required: true },
 			],
-		}
+		})
 		const f = emitTsEvents([ev])['video-uploaded.ts']!
 		expect(f).toContain('providers: z.array(z.enum(ProviderKind)),')
 		expect(f).toContain(`import { ProviderKind, VideoStatus } from '../enums'`)
 	})
 
 	test('a union-ref field uses <Name>Schema imported from ../unions', () => {
-		const ev = {
+		const ev = withDerived({
 			...sample,
+			ownFields: undefined,
 			fields: [...sample.fields, { name: 'platform', type: { kind: 'union-ref' as const, ref: 'Platform' }, required: true }],
-		}
+		})
 		const f = emitTsEvents([ev])['video-uploaded.ts']!
 		expect(f).toContain('platform: PlatformSchema,')
 		expect(f).toContain(`import { PlatformSchema } from '../unions'`)
@@ -153,5 +168,61 @@ describe('emitTsUnions', () => {
 		expect(f).toContain(`import { SalesPlatform, MarketingPlatform } from '../enums'`)
 		expect(f).toContain('export const PlatformSchema = z.union([z.enum(SalesPlatform), z.enum(MarketingPlatform)])')
 		expect(out['index.ts']).toContain("export * from './platform'")
+	})
+})
+
+describe('emitTsEvents — union-slot manifest + verbatim payload', () => {
+	const slotted: ParsedEvent = withDerived({
+		modelName: 'ChannelMessageReceivedEvent',
+		wireName: 'integration.channel_message.received',
+		fields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.received' }, required: true },
+			{ name: 'entityId', type: { kind: 'string' }, required: true },
+			{ name: 'ownerId', type: { kind: 'string' }, required: true },
+			{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
+			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+			{ name: 'content', type: { kind: 'unknown' }, required: false },
+			{ name: 'platform', type: { kind: 'string' }, required: true },
+		],
+		ownFields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.received' }, required: true },
+			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+			{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
+			{ name: 'content', type: { kind: 'unknown' }, required: false },
+			{ name: 'platform', type: { kind: 'string' }, required: true },
+			{ name: 'ownerId', type: { kind: 'string' }, required: true },
+		],
+		unionSlots: [
+			{
+				field: 'content',
+				discriminators: ['platform', 'messageType'],
+				variants: [
+					{ values: ['WHATSAPP', 'TEXT'], typeName: 'WhatsAppTextContent', owner: 'apiGo' },
+					{ values: ['INTERNAL', 'TEXT'], typeName: 'InternalTextContent', owner: 'apiGo' },
+				],
+			},
+		],
+	})
+
+	test('exports a union MANIFEST (slot → discriminators → [{values, typeName, owner}])', () => {
+		const f = emitTsEvents([slotted])['channel-message-received.ts']!
+		expect(f).toContain('export const ChannelMessageReceivedUnions = {')
+		expect(f).toContain("discriminators: ['platform', 'messageType'],")
+		expect(f).toContain("{ values: ['WHATSAPP', 'TEXT'], typeName: 'WhatsAppTextContent', owner: 'apiGo' },")
+		expect(f).toContain("{ values: ['INTERNAL', 'TEXT'], typeName: 'InternalTextContent', owner: 'apiGo' },")
+		expect(f).toContain('} as const')
+	})
+
+	test('payload keeps redeclared envelope fields + opaque slot as z.unknown() + uuid as z.uuid()', () => {
+		const f = emitTsEvents([slotted])['channel-message-received.ts']!
+		expect(f).toContain('ownerId: z.string(),')
+		expect(f).toContain('occurredAt: z.date(),')
+		expect(f).toContain('content: z.unknown().optional(),')
+		expect(f).toContain('channelId: z.uuid(),')
+	})
+
+	test('an event without union slots exports no manifest', () => {
+		const f = emitTsEvents([withDerived({ ...slotted, unionSlots: [] })])['channel-message-received.ts']!
+		expect(f).not.toContain('Unions')
 	})
 })

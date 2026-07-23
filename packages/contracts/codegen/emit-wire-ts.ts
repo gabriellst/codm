@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
 import { parseContractsOpenapi, type ParsedEnum, type ParsedUnion, type ParsedEvent, type FieldType } from './lib/parse-openapi'
 import { assertIntegrationWireNames } from './lib/assert-wire-names'
+import { assertUnionSlotOwners } from './lib/union-slots'
 import { REPO } from '../../../template.config'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -72,8 +73,6 @@ export function emitTsUnions(unions: ParsedUnion[]): Record<string, string> {
 	return files
 }
 
-const ENVELOPE_FIELDS = new Set(['name', 'entityId', 'ownerId', 'occurredAt'])
-
 // Enum/union refs can be nested inside array items (e.g. `providers: ProviderKind[]`), so the
 // import collector must descend into `array` element types — a top-level-only filter would emit
 // `z.array(z.enum(ProviderKind))` without importing ProviderKind. Mirrors zodExpr's recursion.
@@ -93,6 +92,8 @@ function zodExpr(t: FieldType): string {
 	switch (t.kind) {
 		case 'string':
 			return 'z.string()'
+		case 'uuid':
+			return 'z.uuid()'
 		case 'literal':
 			return `z.literal('${t.value}')`
 		case 'string-enum':
@@ -118,12 +119,40 @@ function zodExpr(t: FieldType): string {
 	}
 }
 
+/**
+ * Union-slot MANIFEST export (union-slots spec §2.2) — slot → discriminators →
+ * [{values, typeName, owner}]. Consumed by the union-parity rail and by surface
+ * composition; the variant SHAPES themselves live with the owner workspace and reach
+ * consumers ONLY through the owner's generated client schemas.
+ */
+function unionManifestSource(ev: ParsedEvent): string {
+	const name = `${ev.modelName.replace(/Event$/, '')}Unions`
+	const lines: string[] = []
+	lines.push('/** Union-slot manifest — the variant shapes live with the owner workspace (see union-slots spec). */')
+	lines.push(`export const ${name} = {`)
+	for (const slot of ev.unionSlots) {
+		lines.push(`\t${slot.field}: {`)
+		lines.push(`\t\tdiscriminators: [${slot.discriminators.map(d => `'${d}'`).join(', ')}],`)
+		lines.push('\t\tvariants: [')
+		for (const v of slot.variants) {
+			lines.push(`\t\t\t{ values: [${v.values.map(x => `'${x}'`).join(', ')}], typeName: '${v.typeName}', owner: '${v.owner}' },`)
+		}
+		lines.push('\t\t],')
+		lines.push('\t},')
+	}
+	lines.push('} as const')
+	return lines.join('\n')
+}
+
 export function emitTsEvents(events: ParsedEvent[]): Record<string, string> {
 	assertIntegrationWireNames(events)
 	const files: Record<string, string> = {}
 
 	for (const ev of events) {
-		const payloadFields = ev.fields.filter(f => !ENVELOPE_FIELDS.has(f.name))
+		// Payload = the model's OWN declarations (declaration order), minus the wire
+		// discriminator + entity id. Envelope fields a model explicitly REDECLARES
+		// (verbatim payloads carrying ownerId/occurredAt inside the payload) stay in.
+		const payloadFields = ev.ownFields.filter(f => f.name !== 'name' && f.name !== 'entityId')
 
 		const enumRefs = payloadFields.flatMap(f => collectEnumRefs(f.type))
 		const enumImports = [...new Set(enumRefs)].sort()
@@ -152,7 +181,8 @@ export function emitTsEvents(events: ParsedEvent[]): Record<string, string> {
 			`export class ${ev.modelName} extends BaseIntegrationEvent<typeof ${ev.modelName}Schema> {\n` +
 			`\tstatic override readonly name = '${ev.wireName}' as const\n` +
 			`\tstatic readonly schema = ${ev.modelName}Schema\n` +
-			`}\n`
+			`}\n` +
+			(ev.unionSlots.length > 0 ? `\n${unionManifestSource(ev)}\n` : '')
 
 		files[`${kebab(ev.modelName.replace(/Event$/, ''))}.ts`] = body
 	}
@@ -183,8 +213,10 @@ export function emitTsBarrel(events: ParsedEvent[]): string {
 async function run() {
 	const yamlText = await readFile(INPUT, 'utf-8')
 	const parsed = parseContractsOpenapi(yamlText)
-	// Hard gate BEFORE any rm/write — a bad contract must not wipe the committed bindings.
+	// Hard gates BEFORE any rm/write — a bad contract must not wipe the committed bindings.
 	assertIntegrationWireNames(parsed.events)
+	// Unknown @variant owner = contract compilation error (validated against the WORKSPACES manifest).
+	assertUnionSlotOwners(parsed.events, Object.keys(REPO.workspaces))
 
 	const enumDir = join(OUTPUT, 'enums')
 	const unionDir = join(OUTPUT, 'unions')

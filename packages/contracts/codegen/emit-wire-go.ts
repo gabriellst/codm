@@ -1,8 +1,17 @@
 import { mkdir, writeFile, rm, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseContractsOpenapi, type ParsedEnum, type ParsedUnion, type ParsedEvent, type FieldType } from './lib/parse-openapi'
+import {
+	parseContractsOpenapi,
+	type ParsedEnum,
+	type ParsedUnion,
+	type ParsedEvent,
+	type FieldType,
+	type EventField,
+} from './lib/parse-openapi'
 import { assertIntegrationWireNames } from './lib/assert-wire-names'
+import { assertUnionSlotOwners } from './lib/union-slots'
+import { REPO } from '../../../template.config'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -20,6 +29,8 @@ function goType(t: FieldType): string {
 	switch (t.kind) {
 		case 'string':
 			return 'string'
+		case 'uuid':
+			return 'uuid.UUID'
 		case 'literal':
 			return 'string'
 		case 'string-enum':
@@ -112,17 +123,46 @@ export function emitGoUnions(unions: ParsedUnion[]): string {
 
 const ENVELOPE_FIELDS = new Set(['name', 'entityId', 'ownerId', 'occurredAt'])
 
+/** Fields that make up an event's payload struct: the model's OWN declarations minus the discriminator + entity id. */
+function payloadFieldsOf(ev: ParsedEvent): EventField[] {
+	return ev.ownFields.filter(f => f.name !== 'name' && f.name !== 'entityId')
+}
+
+/**
+ * `// @union` / `// @variant` annotation block for a payload struct — syntax identical to the
+ * hand-written medscall style (internal/channel/events/message_received.go), so the pkg/openapi
+ * AST scanner grammar matches the STAMPED binding without changes to its parser.
+ */
+function unionAnnotationLines(ev: ParsedEvent): string[] {
+	const lines: string[] = []
+	for (const slot of ev.unionSlots) {
+		const goDiscs = slot.discriminators.map(pascalToGoField)
+		lines.push(`// @union field=${pascalToGoField(slot.field)} discriminatedBy=${goDiscs.join(',')}`)
+		for (const v of slot.variants) {
+			const pairs = goDiscs.map((d, i) => `${d}=${v.values[i]}`)
+			lines.push(`// @variant ${pairs.join(' ')} type=${v.typeName}`)
+		}
+	}
+	return lines
+}
+
 export function emitGoEvents(events: ParsedEvent[]): string {
 	assertIntegrationWireNames(events)
 	const lines: string[] = [HEADER, 'package wire', '']
-	const needsTime = events.some(e => e.fields.some(f => f.type.kind === 'date-time'))
-	const needsJson = events.some(e => e.fields.some(f => f.type.kind === 'unknown'))
-	const imports: string[] = []
-	if (needsTime) imports.push('"time"')
-	if (needsJson) imports.push('"encoding/json"')
-	if (imports.length > 0) {
+	const allFields = (e: ParsedEvent) => [...e.fields, ...payloadFieldsOf(e)]
+	const needsTime = events.some(e => allFields(e).some(f => f.type.kind === 'date-time'))
+	const needsJson = events.some(e => allFields(e).some(f => f.type.kind === 'unknown'))
+	const needsUuid = events.some(e => allFields(e).some(f => f.type.kind === 'uuid'))
+	const stdImports: string[] = []
+	if (needsJson) stdImports.push('"encoding/json"')
+	if (needsTime) stdImports.push('"time"')
+	const extImports: string[] = []
+	if (needsUuid) extImports.push('"github.com/google/uuid"')
+	if (stdImports.length + extImports.length > 0) {
 		lines.push('import (')
-		for (const i of imports) lines.push(`\t${i}`)
+		for (const i of stdImports) lines.push(`\t${i}`)
+		if (stdImports.length > 0 && extImports.length > 0) lines.push('')
+		for (const i of extImports) lines.push(`\t${i}`)
 		lines.push(')')
 		lines.push('')
 	}
@@ -146,7 +186,8 @@ export function emitGoEvents(events: ParsedEvent[]): string {
 			const goField = pascalToGoField(f.name)
 			const ty = goType(f.type)
 			// Slices are already nilable — never emit `*[]T`; a nil slice models "absent".
-			const ptr = f.required || f.type.kind === 'array' ? '' : '*'
+			// json.RawMessage (kind "unknown", the opaque union slots) is a []byte slice too.
+			const ptr = f.required || f.type.kind === 'array' || f.type.kind === 'unknown' ? '' : '*'
 			const tag = f.required ? f.name : `${f.name},omitempty`
 			lines.push(`\t${goField} ${ptr}${ty} \`json:"${tag}"\``)
 		}
@@ -154,6 +195,27 @@ export function emitGoEvents(events: ParsedEvent[]): string {
 		lines.push('')
 		lines.push(`func (e ${ev.modelName}) EventName() string { return ${ev.modelName}Name }`)
 		lines.push('')
+
+		// Events with union slots additionally emit a PAYLOAD struct — the verbatim-shaped
+		// struct services alias their local payload type to. The @union/@variant annotations
+		// are STAMPED here so the owner's pkg/openapi scanner materializes the complete oneOf
+		// from the generated binding instead of a hand-declared struct (union-slots spec §2.2).
+		if (ev.unionSlots.length > 0) {
+			const payloadName = `${ev.modelName.replace(/Event$/, '')}Payload`
+			lines.push(`// ${payloadName} — payload of ${ev.wireName}, generated from the contract declaration.`)
+			lines.push('// Union slot fields are opaque (json.RawMessage); the variant SHAPES live in the owner workspace.')
+			lines.push(...unionAnnotationLines(ev))
+			lines.push(`type ${payloadName} struct {`)
+			for (const f of payloadFieldsOf(ev)) {
+				const goField = pascalToGoField(f.name)
+				const ty = goType(f.type)
+				const ptr = f.required || f.type.kind === 'array' || f.type.kind === 'unknown' ? '' : '*'
+				const tag = f.required ? `json:"${f.name}" validate:"required"` : `json:"${f.name},omitempty"`
+				lines.push(`\t${goField} ${ptr}${ty} \`${tag}\``)
+			}
+			lines.push('}')
+			lines.push('')
+		}
 	}
 	return lines.join('\n')
 }
@@ -199,8 +261,10 @@ export function emitGoEnvelope(events: ParsedEvent[]): string {
 async function run() {
 	const yamlText = await readFile(INPUT, 'utf-8')
 	const parsed = parseContractsOpenapi(yamlText)
-	// Hard gate BEFORE any rm/write — a bad contract must not wipe the committed bindings.
+	// Hard gates BEFORE any rm/write — a bad contract must not wipe the committed bindings.
 	assertIntegrationWireNames(parsed.events)
+	// Unknown @variant owner = contract compilation error (validated against the WORKSPACES manifest).
+	assertUnionSlotOwners(parsed.events, Object.keys(REPO.workspaces))
 	await rm(OUTPUT, { recursive: true, force: true })
 	await mkdir(OUTPUT, { recursive: true })
 	await writeFile(join(OUTPUT, 'enums.go'), emitGoEnums(parsed.enums))
