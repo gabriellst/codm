@@ -64,7 +64,7 @@
 		"detect:slice": "bun scripts/detectors/slice-closure.ts",
 		"detect:baseline": "bun scripts/detectors/registry-scan.ts --update-baseline",
 		"detect:self-test": "bun test ./.claude/hooks ./scripts/detectors",
-		"test:tooling": "bun test ./.claude/hooks ./scripts/detectors ./scripts/lib ./scripts/examples ./scripts/sync ./scripts/create-template ./scripts/taxonomy-parity.test.ts ./scripts/skill-examples.test.ts ./scripts/review-plan.test.ts ./scripts/skill-evals/run.test.ts ./scripts/skill-evals/validate-grader-ids.test.ts",
+		"test:tooling": "bun test ./.claude/hooks ./scripts/detectors ./scripts/lib ./scripts/examples ./scripts/sync ./scripts/create-template ./scripts/taxonomy-parity.test.ts ./scripts/skill-examples.test.ts ./scripts/review-plan.test.ts ./scripts/skill-evals/run.test.ts ./scripts/skill-evals/validate-grader-ids.test.ts ./packages/api/typescript/tests/architecture/union-parity.test.ts",
 		"env:generate": "bun scripts/env/generate.ts",
 		"check:generated": "bun scripts/check-generated.ts",
 		"examples:promote": "bun scripts/examples/promote.ts",
