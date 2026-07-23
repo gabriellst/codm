@@ -1,13 +1,19 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { BaseError } from '@codedm/core-typescript'
-import { TerminalSessionRegistry, type TerminalOutputFrame } from './TerminalSessionRegistry'
+import { AgentStreamRegistry, type TerminalOutputFrame } from './AgentStreamRegistry'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 
-const buildFrame = (): TerminalOutputFrame => ({ issueId: 'issue-1', line: 'compiling…', at: new Date().toISOString(), stream: 'stdout' })
+const buildFrame = (): TerminalOutputFrame => ({
+	name: 'browser.terminal_output_appended',
+	issueId: 'issue-1',
+	line: 'compiling…',
+	at: new Date().toISOString(),
+	stream: 'stdout',
+})
 
-describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegistry, rekeyed issueId)', () => {
+describe('AgentStreamRegistry — observer channel (whatscode port adopted whole, rekeyed issueId)', () => {
 	it('registers a writer and exposes get/has', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		const writer = (): Promise<void> => Promise.resolve()
 
 		const unregister = registry.register('issue-1', 'owner-1', writer)
@@ -20,7 +26,7 @@ describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegist
 	})
 
 	it('throws SESSION_ALREADY_STREAMING on double-register for same issue', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		const writer = (): Promise<void> => Promise.resolve()
 
 		registry.register('issue-2', 'owner-1', writer)
@@ -31,10 +37,10 @@ describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegist
 	})
 
 	it('enforces MAX_STREAMS_PER_OWNER', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		const writer = (): Promise<void> => Promise.resolve()
 
-		for (let i = 0; i < TerminalSessionRegistry.MAX_STREAMS_PER_OWNER; i++) {
+		for (let i = 0; i < AgentStreamRegistry.MAX_STREAMS_PER_OWNER; i++) {
 			registry.register(`issue-${i}`, 'owner-A', writer)
 		}
 
@@ -44,7 +50,7 @@ describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegist
 	})
 
 	it('decrements the per-owner counter on unregister', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		const writer = (): Promise<void> => Promise.resolve()
 		const unregister = registry.register('issue-3', 'owner-B', writer)
 
@@ -55,7 +61,7 @@ describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegist
 
 	describe('send', () => {
 		it('delivers the frame to the registered writer', async () => {
-			const registry = new TerminalSessionRegistry()
+			const registry = new AgentStreamRegistry()
 			const writer = mock((): void => {})
 			registry.register('issue-1', 'owner-1', writer)
 
@@ -67,12 +73,12 @@ describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegist
 		})
 
 		it('drops the frame silently when no writer is registered (headless run)', async () => {
-			const registry = new TerminalSessionRegistry()
+			const registry = new AgentStreamRegistry()
 			await expect(registry.send('issue-1', buildFrame())).resolves.toBeUndefined()
 		})
 
 		it('force-unregisters the issue when the writer throws', async () => {
-			const registry = new TerminalSessionRegistry()
+			const registry = new AgentStreamRegistry()
 			const failingWriter = mock(() => {
 				throw new Error('client hung up')
 			})
@@ -87,9 +93,9 @@ describe('TerminalSessionRegistry — observer channel (ported AgentStreamRegist
 	})
 })
 
-describe('TerminalSessionRegistry — single-active-run guard (one session per issue)', () => {
+describe('AgentStreamRegistry — absorbed single-active-run guard (one session per issue)', () => {
 	it('marks an issue active on beginSession and clears it on endSession', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		expect(registry.isActive('issue-1')).toBe(false)
 
 		registry.beginSession('issue-1')
@@ -100,21 +106,21 @@ describe('TerminalSessionRegistry — single-active-run guard (one session per i
 	})
 
 	it('throws TERMINAL_ALREADY_RUNNING on a second concurrent begin for the same issue', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		registry.beginSession('issue-1')
 
 		expect(() => registry.beginSession('issue-1')).toThrow(expect.objectContaining({ name: 'TERMINAL_ALREADY_RUNNING' }) as BaseError<DomainErrors>)
 	})
 
 	it('allows re-running an issue after its session ended', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		registry.beginSession('issue-1')
 		registry.endSession('issue-1')
 		expect(() => registry.beginSession('issue-1')).not.toThrow()
 	})
 
 	it('tracks distinct issues independently', () => {
-		const registry = new TerminalSessionRegistry()
+		const registry = new AgentStreamRegistry()
 		registry.beginSession('issue-1')
 		expect(() => registry.beginSession('issue-2')).not.toThrow()
 		expect(registry.isActive('issue-1')).toBe(true)

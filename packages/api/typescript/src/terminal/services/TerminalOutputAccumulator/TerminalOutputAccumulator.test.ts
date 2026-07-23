@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { TerminalOutputAccumulator } from './TerminalOutputAccumulator'
-import type { TerminalRuntimeEvent } from '../AgentRunner'
+import type { TerminalRuntimeEvent } from '../TerminalLLMRunner'
 
 const output = (line: string, stream: 'stdout' | 'stderr' = 'stdout'): TerminalRuntimeEvent => ({
 	type: 'output',
@@ -12,7 +12,13 @@ describe('TerminalOutputAccumulator (two-stream split)', () => {
 	it('returns a transport frame for every output event, tagged with the issueId', () => {
 		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
 		const frame = acc.feed(output('compiling…'))
-		expect(frame).toEqual({ issueId: 'issue-1', line: 'compiling…', at: '2026-07-22T00:00:00.000Z', stream: 'stdout' })
+		expect(frame).toEqual({
+			name: 'browser.terminal_output_appended',
+			issueId: 'issue-1',
+			line: 'compiling…',
+			at: '2026-07-22T00:00:00.000Z',
+			stream: 'stdout',
+		})
 	})
 
 	it('returns null for the terminal exit event (nothing to transport)', () => {

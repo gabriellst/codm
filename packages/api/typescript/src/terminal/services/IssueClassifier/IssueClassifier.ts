@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import type { z as Zod } from 'zod'
 import { z, BaseError } from '@codedm/core-typescript'
 import { ClassificationMethod, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner } from '../AgentRunner'
+import { TerminalLLMRunner } from '../TerminalLLMRunner'
 import type { TerminalApplicationErrors } from '../../errors'
 import { uniqueSlugKey } from './slug'
 
@@ -60,7 +60,7 @@ const LlmDecisionSchema = z.object({
  *
  * Resolution order (the modeling's authoritative order):
  *   1. REPLY-QUOTE — deterministic, BEFORE any LLM call: a reply-quote to an open issue routes there.
- *   2. CONTEXT-MATCH / NEW / CLARIFY — an LLM structured-generate (`AgentRunner.generate`) over the
+ *   2. CONTEXT-MATCH / NEW / CLARIFY — an LLM structured-generate (`TerminalLLMRunner.generate`) over the
  *      message + open issues + context buffer; a match below `threshold` degrades to a clarification.
  *
  * Tested against a stubbed runner — never a real LLM (house rule: no real provider calls in tests).
@@ -70,7 +70,7 @@ export class IssueClassifier {
 	/** Default confidence floor for a context match — configurable per-call via `ClassifyInput.threshold`. */
 	static readonly DEFAULT_THRESHOLD = 0.6
 
-	constructor(private readonly runner: AgentRunner) {}
+	constructor(private readonly runner: TerminalLLMRunner) {}
 
 	async classify(input: ClassifyInput): Promise<ClassificationDecision> {
 		// 1. Deterministic reply-quote shortcut — authoritative, wins over context matching, no LLM.

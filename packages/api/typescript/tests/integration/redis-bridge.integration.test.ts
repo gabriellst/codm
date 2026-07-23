@@ -8,7 +8,13 @@ import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type TerminalRuntimeEvent } from '@terminal/services/AgentRunner'
+import {
+	TerminalLLMRunner,
+	type AgentGenerateRequest,
+	type TerminalLLMRunnerStreamRequest,
+	type TerminalLLMSessionSnapshot,
+	type TerminalRuntimeEvent,
+} from '@terminal/services/TerminalLLMRunner'
 
 /**
  * PROVES the Go→TS bridge end to end over a REAL Redis (phase 9-1). The Go channel gateway publishes
@@ -71,13 +77,18 @@ if (!REACHABLE) {
 const describeBridge = REACHABLE ? describe : describe.skip
 
 /** Deterministic classifier stub → NEW_ISSUE, so classify emits `thread.message_classified`. */
-class NewIssueStubRunner extends AgentRunner {
+class NewIssueStubRunner extends TerminalLLMRunner {
 	async generate<OutputSchema extends ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<Zod.output<OutputSchema>> {
 		return { decision: 'NEW_ISSUE', title: 'Fix the login bug' } as Zod.output<OutputSchema>
 	}
-	async *stream(_r: AgentStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
+	async *stream(_r: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
 		yield { type: 'exit', code: 0 }
 	}
+	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
+		return null
+	}
+	async killSession(_issueId: string): Promise<void> {}
+	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
 }
 
 /**
@@ -134,7 +145,7 @@ describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + clas
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
 		// Deterministic classification (NEW_ISSUE) — set BEFORE resolving the consumer graph.
-		testBed.override(AgentRunner, new NewIssueStubRunner())
+		testBed.override(TerminalLLMRunner, new NewIssueStubRunner())
 
 		producer = new RedisClient(REDIS_URL)
 		await producer.connect()

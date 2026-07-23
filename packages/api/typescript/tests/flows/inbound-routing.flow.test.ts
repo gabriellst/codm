@@ -11,7 +11,13 @@ import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIn
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { PublishTerminalIntegrationEvents } from '@terminal/handlers/PublishTerminalIntegrationEvents'
 import { RunTerminalSessionOnClassification } from '@terminal/handlers/RunTerminalSessionOnClassification'
-import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type TerminalRuntimeEvent } from '@terminal/services/AgentRunner'
+import {
+	TerminalLLMRunner,
+	type AgentGenerateRequest,
+	type TerminalLLMRunnerStreamRequest,
+	type TerminalLLMSessionSnapshot,
+	type TerminalRuntimeEvent,
+} from '@terminal/services/TerminalLLMRunner'
 import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
@@ -32,17 +38,22 @@ import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
  */
 
 /** Stub runner: `generate()` → a NEW_ISSUE classification decision; `stream()` → a clean session. */
-class NewIssueStubRunner extends AgentRunner {
+class NewIssueStubRunner extends TerminalLLMRunner {
 	async generate<OutputSchema extends ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<z.output<OutputSchema>> {
 		return { decision: 'NEW_ISSUE', title: 'Ship the coupon fix' } as z.output<OutputSchema>
 	}
-	async *stream(request: AgentStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
+	async *stream(request: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
 		const at = new Date().toISOString()
 		yield { type: 'output', line: { at, line: `$ ${request.provider} (stub) in ${request.cwd}`, stream: 'stdout' } }
 		yield { type: 'output', line: { at, line: request.prompt, stream: 'stdout' } }
 		yield { type: 'output', line: { at, line: 'done', stream: 'stdout' } }
 		yield { type: 'exit', code: 0 }
 	}
+	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
+		return null
+	}
+	async killSession(_issueId: string): Promise<void> {}
+	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
 }
 
 describe('Flow (mock): inbound → classify → spawn → issue opened → SSE', () => {
@@ -106,7 +117,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	})
 
 	it('an invocable inbound is classified → integration.message.classified is published (captured)', async () => {
-		testBed.override(AgentRunner, new NewIssueStubRunner())
+		testBed.override(TerminalLLMRunner, new NewIssueStubRunner())
 		const outbox = await wireBridges()
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
@@ -121,7 +132,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	})
 
 	it('classified → RunTerminalSession → issue OPENED fires live, materializes the Issue + an SSE frame', async () => {
-		testBed.override(AgentRunner, new NewIssueStubRunner())
+		testBed.override(TerminalLLMRunner, new NewIssueStubRunner())
 		const outbox = await wireBridges()
 
 		// A workspace bound to the thread so the closer can resolve the run cwd.

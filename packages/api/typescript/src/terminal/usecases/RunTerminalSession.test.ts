@@ -4,22 +4,33 @@ import { TestBed } from '@test/support'
 import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
 import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { RunTerminalSession } from './RunTerminalSession'
-import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type TerminalRuntimeEvent } from '../services/AgentRunner'
-import { TerminalSessionRegistry, type TerminalOutputFrame } from '../services/TerminalSessionRegistry'
+import {
+	TerminalLLMRunner,
+	type AgentGenerateRequest,
+	type TerminalLLMRunnerStreamRequest,
+	type TerminalLLMSessionSnapshot,
+	type TerminalRuntimeEvent,
+} from '../services/TerminalLLMRunner'
+import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'
 import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
 
 /** A runner that fails the session (non-zero exit) — drives the STOPPED branch deterministically. */
-class FailingRunner extends AgentRunner {
+class FailingRunner extends TerminalLLMRunner {
 	async generate<OutputSchema extends import('zod').ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<import('zod').z.output<OutputSchema>> {
 		return {} as import('zod').z.output<OutputSchema>
 	}
-	async *stream(_request: AgentStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
+	async *stream(_request: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
 		yield { type: 'output', line: { at: new Date().toISOString(), line: 'Error: API rate limit exceeded', stream: 'stderr' } }
 		yield { type: 'exit', code: 1 }
 	}
+	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
+		return null
+	}
+	async killSession(_issueId: string): Promise<void> {}
+	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
 }
 
 describe('RunTerminalSession use case', () => {
@@ -53,12 +64,12 @@ describe('RunTerminalSession use case', () => {
 
 	it('happy path: streams transport frames to the observer + persists opened/reply/completed facts', async () => {
 		const useCase = testBed.resolve(RunTerminalSession)
-		const registry = testBed.resolve(TerminalSessionRegistry)
+		const registry = testBed.resolve(AgentStreamRegistry)
 		const eventRepo = testBed.resolve(DomainEventRepository)
 		const issueId = '019e4d24-0000-7041-9e1c-000000000001'
 
 		// Attach an SSE observer so the transport half of the two-stream split is observable.
-		const frames: TerminalOutputFrame[] = []
+		const frames: TerminalSseFrame[] = []
 		registry.register(issueId, ownerId, frame => frames.push(frame))
 
 		const out = await useCase.execute(baseInput(issueId))
@@ -82,7 +93,7 @@ describe('RunTerminalSession use case', () => {
 
 	it('enforces one session per issue (single-active invariant)', async () => {
 		const useCase = testBed.resolve(RunTerminalSession)
-		const registry = testBed.resolve(TerminalSessionRegistry)
+		const registry = testBed.resolve(AgentStreamRegistry)
 		const issueId = '019e4d24-0000-7041-9e1c-000000000002'
 
 		registry.beginSession(issueId) // simulate an already-running session
@@ -105,7 +116,7 @@ describe('RunTerminalSession use case', () => {
 	})
 
 	it('maps a failed run to a STOPPED outcome + a stop-raised fact (runner overridden last)', async () => {
-		testBed.override(AgentRunner, new FailingRunner())
+		testBed.override(TerminalLLMRunner, new FailingRunner())
 		const useCase = testBed.resolve(RunTerminalSession)
 		const eventRepo = testBed.resolve(DomainEventRepository)
 		const issueId = '019e4d24-0000-7041-9e1c-000000000004'

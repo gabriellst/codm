@@ -170,6 +170,7 @@ export async function* tailJsonl(options: TailJsonlOptions): AsyncGenerator<Tail
 		}
 
 		let newlineIndex: number
+		// biome-ignore lint/suspicious/noAssignInExpressions: canonical incremental line-split loop (whatscode port)
 		while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
 			const line = buffer.slice(0, newlineIndex)
 			buffer = buffer.slice(newlineIndex + 1)

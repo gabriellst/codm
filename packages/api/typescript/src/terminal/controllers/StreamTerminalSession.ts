@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, MimeTypes, z, SSE_CONNECTED_FRAME, createSSEResponse, encodeSSEFrame } from '@codedm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { TerminalSessionRegistry, type TerminalStreamWriter } from '../services/TerminalSessionRegistry'
+import { AgentStreamRegistry, type TerminalStreamWriter } from '../services/AgentStreamRegistry'
 
 export const StreamTerminalSessionInputSchema = z
 	.object({
@@ -18,9 +18,9 @@ export const StreamTerminalSessionOutputSchema = z.unknown()
 
 /**
  * The two-stream TRANSPORT endpoint — the CodeDM descendant of whatscode's SSE Completion controller,
- * rekeyed chatId → issueId. It registers ONE observer writer per issue in `TerminalSessionRegistry`
+ * rekeyed chatId → issueId. It registers ONE observer writer per issue in `AgentStreamRegistry`
  * (double-open → 409, the observer half of the single-active invariant) and forwards every terminal
- * output frame the running session pushes (`TerminalSessionRegistry.send`) straight to the browser.
+ * output frame the running session pushes (`AgentStreamRegistry.send`) straight to the browser.
  *
  * It is a pure OBSERVER: it does NOT spawn the session (the run is driven by `RunTerminalSession`,
  * invoked by the domain flow) and it carries no domain facts — those ride the outbox separately.
@@ -38,7 +38,7 @@ export class StreamTerminalSessionController extends Controller<typeof StreamTer
 
 	override middlewares = [OperatorMiddleware]
 
-	constructor(private readonly registry: TerminalSessionRegistry) {
+	constructor(private readonly registry: AgentStreamRegistry) {
 		super()
 	}
 
@@ -56,10 +56,9 @@ export class StreamTerminalSessionController extends Controller<typeof StreamTer
 				signal: request.raw.signal,
 				headers: { 'X-Accel-Buffering': 'no' },
 				onStart: handle => {
-					const writer: TerminalStreamWriter = frame =>
-						handle.send(
-							encodeSSEFrame({ name: 'browser.terminal_output_appended', issueId: frame.issueId, line: frame.line, at: frame.at, stream: frame.stream }),
-						)
+					// Frames already carry their browser-facing `name` discriminator
+					// (output_appended | action_detected — the latter per the wave-0 amendment).
+					const writer: TerminalStreamWriter = frame => handle.send(encodeSSEFrame(frame))
 					let unregister: () => void
 					try {
 						unregister = this.registry.register(issueId, ownerId, writer)

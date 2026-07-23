@@ -1,21 +1,35 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, tryCatchAsync } from '@codedm/core-typescript'
+import type { TuiActionType } from '../../enums'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 
 /**
- * One TRANSPORT frame of the two-stream split — a single line of terminal output for an issue's
- * session. It rides the SSE side-channel (`browser.terminal_output_appended`) directly to the
- * observing browser; it is NOT a domain fact and never touches the outbox. Domain facts
- * (AgentReplyDrafted / IssueCompleted / StopRaised) flow through the outbox separately.
+ * TRANSPORT frames of the two-stream split — what rides the SSE side-channel straight to the
+ * observing browser. NOT domain facts; they never touch the outbox.
+ *
+ *   - `browser.terminal_output_appended` — one line of terminal output (T12 panel).
+ *   - `browser.terminal_action_detected` — one structured claude TUI action line (wave-0
+ *     AMENDMENT: action_detected is an SSE frame ONLY — no wire event).
  */
 export interface TerminalOutputFrame {
+	name: 'browser.terminal_output_appended'
 	issueId: string
 	line: string
 	at: string
 	stream: 'stdout' | 'stderr'
 }
 
-export type TerminalStreamWriter = (frame: TerminalOutputFrame) => void | Promise<void>
+export interface TerminalActionFrame {
+	name: 'browser.terminal_action_detected'
+	issueId: string
+	action: TuiActionType
+	value: string
+	at: string
+}
+
+export type TerminalSseFrame = TerminalOutputFrame | TerminalActionFrame
+
+export type TerminalStreamWriter = (frame: TerminalSseFrame) => void | Promise<void>
 
 interface StreamEntry {
 	writer: TerminalStreamWriter
@@ -23,34 +37,36 @@ interface StreamEntry {
 }
 
 /**
- * The CodeDM descendant of whatscode's `AgentStreamRegistry`, rekeyed `chatId → issueId`. A
- * process-local, domain-free in-memory registry with two responsibilities:
+ * Whatscode's `AgentStreamRegistry`, ADOPTED WHOLE (Fork C, ratified: option 1 — not the fold)
+ * and rekeyed `chatId → issueId` (Fork B). It additionally ABSORBS the single-active-run guard
+ * that codedm's interim `TerminalSessionRegistry` carried — that guard is an INVARIANT ("one
+ * terminal session per issue") and migrates INTO the adopted registry; `TerminalSessionRegistry`
+ * is superseded and deleted.
  *
  *   1. OBSERVER channel — at most one live SSE writer per issue (`register`/`send`/`unregister`).
  *      Double-register throws `SESSION_ALREADY_STREAMING`; a per-owner soft cap throws
- *      `TOO_MANY_TERMINAL_STREAMS`; `send` drops silently when no observer is attached and force-
- *      unregisters a writer that throws. This is the ported AgentStreamRegistry, verbatim in spirit.
+ *      `TOO_MANY_TERMINAL_STREAMS`; `send` drops silently when no observer is attached and
+ *      force-unregisters a writer that throws.
  *
- *   2. SINGLE-ACTIVE-RUN guard — `beginSession`/`endSession` enforce "one terminal session per
- *      issue" independent of whether a browser is observing. `RunTerminalSession` brackets its run
- *      with these; a second concurrent run for the same issue throws `TERMINAL_ALREADY_RUNNING`.
+ *   2. SINGLE-ACTIVE-RUN guard — `beginSession`/`endSession` enforce one run per issue
+ *      independent of whether a browser is observing. `RunTerminalSession` brackets its run with
+ *      these; a second concurrent run for the same issue throws `TERMINAL_ALREADY_RUNNING`.
  *
  * TODO(scale): both maps are process-local — shard by issueId at the ingress before horizontal
  * scale (same documented limitation as the whatscode original).
  *
- * Registered as a container-scoped SINGLETON in `terminal/registry.ts` (all envs) — its in-memory
- * state must be shared across every controller/use case in the process.
+ * Registered as a container-scoped SINGLETON in `terminal/registry.ts` (all envs).
  */
 @injectable()
-export class TerminalSessionRegistry {
-	/** Soft cap on concurrent SSE observers per owner. Prevents trivial DoS. */
+export class AgentStreamRegistry {
+	/** Soft cap on concurrent SSE streams per owner. Prevents trivial DoS. */
 	static readonly MAX_STREAMS_PER_OWNER = 5
 
 	private writers = new Map<string, StreamEntry>()
 	private ownerCounts = new Map<string, number>()
 	private activeSessions = new Set<string>()
 
-	// ── Observer channel (ported AgentStreamRegistry) ───────────────────────────────────────────
+	// ── Observer channel (whatscode AgentStreamRegistry, verbatim in spirit) ────────────────────
 
 	register(issueId: string, ownerId: string, writer: TerminalStreamWriter): () => void {
 		if (this.writers.has(issueId)) {
@@ -58,10 +74,10 @@ export class TerminalSessionRegistry {
 		}
 
 		const currentForOwner = this.ownerCounts.get(ownerId) ?? 0
-		if (currentForOwner >= TerminalSessionRegistry.MAX_STREAMS_PER_OWNER) {
+		if (currentForOwner >= AgentStreamRegistry.MAX_STREAMS_PER_OWNER) {
 			throw new BaseError<ApplicationErrors>(
 				'TOO_MANY_TERMINAL_STREAMS',
-				`Owner ${ownerId} has reached the concurrent stream limit (${TerminalSessionRegistry.MAX_STREAMS_PER_OWNER})`,
+				`Owner ${ownerId} has reached the concurrent stream limit (${AgentStreamRegistry.MAX_STREAMS_PER_OWNER})`,
 			)
 		}
 
@@ -105,12 +121,12 @@ export class TerminalSessionRegistry {
 	}
 
 	/**
-	 * Deliver one transport frame to the observer registered for `issueId`. Dropped silently when no
-	 * observer is attached (a headless run — triggered by the domain flow with no browser watching —
-	 * still persists its outbox facts). On writer failure the observer is force-unregistered so
-	 * subsequent frames are dropped; a mid-stream writer failure is terminal for that observer.
+	 * Deliver one transport frame to the observer registered for `issueId`. Dropped silently when
+	 * no observer is attached (a headless run still persists its outbox facts). On writer failure
+	 * the observer is force-unregistered so subsequent frames are dropped; a mid-stream writer
+	 * failure is terminal for that observer.
 	 */
-	async send(issueId: string, frame: TerminalOutputFrame): Promise<void> {
+	async send(issueId: string, frame: TerminalSseFrame): Promise<void> {
 		const writer = this.writers.get(issueId)?.writer
 		if (!writer) return
 
@@ -120,12 +136,11 @@ export class TerminalSessionRegistry {
 		}
 	}
 
-	// ── Single-active-run guard ─────────────────────────────────────────────────────────────────
+	// ── Single-active-run guard (absorbed from the superseded TerminalSessionRegistry) ──────────
 
 	/**
-	 * Claim the single terminal session for `issueId`. Throws `TERMINAL_ALREADY_RUNNING` if a run is
-	 * already active for that issue — the "one terminal session per issue" invariant, enforced
-	 * whether or not a browser is observing. Pair with `endSession` in a `finally`.
+	 * Claim the single terminal session for `issueId`. Throws `TERMINAL_ALREADY_RUNNING` if a run
+	 * is already active for that issue. Pair with `endSession` in a `finally`.
 	 */
 	beginSession(issueId: string): void {
 		if (this.activeSessions.has(issueId)) {

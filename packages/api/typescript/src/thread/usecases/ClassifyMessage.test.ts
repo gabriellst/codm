@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenIssue } from '@test/support'
 import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
 import { ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner } from '@terminal/services/AgentRunner'
+import { TerminalLLMRunner } from '@terminal/services/TerminalLLMRunner'
 import { OPERATOR_ID } from '@auth/operator'
 import { ClassifyMessage } from './ClassifyMessage'
 import { TranscriptRepository } from '../repositories/TranscriptRepository'
@@ -36,8 +36,8 @@ describe('ClassifyMessage — classification routes + clarification invariant', 
 		const fakeRunner = {
 			generate: async () => nextDecision,
 			stream: () => (async function* () {})(),
-		} as unknown as AgentRunner
-		testBed.override(AgentRunner, fakeRunner)
+		} as unknown as TerminalLLMRunner
+		testBed.override(TerminalLLMRunner, fakeRunner)
 	})
 	afterAll(async () => {
 		await testBed.destroy()

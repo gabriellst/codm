@@ -2,7 +2,13 @@ import { describe, expect, it, mock } from 'bun:test'
 import type { z, ZodType } from 'zod'
 import { BaseError } from '@codedm/core-typescript'
 import { ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type TerminalRuntimeEvent } from '../AgentRunner'
+import {
+	TerminalLLMRunner,
+	type AgentGenerateRequest,
+	type TerminalLLMRunnerStreamRequest,
+	type TerminalLLMSessionSnapshot,
+	type TerminalRuntimeEvent,
+} from '../TerminalLLMRunner'
 import { IssueClassifier, type OpenIssueRef } from './IssueClassifier'
 
 /**
@@ -11,15 +17,21 @@ import { IssueClassifier, type OpenIssueRef } from './IssueClassifier'
  * touched. `generateCalls` records how often the LLM path was taken (asserting the reply-quote
  * shortcut never consults it).
  */
-class StubbedRunner extends AgentRunner {
+class StubbedRunner extends TerminalLLMRunner {
 	nextDecision: Record<string, unknown> = { decision: 'CLARIFY' }
 	generate = mock(async <OutputSchema extends ZodType>(_request: AgentGenerateRequest<OutputSchema>): Promise<z.output<OutputSchema>> => {
 		return this.nextDecision as z.output<OutputSchema>
 	})
+	// biome-ignore lint/correctness/useYield: intentionally throws before yielding — the classifier must never stream
 	// eslint-disable-next-line require-yield
-	async *stream(_request: AgentStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
+	async *stream(_request: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
 		throw new Error('stream() must not be called by the classifier')
 	}
+	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
+		return null
+	}
+	async killSession(_issueId: string): Promise<void> {}
+	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
 }
 
 const openIssues: OpenIssueRef[] = [

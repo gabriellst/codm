@@ -3,14 +3,18 @@ import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner } from '../services/AgentRunner'
+import { TerminalLLMRunner, type SessionKillReason } from '../services/TerminalLLMRunner'
 import { ProviderDetector } from '../services/ProviderDetector'
-import { TerminalSessionRegistry } from '../services/TerminalSessionRegistry'
+import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
+import { TerminalLLMSessionRepository } from '../repositories'
+import { TerminalLLMSession } from '../entities/TerminalLLMSession'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'
 import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
+import { TerminalSessionResumedEvent } from '../events/TerminalSessionResumedEvent'
+import { TerminalSessionKilledEvent } from '../events/TerminalSessionKilledEvent'
 import type { TerminalApplicationErrors } from '../errors'
 
 export const RunTerminalSessionInputSchema = z.object({
@@ -31,20 +35,33 @@ export const RunTerminalSessionOutputSchema = z.object({
 	stopId: z.string().optional(),
 })
 
+/** What the stream loop observed beyond transport — the engine's lifecycle facts for this turn. */
+interface StreamObservations {
+	outcome: TerminalOutcome
+	terminalSessionId: string | null
+	resumed: boolean
+	killedReason: SessionKillReason | null
+}
+
 /**
- * Runs one terminal session for an issue end to end — the engine's write-side entry point. It is
- * INVOKED by the domain flow (BC4's external handler on `integration.message.classified`, phase 6);
- * this phase keeps the seam clean by exposing it as a use case with no thread/routing domain of its
- * own. It realizes the two-stream split:
+ * Runs one terminal session TURN for an issue end to end — the engine's write-side entry point,
+ * invoked by the 6b saga on `integration.message.classified`. Adapted to the WIDE seam (Fork A1):
+ * the runner is the full whatscode session engine (persistent claude REPL per issue, Fork B), and
+ * this use case realizes the two-stream split over its rich event union:
  *
- *   TRANSPORT — every output line is pushed to the SSE observer via `TerminalSessionRegistry.send`
- *               (`browser.terminal_output_appended`), streamed OUTSIDE any transaction.
- *   FACTS     — the run's outcome is persisted as context-private domain events; the internal bridge
- *               maps each to a FROZEN integration event (issue.opened / agent.reply_drafted /
- *               issue.completed / issue.stop_raised). No event is authored here beyond those.
+ *   TRANSPORT — every `output`/`action` event is pushed to the SSE observer via
+ *               `AgentStreamRegistry.send`, streamed OUTSIDE any transaction.
+ *   FACTS     — the run's outcome + lifecycle are persisted as context-private domain events; the
+ *               internal bridge maps outcome facts to the FROZEN integration events
+ *               (issue.opened / agent.reply_drafted / issue.completed / issue.stop_raised).
+ *               Lifecycle facts (session resumed/killed) stay domain-only (wave-0 amendments).
+ *
+ * It also upserts the durable `TerminalLLMSession` row (issueId → claudeSessionId, lastTurnAt) so
+ * resume identity + prewarm recency survive daemon restarts.
  *
  * The single-active invariant ("one terminal session per issue") is claimed on `beginSession` and
- * released in a `finally` — a second concurrent run for the same issue throws TERMINAL_ALREADY_RUNNING.
+ * released in a `finally` — a second concurrent run for the same issue throws
+ * TERMINAL_ALREADY_RUNNING.
  */
 @injectable()
 export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSchema, typeof RunTerminalSessionOutputSchema> {
@@ -53,9 +70,10 @@ export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSc
 	readonly outputSchema = RunTerminalSessionOutputSchema
 
 	constructor(
-		private readonly runner: AgentRunner,
+		private readonly runner: TerminalLLMRunner,
 		private readonly providerDetector: ProviderDetector,
-		private readonly registry: TerminalSessionRegistry,
+		private readonly registry: AgentStreamRegistry,
+		private readonly sessions: TerminalLLMSessionRepository,
 	) {
 		super()
 	}
@@ -78,19 +96,21 @@ export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSc
 				)
 			})
 
-			// TRANSPORT — stream the subprocess output to the SSE observer, strictly outside any tx.
-			const outcome = await this.streamSession(input, binaryPath)
+			// TRANSPORT — stream the session output to the SSE observer, strictly outside any tx.
+			const observed = await this.streamSession(input, binaryPath)
 
-			// FACT — the run's conclusion.
-			const stopId = outcome.kind === 'STOPPED' ? uuidv7() : undefined
+			// FACT — the run's conclusion + lifecycle.
+			const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
 			await this.withTransaction(tx, async tx => {
-				await this.persistOutcome(input, outcome, stopId, tx)
+				await this.persistLifecycle(input, observed, tx)
+				await this.persistOutcome(input, observed.outcome, stopId, tx)
+				await this.upsertSessionRecord(input, observed.terminalSessionId, tx)
 			})
 
 			return {
 				issueId: input.issueId,
-				outcome: outcome.kind,
-				replyText: outcome.kind === 'COMPLETED' ? outcome.replyText : undefined,
+				outcome: observed.outcome.kind,
+				replyText: observed.outcome.kind === 'COMPLETED' ? observed.outcome.replyText : undefined,
 				stopId,
 			}
 		} finally {
@@ -107,19 +127,67 @@ export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSc
 		return detection.binaryPath
 	}
 
-	private async streamSession(input: this['input'], binaryPath: string | undefined): Promise<TerminalOutcome> {
+	private async streamSession(input: this['input'], binaryPath: string | undefined): Promise<StreamObservations> {
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.issueId })
+		let terminalSessionId: string | null = null
+		let resumed = false
+		let killedReason: SessionKillReason | null = null
+
 		for await (const event of this.runner.stream({
-			provider: input.provider,
 			issueId: input.issueId,
+			threadId: input.threadId,
+			ownerId: input.ownerId,
+			provider: input.provider,
 			cwd: input.workspacePath,
 			prompt: input.prompt,
 			binaryPath,
 		})) {
+			if (event.type === 'session') {
+				terminalSessionId = event.terminalSessionId
+				if (event.lifecycle === 'resumed') resumed = true
+			}
+			if (event.type === 'killed') {
+				killedReason = event.reason
+				if (event.terminalSessionId) terminalSessionId = event.terminalSessionId
+			}
 			const frame = accumulator.feed(event)
 			if (frame) await this.registry.send(input.issueId, frame)
 		}
-		return accumulator.outcome()
+		return { outcome: accumulator.outcome(), terminalSessionId, resumed, killedReason }
+	}
+
+	/** Domain-only lifecycle facts (wave-0 amendments: no wire counterparts). */
+	private async persistLifecycle(input: this['input'], observed: StreamObservations, tx: Transaction): Promise<void> {
+		if (observed.resumed && observed.terminalSessionId) {
+			await this.domainEventRepository.save(
+				new TerminalSessionResumedEvent({
+					entityId: input.issueId,
+					ownerId: input.ownerId,
+					payload: {
+						issueId: input.issueId,
+						threadId: input.threadId,
+						terminalSessionId: observed.terminalSessionId,
+						cwd: input.workspacePath,
+					},
+				}),
+				tx,
+			)
+		}
+		if (observed.killedReason) {
+			await this.domainEventRepository.save(
+				new TerminalSessionKilledEvent({
+					entityId: input.issueId,
+					ownerId: input.ownerId,
+					payload: {
+						issueId: input.issueId,
+						threadId: input.threadId,
+						terminalSessionId: observed.terminalSessionId ?? 'unknown',
+						reason: observed.killedReason,
+					},
+				}),
+				tx,
+			)
+		}
 	}
 
 	private async persistOutcome(input: this['input'], outcome: TerminalOutcome, stopId: string | undefined, tx: Transaction): Promise<void> {
@@ -150,6 +218,28 @@ export class RunTerminalSession extends Handler<typeof RunTerminalSessionInputSc
 				entityId: input.issueId,
 				ownerId: input.ownerId,
 				payload: { stopId: stopId ?? uuidv7(), issueId: input.issueId, threadId: input.threadId, kind: outcome.stopKind },
+			}),
+			tx,
+		)
+	}
+
+	/** Durable per-issue session record: resume identity + prewarm recency (Fork B). */
+	private async upsertSessionRecord(input: this['input'], terminalSessionId: string | null, tx: Transaction): Promise<void> {
+		if (!terminalSessionId) return
+		const existing = await this.sessions.findByIssueId(input.issueId, tx)
+		if (existing) {
+			existing.recordTurn(terminalSessionId)
+			await this.sessions.save(existing, tx)
+			return
+		}
+		await this.sessions.save(
+			TerminalLLMSession.create({
+				ownerId: input.ownerId,
+				issueId: input.issueId,
+				threadId: input.threadId,
+				provider: input.provider,
+				cwd: input.workspacePath,
+				claudeSessionId: terminalSessionId,
 			}),
 			tx,
 		)
