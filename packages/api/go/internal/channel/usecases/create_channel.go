@@ -6,8 +6,8 @@ import (
 	"template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/shared/services/unitofwork"
 	"template/core-go/errors"
+	"template/core-go/services/unitofwork"
 )
 
 type CreateChannelInput struct {

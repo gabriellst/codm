@@ -9,7 +9,7 @@ import (
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/shared/services/unitofwork"
+	"template/core-go/services/unitofwork"
 )
 
 type GetOrCreateChannelInput struct {

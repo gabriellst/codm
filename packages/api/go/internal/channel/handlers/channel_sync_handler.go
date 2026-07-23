@@ -6,8 +6,8 @@ import (
 	"time"
 
 	ctxevents "template/api-go/internal/channel/events"
-	repositories "template/api-go/internal/shared/repositories"
-	"template/api-go/internal/shared/services/mediator"
+	repositories "template/core-go/repositories"
+	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 

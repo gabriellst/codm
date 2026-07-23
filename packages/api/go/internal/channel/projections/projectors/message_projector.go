@@ -9,7 +9,7 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
-	"template/api-go/internal/shared/services/mediator"
+	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 

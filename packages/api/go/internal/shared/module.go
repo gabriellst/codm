@@ -12,10 +12,13 @@ import (
 	"template/api-go/internal/shared/middleware"
 	"template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/httprouter"
-	"template/api-go/internal/shared/services/mediator"
+	sharedmediator "template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/services/outbox"
-	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/public"
+	coremw "template/core-go/middleware"
+	corerepositories "template/core-go/repositories"
+	"template/core-go/services/mediator"
+	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 
 	"go.uber.org/fx"
@@ -30,7 +33,7 @@ var Module = fx.Module("shared",
 
 	// Infrastructure
 	fx.Provide(fx.Annotate(unitofwork.NewNoopUnitOfWork, fx.As(new(unitofwork.UnitOfWork)))),
-	fx.Provide(fx.Annotate(mediator.NewRedisExternalMediator, fx.As(new(mediator.ExternalMediator)))),
+	fx.Provide(fx.Annotate(sharedmediator.NewRedisExternalMediator, fx.As(new(mediator.ExternalMediator)))),
 
 	// Internal Mediator (domain events via channels)
 	fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
@@ -38,7 +41,7 @@ var Module = fx.Module("shared",
 	// Domain Event Repository (dual-writes to events + outbox)
 	fx.Provide(fx.Annotate(
 		repositories.NewPgDomainEventRepository,
-		fx.As(new(repositories.DomainEventRepository)),
+		fx.As(new(corerepositories.DomainEventRepository)),
 	)),
 
 	// Outbox Dispatcher (polls outbox → dispatches to InternalMediator)
@@ -69,8 +72,8 @@ var Module = fx.Module("shared",
 )
 
 func registerMiddlewares(router *httprouter.HttpRouter, cfg *config.Config, db *stdsql.DB) {
-	router.Use(middleware.Recovery)
-	router.Use(middleware.Logging)
+	router.Use(coremw.Recovery)
+	router.Use(coremw.Logging)
 	router.Use(middleware.Session(db))
 	if cfg.GlobalAPIKey != "" {
 		router.Use(middleware.APIKey(cfg.GlobalAPIKey))
@@ -146,7 +149,7 @@ func startOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.OutboxDispatcher)
 func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config) {
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: middleware.CORS(cfg.AllowedOrigins, router.Handler()),
+		Handler: coremw.CORS(cfg.AllowedOrigins, router.Handler()),
 	}
 
 	lc.Append(fx.Hook{

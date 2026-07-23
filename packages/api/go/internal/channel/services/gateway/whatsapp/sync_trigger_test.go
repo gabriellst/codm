@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/repositories"
+	"template/core-go/repositories"
 	"template/core-go/types"
 )
 

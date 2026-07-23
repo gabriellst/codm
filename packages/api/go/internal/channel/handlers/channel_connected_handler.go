@@ -9,8 +9,8 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
 	sharedevents "template/api-go/internal/shared/events"
-	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/services/unitofwork"
+	"template/core-go/services/mediator"
+	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 )
 

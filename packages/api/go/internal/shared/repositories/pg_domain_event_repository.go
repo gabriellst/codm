@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"template/api-go/internal/shared/services/outbox"
-	"template/api-go/internal/shared/services/unitofwork"
+	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 )
 

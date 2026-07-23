@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/services/mediator"
+	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 

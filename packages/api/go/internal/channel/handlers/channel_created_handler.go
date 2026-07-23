@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/services/mediator"
+	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 

@@ -17,7 +17,7 @@ import (
 	"template/api-go/internal/channel/services/gateway"
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
 	mapperpkg "template/api-go/internal/channel/services/gateway/whatsapp/mapper"
-	repositories "template/api-go/internal/shared/repositories"
+	repositories "template/core-go/repositories"
 	"time"
 
 	"golang.org/x/time/rate"

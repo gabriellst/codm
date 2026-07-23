@@ -8,8 +8,8 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/utils"
-	sharedrepos "template/api-go/internal/shared/repositories"
-	"template/api-go/internal/shared/services/unitofwork"
+	sharedrepos "template/core-go/repositories"
+	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 )
 

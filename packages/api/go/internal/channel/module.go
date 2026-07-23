@@ -13,9 +13,9 @@ import (
 	whatsapp "template/api-go/internal/channel/services/gateway/whatsapp"
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/usecases"
-	"template/api-go/internal/shared/repositories"
-	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/services/unitofwork"
+	"template/core-go/repositories"
+	"template/core-go/services/mediator"
+	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 	"time"
 

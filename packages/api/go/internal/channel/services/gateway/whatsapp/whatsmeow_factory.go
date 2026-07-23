@@ -15,7 +15,7 @@ import (
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/shared/config"
-	repositories "template/api-go/internal/shared/repositories"
+	repositories "template/core-go/repositories"
 )
 
 // WhatsmeowChannelFactory creates WhatsmeowChannel instances using a shared sqlstore container.

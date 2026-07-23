@@ -7,7 +7,7 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/services/registry"
 	sharedevents "template/api-go/internal/shared/events"
-	"template/api-go/internal/shared/services/mediator"
+	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 

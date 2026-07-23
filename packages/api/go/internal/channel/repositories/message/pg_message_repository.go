@@ -13,8 +13,8 @@ import (
 	"template/api-go/internal/channel/entities"
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/shared/db/dbutil"
-	sharedrepos "template/api-go/internal/shared/repositories"
-	"template/api-go/internal/shared/services/unitofwork"
+	sharedrepos "template/core-go/repositories"
+	"template/core-go/services/unitofwork"
 )
 
 // PgMessageRepository implements MessageRepository with Postgres.

@@ -10,7 +10,7 @@ import (
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
-	"template/api-go/internal/shared/services/mediator"
+	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 

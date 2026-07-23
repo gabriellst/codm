@@ -6,8 +6,8 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
-	"template/api-go/internal/shared/services/unitofwork"
 	"template/core-go/errors"
+	"template/core-go/services/unitofwork"
 
 	"github.com/google/uuid"
 )
