@@ -40,15 +40,6 @@ func NewCreateChannelHandler(
 func (h *CreateChannelHandler) Name() string { return "create_channel" }
 
 func (h *CreateChannelHandler) Execute(ctx context.Context, input CreateChannelInput) (CreateChannelOutput, error) {
-	// Check name uniqueness
-	existing, err := h.repo.FindByName(ctx, input.Name)
-	if err != nil {
-		return CreateChannelOutput{}, err
-	}
-	if existing != nil {
-		return CreateChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNameAlreadyExists, "channel name already exists")
-	}
-
 	integration, err := entities.NewChannel(entities.NewChannelParams{
 		Name:     input.Name,
 		Platform: input.Platform,
@@ -58,7 +49,17 @@ func (h *CreateChannelHandler) Execute(ctx context.Context, input CreateChannelI
 		return CreateChannelOutput{}, err
 	}
 
+	// Uniqueness guard + save inside the same transaction (avoids the
+	// check-then-act race between two concurrent creates).
 	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
+		existing, err := h.repo.FindByName(txCtx, input.Name)
+		if err != nil {
+			return err
+		}
+		if existing != nil {
+			return errors.NewBaseError(ctxerrors.CodeChannelNameAlreadyExists, "channel name already exists")
+		}
+
 		// Save persists the aggregate's pulled domain events itself.
 		return h.repo.Save(txCtx, integration)
 	})

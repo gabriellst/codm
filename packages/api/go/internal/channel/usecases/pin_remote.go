@@ -9,6 +9,7 @@ import (
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/internal/shared/types"
 )
 
@@ -30,14 +31,16 @@ type PinRemoteHandler struct {
 	channelRepo     channelrepo.ChannelRepository
 	registry        registry.ChannelRegistry
 	domainEventRepo sharedrepos.DomainEventRepository
+	uow             unitofwork.UnitOfWork
 }
 
 func NewPinRemoteHandler(
 	channelRepo channelrepo.ChannelRepository,
 	reg registry.ChannelRegistry,
 	domainEventRepo sharedrepos.DomainEventRepository,
+	uow unitofwork.UnitOfWork,
 ) *PinRemoteHandler {
-	return &PinRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
+	return &PinRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *PinRemoteHandler) Name() string { return "pin_remote" }
@@ -58,7 +61,10 @@ func (h *PinRemoteHandler) Execute(ctx context.Context, input PinRemoteInput) (P
 		At:        time.Now().UTC(),
 		OwnerID:   ownerID,
 	})
-	if err := h.domainEventRepo.SaveAll(ctx, []types.DomainEventI{event}); err != nil {
+	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
+		return h.domainEventRepo.SaveAll(txCtx, []types.DomainEventI{event})
+	})
+	if err != nil {
 		return PinRemoteOutput{}, err
 	}
 

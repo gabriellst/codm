@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"strings"
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/services/unitofwork"
-	"strings"
 )
 
 type GetOrCreateChannelInput struct {

@@ -9,6 +9,7 @@ import (
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/internal/shared/types"
 )
 
@@ -24,14 +25,16 @@ type UnpinRemoteHandler struct {
 	channelRepo     channelrepo.ChannelRepository
 	registry        registry.ChannelRegistry
 	domainEventRepo sharedrepos.DomainEventRepository
+	uow             unitofwork.UnitOfWork
 }
 
 func NewUnpinRemoteHandler(
 	channelRepo channelrepo.ChannelRepository,
 	reg registry.ChannelRegistry,
 	domainEventRepo sharedrepos.DomainEventRepository,
+	uow unitofwork.UnitOfWork,
 ) *UnpinRemoteHandler {
-	return &UnpinRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
+	return &UnpinRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *UnpinRemoteHandler) Name() string { return "unpin_remote" }
@@ -52,7 +55,10 @@ func (h *UnpinRemoteHandler) Execute(ctx context.Context, input UnpinRemoteInput
 		At:        time.Now().UTC(),
 		OwnerID:   ownerID,
 	})
-	if err := h.domainEventRepo.SaveAll(ctx, []types.DomainEventI{event}); err != nil {
+	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
+		return h.domainEventRepo.SaveAll(txCtx, []types.DomainEventI{event})
+	})
+	if err != nil {
 		return UnpinRemoteOutput{}, err
 	}
 

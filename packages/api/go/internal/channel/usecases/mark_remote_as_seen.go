@@ -10,6 +10,7 @@ import (
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/internal/shared/types"
 )
 
@@ -29,14 +30,16 @@ type MarkRemoteAsSeenHandler struct {
 	channelRepo     channelrepo.ChannelRepository
 	registry        registry.ChannelRegistry
 	domainEventRepo sharedrepos.DomainEventRepository
+	uow             unitofwork.UnitOfWork
 }
 
 func NewMarkRemoteAsSeenHandler(
 	channelRepo channelrepo.ChannelRepository,
 	reg registry.ChannelRegistry,
 	domainEventRepo sharedrepos.DomainEventRepository,
+	uow unitofwork.UnitOfWork,
 ) *MarkRemoteAsSeenHandler {
-	return &MarkRemoteAsSeenHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
+	return &MarkRemoteAsSeenHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *MarkRemoteAsSeenHandler) Name() string { return "mark_remote_as_seen" }
@@ -57,7 +60,10 @@ func (h *MarkRemoteAsSeenHandler) Execute(ctx context.Context, input MarkRemoteA
 		At:        time.Now().UTC(),
 		OwnerID:   ownerID,
 	})
-	if err := h.domainEventRepo.SaveAll(ctx, []types.DomainEventI{event}); err != nil {
+	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
+		return h.domainEventRepo.SaveAll(txCtx, []types.DomainEventI{event})
+	})
+	if err != nil {
 		slog.Error("mark_remote_as_seen: save domain event failed",
 			"channelId", input.ChannelID,
 			"remoteId", input.RemoteID,

@@ -9,6 +9,7 @@ import (
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/internal/shared/types"
 )
 
@@ -27,14 +28,16 @@ type MuteRemoteHandler struct {
 	channelRepo     channelrepo.ChannelRepository
 	registry        registry.ChannelRegistry
 	domainEventRepo sharedrepos.DomainEventRepository
+	uow             unitofwork.UnitOfWork
 }
 
 func NewMuteRemoteHandler(
 	channelRepo channelrepo.ChannelRepository,
 	reg registry.ChannelRegistry,
 	domainEventRepo sharedrepos.DomainEventRepository,
+	uow unitofwork.UnitOfWork,
 ) *MuteRemoteHandler {
-	return &MuteRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo}
+	return &MuteRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *MuteRemoteHandler) Name() string { return "mute_remote" }
@@ -62,7 +65,10 @@ func (h *MuteRemoteHandler) Execute(ctx context.Context, input MuteRemoteInput) 
 		MutedUntil: mutedUntil,
 		OwnerID:    ownerID,
 	})
-	if err := h.domainEventRepo.SaveAll(ctx, []types.DomainEventI{event}); err != nil {
+	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
+		return h.domainEventRepo.SaveAll(txCtx, []types.DomainEventI{event})
+	})
+	if err != nil {
 		return MuteRemoteOutput{}, err
 	}
 

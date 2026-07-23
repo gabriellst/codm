@@ -7,6 +7,7 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
 	"template/api-go/internal/shared/errors"
+	"template/api-go/internal/shared/services/unitofwork"
 
 	"github.com/google/uuid"
 )
@@ -22,13 +23,15 @@ type DeleteChannelOutput struct {
 type DeleteChannelHandler struct {
 	repo     channelrepo.ChannelRepository
 	registry registry.ChannelRegistry
+	uow      unitofwork.UnitOfWork
 }
 
 func NewDeleteChannelHandler(
 	repo channelrepo.ChannelRepository,
 	registry registry.ChannelRegistry,
+	uow unitofwork.UnitOfWork,
 ) *DeleteChannelHandler {
-	return &DeleteChannelHandler{repo: repo, registry: registry}
+	return &DeleteChannelHandler{repo: repo, registry: registry, uow: uow}
 }
 
 func (h *DeleteChannelHandler) Name() string { return "delete_channel" }
@@ -60,12 +63,16 @@ func (h *DeleteChannelHandler) Execute(ctx context.Context, input DeleteChannelI
 			OwnerID:   channel.OwnerID,
 		},
 	))
-	if err := h.repo.Save(ctx, channel); err != nil {
-		return DeleteChannelOutput{}, err
-	}
-
-	// Physically remove the projection row after the event is persisted.
-	if err := h.repo.Delete(ctx, input.ID); err != nil {
+	// Save + Delete are a genuine double-write: the repo contract requires a
+	// UoW for strict atomicity (pg_channel_repository.go Save docs).
+	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
+		if err := h.repo.Save(txCtx, channel); err != nil {
+			return err
+		}
+		// Physically remove the projection row after the event is persisted.
+		return h.repo.Delete(txCtx, input.ID)
+	})
+	if err != nil {
 		return DeleteChannelOutput{}, err
 	}
 
