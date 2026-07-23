@@ -48,6 +48,7 @@ export * from './db'
 // Utils
 export * from './utils/Concurrency'
 export * from './utils/Config'
+export * from './utils/ForwardRequest'
 export * from './utils/GlobalErrorMapper'
 export * from './utils/OpenAPI'
 export * from './utils/Resilience'
