@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"template/api-go/pkg/validation"
 	"template/core-go/errors"
+	"template/core-go/pkg/validation"
 )
 
 // DecodeRequest decodes an HTTP request into a struct that defines the full request schema.

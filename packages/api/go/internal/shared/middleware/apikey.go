@@ -3,8 +3,8 @@ package middleware
 import (
 	"net/http"
 
-	"template/api-go/pkg/httputil"
 	"template/core-go/errors"
+	"template/core-go/pkg/httputil"
 )
 
 // APIKey creates a middleware that validates the apikey header against the global API key.

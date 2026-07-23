@@ -14,7 +14,7 @@ import (
 	whatsapp "template/api-go/internal/channel/services/gateway/whatsapp"
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
 	sharedevents "template/api-go/internal/shared/events"
-	"template/api-go/pkg/httputil"
+	"template/core-go/pkg/httputil"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
