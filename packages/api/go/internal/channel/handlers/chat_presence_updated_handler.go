@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	ctxevents "template/api-go/internal/channel/events"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -30,7 +30,7 @@ func (h *ChatPresenceUpdatedIntegrationHandler) Handle(ctx context.Context, even
 	if err != nil {
 		return err
 	}
-	if err := h.ext.Publish(ctx, sharedevents.NewChannelChatPresenceUpdatedEvent(e.OwnerID, e.Payload)); err != nil {
+	if err := h.ext.Publish(ctx, types.NewIntegrationEvent(wire.ChannelChatPresenceUpdatedEventName, e.OwnerID, e.Payload)); err != nil {
 		slog.Error("failed to publish chat_presence_updated integration event",
 			"channelId", e.Payload.ChannelID, "chatId", e.Payload.ChatID, "error", err)
 		return err

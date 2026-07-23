@@ -40,7 +40,7 @@ func mapReceipt(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 			SenderID:   senderJID,
 			MessageIDs: messageIDs,
 			Timestamp:  v.Timestamp.Unix(),
-			Platform:   enums.PlatformWhatsApp,
+			Platform:   string(enums.PlatformWhatsApp),
 			OwnerID:    ownerID,
 		})
 	case waenums.ReceiptTypeRead, waenums.ReceiptTypePlayed, waenums.ReceiptTypeReadSelf:
@@ -51,7 +51,7 @@ func mapReceipt(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 			MessageIDs: messageIDs,
 			Timestamp:  v.Timestamp.Unix(),
 			Self:       receiptType == waenums.ReceiptTypeReadSelf,
-			Platform:   enums.PlatformWhatsApp,
+			Platform:   string(enums.PlatformWhatsApp),
 			OwnerID:    ownerID,
 		})
 	default:

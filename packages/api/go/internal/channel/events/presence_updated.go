@@ -1,26 +1,21 @@
 package events
 
 import (
-	"time"
-
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelPresenceUpdatedPayload carries a contact's overall availability.
-// Fires when whatsmeow emits *events.Presence (user went online/offline
-// or their lastSeen timestamp advanced).
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelPresenceUpdatedPayload struct {
-	ChannelID   uuid.UUID `json:"channelId" validate:"required"`
-	RemoteID    string    `json:"remoteId" validate:"required"`
-	Unavailable bool      `json:"unavailable"`
-	LastSeen    *int64    `json:"lastSeen,omitempty"`
-	ObservedAt  time.Time `json:"observedAt" validate:"required"`
-	OwnerID     string    `json:"ownerId" validate:"required"`
-}
+// ChannelPresenceUpdatedPayload is retargeted onto the frozen contracts wire
+// binding (packages/contracts/generated/go/wire/events.go) — flat-events swap:
+// the payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-presence-updated.tsp`.
+//
+// Semantics (unchanged): a contact's overall availability. Fires when
+// whatsmeow emits *events.Presence (user went online/offline or their
+// lastSeen timestamp advanced).
+type ChannelPresenceUpdatedPayload = wire.ChannelPresenceUpdatedPayload
 
 const PresenceUpdatedEventName = "channel.presence_updated"
 

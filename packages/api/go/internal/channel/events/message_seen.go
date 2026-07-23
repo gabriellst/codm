@@ -1,37 +1,32 @@
 package events
 
 import (
-	"template/api-go/internal/channel/enums"
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelMessageSeenPayload signals that messages in a chat were read or
-// played. Covers three whatsmeow receipt types that all mean "consumed":
+// ChannelMessageSeenPayload is retargeted onto the frozen contracts wire
+// binding (packages/contracts/generated/go/wire/events.go) — flat-events swap:
+// the payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-message-seen.tsp`.
+//
+// Semantics (unchanged): messages in a chat were read or played. Covers three
+// whatsmeow receipt types that all mean "consumed":
 //
 //   - read              → counterparty opened the chat / message
 //   - played            → counterparty played a voice/video note
 //   - read-self (Self=true) → owner read the thread on another device
 //
 // Status aggregation (per-message ✓✓ blue) uses SenderID != owner rows.
-// Remote chat_seen sync (multi-device) uses Self=true rows.
+// Remote chat_seen sync (multi-device) uses Self=true rows. Timestamp is a
+// watermark — every owner message with message_timestamp <= Timestamp is seen.
 //
-// Timestamp is a watermark — every owner message in the chat with
-// message_timestamp <= Timestamp is considered seen.
-//
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelMessageSeenPayload struct {
-	ChannelID  uuid.UUID      `json:"channelId" validate:"required"`
-	RemoteID   string         `json:"remoteId" validate:"required"`
-	SenderID   string         `json:"senderId" validate:"required"`
-	MessageIDs []string       `json:"messageIds"`
-	Timestamp  int64          `json:"timestamp" validate:"required"`
-	Self       bool           `json:"self"` // true when SenderID == owner (read-self)
-	Platform   enums.Platform `json:"platform" validate:"required"`
-	OwnerID    string         `json:"ownerId" validate:"required"`
-}
+// Disclosed type adaptation: the binding types `Platform` as the wire `string`
+// (verbatim gateway Platform; ChannelKind reconciliation deferred to the
+// enum-harmonization handoff) — publishers cast `string(enums.Platform*)`.
+type ChannelMessageSeenPayload = wire.ChannelMessageSeenPayload
 
 const MessageSeenEventName = "channel.message_seen"
 

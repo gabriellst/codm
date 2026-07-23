@@ -6,7 +6,7 @@ import (
 
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/services/registry"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -44,7 +44,7 @@ func (h *MessageReceivedHandler) Handle(ctx context.Context, event types.DomainE
 		)
 	}
 
-	integrationEvent := sharedevents.NewChannelMessageReceivedEvent(e.OwnerID, payload)
+	integrationEvent := types.NewIntegrationEvent(wire.ChannelMessageReceivedEventName, e.OwnerID, payload)
 	if err := h.externalMediator.Publish(ctx, integrationEvent); err != nil {
 		slog.Error("failed to publish message received integration event",
 			"error", err,

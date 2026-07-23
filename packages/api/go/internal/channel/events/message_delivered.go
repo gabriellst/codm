@@ -1,33 +1,27 @@
 package events
 
 import (
-	"template/api-go/internal/channel/enums"
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelMessageDeliveredPayload signals that a recipient's device received
-// one or more of the owner's messages in the given chat. Timestamp is treated
-// as a watermark — every owner message in the chat with
-// message_timestamp <= Timestamp is considered delivered to SenderID.
+// ChannelMessageDeliveredPayload is retargeted onto the frozen contracts wire
+// binding (packages/contracts/generated/go/wire/events.go) — flat-events swap:
+// the payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-message-delivered.tsp`.
 //
-// MessageIDs may be empty (presence/online ack carrying no specific ids),
-// populated with a single id (per-message ack), or batched. The read model
-// does not use them; it only uses (RemoteID, SenderID, Timestamp) to close
-// the watermark.
+// Semantics (unchanged): a recipient's device received one or more of the
+// owner's messages in the given chat. Timestamp is a watermark — every owner
+// message in the chat with message_timestamp <= Timestamp is considered
+// delivered to SenderID. MessageIDs may be empty (bare online-ack), single, or
+// batched; the read model only uses (RemoteID, SenderID, Timestamp).
 //
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelMessageDeliveredPayload struct {
-	ChannelID  uuid.UUID      `json:"channelId" validate:"required"`
-	RemoteID   string         `json:"remoteId" validate:"required"`
-	SenderID   string         `json:"senderId" validate:"required"`
-	MessageIDs []string       `json:"messageIds"`
-	Timestamp  int64          `json:"timestamp" validate:"required"`
-	Platform   enums.Platform `json:"platform" validate:"required"`
-	OwnerID    string         `json:"ownerId" validate:"required"`
-}
+// Disclosed type adaptation: the binding types `Platform` as the wire `string`
+// (verbatim gateway Platform; ChannelKind reconciliation deferred to the
+// enum-harmonization handoff) — publishers cast `string(enums.Platform*)`.
+type ChannelMessageDeliveredPayload = wire.ChannelMessageDeliveredPayload
 
 const MessageDeliveredEventName = "channel.message_delivered"
 

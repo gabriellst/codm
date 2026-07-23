@@ -69,7 +69,7 @@ func strPtr(s string) *string    { return &s }
 func cases() map[string]any {
 	return map[string]any{
 		// ── message cluster ──────────────────────────────────────────────
-		"channel_message.received": envelope(sharedevents.ChannelMessageReceivedEventName,
+		"channel_message.received": envelope(wire.ChannelMessageReceivedEventName,
 			channelevents.ChannelMessageReceivedPayload{
 				ChannelID:         channelID,
 				MessageID:         "wamid-1",
@@ -87,26 +87,26 @@ func cases() map[string]any {
 				PlatformData:      json.RawMessage(`{"waMessageId":"wamid-1"}`),
 				OwnerID:           fixedOwner,
 			}),
-		"channel_message.delivered": envelope(sharedevents.ChannelMessageDeliveredEventName,
+		"channel_message.delivered": envelope(wire.ChannelMessageDeliveredEventName,
 			channelevents.ChannelMessageDeliveredPayload{
 				ChannelID:  channelID,
 				RemoteID:   "5511999999999@s.whatsapp.net",
 				SenderID:   "5511888888888@s.whatsapp.net",
 				MessageIDs: []string{"wamid-1", "wamid-2"},
 				Timestamp:  1751371200,
-				Platform:   channelenums.PlatformWhatsApp,
+				Platform:   string(channelenums.PlatformWhatsApp),
 				OwnerID:    fixedOwner,
 			}),
-		"channel_message.delivered/empty-ids": envelope(sharedevents.ChannelMessageDeliveredEventName,
+		"channel_message.delivered/empty-ids": envelope(wire.ChannelMessageDeliveredEventName,
 			channelevents.ChannelMessageDeliveredPayload{
 				ChannelID: channelID,
 				RemoteID:  "5511999999999@s.whatsapp.net",
 				SenderID:  "5511888888888@s.whatsapp.net",
 				Timestamp: 1751371200,
-				Platform:  channelenums.PlatformWhatsApp,
+				Platform:  string(channelenums.PlatformWhatsApp),
 				OwnerID:   fixedOwner,
 			}),
-		"channel_message.seen": envelope(sharedevents.ChannelMessageSeenEventName,
+		"channel_message.seen": envelope(wire.ChannelMessageSeenEventName,
 			channelevents.ChannelMessageSeenPayload{
 				ChannelID:  channelID,
 				RemoteID:   "5511999999999@s.whatsapp.net",
@@ -114,12 +114,12 @@ func cases() map[string]any {
 				MessageIDs: []string{"wamid-1"},
 				Timestamp:  1751371200,
 				Self:       true,
-				Platform:   channelenums.PlatformWhatsApp,
+				Platform:   string(channelenums.PlatformWhatsApp),
 				OwnerID:    fixedOwner,
 			}),
 
 		// ── presence cluster ─────────────────────────────────────────────
-		"channel.presence_updated": envelope(sharedevents.ChannelPresenceUpdatedEventName,
+		"channel.presence_updated": envelope(wire.ChannelPresenceUpdatedEventName,
 			channelevents.ChannelPresenceUpdatedPayload{
 				ChannelID:   channelID,
 				RemoteID:    "5511999999999@s.whatsapp.net",
@@ -128,7 +128,7 @@ func cases() map[string]any {
 				ObservedAt:  t1,
 				OwnerID:     fixedOwner,
 			}),
-		"channel.presence_updated/no-lastseen": envelope(sharedevents.ChannelPresenceUpdatedEventName,
+		"channel.presence_updated/no-lastseen": envelope(wire.ChannelPresenceUpdatedEventName,
 			channelevents.ChannelPresenceUpdatedPayload{
 				ChannelID:   channelID,
 				RemoteID:    "5511999999999@s.whatsapp.net",
@@ -136,7 +136,7 @@ func cases() map[string]any {
 				ObservedAt:  t1,
 				OwnerID:     fixedOwner,
 			}),
-		"channel.chat_presence_updated": envelope(sharedevents.ChannelChatPresenceUpdatedEventName,
+		"channel.chat_presence_updated": envelope(wire.ChannelChatPresenceUpdatedEventName,
 			channelevents.ChannelChatPresenceUpdatedPayload{
 				ChannelID:  channelID,
 				ChatID:     "5511999999999@s.whatsapp.net",
@@ -274,11 +274,6 @@ func cases() map[string]any {
 // swap commits change the publishers' const SOURCE, so value equality is load-bearing.
 func TestWireIdentityNameConsts(t *testing.T) {
 	pairs := map[string][2]string{
-		"received":       {sharedevents.ChannelMessageReceivedEventName, wire.ChannelMessageReceivedEventName},
-		"delivered":      {sharedevents.ChannelMessageDeliveredEventName, wire.ChannelMessageDeliveredEventName},
-		"seen":           {sharedevents.ChannelMessageSeenEventName, wire.ChannelMessageSeenEventName},
-		"presence":       {sharedevents.ChannelPresenceUpdatedEventName, wire.ChannelPresenceUpdatedEventName},
-		"chat_presence":  {sharedevents.ChannelChatPresenceUpdatedEventName, wire.ChannelChatPresenceUpdatedEventName},
 		"remote_created": {sharedevents.ChannelRemoteCreatedEventName, wire.ChannelRemoteCreatedEventName},
 		"remote_updated": {sharedevents.ChannelRemoteUpdatedEventName, wire.ChannelRemoteUpdatedEventName},
 		"remote_deleted": {sharedevents.ChannelRemoteDeletedEventName, wire.ChannelRemoteDeletedEventName},

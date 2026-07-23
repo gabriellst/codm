@@ -1,26 +1,21 @@
 package events
 
 import (
-	"time"
-
-	msgenums "template/api-go/internal/channel/enums"
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelChatPresenceUpdatedPayload carries a typing/recording indicator
-// inside a specific chat. Fires when whatsmeow emits *events.ChatPresence.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelChatPresenceUpdatedPayload struct {
-	ChannelID  uuid.UUID                 `json:"channelId" validate:"required"`
-	ChatID     string                    `json:"chatId" validate:"required"`
-	SenderID   string                    `json:"senderId" validate:"required"`
-	State      msgenums.ChatPresenceType `json:"state" validate:"required"`
-	ObservedAt time.Time                 `json:"observedAt" validate:"required"`
-	OwnerID    string                    `json:"ownerId" validate:"required"`
-}
+// ChannelChatPresenceUpdatedPayload is retargeted onto the frozen contracts
+// wire binding (packages/contracts/generated/go/wire/events.go) — flat-events
+// swap: the payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-chat-presence-updated.tsp`.
+//
+// Semantics (unchanged): a typing/recording indicator inside a specific chat.
+// Fires when whatsmeow emits *events.ChatPresence. `State` keeps its enum
+// type: ChatPresenceType is already the exact-match wire alias.
+type ChannelChatPresenceUpdatedPayload = wire.ChannelChatPresenceUpdatedPayload
 
 const ChatPresenceUpdatedEventName = "channel.chat_presence_updated"
 
