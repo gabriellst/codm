@@ -233,7 +233,7 @@ Executada em worktree isolada (`.claude/worktrees/tauri-shell`, branch `tauri-sh
 
 ## FIX PASS — Fase C judge blockers (23 jul, worktree `tauri-shell`)
 
-Quatro commits, um por fix (`2a42de7d` · `f1ddf17c` · `e75fa25e` · `4b1ef074`):
+Quatro commits de código, um por fix (`2a42de7d` · `f1ddf17c` · `e75fa25e` · `4b1ef074`) + esta entrada de log:
 
 **1. Remoção TOTAL do expo executada (`2a42de7d`).** O waiver "DORMANT" era fabricado (correção honesta no lugar do parágrafo, acima). Executado: 8 pastas `.claude/skills/*/expo/` deletadas (component/form/primitive/route; onboarding/push/realtime/sheet eram expo-only → skill inteira removida, incl. o componente `sheet` do registry + disposition da taxonomy-parity); `scripts/cli/expo/` deletado e o CLI re-roteado (`resolve.ts`: Platform = react|astro; react scaffolda exit 0, astro segue stub explícito exit 2); padrões/notas expo purgados de `.claude/registry.yaml`, hubs de skill, guards astro, atlas (`NAV-MODAL` removido — owner `sheet#` morreria), CLAUDE.md, docs/FRONTEND.md, eslint/vscode ignores `.expo`; evals: 2 tasks expo + `synthetic-l6-mobile-habit-tracker` (+seed) removidas, grader `app-expo` e branches expo do run.ts removidos; `route-closure.ts` (no-op) removido do `bun run detect`, dos DETECTORS de graders.ts e de TODA task que o listava — harness verde sem exemption, nenhuma fixture mínima precisou ficar.
 
@@ -248,7 +248,7 @@ Quatro commits, um por fix (`2a42de7d` · `f1ddf17c` · `e75fa25e` · `4b1ef074`
 **Sweep expo — sobreviventes enumerados (todos justificados, zero refs vivas):**
 - `scripts/create-template/plan.test.ts` (16) + `render-manifest.test.ts` (1) — fixture universe do stamp: o entry `appExpo` prova o pruning de um frontend dropado (lang agora `react`, comentado).
 - `scripts/skill-evals/tasks/PROBES-BACKLOG.md` (4) — histórico do programa de probes (documenta probes já removidas).
-- `scripts/skill-evals/seeds/synthetic-l5-learnings-meta/findings.md` (1) — corpus fixture do eval learnings-meta (dados, não código).
+- `scripts/skill-evals/seeds/synthetic-l5-learnings-meta/{findings.md,scoreboard.jsonl}` — corpus fixture do eval learnings-meta (dados, não código; o scoreboard carrega o task-id sintético `synthetic-expo-form-state-subscribe`).
 - `docs/ECOSYSTEM.md` (2) + `docs/BOOTSTRAP.md` (1) — descrevem o repo irmão berzerk-club (exemplar mobile DELE, não deste repo).
 - `docs/CORRECTNESS.md` (1) — exemplo histórico medido ("expo registration drift").
 - `HANDOFF.md` (1), `.specs/codedm/ROADMAP.md` (1), `.specs/codedm/OVERNIGHT-BLOCKED.md` (1) — afirmam "expo REMOVIDO" (corretas).
