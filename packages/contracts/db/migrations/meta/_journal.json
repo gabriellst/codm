@@ -57,6 +57,13 @@
       "when": 1784792820221,
       "tag": "0007_acoustic_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784793395778,
+      "tag": "0008_spicy_namor",
+      "breakpoints": true
     }
   ]
 }

@@ -21,11 +21,11 @@ export const CONTEXTS = {
 	auth: { pgSchema: 'authentication' },
 	owner: { pgSchema: 'owner' },
 	shared: { pgSchema: 'shared' },
-	// terminal (agent-runtime) — the Phase-5 terminal engine: runtime spine + PTY runner + provider
-	// detection + classification service. Runtime + services only, owns NO tables (its outbound facts
-	// are the frozen `integration.issue.*` events on the shared outbox), so pgSchema is null like ui.
-	// The BC5 Issue AGGREGATE + its `issue` schema (still in PENDING_PGSCHEMAS) land in a later phase.
-	terminal: { pgSchema: null },
+	// terminal (agent-runtime) — the terminal engine: runtime spine + PTY runner + provider
+	// detection + classification service. Its outbound facts are the frozen `integration.issue.*`
+	// events on the shared outbox. Phase-10 (foundation runner extraction) promoted it to owning the
+	// `terminal` schema: `terminal_llm_sessions`, the durable per-issue session record (Fork B).
+	terminal: { pgSchema: 'terminal' },
 	// BC2 Workspace Registry (TS-owned) — the `workspace` schema, promoted out of PENDING_PGSCHEMAS.
 	workspace: { pgSchema: 'workspace' },
 	// BC4 Thread & Routing (Core, TS-owned) — the `thread` schema, promoted out of PENDING_PGSCHEMAS.
