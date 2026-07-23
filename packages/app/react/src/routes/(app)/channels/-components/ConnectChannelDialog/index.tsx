@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { useQueryClient } from '@tanstack/react-query'
 import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-react'
-import { ChannelStatusEnum, getHomeDashboardQueryKey, useConnectChannel, useGetChannelPairingStatus } from '@codedm/client-typescript/typescript'
+import { getHomeDashboardQueryKey } from '@codedm/client-typescript/typescript'
+import { ChannelStatusEnum, PlatformEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codedm/client-typescript/go'
 import { extractErrorCode, getErrorTranslation } from '@/lib'
 import { channelGlyph } from '@/components/console/glyphs'
 import { Button } from '@/components/ui/button'
@@ -20,11 +21,14 @@ const POLL_INTERVAL_MS = 2000
  * Connect-a-channel flow (T06). WhatsApp is the only connectable channel today; Instagram DM and
  * Telegram are "coming soon" and never reach this dialog.
  *
- * The real pairing wire: opening the dialog fires the `ConnectChannel` proxy, which server-side asks
- * the Go channel gateway to start a WhatsApp session and hands back a live QR string SYNCHRONOUSLY.
- * We render that string as a scannable QR, then poll `GetChannelPairingStatus` every ~2s until the
- * gateway reports CONNECTED — at which point the channels list is invalidated so the new link shows
- * up. The QR rotates: past its ~3-min TTL we surface a "generate a new code" retry (a fresh connect).
+ * The real pairing wire — the GATEWAY SDK (`/go` subpath) through the api-ts external/ChannelProxy
+ * (the browser never talks to the Go service; identity is stamped server-side):
+ *   1. `useGetOrCreateChannel({ platform: WHATSAPP })` resolves the operator's channel row.
+ *   2. `useConnectChannel({ id })` starts whatsmeow and hands back a live QR string SYNCHRONOUSLY
+ *      (`{ id, state, qrCode }` — the connect call blocks on the first QR rotation).
+ *   3. `useGetChannel(id)` polls ~every 2s until the gateway reports CONNECTED (its status
+ *      projector flips the row when the device pairs), then the channels list is invalidated.
+ * The QR rotates: past its ~3-min TTL we surface a "generate a new code" retry (a fresh connect).
  * If the gateway is unreachable the proxy raises GATEWAY_UNAVAILABLE, which we render as an honest,
  * retryable state rather than a fabricated code. The `trigger` slot lets both the page's "Connect
  * channel" button and the WhatsApp row open the same flow.
@@ -36,22 +40,37 @@ export function ConnectChannelDialog({ trigger }: { trigger?: ReactElement }) {
 
 	const [open, setOpen] = useState(false)
 	const [expired, setExpired] = useState(false)
+	// Bumped by every retry ("generate new code" / error retry) so the connect effect re-fires even
+	// though the resolved channel id is unchanged.
+	const [attempt, setAttempt] = useState(0)
+
+	const resolve = useGetOrCreateChannel({ platform: PlatformEnum.WHATSAPP }, { query: { enabled: open } })
+	const channelId = resolve.data?.id ?? null
 
 	const connect = useConnectChannel()
-	const channelId = connect.data?.channelId ?? null
-	const qr = connect.data?.qr ?? null
-	const connectedOnConnect = connect.data?.status === ChannelStatusEnum.CONNECTED
+	const qr = connect.data?.qrCode ?? null
+	const connectedOnConnect = connect.data?.state === ChannelStatusEnum.CONNECTED
 
-	const pairing = useGetChannelPairingStatus(
-		{ channelId: channelId ?? '' },
-		{ query: { enabled: open && !!channelId && !expired && !connectedOnConnect, refetchInterval: POLL_INTERVAL_MS } },
-	)
+	// Fire the connect as soon as the channel resolves (and again on every retry attempt). `isIdle`
+	// guards the re-render loop: a fired mutation is pending/settled until the next reset().
+	const { mutate: connectMutate, isIdle: connectIsIdle } = connect
+	useEffect(() => {
+		if (open && channelId && connectIsIdle) connectMutate({ id: channelId })
+	}, [open, channelId, connectIsIdle, connectMutate, attempt])
+
+	const pairing = useGetChannel(channelId ?? undefined, {
+		query: {
+			enabled: open && !!channelId && !!connect.data && !expired && !connectedOnConnect,
+			refetchInterval: POLL_INTERVAL_MS,
+		},
+	})
 	const isConnected = connectedOnConnect || pairing.data?.status === ChannelStatusEnum.CONNECTED
 
 	const startPairing = () => {
 		setExpired(false)
 		connect.reset()
-		connect.mutate()
+		if (resolve.isError) void resolve.refetch()
+		setAttempt(n => n + 1)
 	}
 
 	const handleOpenChange = (next: boolean) => {
@@ -88,8 +107,8 @@ export function ConnectChannelDialog({ trigger }: { trigger?: ReactElement }) {
 				<DialogClose render={<Button>{t('common.close')}</Button>} />
 			</>
 		)
-	} else if (connect.isError) {
-		const code = extractErrorCode(connect.error)
+	} else if (resolve.isError || connect.isError) {
+		const code = extractErrorCode(resolve.error ?? connect.error)
 		body = (
 			<>
 				<div className="flex size-52 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-destructive/40 bg-destructive/5 p-4 text-center">
