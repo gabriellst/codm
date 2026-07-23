@@ -85,6 +85,19 @@ dialog/notification/autostart, feature flags do keyring). Nada estrutural: a top
 **Pendência menor associada:** ícones do bundle (`src-tauri/icons/`) não commitados —
 rodar `bun x tauri icon <png-1024>` antes do primeiro `desktop:bundle`.
 
+### Lote 3 (astro-tauri-org) — contrato nativo + DI: mesmo park honesto
+
+O rename DialogService→FilePickerService, o wiring do NativeProvider (DI + code-split
+dynamic-import provado no build), a lint-rule do seam (probe mordeu nas duas direções) e o
+fluxo AddWorkspace via file picker foram entregues e verificados **sem Rust**. A capability
+`dialog:allow-open` do plugin-dialog **deriva declarativamente** de `REPO.desktop.services.filePicker`
+(o gerador do Lote 2 já flatteneia `services` → `capabilities/default.json`; renomear a chave
+`dialog`→`filePicker` é idempotente no output — `bun desktop:generate --check` verde). O
+`capabilities/default.json` e `tauri.conf.json` gerados são verificáveis por **schema/diff** —
+`cargo build`/`tauri dev` seguem PARKED pela mesma ausência de toolchain Rust acima
+(`src-tauri/*.rs` continuam `UNVERIFIED-COMPILE`; o primeiro `cargo build` valida a assinatura do
+plugin-dialog `open`). Nada novo destrava o park — a superfície nativa nova é só TS + conf gerada.
+
 ## Fase F (go-domain) — ADIADA POR DECISÃO DO FOUNDER (23-jul, manhã)
 Primeira tentativa morreu em usage-limit (branch vazia — juízes flagaram a não-entrega, worst=6);
 retry lançado e então o founder redirecionou: "Deixe para fazer o dominio go depois, vamos
