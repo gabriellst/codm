@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 	msgenums "template/api-go/internal/channel/enums"
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -39,6 +41,7 @@ func (c *SendStatusController) Metadata() types.ControllerMetadata {
 		Request:  SendStatusRequest{},
 		Response: usecases.SendStatusOutput{},
 		Status:   http.StatusCreated,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, ctxerrors.CodeChannelNotConnected, errors.CodeValidationFailed},
 	}
 }
 

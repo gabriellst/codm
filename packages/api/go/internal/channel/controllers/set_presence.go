@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"template/api-go/internal/channel/enums"
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -36,6 +38,7 @@ func (c *SetPresenceController) Metadata() types.ControllerMetadata {
 		Request:  SetPresenceRequest{},
 		Response: nil,
 		Status:   http.StatusNoContent,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, ctxerrors.CodeChannelNotConnected, errors.CodeValidationFailed},
 	}
 }
 
@@ -55,5 +58,5 @@ func (c *SetPresenceController) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	httputil.RespondJSON(w, http.StatusNoContent, nil)
 }

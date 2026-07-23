@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"template/api-go/internal/channel/usecases"
 	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -35,6 +36,7 @@ func (c *GetOrCreateChannelController) Metadata() types.ControllerMetadata {
 		Request:  GetOrCreateChannelRequest{},
 		Response: usecases.GetOrCreateChannelOutput{},
 		Status:   http.StatusOK,
+		Errors:   []errors.ErrorCode{errors.CodeValidationFailed},
 	}
 }
 

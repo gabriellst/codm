@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -39,6 +41,7 @@ func (c *SendLocationController) Metadata() types.ControllerMetadata {
 		Request:  SendLocationRequest{},
 		Response: usecases.SendLocationOutput{},
 		Status:   http.StatusCreated,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, ctxerrors.CodeChannelNotConnected, ctxerrors.CodeInvalidCoordinates, errors.CodeValidationFailed},
 	}
 }
 

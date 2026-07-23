@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -34,6 +36,7 @@ func (c *DeleteChannelController) Metadata() types.ControllerMetadata {
 		Request:  DeleteChannelRequest{},
 		Response: usecases.DeleteChannelOutput{},
 		Status:   http.StatusOK,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, errors.CodeValidationFailed},
 	}
 }
 

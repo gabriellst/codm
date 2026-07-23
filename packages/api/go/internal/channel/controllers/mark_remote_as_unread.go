@@ -60,5 +60,5 @@ func (c *MarkRemoteAsUnreadController) Handle(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	httputil.RespondJSON(w, http.StatusNoContent, nil)
 }

@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -34,6 +36,7 @@ func (c *RestartChannelController) Metadata() types.ControllerMetadata {
 		Request:  RestartChannelRequest{},
 		Response: usecases.RestartChannelOutput{},
 		Status:   http.StatusOK,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, errors.CodeValidationFailed},
 	}
 }
 

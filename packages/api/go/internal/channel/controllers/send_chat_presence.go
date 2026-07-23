@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 	msgenums "template/api-go/internal/channel/enums"
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -36,6 +38,7 @@ func (c *SendChatPresenceController) Metadata() types.ControllerMetadata {
 		Request:  SendChatPresenceRequest{},
 		Response: usecases.SendChatPresenceOutput{},
 		Status:   http.StatusOK,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, ctxerrors.CodeChannelNotConnected, errors.CodeValidationFailed},
 	}
 }
 

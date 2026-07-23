@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -36,6 +37,7 @@ func (c *ListChannelsController) Metadata() types.ControllerMetadata {
 		Request:  ListChannelsRequest{},
 		Response: usecases.ListChannelsOutput{},
 		Status:   http.StatusOK,
+		Errors:   []errors.ErrorCode{errors.CodeValidationFailed},
 	}
 }
 

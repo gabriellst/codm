@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"template/api-go/internal/channel/enums"
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -40,6 +42,7 @@ func (c *SendMediaController) Metadata() types.ControllerMetadata {
 		Request:  SendMediaRequest{},
 		Response: usecases.SendMediaOutput{},
 		Status:   http.StatusCreated,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, ctxerrors.CodeChannelNotConnected, errors.CodeValidationFailed},
 	}
 }
 

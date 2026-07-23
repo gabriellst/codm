@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"net/http"
+	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
 	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
 )
@@ -35,6 +37,7 @@ func (c *CreateWhatsAppChannelController) Metadata() types.ControllerMetadata {
 		Request:  CreateWhatsAppChannelRequest{},
 		Response: usecases.CreateChannelOutput{},
 		Status:   http.StatusCreated,
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNameAlreadyExists, errors.CodeValidationFailed},
 	}
 }
 

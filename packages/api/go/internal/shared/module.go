@@ -2,16 +2,16 @@ package shared
 
 import (
 	"context"
+	stdsql "database/sql"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"template/api-go/internal/shared/config"
 	sharedcontrollers "template/api-go/internal/shared/controllers"
-	stdsql "database/sql"
 	"template/api-go/internal/shared/db/sql"
 	"template/api-go/internal/shared/middleware"
-	"template/api-go/internal/shared/services/httprouter"
 	"template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/httprouter"
 	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/services/outbox"
 	"template/api-go/internal/shared/services/unitofwork"
@@ -48,9 +48,9 @@ var Module = fx.Module("shared",
 	fx.Provide(httprouter.NewHttpRouter),
 
 	// SSE Events Controller
-	fx.Provide(sharedcontrollers.NewListenEventsController),
 	fx.Provide(fx.Annotate(
-		func(c *sharedcontrollers.ListenEventsController) types.Controller { return c },
+		sharedcontrollers.NewListenEventsController,
+		fx.As(new(types.Controller)),
 		fx.ResultTags(`group:"controllers"`),
 	)),
 

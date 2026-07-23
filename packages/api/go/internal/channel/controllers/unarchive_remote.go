@@ -60,5 +60,5 @@ func (c *UnarchiveRemoteController) Handle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	httputil.RespondJSON(w, http.StatusNoContent, nil)
 }
