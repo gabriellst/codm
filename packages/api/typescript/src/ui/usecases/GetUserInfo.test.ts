@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
+import { givenOwner } from '@test/support'
 import { TestBed, testId } from '@test/support'
 import { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 import { GetUserInfo } from './GetUserInfo'
@@ -27,11 +28,9 @@ describe('GetUserInfo', () => {
 		await testBed.destroy()
 	})
 
-	async function seedOwner(name: string): Promise<string> {
-		const owner = Owner.create({ name, kind: OwnerKind.ORGANIZATION, responsibleUserId: USER, timezone: 'UTC' })
-		await ownerRepo.save(owner)
-		return owner.id.value
-	}
+	// State via the shared repo-direct given — never a local seed helper.
+	const seedOwner = async (name: string): Promise<string> =>
+		(await givenOwner(testBed, { name, responsibleUserId: USER, timezone: 'UTC' })).id.value
 
 	it('returns user identity + real owners (where user is responsible) + active owner', async () => {
 		const ownerId = await seedOwner('Acme')

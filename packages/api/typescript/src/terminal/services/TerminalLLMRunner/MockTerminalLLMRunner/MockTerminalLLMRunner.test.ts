@@ -1,3 +1,4 @@
+import { testId } from '@test/support'
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { TurnEndSignal } from '../../../enums'
@@ -8,8 +9,8 @@ import type { TerminalRuntimeEvent } from '../types'
 describe('MockTerminalLLMRunner', () => {
 	let runner: MockTerminalLLMRunner
 	const baseReq: TerminalLLMRunnerStreamRequest = {
-		issueId: '00000000-0000-4000-8000-000000000001',
-		threadId: '00000000-0000-4000-8000-000000000002',
+		issueId: testId('mock-runner', 'issue'),
+		threadId: testId('mock-runner', 'thread'),
 		ownerId: 'tenant',
 		provider: ProviderKind.CLAUDE_CODE,
 		cwd: '/tmp/repo',

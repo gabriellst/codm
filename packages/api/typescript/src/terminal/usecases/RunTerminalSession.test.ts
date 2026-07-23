@@ -1,3 +1,4 @@
+import { testId } from '@test/support'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
@@ -19,7 +20,9 @@ import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
 
 /** A runner that fails the session (non-zero exit) — drives the STOPPED branch deterministically. */
 class FailingRunner extends TerminalLLMRunner {
-	async generate<OutputSchema extends import('zod').ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<import('zod').z.output<OutputSchema>> {
+	async generate<OutputSchema extends import('zod').ZodType>(
+		_r: AgentGenerateRequest<OutputSchema>,
+	): Promise<import('zod').z.output<OutputSchema>> {
 		return {} as import('zod').z.output<OutputSchema>
 	}
 	async *stream(_request: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
@@ -37,8 +40,8 @@ describe('RunTerminalSession use case', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 
-	const ownerId = '00000000-0000-4000-8000-000000000001'
-	const threadId = '019e4d24-6524-7041-9e1c-8108180cddae'
+	const ownerId = testId('run-terminal-session', 'owner')
+	const threadId = testId('run-terminal-session', 'thread')
 
 	const baseInput = (issueId: string) => ({
 		ownerId,
@@ -66,7 +69,7 @@ describe('RunTerminalSession use case', () => {
 		const useCase = testBed.resolve(RunTerminalSession)
 		const registry = testBed.resolve(AgentStreamRegistry)
 		const eventRepo = testBed.resolve(DomainEventRepository)
-		const issueId = '019e4d24-0000-7041-9e1c-000000000001'
+		const issueId = testId('run-terminal-session', 'issue-1')
 
 		// Attach an SSE observer so the transport half of the two-stream split is observable.
 		const frames: TerminalSseFrame[] = []
@@ -94,7 +97,7 @@ describe('RunTerminalSession use case', () => {
 	it('enforces one session per issue (single-active invariant)', async () => {
 		const useCase = testBed.resolve(RunTerminalSession)
 		const registry = testBed.resolve(AgentStreamRegistry)
-		const issueId = '019e4d24-0000-7041-9e1c-000000000002'
+		const issueId = testId('run-terminal-session', 'issue-2')
 
 		registry.beginSession(issueId) // simulate an already-running session
 		try {
@@ -108,7 +111,7 @@ describe('RunTerminalSession use case', () => {
 
 	it('rejects a provider that is not installed', async () => {
 		const useCase = testBed.resolve(RunTerminalSession)
-		const issueId = '019e4d24-0000-7041-9e1c-000000000003'
+		const issueId = testId('run-terminal-session', 'issue-3')
 		// CODEX is NOT_INSTALLED in the MockProviderDetector default catalog.
 		await expect(useCase.execute({ ...baseInput(issueId), provider: ProviderKind.CODEX })).rejects.toThrow(
 			expect.objectContaining({ name: 'PROVIDER_NOT_DETECTED' }) as BaseError,
@@ -119,7 +122,7 @@ describe('RunTerminalSession use case', () => {
 		testBed.override(TerminalLLMRunner, new FailingRunner())
 		const useCase = testBed.resolve(RunTerminalSession)
 		const eventRepo = testBed.resolve(DomainEventRepository)
-		const issueId = '019e4d24-0000-7041-9e1c-000000000004'
+		const issueId = testId('run-terminal-session', 'issue-4')
 
 		const out = await useCase.execute(baseInput(issueId))
 

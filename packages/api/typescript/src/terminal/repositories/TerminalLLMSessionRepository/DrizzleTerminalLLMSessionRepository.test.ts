@@ -7,12 +7,12 @@ import { TerminalLLMSessionRepository } from './TerminalLLMSessionRepository'
 
 function makeSession(overrides: Partial<Parameters<typeof TerminalLLMSession.create>[0]> = {}) {
 	return TerminalLLMSession.create({
-		ownerId: '00000000-0000-4000-8000-000000000001',
+		ownerId: testId('terminal-session-repo', 'owner'),
 		issueId: testId(),
-		threadId: '00000000-0000-4000-8000-0000000000bb',
+		threadId: testId('terminal-session-repo', 'thread'),
 		provider: ProviderKind.CLAUDE_CODE,
 		cwd: '/tmp/workspace',
-		claudeSessionId: 'b9f1c8e2-3f44-4b55-8a66-77d1e2f3a4b5',
+		claudeSessionId: testId('terminal-session-repo', 'claude-session'),
 		...overrides,
 	})
 }
@@ -52,11 +52,11 @@ describe('DrizzleTerminalLLMSessionRepository (integration)', () => {
 	it('save UPSERTs — recordTurn + re-save mutates the row and bumps version', async () => {
 		const session = makeSession()
 		await repo.save(session)
-		session.recordTurn('c0000000-0000-4000-8000-000000000002')
+		session.recordTurn(testId('terminal-session-repo', 'claude-session-2'))
 		await repo.save(session)
 
 		const found = await repo.findById(session.id.value)
-		expect(found?.claudeSessionId).toBe('c0000000-0000-4000-8000-000000000002')
+		expect(found?.claudeSessionId).toBe(testId('terminal-session-repo', 'claude-session-2'))
 		expect(found?.version).toBeGreaterThanOrEqual(2)
 	})
 

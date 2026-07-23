@@ -8,6 +8,9 @@
  * single module boundary (the same invariant whatscode enforced for node-pty).
  *
  * Walks all non-test `.ts` files under `packages/api/typescript/src/`, skipping `node_modules`.
+ *
+ * Lives in `tests/architecture/` — the shared home for repo-wide mechanical detectors (the rail is
+ * package-wide, not a property of the engine subtree it protects).
  */
 import { describe, it, expect } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -18,9 +21,8 @@ import { join } from 'node:path'
 const FORBIDDEN_PTY_REFS = ['new Bun.Terminal', "from 'node-pty'"]
 const FORBIDDEN_PATH_REFS = ['~/.claude/projects', ".claude', 'projects'"]
 
-// This file lives at: src/terminal/services/TerminalLLMRunner/
-// Going up 3 levels: TerminalLLMRunner → services → terminal → src
-const SRC = join(import.meta.dir, '../../..')
+// Repo-wide rail home (tests/architecture) — re-rooted onto the package's src tree.
+const SRC = join(import.meta.dir, '..', '..', 'src')
 const ALLOWED_PREFIX = join(SRC, 'terminal/services/TerminalLLMRunner/ClaudeCliTerminalLLMRunner')
 
 function walk(dir: string, out: string[] = []): string[] {

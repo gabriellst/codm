@@ -4,7 +4,7 @@ import { sessions } from '@codedm/contracts/db'
 import type { TestBed } from '../TestBed'
 import { uniqueId } from './sequence'
 
-export async function givenActiveSession(testBed: TestBed, userId: string): Promise<string> {
+export async function givenActiveSession(testBed: TestBed, userId: string): Promise<{ sessionId: string; token: string }> {
 	const db = testBed.resolve(DrizzleClient)
 	const sessionId = `session-${uniqueId()}`
 	const token = `token-${sessionId}`
@@ -18,5 +18,5 @@ export async function givenActiveSession(testBed: TestBed, userId: string): Prom
 		updatedAt: new Date(),
 	})
 
-	return token
+	return { sessionId, token }
 }

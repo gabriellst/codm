@@ -1,3 +1,4 @@
+import { testId } from '@test/support'
 import { describe, expect, it, mock } from 'bun:test'
 import type { ExternalMediator } from '@codedm/core-typescript'
 import {
@@ -13,7 +14,7 @@ import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'
 import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
 
-const ownerId = '00000000-0000-4000-8000-000000000001'
+const ownerId = testId('terminal-bridge', 'owner')
 
 function makeHandler() {
 	const published: unknown[] = []
@@ -28,7 +29,13 @@ describe('PublishTerminalIntegrationEvents (terminal.* domain facts → frozen i
 			new TerminalSessionStartedEvent({
 				entityId: 'issue-1',
 				ownerId,
-				payload: { issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', title: 'Coupon focus', provider: ProviderKind.CLAUDE_CODE },
+				payload: {
+					issueId: 'issue-1',
+					threadId: 'thread-1',
+					key: 'coupon-focus',
+					title: 'Coupon focus',
+					provider: ProviderKind.CLAUDE_CODE,
+				},
 			}) as never,
 		)
 		expect(published).toHaveLength(1)
@@ -36,7 +43,13 @@ describe('PublishTerminalIntegrationEvents (terminal.* domain facts → frozen i
 		expect(event).toBeInstanceOf(IssueOpenedEvent)
 		expect(event.name).toBe('integration.issue.opened')
 		expect(event.ownerId).toBe(ownerId)
-		expect(event.payload).toEqual({ issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', title: 'Coupon focus', provider: ProviderKind.CLAUDE_CODE })
+		expect(event.payload).toEqual({
+			issueId: 'issue-1',
+			threadId: 'thread-1',
+			key: 'coupon-focus',
+			title: 'Coupon focus',
+			provider: ProviderKind.CLAUDE_CODE,
+		})
 	})
 
 	it('terminal.agent.reply_drafted → integration.agent.reply_drafted (labeled)', async () => {
@@ -51,7 +64,13 @@ describe('PublishTerminalIntegrationEvents (terminal.* domain facts → frozen i
 		const event = published[0] as AgentReplyDraftedEvent
 		expect(event).toBeInstanceOf(AgentReplyDraftedEvent)
 		expect(event.name).toBe('integration.agent.reply_drafted')
-		expect(event.payload).toEqual({ issueId: 'issue-1', threadId: 'thread-1', labelIssueKey: 'coupon-focus', labelThreadId: 'thread-1', text: 'Fixed it. PR #214.' })
+		expect(event.payload).toEqual({
+			issueId: 'issue-1',
+			threadId: 'thread-1',
+			labelIssueKey: 'coupon-focus',
+			labelThreadId: 'thread-1',
+			text: 'Fixed it. PR #214.',
+		})
 	})
 
 	it('terminal.session.completed → integration.issue.completed', async () => {
@@ -87,6 +106,11 @@ describe('PublishTerminalIntegrationEvents (terminal.* domain facts → frozen i
 
 	it('subscribes to exactly the four terminal.* facts', () => {
 		const { handler } = makeHandler()
-		expect(handler.events).toEqual(['terminal.session.started', 'terminal.agent.reply_drafted', 'terminal.session.completed', 'terminal.stop.raised'])
+		expect(handler.events).toEqual([
+			'terminal.session.started',
+			'terminal.agent.reply_drafted',
+			'terminal.session.completed',
+			'terminal.stop.raised',
+		])
 	})
 })

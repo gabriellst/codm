@@ -1,3 +1,4 @@
+import { testId } from '@test/support'
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { MockLoggingService } from '@codedm/core-typescript'
 import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
@@ -38,8 +39,8 @@ class InstrumentedRunner extends MockTerminalLLMRunner {
 	}
 }
 
-const OWNER = '00000000-0000-4000-8000-000000000001'
-const THREAD = '00000000-0000-4000-8000-0000000000bb'
+const OWNER = testId('session-prewarm', 'owner')
+const THREAD = testId('session-prewarm', 'thread')
 
 function issueId(n: number): string {
 	return `00000000-0000-4000-8000-0000000000${String(n).padStart(2, '0')}`

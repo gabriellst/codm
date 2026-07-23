@@ -1,3 +1,4 @@
+import { testId } from '@test/support'
 import { describe, it, expect } from 'bun:test'
 import { parseTier, sessionBadge, supportsColor, colorize, LOG_TIER_RANK } from './format'
 
@@ -32,7 +33,7 @@ describe('format', () => {
 
 	describe('sessionBadge', () => {
 		it('produces a 5-char #xxxx badge from the issueId (Fork B)', () => {
-			const badge = sessionBadge('00000000-0000-4000-8000-000000000001')
+			const badge = sessionBadge(testId('runner-logger', 'session'))
 			expect(badge).toMatch(/^#[0-9a-f]{4}$/)
 		})
 

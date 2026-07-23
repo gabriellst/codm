@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { eq } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
+import { Handler, z, BaseError } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
-import { threads, issues } from '@codedm/contracts/db'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { Artifact } from '../entities/Artifact'
 import { ArtifactRepository } from '../repositories/ArtifactRepository'
 import { ArtifactRecordedEvent } from '../events'
@@ -34,16 +34,19 @@ export class RecordArtifact extends Handler<typeof RecordArtifactInputSchema, ty
 
 	constructor(
 		private readonly artifacts: ArtifactRepository,
-		private readonly db: DrizzleClient,
+		private readonly threads: ThreadRepository,
+		private readonly issues: IssueRepository,
 	) {
 		super()
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
-		const [thread] = await this.db.select({ id: threads.id }).from(threads).where(eq(threads.id, input.threadId)).limit(1)
+		// Cross-context existence checks ride the owning contexts' REPOSITORIES (the declared read
+		// seam) — never raw table selects from a foreign schema.
+		const thread = await this.threads.findById(input.threadId)
 		if (!thread) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		if (input.issueId) {
-			const [issue] = await this.db.select({ id: issues.id }).from(issues).where(eq(issues.id, input.issueId)).limit(1)
+			const issue = await this.issues.findById(input.issueId)
 			if (!issue) throw new BaseError<ApplicationErrors>('ISSUE_NOT_FOUND', `no issue ${input.issueId}`)
 		}
 

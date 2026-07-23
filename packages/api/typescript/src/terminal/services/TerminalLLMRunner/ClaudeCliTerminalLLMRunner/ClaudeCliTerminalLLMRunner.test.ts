@@ -11,6 +11,7 @@ process.env.CODEDM_JSONL_POLL_MS = '20'
 process.env.CODEDM_SUBMIT_DELAY_MS = '0'
 process.env.CODEDM_BOOT_SETTLE_MS = '20'
 
+import { testId } from '@test/support'
 import { describe, it, expect, beforeAll, beforeEach, afterAll, mock } from 'bun:test'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -53,8 +54,8 @@ mock.module(new URL('./spawner', import.meta.url).pathname, () => ({
 const { ClaudeCliTerminalLLMRunner } = await import('./ClaudeCliTerminalLLMRunner')
 
 const baseRequest = (cwd: string): TerminalLLMRunnerStreamRequest => ({
-	issueId: '00000000-0000-4000-8000-00000000aa01',
-	threadId: '00000000-0000-4000-8000-00000000bb01',
+	issueId: testId('engine-core', 'issue'),
+	threadId: testId('engine-core', 'thread'),
 	ownerId: 'tenant',
 	provider: ProviderKind.CLAUDE_CODE,
 	cwd,

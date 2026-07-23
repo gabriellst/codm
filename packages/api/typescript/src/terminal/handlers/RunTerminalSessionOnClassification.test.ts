@@ -1,3 +1,4 @@
+import { testId } from '@test/support'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
@@ -68,7 +69,7 @@ describe('RunTerminalSessionOnClassification (saga closer)', () => {
 
 		await testBed
 			.resolve(RunTerminalSessionOnClassification)
-			.handle(classified('00000000-0000-4000-8000-0000000000ff', entryId) as never)
+			.handle(classified(testId('run-on-classification', 'ghost-thread'), entryId) as never)
 
 		expect(await testBed.resolve(DomainEventRepository).findByType(TerminalSessionStartedEvent)).toHaveLength(0)
 	})

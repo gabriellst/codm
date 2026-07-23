@@ -10,6 +10,7 @@ process.env.CODEDM_JSONL_POLL_MS = '20'
 process.env.CODEDM_SUBMIT_DELAY_MS = '0'
 process.env.CODEDM_BOOT_SETTLE_MS = '20'
 
+import { testId } from '@test/support'
 import { describe, it, expect, beforeAll, beforeEach, afterAll, mock } from 'bun:test'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -47,7 +48,7 @@ type LifecycleEvent = import('./ClaudeCliTerminalLLMRunner').RunnerLifecycleEven
 
 const request = (issueId: string, cwd: string, prompt: string): TerminalLLMRunnerStreamRequest => ({
 	issueId,
-	threadId: '00000000-0000-4000-8000-00000000ff02',
+	threadId: testId('engine-prewarm', 'thread'),
 	ownerId: 'tenant',
 	provider: ProviderKind.CLAUDE_CODE,
 	cwd,
@@ -79,7 +80,7 @@ describe('ClaudeCliTerminalLLMRunner — prewarm', () => {
 	})
 
 	it('is a no-op when a session for the same issue already exists', async () => {
-		const issueId = '00000000-0000-4000-8000-00000000ff11'
+		const issueId = testId('engine-prewarm', 'issue-1')
 		// First, spawn a real session via stream().
 		const stream = runner.stream(request(issueId, cwd, 'hello'))
 		for await (const ev of stream) if (ev.type === 'turn_completed') break
@@ -93,7 +94,7 @@ describe('ClaudeCliTerminalLLMRunner — prewarm', () => {
 	})
 
 	it('boots a fresh session without a priming turn and without any lifecycle emission', async () => {
-		const issueId = '00000000-0000-4000-8000-00000000ff22'
+		const issueId = testId('engine-prewarm', 'issue-2')
 		expect(spawnCallCount).toBe(0)
 
 		const lifecycleEvents: LifecycleEvent[] = []

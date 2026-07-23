@@ -28,10 +28,8 @@ describe('DisableOwner use case (C19)', () => {
 		await testBed.destroy()
 	})
 
-	async function seedActiveOwner(): Promise<string> {
-		const s = await givenOwner(testBed, { name: 'Acme', timezone: 'UTC' })
-		return s.id.value
-	}
+	// State via the shared repo-direct given — never a local seed helper.
+	const seedActiveOwner = async (): Promise<string> => (await givenOwner(testBed, { name: 'Acme', timezone: 'UTC' })).id.value
 
 	async function readDisabledEvents() {
 		return testBed.resolve(DomainEventRepository).findByType(OwnerDisabledEvent)

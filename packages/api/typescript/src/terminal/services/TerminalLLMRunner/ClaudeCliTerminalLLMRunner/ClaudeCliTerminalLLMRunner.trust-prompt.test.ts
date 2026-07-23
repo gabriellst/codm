@@ -11,6 +11,7 @@ process.env.CODEDM_JSONL_POLL_MS = '20'
 process.env.CODEDM_SUBMIT_DELAY_MS = '0'
 process.env.CODEDM_BOOT_SETTLE_MS = '20'
 
+import { testId } from '@test/support'
 import { describe, it, expect, beforeAll, beforeEach, afterAll, mock } from 'bun:test'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -61,7 +62,7 @@ const { ClaudeCliTerminalLLMRunner } = await import('./ClaudeCliTerminalLLMRunne
 
 const request = (issueId: string, cwd: string): TerminalLLMRunnerStreamRequest => ({
 	issueId,
-	threadId: '00000000-0000-4000-8000-00000000ab02',
+	threadId: testId('engine-trust', 'thread'),
 	ownerId: 'tenant',
 	provider: ProviderKind.CLAUDE_CODE,
 	cwd,
@@ -94,7 +95,7 @@ describe('ClaudeCliTerminalLLMRunner — trust-prompt auto-accept', () => {
 
 	it('responds with `\\r` when the splash banner contains the trust prompt', async () => {
 		bannerMode = 'spaced'
-		const stream = runner.stream(request('00000000-0000-4000-8000-00000000ab11', cwd))
+		const stream = runner.stream(request(testId('engine-trust', 'issue-1'), cwd))
 		for await (const ev of stream) if (ev.type === 'turn_completed') break
 
 		expect(lastPty).not.toBeNull()
@@ -106,7 +107,7 @@ describe('ClaudeCliTerminalLLMRunner — trust-prompt auto-accept', () => {
 
 	it('also matches the cursor-motion-painted banner (whitespace squashed — D2 gotcha)', async () => {
 		bannerMode = 'squashed'
-		const stream = runner.stream(request('00000000-0000-4000-8000-00000000ab22', cwd))
+		const stream = runner.stream(request(testId('engine-trust', 'issue-2'), cwd))
 		for await (const ev of stream) if (ev.type === 'turn_completed') break
 
 		expect(lastPty).not.toBeNull()

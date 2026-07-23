@@ -11,6 +11,7 @@ process.env.CODEDM_JSONL_POLL_MS = '20'
 process.env.CODEDM_SUBMIT_DELAY_MS = '0'
 process.env.CODEDM_BOOT_SETTLE_MS = '20'
 
+import { testId } from '@test/support'
 import { describe, it, expect, beforeAll, beforeEach, afterAll, mock } from 'bun:test'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -47,7 +48,7 @@ type LifecycleEvent = import('./ClaudeCliTerminalLLMRunner').RunnerLifecycleEven
 
 const request = (issueId: string, cwd: string): TerminalLLMRunnerStreamRequest => ({
 	issueId,
-	threadId: '00000000-0000-4000-8000-00000000dd02',
+	threadId: testId('engine-crash', 'thread'),
 	ownerId: 'tenant',
 	provider: ProviderKind.CLAUDE_CODE,
 	cwd,
@@ -79,7 +80,7 @@ describe('ClaudeCliTerminalLLMRunner — unexpected PTY exit', () => {
 	})
 
 	it('PTY exit after a turn emits killed(reason=crash) on the lifecycle bus and removes the session', async () => {
-		const issueId = '00000000-0000-4000-8000-00000000dd11'
+		const issueId = testId('engine-crash', 'issue-1')
 		const lifecycle: LifecycleEvent[] = []
 		const off = runner.onLifecycle(ev => lifecycle.push(ev))
 
@@ -102,7 +103,7 @@ describe('ClaudeCliTerminalLLMRunner — unexpected PTY exit', () => {
 	})
 
 	it('explicit killSession does NOT cause a duplicate killed event from the exit handler', async () => {
-		const issueId = '00000000-0000-4000-8000-00000000dd22'
+		const issueId = testId('engine-crash', 'issue-2')
 		const lifecycle: LifecycleEvent[] = []
 		const off = runner.onLifecycle(ev => lifecycle.push(ev))
 

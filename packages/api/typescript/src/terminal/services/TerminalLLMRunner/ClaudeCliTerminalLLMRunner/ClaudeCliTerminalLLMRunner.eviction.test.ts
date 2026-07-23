@@ -10,6 +10,7 @@ process.env.CODEDM_SUBMIT_DELAY_MS = '0'
 process.env.CODEDM_BOOT_SETTLE_MS = '20'
 process.env.CODEDM_IDLE_TIMEOUT_MS = '100'
 
+import { testId } from '@test/support'
 import { describe, it, expect, beforeAll, afterAll, mock } from 'bun:test'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -60,13 +61,13 @@ describe('ClaudeCliTerminalLLMRunner — idle eviction', () => {
 	})
 
 	it('after idle timeout, emits idle_evicted on the lifecycle bus', async () => {
-		const issueId = '00000000-0000-4000-8000-00000000ee01'
+		const issueId = testId('engine-eviction', 'issue')
 		const lifecycle: LifecycleEvent[] = []
 		const off = runner.onLifecycle(ev => lifecycle.push(ev))
 
 		const stream = runner.stream({
 			issueId,
-			threadId: '00000000-0000-4000-8000-00000000ee02',
+			threadId: testId('engine-eviction', 'thread'),
 			ownerId: 'tenant',
 			provider: ProviderKind.CLAUDE_CODE,
 			cwd,

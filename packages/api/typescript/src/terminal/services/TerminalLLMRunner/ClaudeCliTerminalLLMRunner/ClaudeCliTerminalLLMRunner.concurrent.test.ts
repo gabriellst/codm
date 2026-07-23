@@ -12,6 +12,7 @@ process.env.CODEDM_JSONL_POLL_MS = '20'
 process.env.CODEDM_SUBMIT_DELAY_MS = '0'
 process.env.CODEDM_BOOT_SETTLE_MS = '20'
 
+import { testId } from '@test/support'
 import { describe, it, expect, beforeAll, afterAll, mock } from 'bun:test'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -75,10 +76,10 @@ describe('ClaudeCliTerminalLLMRunner — concurrent writes', () => {
 	})
 
 	it('two concurrent stream() calls for the same issueId result in exactly one spawn (in-flight lock)', async () => {
-		const issueId = '00000000-0000-4000-8000-00000000cc01'
+		const issueId = testId('engine-concurrent', 'issue-1')
 		const reqBase: Omit<TerminalLLMRunnerStreamRequest, 'prompt'> = {
 			issueId,
-			threadId: '00000000-0000-4000-8000-00000000cc02',
+			threadId: testId('engine-concurrent', 'thread'),
 			ownerId: 'tenant',
 			provider: ProviderKind.CLAUDE_CODE,
 			cwd,
@@ -113,7 +114,7 @@ describe('ClaudeCliTerminalLLMRunner — concurrent writes', () => {
 		// The write queue is the sole unit responsible for the busy invariant; testing it directly
 		// is the only deterministic path because stream()'s inline IIFE dequeues each item before
 		// the next enqueue runs in normal usage.
-		const issueId = '00000000-0000-4000-8000-00000000cc99'
+		const issueId = testId('engine-concurrent', 'issue-2')
 		const q = createWriteQueue(issueId, 4)
 
 		const pending: Promise<void>[] = []

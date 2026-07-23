@@ -21,7 +21,10 @@ export class SetActiveOwner extends Handler<typeof SetActiveOwnerInputSchema, ty
 	readonly inputSchema = SetActiveOwnerInputSchema
 	readonly outputSchema = SetActiveOwnerOutputSchema
 
-	constructor(private readonly owners: OwnerRepository) {
+	constructor(
+		private readonly owners: OwnerRepository,
+		private readonly db: DrizzleClient,
+	) {
 		super()
 	}
 
@@ -39,8 +42,7 @@ export class SetActiveOwner extends Handler<typeof SetActiveOwnerInputSchema, ty
 		// needed for this session mutation (same targeted-update pattern as the
 		// better-auth sign-in hook). No domain event is raised (no aggregate changes
 		// state).
-		const db = this.di.resolve(DrizzleClient as any) as DrizzleClient
-		await db.update(sessions).set({ activeOwnerId: ownerId, updatedAt: new Date() }).where(eq(sessions.id, sessionId))
+		await this.db.update(sessions).set({ activeOwnerId: ownerId, updatedAt: new Date() }).where(eq(sessions.id, sessionId))
 
 		return { ownerId }
 	}
