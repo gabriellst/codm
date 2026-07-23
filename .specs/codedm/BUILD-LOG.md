@@ -296,3 +296,14 @@ Ratificações do founder (23-jul, verbatim intent): (1) Go `shared` LIMPO de ev
 **Gates finais (exit codes, todos verdes):** root `bun tsc` 0 (7/7) · api-ts `bun test` **619/0** · go build/vet/test api-go + core ambos 0 · wire-identity **PASS** (goldens pré-move) · `test:tooling` **283/0** (union-parity + pins) · `bun sdk` 2× idempotente · e2e **5 pass / 2 skip** (baseline exato) · TS boot smoke scratch :3097 (`/v1/session` 200) + **SSE probe real**: `curl /v1/ui/events` + inject via `/v1/_test/gateway` → frame `integration.channel_message.received` entregue no stream, daemon vivo depois · proxy smoke → `{"code":"GATEWAY_UNAVAILABLE"}` HTTP **502** · go boot smoke → openapi **200**, rota SPA **404**.
 
 **Débito anotado:** payload agregado do Kubb como z.union flat (nested discriminatedUnion declarado no manifest) — narrowing/parity intactos hoje; fix é no generator Kubb (packages/client), não no emitter de contracts.
+
+## TS org lotes 0-G — JUÍZES ADVERSARIAIS GREEN (23-jul, retomada Opus)
+Passe único fidelity+integração sobre e5ce116b..6877dc0a: worst=97, zero critical. Verificado
+independentemente: Lote 0 materialização FORA do controller no path mandatório contracts/wire/events
+(grep zero no ListenEvents, openapi byte-idêntico); Lote A boolean-query bug com teste de regressão
+mutation-proven (revert→vermelho); Lote C schema-reuse wire-idêntico (.omit/.pick reproduz o body;
++310 = 3 itens sancionados separados); Lotes E/F/G aplicados (ForwardRequest→core, purge morto,
+CONTEXT_MAP table-read edges mutation-enforced 2 direções). REWRITEs/SANCTIONED §3/§4 intactos (5/5
+spot-check). Gates: tsc 7/7, api-ts 578/0, tooling 286/0, sdk 2× idempotente, e2e 5/2-skip, boot smoke
+SSE ': connected' 15ms + teardown limpo, Go intocado. Nit: commit do Lote A cita IssueReads.test.ts,
+renomeado p/ GetIssuesOverview.test.ts (só narrativa).
