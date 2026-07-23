@@ -8,7 +8,6 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/errors"
-	repositories "template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/unitofwork"
 )
 
@@ -27,17 +26,15 @@ type CreateChannelOutput struct {
 }
 
 type CreateChannelHandler struct {
-	repo            channelrepo.ChannelRepository
-	uow             unitofwork.UnitOfWork
-	domainEventRepo repositories.DomainEventRepository
+	repo channelrepo.ChannelRepository
+	uow  unitofwork.UnitOfWork
 }
 
 func NewCreateChannelHandler(
 	repo channelrepo.ChannelRepository,
 	uow unitofwork.UnitOfWork,
-	domainEventRepo repositories.DomainEventRepository,
 ) *CreateChannelHandler {
-	return &CreateChannelHandler{repo: repo, uow: uow, domainEventRepo: domainEventRepo}
+	return &CreateChannelHandler{repo: repo, uow: uow}
 }
 
 func (h *CreateChannelHandler) Name() string { return "CreateInstance" }
@@ -59,17 +56,8 @@ func (h *CreateChannelHandler) Execute(ctx context.Context, input CreateChannelI
 	}
 
 	err = h.uow.Execute(ctx, func(txCtx context.Context) error {
-		if err := h.repo.Save(txCtx, integration); err != nil {
-			return err
-		}
-
-		for _, event := range integration.PullDomainEvents() {
-			if err := h.domainEventRepo.Save(txCtx, event); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		// Save persists the aggregate's pulled domain events itself.
+		return h.repo.Save(txCtx, integration)
 	})
 	if err != nil {
 		return CreateChannelOutput{}, err

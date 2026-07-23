@@ -274,6 +274,18 @@ func (r *PgChannelRepository) Delete(ctx context.Context, id string) error {
 // Helpers
 // -------------------------------------------------------------------------------
 
+// queryExecContext is a common interface satisfied by both *sql.DB and *sql.Tx.
+type queryExecContext interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// rowScanner abstracts *sql.Row / *sql.Rows for the scanning helpers.
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
 // txOrDB returns the active transaction from ctx when present, otherwise the
 // base DB handle.
 func (r *PgChannelRepository) txOrDB(ctx context.Context) queryExecContext {
@@ -285,7 +297,6 @@ func (r *PgChannelRepository) txOrDB(ctx context.Context) queryExecContext {
 
 // scanChannelEntity scans a row from the channels table into a Channel entity
 // via ReconstructChannel — no events fired, no validation applied.
-// It accepts the shared rowScanner interface (defined in pg_channel_projection_repository.go).
 //
 // Note: connected_at and disconnected_at columns are intentionally omitted from
 // the SELECT column list because entities.Channel does not carry those fields.

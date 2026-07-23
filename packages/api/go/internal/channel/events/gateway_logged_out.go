@@ -12,7 +12,6 @@ import (
 // ChannelLoggedOutPayload is the data carried by the channel-logged-out events.
 // Owned by the channel domain; shared/events imports this type for the
 // integration wrapper.
-// @union field=PlatformData discriminatedBy=Platform
 type ChannelLoggedOutPayload struct {
 	ChannelID    uuid.UUID            `json:"channelId" validate:"required"`
 	Reason       string               `json:"reason" validate:"required"`

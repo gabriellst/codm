@@ -9,7 +9,6 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
 	sharedevents "template/api-go/internal/shared/events"
-	repositories "template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/services/unitofwork"
 	"template/api-go/internal/shared/types"
@@ -18,7 +17,6 @@ import (
 type ChannelConnectedHandler struct {
 	repo             channelrepo.ChannelRepository
 	registry         registry.ChannelRegistry
-	domainEventRepo  repositories.DomainEventRepository
 	externalMediator mediator.ExternalMediator
 	uow              unitofwork.UnitOfWork
 }
@@ -26,14 +24,12 @@ type ChannelConnectedHandler struct {
 func NewChannelConnectedHandler(
 	repo channelrepo.ChannelRepository,
 	reg registry.ChannelRegistry,
-	domainEventRepo repositories.DomainEventRepository,
 	ext mediator.ExternalMediator,
 	uow unitofwork.UnitOfWork,
 ) *ChannelConnectedHandler {
 	return &ChannelConnectedHandler{
 		repo:             repo,
 		registry:         reg,
-		domainEventRepo:  domainEventRepo,
 		externalMediator: ext,
 		uow:              uow,
 	}
@@ -78,11 +74,6 @@ func (h *ChannelConnectedHandler) Handle(ctx context.Context, event types.Domain
 			return err
 		}
 
-		for _, evt := range inst.PullDomainEvents() {
-			if err := h.domainEventRepo.Save(txCtx, evt); err != nil {
-				return err
-			}
-		}
 		return nil
 	})
 	if err != nil {

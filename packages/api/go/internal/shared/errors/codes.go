@@ -4,16 +4,9 @@ import "net/http"
 
 // Domain error codes
 const (
-	CodeInvalidEmail   ErrorCode = "INVALID_EMAIL"
-	CodeInvalidCPF     ErrorCode = "INVALID_CPF"
-	CodeInvalidCNPJ    ErrorCode = "INVALID_CNPJ"
-	CodeInvalidPhone   ErrorCode = "INVALID_PHONE"
-	CodeInvalidName    ErrorCode = "INVALID_NAME"
-	CodeInvalidAddress ErrorCode = "INVALID_ADDRESS"
-	CodeInvalidID      ErrorCode = "INVALID_ID"
-	CodeInvalidMoney   ErrorCode = "INVALID_MONEY"
-	CodeBusinessRule   ErrorCode = "BUSINESS_RULE_VIOLATION"
-	CodeInvalidEntity  ErrorCode = "INVALID_ENTITY"
+	CodeInvalidID     ErrorCode = "INVALID_ID"
+	CodeBusinessRule  ErrorCode = "BUSINESS_RULE_VIOLATION"
+	CodeInvalidEntity ErrorCode = "INVALID_ENTITY"
 )
 
 // Application error codes
@@ -41,16 +34,9 @@ const (
 
 func init() {
 	RegisterErrorCodes(map[ErrorCode]int{
-		CodeInvalidEmail:   http.StatusUnprocessableEntity,
-		CodeInvalidCPF:     http.StatusUnprocessableEntity,
-		CodeInvalidCNPJ:    http.StatusUnprocessableEntity,
-		CodeInvalidPhone:   http.StatusUnprocessableEntity,
-		CodeInvalidName:    http.StatusUnprocessableEntity,
-		CodeInvalidAddress: http.StatusUnprocessableEntity,
-		CodeInvalidID:      http.StatusUnprocessableEntity,
-		CodeInvalidMoney:   http.StatusUnprocessableEntity,
-		CodeBusinessRule:   http.StatusUnprocessableEntity,
-		CodeInvalidEntity:  http.StatusUnprocessableEntity,
+		CodeInvalidID:     http.StatusUnprocessableEntity,
+		CodeBusinessRule:  http.StatusUnprocessableEntity,
+		CodeInvalidEntity: http.StatusUnprocessableEntity,
 		CodeNotFound:         http.StatusNotFound,
 		CodeEntityConflict:   http.StatusConflict,
 		CodeValidationFailed: http.StatusBadRequest,

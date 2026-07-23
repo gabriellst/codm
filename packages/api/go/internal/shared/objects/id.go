@@ -1,11 +1,6 @@
 package objects
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"strings"
-
 	"github.com/google/uuid"
 
 	"template/api-go/internal/shared/errors"
@@ -14,7 +9,6 @@ import (
 // ID is a value object wrapping a UUID. It supports:
 // - Random generation: NewID()
 // - Pre-set value: IDFromString(s), IDFromUUID(u)
-// - Hashed from values: HashedID(values...) — deterministic UUID from input strings
 type ID struct {
 	value uuid.UUID
 }
@@ -40,29 +34,6 @@ func IDFromString(s string) (ID, error) {
 	}
 	return ID{value: u}, nil
 }
-
-// HashedID creates a deterministic UUID by hashing the provided values.
-// Useful for creating idempotent IDs from business keys.
-
-func HashedID(values ...string) (ID, error) {
-	if len(values) == 0 {
-		return ID{}, errors.NewBaseError(errors.CodeInvalidID, "at least one value is required for hashed ID")
-	}
-
-	combined := strings.Join(values, "-")
-	hash := sha256.Sum256([]byte(combined))
-	hex := hex.EncodeToString(hash[:16])
-
-	// Format as UUID: 8-4-4-4-12
-	uuidStr := fmt.Sprintf("%s-%s-%s-%s-%s", hex[0:8], hex[8:12], hex[12:16], hex[16:20], hex[20:32])
-	u, err := uuid.Parse(uuidStr)
-	if err != nil {
-		return ID{}, errors.NewBaseError(errors.CodeInvalidID, "failed to generate hashed ID")
-	}
-
-	return ID{value: u}, nil
-}
-
 
 func (id ID) UUID() uuid.UUID { return id.value }
 

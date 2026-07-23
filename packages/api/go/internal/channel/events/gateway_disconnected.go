@@ -12,7 +12,6 @@ import (
 // GatewayDisconnectedPayload is the data carried by the channel-disconnected events.
 // Owned by the channel domain; shared/events imports this type for the
 // integration wrapper.
-// @union field=PlatformData discriminatedBy=Platform
 type GatewayDisconnectedPayload struct {
 	ChannelID    uuid.UUID            `json:"channelId" validate:"required"`
 	Platform     sharedenums.Platform `json:"platform" validate:"required"`

@@ -156,12 +156,6 @@ func TestEmitterIsIdempotent(t *testing.T) {
 // validateInlineEnums ensures no schema outside components.schemas.* has an
 // `enum` key. Mirrors validateSpec but with a simpler recursion.
 func validateInlineEnums(spec map[string]any) error {
-	// Walk everything except components.schemas. direct children.
-	check := func(v any, path string) {
-		// Intentionally permissive — if enum appears under paths anywhere, flag it.
-	}
-	_ = check
-
 	// Walk spec.paths.
 	if paths, ok := spec["paths"].(map[string]any); ok {
 		if err := findInlineEnum(paths, "paths"); err != nil {

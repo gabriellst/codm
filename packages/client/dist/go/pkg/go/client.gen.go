@@ -89,45 +89,6 @@ func (e ConnectionStatus) Valid() bool {
 	}
 }
 
-// Defines values for Country.
-const (
-	CountryBR Country = "BR"
-	CountryUS Country = "US"
-)
-
-// Valid indicates whether the value is a known member of the Country enum.
-func (e Country) Valid() bool {
-	switch e {
-	case CountryBR:
-		return true
-	case CountryUS:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for Currency.
-const (
-	CurrencyBRL Currency = "BRL"
-	CurrencyEUR Currency = "EUR"
-	CurrencyUSD Currency = "USD"
-)
-
-// Valid indicates whether the value is a known member of the Currency enum.
-func (e Currency) Valid() bool {
-	switch e {
-	case CurrencyBRL:
-		return true
-	case CurrencyEUR:
-		return true
-	case CurrencyUSD:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for Direction.
 const (
 	DirectionReceived Direction = "RECEIVED"
@@ -184,21 +145,14 @@ const (
 	CodeEntityConflict           ErrorCode = "ENTITY_CONFLICT"
 	CodeExternalService          ErrorCode = "EXTERNAL_SERVICE_ERROR"
 	CodeForbidden                ErrorCode = "FORBIDDEN"
-	CodeInvalidAddress           ErrorCode = "INVALID_ADDRESS"
 	CodeInvalidAudioURL          ErrorCode = "INVALID_AUDIO_URL"
-	CodeInvalidCNPJ              ErrorCode = "INVALID_CNPJ"
-	CodeInvalidCPF               ErrorCode = "INVALID_CPF"
 	CodeInvalidCoordinates       ErrorCode = "INVALID_COORDINATES"
-	CodeInvalidEmail             ErrorCode = "INVALID_EMAIL"
 	CodeInvalidEntity            ErrorCode = "INVALID_ENTITY"
 	CodeInvalidID                ErrorCode = "INVALID_ID"
 	CodeInvalidImage             ErrorCode = "INVALID_IMAGE"
 	CodeInvalidMediaURL          ErrorCode = "INVALID_MEDIA_URL"
-	CodeInvalidMoney             ErrorCode = "INVALID_MONEY"
-	CodeInvalidName              ErrorCode = "INVALID_NAME"
 	CodeInvalidNumber            ErrorCode = "INVALID_NUMBER"
 	CodeInvalidOwnerId           ErrorCode = "INVALID_OWNER_ID"
-	CodeInvalidPhone             ErrorCode = "INVALID_PHONE"
 	CodeInvalidPlatform          ErrorCode = "INVALID_PLATFORM"
 	CodeInvalidPresenceType      ErrorCode = "INVALID_PRESENCE_TYPE"
 	CodeInvalidRemoteID          ErrorCode = "INVALID_REMOTE_ID"
@@ -264,17 +218,9 @@ func (e ErrorCode) Valid() bool {
 		return true
 	case CodeForbidden:
 		return true
-	case CodeInvalidAddress:
-		return true
 	case CodeInvalidAudioURL:
 		return true
-	case CodeInvalidCNPJ:
-		return true
-	case CodeInvalidCPF:
-		return true
 	case CodeInvalidCoordinates:
-		return true
-	case CodeInvalidEmail:
 		return true
 	case CodeInvalidEntity:
 		return true
@@ -284,15 +230,9 @@ func (e ErrorCode) Valid() bool {
 		return true
 	case CodeInvalidMediaURL:
 		return true
-	case CodeInvalidMoney:
-		return true
-	case CodeInvalidName:
-		return true
 	case CodeInvalidNumber:
 		return true
 	case CodeInvalidOwnerId:
-		return true
-	case CodeInvalidPhone:
 		return true
 	case CodeInvalidPlatform:
 		return true
@@ -392,27 +332,6 @@ func (e HistorySyncType) Valid() bool {
 	case HistorySyncTypeInitial:
 		return true
 	case HistorySyncTypeRecent:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for Language.
-const (
-	LanguageEN Language = "EN"
-	LanguageES Language = "ES"
-	LanguagePT Language = "PT"
-)
-
-// Valid indicates whether the value is a known member of the Language enum.
-func (e Language) Valid() bool {
-	switch e {
-	case LanguageEN:
-		return true
-	case LanguageES:
-		return true
-	case LanguagePT:
 		return true
 	default:
 		return false
@@ -1580,9 +1499,6 @@ type ContactMessageData struct {
 	Vcard       *string `json:"vcard,omitempty"`
 }
 
-// Country defines model for Country.
-type Country string
-
 // CreateChannelOutput defines model for CreateChannelOutput.
 type CreateChannelOutput struct {
 	CreatedAt time.Time     `json:"createdAt"`
@@ -1591,9 +1507,6 @@ type CreateChannelOutput struct {
 	Platform  Platform      `json:"platform"`
 	Status    ChannelStatus `json:"status"`
 }
-
-// Currency defines model for Currency.
-type Currency string
 
 // DeleteChannelOutput defines model for DeleteChannelOutput.
 type DeleteChannelOutput struct {
@@ -1941,9 +1854,6 @@ type InternalChannelMessageSentPlatformData struct {
 type InternalTextContent struct {
 	Text string `json:"text"`
 }
-
-// Language defines model for Language.
-type Language string
 
 // ListChannelsItem defines model for ListChannelsItem.
 type ListChannelsItem struct {

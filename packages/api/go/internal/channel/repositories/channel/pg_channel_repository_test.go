@@ -14,15 +14,9 @@ import (
 	sharedrepos "template/api-go/internal/shared/repositories"
 )
 
-// Note: newChannelTestDB is defined in pg_channel_projection_repository_test.go
-// and is visible here since both files share the same package.
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-// newPgChannelTestDB reuses the isolation helper from the projection test file.
-// Both helpers live in the same package so newChannelTestDB is visible here.
 
 // makeChannelEntity builds a minimal Channel aggregate for testing.
 // NewChannel emits a ChannelCreatedEvent, so Save will write one event row.

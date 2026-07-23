@@ -42,10 +42,6 @@ var Module = fx.Module("channel",
 
 	// Projection repositories (T7/T8) — read/write projection tables.
 	fx.Provide(fx.Annotate(
-		channelrepo.NewPgChannelProjectionRepository,
-		fx.As(new(channelrepo.ChannelProjectionRepository)),
-	)),
-	fx.Provide(fx.Annotate(
 		remoterepo.NewPgRemoteProjectionRepository,
 		fx.As(new(remoterepo.RemoteProjectionRepository)),
 	)),
@@ -330,9 +326,9 @@ func registerDomainEventHandlers(
 ) {
 	m.Register(handlers.NewChannelCreatedHandler())
 	m.Register(handlers.NewChannelDeletedHandler())
-	m.Register(handlers.NewChannelConnectedHandler(repo, reg, domainEventRepo, ext, uow))
-	m.Register(handlers.NewChannelDisconnectedHandler(repo, domainEventRepo, ext, uow))
-	m.Register(handlers.NewChannelLoggedOutHandler(repo, domainEventRepo, ext, uow))
+	m.Register(handlers.NewChannelConnectedHandler(repo, reg, ext, uow))
+	m.Register(handlers.NewChannelDisconnectedHandler(repo, ext, uow))
+	m.Register(handlers.NewChannelLoggedOutHandler(repo, ext, uow))
 	m.Register(handlers.NewMessageReceivedHandler(ext, reg))
 	m.Register(handlers.NewMessageDeliveredHandler(ext))
 	m.Register(handlers.NewMessageSeenHandler(ext))
