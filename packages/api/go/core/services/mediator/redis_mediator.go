@@ -22,10 +22,20 @@ const (
 // cross-service delivery, while also fanning out each published event to any
 // in-process callbacks (e.g. the SSE broadcaster in listen_events.go) so that
 // local subscribers receive integration events alongside remote consumers.
+//
+// EGRESS-ONLY (sanctioned today — channel-wire-classification §A): the
+// XREADGROUP consumer loop is not implemented, so a registered ingress handler
+// would never fire. Register therefore FAILS LOUD at wiring time: it records
+// the registration and Start refuses to boot while any exist. Restoring the
+// full consumer (XREADGROUP + PEL + dead-letter, template lineage) is a listed
+// follow-up gating any TS→Go ingress (e.g. integration.channel.delivery_requested).
 type RedisExternalMediator struct {
 	client    *redis.Client
 	mu        sync.RWMutex
 	callbacks []func(ctx context.Context, event types.IntegrationEventI)
+	// deadRegistrations collects EventName()s handed to Register — a non-empty
+	// list is a wiring error surfaced by Start (fail-loud, never a silent no-op).
+	deadRegistrations []string
 }
 
 func NewRedisExternalMediator(cfg *config.Config) (ExternalMediator, error) {
@@ -36,7 +46,14 @@ func NewRedisExternalMediator(cfg *config.Config) (ExternalMediator, error) {
 	return &RedisExternalMediator{client: redis.NewClient(opts)}, nil
 }
 
-func (m *RedisExternalMediator) Register(_ IntegrationEventHandler) {}
+// Register FAILS LOUD (via Start) instead of silently dropping the handler:
+// this mediator has no consume loop yet, so an accepted registration would be
+// dead ingress — exactly the silent no-op the conformity audit flagged.
+func (m *RedisExternalMediator) Register(h IntegrationEventHandler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.deadRegistrations = append(m.deadRegistrations, h.EventName())
+}
 
 func (m *RedisExternalMediator) RegisterCallback(fn func(ctx context.Context, event types.IntegrationEventI)) {
 	m.mu.Lock()
@@ -74,6 +91,16 @@ func (m *RedisExternalMediator) Publish(ctx context.Context, event types.Integra
 }
 
 func (m *RedisExternalMediator) Start(ctx context.Context) error {
+	m.mu.RLock()
+	dead := append([]string(nil), m.deadRegistrations...)
+	m.mu.RUnlock()
+	if len(dead) > 0 {
+		return fmt.Errorf(
+			"redis external mediator is egress-only (no XREADGROUP consumer yet) but %d ingress handler(s) were registered: %v — "+
+				"restore the stream consumer before wiring TS→Go ingress",
+			len(dead), dead,
+		)
+	}
 	if err := m.client.Ping(ctx).Err(); err != nil {
 		return fmt.Errorf("redis ping: %w", err)
 	}

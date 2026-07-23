@@ -382,6 +382,13 @@ func (e *rawDomainEvent) MarshalJSON() ([]byte, error) {
 // GetEventName implements DomainEventI.
 func (e *rawDomainEvent) GetEventName() string { return e.eventName }
 
+// GetEventID exposes the source event id (same optional interface the typed
+// DomainEvent[T] satisfies). Handlers that DERIVE new facts from a delivered
+// event use it to mint deterministic derived-event ids, so an at-least-once
+// redelivery maps onto the same row and the event store's
+// INSERT ... ON CONFLICT (id) DO NOTHING dedupes the fact.
+func (e *rawDomainEvent) GetEventID() string { return e.eventID.String() }
+
 // GetEntityID implements DomainEventI.
 func (e *rawDomainEvent) GetEntityID() uuid.UUID { return e.entityID }
 

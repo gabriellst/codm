@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"github.com/google/uuid"
+
 	"context"
 	"log/slog"
 	"time"
@@ -10,6 +12,21 @@ import (
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
+
+// derivedEventID mints a DETERMINISTIC id for a fact DERIVED from a delivered
+// domain event: uuidv5 over (source event id, derived event name). The event
+// store inserts with ON CONFLICT (id) DO NOTHING, so an at-least-once
+// redelivery of the same source event derives the same id and the duplicate
+// fact row is dropped by the repo idiom (HDL-GO-06 idempotency guard).
+// Sources that do not expose an id (ok=false) keep the non-deterministic
+// default — no worse than before.
+func derivedEventID(source types.DomainEventI, derivedName string) (uuid.UUID, bool) {
+	src, ok := source.(interface{ GetEventID() string })
+	if !ok {
+		return uuid.Nil, false
+	}
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(src.GetEventID()+"\u2192"+derivedName)), true
+}
 
 // ──────────────────────────────────────────────
 // Sync started — listens to channel.gateway_connected
@@ -39,6 +56,9 @@ func (h *SyncStartedHandler) Handle(ctx context.Context, event types.DomainEvent
 		OwnerID:   e.OwnerID,
 		StartedAt: time.Now().UTC(),
 	})
+	if id, ok := derivedEventID(event, ctxevents.SyncStartedEventName); ok {
+		domain.ID = id
+	}
 	if err := h.domainEventRepo.Save(ctx, domain); err != nil {
 		slog.Warn("failed to save sync_started event",
 			"channelId", e.Payload.ChannelID, "error", err)
@@ -76,6 +96,9 @@ func (h *SyncProgressHandler) Handle(ctx context.Context, event types.DomainEven
 		HistorySyncType: e.Payload.HistorySyncType,
 		Percent:         int32(e.Payload.Percent),
 	})
+	if id, ok := derivedEventID(event, ctxevents.SyncProgressEventName); ok {
+		domain.ID = id
+	}
 	if err := h.domainEventRepo.Save(ctx, domain); err != nil {
 		slog.Warn("failed to save sync_progress event",
 			"channelId", e.Payload.ChannelID, "error", err)
@@ -112,6 +135,9 @@ func (h *SyncCompletedHandler) Handle(ctx context.Context, event types.DomainEve
 		OwnerID:     e.OwnerID,
 		CompletedAt: time.Now().UTC(),
 	})
+	if id, ok := derivedEventID(event, ctxevents.SyncCompletedEventName); ok {
+		domain.ID = id
+	}
 	if err := h.domainEventRepo.Save(ctx, domain); err != nil {
 		slog.Warn("failed to save sync_completed event",
 			"channelId", e.Payload.ChannelID, "error", err)
