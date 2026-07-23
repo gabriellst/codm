@@ -230,3 +230,26 @@ Executada em worktree isolada (`.claude/worktrees/tauri-shell`, branch `tauri-sh
 **Notas de worktree (isolamento surfaced, não absorvido):** (a) `@codedm/*` são symlinks POR PACOTE — worktree exigiu `bun install` local (caso raro documentado; bun.lock inalterado até o add do @tauri-apps/cli); (b) `packages/api/go/public/docs/openapi.json` é gitignored — worktree fresca precisa de `nx run api-go:emit-openapi` antes do test:tooling (union-parity lê o artefato); (c) api-typescript:test flakou 1× no pre-commit (516/0 no rerun; nx marcou flaky task).
 
 **Gates na branch (exit codes):** root `bun tsc` 0 · `test:tooling` 283/0 · api-ts `bun test` 516/0 · `app-react:build` 0 · `app-react:build-spa` 0 · sweep expo-vivo 0 hits · `bun env:generate --check` 0 · sidecars build 0. `tauri dev` smoke: SKIP honesto (acima).
+
+## FIX PASS — Fase C judge blockers (23 jul, worktree `tauri-shell`)
+
+Quatro commits, um por fix (`2a42de7d` · `f1ddf17c` · `e75fa25e` · `4b1ef074`):
+
+**1. Remoção TOTAL do expo executada (`2a42de7d`).** O waiver "DORMANT" era fabricado (correção honesta no lugar do parágrafo, acima). Executado: 8 pastas `.claude/skills/*/expo/` deletadas (component/form/primitive/route; onboarding/push/realtime/sheet eram expo-only → skill inteira removida, incl. o componente `sheet` do registry + disposition da taxonomy-parity); `scripts/cli/expo/` deletado e o CLI re-roteado (`resolve.ts`: Platform = react|astro; react scaffolda exit 0, astro segue stub explícito exit 2); padrões/notas expo purgados de `.claude/registry.yaml`, hubs de skill, guards astro, atlas (`NAV-MODAL` removido — owner `sheet#` morreria), CLAUDE.md, docs/FRONTEND.md, eslint/vscode ignores `.expo`; evals: 2 tasks expo + `synthetic-l6-mobile-habit-tracker` (+seed) removidas, grader `app-expo` e branches expo do run.ts removidos; `route-closure.ts` (no-op) removido do `bun run detect`, dos DETECTORS de graders.ts e de TODA task que o listava — harness verde sem exemption, nenhuma fixture mínima precisou ficar.
+
+**2. review.ts:90 (`f1ddf17c`).** `APP_SRC_ROOTS` = `[appReact, appAstro]` — o entry `packageRoots.appExpo` era dangling (chave não existe mais no manifest).
+
+**3. Gate estrutural novo (`e75fa25e`).** `tsconfig.scripts.json` (Bun types via `@types/bun` root devDep) cobre `scripts/**/*.ts` + `template.config.ts`, roda como `bun tsc:scripts` na frente do `test:tooling`. **Provado que morde:** revertendo temporariamente a linha do review.ts → `TS2339: Property 'appExpo' does not exist` (red observado, fix re-aplicado). Exclusões documentadas: `__fixtures__`, `seeds/` e `features/*.red.ts` (fixtures deliberadamente red). Drift que o gate já pegou: awaits faltando no golden test do CLI, `devServer` faltando na fixture do plan.test, teste fóssil `openapi-naming` (API antiga tagToFolder/null/per-tag) atualizado.
+
+**4. `template.config.ts` (`4b1ef074`).** `Workspace.lang` = `'typescript' | 'go' | 'react' | 'astro'` — `'expo'` fora da união; SkillLang/LANGS estreitam derivadamente. Fixture do create-template mantém o entry de pruning `appExpo` com lang vivo (comentado).
+
+**Gates re-rodados (exit codes):** root `bun tsc` 0 (7/7) · `bun run test:tooling` 0 — tsc:scripts + 283/0 · api-ts `bun test` 516/0 · `nx run app-react:build` 0 · `bun env:generate --check` 0 · `bun cli` sanity (react scaffold 0 / astro stub 2 / help lista react+astro) · `bun test scripts/cli` 110/0.
+
+**Sweep expo — sobreviventes enumerados (todos justificados, zero refs vivas):**
+- `scripts/create-template/plan.test.ts` (16) + `render-manifest.test.ts` (1) — fixture universe do stamp: o entry `appExpo` prova o pruning de um frontend dropado (lang agora `react`, comentado).
+- `scripts/skill-evals/tasks/PROBES-BACKLOG.md` (4) — histórico do programa de probes (documenta probes já removidas).
+- `scripts/skill-evals/seeds/synthetic-l5-learnings-meta/findings.md` (1) — corpus fixture do eval learnings-meta (dados, não código).
+- `docs/ECOSYSTEM.md` (2) + `docs/BOOTSTRAP.md` (1) — descrevem o repo irmão berzerk-club (exemplar mobile DELE, não deste repo).
+- `docs/CORRECTNESS.md` (1) — exemplo histórico medido ("expo registration drift").
+- `HANDOFF.md` (1), `.specs/codedm/ROADMAP.md` (1), `.specs/codedm/OVERNIGHT-BLOCKED.md` (1) — afirmam "expo REMOVIDO" (corretas).
+- Esta BUILD-LOG + `.plans/**` + `.specs/**` restantes — prosa histórica, fica como história.
