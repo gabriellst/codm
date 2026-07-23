@@ -91,7 +91,15 @@ const FIXTURE: RepoLike = {
 			nxProject: 'client',
 			devServer: null,
 		},
-		e2e: { pkgRoot: 'packages/e2e', srcRoot: 'packages/e2e', lang: 'typescript', kind: 'shared', alias: 'e2e', nxProject: 'e2e' },
+		e2e: {
+			pkgRoot: 'packages/e2e',
+			srcRoot: 'packages/e2e',
+			lang: 'typescript',
+			kind: 'shared',
+			alias: 'e2e',
+			nxProject: 'e2e',
+			devServer: null,
+		},
 	},
 	env: {
 		COMPOSE_KEY: { consumers: ['compose'], example: 'x' },
