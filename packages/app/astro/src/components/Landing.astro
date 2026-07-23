@@ -20,7 +20,8 @@ const t = entry!.data
 
 const githubHref = t.footer.links.github
 const downloadHref = `${githubHref}/releases`
-const docsHref = '/docs'
+// /docs doesn't exist yet — anchor to the repo README until it ships (arch doc, out-of-scope list).
+const docsHref = `${githubHref}#readme`
 ---
 
 <Hero t={t.hero} downloadHref={downloadHref} githubHref={githubHref} />

@@ -20,12 +20,15 @@ const SECTIONS: { title: string; match: (d: EnvDecl) => boolean; note?: string }
 	{ title: 'Backend — kernel (api-typescript core Config)', match: d => d.schema === 'kernel' },
 	{ title: 'Backend — product (ProductConfig: brand + billing policy)', match: d => d.schema === 'product' },
 	{ title: 'Go worker (api-go)', match: d => d.consumers.includes('apiGo') },
-	{ title: 'Frontend (only VITE_* reach the browser)', match: d => d.consumers.includes('appReact') },
+	{
+		title: 'Frontend (only VITE_* reach the browser)',
+		match: d => d.consumers.some(c => c !== 'compose' && REPO.workspaces[c].kind === 'frontend'),
+	},
 ]
 
 /** Render .env.example from an env registry — defaults to the full REPO.env; create-template
  *  passes the PRUNED registry of a stamp so the stamped file and manifest stay in lockstep. */
-export function renderEnvExample(env: Record<string, EnvDecl> = REPO.env): string {
+export function renderEnvExample(env: Record<string, EnvDecl> = REPO.env, opts: { strict?: boolean } = {}): string {
 	const lines: string[] = [
 		'# ===========================================',
 		`# ${REPO.brand} — root environment variables`,
@@ -55,11 +58,16 @@ export function renderEnvExample(env: Record<string, EnvDecl> = REPO.env): strin
 		}
 		lines.push('')
 	}
+	// strict: a key claimed by no section would silently vanish from .env.example — fail instead.
+	// CLI-only: fixture universes (create-template tests) render synthetic keys outside SECTIONS.
+	const unclaimed = entries.filter(([k]) => !claimed.has(k)).map(([k]) => k)
+	if (opts.strict && unclaimed.length > 0)
+		throw new Error(`env keys match no rendering section (extend a SECTIONS predicate): ${unclaimed.join(', ')}`)
 	return `${lines.join('\n').trimEnd()}\n`
 }
 
 if (import.meta.main) {
-	const rendered = renderEnvExample()
+	const rendered = renderEnvExample(REPO.env, { strict: true })
 	if (process.argv.includes('--check')) {
 		const current = readFileSync(TARGET, 'utf8')
 		if (current !== rendered) {

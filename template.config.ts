@@ -241,16 +241,29 @@ export const REPO = {
 		// classification step; declared here so ENV-03 parity holds over the verbatim code.
 		CHANNEL_PORT: { consumers: ['apiGo'], example: '3032', doc: 'gateway HTTP port (fallback: PORT)' },
 		PORT: { consumers: ['apiGo'], example: '3030', doc: 'generic port fallback (TS honors it at runtime, outside the Config schema)' },
-		CHANNEL_ALLOWED_ORIGINS: { consumers: ['apiGo'], example: 'http://localhost:5173', doc: 'gateway CORS allowlist (fallback: ALLOWED_ORIGINS)' },
+		CHANNEL_ALLOWED_ORIGINS: {
+			consumers: ['apiGo'],
+			example: 'http://localhost:5173',
+			doc: 'gateway CORS allowlist (fallback: ALLOWED_ORIGINS)',
+		},
 		ALLOWED_ORIGINS: { consumers: ['apiGo'], example: 'http://localhost:5173', doc: 'generic CORS fallback' },
 		CHANNEL_ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'gateway environment (fallback: ENVIRONMENT)' },
 		ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'generic environment fallback' },
 		CHANNEL_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'codedm-gateway', doc: 'Redis consumer group for the gateway' },
 		CHANNEL_SERVICE_NAME: { consumers: ['apiGo'], example: 'gateway', doc: 'service name for logs/traces (fallback: SERVICE_NAME)' },
 		SERVICE_NAME: { consumers: ['apiGo'], example: 'gateway', doc: 'generic service-name fallback' },
-		CHANNEL_GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'gateway HTTP apikey guard (TS proxy sends it server-side; fallback: GLOBAL_API_KEY)' },
+		CHANNEL_GLOBAL_API_KEY: {
+			consumers: ['apiGo'],
+			secret: true,
+			example: '',
+			doc: 'gateway HTTP apikey guard (TS proxy sends it server-side; fallback: GLOBAL_API_KEY)',
+		},
 		GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'generic apikey fallback' },
-		WHATSMEOW_DATABASE_URL: { consumers: ['apiGo'], example: 'postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable', doc: 'whatsmeow session store (empty falls back to DATABASE_URL)' },
+		WHATSMEOW_DATABASE_URL: {
+			consumers: ['apiGo'],
+			example: 'postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable',
+			doc: 'whatsmeow session store (empty falls back to DATABASE_URL)',
+		},
 		WHATSMEOW_LOG_LEVEL: { consumers: ['apiGo'], example: 'WARN', doc: 'whatsmeow client log level' },
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
@@ -269,7 +282,12 @@ export const REPO = {
 		API_GO_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'api-go', doc: 'outbox source tag consumed by api-go' },
 		// ── cross-service URLs ──
 		API_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'http://localhost:3030', doc: 'api-typescript public URL' },
-		API_GO_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:3032', doc: 'api-go public URL (SDK aggregate client)' },
+		API_GO_URL: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'http://localhost:3032',
+			doc: 'api-go public URL (SDK aggregate client)',
+		},
 		APP_URL: {
 			consumers: ['apiTs'],
 			schema: 'kernel',
@@ -339,6 +357,11 @@ export const REPO = {
 		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
 		// ── frontend (only VITE_* reach the browser) ──
 		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
+		SITE_URL: {
+			consumers: ['appAstro'],
+			example: '',
+			doc: 'app-astro canonical origin (sitemap/RSS/canonical) at build time; MUST be set in production builds — empty falls back to http://localhost:4321',
+		},
 	},
 	// ── STAMP-MANAGED-END: env ──
 } as const

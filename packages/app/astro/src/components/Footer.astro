@@ -8,10 +8,11 @@ const t = entry!.data
 
 // Footer GitHub label = nav label minus the external-arrow glyph (single copy source).
 const githubLabel = t.nav.links.github.replace(/\s*↗\s*$/, '')
+// /docs and /changelog don't exist yet — anchor to GitHub until those routes ship (arch doc, out-of-scope list).
 const links = [
 	{ href: t.footer.links.github, label: githubLabel },
-	{ href: '/docs', label: t.footer.links.docs },
-	{ href: '/changelog', label: t.footer.links.changelog },
+	{ href: `${t.footer.links.github}#readme`, label: t.footer.links.docs },
+	{ href: `${t.footer.links.github}/releases`, label: t.footer.links.changelog },
 ]
 ---
 

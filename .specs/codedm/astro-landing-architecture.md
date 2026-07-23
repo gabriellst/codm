@@ -80,7 +80,7 @@ const landing = defineCollection({
       primaryCta: z.string(),          // "Download — macOS · Windows · Linux"
       secondaryCta: z.string(),        // "Star on GitHub"
     }),
-    marquee: z.object({ items: z.array(z.string()).min(4) }),   // WhatsApp…OpenCode; component triples it
+    marquee: z.object({ items: z.array(z.string()).min(4) }),   // WhatsApp…OpenCode; component renders four copies (seamless -50% loop)
     demo: z.object({
       eyebrow: z.string(), title: z.string(), body: z.string(),
       steps: z.array(step).length(3),
@@ -99,6 +99,7 @@ const landing = defineCollection({
       cards: z.array(featureCard).length(6),   // ISSUES/LABELS/WHISPERS/STOPS/ARTIFACTS/LOCAL
       controls: z.array(z.string()).length(6), // outlined mono chips
     }),
+    pricing: z.object({ free: z.string(), perMonth: z.string() }), // PricingSection labels (built, not mounted — D8; post-freeze addition)
     closingCta: z.object({
       titleBold: z.string(), titleLight: z.string(), note: z.string(),
       primary: z.string(), secondary: z.string(),
@@ -264,7 +265,7 @@ src/components/
 ├── BlogCard.astro               # keep
 ├── landing/                     # NEW — one file per section, each takes its `t` slice as Props
 │   ├── Hero.astro               #   animate-rise-in wrapper, badge pulse dot, DotWave host, #⌂
-│   ├── Marquee.astro            #   triples t.marquee.items, animate-marquee, aria-hidden dupes
+│   ├── Marquee.astro            #   4× t.marquee.items, animate-marquee, aria-hidden dupes
 │   ├── DemoSection.astro        #   id="demo" — 2-col grid, 3 steps
 │   ├── ChatMock.astro           #   WhatsApp card — maps t.demo.chat.messages by kind
 │   ├── RouterSection.astro      #   id="router" — .dark card, 4 rows
@@ -340,4 +341,4 @@ Each step leaves `astro check` + `astro build` green. Run from `packages/app/ast
 
 **Step 8 — assets & gates.** Author `public/og/og-pt.png` / `og-en.png`. Gates: `bun x nx run app-astro:tsc` (astro check), `:lint`, `astro build` clean; manual pass: both locales render all 8 sections, anchors scroll, nav hides on scroll-down, marquee loops seamlessly, DotWave runs on hero + CTA and pauses offscreen, reduced-motion kills all animation, no request leaves the origin (fonts/three bundled — verify in devtools network), Lighthouse a11y/SEO ≥ 95, total JS < 150 kB gz (three ~120 kB is the ceiling-setter; everything else rounds to zero).
 
-**Out of scope / follow-ups:** `/docs` and `/download` targets (nav links point at them; ship when those routes exist — until then Download anchors to the GitHub releases URL from `footer.links.github`), pricing section mount, first real `PLANS_SOURCE_URL` + `PUBLIC_STATS_URL` wiring.
+**Out of scope / follow-ups:** `/docs`, `/changelog` and `/download` targets (ship when those routes exist — until then every link to them anchors to GitHub, all derived from `footer.links.github`: Download + footer Changelog → `/releases`, docs CTAs + footer Docs → `#readme`), pricing section mount, first real `PLANS_SOURCE_URL` + `PUBLIC_STATS_URL` wiring. Production builds MUST set `SITE_URL` — sitemap/RSS/canonical URLs fall back to `http://localhost:4321` without it.
