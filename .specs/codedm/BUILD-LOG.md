@@ -296,3 +296,20 @@ Ratificações do founder (23-jul, verbatim intent): (1) Go `shared` LIMPO de ev
 **Gates finais (exit codes, todos verdes):** root `bun tsc` 0 (7/7) · api-ts `bun test` **619/0** · go build/vet/test api-go + core ambos 0 · wire-identity **PASS** (goldens pré-move) · `test:tooling` **283/0** (union-parity + pins) · `bun sdk` 2× idempotente · e2e **5 pass / 2 skip** (baseline exato) · TS boot smoke scratch :3097 (`/v1/session` 200) + **SSE probe real**: `curl /v1/ui/events` + inject via `/v1/_test/gateway` → frame `integration.channel_message.received` entregue no stream, daemon vivo depois · proxy smoke → `{"code":"GATEWAY_UNAVAILABLE"}` HTTP **502** · go boot smoke → openapi **200**, rota SPA **404**.
 
 **Débito anotado:** payload agregado do Kubb como z.union flat (nested discriminatedUnion declarado no manifest) — narrowing/parity intactos hoje; fix é no generator Kubb (packages/client), não no emitter de contracts.
+
+## ASTRO + TAURI ORG — Lote 1: landing vertical slice (23 jul, worktree `astro-tauri-org`)
+
+Diretriz do founder (verbatim intent): "componentes referentes a landing page devem ficar em pastas dentro da page da landing page, assim como a definição do seu conteúdo e o próprio conteúdo. Layout deve ser definido de forma colocalizada também, como se fosse um slice vertical."
+
+**Slice materializado em `src/pages/_landing/`** (underscore = fora do file router, estável desde Astro 2.x, vigente na 5.x). git mv com repoints completos:
+- `components/Landing.astro` → `_landing/Landing.astro` (composition root)
+- `components/landing/*.astro` (9, incl. PricingSection built-not-mounted D8) → `_landing/sections/`
+- `components/islands/DotWave.tsx` → `_landing/DotWave.tsx`
+- DEFINIÇÃO de conteúdo: collections `landing` + `plans` extraídas para `_landing/content/config.ts`; `src/content.config.ts` vira agregador (blog local + re-export do slice)
+- CONTEÚDO: `content/i18n/{pt,en}/landing.json` → `_landing/content/i18n/`; `content/plans/plans.json` + loader → `_landing/content/{plans,loaders}/` (loader relativo recontado)
+- `pages/{index,en/index}.astro` ficam como cascas finas — só o import repontado
+- MORTO: `components/islands/LiveStats.tsx` (zero refs — deletado, não movido)
+
+**Fronteira documentada** (`_landing/README.md` + skill `component/astro`): BaseLayout/Nav/Footer/LocaleSwitcher/BlogCard/i18n ficam FORA (blog também consome); a landing não tem layout próprio — o dia que divergir, forka `_landing/Layout.astro`. Nav/Footer consomem o slice pela collection **name + schema** (`getEntry('landing')`), nunca por path-import de `_landing/` — a collection é o contrato; anchors `#demo/#router/#features` são contrato público do slice. Tooling repontado: extractor de locale do graph agora DESCOBRE roots `content/i18n` (shared + slice-colocated) em vez de hardcodear; eval `synthetic-astro-landing-section` re-apontada.
+
+**Gates (exit codes):** `astro build` 0 — lista de rotas no dist **byte-idêntica** ao baseline do scout (13 arquivos html/xml/txt) e `sitemap-0.xml` **byte-idêntico** · `astro check` 0 erros/0 warnings (31 files) · anchors `id=demo/router/features` 1× em pt+en · RSS 2 items × 2 locales · OG `og-{pt,en}.png` referenciados · `test:tooling` 286/0 · root `bun tsc` 0 (7/7).

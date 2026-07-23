@@ -22,15 +22,17 @@ export function runLocaleExtraction(graph: Graph, _audit: AuditCollector): { key
 		}
 	}
 
-	// Astro content collection — `src/content/i18n/<lang>/<namespace>.json`. The
+	// Astro content collections — `<i18n root>/<lang>/<namespace>.json`. The
 	// namespace (filename without extension) is prepended to every dotted key, so
 	// `<namespace>.json` containing `hero.title` emits `<namespace>.hero.title` —
 	// matches how Astro components reference the entry (`t.hero.title` inside a
 	// component scoped to the `landing` collection).
+	// Roots are discovered, not hardcoded: any `content/i18n/` directory under the
+	// workspace src counts — the shared `src/content/i18n/` as well as vertical-slice
+	// colocations like `src/pages/_landing/content/i18n/`.
 	const astroWs = workspacesByRole('app').find(w => w.id === 'app-astro')
 	if (astroWs) {
-		const i18nRoot = join(ROOT, astroWs.src, 'content/i18n')
-		if (existsSync(i18nRoot)) {
+		for (const i18nRoot of findI18nRoots(join(ROOT, astroWs.src))) {
 			for (const lang of LANGS) {
 				const langDir = join(i18nRoot, lang)
 				if (!existsSync(langDir)) continue
@@ -44,6 +46,15 @@ export function runLocaleExtraction(graph: Graph, _audit: AuditCollector): { key
 	}
 
 	return { keysExtracted: keys }
+}
+
+/** Every `content/i18n/` directory under `root` (shared or slice-colocated). */
+function findI18nRoots(root: string): string[] {
+	if (!existsSync(root)) return []
+	return readdirSync(root, { recursive: true, withFileTypes: true })
+		.filter(d => d.isDirectory() && d.name === 'i18n' && d.parentPath.endsWith('/content'))
+		.map(d => join(d.parentPath, d.name))
+		.sort()
 }
 
 function emitFromJsonFile(graph: Graph, path: string, lang: string, workspace: string, namespacePrefix?: string): number {

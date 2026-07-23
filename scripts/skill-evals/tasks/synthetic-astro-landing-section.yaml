@@ -18,7 +18,7 @@ prompt: >
   in the existing exemplars FIRST: astro.config.mjs (i18n with
   prefixDefaultLocale: false — pt lives unprefixed, en under /en/),
   src/pages/index.astro + src/pages/en/index.astro (per-locale page
-  pairs), src/content.config.ts + src/content/i18n/{pt,en}/landing.json
+  pairs), src/content.config.ts + src/pages/_landing/content/i18n/{pt,en}/landing.json
   (the Zod-typed content-collection dictionaries),
   src/components/Nav.astro + Footer.astro (getLocale + getEntry
   consumption) and src/i18n/index.ts (the routeFor/localizedPath
@@ -157,10 +157,10 @@ graders:
     spec: "packages/app/astro/src/components/Nav.astro::[Pp]ricing"
     id: route-astro#BP-AR-003
   - kind: grep-must
-    spec: "packages/app/astro/src/content/i18n/pt/landing.json::pricing|Pre[çc]os"
+    spec: "packages/app/astro/src/pages/_landing/content/i18n/pt/landing.json::pricing|Pre[çc]os"
     id: component-astro#BP-AC-002
   - kind: grep-must
-    spec: "packages/app/astro/src/content/i18n/en/landing.json::[Pp]ricing"
+    spec: "packages/app/astro/src/pages/_landing/content/i18n/en/landing.json::[Pp]ricing"
     id: component-astro#BP-AC-002
   # ── TOKENS / WORKSPACE BOUNDARIES ──────────────────────────────────
   - kind: grep-must-not
@@ -234,7 +234,7 @@ graders:
       hardcoded 'Blog' label and conditional blog href, index.astro's
       inline sections without role="list", and the BaseLayout jsonLd
       is:inline hint). Inspect the new files plus src/content.config.ts,
-      src/components/Nav.astro and src/content/i18n/{pt,en}/landing.json.
+      src/components/Nav.astro and src/pages/_landing/content/i18n/{pt,en}/landing.json.
 notes: >-
   First astro probe ever — synthetic, no gold tree, agent mode only.
   Platform gates: the backlog row asked for an astro TSC_TARGETS entry,

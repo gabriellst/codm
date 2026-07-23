@@ -8,7 +8,11 @@ description: Create an Astro component for the landing/blog app (packages/app/as
 
 # Create Astro Component (static-first, island-when-needed)
 
-Creates a server-rendered component for `packages/app/astro/`. Astro components live in `src/components/` as `.astro` files. They render once at build time (or per-request in SSR) and **emit zero JavaScript** by default. Reach for a React island only when the UI genuinely needs interactivity that can't be done with CSS or progressive enhancement.
+Creates a server-rendered component for `packages/app/astro/`. Astro components render once at build time (or per-request in SSR) and **emit zero JavaScript** by default. Reach for a React island only when the UI genuinely needs interactivity that can't be done with CSS or progressive enhancement.
+
+## Placement — vertical slice vs shared
+
+Components that belong to **one page** live inside that page's vertical slice under `src/pages/_<page>/` (the `_` prefix keeps the folder out of the file router). The landing is the exemplar: `src/pages/_landing/{Landing.astro,sections/*,DotWave.tsx,content/{config.ts,i18n,plans,loaders}}` — components, islands, collection **definition** and **content** all colocated; `src/content.config.ts` only aggregates the slice's re-exported collections, and the route files (`index.astro`, `en/index.astro`) stay thin shells importing the slice's composition root. `src/components/` is reserved for **genuinely shared** components (Nav, Footer, LocaleSwitcher, BlogCard). Boundary rules: shared components may consume a slice's collection by **name + schema** (`getEntry('landing', ...)`) but must never path-import from `_<page>/`; slice files may import shared modules freely. See `src/pages/_landing/README.md` for the worked boundary table.
 
 ## Core mental model
 
