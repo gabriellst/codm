@@ -4,13 +4,13 @@
 */
 
 
-export const LogLevel = {
-    LogLevelDebug: "DEBUG",
-    LogLevelInfo: "INFO",
-    LogLevelWarn: "WARN",
-    LogLevelError: "ERROR"
+export const LogLevelEnum = {
+    DEBUG: "DEBUG",
+    INFO: "INFO",
+    WARN: "WARN",
+    ERROR: "ERROR"
 } as const;
 
-export type LogLevelEnumKey = (typeof LogLevel)[keyof typeof LogLevel];
+export type LogLevelEnumKey = (typeof LogLevelEnum)[keyof typeof LogLevelEnum];
 
 export type LogLevel = LogLevelEnumKey;

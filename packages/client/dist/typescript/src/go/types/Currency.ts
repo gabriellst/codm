@@ -4,12 +4,12 @@
 */
 
 
-export const Currency = {
-    CurrencyBRL: "BRL",
-    CurrencyUSD: "USD",
-    CurrencyEUR: "EUR"
+export const CurrencyEnum = {
+    BRL: "BRL",
+    USD: "USD",
+    EUR: "EUR"
 } as const;
 
-export type CurrencyEnumKey = (typeof Currency)[keyof typeof Currency];
+export type CurrencyEnumKey = (typeof CurrencyEnum)[keyof typeof CurrencyEnum];
 
 export type Currency = CurrencyEnumKey;

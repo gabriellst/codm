@@ -4,12 +4,12 @@
 */
 
 
-export const ChatPresenceType = {
-    ChatPresenceTypeComposing: "composing",
-    ChatPresenceTypeRecording: "recording",
-    ChatPresenceTypePaused: "paused"
+export const ChatPresenceTypeEnum = {
+    composing: "composing",
+    recording: "recording",
+    paused: "paused"
 } as const;
 
-export type ChatPresenceTypeEnumKey = (typeof ChatPresenceType)[keyof typeof ChatPresenceType];
+export type ChatPresenceTypeEnumKey = (typeof ChatPresenceTypeEnum)[keyof typeof ChatPresenceTypeEnum];
 
 export type ChatPresenceType = ChatPresenceTypeEnumKey;

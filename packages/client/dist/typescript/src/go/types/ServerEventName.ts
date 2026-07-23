@@ -4,28 +4,28 @@
 */
 
 
-export const ServerEventName = {
-    IntegrationChannelChatPresenceUpdated: "integration.channel.chat_presence_updated",
-    IntegrationChannelConnected: "integration.channel.connected",
-    IntegrationChannelDisconnected: "integration.channel.disconnected",
-    IntegrationChannelLoggedOut: "integration.channel.logged_out",
-    IntegrationChannelMembershipAdded: "integration.channel.membership_added",
-    IntegrationChannelMembershipRemoved: "integration.channel.membership_removed",
-    IntegrationChannelMessagesSynced: "integration.channel.messages_synced",
-    IntegrationChannelPresenceUpdated: "integration.channel.presence_updated",
-    IntegrationChannelRemoteCreated: "integration.channel.remote_created",
-    IntegrationChannelRemoteDeleted: "integration.channel.remote_deleted",
-    IntegrationChannelRemoteUpdated: "integration.channel.remote_updated",
-    IntegrationChannelRemotesSynced: "integration.channel.remotes_synced",
-    IntegrationChannelSyncCompleted: "integration.channel.sync_completed",
-    IntegrationChannelSyncProgress: "integration.channel.sync_progress",
-    IntegrationChannelSyncStarted: "integration.channel.sync_started",
-    IntegrationChannelMessageDelivered: "integration.channel_message.delivered",
-    IntegrationChannelMessageReceived: "integration.channel_message.received",
-    IntegrationChannelMessageSeen: "integration.channel_message.seen",
-    IntegrationChannelSpecialPlatformEventReceived: "integration.channel_special_platform_event.received"
+export const ServerEventNameEnum = {
+    "integration.channel.chat_presence_updated": "integration.channel.chat_presence_updated",
+    "integration.channel.connected": "integration.channel.connected",
+    "integration.channel.disconnected": "integration.channel.disconnected",
+    "integration.channel.logged_out": "integration.channel.logged_out",
+    "integration.channel.membership_added": "integration.channel.membership_added",
+    "integration.channel.membership_removed": "integration.channel.membership_removed",
+    "integration.channel.messages_synced": "integration.channel.messages_synced",
+    "integration.channel.presence_updated": "integration.channel.presence_updated",
+    "integration.channel.remote_created": "integration.channel.remote_created",
+    "integration.channel.remote_deleted": "integration.channel.remote_deleted",
+    "integration.channel.remote_updated": "integration.channel.remote_updated",
+    "integration.channel.remotes_synced": "integration.channel.remotes_synced",
+    "integration.channel.sync_completed": "integration.channel.sync_completed",
+    "integration.channel.sync_progress": "integration.channel.sync_progress",
+    "integration.channel.sync_started": "integration.channel.sync_started",
+    "integration.channel_message.delivered": "integration.channel_message.delivered",
+    "integration.channel_message.received": "integration.channel_message.received",
+    "integration.channel_message.seen": "integration.channel_message.seen",
+    "integration.channel_special_platform_event.received": "integration.channel_special_platform_event.received"
 } as const;
 
-export type ServerEventNameEnumKey = (typeof ServerEventName)[keyof typeof ServerEventName];
+export type ServerEventNameEnumKey = (typeof ServerEventNameEnum)[keyof typeof ServerEventNameEnum];
 
 export type ServerEventName = ServerEventNameEnumKey;

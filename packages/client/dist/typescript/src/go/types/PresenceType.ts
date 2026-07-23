@@ -4,14 +4,14 @@
 */
 
 
-export const PresenceType = {
-    PresenceTypeAvailable: "AVAILABLE",
-    PresenceTypeUnavailable: "UNAVAILABLE",
-    PresenceTypeComposing: "COMPOSING",
-    PresenceTypeRecording: "RECORDING",
-    PresenceTypePaused: "PAUSED"
+export const PresenceTypeEnum = {
+    AVAILABLE: "AVAILABLE",
+    UNAVAILABLE: "UNAVAILABLE",
+    COMPOSING: "COMPOSING",
+    RECORDING: "RECORDING",
+    PAUSED: "PAUSED"
 } as const;
 
-export type PresenceTypeEnumKey = (typeof PresenceType)[keyof typeof PresenceType];
+export type PresenceTypeEnumKey = (typeof PresenceTypeEnum)[keyof typeof PresenceTypeEnum];
 
 export type PresenceType = PresenceTypeEnumKey;

@@ -47,6 +47,14 @@ interface Plan {
  *    `z.array()` needs an element. Stripping the empty combinator leaves `{}`
  *    (= any), so kubb emits `z.array(z.any())…` and compiles. The array is
  *    `maxItems: 0` anyway, so the element type is never exercised at runtime.
+ *
+ * 3. `x-enum-varnames` → dropped. The Go emitter (swaggo convention) attaches it
+ *    so oapi-codegen can name Go constants; but under it `@kubb/plugin-ts`
+ *    abandons the `asPascalConst` naming and emits the enum const with the SAME
+ *    name as the type (no `Enum` suffix) — and the named barrel then exports the
+ *    identifier twice (`export type { X }` + `export { X }`), a TS2300 on every
+ *    annotated enum (20 in the gateway spec). Stripping restores the suffixed
+ *    const path (`XEnum` + `type X`), identical to the typescript service output.
  */
 function normalizeForKubb(node: unknown): void {
 	if (!node || typeof node !== 'object') return
@@ -59,6 +67,7 @@ function normalizeForKubb(node: unknown): void {
 		obj.enum = [obj.const]
 		delete obj.const
 	}
+	delete obj['x-enum-varnames']
 	for (const combinator of ['anyOf', 'oneOf', 'allOf'] as const) {
 		if (Array.isArray(obj[combinator]) && (obj[combinator] as unknown[]).length === 0) {
 			delete obj[combinator]

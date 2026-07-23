@@ -4,13 +4,13 @@
 */
 
 
-export const ReceiptType = {
-    ReceiptTypeDelivered: "delivered",
-    ReceiptTypeRead: "read",
-    ReceiptTypeReadSelf: "read-self",
-    ReceiptTypePlayed: "played"
+export const ReceiptTypeEnum = {
+    delivered: "delivered",
+    read: "read",
+    "read-self": "read-self",
+    played: "played"
 } as const;
 
-export type ReceiptTypeEnumKey = (typeof ReceiptType)[keyof typeof ReceiptType];
+export type ReceiptTypeEnumKey = (typeof ReceiptTypeEnum)[keyof typeof ReceiptTypeEnum];
 
 export type ReceiptType = ReceiptTypeEnumKey;

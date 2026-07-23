@@ -4,13 +4,13 @@
 */
 
 
-export const MembershipAction = {
-    MembershipActionJoined: "joined",
-    MembershipActionLeft: "left",
-    MembershipActionPromoted: "promoted",
-    MembershipActionDemoted: "demoted"
+export const MembershipActionEnum = {
+    joined: "joined",
+    left: "left",
+    promoted: "promoted",
+    demoted: "demoted"
 } as const;
 
-export type MembershipActionEnumKey = (typeof MembershipAction)[keyof typeof MembershipAction];
+export type MembershipActionEnumKey = (typeof MembershipActionEnum)[keyof typeof MembershipActionEnum];
 
 export type MembershipAction = MembershipActionEnumKey;

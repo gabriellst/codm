@@ -4,12 +4,12 @@
 */
 
 
-export const Environment = {
-    EnvironmentDevelopment: "DEVELOPMENT",
-    EnvironmentStaging: "STAGING",
-    EnvironmentProduction: "PRODUCTION"
+export const EnvironmentEnum = {
+    DEVELOPMENT: "DEVELOPMENT",
+    STAGING: "STAGING",
+    PRODUCTION: "PRODUCTION"
 } as const;
 
-export type EnvironmentEnumKey = (typeof Environment)[keyof typeof Environment];
+export type EnvironmentEnumKey = (typeof EnvironmentEnum)[keyof typeof EnvironmentEnum];
 
 export type Environment = EnvironmentEnumKey;

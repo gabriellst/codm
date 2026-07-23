@@ -4,11 +4,11 @@
 */
 
 
-export const Country = {
-    CountryBR: "BR",
-    CountryUS: "US"
+export const CountryEnum = {
+    BR: "BR",
+    US: "US"
 } as const;
 
-export type CountryEnumKey = (typeof Country)[keyof typeof Country];
+export type CountryEnumKey = (typeof CountryEnum)[keyof typeof CountryEnum];
 
 export type Country = CountryEnumKey;

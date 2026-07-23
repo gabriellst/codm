@@ -4,11 +4,11 @@
 */
 
 
-export const Platform = {
-    PlatformWhatsApp: "WHATSAPP",
-    PlatformInternal: "INTERNAL"
+export const PlatformEnum = {
+    WHATSAPP: "WHATSAPP",
+    INTERNAL: "INTERNAL"
 } as const;
 
-export type PlatformEnumKey = (typeof Platform)[keyof typeof Platform];
+export type PlatformEnumKey = (typeof PlatformEnum)[keyof typeof PlatformEnum];
 
 export type Platform = PlatformEnumKey;

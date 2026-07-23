@@ -4,12 +4,12 @@
 */
 
 
-export const Language = {
-    LanguagePT: "PT",
-    LanguageEN: "EN",
-    LanguageES: "ES"
+export const LanguageEnum = {
+    PT: "PT",
+    EN: "EN",
+    ES: "ES"
 } as const;
 
-export type LanguageEnumKey = (typeof Language)[keyof typeof Language];
+export type LanguageEnumKey = (typeof LanguageEnum)[keyof typeof LanguageEnum];
 
 export type Language = LanguageEnumKey;

@@ -4,12 +4,12 @@
 */
 
 
-export const GroupRole = {
-    GroupRoleMember: "member",
-    GroupRoleAdmin: "admin",
-    GroupRoleSuperAdmin: "super_admin"
+export const GroupRoleEnum = {
+    member: "member",
+    admin: "admin",
+    super_admin: "super_admin"
 } as const;
 
-export type GroupRoleEnumKey = (typeof GroupRole)[keyof typeof GroupRole];
+export type GroupRoleEnumKey = (typeof GroupRoleEnum)[keyof typeof GroupRoleEnum];
 
 export type GroupRole = GroupRoleEnumKey;

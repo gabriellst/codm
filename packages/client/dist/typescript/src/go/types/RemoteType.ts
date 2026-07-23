@@ -4,12 +4,12 @@
 */
 
 
-export const RemoteType = {
-    RemoteTypeUser: "USER",
-    RemoteTypeGroup: "GROUP",
-    RemoteTypeBroadcast: "BROADCAST"
+export const RemoteTypeEnum = {
+    USER: "USER",
+    GROUP: "GROUP",
+    BROADCAST: "BROADCAST"
 } as const;
 
-export type RemoteTypeEnumKey = (typeof RemoteType)[keyof typeof RemoteType];
+export type RemoteTypeEnumKey = (typeof RemoteTypeEnum)[keyof typeof RemoteTypeEnum];
 
 export type RemoteType = RemoteTypeEnumKey;

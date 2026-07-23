@@ -4,22 +4,22 @@
 */
 
 
-export const MessageType = {
-    MessageTypeText: "TEXT",
-    MessageTypeImage: "IMAGE",
-    MessageTypeVideo: "VIDEO",
-    MessageTypeAudio: "AUDIO",
-    MessageTypeDocument: "DOCUMENT",
-    MessageTypeSticker: "STICKER",
-    MessageTypeLocation: "LOCATION",
-    MessageTypeContact: "CONTACT",
-    MessageTypePoll: "POLL",
-    MessageTypeList: "LIST",
-    MessageTypeButton: "BUTTON",
-    MessageTypeReaction: "REACTION",
-    MessageTypeStatus: "STATUS"
+export const MessageTypeEnum = {
+    TEXT: "TEXT",
+    IMAGE: "IMAGE",
+    VIDEO: "VIDEO",
+    AUDIO: "AUDIO",
+    DOCUMENT: "DOCUMENT",
+    STICKER: "STICKER",
+    LOCATION: "LOCATION",
+    CONTACT: "CONTACT",
+    POLL: "POLL",
+    LIST: "LIST",
+    BUTTON: "BUTTON",
+    REACTION: "REACTION",
+    STATUS: "STATUS"
 } as const;
 
-export type MessageTypeEnumKey = (typeof MessageType)[keyof typeof MessageType];
+export type MessageTypeEnumKey = (typeof MessageTypeEnum)[keyof typeof MessageTypeEnum];
 
 export type MessageType = MessageTypeEnumKey;

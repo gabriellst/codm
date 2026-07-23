@@ -4,11 +4,11 @@
 */
 
 
-export const HistorySyncType = {
-    HistorySyncTypeInitial: "initial",
-    HistorySyncTypeRecent: "recent"
+export const HistorySyncTypeEnum = {
+    initial: "initial",
+    recent: "recent"
 } as const;
 
-export type HistorySyncTypeEnumKey = (typeof HistorySyncType)[keyof typeof HistorySyncType];
+export type HistorySyncTypeEnumKey = (typeof HistorySyncTypeEnum)[keyof typeof HistorySyncTypeEnum];
 
 export type HistorySyncType = HistorySyncTypeEnumKey;

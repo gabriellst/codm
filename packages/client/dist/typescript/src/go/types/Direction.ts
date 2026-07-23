@@ -4,11 +4,11 @@
 */
 
 
-export const Direction = {
-    DirectionSent: "SENT",
-    DirectionReceived: "RECEIVED"
+export const DirectionEnum = {
+    SENT: "SENT",
+    RECEIVED: "RECEIVED"
 } as const;
 
-export type DirectionEnumKey = (typeof Direction)[keyof typeof Direction];
+export type DirectionEnumKey = (typeof DirectionEnum)[keyof typeof DirectionEnum];
 
 export type Direction = DirectionEnumKey;

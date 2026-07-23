@@ -4,13 +4,13 @@
 */
 
 
-export const ProxyProtocol = {
-    ProxyProtocolHTTP: "HTTP",
-    ProxyProtocolHTTPS: "HTTPS",
-    ProxyProtocolSOCKS4: "SOCKS4",
-    ProxyProtocolSOCKS5: "SOCKS5"
+export const ProxyProtocolEnum = {
+    HTTP: "HTTP",
+    HTTPS: "HTTPS",
+    SOCKS4: "SOCKS4",
+    SOCKS5: "SOCKS5"
 } as const;
 
-export type ProxyProtocolEnumKey = (typeof ProxyProtocol)[keyof typeof ProxyProtocol];
+export type ProxyProtocolEnumKey = (typeof ProxyProtocolEnum)[keyof typeof ProxyProtocolEnum];
 
 export type ProxyProtocol = ProxyProtocolEnumKey;
