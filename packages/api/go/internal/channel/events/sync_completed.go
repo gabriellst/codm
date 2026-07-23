@@ -1,21 +1,19 @@
 package events
 
 import (
-	"time"
-
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelSyncCompletedPayload signals that a sync session has finished.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelSyncCompletedPayload struct {
-	ChannelID   uuid.UUID `json:"channelId" validate:"required"`
-	OwnerID     string    `json:"ownerId" validate:"required"`
-	CompletedAt time.Time `json:"completedAt" validate:"required"`
-}
+// ChannelSyncCompletedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-sync-completed.tsp`.
+//
+// Semantics (unchanged): a sync session has finished.
+type ChannelSyncCompletedPayload = wire.ChannelSyncCompletedPayload
 
 const SyncCompletedEventName = "channel.sync_completed"
 

@@ -214,20 +214,20 @@ func cases() map[string]any {
 			}),
 
 		// ── sync cluster ─────────────────────────────────────────────────
-		"channel.sync_started": envelope(sharedevents.ChannelSyncStartedEventName,
+		"channel.sync_started": envelope(wire.ChannelSyncStartedEventName,
 			channelevents.ChannelSyncStartedPayload{
 				ChannelID: channelID,
 				OwnerID:   fixedOwner,
 				StartedAt: t1,
 			}),
-		"channel.sync_progress": envelope(sharedevents.ChannelSyncProgressEventName,
+		"channel.sync_progress": envelope(wire.ChannelSyncProgressEventName,
 			channelevents.ChannelSyncProgressPayload{
 				ChannelID:       channelID,
 				OwnerID:         fixedOwner,
 				HistorySyncType: channelenums.HistorySyncTypeInitial,
 				Percent:         42,
 			}),
-		"channel.sync_completed": envelope(sharedevents.ChannelSyncCompletedEventName,
+		"channel.sync_completed": envelope(wire.ChannelSyncCompletedEventName,
 			channelevents.ChannelSyncCompletedPayload{
 				ChannelID:   channelID,
 				OwnerID:     fixedOwner,
@@ -276,9 +276,6 @@ func TestWireIdentityNameConsts(t *testing.T) {
 	pairs := map[string][2]string{
 		"remote_created": {sharedevents.ChannelRemoteCreatedEventName, wire.ChannelRemoteCreatedEventName},
 		"remote_updated": {sharedevents.ChannelRemoteUpdatedEventName, wire.ChannelRemoteUpdatedEventName},
-		"sync_started":   {sharedevents.ChannelSyncStartedEventName, wire.ChannelSyncStartedEventName},
-		"sync_progress":  {sharedevents.ChannelSyncProgressEventName, wire.ChannelSyncProgressEventName},
-		"sync_completed": {sharedevents.ChannelSyncCompletedEventName, wire.ChannelSyncCompletedEventName},
 		"connected":      {sharedevents.ChannelConnectedEventName, wire.ChannelConnectedEventName},
 		"disconnected":   {sharedevents.ChannelDisconnectedEventName, wire.ChannelDisconnectedEventName},
 		"logged_out":     {sharedevents.ChannelLoggedOutEventName, wire.ChannelLoggedOutEventName},

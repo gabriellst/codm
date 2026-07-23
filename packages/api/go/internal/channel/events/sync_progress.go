@@ -1,21 +1,21 @@
 package events
 
 import (
-	channelenums "template/api-go/internal/channel/enums"
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelSyncProgressPayload carries progress metrics for an ongoing sync session.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelSyncProgressPayload struct {
-	ChannelID       uuid.UUID                    `json:"channelId" validate:"required"`
-	OwnerID         string                       `json:"ownerId" validate:"required"`
-	HistorySyncType channelenums.HistorySyncType `json:"historySyncType" validate:"required"`
-	Percent         uint32                       `json:"percent"`
-}
+// ChannelSyncProgressPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-sync-progress.tsp`.
+//
+// Semantics (unchanged): progress metrics for an ongoing sync session.
+// HistorySyncType keeps its enum type (exact-match wire alias); Percent is
+// int32 in the binding (0-100).
+type ChannelSyncProgressPayload = wire.ChannelSyncProgressPayload
 
 const SyncProgressEventName = "channel.sync_progress"
 

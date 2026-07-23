@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	ctxevents "template/api-go/internal/channel/events"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -32,7 +32,7 @@ func (h *SyncProgressIntegrationHandler) Handle(ctx context.Context, event types
 	if err != nil {
 		return err
 	}
-	integration := sharedevents.NewChannelSyncProgressEvent(e.OwnerID, e.Payload)
+	integration := types.NewIntegrationEvent(wire.ChannelSyncProgressEventName, e.OwnerID, e.Payload)
 	if err := h.externalMediator.Publish(ctx, integration); err != nil {
 		slog.Error("failed to publish sync_progress integration event",
 			"channelId", e.Payload.ChannelID, "error", err)

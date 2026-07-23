@@ -74,7 +74,7 @@ func (h *SyncProgressHandler) Handle(ctx context.Context, event types.DomainEven
 		ChannelID:       e.Payload.ChannelID,
 		OwnerID:         e.OwnerID,
 		HistorySyncType: e.Payload.HistorySyncType,
-		Percent:         e.Payload.Percent,
+		Percent:         int32(e.Payload.Percent),
 	})
 	if err := h.domainEventRepo.Save(ctx, domain); err != nil {
 		slog.Warn("failed to save sync_progress event",

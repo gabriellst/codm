@@ -1,21 +1,19 @@
 package events
 
 import (
-	"time"
-
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelSyncStartedPayload signals that a sync session has begun.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelSyncStartedPayload struct {
-	ChannelID uuid.UUID `json:"channelId" validate:"required"`
-	OwnerID   string    `json:"ownerId" validate:"required"`
-	StartedAt time.Time `json:"startedAt" validate:"required"`
-}
+// ChannelSyncStartedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-sync-started.tsp`.
+//
+// Semantics (unchanged): a sync session has begun.
+type ChannelSyncStartedPayload = wire.ChannelSyncStartedPayload
 
 const SyncStartedEventName = "channel.sync_started"
 
