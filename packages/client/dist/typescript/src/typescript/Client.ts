@@ -5,13 +5,11 @@ import {
 	attachThread,
 	configureContextBuffer,
 	configureMentionGate,
-	connectChannel,
 	createOwner,
 	detectProviders,
 	disableOwner,
 	enableOwner,
 	getAttachThreadWizard,
-	getChannelPairingStatus,
 	getHomeDashboard,
 	getIssueDetail,
 	getIssuesOverview,
@@ -76,10 +74,6 @@ export class TypescriptClient {
 		return (configureMentionGate as (...a: any[]) => ReturnType<typeof configureMentionGate>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
-	connectChannel(...args: Parameters<typeof connectChannel>): ReturnType<typeof connectChannel> {
-		return (connectChannel as (...a: any[]) => ReturnType<typeof connectChannel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
-	}
-
 	createOwner(...args: Parameters<typeof createOwner>): ReturnType<typeof createOwner> {
 		return (createOwner as (...a: any[]) => ReturnType<typeof createOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -98,10 +92,6 @@ export class TypescriptClient {
 
 	getAttachThreadWizard(...args: Parameters<typeof getAttachThreadWizard>): ReturnType<typeof getAttachThreadWizard> {
 		return (getAttachThreadWizard as (...a: any[]) => ReturnType<typeof getAttachThreadWizard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
-	}
-
-	getChannelPairingStatus(...args: Parameters<typeof getChannelPairingStatus>): ReturnType<typeof getChannelPairingStatus> {
-		return (getChannelPairingStatus as (...a: any[]) => ReturnType<typeof getChannelPairingStatus>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getHomeDashboard(...args: Parameters<typeof getHomeDashboard>): ReturnType<typeof getHomeDashboard> {
