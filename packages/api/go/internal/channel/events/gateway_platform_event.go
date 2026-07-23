@@ -1,34 +1,33 @@
 package events
 
 import (
-	"encoding/json"
-
-	"template/api-go/internal/channel/enums"
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelSpecialPlatformEventType is the discriminator for platform-specific events.
-type ChannelSpecialPlatformEventType string
+// ChannelSpecialPlatformEventType is retargeted onto the frozen contracts wire
+// enum `wire.SpecialPlatformEventType` (exact value-set match: qr_code_updated).
+type ChannelSpecialPlatformEventType = wire.SpecialPlatformEventType
 
 const (
-	PlatformEventQRCodeUpdated ChannelSpecialPlatformEventType = "qr_code_updated"
+	PlatformEventQRCodeUpdated = wire.SpecialPlatformEventTypeqr_code_updated
 )
 
-// ChannelSpecialPlatformEventPayload is the data carried by special platform events.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-// @union field=Payload discriminatedBy=Platform,EventType
-// @variant Platform=WHATSAPP EventType=qr_code_updated type=WhatsAppQRCodeUpdated
-type ChannelSpecialPlatformEventPayload struct {
-	ChannelID uuid.UUID                       `json:"channelId" validate:"required"`
-	EventName string                          `json:"eventName" validate:"required"`
-	EventType ChannelSpecialPlatformEventType `json:"eventType" validate:"required"`
-	Platform  enums.Platform                  `json:"platform" validate:"required"`
-	Payload   json.RawMessage                 `json:"payload" validate:"required"`
-	OwnerID   string                          `json:"ownerId" validate:"required"`
-}
+// ChannelSpecialPlatformEventPayload is retargeted onto the frozen contracts
+// wire binding (packages/contracts/generated/go/wire/events.go,
+// `wire.ChannelSpecialPlatformEventReceivedPayload`) — flat-events swap: the
+// payload DECLARATION (fields + the stamped `// @union` / `// @variant`
+// annotations the pkg/openapi scanner reads) is single-sourced from
+// `packages/contracts/wire/events/channel-special-platform-event-received.tsp`.
+// The union variant SHAPE (WhatsAppQRCodeUpdated) stays in this workspace
+// (owner `apiGo`, services/gateway/whatsapp/events).
+//
+// Disclosed type adaptation: the binding types `Platform` as the wire `string`
+// (verbatim gateway Platform; ChannelKind reconciliation deferred to the
+// enum-harmonization handoff) — publishers cast `string(enums.Platform*)`.
+type ChannelSpecialPlatformEventPayload = wire.ChannelSpecialPlatformEventReceivedPayload
 
 const GatewayPlatformEventName = "channel.gateway_platform_event"
 

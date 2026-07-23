@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	ctxevents "template/api-go/internal/channel/events"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -28,7 +28,7 @@ func (h *GatewayPlatformEventHandler) Handle(ctx context.Context, event types.Do
 	if err != nil {
 		return err
 	}
-	integrationEvent := sharedevents.NewChannelSpecialPlatformEvent(e.OwnerID, e.Payload)
+	integrationEvent := types.NewIntegrationEvent(wire.ChannelSpecialPlatformEventReceivedEventName, e.OwnerID, e.Payload)
 	if err := h.ext.Publish(ctx, integrationEvent); err != nil {
 		slog.Error("failed to publish platform event integration event", "eventType", e.Payload.EventType, "error", err)
 		return err

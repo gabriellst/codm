@@ -711,28 +711,32 @@ type ChannelRemotesSyncedPayload struct {
 const ChannelSpecialPlatformEventReceivedEventName = "integration.channel_special_platform_event.received"
 
 // ChannelSpecialPlatformEventReceivedEvent — wire shape of integration.channel_special_platform_event.received.
-// BC1 Channel Gateway. A generic envelope for a platform-native out-of-band event. Descends the medscall integration.channel_special_platform_event.received. Defined-and-dormant: the only realized variant (qr_code_updated) is served concretely by the frozen pairing_qr_updated event; this wrapper carries eventType (SpecialPlatformEventType) + an opaque JSON-serialized payload (payloadJson) for future platform events. The source field `eventName` is renamed platformEventName to avoid colliding with the generated Go EventName() discriminator method. ownerId travels on the envelope.
+// BC1 Channel Gateway. A generic envelope for a platform-native out-of-band event. Descends the medscall integration.channel_special_platform_event.received. Flat-events sanctioned amendment (wire-identity invariant, pilot precedent): the payload is the VERBATIM gateway shape — `eventName` keeps its wire key (the earlier platformEventName rename would change the marshaled key; the generated FLAT struct renames only the Go field ident to dodge the EventName() method collision) and `payload` is an opaque union SLOT carrying the platform-native variant object (the earlier payloadJson string re-encoding was never on the wire). The realized variant (WHATSAPP qr_code_updated → WhatsAppQRCodeUpdated) lives in the owner workspace (apiGo).
 type ChannelSpecialPlatformEventReceivedEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
-	PlatformEventName string `json:"platformEventName"`
+	ChannelID uuid.UUID `json:"channelId"`
+	PayloadEventName string `json:"eventName"`
 	EventType SpecialPlatformEventType `json:"eventType"`
-	Platform ChannelKind `json:"platform"`
-	PayloadJson string `json:"payloadJson"`
+	Platform string `json:"platform"`
+	Payload json.RawMessage `json:"payload"`
 }
 
 func (e ChannelSpecialPlatformEventReceivedEvent) EventName() string { return ChannelSpecialPlatformEventReceivedEventName }
 
 // ChannelSpecialPlatformEventReceivedPayload — payload of integration.channel_special_platform_event.received, generated from the contract declaration.
+// Union slot fields are opaque (json.RawMessage); the variant SHAPES live in the owner workspace.
+// @union field=Payload discriminatedBy=Platform,EventType
+// @variant Platform=WHATSAPP EventType=qr_code_updated type=WhatsAppQRCodeUpdated
 type ChannelSpecialPlatformEventReceivedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
-	PlatformEventName string `json:"platformEventName" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	EventName string `json:"eventName" validate:"required"`
 	EventType SpecialPlatformEventType `json:"eventType" validate:"required"`
-	Platform ChannelKind `json:"platform" validate:"required"`
-	PayloadJson string `json:"payloadJson" validate:"required"`
+	Platform string `json:"platform" validate:"required"`
+	Payload json.RawMessage `json:"payload" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelSyncCompletedEventName is the wire discriminator for ChannelSyncCompletedEvent.

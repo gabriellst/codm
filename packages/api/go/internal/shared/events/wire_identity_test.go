@@ -257,12 +257,12 @@ func cases() map[string]any {
 			}),
 
 		// ── special platform event ───────────────────────────────────────
-		"channel_special_platform_event.received": envelope(sharedevents.ChannelSpecialPlatformEventName,
+		"channel_special_platform_event.received": envelope(wire.ChannelSpecialPlatformEventReceivedEventName,
 			channelevents.ChannelSpecialPlatformEventPayload{
 				ChannelID: channelID,
 				EventName: "*events.QR",
 				EventType: channelevents.PlatformEventQRCodeUpdated,
-				Platform:  channelenums.PlatformWhatsApp,
+				Platform:  string(channelenums.PlatformWhatsApp),
 				Payload:   json.RawMessage(`{"code":"2@abcdef"}`),
 				OwnerID:   fixedOwner,
 			}),
@@ -276,8 +276,6 @@ func TestWireIdentityNameConsts(t *testing.T) {
 	pairs := map[string][2]string{
 		"remote_created": {sharedevents.ChannelRemoteCreatedEventName, wire.ChannelRemoteCreatedEventName},
 		"remote_updated": {sharedevents.ChannelRemoteUpdatedEventName, wire.ChannelRemoteUpdatedEventName},
-		"special_platform_event": {sharedevents.ChannelSpecialPlatformEventName,
-			wire.ChannelSpecialPlatformEventReceivedEventName},
 	}
 	for id, pair := range pairs {
 		if pair[0] != pair[1] {

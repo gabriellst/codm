@@ -220,7 +220,7 @@ func (c *WhatsmeowChannel) GetQRChannel(ctx context.Context) (<-chan gateway.QRC
 					ChannelID: c.instanceID,
 					EventName: waevents.EventNameQRCodeUpdated,
 					EventType: ctxevents.PlatformEventQRCodeUpdated,
-					Platform:  channelenums.PlatformWhatsApp,
+					Platform:  string(channelenums.PlatformWhatsApp),
 					Payload:   marshalPlatformData(waevents.WhatsAppQRCodeUpdated{Code: evt.Code}),
 					OwnerID:   c.ownerID,
 				})

@@ -118,6 +118,15 @@ describe('union-parity — the manifests exist (pilot floor)', () => {
 		expect(pilot!.slots.content!.variants).toHaveLength(11)
 		expect(pilot!.slots.platformData!.variants).toHaveLength(2)
 	})
+
+	test('the daemon re-emits the pilot frame (floor for the conditional daemon check in check 2)', () => {
+		// Check 2's daemon leg skips events the daemon does not carry (a surface that
+		// never emits the frame is not an emitting surface for it). This floor pins
+		// that the PILOT stays on the daemon surface, so that skip can never silently
+		// swallow the original end-to-end guarantee.
+		const spec = readFileSync(join(ROOT, 'packages/api/typescript/public/docs/openapi.json'), 'utf-8')
+		expect(JSON.stringify((JSON.parse(spec) as { paths: unknown }).paths)).toContain('"integration.channel_message.received"')
+	})
 })
 
 describe('union-parity check 1 — every @variant resolves to a real type in its OWNER workspace', () => {
@@ -242,7 +251,14 @@ describe('union-parity check 2 — every emitting surface publishes the COMPLETE
 			test(`daemon (TS): the re-emitting response materializes ${payloadName}.${slotName} for every declared variant`, () => {
 				const spec = readFileSync(join(ROOT, 'packages/api/typescript/public/docs/openapi.json'), 'utf-8')
 				const doc = JSON.parse(spec) as { paths: Record<string, Record<string, unknown>> }
-				expect(JSON.stringify(doc.paths).includes(`"${m.wireName}"`), 'daemon spec does not carry the re-emitted frame').toBe(true)
+				// The check binds to "every emitting surface WHOSE RESPONSE CARRIES the slot"
+				// (docblock). The daemon deliberately does not re-emit every gateway event —
+				// e.g. channel_special_platform_event.received rides the gateway's own /events
+				// stream only (ListenEvents BROWSER_EVENTS decision). A surface that does not
+				// carry the event at all is not an emitting surface for it: assert complete
+				// ABSENCE (no half-carried frame) and stop; a carried frame must materialize
+				// every declared variant.
+				if (!JSON.stringify(doc.paths).includes(`"${m.wireName}"`)) return
 				// Every object schema carrying the slot field AND all of its discriminators is a payload
 				// arm; for each declared variant there must be an arm whose discriminator consts match the
 				// variant's values and whose slot field is materialized (never `{}` / x-unknown).
@@ -296,6 +312,76 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 			}
 		}
 	}
+
+	// ── Flat-events ratchet: binding consumption on every SWAPPED event ─────────
+	// The union-slots pilot proved consumption for channel_message.received only;
+	// the flat-events migration swapped every publishable gateway event onto its
+	// generated binding. This check pins the end state mechanically:
+	//   - SWAPPED: api-go must reference `wire.<Model>EventName` (publisher constructs
+	//     the envelope from the binding) and must NOT redeclare `type <Model>Payload
+	//     struct` (declaration lives in the generated binding only).
+	//   - BLOCKED: the hand-rolled envelope must still exist in internal/shared/events
+	//     (else the entry is stale — move it to SWAPPED when the enum harmonizes).
+	describe('flat-events: every swapped event consumes its generated binding', () => {
+		const SWAPPED_EVENT_MODELS = [
+			'ChannelMessageReceived',
+			'ChannelMessageDelivered',
+			'ChannelMessageSeen',
+			'ChannelPresenceUpdated',
+			'ChannelChatPresenceUpdated',
+			'ChannelRemoteDeleted',
+			'ChannelRemotesSynced',
+			'ChannelMessagesSynced',
+			'ChannelMembershipAdded',
+			'ChannelMembershipRemoved',
+			'ChannelSyncStarted',
+			'ChannelSyncProgress',
+			'ChannelSyncCompleted',
+			'ChannelConnected',
+			'ChannelDisconnected',
+			'ChannelLoggedOut',
+			'ChannelSpecialPlatformEventReceived',
+		] as const
+		// BLOCKED (schema-handoff enum harmonization): RemoteType {USER,GROUP,BROADCAST}
+		// vs ContactKind {CONTACT,GROUP,BROADCAST} — a swap would corrupt the wire.
+		const BLOCKED_ENVELOPES = ['channel_remote_created.go', 'channel_remote_updated.go'] as const
+
+		// apiGo srcRoot is packages/api/go/internal (the walker's source set).
+		const goSrcRoot = join(ROOT, workspaces.apiGo!.srcRoot)
+		const goFiles = walk(goSrcRoot, '.go').filter(f => !f.endsWith('_test.go'))
+		const goSources = goFiles.map(f => ({ f, src: readFileSync(f, 'utf-8') }))
+
+		// Domain-event payloads whose names coincidentally match a wire payload name —
+		// they belong to DIFFERENT facts (the in-process channel.channel_connected /
+		// channel.channel_disconnected domain events), not redeclarations of the
+		// integration payload (whose local aliases are Gateway{Connected,Disconnected}Payload).
+		const DOMAIN_HOMONYMS = new Set(['ChannelConnectedPayload', 'ChannelDisconnectedPayload'])
+
+		for (const model of SWAPPED_EVENT_MODELS) {
+			test(`${model}: publisher consumes wire.${model}EventName; payload struct not redeclared`, () => {
+				expect(
+					goSources.some(({ src }) => src.includes(`wire.${model}EventName`)),
+					`no api-go source references wire.${model}EventName — the swapped event lost its binding consumption`,
+				).toBe(true)
+				const redeclared = DOMAIN_HOMONYMS.has(`${model}Payload`)
+					? []
+					: goSources.filter(({ src }) => new RegExp(`^type\\s+${model}Payload\\s+struct\\b`, 'm').test(src))
+				expect(
+					redeclared.map(({ f }) => f.replace(`${ROOT}/`, '')),
+					`${model}Payload is redeclared as a struct in api-go — swapped payloads must be aliases to the generated binding`,
+				).toEqual([])
+			})
+		}
+
+		test('BLOCKED envelopes still exist (stale-entry guard)', () => {
+			for (const file of BLOCKED_ENVELOPES) {
+				expect(
+					existsSync(join(goSrcRoot, 'shared/events', file)),
+					`${file} no longer exists — its event was swapped; move it out of BLOCKED_ENVELOPES and into SWAPPED_EVENT_MODELS`,
+				).toBe(true)
+			}
+		})
+	})
 
 	test('non-owner TS sources referencing variant schemas import them from @codedm/client-typescript', () => {
 		// Import-grep: any api-ts source line mentioning a generated variant schema identifier must be
