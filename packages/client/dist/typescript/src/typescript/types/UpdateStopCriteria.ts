@@ -30,6 +30,10 @@ export type UpdateStopCriteriaMutationRequest = {
          * @type boolean
         */
         approvalNeeded: boolean;
+        /**
+         * @type boolean
+        */
+        authRequired: boolean;
     };
 };
 

@@ -15,7 +15,10 @@ export const ArchiveIssueControllerInputSchema = IssueParam
 export const ArchiveIssueControllerOutputSchema = z.void()
 
 @injectable()
-export class ArchiveIssueController extends Controller<typeof ArchiveIssueControllerInputSchema, typeof ArchiveIssueControllerOutputSchema> {
+export class ArchiveIssueController extends Controller<
+	typeof ArchiveIssueControllerInputSchema,
+	typeof ArchiveIssueControllerOutputSchema
+> {
 	readonly path = '/issues/:issueId/archive'
 	readonly method = 'post' as const
 	readonly description = 'Archive an issue (C26)'
@@ -36,7 +39,10 @@ export const RestoreIssueControllerInputSchema = IssueParam
 export const RestoreIssueControllerOutputSchema = z.void()
 
 @injectable()
-export class RestoreIssueController extends Controller<typeof RestoreIssueControllerInputSchema, typeof RestoreIssueControllerOutputSchema> {
+export class RestoreIssueController extends Controller<
+	typeof RestoreIssueControllerInputSchema,
+	typeof RestoreIssueControllerOutputSchema
+> {
 	readonly path = '/issues/:issueId/restore'
 	readonly method = 'post' as const
 	readonly description = 'Restore an archived issue (C27)'
@@ -107,6 +113,7 @@ export const UpdateStopCriteriaControllerInputSchema = z.object({
 			blockedByClassification: z.boolean(),
 			humanRequested: z.boolean(),
 			approvalNeeded: z.boolean(),
+			authRequired: z.boolean(),
 		}),
 	}),
 })

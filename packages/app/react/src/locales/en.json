@@ -320,7 +320,8 @@
 			"APPROVAL_NEEDED": "Approval needed",
 			"BLOCKED_BY_CLASSIFICATION": "Blocked",
 			"HUMAN_REQUESTED": "Human requested",
-			"SERVER_ERROR": "Server error"
+			"SERVER_ERROR": "Server error",
+			"AUTH_REQUIRED": "Sign-in required"
 		},
 		"StopResolution": {
 			"APPROVE": "Approve",
@@ -556,6 +557,8 @@
 		"agentProviders": "Agent providers",
 		"criteriaApprovalNeeded": "Approval needed",
 		"criteriaApprovalNeededDesc": "The agent wants to run a command that needs sign-off.",
+		"criteriaAuthRequired": "Sign-in required",
+		"criteriaAuthRequiredDesc": "The agent CLI needs you to sign in again.",
 		"criteriaBlocked": "Blocked by classification",
 		"criteriaBlockedDesc": "A drafted reply is flagged before it is sent.",
 		"criteriaHumanRequested": "Human requested",

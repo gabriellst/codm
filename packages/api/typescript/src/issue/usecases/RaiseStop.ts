@@ -22,6 +22,7 @@ const POLICY_KEY: Record<StopKind, keyof StopPolicy> = {
 	[StopKind.BLOCKED_BY_CLASSIFICATION]: 'blockedByClassification',
 	[StopKind.HUMAN_REQUESTED]: 'humanRequested',
 	[StopKind.APPROVAL_NEEDED]: 'approvalNeeded',
+	[StopKind.AUTH_REQUIRED]: 'authRequired',
 }
 
 /**

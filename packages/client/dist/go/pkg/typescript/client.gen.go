@@ -787,6 +787,7 @@ func (e Refresh) Valid() bool {
 // Defines values for StopKind.
 const (
 	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	AUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
 	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
 	SERVERERROR             StopKind = "SERVER_ERROR"
@@ -796,6 +797,8 @@ const (
 func (e StopKind) Valid() bool {
 	switch e {
 	case APPROVALNEEDED:
+		return true
+	case AUTHREQUIRED:
 		return true
 	case BLOCKEDBYCLASSIFICATION:
 		return true
@@ -1019,6 +1022,7 @@ type UpdateOwnerSettingsJSONBody struct {
 type UpdateStopCriteriaJSONBody struct {
 	StopCriteria struct {
 		ApprovalNeeded          bool `json:"approvalNeeded"`
+		AuthRequired            bool `json:"authRequired"`
 		BlockedByClassification bool `json:"blockedByClassification"`
 		HumanRequested          bool `json:"humanRequested"`
 		ServerErrors            bool `json:"serverErrors"`
@@ -5239,6 +5243,7 @@ type GetSettingsResponse struct {
 		} `json:"providers"`
 		StopCriteria struct {
 			ApprovalNeeded          bool `json:"approvalNeeded"`
+			AuthRequired            bool `json:"authRequired"`
 			BlockedByClassification bool `json:"blockedByClassification"`
 			HumanRequested          bool `json:"humanRequested"`
 			ServerErrors            bool `json:"serverErrors"`
@@ -7080,6 +7085,7 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 			} `json:"providers"`
 			StopCriteria struct {
 				ApprovalNeeded          bool `json:"approvalNeeded"`
+				AuthRequired            bool `json:"authRequired"`
 				BlockedByClassification bool `json:"blockedByClassification"`
 				HumanRequested          bool `json:"humanRequested"`
 				ServerErrors            bool `json:"serverErrors"`

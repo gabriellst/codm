@@ -320,7 +320,8 @@
 			"APPROVAL_NEEDED": "Aprovação necessária",
 			"BLOCKED_BY_CLASSIFICATION": "Bloqueada",
 			"HUMAN_REQUESTED": "Humano solicitado",
-			"SERVER_ERROR": "Erro de servidor"
+			"SERVER_ERROR": "Erro de servidor",
+			"AUTH_REQUIRED": "Login necessário"
 		},
 		"StopResolution": {
 			"APPROVE": "Aprovar",
@@ -556,6 +557,8 @@
 		"agentProviders": "Provedores de agentes",
 		"criteriaApprovalNeeded": "Aprovação necessária",
 		"criteriaApprovalNeededDesc": "O agente quer rodar um comando que precisa de aval.",
+		"criteriaAuthRequired": "Login necessário",
+		"criteriaAuthRequiredDesc": "A CLI do agente precisa que você faça login de novo.",
 		"criteriaBlocked": "Bloqueada pela classificação",
 		"criteriaBlockedDesc": "Uma resposta rascunhada é sinalizada antes de ser enviada.",
 		"criteriaHumanRequested": "Humano solicitado",

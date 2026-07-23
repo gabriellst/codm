@@ -503,11 +503,12 @@ const (
 	StopKindBLOCKED_BY_CLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
 	StopKindHUMAN_REQUESTED StopKind = "HUMAN_REQUESTED"
 	StopKindAPPROVAL_NEEDED StopKind = "APPROVAL_NEEDED"
+	StopKindAUTH_REQUIRED StopKind = "AUTH_REQUIRED"
 )
 
 func ParseStopKind(s string) (StopKind, error) {
 	switch StopKind(s) {
-	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED:
+	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED, StopKindAUTH_REQUIRED:
 		return StopKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid StopKind: %q", s)

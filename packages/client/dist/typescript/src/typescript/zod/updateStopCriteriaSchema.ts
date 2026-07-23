@@ -15,7 +15,8 @@ export const updateStopCriteriaMutationRequestSchema = z.object({
     "serverErrors": z.boolean(),
 "blockedByClassification": z.boolean(),
 "humanRequested": z.boolean(),
-"approvalNeeded": z.boolean()
+"approvalNeeded": z.boolean(),
+"authRequired": z.boolean()
     })
     })
 

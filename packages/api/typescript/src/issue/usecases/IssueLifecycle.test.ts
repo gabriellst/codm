@@ -70,11 +70,26 @@ describe('Issue lifecycle + stop control plane', () => {
 		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID })
 		await testBed
 			.resolve(UpdateStopCriteriaConfig)
-			.execute({ ownerId: OPERATOR_ID, stopCriteria: { serverErrors: false, blockedByClassification: true, humanRequested: true, approvalNeeded: true } })
+			.execute({
+				ownerId: OPERATOR_ID,
+				stopCriteria: {
+					serverErrors: false,
+					blockedByClassification: true,
+					humanRequested: true,
+					approvalNeeded: true,
+					authRequired: true,
+				},
+			})
 		await expect(
 			testBed
 				.resolve(RaiseStop)
-				.execute({ stopId: '00000000-0000-4000-8000-0000000000f3', issueId: issue.id.value, kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' }),
+				.execute({
+					stopId: '00000000-0000-4000-8000-0000000000f3',
+					issueId: issue.id.value,
+					kind: StopKind.SERVER_ERROR,
+					title: 't',
+					detail: 'd',
+				}),
 		).rejects.toThrow(BaseError)
 	})
 

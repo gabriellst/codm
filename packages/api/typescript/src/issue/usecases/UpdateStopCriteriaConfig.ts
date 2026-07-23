@@ -10,6 +10,7 @@ export const UpdateStopCriteriaConfigInputSchema = z.object({
 		blockedByClassification: z.boolean(),
 		humanRequested: z.boolean(),
 		approvalNeeded: z.boolean(),
+		authRequired: z.boolean(),
 	}),
 })
 export const UpdateStopCriteriaConfigOutputSchema = z.void()

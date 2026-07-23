@@ -11,6 +11,9 @@ export const RESOLUTIONS_BY_KIND: Record<StopKind, StopResolution[]> = {
 	[StopKind.BLOCKED_BY_CLASSIFICATION]: [StopResolution.RETRY, StopResolution.REVIEW_AND_SEND, StopResolution.TAKE_OVER],
 	[StopKind.HUMAN_REQUESTED]: [StopResolution.REVIEW_AND_SEND, StopResolution.TAKE_OVER],
 	[StopKind.APPROVAL_NEEDED]: [StopResolution.APPROVE, StopResolution.DENY, StopResolution.TAKE_OVER],
+	// AUTH_REQUIRED (phase-10 amendment): the provider CLI needs re-login. RETRY re-runs the issue
+	// once the human has re-authed the CLI; TAKE_OVER hands the conversation to the human.
+	[StopKind.AUTH_REQUIRED]: [StopResolution.RETRY, StopResolution.TAKE_OVER],
 }
 
 export function resolutionsForKind(kind: StopKind): StopResolution[] {

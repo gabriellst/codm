@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const stopKindSchema = z.enum(["SERVER_ERROR", "BLOCKED_BY_CLASSIFICATION", "HUMAN_REQUESTED", "APPROVAL_NEEDED"])
+export const stopKindSchema = z.enum(["SERVER_ERROR", "BLOCKED_BY_CLASSIFICATION", "HUMAN_REQUESTED", "APPROVAL_NEEDED", "AUTH_REQUIRED"])

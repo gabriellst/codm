@@ -12,6 +12,7 @@ const STOP_TITLES: Record<StopKind, string> = {
 	[StopKind.BLOCKED_BY_CLASSIFICATION]: 'Reply blocked by classification',
 	[StopKind.HUMAN_REQUESTED]: 'A participant asked for a human',
 	[StopKind.APPROVAL_NEEDED]: 'An action needs your approval',
+	[StopKind.AUTH_REQUIRED]: 'The agent CLI needs you to sign in again',
 }
 
 /**

@@ -1,0 +1,1 @@
+ALTER TABLE "issue"."stop_policy_config" ADD COLUMN "auth_required" boolean DEFAULT true NOT NULL;

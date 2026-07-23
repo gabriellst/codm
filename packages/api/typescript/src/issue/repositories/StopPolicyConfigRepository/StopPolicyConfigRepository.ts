@@ -5,6 +5,7 @@ export interface StopPolicy {
 	blockedByClassification: boolean
 	humanRequested: boolean
 	approvalNeeded: boolean
+	authRequired: boolean
 }
 
 export const DEFAULT_STOP_POLICY: StopPolicy = {
@@ -12,6 +13,7 @@ export const DEFAULT_STOP_POLICY: StopPolicy = {
 	blockedByClassification: true,
 	humanRequested: true,
 	approvalNeeded: true,
+	authRequired: true,
 }
 
 /** The global (per-owner) stop-criteria toggles — demoted from an aggregate to a settings row. */

@@ -1,12 +1,6 @@
 import { pgSchema, uuid, text, timestamp, integer, boolean, bigint, index, uniqueIndex } from 'drizzle-orm/pg-core'
 // Enum column types — single-sourced from the generated wire binding (type-only, erased at compile).
-import type {
-	IssueStatus,
-	ProviderKind,
-	StopKind,
-	StopResolution,
-	IssueArchiveReason,
-} from '../../generated/typescript/src/wire/enums'
+import type { IssueStatus, ProviderKind, StopKind, StopResolution, IssueArchiveReason } from '../../generated/typescript/src/wire/enums'
 
 /**
  * `issue` — BC5 Issue Execution (Core, TS-owned). Issues as units of concurrent work — the terminal
@@ -117,6 +111,8 @@ export const stopPolicyConfig = issueSchema.table('stop_policy_config', {
 	blockedByClassification: boolean('blocked_by_classification').notNull().default(true),
 	humanRequested: boolean('human_requested').notNull().default(true),
 	approvalNeeded: boolean('approval_needed').notNull().default(true),
+	// AUTH_REQUIRED (phase-10 amendment): provider CLI re-login needed.
+	authRequired: boolean('auth_required').notNull().default(true),
 
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 	version: integer('version').notNull().default(1),

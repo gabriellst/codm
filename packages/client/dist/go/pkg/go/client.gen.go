@@ -1163,6 +1163,7 @@ func (e ServerEventName) Valid() bool {
 // Defines values for StopKind.
 const (
 	StopKindAPPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	StopKindAUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	StopKindBLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
 	StopKindHUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
 	StopKindSERVERERROR             StopKind = "SERVER_ERROR"
@@ -1172,6 +1173,8 @@ const (
 func (e StopKind) Valid() bool {
 	switch e {
 	case StopKindAPPROVALNEEDED:
+		return true
+	case StopKindAUTHREQUIRED:
 		return true
 	case StopKindBLOCKEDBYCLASSIFICATION:
 		return true

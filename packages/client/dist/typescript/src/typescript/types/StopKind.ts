@@ -8,7 +8,8 @@ export const StopKindEnum = {
     SERVER_ERROR: "SERVER_ERROR",
     BLOCKED_BY_CLASSIFICATION: "BLOCKED_BY_CLASSIFICATION",
     HUMAN_REQUESTED: "HUMAN_REQUESTED",
-    APPROVAL_NEEDED: "APPROVAL_NEEDED"
+    APPROVAL_NEEDED: "APPROVAL_NEEDED",
+    AUTH_REQUIRED: "AUTH_REQUIRED"
 } as const;
 
 export type StopKindEnumKey = (typeof StopKindEnum)[keyof typeof StopKindEnum];

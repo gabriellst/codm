@@ -20,6 +20,7 @@ export class DrizzleStopPolicyConfigRepository extends StopPolicyConfigRepositor
 			blockedByClassification: row.blockedByClassification,
 			humanRequested: row.humanRequested,
 			approvalNeeded: row.approvalNeeded,
+			authRequired: row.authRequired,
 		}
 	}
 

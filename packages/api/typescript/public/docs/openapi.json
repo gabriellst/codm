@@ -2328,13 +2328,17 @@
                       },
                       "approvalNeeded": {
                         "type": "boolean"
+                      },
+                      "authRequired": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
                       "serverErrors",
                       "blockedByClassification",
                       "humanRequested",
-                      "approvalNeeded"
+                      "approvalNeeded",
+                      "authRequired"
                     ]
                   }
                 },
@@ -3029,13 +3033,17 @@
                         },
                         "approvalNeeded": {
                           "type": "boolean"
+                        },
+                        "authRequired": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
                         "serverErrors",
                         "blockedByClassification",
                         "humanRequested",
-                        "approvalNeeded"
+                        "approvalNeeded",
+                        "authRequired"
                       ],
                       "additionalProperties": false
                     },
@@ -4976,7 +4984,8 @@
           "SERVER_ERROR",
           "BLOCKED_BY_CLASSIFICATION",
           "HUMAN_REQUESTED",
-          "APPROVAL_NEEDED"
+          "APPROVAL_NEEDED",
+          "AUTH_REQUIRED"
         ]
       },
       "TranscriptKind": {
