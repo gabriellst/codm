@@ -6,7 +6,15 @@ import { PRODUCT_ENV_KEYS } from '@shared/config'
 
 // Root files are OUTSIDE this tsconfig project — load them at runtime via computed paths (bun
 // resolves fine; tsc doesn't try to project-check non-literal dynamic imports).
-type EnvDecl = { consumers: readonly string[]; schema?: 'kernel' | 'product'; group?: string; example: string; doc?: string; secret?: boolean; advanced?: boolean }
+type EnvDecl = {
+	consumers: readonly string[]
+	schema?: 'kernel' | 'product'
+	group?: string
+	example: string
+	doc?: string
+	secret?: boolean
+	advanced?: boolean
+}
 const ROOT = join(import.meta.dir, '..', '..', '..', '..', '..')
 const { REPO } = (await import(join(ROOT, 'template.config.ts'))) as { REPO: { env: Record<string, EnvDecl> } }
 const { renderEnvExample } = (await import(join(ROOT, 'scripts/env/generate.ts'))) as { renderEnvExample: () => string }
@@ -62,24 +70,22 @@ describe('env-model (single env registry; schemas, .env.example and Go reads gat
 	})
 
 	test('ENV-03: every env key config.go reads is declared for Go in the registry', () => {
-		const goSource = readFileSync(join(REPO_ROOT, 'packages/api/go/internal/shared/config/config.go'), 'utf8')
+		const goSource = readFileSync(join(REPO_ROOT, 'packages/api/go/core/config/config.go'), 'utf8')
 		// Keys come ONLY from env-accessor call sites — bare quoted UPPERCASE literals elsewhere are
 		// enum VALUES (DEVELOPMENT, WARN), not env keys (the verbatim medscall config style).
-		const goReads = [...new Set([...goSource.matchAll(/(?:getEnvOrDefault|os\.Getenv)\("([A-Z][A-Z0-9_]+)"/g)].map(m => m[1] ?? ''))].filter(Boolean)
+		const goReads = [
+			...new Set([...goSource.matchAll(/(?:getEnvOrDefault|os\.Getenv)\("([A-Z][A-Z0-9_]+)"/g)].map(m => m[1] ?? '')),
+		].filter(Boolean)
 		const declaredForGo = entries.filter(([, d]) => d.consumers.includes('apiGo')).map(([k]) => k)
 		const undeclared = goReads.filter(k => !declaredForGo.includes(k)).sort()
-		expect(
-			undeclared,
-			`config.go reads env keys not declared for Go in REPO.env — add 'apiGo' to the entry's consumers.`,
-		).toEqual([])
+		expect(undeclared, `config.go reads env keys not declared for Go in REPO.env — add 'apiGo' to the entry's consumers.`).toEqual([])
 	})
 
 	test('ENV-04: .env.example is exactly the registry rendering (bun env:generate)', () => {
 		const committed = readFileSync(join(REPO_ROOT, '.env.example'), 'utf8')
-		expect(
-			committed === renderEnvExample(),
-			'.env.example is out of sync with template.config.ts REPO.env — run: bun env:generate',
-		).toBe(true)
+		expect(committed === renderEnvExample(), '.env.example is out of sync with template.config.ts REPO.env — run: bun env:generate').toBe(
+			true,
+		)
 	})
 
 	// Negative fixture — proves the set-diff actually reports both directions.
