@@ -3,13 +3,17 @@
 * Do not edit manually.
 */
 
+import type { HistorySyncType } from "./HistorySyncType.ts";
 
 export type ChannelSyncProgressPayload = {
     /**
      * @type string, uuid
     */
     channelId: string;
-    historySyncType: any;
+    /**
+     * @type string
+    */
+    historySyncType: HistorySyncType;
     /**
      * @type string
     */

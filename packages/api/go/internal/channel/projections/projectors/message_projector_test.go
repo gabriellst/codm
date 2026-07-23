@@ -501,7 +501,7 @@ func TestMessageReceivedProjector_SkipsPlatformInternal(t *testing.T) {
 		OccurredAt:        time.Unix(ts, 0).UTC(),
 		ObservedAt:        time.Now().UTC(),
 		MessageType:       "TEXT",
-		Platform:          sharedenums.PlatformInternal,
+		Platform:          string(sharedenums.PlatformInternal),
 		OwnerID:           "tenant",
 	})
 

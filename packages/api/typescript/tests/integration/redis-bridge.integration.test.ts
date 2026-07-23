@@ -12,16 +12,18 @@ import { AgentRunner, type AgentGenerateRequest, type AgentStreamRequest, type T
 
 /**
  * PROVES the Go→TS bridge end to end over a REAL Redis (phase 9-1). The Go channel gateway publishes
- * `integration.channel_message.received` by XADD-ing the FROZEN wire event — marshalled FLAT — onto
- * `events:integration.channel_message.received` (api-go channel/handlers/{egress,publish}.go +
- * core/services/mediator/redis_mediator.go). This test XADDs that exact byte shape via a raw Redis
- * client (impersonating the Go producer) and asserts the TS `RedisExternalMediator` consume loop
- * drives the real handler chain:
+ * `integration.channel_message.received` by XADD-ing `json.Marshal(types.IntegrationEvent)` — the
+ * NESTED envelope `{id, ownerId, time, name, payload}` whose payload is the VERBATIM gateway shape
+ * (union-slots pilot: remoteId/senderId + the opaque `content` slot carrying the WHATSAPP/TEXT
+ * variant) — onto `events:integration.channel_message.received` (api-go
+ * internal/shared/services/mediator/redis_mediator.go). This test XADDs that exact byte shape via a
+ * raw Redis client (impersonating the Go producer) and asserts the TS `RedisExternalMediator`
+ * consume loop drives the real handler chain:
  *
- *   XADD flat wire  →  RedisExternalMediator (consumer-group drain+PEL+ack; medscall lineage)
- *                   →  re-nest flat envelope + revive ISO dates  →  ConsumeInboundMessage
- *                   →  dedup ledger row (ConsumedMessageRepository) + transcript entry (ingest)
- *                   →  thread.message_classified fact (classify)
+ *   XADD wire envelope  →  RedisExternalMediator (consumer-group drain+PEL+ack; medscall lineage)
+ *                       →  adaptWireEnvelope passthrough + revive ISO dates  →  ConsumeInboundMessage
+ *                       →  dedup ledger row (ConsumedMessageRepository) + transcript entry (ingest)
+ *                       →  thread.message_classified fact (classify)
  *
  * A redelivery of the SAME platform message is proven a no-op (exactly-once PROCESSING over the
  * at-least-once transport).
@@ -85,22 +87,30 @@ class NewIssueStubRunner extends AgentRunner {
  * wrapper — and `receivedAt` is an RFC3339 string. `senderExternalId` is a non-participant so the
  * message is invocable (drives classification); channelId/contactExternalId bind it to the thread.
  */
-function goFlatWireEnvelope(channelId: string, contactExternalId: string, messageId: string): string {
+function goWireEnvelope(channelId: string, contactExternalId: string, messageId: string): string {
+	const now = new Date().toISOString()
+	// Byte shape of api-go `json.Marshal(types.IntegrationEvent[wire.ChannelMessageReceivedPayload])`.
 	return JSON.stringify({
-		name: EVENT_NAME,
-		entityId: channelId,
+		id: crypto.randomUUID(),
 		ownerId: OPERATOR_ID,
-		occurredAt: new Date().toISOString(),
-		channelId,
-		messageId,
-		contactExternalId,
-		contactDisplayName: 'Ada',
-		contactKind: 'CONTACT',
-		senderExternalId: 'stranger-42',
-		isGroup: false,
-		text: 'fix the login bug',
-		platform: 'WHATSAPP',
-		receivedAt: new Date().toISOString(),
+		time: now,
+		name: EVENT_NAME,
+		payload: {
+			channelId,
+			messageId,
+			internalMessageId: crypto.randomUUID(),
+			remoteId: contactExternalId,
+			senderId: 'stranger-42',
+			fromMe: false,
+			isGroup: false,
+			timestamp: Math.floor(Date.now() / 1000),
+			occurredAt: now,
+			observedAt: now,
+			messageType: 'TEXT',
+			content: { text: 'fix the login bug' },
+			platform: 'WHATSAPP',
+			ownerId: OPERATOR_ID,
+		},
 	})
 }
 
@@ -113,7 +123,7 @@ async function waitUntil(predicate: () => Promise<boolean>, { timeout = 20_000, 
 	}
 }
 
-describeBridge('Go→TS Redis bridge: flat wire → consume → dedup + classify', () => {
+describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + classify', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 	let mediator: RedisExternalMediator
@@ -163,7 +173,7 @@ describeBridge('Go→TS Redis bridge: flat wire → consume → dedup + classify
 		await testBed?.destroy()
 	})
 
-	it('consumes the flat Go wire envelope → dedup row + transcript + thread.message_classified; redelivery is a no-op', async () => {
+	it('consumes the Go wire envelope → dedup row + transcript + thread.message_classified; redelivery is a no-op', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const channelId = thread.channelId
 		const contactExternalId = thread.contactRef.externalId
@@ -172,15 +182,16 @@ describeBridge('Go→TS Redis bridge: flat wire → consume → dedup + classify
 		const consumed = testBed.resolve(ConsumedMessageRepository)
 		const transcript = testBed.resolve(TranscriptRepository)
 
-		// 1. The Go gateway publishes the frozen wire event (flat) onto the stream.
-		await producer.send('XADD', [STREAM, 'MAXLEN', '~', '10000', '*', 'data', goFlatWireEnvelope(channelId, contactExternalId, messageId)])
+		// 1. The Go gateway publishes the frozen wire event (nested verbatim envelope) onto the stream.
+		await producer.send('XADD', [STREAM, 'MAXLEN', '~', '10000', '*', 'data', goWireEnvelope(channelId, contactExternalId, messageId)])
 
 		// 2. The bridge consumes it → dedup ledger row written (message consumed).
 		await waitUntil(() => consumed.has(channelId, messageId))
 		expect(await consumed.has(channelId, messageId)).toBe(true)
 
-		// 3. Ingested → exactly one CONTACT transcript entry (proves the flat payload decoded: text,
-		//    senderExternalId, and the ISO `receivedAt` revived to a Date the z.date() input accepts).
+		// 3. Ingested → exactly one CONTACT transcript entry (proves the verbatim payload decoded: the
+		//    WHATSAPP/TEXT content slot narrowed via the generated owner schema, senderId mapped, and
+		//    the ISO `occurredAt` revived to a Date the z.date() input accepts).
 		await waitUntil(async () => (await transcript.listByThread(thread.id.value)).filter(e => e.kind === 'CONTACT').length === 1)
 		expect((await transcript.listByThread(thread.id.value)).filter(e => e.kind === 'CONTACT')).toHaveLength(1)
 
@@ -194,7 +205,7 @@ describeBridge('Go→TS Redis bridge: flat wire → consume → dedup + classify
 
 		// 5. Redelivery of the SAME platform message — at-least-once transport, exactly-once PROCESSING.
 		const deliveriesBefore = deliveries
-		await producer.send('XADD', [STREAM, 'MAXLEN', '~', '10000', '*', 'data', goFlatWireEnvelope(channelId, contactExternalId, messageId)])
+		await producer.send('XADD', [STREAM, 'MAXLEN', '~', '10000', '*', 'data', goWireEnvelope(channelId, contactExternalId, messageId)])
 		await waitUntil(async () => deliveries >= deliveriesBefore + 1) // the redelivery was actually consumed
 
 		expect((await transcript.listByThread(thread.id.value)).filter(e => e.kind === 'CONTACT')).toHaveLength(1) // dedup latch held

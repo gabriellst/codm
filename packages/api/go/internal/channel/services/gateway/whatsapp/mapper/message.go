@@ -75,7 +75,7 @@ func mapMessage(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 		ObservedAt:        time.Now().UTC(),
 		MessageType:       msgenums.MessageType(msgType),
 		Content:           content,
-		Platform:          sharedenums.PlatformWhatsApp,
+		Platform:          string(sharedenums.PlatformWhatsApp),
 		PlatformData: marshalPlatformData(ctxevents.WhatsAppChannelMessageReceivedPlatformData{
 			IsEphemeral: v.IsEphemeral,
 			IsViewOnce:  v.IsViewOnce || v.IsViewOnceV2,

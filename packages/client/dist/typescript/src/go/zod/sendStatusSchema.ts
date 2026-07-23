@@ -4,6 +4,7 @@
 */
 
 import { errorResponseSchema } from "./errorResponseSchema.ts";
+import { messageTypeSchema } from "./messageTypeSchema.ts";
 import { sendStatusOutputSchema } from "./sendStatusOutputSchema.ts";
 import { z } from "zod/v4";
 
@@ -23,7 +24,9 @@ export const sendStatusMutationRequestSchema = z.object({
 "channelId": z.string(),
 "content": z.string(),
 "font": z.optional(z.string()),
-"statusType": z.any()
+get "statusType"(){
+                return messageTypeSchema
+              }
     })
 
 export const sendStatusMutationResponseSchema = z.lazy(() => sendStatus201Schema)

@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,51 +25,73 @@ func registerEnums(spec *Spec, w *walker) error {
 	}
 	collected := map[string]*enumEntry{}
 
-	// Deterministic package order, scoped to this module only.
-	pkgPaths := make([]string, 0, len(w.byPath))
-	for p := range w.byPath {
-		if !strings.HasPrefix(p, "template/api-go/") {
-			continue
+	// Deterministic package order, in two tiers: the own module FIRST, then the generated
+	// contracts bindings (template/contracts-go/wire), where contract enums referenced by
+	// stamped payload structs are declared (union-slots spec §2.2). Per enum NAME the first
+	// tier that declares it wins outright — an own-module enum (e.g. the gateway-local
+	// ChannelStatus) is never merged with a same-named contracts enum whose value set
+	// differs, and an aliased enum (`type X = wire.X` + alias consts) keeps the exact
+	// component it had before the bindings were scanned.
+	tierPaths := func(prefix string) []string {
+		paths := make([]string, 0, len(w.byPath))
+		for p := range w.byPath {
+			if strings.HasPrefix(p, prefix) {
+				paths = append(paths, p)
+			}
 		}
-		pkgPaths = append(pkgPaths, p)
+		sort.Strings(paths)
+		return paths
 	}
-	sort.Strings(pkgPaths)
 
-	for _, ppath := range pkgPaths {
-		pkg := w.byPath[ppath]
-		if pkg.Types == nil {
-			continue
+	for _, tier := range [][]string{tierPaths("template/api-go/"), tierPaths("template/contracts-go/")} {
+		ownedByEarlierTier := map[string]bool{}
+		for n := range collected {
+			ownedByEarlierTier[n] = true
 		}
-		for _, f := range pkg.Syntax {
-			for _, decl := range f.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.CONST {
-					continue
-				}
-				for _, spec := range gen.Specs {
-					vs, ok := spec.(*ast.ValueSpec)
-					if !ok {
+		for _, ppath := range tier {
+			pkg := w.byPath[ppath]
+			if pkg.Types == nil {
+				continue
+			}
+			for _, f := range pkg.Syntax {
+				for _, decl := range f.Decls {
+					gen, ok := decl.(*ast.GenDecl)
+					if !ok || gen.Tok != token.CONST {
 						continue
 					}
-					enumName := resolveTypedStringType(pkg, vs)
-					if enumName == "" {
-						continue
-					}
-					for i, n := range vs.Names {
-						if i >= len(vs.Values) {
-							continue
-						}
-						val, ok := constStringValue(pkg, vs.Values[i])
+					for _, spec := range gen.Specs {
+						vs, ok := spec.(*ast.ValueSpec)
 						if !ok {
 							continue
 						}
-						e := collected[enumName]
-						if e == nil {
-							e = &enumEntry{}
-							collected[enumName] = e
+						enumName := resolveTypedStringType(pkg, vs)
+						if enumName == "" {
+							continue
 						}
-						e.varNames = append(e.varNames, n.Name)
-						e.values = append(e.values, val)
+						if ownedByEarlierTier[enumName] {
+							continue
+						}
+						for i, n := range vs.Names {
+							if i >= len(vs.Values) {
+								continue
+							}
+							val, ok := constStringValue(pkg, vs.Values[i])
+							if !ok {
+								continue
+							}
+							e := collected[enumName]
+							if e == nil {
+								e = &enumEntry{}
+								collected[enumName] = e
+							}
+							// Within a tier, first declaration wins per (enum, value) —
+							// split const blocks for one type stay a single component.
+							if slices.Contains(e.values, val) {
+								continue
+							}
+							e.varNames = append(e.varNames, n.Name)
+							e.values = append(e.values, val)
+						}
 					}
 				}
 			}

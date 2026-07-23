@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { chatPresenceTypeSchema } from "./chatPresenceTypeSchema.ts";
 import { z } from "zod/v4";
 
 export const channelChatPresenceUpdatedPayloadSchema = z.object({
@@ -11,5 +12,7 @@ export const channelChatPresenceUpdatedPayloadSchema = z.object({
 "observedAt": z.iso.datetime(),
 "ownerId": z.string(),
 "senderId": z.string(),
-"state": z.any()
+get "state"(){
+                return chatPresenceTypeSchema
+              }
     })

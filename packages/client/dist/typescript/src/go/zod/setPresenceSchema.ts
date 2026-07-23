@@ -4,6 +4,7 @@
 */
 
 import { errorResponseSchema } from "./errorResponseSchema.ts";
+import { presenceTypeSchema } from "./presenceTypeSchema.ts";
 import { z } from "zod/v4";
 
 export const setPresencePathParamsSchema = z.object({
@@ -21,7 +22,9 @@ export const setPresence204Schema = z.any()
 export const setPresenceErrorSchema = z.lazy(() => errorResponseSchema)
 
 export const setPresenceMutationRequestSchema = z.object({
-    "presence": z.any()
+    get "presence"(){
+                return presenceTypeSchema
+              }
     })
 
 export const setPresenceMutationResponseSchema = z.lazy(() => setPresence204Schema)

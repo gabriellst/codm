@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z, ExternalMediator, DrizzleClient } from '@codedm/core-typescript'
 import { channels } from '@codedm/contracts/db'
-import { ChannelKind, ContactKind, ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ChannelKind, ContactKind, ChannelStatus, MessageType } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
 
@@ -96,22 +96,31 @@ export class TestIngressController extends Controller<typeof TestIngressInputSch
 			return { status: HttpStatusCode.OK, data: { ok: true, channelId } }
 		}
 
+		// Publish the VERBATIM gateway payload (union-slots pilot): the spec-facing body stays
+		// normalized (contact*/text) for the Playwright givens, and this simulator maps it onto
+		// the frozen wire shape exactly like the Go gateway's whatsmeow mapper does — remoteId =
+		// the counterparty chat id, `content` = the WHATSAPP/TEXT variant shape (owner: apiGo).
 		const messageId = body.messageId ?? `wamid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+		const now = new Date()
 		await this.externalMediator.publish(
 			new ChannelMessageReceivedEvent({
 				ownerId,
 				payload: {
 					channelId: body.channelId,
 					messageId,
-					contactExternalId: body.contactExternalId,
-					contactDisplayName: body.contactDisplayName,
-					contactKind: body.contactKind,
-					senderExternalId: body.senderExternalId ?? body.contactExternalId,
+					internalMessageId: crypto.randomUUID(),
+					remoteId: body.contactExternalId,
+					senderId: body.senderExternalId ?? body.contactExternalId,
+					fromMe: false,
 					isGroup: body.isGroup,
-					text: body.text,
-					quotedEntryId: body.quotedEntryId,
+					timestamp: Math.floor(now.getTime() / 1000),
+					occurredAt: now,
+					observedAt: now,
+					messageType: MessageType.TEXT,
+					content: { text: body.text },
 					platform: body.platform,
-					receivedAt: new Date(),
+					platformData: undefined,
+					ownerId,
 				},
 			}),
 		)

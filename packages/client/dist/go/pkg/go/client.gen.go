@@ -20,6 +20,90 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ArtifactKind.
+const (
+	ArtifactKindFILE  ArtifactKind = "FILE"
+	ArtifactKindIMAGE ArtifactKind = "IMAGE"
+	ArtifactKindLINK  ArtifactKind = "LINK"
+)
+
+// Valid indicates whether the value is a known member of the ArtifactKind enum.
+func (e ArtifactKind) Valid() bool {
+	switch e {
+	case ArtifactKindFILE:
+		return true
+	case ArtifactKindIMAGE:
+		return true
+	case ArtifactKindLINK:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttachFlowStyle.
+const (
+	AttachFlowStyleFULLSCREEN AttachFlowStyle = "FULLSCREEN"
+	AttachFlowStyleSIDEPANEL  AttachFlowStyle = "SIDE_PANEL"
+)
+
+// Valid indicates whether the value is a known member of the AttachFlowStyle enum.
+func (e AttachFlowStyle) Valid() bool {
+	switch e {
+	case AttachFlowStyleFULLSCREEN:
+		return true
+	case AttachFlowStyleSIDEPANEL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BufferSize.
+const (
+	BufferSize100 BufferSize = "100"
+	BufferSize200 BufferSize = "200"
+	BufferSize25  BufferSize = "25"
+	BufferSize50  BufferSize = "50"
+)
+
+// Valid indicates whether the value is a known member of the BufferSize enum.
+func (e BufferSize) Valid() bool {
+	switch e {
+	case BufferSize100:
+		return true
+	case BufferSize200:
+		return true
+	case BufferSize25:
+		return true
+	case BufferSize50:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelKind.
+const (
+	ChannelKindINSTAGRAMDM ChannelKind = "INSTAGRAM_DM"
+	ChannelKindTELEGRAM    ChannelKind = "TELEGRAM"
+	ChannelKindWHATSAPP    ChannelKind = "WHATSAPP"
+)
+
+// Valid indicates whether the value is a known member of the ChannelKind enum.
+func (e ChannelKind) Valid() bool {
+	switch e {
+	case ChannelKindINSTAGRAMDM:
+		return true
+	case ChannelKindTELEGRAM:
+		return true
+	case ChannelKindWHATSAPP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ChannelStatus.
 const (
 	ChannelStatusConnected    ChannelStatus = "CONNECTED"
@@ -68,6 +152,30 @@ func (e ChatPresenceType) Valid() bool {
 	}
 }
 
+// Defines values for ClassificationMethod.
+const (
+	ClassificationMethodCLARIFIED    ClassificationMethod = "CLARIFIED"
+	ClassificationMethodCONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
+	ClassificationMethodNEWISSUE     ClassificationMethod = "NEW_ISSUE"
+	ClassificationMethodREPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+)
+
+// Valid indicates whether the value is a known member of the ClassificationMethod enum.
+func (e ClassificationMethod) Valid() bool {
+	switch e {
+	case ClassificationMethodCLARIFIED:
+		return true
+	case ClassificationMethodCONTEXTMATCH:
+		return true
+	case ClassificationMethodNEWISSUE:
+		return true
+	case ClassificationMethodREPLYQUOTE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectionStatus.
 const (
 	ConnectionStatusConnected    ConnectionStatus = "CONNECTED"
@@ -83,6 +191,279 @@ func (e ConnectionStatus) Valid() bool {
 	case ConnectionStatusConnecting:
 		return true
 	case ConnectionStatusDisconnected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactKind.
+const (
+	ContactKindBROADCAST ContactKind = "BROADCAST"
+	ContactKindCONTACT   ContactKind = "CONTACT"
+	ContactKindGROUP     ContactKind = "GROUP"
+)
+
+// Valid indicates whether the value is a known member of the ContactKind enum.
+func (e ContactKind) Valid() bool {
+	switch e {
+	case ContactKindBROADCAST:
+		return true
+	case ContactKindCONTACT:
+		return true
+	case ContactKindGROUP:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CurrencyCode.
+const (
+	CurrencyCodeAED CurrencyCode = "AED"
+	CurrencyCodeALL CurrencyCode = "ALL"
+	CurrencyCodeARS CurrencyCode = "ARS"
+	CurrencyCodeAUD CurrencyCode = "AUD"
+	CurrencyCodeBDT CurrencyCode = "BDT"
+	CurrencyCodeBGN CurrencyCode = "BGN"
+	CurrencyCodeBHD CurrencyCode = "BHD"
+	CurrencyCodeBIF CurrencyCode = "BIF"
+	CurrencyCodeBOB CurrencyCode = "BOB"
+	CurrencyCodeBRL CurrencyCode = "BRL"
+	CurrencyCodeBWP CurrencyCode = "BWP"
+	CurrencyCodeCAD CurrencyCode = "CAD"
+	CurrencyCodeCHF CurrencyCode = "CHF"
+	CurrencyCodeCLP CurrencyCode = "CLP"
+	CurrencyCodeCNY CurrencyCode = "CNY"
+	CurrencyCodeCOP CurrencyCode = "COP"
+	CurrencyCodeCVE CurrencyCode = "CVE"
+	CurrencyCodeCZK CurrencyCode = "CZK"
+	CurrencyCodeDKK CurrencyCode = "DKK"
+	CurrencyCodeDOP CurrencyCode = "DOP"
+	CurrencyCodeEGP CurrencyCode = "EGP"
+	CurrencyCodeETB CurrencyCode = "ETB"
+	CurrencyCodeEUR CurrencyCode = "EUR"
+	CurrencyCodeFJD CurrencyCode = "FJD"
+	CurrencyCodeGBP CurrencyCode = "GBP"
+	CurrencyCodeGHS CurrencyCode = "GHS"
+	CurrencyCodeGIP CurrencyCode = "GIP"
+	CurrencyCodeGMD CurrencyCode = "GMD"
+	CurrencyCodeGNF CurrencyCode = "GNF"
+	CurrencyCodeGTQ CurrencyCode = "GTQ"
+	CurrencyCodeHKD CurrencyCode = "HKD"
+	CurrencyCodeHUF CurrencyCode = "HUF"
+	CurrencyCodeIDR CurrencyCode = "IDR"
+	CurrencyCodeINR CurrencyCode = "INR"
+	CurrencyCodeISK CurrencyCode = "ISK"
+	CurrencyCodeJOD CurrencyCode = "JOD"
+	CurrencyCodeJPY CurrencyCode = "JPY"
+	CurrencyCodeKES CurrencyCode = "KES"
+	CurrencyCodeKRW CurrencyCode = "KRW"
+	CurrencyCodeKWD CurrencyCode = "KWD"
+	CurrencyCodeLAK CurrencyCode = "LAK"
+	CurrencyCodeLKR CurrencyCode = "LKR"
+	CurrencyCodeMAD CurrencyCode = "MAD"
+	CurrencyCodeMGA CurrencyCode = "MGA"
+	CurrencyCodeMWK CurrencyCode = "MWK"
+	CurrencyCodeMXN CurrencyCode = "MXN"
+	CurrencyCodeMYR CurrencyCode = "MYR"
+	CurrencyCodeMZN CurrencyCode = "MZN"
+	CurrencyCodeNGN CurrencyCode = "NGN"
+	CurrencyCodeNOK CurrencyCode = "NOK"
+	CurrencyCodeNPR CurrencyCode = "NPR"
+	CurrencyCodeNZD CurrencyCode = "NZD"
+	CurrencyCodeOMR CurrencyCode = "OMR"
+	CurrencyCodePEN CurrencyCode = "PEN"
+	CurrencyCodePHP CurrencyCode = "PHP"
+	CurrencyCodePKR CurrencyCode = "PKR"
+	CurrencyCodePLN CurrencyCode = "PLN"
+	CurrencyCodePYG CurrencyCode = "PYG"
+	CurrencyCodeQAR CurrencyCode = "QAR"
+	CurrencyCodeRON CurrencyCode = "RON"
+	CurrencyCodeRUB CurrencyCode = "RUB"
+	CurrencyCodeRWF CurrencyCode = "RWF"
+	CurrencyCodeSAR CurrencyCode = "SAR"
+	CurrencyCodeSEK CurrencyCode = "SEK"
+	CurrencyCodeSGD CurrencyCode = "SGD"
+	CurrencyCodeSLE CurrencyCode = "SLE"
+	CurrencyCodeSRD CurrencyCode = "SRD"
+	CurrencyCodeTHB CurrencyCode = "THB"
+	CurrencyCodeTND CurrencyCode = "TND"
+	CurrencyCodeTRY CurrencyCode = "TRY"
+	CurrencyCodeTWD CurrencyCode = "TWD"
+	CurrencyCodeTZS CurrencyCode = "TZS"
+	CurrencyCodeUGX CurrencyCode = "UGX"
+	CurrencyCodeUSD CurrencyCode = "USD"
+	CurrencyCodeVND CurrencyCode = "VND"
+	CurrencyCodeXAF CurrencyCode = "XAF"
+	CurrencyCodeXCD CurrencyCode = "XCD"
+	CurrencyCodeXOF CurrencyCode = "XOF"
+	CurrencyCodeZAR CurrencyCode = "ZAR"
+	CurrencyCodeZMW CurrencyCode = "ZMW"
+)
+
+// Valid indicates whether the value is a known member of the CurrencyCode enum.
+func (e CurrencyCode) Valid() bool {
+	switch e {
+	case CurrencyCodeAED:
+		return true
+	case CurrencyCodeALL:
+		return true
+	case CurrencyCodeARS:
+		return true
+	case CurrencyCodeAUD:
+		return true
+	case CurrencyCodeBDT:
+		return true
+	case CurrencyCodeBGN:
+		return true
+	case CurrencyCodeBHD:
+		return true
+	case CurrencyCodeBIF:
+		return true
+	case CurrencyCodeBOB:
+		return true
+	case CurrencyCodeBRL:
+		return true
+	case CurrencyCodeBWP:
+		return true
+	case CurrencyCodeCAD:
+		return true
+	case CurrencyCodeCHF:
+		return true
+	case CurrencyCodeCLP:
+		return true
+	case CurrencyCodeCNY:
+		return true
+	case CurrencyCodeCOP:
+		return true
+	case CurrencyCodeCVE:
+		return true
+	case CurrencyCodeCZK:
+		return true
+	case CurrencyCodeDKK:
+		return true
+	case CurrencyCodeDOP:
+		return true
+	case CurrencyCodeEGP:
+		return true
+	case CurrencyCodeETB:
+		return true
+	case CurrencyCodeEUR:
+		return true
+	case CurrencyCodeFJD:
+		return true
+	case CurrencyCodeGBP:
+		return true
+	case CurrencyCodeGHS:
+		return true
+	case CurrencyCodeGIP:
+		return true
+	case CurrencyCodeGMD:
+		return true
+	case CurrencyCodeGNF:
+		return true
+	case CurrencyCodeGTQ:
+		return true
+	case CurrencyCodeHKD:
+		return true
+	case CurrencyCodeHUF:
+		return true
+	case CurrencyCodeIDR:
+		return true
+	case CurrencyCodeINR:
+		return true
+	case CurrencyCodeISK:
+		return true
+	case CurrencyCodeJOD:
+		return true
+	case CurrencyCodeJPY:
+		return true
+	case CurrencyCodeKES:
+		return true
+	case CurrencyCodeKRW:
+		return true
+	case CurrencyCodeKWD:
+		return true
+	case CurrencyCodeLAK:
+		return true
+	case CurrencyCodeLKR:
+		return true
+	case CurrencyCodeMAD:
+		return true
+	case CurrencyCodeMGA:
+		return true
+	case CurrencyCodeMWK:
+		return true
+	case CurrencyCodeMXN:
+		return true
+	case CurrencyCodeMYR:
+		return true
+	case CurrencyCodeMZN:
+		return true
+	case CurrencyCodeNGN:
+		return true
+	case CurrencyCodeNOK:
+		return true
+	case CurrencyCodeNPR:
+		return true
+	case CurrencyCodeNZD:
+		return true
+	case CurrencyCodeOMR:
+		return true
+	case CurrencyCodePEN:
+		return true
+	case CurrencyCodePHP:
+		return true
+	case CurrencyCodePKR:
+		return true
+	case CurrencyCodePLN:
+		return true
+	case CurrencyCodePYG:
+		return true
+	case CurrencyCodeQAR:
+		return true
+	case CurrencyCodeRON:
+		return true
+	case CurrencyCodeRUB:
+		return true
+	case CurrencyCodeRWF:
+		return true
+	case CurrencyCodeSAR:
+		return true
+	case CurrencyCodeSEK:
+		return true
+	case CurrencyCodeSGD:
+		return true
+	case CurrencyCodeSLE:
+		return true
+	case CurrencyCodeSRD:
+		return true
+	case CurrencyCodeTHB:
+		return true
+	case CurrencyCodeTND:
+		return true
+	case CurrencyCodeTRY:
+		return true
+	case CurrencyCodeTWD:
+		return true
+	case CurrencyCodeTZS:
+		return true
+	case CurrencyCodeUGX:
+		return true
+	case CurrencyCodeUSD:
+		return true
+	case CurrencyCodeVND:
+		return true
+	case CurrencyCodeXAF:
+		return true
+	case CurrencyCodeXCD:
+		return true
+	case CurrencyCodeXOF:
+		return true
+	case CurrencyCodeZAR:
+		return true
+	case CurrencyCodeZMW:
 		return true
 	default:
 		return false
@@ -338,6 +719,66 @@ func (e HistorySyncType) Valid() bool {
 	}
 }
 
+// Defines values for IssueArchiveReason.
+const (
+	IssueArchiveReasonAUTO24H        IssueArchiveReason = "AUTO_24H"
+	IssueArchiveReasonMANUAL         IssueArchiveReason = "MANUAL"
+	IssueArchiveReasonTHREADDETACHED IssueArchiveReason = "THREAD_DETACHED"
+)
+
+// Valid indicates whether the value is a known member of the IssueArchiveReason enum.
+func (e IssueArchiveReason) Valid() bool {
+	switch e {
+	case IssueArchiveReasonAUTO24H:
+		return true
+	case IssueArchiveReasonMANUAL:
+		return true
+	case IssueArchiveReasonTHREADDETACHED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueStatus.
+const (
+	IssueStatusCOMPLETED  IssueStatus = "COMPLETED"
+	IssueStatusNEEDSINPUT IssueStatus = "NEEDS_INPUT"
+	IssueStatusWORKING    IssueStatus = "WORKING"
+)
+
+// Valid indicates whether the value is a known member of the IssueStatus enum.
+func (e IssueStatus) Valid() bool {
+	switch e {
+	case IssueStatusCOMPLETED:
+		return true
+	case IssueStatusNEEDSINPUT:
+		return true
+	case IssueStatusWORKING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Language.
+const (
+	LanguageENUS Language = "en-US"
+	LanguagePTBR Language = "pt-BR"
+)
+
+// Valid indicates whether the value is a known member of the Language enum.
+func (e Language) Valid() bool {
+	switch e {
+	case LanguageENUS:
+		return true
+	case LanguagePTBR:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LogLevel.
 const (
 	LogLevelDebug LogLevel = "DEBUG"
@@ -437,6 +878,24 @@ func (e MessageType) Valid() bool {
 	}
 }
 
+// Defines values for OwnerKind.
+const (
+	OwnerKindINDIVIDUAL   OwnerKind = "INDIVIDUAL"
+	OwnerKindORGANIZATION OwnerKind = "ORGANIZATION"
+)
+
+// Valid indicates whether the value is a known member of the OwnerKind enum.
+func (e OwnerKind) Valid() bool {
+	switch e {
+	case OwnerKindINDIVIDUAL:
+		return true
+	case OwnerKindORGANIZATION:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Platform.
 const (
 	PlatformInternal Platform = "INTERNAL"
@@ -476,6 +935,45 @@ func (e PresenceType) Valid() bool {
 	case PresenceTypeRecording:
 		return true
 	case PresenceTypeUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderKind.
+const (
+	ProviderKindCLAUDECODE ProviderKind = "CLAUDE_CODE"
+	ProviderKindCODEX      ProviderKind = "CODEX"
+	ProviderKindOPENCODE   ProviderKind = "OPENCODE"
+)
+
+// Valid indicates whether the value is a known member of the ProviderKind enum.
+func (e ProviderKind) Valid() bool {
+	switch e {
+	case ProviderKindCLAUDECODE:
+		return true
+	case ProviderKindCODEX:
+		return true
+	case ProviderKindOPENCODE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderStatus.
+const (
+	ProviderStatusDETECTED     ProviderStatus = "DETECTED"
+	ProviderStatusNOTINSTALLED ProviderStatus = "NOT_INSTALLED"
+)
+
+// Valid indicates whether the value is a known member of the ProviderStatus enum.
+func (e ProviderStatus) Valid() bool {
+	switch e {
+	case ProviderStatusDETECTED:
+		return true
+	case ProviderStatusNOTINSTALLED:
 		return true
 	default:
 		return false
@@ -551,6 +1049,48 @@ func (e RemoteType) Valid() bool {
 	}
 }
 
+// Defines values for Role.
+const (
+	RoleADMIN  Role = "ADMIN"
+	RoleMEMBER Role = "MEMBER"
+	RoleOWNER  Role = "OWNER"
+)
+
+// Valid indicates whether the value is a known member of the Role enum.
+func (e Role) Valid() bool {
+	switch e {
+	case RoleADMIN:
+		return true
+	case RoleMEMBER:
+		return true
+	case RoleOWNER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SenderIdentity.
+const (
+	SenderIdentityAGENT    SenderIdentity = "AGENT"
+	SenderIdentityOPERATOR SenderIdentity = "OPERATOR"
+	SenderIdentityROUTER   SenderIdentity = "ROUTER"
+)
+
+// Valid indicates whether the value is a known member of the SenderIdentity enum.
+func (e SenderIdentity) Valid() bool {
+	switch e {
+	case SenderIdentityAGENT:
+		return true
+	case SenderIdentityOPERATOR:
+		return true
+	case SenderIdentityROUTER:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ServerEventName.
 const (
 	IntegrationChannelChatPresenceUpdated          ServerEventName = "integration.channel.chat_presence_updated"
@@ -620,6 +1160,1095 @@ func (e ServerEventName) Valid() bool {
 	}
 }
 
+// Defines values for StopKind.
+const (
+	StopKindAPPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	StopKindBLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	StopKindHUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	StopKindSERVERERROR             StopKind = "SERVER_ERROR"
+)
+
+// Valid indicates whether the value is a known member of the StopKind enum.
+func (e StopKind) Valid() bool {
+	switch e {
+	case StopKindAPPROVALNEEDED:
+		return true
+	case StopKindBLOCKEDBYCLASSIFICATION:
+		return true
+	case StopKindHUMANREQUESTED:
+		return true
+	case StopKindSERVERERROR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StopResolution.
+const (
+	StopResolutionAPPROVE       StopResolution = "APPROVE"
+	StopResolutionDENY          StopResolution = "DENY"
+	StopResolutionRETRY         StopResolution = "RETRY"
+	StopResolutionREVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
+	StopResolutionTAKEOVER      StopResolution = "TAKE_OVER"
+)
+
+// Valid indicates whether the value is a known member of the StopResolution enum.
+func (e StopResolution) Valid() bool {
+	switch e {
+	case StopResolutionAPPROVE:
+		return true
+	case StopResolutionDENY:
+		return true
+	case StopResolutionRETRY:
+		return true
+	case StopResolutionREVIEWANDSEND:
+		return true
+	case StopResolutionTAKEOVER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ThreadMode.
+const (
+	ThreadModeDIRECT ThreadMode = "DIRECT"
+	ThreadModeSTEER  ThreadMode = "STEER"
+)
+
+// Valid indicates whether the value is a known member of the ThreadMode enum.
+func (e ThreadMode) Valid() bool {
+	switch e {
+	case ThreadModeDIRECT:
+		return true
+	case ThreadModeSTEER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ThreadStatus.
+const (
+	ThreadStatusIDLE           ThreadStatus = "IDLE"
+	ThreadStatusNEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
+	ThreadStatusPAUSED         ThreadStatus = "PAUSED"
+	ThreadStatusRUNNING        ThreadStatus = "RUNNING"
+)
+
+// Valid indicates whether the value is a known member of the ThreadStatus enum.
+func (e ThreadStatus) Valid() bool {
+	switch e {
+	case ThreadStatusIDLE:
+		return true
+	case ThreadStatusNEEDSATTENTION:
+		return true
+	case ThreadStatusPAUSED:
+		return true
+	case ThreadStatusRUNNING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Timezone.
+const (
+	TimezoneAFRICAABIDJAN               Timezone = "Africa/Abidjan"
+	TimezoneAFRICAALGIERS               Timezone = "Africa/Algiers"
+	TimezoneAFRICABISSAU                Timezone = "Africa/Bissau"
+	TimezoneAFRICACAIRO                 Timezone = "Africa/Cairo"
+	TimezoneAFRICACASABLANCA            Timezone = "Africa/Casablanca"
+	TimezoneAFRICACEUTA                 Timezone = "Africa/Ceuta"
+	TimezoneAFRICAELAAIUN               Timezone = "Africa/El_Aaiun"
+	TimezoneAFRICAJOHANNESBURG          Timezone = "Africa/Johannesburg"
+	TimezoneAFRICAJUBA                  Timezone = "Africa/Juba"
+	TimezoneAFRICAKHARTOUM              Timezone = "Africa/Khartoum"
+	TimezoneAFRICALAGOS                 Timezone = "Africa/Lagos"
+	TimezoneAFRICAMAPUTO                Timezone = "Africa/Maputo"
+	TimezoneAFRICAMONROVIA              Timezone = "Africa/Monrovia"
+	TimezoneAFRICANAIROBI               Timezone = "Africa/Nairobi"
+	TimezoneAFRICANDJAMENA              Timezone = "Africa/Ndjamena"
+	TimezoneAFRICASAOTOME               Timezone = "Africa/Sao_Tome"
+	TimezoneAFRICATRIPOLI               Timezone = "Africa/Tripoli"
+	TimezoneAFRICATUNIS                 Timezone = "Africa/Tunis"
+	TimezoneAFRICAWINDHOEK              Timezone = "Africa/Windhoek"
+	TimezoneAMERICAADAK                 Timezone = "America/Adak"
+	TimezoneAMERICAANCHORAGE            Timezone = "America/Anchorage"
+	TimezoneAMERICAARAGUAINA            Timezone = "America/Araguaina"
+	TimezoneAMERICAARGENTINABUENOSAIRES Timezone = "America/Argentina/Buenos_Aires"
+	TimezoneAMERICAARGENTINACATAMARCA   Timezone = "America/Argentina/Catamarca"
+	TimezoneAMERICAARGENTINACORDOBA     Timezone = "America/Argentina/Cordoba"
+	TimezoneAMERICAARGENTINAJUJUY       Timezone = "America/Argentina/Jujuy"
+	TimezoneAMERICAARGENTINALARIOJA     Timezone = "America/Argentina/La_Rioja"
+	TimezoneAMERICAARGENTINAMENDOZA     Timezone = "America/Argentina/Mendoza"
+	TimezoneAMERICAARGENTINARIOGALLEGOS Timezone = "America/Argentina/Rio_Gallegos"
+	TimezoneAMERICAARGENTINASALTA       Timezone = "America/Argentina/Salta"
+	TimezoneAMERICAARGENTINASANJUAN     Timezone = "America/Argentina/San_Juan"
+	TimezoneAMERICAARGENTINASANLUIS     Timezone = "America/Argentina/San_Luis"
+	TimezoneAMERICAARGENTINATUCUMAN     Timezone = "America/Argentina/Tucuman"
+	TimezoneAMERICAARGENTINAUSHUAIA     Timezone = "America/Argentina/Ushuaia"
+	TimezoneAMERICAASUNCION             Timezone = "America/Asuncion"
+	TimezoneAMERICABAHIA                Timezone = "America/Bahia"
+	TimezoneAMERICABAHIABANDERAS        Timezone = "America/Bahia_Banderas"
+	TimezoneAMERICABARBADOS             Timezone = "America/Barbados"
+	TimezoneAMERICABELEM                Timezone = "America/Belem"
+	TimezoneAMERICABELIZE               Timezone = "America/Belize"
+	TimezoneAMERICABOAVISTA             Timezone = "America/Boa_Vista"
+	TimezoneAMERICABOGOTA               Timezone = "America/Bogota"
+	TimezoneAMERICABOISE                Timezone = "America/Boise"
+	TimezoneAMERICACAMBRIDGEBAY         Timezone = "America/Cambridge_Bay"
+	TimezoneAMERICACAMPOGRANDE          Timezone = "America/Campo_Grande"
+	TimezoneAMERICACANCUN               Timezone = "America/Cancun"
+	TimezoneAMERICACARACAS              Timezone = "America/Caracas"
+	TimezoneAMERICACAYENNE              Timezone = "America/Cayenne"
+	TimezoneAMERICACHICAGO              Timezone = "America/Chicago"
+	TimezoneAMERICACHIHUAHUA            Timezone = "America/Chihuahua"
+	TimezoneAMERICACIUDADJUAREZ         Timezone = "America/Ciudad_Juarez"
+	TimezoneAMERICACOSTARICA            Timezone = "America/Costa_Rica"
+	TimezoneAMERICACOYHAIQUE            Timezone = "America/Coyhaique"
+	TimezoneAMERICACUIABA               Timezone = "America/Cuiaba"
+	TimezoneAMERICADANMARKSHAVN         Timezone = "America/Danmarkshavn"
+	TimezoneAMERICADAWSON               Timezone = "America/Dawson"
+	TimezoneAMERICADAWSONCREEK          Timezone = "America/Dawson_Creek"
+	TimezoneAMERICADENVER               Timezone = "America/Denver"
+	TimezoneAMERICADETROIT              Timezone = "America/Detroit"
+	TimezoneAMERICAEDMONTON             Timezone = "America/Edmonton"
+	TimezoneAMERICAEIRUNEPE             Timezone = "America/Eirunepe"
+	TimezoneAMERICAELSALVADOR           Timezone = "America/El_Salvador"
+	TimezoneAMERICAFORTALEZA            Timezone = "America/Fortaleza"
+	TimezoneAMERICAFORTNELSON           Timezone = "America/Fort_Nelson"
+	TimezoneAMERICAGLACEBAY             Timezone = "America/Glace_Bay"
+	TimezoneAMERICAGOOSEBAY             Timezone = "America/Goose_Bay"
+	TimezoneAMERICAGRANDTURK            Timezone = "America/Grand_Turk"
+	TimezoneAMERICAGUATEMALA            Timezone = "America/Guatemala"
+	TimezoneAMERICAGUAYAQUIL            Timezone = "America/Guayaquil"
+	TimezoneAMERICAGUYANA               Timezone = "America/Guyana"
+	TimezoneAMERICAHALIFAX              Timezone = "America/Halifax"
+	TimezoneAMERICAHAVANA               Timezone = "America/Havana"
+	TimezoneAMERICAHERMOSILLO           Timezone = "America/Hermosillo"
+	TimezoneAMERICAINDIANAINDIANAPOLIS  Timezone = "America/Indiana/Indianapolis"
+	TimezoneAMERICAINDIANAKNOX          Timezone = "America/Indiana/Knox"
+	TimezoneAMERICAINDIANAMARENGO       Timezone = "America/Indiana/Marengo"
+	TimezoneAMERICAINDIANAPETERSBURG    Timezone = "America/Indiana/Petersburg"
+	TimezoneAMERICAINDIANATELLCITY      Timezone = "America/Indiana/Tell_City"
+	TimezoneAMERICAINDIANAVEVAY         Timezone = "America/Indiana/Vevay"
+	TimezoneAMERICAINDIANAVINCENNES     Timezone = "America/Indiana/Vincennes"
+	TimezoneAMERICAINDIANAWINAMAC       Timezone = "America/Indiana/Winamac"
+	TimezoneAMERICAINUVIK               Timezone = "America/Inuvik"
+	TimezoneAMERICAIQALUIT              Timezone = "America/Iqaluit"
+	TimezoneAMERICAJAMAICA              Timezone = "America/Jamaica"
+	TimezoneAMERICAJUNEAU               Timezone = "America/Juneau"
+	TimezoneAMERICAKENTUCKYLOUISVILLE   Timezone = "America/Kentucky/Louisville"
+	TimezoneAMERICAKENTUCKYMONTICELLO   Timezone = "America/Kentucky/Monticello"
+	TimezoneAMERICALAPAZ                Timezone = "America/La_Paz"
+	TimezoneAMERICALIMA                 Timezone = "America/Lima"
+	TimezoneAMERICALOSANGELES           Timezone = "America/Los_Angeles"
+	TimezoneAMERICAMACEIO               Timezone = "America/Maceio"
+	TimezoneAMERICAMANAGUA              Timezone = "America/Managua"
+	TimezoneAMERICAMANAUS               Timezone = "America/Manaus"
+	TimezoneAMERICAMARTINIQUE           Timezone = "America/Martinique"
+	TimezoneAMERICAMATAMOROS            Timezone = "America/Matamoros"
+	TimezoneAMERICAMAZATLAN             Timezone = "America/Mazatlan"
+	TimezoneAMERICAMENOMINEE            Timezone = "America/Menominee"
+	TimezoneAMERICAMERIDA               Timezone = "America/Merida"
+	TimezoneAMERICAMETLAKATLA           Timezone = "America/Metlakatla"
+	TimezoneAMERICAMEXICOCITY           Timezone = "America/Mexico_City"
+	TimezoneAMERICAMIQUELON             Timezone = "America/Miquelon"
+	TimezoneAMERICAMONCTON              Timezone = "America/Moncton"
+	TimezoneAMERICAMONTERREY            Timezone = "America/Monterrey"
+	TimezoneAMERICAMONTEVIDEO           Timezone = "America/Montevideo"
+	TimezoneAMERICANEWYORK              Timezone = "America/New_York"
+	TimezoneAMERICANOME                 Timezone = "America/Nome"
+	TimezoneAMERICANORONHA              Timezone = "America/Noronha"
+	TimezoneAMERICANORTHDAKOTABEULAH    Timezone = "America/North_Dakota/Beulah"
+	TimezoneAMERICANORTHDAKOTACENTER    Timezone = "America/North_Dakota/Center"
+	TimezoneAMERICANORTHDAKOTANEWSALEM  Timezone = "America/North_Dakota/New_Salem"
+	TimezoneAMERICANUUK                 Timezone = "America/Nuuk"
+	TimezoneAMERICAOJINAGA              Timezone = "America/Ojinaga"
+	TimezoneAMERICAPANAMA               Timezone = "America/Panama"
+	TimezoneAMERICAPARAMARIBO           Timezone = "America/Paramaribo"
+	TimezoneAMERICAPHOENIX              Timezone = "America/Phoenix"
+	TimezoneAMERICAPORTAUPRINCE         Timezone = "America/Port-au-Prince"
+	TimezoneAMERICAPORTOVELHO           Timezone = "America/Porto_Velho"
+	TimezoneAMERICAPUERTORICO           Timezone = "America/Puerto_Rico"
+	TimezoneAMERICAPUNTAARENAS          Timezone = "America/Punta_Arenas"
+	TimezoneAMERICARANKININLET          Timezone = "America/Rankin_Inlet"
+	TimezoneAMERICARECIFE               Timezone = "America/Recife"
+	TimezoneAMERICAREGINA               Timezone = "America/Regina"
+	TimezoneAMERICARESOLUTE             Timezone = "America/Resolute"
+	TimezoneAMERICARIOBRANCO            Timezone = "America/Rio_Branco"
+	TimezoneAMERICASANTAREM             Timezone = "America/Santarem"
+	TimezoneAMERICASANTIAGO             Timezone = "America/Santiago"
+	TimezoneAMERICASANTODOMINGO         Timezone = "America/Santo_Domingo"
+	TimezoneAMERICASAOPAULO             Timezone = "America/Sao_Paulo"
+	TimezoneAMERICASCORESBYSUND         Timezone = "America/Scoresbysund"
+	TimezoneAMERICASITKA                Timezone = "America/Sitka"
+	TimezoneAMERICASTJOHNS              Timezone = "America/St_Johns"
+	TimezoneAMERICASWIFTCURRENT         Timezone = "America/Swift_Current"
+	TimezoneAMERICATEGUCIGALPA          Timezone = "America/Tegucigalpa"
+	TimezoneAMERICATHULE                Timezone = "America/Thule"
+	TimezoneAMERICATIJUANA              Timezone = "America/Tijuana"
+	TimezoneAMERICATORONTO              Timezone = "America/Toronto"
+	TimezoneAMERICAVANCOUVER            Timezone = "America/Vancouver"
+	TimezoneAMERICAWHITEHORSE           Timezone = "America/Whitehorse"
+	TimezoneAMERICAWINNIPEG             Timezone = "America/Winnipeg"
+	TimezoneAMERICAYAKUTAT              Timezone = "America/Yakutat"
+	TimezoneANTARCTICACASEY             Timezone = "Antarctica/Casey"
+	TimezoneANTARCTICADAVIS             Timezone = "Antarctica/Davis"
+	TimezoneANTARCTICAMACQUARIE         Timezone = "Antarctica/Macquarie"
+	TimezoneANTARCTICAMAWSON            Timezone = "Antarctica/Mawson"
+	TimezoneANTARCTICAPALMER            Timezone = "Antarctica/Palmer"
+	TimezoneANTARCTICAROTHERA           Timezone = "Antarctica/Rothera"
+	TimezoneANTARCTICATROLL             Timezone = "Antarctica/Troll"
+	TimezoneANTARCTICAVOSTOK            Timezone = "Antarctica/Vostok"
+	TimezoneASIAALMATY                  Timezone = "Asia/Almaty"
+	TimezoneASIAAMMAN                   Timezone = "Asia/Amman"
+	TimezoneASIAANADYR                  Timezone = "Asia/Anadyr"
+	TimezoneASIAAQTAU                   Timezone = "Asia/Aqtau"
+	TimezoneASIAAQTOBE                  Timezone = "Asia/Aqtobe"
+	TimezoneASIAASHGABAT                Timezone = "Asia/Ashgabat"
+	TimezoneASIAATYRAU                  Timezone = "Asia/Atyrau"
+	TimezoneASIABAGHDAD                 Timezone = "Asia/Baghdad"
+	TimezoneASIABAKU                    Timezone = "Asia/Baku"
+	TimezoneASIABANGKOK                 Timezone = "Asia/Bangkok"
+	TimezoneASIABARNAUL                 Timezone = "Asia/Barnaul"
+	TimezoneASIABEIRUT                  Timezone = "Asia/Beirut"
+	TimezoneASIABISHKEK                 Timezone = "Asia/Bishkek"
+	TimezoneASIACHITA                   Timezone = "Asia/Chita"
+	TimezoneASIACOLOMBO                 Timezone = "Asia/Colombo"
+	TimezoneASIADAMASCUS                Timezone = "Asia/Damascus"
+	TimezoneASIADHAKA                   Timezone = "Asia/Dhaka"
+	TimezoneASIADILI                    Timezone = "Asia/Dili"
+	TimezoneASIADUBAI                   Timezone = "Asia/Dubai"
+	TimezoneASIADUSHANBE                Timezone = "Asia/Dushanbe"
+	TimezoneASIAFAMAGUSTA               Timezone = "Asia/Famagusta"
+	TimezoneASIAGAZA                    Timezone = "Asia/Gaza"
+	TimezoneASIAHEBRON                  Timezone = "Asia/Hebron"
+	TimezoneASIAHOCHIMINH               Timezone = "Asia/Ho_Chi_Minh"
+	TimezoneASIAHONGKONG                Timezone = "Asia/Hong_Kong"
+	TimezoneASIAHOVD                    Timezone = "Asia/Hovd"
+	TimezoneASIAIRKUTSK                 Timezone = "Asia/Irkutsk"
+	TimezoneASIAJAKARTA                 Timezone = "Asia/Jakarta"
+	TimezoneASIAJAYAPURA                Timezone = "Asia/Jayapura"
+	TimezoneASIAJERUSALEM               Timezone = "Asia/Jerusalem"
+	TimezoneASIAKABUL                   Timezone = "Asia/Kabul"
+	TimezoneASIAKAMCHATKA               Timezone = "Asia/Kamchatka"
+	TimezoneASIAKARACHI                 Timezone = "Asia/Karachi"
+	TimezoneASIAKATHMANDU               Timezone = "Asia/Kathmandu"
+	TimezoneASIAKHANDYGA                Timezone = "Asia/Khandyga"
+	TimezoneASIAKOLKATA                 Timezone = "Asia/Kolkata"
+	TimezoneASIAKRASNOYARSK             Timezone = "Asia/Krasnoyarsk"
+	TimezoneASIAKUCHING                 Timezone = "Asia/Kuching"
+	TimezoneASIAMACAU                   Timezone = "Asia/Macau"
+	TimezoneASIAMAGADAN                 Timezone = "Asia/Magadan"
+	TimezoneASIAMAKASSAR                Timezone = "Asia/Makassar"
+	TimezoneASIAMANILA                  Timezone = "Asia/Manila"
+	TimezoneASIANICOSIA                 Timezone = "Asia/Nicosia"
+	TimezoneASIANOVOKUZNETSK            Timezone = "Asia/Novokuznetsk"
+	TimezoneASIANOVOSIBIRSK             Timezone = "Asia/Novosibirsk"
+	TimezoneASIAOMSK                    Timezone = "Asia/Omsk"
+	TimezoneASIAORAL                    Timezone = "Asia/Oral"
+	TimezoneASIAPONTIANAK               Timezone = "Asia/Pontianak"
+	TimezoneASIAPYONGYANG               Timezone = "Asia/Pyongyang"
+	TimezoneASIAQATAR                   Timezone = "Asia/Qatar"
+	TimezoneASIAQOSTANAY                Timezone = "Asia/Qostanay"
+	TimezoneASIAQYZYLORDA               Timezone = "Asia/Qyzylorda"
+	TimezoneASIASAKHALIN                Timezone = "Asia/Sakhalin"
+	TimezoneASIASAMARKAND               Timezone = "Asia/Samarkand"
+	TimezoneASIASEOUL                   Timezone = "Asia/Seoul"
+	TimezoneASIASHANGHAI                Timezone = "Asia/Shanghai"
+	TimezoneASIASINGAPORE               Timezone = "Asia/Singapore"
+	TimezoneASIASREDNEKOLYMSK           Timezone = "Asia/Srednekolymsk"
+	TimezoneASIATAIPEI                  Timezone = "Asia/Taipei"
+	TimezoneASIATASHKENT                Timezone = "Asia/Tashkent"
+	TimezoneASIATBILISI                 Timezone = "Asia/Tbilisi"
+	TimezoneASIATEHRAN                  Timezone = "Asia/Tehran"
+	TimezoneASIATHIMPHU                 Timezone = "Asia/Thimphu"
+	TimezoneASIATOMSK                   Timezone = "Asia/Tomsk"
+	TimezoneASIAULAANBAATAR             Timezone = "Asia/Ulaanbaatar"
+	TimezoneASIAURUMQI                  Timezone = "Asia/Urumqi"
+	TimezoneASIAUSTNERA                 Timezone = "Asia/Ust-Nera"
+	TimezoneASIAVLADIVOSTOK             Timezone = "Asia/Vladivostok"
+	TimezoneASIAYAKUTSK                 Timezone = "Asia/Yakutsk"
+	TimezoneASIAYANGON                  Timezone = "Asia/Yangon"
+	TimezoneASIAYEKATERINBURG           Timezone = "Asia/Yekaterinburg"
+	TimezoneASIAYEREVAN                 Timezone = "Asia/Yerevan"
+	TimezoneATLANTICAZORES              Timezone = "Atlantic/Azores"
+	TimezoneATLANTICBERMUDA             Timezone = "Atlantic/Bermuda"
+	TimezoneATLANTICCANARY              Timezone = "Atlantic/Canary"
+	TimezoneATLANTICCAPEVERDE           Timezone = "Atlantic/Cape_Verde"
+	TimezoneATLANTICFAROE               Timezone = "Atlantic/Faroe"
+	TimezoneATLANTICMADEIRA             Timezone = "Atlantic/Madeira"
+	TimezoneATLANTICSOUTHGEORGIA        Timezone = "Atlantic/South_Georgia"
+	TimezoneATLANTICSTANLEY             Timezone = "Atlantic/Stanley"
+	TimezoneAUSTRALIAADELAIDE           Timezone = "Australia/Adelaide"
+	TimezoneAUSTRALIABRISBANE           Timezone = "Australia/Brisbane"
+	TimezoneAUSTRALIABROKENHILL         Timezone = "Australia/Broken_Hill"
+	TimezoneAUSTRALIADARWIN             Timezone = "Australia/Darwin"
+	TimezoneAUSTRALIAEUCLA              Timezone = "Australia/Eucla"
+	TimezoneAUSTRALIAHOBART             Timezone = "Australia/Hobart"
+	TimezoneAUSTRALIALINDEMAN           Timezone = "Australia/Lindeman"
+	TimezoneAUSTRALIALORDHOWE           Timezone = "Australia/Lord_Howe"
+	TimezoneAUSTRALIAMELBOURNE          Timezone = "Australia/Melbourne"
+	TimezoneAUSTRALIAPERTH              Timezone = "Australia/Perth"
+	TimezoneAUSTRALIASYDNEY             Timezone = "Australia/Sydney"
+	TimezoneEUROPEANDORRA               Timezone = "Europe/Andorra"
+	TimezoneEUROPEASTRAKHAN             Timezone = "Europe/Astrakhan"
+	TimezoneEUROPEATHENS                Timezone = "Europe/Athens"
+	TimezoneEUROPEBELGRADE              Timezone = "Europe/Belgrade"
+	TimezoneEUROPEBERLIN                Timezone = "Europe/Berlin"
+	TimezoneEUROPEBRUSSELS              Timezone = "Europe/Brussels"
+	TimezoneEUROPEBUCHAREST             Timezone = "Europe/Bucharest"
+	TimezoneEUROPEBUDAPEST              Timezone = "Europe/Budapest"
+	TimezoneEUROPECHISINAU              Timezone = "Europe/Chisinau"
+	TimezoneEUROPEDUBLIN                Timezone = "Europe/Dublin"
+	TimezoneEUROPEGIBRALTAR             Timezone = "Europe/Gibraltar"
+	TimezoneEUROPEHELSINKI              Timezone = "Europe/Helsinki"
+	TimezoneEUROPEISTANBUL              Timezone = "Europe/Istanbul"
+	TimezoneEUROPEKALININGRAD           Timezone = "Europe/Kaliningrad"
+	TimezoneEUROPEKIROV                 Timezone = "Europe/Kirov"
+	TimezoneEUROPEKYIV                  Timezone = "Europe/Kyiv"
+	TimezoneEUROPELISBON                Timezone = "Europe/Lisbon"
+	TimezoneEUROPELONDON                Timezone = "Europe/London"
+	TimezoneEUROPEMADRID                Timezone = "Europe/Madrid"
+	TimezoneEUROPEMALTA                 Timezone = "Europe/Malta"
+	TimezoneEUROPEMINSK                 Timezone = "Europe/Minsk"
+	TimezoneEUROPEMOSCOW                Timezone = "Europe/Moscow"
+	TimezoneEUROPEPARIS                 Timezone = "Europe/Paris"
+	TimezoneEUROPEPRAGUE                Timezone = "Europe/Prague"
+	TimezoneEUROPERIGA                  Timezone = "Europe/Riga"
+	TimezoneEUROPEROME                  Timezone = "Europe/Rome"
+	TimezoneEUROPESAMARA                Timezone = "Europe/Samara"
+	TimezoneEUROPESARATOV               Timezone = "Europe/Saratov"
+	TimezoneEUROPESIMFEROPOL            Timezone = "Europe/Simferopol"
+	TimezoneEUROPESOFIA                 Timezone = "Europe/Sofia"
+	TimezoneEUROPETALLINN               Timezone = "Europe/Tallinn"
+	TimezoneEUROPETIRANE                Timezone = "Europe/Tirane"
+	TimezoneEUROPEULYANOVSK             Timezone = "Europe/Ulyanovsk"
+	TimezoneEUROPEVIENNA                Timezone = "Europe/Vienna"
+	TimezoneEUROPEVILNIUS               Timezone = "Europe/Vilnius"
+	TimezoneEUROPEVOLGOGRAD             Timezone = "Europe/Volgograd"
+	TimezoneEUROPEWARSAW                Timezone = "Europe/Warsaw"
+	TimezoneEUROPEZURICH                Timezone = "Europe/Zurich"
+	TimezoneINDIANCHAGOS                Timezone = "Indian/Chagos"
+	TimezoneINDIANMALDIVES              Timezone = "Indian/Maldives"
+	TimezoneINDIANMAURITIUS             Timezone = "Indian/Mauritius"
+	TimezonePACIFICAPIA                 Timezone = "Pacific/Apia"
+	TimezonePACIFICAUCKLAND             Timezone = "Pacific/Auckland"
+	TimezonePACIFICBOUGAINVILLE         Timezone = "Pacific/Bougainville"
+	TimezonePACIFICCHATHAM              Timezone = "Pacific/Chatham"
+	TimezonePACIFICEASTER               Timezone = "Pacific/Easter"
+	TimezonePACIFICEFATE                Timezone = "Pacific/Efate"
+	TimezonePACIFICFAKAOFO              Timezone = "Pacific/Fakaofo"
+	TimezonePACIFICFIJI                 Timezone = "Pacific/Fiji"
+	TimezonePACIFICGALAPAGOS            Timezone = "Pacific/Galapagos"
+	TimezonePACIFICGAMBIER              Timezone = "Pacific/Gambier"
+	TimezonePACIFICGUADALCANAL          Timezone = "Pacific/Guadalcanal"
+	TimezonePACIFICGUAM                 Timezone = "Pacific/Guam"
+	TimezonePACIFICHONOLULU             Timezone = "Pacific/Honolulu"
+	TimezonePACIFICKANTON               Timezone = "Pacific/Kanton"
+	TimezonePACIFICKIRITIMATI           Timezone = "Pacific/Kiritimati"
+	TimezonePACIFICKOSRAE               Timezone = "Pacific/Kosrae"
+	TimezonePACIFICKWAJALEIN            Timezone = "Pacific/Kwajalein"
+	TimezonePACIFICMARQUESAS            Timezone = "Pacific/Marquesas"
+	TimezonePACIFICNAURU                Timezone = "Pacific/Nauru"
+	TimezonePACIFICNIUE                 Timezone = "Pacific/Niue"
+	TimezonePACIFICNORFOLK              Timezone = "Pacific/Norfolk"
+	TimezonePACIFICNOUMEA               Timezone = "Pacific/Noumea"
+	TimezonePACIFICPAGOPAGO             Timezone = "Pacific/Pago_Pago"
+	TimezonePACIFICPALAU                Timezone = "Pacific/Palau"
+	TimezonePACIFICPITCAIRN             Timezone = "Pacific/Pitcairn"
+	TimezonePACIFICPORTMORESBY          Timezone = "Pacific/Port_Moresby"
+	TimezonePACIFICRAROTONGA            Timezone = "Pacific/Rarotonga"
+	TimezonePACIFICTAHITI               Timezone = "Pacific/Tahiti"
+	TimezonePACIFICTARAWA               Timezone = "Pacific/Tarawa"
+	TimezonePACIFICTONGATAPU            Timezone = "Pacific/Tongatapu"
+	TimezoneUTC                         Timezone = "UTC"
+)
+
+// Valid indicates whether the value is a known member of the Timezone enum.
+func (e Timezone) Valid() bool {
+	switch e {
+	case TimezoneAFRICAABIDJAN:
+		return true
+	case TimezoneAFRICAALGIERS:
+		return true
+	case TimezoneAFRICABISSAU:
+		return true
+	case TimezoneAFRICACAIRO:
+		return true
+	case TimezoneAFRICACASABLANCA:
+		return true
+	case TimezoneAFRICACEUTA:
+		return true
+	case TimezoneAFRICAELAAIUN:
+		return true
+	case TimezoneAFRICAJOHANNESBURG:
+		return true
+	case TimezoneAFRICAJUBA:
+		return true
+	case TimezoneAFRICAKHARTOUM:
+		return true
+	case TimezoneAFRICALAGOS:
+		return true
+	case TimezoneAFRICAMAPUTO:
+		return true
+	case TimezoneAFRICAMONROVIA:
+		return true
+	case TimezoneAFRICANAIROBI:
+		return true
+	case TimezoneAFRICANDJAMENA:
+		return true
+	case TimezoneAFRICASAOTOME:
+		return true
+	case TimezoneAFRICATRIPOLI:
+		return true
+	case TimezoneAFRICATUNIS:
+		return true
+	case TimezoneAFRICAWINDHOEK:
+		return true
+	case TimezoneAMERICAADAK:
+		return true
+	case TimezoneAMERICAANCHORAGE:
+		return true
+	case TimezoneAMERICAARAGUAINA:
+		return true
+	case TimezoneAMERICAARGENTINABUENOSAIRES:
+		return true
+	case TimezoneAMERICAARGENTINACATAMARCA:
+		return true
+	case TimezoneAMERICAARGENTINACORDOBA:
+		return true
+	case TimezoneAMERICAARGENTINAJUJUY:
+		return true
+	case TimezoneAMERICAARGENTINALARIOJA:
+		return true
+	case TimezoneAMERICAARGENTINAMENDOZA:
+		return true
+	case TimezoneAMERICAARGENTINARIOGALLEGOS:
+		return true
+	case TimezoneAMERICAARGENTINASALTA:
+		return true
+	case TimezoneAMERICAARGENTINASANJUAN:
+		return true
+	case TimezoneAMERICAARGENTINASANLUIS:
+		return true
+	case TimezoneAMERICAARGENTINATUCUMAN:
+		return true
+	case TimezoneAMERICAARGENTINAUSHUAIA:
+		return true
+	case TimezoneAMERICAASUNCION:
+		return true
+	case TimezoneAMERICABAHIA:
+		return true
+	case TimezoneAMERICABAHIABANDERAS:
+		return true
+	case TimezoneAMERICABARBADOS:
+		return true
+	case TimezoneAMERICABELEM:
+		return true
+	case TimezoneAMERICABELIZE:
+		return true
+	case TimezoneAMERICABOAVISTA:
+		return true
+	case TimezoneAMERICABOGOTA:
+		return true
+	case TimezoneAMERICABOISE:
+		return true
+	case TimezoneAMERICACAMBRIDGEBAY:
+		return true
+	case TimezoneAMERICACAMPOGRANDE:
+		return true
+	case TimezoneAMERICACANCUN:
+		return true
+	case TimezoneAMERICACARACAS:
+		return true
+	case TimezoneAMERICACAYENNE:
+		return true
+	case TimezoneAMERICACHICAGO:
+		return true
+	case TimezoneAMERICACHIHUAHUA:
+		return true
+	case TimezoneAMERICACIUDADJUAREZ:
+		return true
+	case TimezoneAMERICACOSTARICA:
+		return true
+	case TimezoneAMERICACOYHAIQUE:
+		return true
+	case TimezoneAMERICACUIABA:
+		return true
+	case TimezoneAMERICADANMARKSHAVN:
+		return true
+	case TimezoneAMERICADAWSON:
+		return true
+	case TimezoneAMERICADAWSONCREEK:
+		return true
+	case TimezoneAMERICADENVER:
+		return true
+	case TimezoneAMERICADETROIT:
+		return true
+	case TimezoneAMERICAEDMONTON:
+		return true
+	case TimezoneAMERICAEIRUNEPE:
+		return true
+	case TimezoneAMERICAELSALVADOR:
+		return true
+	case TimezoneAMERICAFORTALEZA:
+		return true
+	case TimezoneAMERICAFORTNELSON:
+		return true
+	case TimezoneAMERICAGLACEBAY:
+		return true
+	case TimezoneAMERICAGOOSEBAY:
+		return true
+	case TimezoneAMERICAGRANDTURK:
+		return true
+	case TimezoneAMERICAGUATEMALA:
+		return true
+	case TimezoneAMERICAGUAYAQUIL:
+		return true
+	case TimezoneAMERICAGUYANA:
+		return true
+	case TimezoneAMERICAHALIFAX:
+		return true
+	case TimezoneAMERICAHAVANA:
+		return true
+	case TimezoneAMERICAHERMOSILLO:
+		return true
+	case TimezoneAMERICAINDIANAINDIANAPOLIS:
+		return true
+	case TimezoneAMERICAINDIANAKNOX:
+		return true
+	case TimezoneAMERICAINDIANAMARENGO:
+		return true
+	case TimezoneAMERICAINDIANAPETERSBURG:
+		return true
+	case TimezoneAMERICAINDIANATELLCITY:
+		return true
+	case TimezoneAMERICAINDIANAVEVAY:
+		return true
+	case TimezoneAMERICAINDIANAVINCENNES:
+		return true
+	case TimezoneAMERICAINDIANAWINAMAC:
+		return true
+	case TimezoneAMERICAINUVIK:
+		return true
+	case TimezoneAMERICAIQALUIT:
+		return true
+	case TimezoneAMERICAJAMAICA:
+		return true
+	case TimezoneAMERICAJUNEAU:
+		return true
+	case TimezoneAMERICAKENTUCKYLOUISVILLE:
+		return true
+	case TimezoneAMERICAKENTUCKYMONTICELLO:
+		return true
+	case TimezoneAMERICALAPAZ:
+		return true
+	case TimezoneAMERICALIMA:
+		return true
+	case TimezoneAMERICALOSANGELES:
+		return true
+	case TimezoneAMERICAMACEIO:
+		return true
+	case TimezoneAMERICAMANAGUA:
+		return true
+	case TimezoneAMERICAMANAUS:
+		return true
+	case TimezoneAMERICAMARTINIQUE:
+		return true
+	case TimezoneAMERICAMATAMOROS:
+		return true
+	case TimezoneAMERICAMAZATLAN:
+		return true
+	case TimezoneAMERICAMENOMINEE:
+		return true
+	case TimezoneAMERICAMERIDA:
+		return true
+	case TimezoneAMERICAMETLAKATLA:
+		return true
+	case TimezoneAMERICAMEXICOCITY:
+		return true
+	case TimezoneAMERICAMIQUELON:
+		return true
+	case TimezoneAMERICAMONCTON:
+		return true
+	case TimezoneAMERICAMONTERREY:
+		return true
+	case TimezoneAMERICAMONTEVIDEO:
+		return true
+	case TimezoneAMERICANEWYORK:
+		return true
+	case TimezoneAMERICANOME:
+		return true
+	case TimezoneAMERICANORONHA:
+		return true
+	case TimezoneAMERICANORTHDAKOTABEULAH:
+		return true
+	case TimezoneAMERICANORTHDAKOTACENTER:
+		return true
+	case TimezoneAMERICANORTHDAKOTANEWSALEM:
+		return true
+	case TimezoneAMERICANUUK:
+		return true
+	case TimezoneAMERICAOJINAGA:
+		return true
+	case TimezoneAMERICAPANAMA:
+		return true
+	case TimezoneAMERICAPARAMARIBO:
+		return true
+	case TimezoneAMERICAPHOENIX:
+		return true
+	case TimezoneAMERICAPORTAUPRINCE:
+		return true
+	case TimezoneAMERICAPORTOVELHO:
+		return true
+	case TimezoneAMERICAPUERTORICO:
+		return true
+	case TimezoneAMERICAPUNTAARENAS:
+		return true
+	case TimezoneAMERICARANKININLET:
+		return true
+	case TimezoneAMERICARECIFE:
+		return true
+	case TimezoneAMERICAREGINA:
+		return true
+	case TimezoneAMERICARESOLUTE:
+		return true
+	case TimezoneAMERICARIOBRANCO:
+		return true
+	case TimezoneAMERICASANTAREM:
+		return true
+	case TimezoneAMERICASANTIAGO:
+		return true
+	case TimezoneAMERICASANTODOMINGO:
+		return true
+	case TimezoneAMERICASAOPAULO:
+		return true
+	case TimezoneAMERICASCORESBYSUND:
+		return true
+	case TimezoneAMERICASITKA:
+		return true
+	case TimezoneAMERICASTJOHNS:
+		return true
+	case TimezoneAMERICASWIFTCURRENT:
+		return true
+	case TimezoneAMERICATEGUCIGALPA:
+		return true
+	case TimezoneAMERICATHULE:
+		return true
+	case TimezoneAMERICATIJUANA:
+		return true
+	case TimezoneAMERICATORONTO:
+		return true
+	case TimezoneAMERICAVANCOUVER:
+		return true
+	case TimezoneAMERICAWHITEHORSE:
+		return true
+	case TimezoneAMERICAWINNIPEG:
+		return true
+	case TimezoneAMERICAYAKUTAT:
+		return true
+	case TimezoneANTARCTICACASEY:
+		return true
+	case TimezoneANTARCTICADAVIS:
+		return true
+	case TimezoneANTARCTICAMACQUARIE:
+		return true
+	case TimezoneANTARCTICAMAWSON:
+		return true
+	case TimezoneANTARCTICAPALMER:
+		return true
+	case TimezoneANTARCTICAROTHERA:
+		return true
+	case TimezoneANTARCTICATROLL:
+		return true
+	case TimezoneANTARCTICAVOSTOK:
+		return true
+	case TimezoneASIAALMATY:
+		return true
+	case TimezoneASIAAMMAN:
+		return true
+	case TimezoneASIAANADYR:
+		return true
+	case TimezoneASIAAQTAU:
+		return true
+	case TimezoneASIAAQTOBE:
+		return true
+	case TimezoneASIAASHGABAT:
+		return true
+	case TimezoneASIAATYRAU:
+		return true
+	case TimezoneASIABAGHDAD:
+		return true
+	case TimezoneASIABAKU:
+		return true
+	case TimezoneASIABANGKOK:
+		return true
+	case TimezoneASIABARNAUL:
+		return true
+	case TimezoneASIABEIRUT:
+		return true
+	case TimezoneASIABISHKEK:
+		return true
+	case TimezoneASIACHITA:
+		return true
+	case TimezoneASIACOLOMBO:
+		return true
+	case TimezoneASIADAMASCUS:
+		return true
+	case TimezoneASIADHAKA:
+		return true
+	case TimezoneASIADILI:
+		return true
+	case TimezoneASIADUBAI:
+		return true
+	case TimezoneASIADUSHANBE:
+		return true
+	case TimezoneASIAFAMAGUSTA:
+		return true
+	case TimezoneASIAGAZA:
+		return true
+	case TimezoneASIAHEBRON:
+		return true
+	case TimezoneASIAHOCHIMINH:
+		return true
+	case TimezoneASIAHONGKONG:
+		return true
+	case TimezoneASIAHOVD:
+		return true
+	case TimezoneASIAIRKUTSK:
+		return true
+	case TimezoneASIAJAKARTA:
+		return true
+	case TimezoneASIAJAYAPURA:
+		return true
+	case TimezoneASIAJERUSALEM:
+		return true
+	case TimezoneASIAKABUL:
+		return true
+	case TimezoneASIAKAMCHATKA:
+		return true
+	case TimezoneASIAKARACHI:
+		return true
+	case TimezoneASIAKATHMANDU:
+		return true
+	case TimezoneASIAKHANDYGA:
+		return true
+	case TimezoneASIAKOLKATA:
+		return true
+	case TimezoneASIAKRASNOYARSK:
+		return true
+	case TimezoneASIAKUCHING:
+		return true
+	case TimezoneASIAMACAU:
+		return true
+	case TimezoneASIAMAGADAN:
+		return true
+	case TimezoneASIAMAKASSAR:
+		return true
+	case TimezoneASIAMANILA:
+		return true
+	case TimezoneASIANICOSIA:
+		return true
+	case TimezoneASIANOVOKUZNETSK:
+		return true
+	case TimezoneASIANOVOSIBIRSK:
+		return true
+	case TimezoneASIAOMSK:
+		return true
+	case TimezoneASIAORAL:
+		return true
+	case TimezoneASIAPONTIANAK:
+		return true
+	case TimezoneASIAPYONGYANG:
+		return true
+	case TimezoneASIAQATAR:
+		return true
+	case TimezoneASIAQOSTANAY:
+		return true
+	case TimezoneASIAQYZYLORDA:
+		return true
+	case TimezoneASIASAKHALIN:
+		return true
+	case TimezoneASIASAMARKAND:
+		return true
+	case TimezoneASIASEOUL:
+		return true
+	case TimezoneASIASHANGHAI:
+		return true
+	case TimezoneASIASINGAPORE:
+		return true
+	case TimezoneASIASREDNEKOLYMSK:
+		return true
+	case TimezoneASIATAIPEI:
+		return true
+	case TimezoneASIATASHKENT:
+		return true
+	case TimezoneASIATBILISI:
+		return true
+	case TimezoneASIATEHRAN:
+		return true
+	case TimezoneASIATHIMPHU:
+		return true
+	case TimezoneASIATOMSK:
+		return true
+	case TimezoneASIAULAANBAATAR:
+		return true
+	case TimezoneASIAURUMQI:
+		return true
+	case TimezoneASIAUSTNERA:
+		return true
+	case TimezoneASIAVLADIVOSTOK:
+		return true
+	case TimezoneASIAYAKUTSK:
+		return true
+	case TimezoneASIAYANGON:
+		return true
+	case TimezoneASIAYEKATERINBURG:
+		return true
+	case TimezoneASIAYEREVAN:
+		return true
+	case TimezoneATLANTICAZORES:
+		return true
+	case TimezoneATLANTICBERMUDA:
+		return true
+	case TimezoneATLANTICCANARY:
+		return true
+	case TimezoneATLANTICCAPEVERDE:
+		return true
+	case TimezoneATLANTICFAROE:
+		return true
+	case TimezoneATLANTICMADEIRA:
+		return true
+	case TimezoneATLANTICSOUTHGEORGIA:
+		return true
+	case TimezoneATLANTICSTANLEY:
+		return true
+	case TimezoneAUSTRALIAADELAIDE:
+		return true
+	case TimezoneAUSTRALIABRISBANE:
+		return true
+	case TimezoneAUSTRALIABROKENHILL:
+		return true
+	case TimezoneAUSTRALIADARWIN:
+		return true
+	case TimezoneAUSTRALIAEUCLA:
+		return true
+	case TimezoneAUSTRALIAHOBART:
+		return true
+	case TimezoneAUSTRALIALINDEMAN:
+		return true
+	case TimezoneAUSTRALIALORDHOWE:
+		return true
+	case TimezoneAUSTRALIAMELBOURNE:
+		return true
+	case TimezoneAUSTRALIAPERTH:
+		return true
+	case TimezoneAUSTRALIASYDNEY:
+		return true
+	case TimezoneEUROPEANDORRA:
+		return true
+	case TimezoneEUROPEASTRAKHAN:
+		return true
+	case TimezoneEUROPEATHENS:
+		return true
+	case TimezoneEUROPEBELGRADE:
+		return true
+	case TimezoneEUROPEBERLIN:
+		return true
+	case TimezoneEUROPEBRUSSELS:
+		return true
+	case TimezoneEUROPEBUCHAREST:
+		return true
+	case TimezoneEUROPEBUDAPEST:
+		return true
+	case TimezoneEUROPECHISINAU:
+		return true
+	case TimezoneEUROPEDUBLIN:
+		return true
+	case TimezoneEUROPEGIBRALTAR:
+		return true
+	case TimezoneEUROPEHELSINKI:
+		return true
+	case TimezoneEUROPEISTANBUL:
+		return true
+	case TimezoneEUROPEKALININGRAD:
+		return true
+	case TimezoneEUROPEKIROV:
+		return true
+	case TimezoneEUROPEKYIV:
+		return true
+	case TimezoneEUROPELISBON:
+		return true
+	case TimezoneEUROPELONDON:
+		return true
+	case TimezoneEUROPEMADRID:
+		return true
+	case TimezoneEUROPEMALTA:
+		return true
+	case TimezoneEUROPEMINSK:
+		return true
+	case TimezoneEUROPEMOSCOW:
+		return true
+	case TimezoneEUROPEPARIS:
+		return true
+	case TimezoneEUROPEPRAGUE:
+		return true
+	case TimezoneEUROPERIGA:
+		return true
+	case TimezoneEUROPEROME:
+		return true
+	case TimezoneEUROPESAMARA:
+		return true
+	case TimezoneEUROPESARATOV:
+		return true
+	case TimezoneEUROPESIMFEROPOL:
+		return true
+	case TimezoneEUROPESOFIA:
+		return true
+	case TimezoneEUROPETALLINN:
+		return true
+	case TimezoneEUROPETIRANE:
+		return true
+	case TimezoneEUROPEULYANOVSK:
+		return true
+	case TimezoneEUROPEVIENNA:
+		return true
+	case TimezoneEUROPEVILNIUS:
+		return true
+	case TimezoneEUROPEVOLGOGRAD:
+		return true
+	case TimezoneEUROPEWARSAW:
+		return true
+	case TimezoneEUROPEZURICH:
+		return true
+	case TimezoneINDIANCHAGOS:
+		return true
+	case TimezoneINDIANMALDIVES:
+		return true
+	case TimezoneINDIANMAURITIUS:
+		return true
+	case TimezonePACIFICAPIA:
+		return true
+	case TimezonePACIFICAUCKLAND:
+		return true
+	case TimezonePACIFICBOUGAINVILLE:
+		return true
+	case TimezonePACIFICCHATHAM:
+		return true
+	case TimezonePACIFICEASTER:
+		return true
+	case TimezonePACIFICEFATE:
+		return true
+	case TimezonePACIFICFAKAOFO:
+		return true
+	case TimezonePACIFICFIJI:
+		return true
+	case TimezonePACIFICGALAPAGOS:
+		return true
+	case TimezonePACIFICGAMBIER:
+		return true
+	case TimezonePACIFICGUADALCANAL:
+		return true
+	case TimezonePACIFICGUAM:
+		return true
+	case TimezonePACIFICHONOLULU:
+		return true
+	case TimezonePACIFICKANTON:
+		return true
+	case TimezonePACIFICKIRITIMATI:
+		return true
+	case TimezonePACIFICKOSRAE:
+		return true
+	case TimezonePACIFICKWAJALEIN:
+		return true
+	case TimezonePACIFICMARQUESAS:
+		return true
+	case TimezonePACIFICNAURU:
+		return true
+	case TimezonePACIFICNIUE:
+		return true
+	case TimezonePACIFICNORFOLK:
+		return true
+	case TimezonePACIFICNOUMEA:
+		return true
+	case TimezonePACIFICPAGOPAGO:
+		return true
+	case TimezonePACIFICPALAU:
+		return true
+	case TimezonePACIFICPITCAIRN:
+		return true
+	case TimezonePACIFICPORTMORESBY:
+		return true
+	case TimezonePACIFICRAROTONGA:
+		return true
+	case TimezonePACIFICTAHITI:
+		return true
+	case TimezonePACIFICTARAWA:
+		return true
+	case TimezonePACIFICTONGATAPU:
+		return true
+	case TimezoneUTC:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscriptKind.
+const (
+	TranscriptKindACTION         TranscriptKind = "ACTION"
+	TranscriptKindAGENT          TranscriptKind = "AGENT"
+	TranscriptKindCONTACT        TranscriptKind = "CONTACT"
+	TranscriptKindOPERATORDIRECT TranscriptKind = "OPERATOR_DIRECT"
+	TranscriptKindWHISPER        TranscriptKind = "WHISPER"
+)
+
+// Valid indicates whether the value is a known member of the TranscriptKind enum.
+func (e TranscriptKind) Valid() bool {
+	switch e {
+	case TranscriptKindACTION:
+		return true
+	case TranscriptKindAGENT:
+		return true
+	case TranscriptKindCONTACT:
+		return true
+	case TranscriptKindOPERATORDIRECT:
+		return true
+	case TranscriptKindWHISPER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceBadge.
+const (
+	WorkspaceBadgeCLAUDEPROJECT WorkspaceBadge = "CLAUDE_PROJECT"
+	WorkspaceBadgeGIT           WorkspaceBadge = "GIT"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceBadge enum.
+func (e WorkspaceBadge) Valid() bool {
+	switch e {
+	case WorkspaceBadgeCLAUDEPROJECT:
+		return true
+	case WorkspaceBadgeGIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// ArtifactKind defines model for ArtifactKind.
+type ArtifactKind string
+
+// AttachFlowStyle defines model for AttachFlowStyle.
+type AttachFlowStyle string
+
 // AudioMessageData defines model for AudioMessageData.
 type AudioMessageData struct {
 	FileLength *int    `json:"fileLength,omitempty"`
@@ -628,6 +2257,9 @@ type AudioMessageData struct {
 	Seconds    *int    `json:"seconds,omitempty"`
 	Url        *string `json:"url,omitempty"`
 }
+
+// BufferSize defines model for BufferSize.
+type BufferSize string
 
 // ButtonItem defines model for ButtonItem.
 type ButtonItem struct {
@@ -642,7 +2274,7 @@ type ChannelChatPresenceUpdatedPayload struct {
 	ObservedAt time.Time          `json:"observedAt"`
 	OwnerId    string             `json:"ownerId"`
 	SenderId   string             `json:"senderId"`
-	State      interface{}        `json:"state"`
+	State      ChatPresenceType   `json:"state"`
 }
 
 // ChannelCreatedPayload defines model for ChannelCreatedPayload.
@@ -802,6 +2434,9 @@ type ChannelEventChannelRemotesSynced struct {
 	Payload ChannelRemotesSyncedPayload `json:"payload"`
 }
 
+// ChannelKind defines model for ChannelKind.
+type ChannelKind string
+
 // ChannelLoggedOutPayload defines model for ChannelLoggedOutPayload.
 type ChannelLoggedOutPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
@@ -855,7 +2490,7 @@ type ChannelMessageEditedPayload struct {
 	ChannelId   openapi_types.UUID `json:"channelId"`
 	Content     interface{}        `json:"content,omitempty"`
 	MessageId   string             `json:"messageId"`
-	MessageType interface{}        `json:"messageType"`
+	MessageType MessageType        `json:"messageType"`
 	OwnerId     string             `json:"ownerId"`
 	Platform    Platform           `json:"platform"`
 	RemoteId    string             `json:"remoteId"`
@@ -1440,7 +3075,7 @@ type ChannelSyncCompletedPayload struct {
 // ChannelSyncProgressPayload defines model for ChannelSyncProgressPayload.
 type ChannelSyncProgressPayload struct {
 	ChannelId       openapi_types.UUID `json:"channelId"`
-	HistorySyncType interface{}        `json:"historySyncType"`
+	HistorySyncType HistorySyncType    `json:"historySyncType"`
 	OwnerId         string             `json:"ownerId"`
 	Percent         int                `json:"percent"`
 }
@@ -1459,6 +3094,9 @@ type ChatPresenceType string
 type CheckIsOnPlatformOutput struct {
 	Results []ContactCheck `json:"results"`
 }
+
+// ClassificationMethod defines model for ClassificationMethod.
+type ClassificationMethod string
 
 // ConnectChannelOutput defines model for ConnectChannelOutput.
 type ConnectChannelOutput struct {
@@ -1493,6 +3131,9 @@ type ContactInfo struct {
 	PhoneNumber  string  `json:"phoneNumber"`
 }
 
+// ContactKind defines model for ContactKind.
+type ContactKind string
+
 // ContactMessageData defines model for ContactMessageData.
 type ContactMessageData struct {
 	DisplayName *string `json:"displayName,omitempty"`
@@ -1507,6 +3148,9 @@ type CreateChannelOutput struct {
 	Platform  Platform      `json:"platform"`
 	Status    ChannelStatus `json:"status"`
 }
+
+// CurrencyCode defines model for CurrencyCode.
+type CurrencyCode string
 
 // DeleteChannelOutput defines model for DeleteChannelOutput.
 type DeleteChannelOutput struct {
@@ -1855,6 +3499,15 @@ type InternalTextContent struct {
 	Text string `json:"text"`
 }
 
+// IssueArchiveReason defines model for IssueArchiveReason.
+type IssueArchiveReason string
+
+// IssueStatus defines model for IssueStatus.
+type IssueStatus string
+
+// Language defines model for Language.
+type Language string
+
 // ListChannelsItem defines model for ListChannelsItem.
 type ListChannelsItem struct {
 	CreatedAt   time.Time     `json:"createdAt"`
@@ -1908,6 +3561,9 @@ type MembershipAction string
 // MessageType defines model for MessageType.
 type MessageType string
 
+// OwnerKind defines model for OwnerKind.
+type OwnerKind string
+
 // Platform defines model for Platform.
 type Platform string
 
@@ -1924,6 +3580,12 @@ type PollOption struct {
 
 // PresenceType defines model for PresenceType.
 type PresenceType string
+
+// ProviderKind defines model for ProviderKind.
+type ProviderKind string
+
+// ProviderStatus defines model for ProviderStatus.
+type ProviderStatus string
 
 // ProxyProtocol defines model for ProxyProtocol.
 type ProxyProtocol string
@@ -1952,6 +3614,9 @@ type RestartChannelOutput struct {
 	Id    string `json:"id"`
 	State string `json:"state"`
 }
+
+// Role defines model for Role.
+type Role string
 
 // SendAudioOutput defines model for SendAudioOutput.
 type SendAudioOutput struct {
@@ -2047,6 +3712,9 @@ type SendVideoOutput struct {
 	Timestamp int    `json:"timestamp"`
 }
 
+// SenderIdentity defines model for SenderIdentity.
+type SenderIdentity string
+
 // ServerEvent defines model for ServerEvent.
 type ServerEvent struct {
 	union json.RawMessage
@@ -2063,6 +3731,24 @@ type StickerMessageData struct {
 	PngThumbnail *[]int  `json:"pngThumbnail,omitempty"`
 	Url          *string `json:"url,omitempty"`
 }
+
+// StopKind defines model for StopKind.
+type StopKind string
+
+// StopResolution defines model for StopResolution.
+type StopResolution string
+
+// ThreadMode defines model for ThreadMode.
+type ThreadMode string
+
+// ThreadStatus defines model for ThreadStatus.
+type ThreadStatus string
+
+// Timezone defines model for Timezone.
+type Timezone string
+
+// TranscriptKind defines model for TranscriptKind.
+type TranscriptKind string
 
 // VideoMessageData defines model for VideoMessageData.
 type VideoMessageData struct {
@@ -2165,6 +3851,9 @@ type WhatsAppVideoContent struct {
 	VideoMessage VideoMessageData `json:"videoMessage"`
 }
 
+// WorkspaceBadge defines model for WorkspaceBadge.
+type WorkspaceBadge string
+
 // ListChannelsParams defines parameters for ListChannels.
 type ListChannelsParams struct {
 	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -2183,7 +3872,7 @@ type CreateWhatsAppChannelJSONBody struct {
 
 // SetPresenceJSONBody defines parameters for SetPresence.
 type SetPresenceJSONBody struct {
-	Presence interface{} `json:"presence"`
+	Presence PresenceType `json:"presence"`
 }
 
 // ArchiveRemoteJSONBody defines parameters for ArchiveRemote.
@@ -2342,7 +4031,7 @@ type SendMediaJSONBody struct {
 	Caption   *string     `json:"caption,omitempty"`
 	ChannelId string      `json:"channelId"`
 	FileName  *string     `json:"fileName,omitempty"`
-	MediaType interface{} `json:"mediaType"`
+	MediaType MessageType `json:"mediaType"`
 	MediaUrl  string      `json:"mediaUrl"`
 	RemoteId  string      `json:"remoteId"`
 }
@@ -2358,9 +4047,9 @@ type SendPollJSONBody struct {
 
 // SendChatPresenceJSONBody defines parameters for SendChatPresence.
 type SendChatPresenceJSONBody struct {
-	ChannelId string      `json:"channelId"`
-	Presence  interface{} `json:"presence"`
-	RemoteId  string      `json:"remoteId"`
+	ChannelId string           `json:"channelId"`
+	Presence  ChatPresenceType `json:"presence"`
+	RemoteId  string           `json:"remoteId"`
 }
 
 // SendReactionJSONBody defines parameters for SendReaction.
@@ -2379,7 +4068,7 @@ type SendStatusJSONBody struct {
 	ChannelId       string      `json:"channelId"`
 	Content         string      `json:"content"`
 	Font            *string     `json:"font,omitempty"`
-	StatusType      interface{} `json:"statusType"`
+	StatusType      MessageType `json:"statusType"`
 }
 
 // SendStickerJSONBody defines parameters for SendSticker.

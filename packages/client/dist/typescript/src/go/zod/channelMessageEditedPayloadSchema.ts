@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { messageTypeSchema } from "./messageTypeSchema.ts";
 import { platformSchema } from "./platformSchema.ts";
 import { z } from "zod/v4";
 
@@ -10,7 +11,9 @@ export const channelMessageEditedPayloadSchema = z.object({
     "channelId": z.uuid(),
 "content": z.optional(z.any()),
 "messageId": z.string(),
-"messageType": z.any(),
+get "messageType"(){
+                return messageTypeSchema
+              },
 "ownerId": z.string(),
 get "platform"(){
                 return platformSchema

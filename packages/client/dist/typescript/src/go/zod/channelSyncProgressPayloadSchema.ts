@@ -3,11 +3,14 @@
 * Do not edit manually.
 */
 
+import { historySyncTypeSchema } from "./historySyncTypeSchema.ts";
 import { z } from "zod/v4";
 
 export const channelSyncProgressPayloadSchema = z.object({
     "channelId": z.uuid(),
-"historySyncType": z.any(),
+get "historySyncType"(){
+                return historySyncTypeSchema
+              },
 "ownerId": z.string(),
 "percent": z.int()
     })

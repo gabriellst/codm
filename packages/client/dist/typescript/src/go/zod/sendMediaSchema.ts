@@ -4,6 +4,7 @@
 */
 
 import { errorResponseSchema } from "./errorResponseSchema.ts";
+import { messageTypeSchema } from "./messageTypeSchema.ts";
 import { sendMediaOutputSchema } from "./sendMediaOutputSchema.ts";
 import { z } from "zod/v4";
 
@@ -21,7 +22,9 @@ export const sendMediaMutationRequestSchema = z.object({
     "caption": z.optional(z.string()),
 "channelId": z.string(),
 "fileName": z.optional(z.string()),
-"mediaType": z.any(),
+get "mediaType"(){
+                return messageTypeSchema
+              },
 "mediaUrl": z.string(),
 "remoteId": z.string()
     })

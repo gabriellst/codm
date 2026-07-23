@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { ChatPresenceType } from "./ChatPresenceType.ts";
 
 export type ChannelChatPresenceUpdatedPayload = {
     /**
@@ -25,5 +26,8 @@ export type ChannelChatPresenceUpdatedPayload = {
      * @type string
     */
     senderId: string;
-    state: any;
+    /**
+     * @type string
+    */
+    state: ChatPresenceType;
 };

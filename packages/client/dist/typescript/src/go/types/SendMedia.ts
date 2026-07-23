@@ -4,6 +4,7 @@
 */
 
 import type { ErrorResponse } from "./ErrorResponse.ts";
+import type { MessageType } from "./MessageType.ts";
 import type { SendMediaOutput } from "./SendMediaOutput.ts";
 
 /**
@@ -29,7 +30,10 @@ export type SendMediaMutationRequest = {
      * @type string | undefined
     */
     fileName?: string;
-    mediaType: any;
+    /**
+     * @type string
+    */
+    mediaType: MessageType;
     /**
      * @type string
     */

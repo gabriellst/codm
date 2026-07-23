@@ -35,7 +35,10 @@ func collectUnions(w *walker) (map[string]*UnionAnnotation, error) {
 	primary := map[string]*UnionAnnotation{}
 
 	for _, ppath := range w.sortedPkgPaths() {
-		if !strings.HasPrefix(ppath, "template/api-go/") {
+		// Own module + the generated contracts bindings: union annotations are STAMPED
+		// onto the generated payload structs (template/contracts-go/wire) by the wire
+		// codegen — the scanner must find them there (union-slots spec §2.2).
+		if !strings.HasPrefix(ppath, "template/api-go/") && !strings.HasPrefix(ppath, "template/contracts-go/") {
 			continue
 		}
 		pkg := w.byPath[ppath]

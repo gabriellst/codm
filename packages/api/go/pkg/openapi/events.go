@@ -179,7 +179,9 @@ func collectEventMappings(pkg *packages.Package) []eventMapping {
 		if rhs.TypeArgs() == nil || rhs.TypeArgs().Len() == 0 {
 			continue
 		}
-		payloadType, ok := rhs.TypeArgs().At(0).(*types.Named)
+		// Unalias: after the union-slots binding swap, context payload types are
+		// aliases to the generated wire structs (`type X = wire.X`).
+		payloadType, ok := types.Unalias(rhs.TypeArgs().At(0)).(*types.Named)
 		if !ok {
 			continue
 		}

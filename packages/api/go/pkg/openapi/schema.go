@@ -213,6 +213,8 @@ func (c *schemaCtx) unionSchema(structName string, st *types.Struct, u *UnionAnn
 // typeSchema converts a Go type into an OpenAPI 3.1 schema fragment (inline).
 // Named structs promote to $ref via ensureComponent.
 func (c *schemaCtx) typeSchema(t types.Type) map[string]any {
+	// Unalias: `type X = wire.X` swaps (union-slots bindings) surface as *types.Alias.
+	t = types.Unalias(t)
 	switch tt := t.(type) {
 	case *types.Pointer:
 		inner := c.typeSchema(tt.Elem())
@@ -434,7 +436,9 @@ func (w *walker) findTypeByName(name string) *types.Named {
 			continue
 		}
 		if tn, ok := obj.(*types.TypeName); ok {
-			if n, ok := tn.Type().(*types.Named); ok {
+			// Unalias: a variant name may resolve through an alias to a generated
+			// wire struct (union-slots binding swap).
+			if n, ok := types.Unalias(tn.Type()).(*types.Named); ok {
 				return n
 			}
 		}

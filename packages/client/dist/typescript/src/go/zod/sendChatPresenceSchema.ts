@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { chatPresenceTypeSchema } from "./chatPresenceTypeSchema.ts";
 import { errorResponseSchema } from "./errorResponseSchema.ts";
 import { sendChatPresenceOutputSchema } from "./sendChatPresenceOutputSchema.ts";
 import { z } from "zod/v4";
@@ -19,7 +20,9 @@ export const sendChatPresenceErrorSchema = z.lazy(() => errorResponseSchema)
 
 export const sendChatPresenceMutationRequestSchema = z.object({
     "channelId": z.string(),
-"presence": z.any(),
+get "presence"(){
+                return chatPresenceTypeSchema
+              },
 "remoteId": z.string()
     })
 

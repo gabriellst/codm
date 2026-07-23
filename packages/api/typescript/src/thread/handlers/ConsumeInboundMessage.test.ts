@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
-import { ChannelKind, ContactKind } from '@codedm/contracts-typescript/wire/enums'
+import { ChannelKind, MessageType } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from './ConsumeInboundMessage'
@@ -28,20 +28,25 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 		await testBed.destroy()
 	})
 
+	// Verbatim gateway payload (union-slots pilot): text rides the WHATSAPP/TEXT content variant.
 	const buildEvent = (channelId: string, contactExternalId: string, messageId: string) =>
 		new ChannelMessageReceivedEvent({
 			ownerId: OPERATOR_ID,
 			payload: {
 				channelId,
 				messageId,
-				contactExternalId,
-				contactDisplayName: 'Test Contact',
-				contactKind: ContactKind.CONTACT,
-				senderExternalId: contactExternalId,
+				internalMessageId: crypto.randomUUID(),
+				remoteId: contactExternalId,
+				senderId: contactExternalId,
+				fromMe: false,
 				isGroup: false,
-				text: 'ship the coupon fix',
+				timestamp: Math.floor(Date.now() / 1000),
+				occurredAt: new Date(),
+				observedAt: new Date(),
+				messageType: MessageType.TEXT,
+				content: { text: 'ship the coupon fix' },
 				platform: ChannelKind.WHATSAPP,
-				receivedAt: new Date(),
+				ownerId: OPERATOR_ID,
 			},
 		})
 

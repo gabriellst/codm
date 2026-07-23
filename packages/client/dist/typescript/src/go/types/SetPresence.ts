@@ -4,6 +4,7 @@
 */
 
 import type { ErrorResponse } from "./ErrorResponse.ts";
+import type { PresenceType } from "./PresenceType.ts";
 
 export type SetPresencePathParams = {
     /**
@@ -23,7 +24,10 @@ export type SetPresence204 = any;
 export type SetPresenceError = ErrorResponse;
 
 export type SetPresenceMutationRequest = {
-    presence: any;
+    /**
+     * @type string
+    */
+    presence: PresenceType;
 };
 
 export type SetPresenceMutationResponse = SetPresence204;

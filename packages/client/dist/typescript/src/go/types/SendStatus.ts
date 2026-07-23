@@ -4,6 +4,7 @@
 */
 
 import type { ErrorResponse } from "./ErrorResponse.ts";
+import type { MessageType } from "./MessageType.ts";
 import type { SendStatusOutput } from "./SendStatusOutput.ts";
 
 /**
@@ -37,7 +38,10 @@ export type SendStatusMutationRequest = {
      * @type string | undefined
     */
     font?: string;
-    statusType: any;
+    /**
+     * @type string
+    */
+    statusType: MessageType;
 };
 
 export type SendStatusMutationResponse = SendStatus201;

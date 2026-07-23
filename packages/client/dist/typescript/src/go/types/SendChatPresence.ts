@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { ChatPresenceType } from "./ChatPresenceType.ts";
 import type { ErrorResponse } from "./ErrorResponse.ts";
 import type { SendChatPresenceOutput } from "./SendChatPresenceOutput.ts";
 
@@ -21,7 +22,10 @@ export type SendChatPresenceMutationRequest = {
      * @type string
     */
     channelId: string;
-    presence: any;
+    /**
+     * @type string
+    */
+    presence: ChatPresenceType;
     /**
      * @type string
     */

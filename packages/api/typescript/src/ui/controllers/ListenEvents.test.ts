@@ -33,17 +33,22 @@ describe('ListenEvents SSE broadcaster filtering', () => {
 	it('a non-browser event is never delivered (filtered by name)', () => {
 		const notBrowser = new ChannelMessageReceivedEvent({
 			ownerId: OWNER_A,
+			// Verbatim gateway payload (union-slots pilot).
 			payload: {
 				channelId: 'ch-1',
 				messageId: 'm-1',
-				contactExternalId: 'c-1',
-				contactDisplayName: 'x',
-				contactKind: 'CONTACT' as never,
-				senderExternalId: 'c-1',
+				internalMessageId: 'im-1',
+				remoteId: 'c-1',
+				senderId: 'c-1',
+				fromMe: false,
 				isGroup: false,
-				text: 'hi',
-				platform: 'WHATSAPP' as never,
-				receivedAt: new Date(),
+				timestamp: 0,
+				occurredAt: new Date(),
+				observedAt: new Date(),
+				messageType: 'TEXT' as never,
+				content: { text: 'hi' },
+				platform: 'WHATSAPP',
+				ownerId: OWNER_A,
 			},
 		}) as unknown as BaseIntegrationEvent
 		expect(browserDeliveryOwnerId(notBrowser)).toBeUndefined()

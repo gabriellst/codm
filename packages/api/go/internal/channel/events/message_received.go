@@ -1,51 +1,21 @@
 package events
 
 import (
-	"encoding/json"
-	"time"
-
-	msgenums "template/api-go/internal/channel/enums"
-	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/types"
+	"template/contracts-go/wire"
 
 	"github.com/google/uuid"
 )
 
-// ChannelMessageReceivedPayload is the data carried by the message-received events.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-// @union field=PlatformData discriminatedBy=Platform
-// @variant Platform=WHATSAPP type=WhatsAppChannelMessageReceivedPlatformData
-// @variant Platform=INTERNAL type=InternalChannelMessageReceivedPlatformData
-// @union field=Content discriminatedBy=Platform,MessageType
-// @variant Platform=WHATSAPP MessageType=TEXT type=WhatsAppTextContent
-// @variant Platform=WHATSAPP MessageType=IMAGE type=WhatsAppImageContent
-// @variant Platform=WHATSAPP MessageType=VIDEO type=WhatsAppVideoContent
-// @variant Platform=WHATSAPP MessageType=AUDIO type=WhatsAppAudioContent
-// @variant Platform=WHATSAPP MessageType=DOCUMENT type=WhatsAppDocumentContent
-// @variant Platform=WHATSAPP MessageType=STICKER type=WhatsAppStickerContent
-// @variant Platform=WHATSAPP MessageType=LOCATION type=WhatsAppLocationContent
-// @variant Platform=WHATSAPP MessageType=CONTACT type=WhatsAppContactContent
-// @variant Platform=WHATSAPP MessageType=POLL type=WhatsAppPollContent
-// @variant Platform=WHATSAPP MessageType=REACTION type=WhatsAppReactionContent
-// @variant Platform=INTERNAL MessageType=TEXT type=InternalTextContent
-type ChannelMessageReceivedPayload struct {
-	ChannelID         uuid.UUID            `json:"channelId" validate:"required"`
-	MessageID         string               `json:"messageId" validate:"required"`
-	InternalMessageID uuid.UUID            `json:"internalMessageId" validate:"required"`
-	RemoteID          string               `json:"remoteId" validate:"required"`
-	SenderID     string               `json:"senderId" validate:"required"`
-	FromMe       bool                 `json:"fromMe" validate:"required"`
-	IsGroup      bool                 `json:"isGroup"`
-	Timestamp    int64                `json:"timestamp" validate:"required"`
-	OccurredAt   time.Time            `json:"occurredAt" validate:"required"` // when WhatsApp says the message was sent
-	ObservedAt   time.Time            `json:"observedAt" validate:"required"` // when our server learned about it
-	MessageType  msgenums.MessageType `json:"messageType" validate:"required"`
-	Content      json.RawMessage      `json:"content,omitempty"`
-	Platform     sharedenums.Platform `json:"platform" validate:"required"`
-	PlatformData json.RawMessage      `json:"platformData,omitempty"`
-	OwnerID      string               `json:"ownerId" validate:"required"`
-}
+// ChannelMessageReceivedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — the union-slots PILOT: the payload
+// DECLARATION (fields + the stamped `// @union` / `// @variant` annotations the
+// pkg/openapi scanner reads) now lives on the generated binding, single-sourced from
+// `packages/contracts/wire/events/channel-message-received.tsp`. The union variant
+// SHAPES stay in this workspace (owner `apiGo`): the WhatsApp*Content structs in
+// services/gateway/whatsapp, InternalTextContent in services/gateway, and the
+// *PlatformData structs below.
+type ChannelMessageReceivedPayload = wire.ChannelMessageReceivedPayload
 
 // WhatsAppChannelMessageReceivedPlatformData holds WhatsApp-specific fields for message received events.
 type WhatsAppChannelMessageReceivedPlatformData struct {

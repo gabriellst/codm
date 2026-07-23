@@ -3,7 +3,10 @@
 package wire
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // AgentReplyDraftedEventName is the wire discriminator for AgentReplyDraftedEvent.
@@ -238,26 +241,63 @@ func (e ChannelMessageEditedEvent) EventName() string { return ChannelMessageEdi
 const ChannelMessageReceivedEventName = "integration.channel_message.received"
 
 // ChannelMessageReceivedEvent — wire shape of integration.channel_message.received.
-// BC1 Channel Gateway -> BC4 Thread & Routing. A normalized inbound message on a connected channel. Descends medscall integration.channel_message.received. The ContactRef VO is flattened to scalar contact* fields (the wire codegen carries scalars + enums, not nested models); the core reassembles it. `receivedAt` is when the platform says the message was sent. ownerId travels on the envelope.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A normalized inbound message on a connected channel — the union-slots PILOT (spec RATIFIED 2026-07-22): fields are the stable verbatim gateway payload (medscall channel.message_received); `content` and `platformData` are opaque union SLOTS whose variant shapes live in the owner workspace (apiGo) and reach consumers only through the owner's generated client schemas. The payload redeclares `ownerId`/`occurredAt` on purpose: the verbatim wire payload carries them INSIDE the payload in addition to the envelope. `occurredAt` is when the platform says the message was sent; `observedAt` is when our gateway learned about it.
 type ChannelMessageReceivedEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	MessageID string `json:"messageId"`
-	ContactExternalID string `json:"contactExternalId"`
-	ContactDisplayName string `json:"contactDisplayName"`
-	ContactKind ContactKind `json:"contactKind"`
-	SenderExternalID string `json:"senderExternalId"`
+	InternalMessageID uuid.UUID `json:"internalMessageId"`
+	RemoteID string `json:"remoteId"`
+	SenderID string `json:"senderId"`
+	FromMe bool `json:"fromMe"`
 	IsGroup bool `json:"isGroup"`
-	Text string `json:"text"`
-	QuotedEntryID *string `json:"quotedEntryId,omitempty"`
-	Platform ChannelKind `json:"platform"`
-	ReceivedAt time.Time `json:"receivedAt"`
+	Timestamp int64 `json:"timestamp"`
+	ObservedAt time.Time `json:"observedAt"`
+	MessageType MessageType `json:"messageType"`
+	Content json.RawMessage `json:"content,omitempty"`
+	Platform string `json:"platform"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
 }
 
 func (e ChannelMessageReceivedEvent) EventName() string { return ChannelMessageReceivedEventName }
+
+// ChannelMessageReceivedPayload — payload of integration.channel_message.received, generated from the contract declaration.
+// Union slot fields are opaque (json.RawMessage); the variant SHAPES live in the owner workspace.
+// @union field=Content discriminatedBy=Platform,MessageType
+// @variant Platform=WHATSAPP MessageType=TEXT type=WhatsAppTextContent
+// @variant Platform=WHATSAPP MessageType=IMAGE type=WhatsAppImageContent
+// @variant Platform=WHATSAPP MessageType=VIDEO type=WhatsAppVideoContent
+// @variant Platform=WHATSAPP MessageType=AUDIO type=WhatsAppAudioContent
+// @variant Platform=WHATSAPP MessageType=DOCUMENT type=WhatsAppDocumentContent
+// @variant Platform=WHATSAPP MessageType=STICKER type=WhatsAppStickerContent
+// @variant Platform=WHATSAPP MessageType=LOCATION type=WhatsAppLocationContent
+// @variant Platform=WHATSAPP MessageType=CONTACT type=WhatsAppContactContent
+// @variant Platform=WHATSAPP MessageType=POLL type=WhatsAppPollContent
+// @variant Platform=WHATSAPP MessageType=REACTION type=WhatsAppReactionContent
+// @variant Platform=INTERNAL MessageType=TEXT type=InternalTextContent
+// @union field=PlatformData discriminatedBy=Platform
+// @variant Platform=WHATSAPP type=WhatsAppChannelMessageReceivedPlatformData
+// @variant Platform=INTERNAL type=InternalChannelMessageReceivedPlatformData
+type ChannelMessageReceivedPayload struct {
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	MessageID string `json:"messageId" validate:"required"`
+	InternalMessageID uuid.UUID `json:"internalMessageId" validate:"required"`
+	RemoteID string `json:"remoteId" validate:"required"`
+	SenderID string `json:"senderId" validate:"required"`
+	FromMe bool `json:"fromMe" validate:"required"`
+	IsGroup bool `json:"isGroup" validate:"required"`
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	OccurredAt time.Time `json:"occurredAt" validate:"required"`
+	ObservedAt time.Time `json:"observedAt" validate:"required"`
+	MessageType MessageType `json:"messageType" validate:"required"`
+	Content json.RawMessage `json:"content,omitempty"`
+	Platform string `json:"platform" validate:"required"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
+	OwnerID string `json:"ownerId" validate:"required"`
+}
 
 // ChannelMessageSeenEventName is the wire discriminator for ChannelMessageSeenEvent.
 const ChannelMessageSeenEventName = "integration.channel_message.seen"

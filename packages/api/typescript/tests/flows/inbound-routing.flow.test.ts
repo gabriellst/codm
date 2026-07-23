@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { z, ZodType } from 'zod'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { MockOutboxDispatcher } from '@codedm/core-typescript'
-import { ChannelKind, ContactKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { ChannelKind, MessageType, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
@@ -66,18 +66,22 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	) =>
 		new ChannelMessageReceivedEvent({
 			ownerId: OPERATOR_ID,
+			// Verbatim gateway payload (union-slots pilot): text rides the WHATSAPP/TEXT content variant.
 			payload: {
 				channelId,
 				messageId,
-				contactExternalId,
-				contactDisplayName: 'Test Contact',
-				contactKind: ContactKind.CONTACT,
-				senderExternalId: opts.senderExternalId ?? contactExternalId,
+				internalMessageId: crypto.randomUUID(),
+				remoteId: contactExternalId,
+				senderId: opts.senderExternalId ?? contactExternalId,
+				fromMe: false,
 				isGroup: false,
-				text: opts.text ?? 'ship the coupon fix',
-				quotedEntryId: undefined,
+				timestamp: Math.floor(Date.now() / 1000),
+				occurredAt: new Date(),
+				observedAt: new Date(),
+				messageType: MessageType.TEXT,
+				content: { text: opts.text ?? 'ship the coupon fix' },
 				platform: ChannelKind.WHATSAPP,
-				receivedAt: new Date(),
+				ownerId: OPERATOR_ID,
 			},
 		})
 

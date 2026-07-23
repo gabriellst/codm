@@ -41,7 +41,7 @@ func (p *MessageReceivedProjector) Handle(ctx context.Context, event types.Domai
 		return err
 	}
 	pl := e.Payload
-	if pl.Platform == sharedenums.PlatformInternal {
+	if pl.Platform == string(sharedenums.PlatformInternal) {
 		return nil
 	}
 	msg := &projections.Message{
@@ -50,7 +50,7 @@ func (p *MessageReceivedProjector) Handle(ctx context.Context, event types.Domai
 		RemoteID:          pl.RemoteID,
 		PlatformMessageID: pl.MessageID,
 		Direction:         string(channelenums.DirectionReceived),
-		Platform:          pl.Platform,
+		Platform:          sharedenums.Platform(pl.Platform),
 		SenderRemoteID:    pl.SenderID,
 		Content:           pl.Content,
 		OccurredAt:        pl.OccurredAt,
