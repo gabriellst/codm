@@ -3,9 +3,8 @@
 //
 // Split out of the old internal/shared/module.go by the core-adequation plan
 // (Lote 6): the core keeps context-agnostic infrastructure; auth middlewares,
-// the SSE ListenEvents controller, the docs routes and the embedded SPA are
-// domain decisions and live here (template core/module.go: "auth middlewares
-// are domain decisions").
+// the SSE ListenEvents controller and the docs routes are domain decisions and
+// live here (template core/module.go: "auth middlewares are domain decisions").
 //
 // Auth is contributed through the core's "app_middlewares" value group (NOT a
 // local fx.Invoke calling router.Use): Use is registration-time, so the core
@@ -16,8 +15,6 @@ package app
 
 import (
 	stdsql "database/sql"
-	"io/fs"
-	"log/slog"
 	"net/http"
 
 	sharedcontrollers "template/api-go/internal/shared/controllers"
@@ -47,7 +44,6 @@ var Module = fx.Module("app",
 
 	// Lifecycle hooks
 	fx.Invoke(registerDocsRoutes),
-	fx.Invoke(registerSPA),
 )
 
 // newAuthMiddleware composes Session → APIKey as a single middleware so the
@@ -64,13 +60,4 @@ func newAuthMiddleware(cfg *config.Config, db *stdsql.DB) types.Middleware {
 
 func registerDocsRoutes(router *httprouter.HttpRouter) {
 	router.RegisterDocsRoutes(public.OpenAPIJSON)
-}
-
-func registerSPA(router *httprouter.HttpRouter) {
-	appFS, err := fs.Sub(public.AppFS, "app")
-	if err != nil {
-		slog.Error("failed to access embedded app filesystem", "error", err)
-		return
-	}
-	router.RegisterSPA(appFS)
 }

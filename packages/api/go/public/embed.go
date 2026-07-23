@@ -1,9 +1,6 @@
 package public
 
-import "embed"
+import _ "embed"
 
 //go:embed docs/openapi.json
 var OpenAPIJSON []byte
-
-//go:embed all:app
-var AppFS embed.FS
