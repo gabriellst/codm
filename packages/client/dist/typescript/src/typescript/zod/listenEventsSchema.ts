@@ -27,6 +27,283 @@ get "stopKind"(){
                 return stopKindSchema
               }
     }), z.object({
+    "name": z.enum(["integration.channel_message.received"]),
+"ownerId": z.string(),
+"payload": z.union([z.union([z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "contextInfo": z.object({
+    "participant": z.optional(z.string()),
+"quotedMessageContent": z.optional(z.any()),
+"quotedMessageType": z.optional(z.string()),
+"quotedSenderName": z.optional(z.string()),
+"stanzaId": z.optional(z.string())
+    }).nullish(),
+"extendedTextMessage": z.object({
+    "matchedText": z.optional(z.string()),
+"text": z.optional(z.string()),
+"title": z.optional(z.string())
+    }).nullish(),
+"forward": z.optional(z.boolean()),
+"messageId": z.optional(z.string()),
+"remoteId": z.optional(z.string()),
+"text": z.string()
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["TEXT"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "imageMessage": z.object({
+    "caption": z.optional(z.string()),
+"fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"height": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"jpegThumbnail": z.optional(z.array(z.int().min(-9007199254740991).max(9007199254740991))),
+"mimetype": z.optional(z.string()),
+"url": z.optional(z.string()),
+"width": z.optional(z.int().min(-9007199254740991).max(9007199254740991))
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["IMAGE"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "videoMessage": z.object({
+    "caption": z.optional(z.string()),
+"fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"jpegThumbnail": z.optional(z.array(z.int().min(-9007199254740991).max(9007199254740991))),
+"mimetype": z.optional(z.string()),
+"seconds": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"url": z.optional(z.string())
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["VIDEO"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "audioMessage": z.object({
+    "fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"mimetype": z.optional(z.string()),
+"ptt": z.optional(z.boolean()),
+"seconds": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"url": z.optional(z.string())
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["AUDIO"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "documentMessage": z.object({
+    "caption": z.optional(z.string()),
+"fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"fileName": z.optional(z.string()),
+"jpegThumbnail": z.optional(z.array(z.int().min(-9007199254740991).max(9007199254740991))),
+"mimetype": z.optional(z.string()),
+"url": z.optional(z.string())
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["DOCUMENT"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "stickerMessage": z.object({
+    "fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
+"isAnimated": z.optional(z.boolean()),
+"mimetype": z.optional(z.string()),
+"pngThumbnail": z.optional(z.array(z.int().min(-9007199254740991).max(9007199254740991))),
+"url": z.optional(z.string())
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["STICKER"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "locationMessage": z.object({
+    "address": z.optional(z.string()),
+"degreesLatitude": z.optional(z.number()),
+"degreesLongitude": z.optional(z.number()),
+"jpegThumbnail": z.optional(z.array(z.int().min(-9007199254740991).max(9007199254740991))),
+"name": z.optional(z.string())
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["LOCATION"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "contactMessage": z.object({
+    "displayName": z.optional(z.string()),
+"vcard": z.optional(z.string())
+    }).nullish(),
+"contacts": z.optional(z.array(z.object({
+    "email": z.optional(z.string()),
+"fullName": z.string(),
+"organization": z.optional(z.string()),
+"phoneNumber": z.string()
+    })))
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["CONTACT"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "pollMessage": z.object({
+    "options": z.array(z.string()),
+"question": z.string()
+    })
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["POLL"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    }), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "reactionMessage": z.object({
+    "key": z.object({
+    "fromMe": z.optional(z.boolean()),
+"id": z.optional(z.string()),
+"remoteId": z.optional(z.string())
+    }).nullish(),
+"text": z.string()
+    }),
+"text": z.optional(z.string())
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["REACTION"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["WHATSAPP"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    })]), z.object({
+    "channelId": z.uuid(),
+"content": z.optional(z.object({
+    "text": z.string()
+    })),
+"fromMe": z.boolean(),
+"internalMessageId": z.uuid(),
+"isGroup": z.boolean(),
+"messageId": z.string(),
+"messageType": z.enum(["TEXT"]),
+"observedAt": z.iso.datetime(),
+"occurredAt": z.iso.datetime(),
+"ownerId": z.string(),
+"platform": z.enum(["INTERNAL"]),
+"platformData": z.optional(z.any()),
+"remoteId": z.string(),
+"senderId": z.string(),
+"timestamp": z.int().min(-9007199254740991).max(9007199254740991)
+    })])
+    }), z.object({
     "name": z.string(),
 "ownerId": z.string(),
 "payload": z.object({

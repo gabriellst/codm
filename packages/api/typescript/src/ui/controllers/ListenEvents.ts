@@ -1,15 +1,24 @@
 import { injectable } from 'tsyringe-neo'
-import {
-	Controller,
-	z,
-	MimeTypes,
-	ExternalMediator,
-	SSE_CONNECTED_FRAME,
-	createSSEResponse,
-	encodeSSEFrame,
-} from '@codedm/core-typescript'
+import { Controller, z, MimeTypes, ExternalMediator, SSE_CONNECTED_FRAME, createSSEResponse, encodeSSEFrame } from '@codedm/core-typescript'
 import { BaseIntegrationEvent } from '@codedm/core-typescript'
 import { ThreadStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
+// Generated zod variant schemas from the OWNER service's client subpath (types/schemas ONLY — never
+// the HTTP client): the composed union below is how this surface re-emits the gateway's
+// channel_message.received with FULL narrowing, without redeclaring a single shape (union-slots
+// spec §2.4 — one shape, N surfaces, zero redeclaration).
+import {
+	channelMessageReceivedPayloadInternalTextSchema,
+	channelMessageReceivedPayloadWhatsappAudioSchema,
+	channelMessageReceivedPayloadWhatsappContactSchema,
+	channelMessageReceivedPayloadWhatsappDocumentSchema,
+	channelMessageReceivedPayloadWhatsappImageSchema,
+	channelMessageReceivedPayloadWhatsappLocationSchema,
+	channelMessageReceivedPayloadWhatsappPollSchema,
+	channelMessageReceivedPayloadWhatsappReactionSchema,
+	channelMessageReceivedPayloadWhatsappStickerSchema,
+	channelMessageReceivedPayloadWhatsappTextSchema,
+	channelMessageReceivedPayloadWhatsappVideoSchema,
+} from '@codedm/client-typescript/go'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { BrowserFrameEnricher } from '../services/BrowserFrameEnricher'
 
@@ -70,6 +79,9 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	// Contact directory sync (T15 attach wizard): a bootstrap remotes-sync pass finished → the browser
 	// invalidates its attach-wizard contacts read. Paired with the load-bearing ConsumeChannelRemotesSynced.
 	{ name: 'integration.channel.remotes_synced' },
+	// Inbound message (union-slots pilot): the gateway's verbatim payload re-emitted with FULL typed
+	// narrowing — the frame schema below composes the generated variant schemas from the owner's client.
+	{ name: 'integration.channel_message.received' },
 ]
 
 const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))
@@ -109,10 +121,7 @@ export const BrowserStopRaisedFrameSchema = z.object({
 	stopKind: z.enum(StopKind),
 })
 
-export const BrowserSseFrameSchema = z.discriminatedUnion('name', [
-	BrowserThreadStatusChangedFrameSchema,
-	BrowserStopRaisedFrameSchema,
-])
+export const BrowserSseFrameSchema = z.discriminatedUnion('name', [BrowserThreadStatusChangedFrameSchema, BrowserStopRaisedFrameSchema])
 
 export const ListenEventsControllerInputSchema = z.object({
 	ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
@@ -132,9 +141,42 @@ const GenericIntegrationFrameSchema = z.object({
 	payload: z.object({ ownerId: z.uuid() }).loose(),
 })
 
+/**
+ * The gateway's channel_message.received payload — the COMPLETE discriminated union composed from
+ * the generated variant schemas of the owner's client (`@codedm/client-typescript/go`), never
+ * redeclared here (union-slots spec §2.4). Composite discriminator (platform, messageType) nests:
+ * the outer union narrows by `platform`, the WHATSAPP branch narrows by `messageType`. The TS
+ * openapi emitter publishes this as the full oneOf in the daemon spec, so console narrowing is
+ * identical whether the frame arrives from the gateway's own /events stream or from this re-emitting
+ * surface.
+ */
+export const ChannelMessageReceivedPayloadUnionSchema = z.discriminatedUnion('platform', [
+	z.discriminatedUnion('messageType', [
+		channelMessageReceivedPayloadWhatsappTextSchema,
+		channelMessageReceivedPayloadWhatsappImageSchema,
+		channelMessageReceivedPayloadWhatsappVideoSchema,
+		channelMessageReceivedPayloadWhatsappAudioSchema,
+		channelMessageReceivedPayloadWhatsappDocumentSchema,
+		channelMessageReceivedPayloadWhatsappStickerSchema,
+		channelMessageReceivedPayloadWhatsappLocationSchema,
+		channelMessageReceivedPayloadWhatsappContactSchema,
+		channelMessageReceivedPayloadWhatsappPollSchema,
+		channelMessageReceivedPayloadWhatsappReactionSchema,
+	]),
+	channelMessageReceivedPayloadInternalTextSchema,
+])
+
+/** Typed frame for the re-emitted gateway inbound message (union-slots pilot). */
+export const ChannelMessageReceivedFrameSchema = z.object({
+	name: z.literal('integration.channel_message.received'),
+	ownerId: z.string(),
+	payload: ChannelMessageReceivedPayloadUnionSchema,
+})
+
 export const ListenEventsControllerOutputSchema = z.union([
 	BrowserThreadStatusChangedFrameSchema,
 	BrowserStopRaisedFrameSchema,
+	ChannelMessageReceivedFrameSchema,
 	GenericIntegrationFrameSchema,
 ])
 

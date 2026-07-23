@@ -3295,6 +3295,1251 @@
                       "type": "object",
                       "properties": {
                         "name": {
+                          "type": "string",
+                          "const": "integration.channel_message.received"
+                        },
+                        "ownerId": {
+                          "type": "string"
+                        },
+                        "payload": {
+                          "oneOf": [
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "contextInfo": {
+                                          "nullable": true,
+                                          "type": "object",
+                                          "properties": {
+                                            "participant": {
+                                              "type": "string"
+                                            },
+                                            "quotedMessageContent": {},
+                                            "quotedMessageType": {
+                                              "type": "string"
+                                            },
+                                            "quotedSenderName": {
+                                              "type": "string"
+                                            },
+                                            "stanzaId": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "extendedTextMessage": {
+                                          "nullable": true,
+                                          "type": "object",
+                                          "properties": {
+                                            "matchedText": {
+                                              "type": "string"
+                                            },
+                                            "text": {
+                                              "type": "string"
+                                            },
+                                            "title": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "forward": {
+                                          "type": "boolean"
+                                        },
+                                        "messageId": {
+                                          "type": "string"
+                                        },
+                                        "remoteId": {
+                                          "type": "string"
+                                        },
+                                        "text": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "TEXT"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "imageMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "caption": {
+                                              "type": "string"
+                                            },
+                                            "fileLength": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "height": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "jpegThumbnail": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "mimetype": {
+                                              "type": "string"
+                                            },
+                                            "url": {
+                                              "type": "string"
+                                            },
+                                            "width": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "imageMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "IMAGE"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "videoMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "caption": {
+                                              "type": "string"
+                                            },
+                                            "fileLength": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "jpegThumbnail": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "mimetype": {
+                                              "type": "string"
+                                            },
+                                            "seconds": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "url": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "videoMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "VIDEO"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "audioMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "fileLength": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "mimetype": {
+                                              "type": "string"
+                                            },
+                                            "ptt": {
+                                              "type": "boolean"
+                                            },
+                                            "seconds": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "url": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "audioMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "AUDIO"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "documentMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "caption": {
+                                              "type": "string"
+                                            },
+                                            "fileLength": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "fileName": {
+                                              "type": "string"
+                                            },
+                                            "jpegThumbnail": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "mimetype": {
+                                              "type": "string"
+                                            },
+                                            "url": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "documentMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "DOCUMENT"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "stickerMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "fileLength": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "isAnimated": {
+                                              "type": "boolean"
+                                            },
+                                            "mimetype": {
+                                              "type": "string"
+                                            },
+                                            "pngThumbnail": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "url": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "stickerMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "STICKER"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "locationMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "address": {
+                                              "type": "string"
+                                            },
+                                            "degreesLatitude": {
+                                              "type": "number"
+                                            },
+                                            "degreesLongitude": {
+                                              "type": "number"
+                                            },
+                                            "jpegThumbnail": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "integer",
+                                                "minimum": -9007199254740991,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "name": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "locationMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "LOCATION"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "contactMessage": {
+                                          "nullable": true,
+                                          "type": "object",
+                                          "properties": {
+                                            "displayName": {
+                                              "type": "string"
+                                            },
+                                            "vcard": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "contacts": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "email": {
+                                                "type": "string"
+                                              },
+                                              "fullName": {
+                                                "type": "string"
+                                              },
+                                              "organization": {
+                                                "type": "string"
+                                              },
+                                              "phoneNumber": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "fullName",
+                                              "phoneNumber"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        }
+                                      },
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "CONTACT"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "pollMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "options": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "question": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "options",
+                                            "question"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "pollMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "POLL"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "channelId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "content": {
+                                      "type": "object",
+                                      "properties": {
+                                        "reactionMessage": {
+                                          "type": "object",
+                                          "properties": {
+                                            "key": {
+                                              "nullable": true,
+                                              "type": "object",
+                                              "properties": {
+                                                "fromMe": {
+                                                  "type": "boolean"
+                                                },
+                                                "id": {
+                                                  "type": "string"
+                                                },
+                                                "remoteId": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "additionalProperties": false
+                                            },
+                                            "text": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "text"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "text": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "reactionMessage"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "fromMe": {
+                                      "type": "boolean"
+                                    },
+                                    "internalMessageId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "isGroup": {
+                                      "type": "boolean"
+                                    },
+                                    "messageId": {
+                                      "type": "string"
+                                    },
+                                    "messageType": {
+                                      "type": "string",
+                                      "const": "REACTION"
+                                    },
+                                    "observedAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "occurredAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                    },
+                                    "ownerId": {
+                                      "type": "string"
+                                    },
+                                    "platform": {
+                                      "type": "string",
+                                      "const": "WHATSAPP"
+                                    },
+                                    "platformData": {},
+                                    "remoteId": {
+                                      "type": "string"
+                                    },
+                                    "senderId": {
+                                      "type": "string"
+                                    },
+                                    "timestamp": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "channelId",
+                                    "fromMe",
+                                    "internalMessageId",
+                                    "isGroup",
+                                    "messageId",
+                                    "messageType",
+                                    "observedAt",
+                                    "occurredAt",
+                                    "ownerId",
+                                    "platform",
+                                    "remoteId",
+                                    "senderId",
+                                    "timestamp"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "channelId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "content": {
+                                  "type": "object",
+                                  "properties": {
+                                    "text": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "text"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "fromMe": {
+                                  "type": "boolean"
+                                },
+                                "internalMessageId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "isGroup": {
+                                  "type": "boolean"
+                                },
+                                "messageId": {
+                                  "type": "string"
+                                },
+                                "messageType": {
+                                  "type": "string",
+                                  "const": "TEXT"
+                                },
+                                "observedAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                },
+                                "occurredAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                                },
+                                "ownerId": {
+                                  "type": "string"
+                                },
+                                "platform": {
+                                  "type": "string",
+                                  "const": "INTERNAL"
+                                },
+                                "platformData": {},
+                                "remoteId": {
+                                  "type": "string"
+                                },
+                                "senderId": {
+                                  "type": "string"
+                                },
+                                "timestamp": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "channelId",
+                                "fromMe",
+                                "internalMessageId",
+                                "isGroup",
+                                "messageId",
+                                "messageType",
+                                "observedAt",
+                                "occurredAt",
+                                "ownerId",
+                                "platform",
+                                "remoteId",
+                                "senderId",
+                                "timestamp"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "ownerId",
+                        "payload"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
                           "type": "string"
                         },
                         "ownerId": {

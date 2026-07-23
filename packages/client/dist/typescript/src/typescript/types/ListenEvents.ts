@@ -18,6 +18,84 @@ export const ListenEvents200NameEnum2 = {
 
 export type ListenEvents200NameEnum2Key = (typeof ListenEvents200NameEnum2)[keyof typeof ListenEvents200NameEnum2];
 
+export const ListenEvents200NameEnum3 = {
+    "integration.channel_message.received": "integration.channel_message.received"
+} as const;
+
+export type ListenEvents200NameEnum3Key = (typeof ListenEvents200NameEnum3)[keyof typeof ListenEvents200NameEnum3];
+
+export const PayloadMessageTypeEnum = {
+    TEXT: "TEXT"
+} as const;
+
+export type PayloadMessageTypeEnumKey = (typeof PayloadMessageTypeEnum)[keyof typeof PayloadMessageTypeEnum];
+
+export const PayloadPlatformEnum = {
+    WHATSAPP: "WHATSAPP"
+} as const;
+
+export type PayloadPlatformEnumKey = (typeof PayloadPlatformEnum)[keyof typeof PayloadPlatformEnum];
+
+export const PayloadMessageTypeEnum2 = {
+    IMAGE: "IMAGE"
+} as const;
+
+export type PayloadMessageTypeEnum2Key = (typeof PayloadMessageTypeEnum2)[keyof typeof PayloadMessageTypeEnum2];
+
+export const PayloadMessageTypeEnum3 = {
+    VIDEO: "VIDEO"
+} as const;
+
+export type PayloadMessageTypeEnum3Key = (typeof PayloadMessageTypeEnum3)[keyof typeof PayloadMessageTypeEnum3];
+
+export const PayloadMessageTypeEnum4 = {
+    AUDIO: "AUDIO"
+} as const;
+
+export type PayloadMessageTypeEnum4Key = (typeof PayloadMessageTypeEnum4)[keyof typeof PayloadMessageTypeEnum4];
+
+export const PayloadMessageTypeEnum5 = {
+    DOCUMENT: "DOCUMENT"
+} as const;
+
+export type PayloadMessageTypeEnum5Key = (typeof PayloadMessageTypeEnum5)[keyof typeof PayloadMessageTypeEnum5];
+
+export const PayloadMessageTypeEnum6 = {
+    STICKER: "STICKER"
+} as const;
+
+export type PayloadMessageTypeEnum6Key = (typeof PayloadMessageTypeEnum6)[keyof typeof PayloadMessageTypeEnum6];
+
+export const PayloadMessageTypeEnum7 = {
+    LOCATION: "LOCATION"
+} as const;
+
+export type PayloadMessageTypeEnum7Key = (typeof PayloadMessageTypeEnum7)[keyof typeof PayloadMessageTypeEnum7];
+
+export const PayloadMessageTypeEnum8 = {
+    CONTACT: "CONTACT"
+} as const;
+
+export type PayloadMessageTypeEnum8Key = (typeof PayloadMessageTypeEnum8)[keyof typeof PayloadMessageTypeEnum8];
+
+export const PayloadMessageTypeEnum9 = {
+    POLL: "POLL"
+} as const;
+
+export type PayloadMessageTypeEnum9Key = (typeof PayloadMessageTypeEnum9)[keyof typeof PayloadMessageTypeEnum9];
+
+export const PayloadMessageTypeEnum10 = {
+    REACTION: "REACTION"
+} as const;
+
+export type PayloadMessageTypeEnum10Key = (typeof PayloadMessageTypeEnum10)[keyof typeof PayloadMessageTypeEnum10];
+
+export const PayloadPlatformEnum2 = {
+    INTERNAL: "INTERNAL"
+} as const;
+
+export type PayloadPlatformEnum2Key = (typeof PayloadPlatformEnum2)[keyof typeof PayloadPlatformEnum2];
+
 /**
  * @description Owner-scoped real-time integration events via SSE
 */
@@ -65,6 +143,1007 @@ export type ListenEvents200 = ({
      * @type string
     */
     stopKind: StopKind;
+} | {
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnum3Key;
+    /**
+     * @type string
+    */
+    ownerId: string;
+    payload: (({
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            contextInfo?: {
+                /**
+                 * @type string | undefined
+                */
+                participant?: string;
+                quotedMessageContent?: any;
+                /**
+                 * @type string | undefined
+                */
+                quotedMessageType?: string;
+                /**
+                 * @type string | undefined
+                */
+                quotedSenderName?: string;
+                /**
+                 * @type string | undefined
+                */
+                stanzaId?: string;
+            } | null;
+            /**
+             * @type object
+            */
+            extendedTextMessage?: {
+                /**
+                 * @type string | undefined
+                */
+                matchedText?: string;
+                /**
+                 * @type string | undefined
+                */
+                text?: string;
+                /**
+                 * @type string | undefined
+                */
+                title?: string;
+            } | null;
+            /**
+             * @type boolean | undefined
+            */
+            forward?: boolean;
+            /**
+             * @type string | undefined
+            */
+            messageId?: string;
+            /**
+             * @type string | undefined
+            */
+            remoteId?: string;
+            /**
+             * @type string
+            */
+            text: string;
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnumKey;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            imageMessage: {
+                /**
+                 * @type string | undefined
+                */
+                caption?: string;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                fileLength?: number;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                height?: number;
+                /**
+                 * @type array | undefined
+                */
+                jpegThumbnail?: number[];
+                /**
+                 * @type string | undefined
+                */
+                mimetype?: string;
+                /**
+                 * @type string | undefined
+                */
+                url?: string;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                width?: number;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum2Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            videoMessage: {
+                /**
+                 * @type string | undefined
+                */
+                caption?: string;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                fileLength?: number;
+                /**
+                 * @type array | undefined
+                */
+                jpegThumbnail?: number[];
+                /**
+                 * @type string | undefined
+                */
+                mimetype?: string;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                seconds?: number;
+                /**
+                 * @type string | undefined
+                */
+                url?: string;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum3Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            audioMessage: {
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                fileLength?: number;
+                /**
+                 * @type string | undefined
+                */
+                mimetype?: string;
+                /**
+                 * @type boolean | undefined
+                */
+                ptt?: boolean;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                seconds?: number;
+                /**
+                 * @type string | undefined
+                */
+                url?: string;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum4Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            documentMessage: {
+                /**
+                 * @type string | undefined
+                */
+                caption?: string;
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                fileLength?: number;
+                /**
+                 * @type string | undefined
+                */
+                fileName?: string;
+                /**
+                 * @type array | undefined
+                */
+                jpegThumbnail?: number[];
+                /**
+                 * @type string | undefined
+                */
+                mimetype?: string;
+                /**
+                 * @type string | undefined
+                */
+                url?: string;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum5Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            stickerMessage: {
+                /**
+                 * @minLength -9007199254740991
+                 * @maxLength 9007199254740991
+                 * @type integer | undefined
+                */
+                fileLength?: number;
+                /**
+                 * @type boolean | undefined
+                */
+                isAnimated?: boolean;
+                /**
+                 * @type string | undefined
+                */
+                mimetype?: string;
+                /**
+                 * @type array | undefined
+                */
+                pngThumbnail?: number[];
+                /**
+                 * @type string | undefined
+                */
+                url?: string;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum6Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            locationMessage: {
+                /**
+                 * @type string | undefined
+                */
+                address?: string;
+                /**
+                 * @type number | undefined
+                */
+                degreesLatitude?: number;
+                /**
+                 * @type number | undefined
+                */
+                degreesLongitude?: number;
+                /**
+                 * @type array | undefined
+                */
+                jpegThumbnail?: number[];
+                /**
+                 * @type string | undefined
+                */
+                name?: string;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum7Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            contactMessage?: {
+                /**
+                 * @type string | undefined
+                */
+                displayName?: string;
+                /**
+                 * @type string | undefined
+                */
+                vcard?: string;
+            } | null;
+            /**
+             * @type array | undefined
+            */
+            contacts?: {
+                /**
+                 * @type string | undefined
+                */
+                email?: string;
+                /**
+                 * @type string
+                */
+                fullName: string;
+                /**
+                 * @type string | undefined
+                */
+                organization?: string;
+                /**
+                 * @type string
+                */
+                phoneNumber: string;
+            }[];
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum8Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            pollMessage: {
+                /**
+                 * @type array
+                */
+                options: string[];
+                /**
+                 * @type string
+                */
+                question: string;
+            };
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum9Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    } | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type object
+            */
+            reactionMessage: {
+                /**
+                 * @type object
+                */
+                key?: {
+                    /**
+                     * @type boolean | undefined
+                    */
+                    fromMe?: boolean;
+                    /**
+                     * @type string | undefined
+                    */
+                    id?: string;
+                    /**
+                     * @type string | undefined
+                    */
+                    remoteId?: string;
+                } | null;
+                /**
+                 * @type string
+                */
+                text: string;
+            };
+            /**
+             * @type string | undefined
+            */
+            text?: string;
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnum10Key;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnumKey;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    }) | {
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type object | undefined
+        */
+        content?: {
+            /**
+             * @type string
+            */
+            text: string;
+        };
+        /**
+         * @type boolean
+        */
+        fromMe: boolean;
+        /**
+         * @type string, uuid
+        */
+        internalMessageId: string;
+        /**
+         * @type boolean
+        */
+        isGroup: boolean;
+        /**
+         * @type string
+        */
+        messageId: string;
+        /**
+         * @type string
+        */
+        messageType: PayloadMessageTypeEnumKey;
+        /**
+         * @type string, date-time
+        */
+        observedAt: string;
+        /**
+         * @type string, date-time
+        */
+        occurredAt: string;
+        /**
+         * @type string
+        */
+        ownerId: string;
+        /**
+         * @type string
+        */
+        platform: PayloadPlatformEnum2Key;
+        platformData?: any;
+        /**
+         * @type string
+        */
+        remoteId: string;
+        /**
+         * @type string
+        */
+        senderId: string;
+        /**
+         * @minLength -9007199254740991
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        timestamp: number;
+    });
 } | {
     /**
      * @type string
