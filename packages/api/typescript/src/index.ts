@@ -108,6 +108,15 @@ async function start(): Promise<void> {
 		}
 
 		await step('http server', () => mainRouter.stop())
+		// Phase-10 terminal engine: tear down live claude PTYs (graceful EOT → SIGTERM → SIGKILL)
+		// BEFORE the outbox/db drain so no PTY zombie survives the daemon. Duck-typed: only the
+		// real ClaudeCliTerminalLLMRunner exposes shutdown(); stubs don't and are skipped.
+		await step('terminal sessions', async () => {
+			const { TerminalLLMRunner } = await import('@terminal/services/TerminalLLMRunner')
+			// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
+			const runner = container.resolve(TerminalLLMRunner as any) as { shutdown?: () => Promise<void> }
+			if (typeof runner.shutdown === 'function') await runner.shutdown()
+		})
 		await step('outbox dispatcher', () => (container.resolve(OutboxDispatcher as any) as OutboxDispatcher).stop())
 		await step('mediator listeners', () => {
 			;(container.resolve(InternalMediator as any) as InternalMediator).removeAllListeners()

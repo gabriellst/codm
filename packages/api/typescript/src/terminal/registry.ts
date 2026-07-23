@@ -6,6 +6,7 @@ import { TerminalLLMRunner, StubTerminalLLMRunner, E2eStubTerminalLLMRunner, Cla
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { TerminalLLMSessionRepository, DrizzleTerminalLLMSessionRepository, MockTerminalLLMSessionRepository } from './repositories'
+import { SessionPrewarmService } from './services/SessionPrewarm'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the `real`
@@ -34,4 +35,8 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: DrizzleTerminalLLMSessionRepository,
 		real: DrizzleTerminalLLMSessionRepository,
 	},
+	// Startup prewarm sweep (whatscode MappingPrewarmService, folded onto issueId recency).
+	// `mock: null` = declared absence — the sweep is a startup-only orchestrator; mock-env tests
+	// construct it manually when needed.
+	{ token: SessionPrewarmService, mock: null, integration: SessionPrewarmService, real: SessionPrewarmService },
 ])

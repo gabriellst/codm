@@ -35,6 +35,12 @@ import { uniqueSlugKey } from '../services/IssueClassifier'
  *
  * Defensive drops (no throw): a fact for an unresolvable thread/entry/workspace is a no-op — the
  * same "drop the unroutable inbound" posture BC4's `ConsumeInboundMessage` takes.
+ *
+ * PHASE-10 FOLD (ONE inbound path): whatscode's `ChannelMessageReceivedHandler` +
+ * `InboundDroppedNoMappingEvent` are NOT ported as artifacts — their surviving responsibilities
+ * live here (mapping resolution → BC4 classification; drop semantics → these defensive returns;
+ * session upsert → RunTerminalSession's durable session-row write) and the startup prewarm lives
+ * in `SessionPrewarmService` (recency over terminal_llm_sessions).
  */
 @injectable()
 export class RunTerminalSessionOnClassification extends EventHandler<typeof MessageClassifiedEvent> {
