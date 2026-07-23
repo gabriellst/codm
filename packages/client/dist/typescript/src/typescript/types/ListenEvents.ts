@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { BrowserIntegrationEventName } from "./BrowserIntegrationEventName.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { ThreadStatus } from "./ThreadStatus.ts";
 
@@ -1358,7 +1359,7 @@ export type ListenEvents200 = ({
     /**
      * @type string
     */
-    name: string;
+    name: BrowserIntegrationEventName;
     /**
      * @type string
     */

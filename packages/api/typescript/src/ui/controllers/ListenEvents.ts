@@ -58,7 +58,7 @@ import { BrowserFrameEnricher } from '../services/BrowserFrameEnricher'
  * connected clients today. The two enriched `browser.*` frames are synthesized + delivered by the
  * `BrowserFrameEnricher` (see the FROZEN SSE FRAMES note above).
  */
-const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
+const BROWSER_EVENTS = [
 	// Human-in-the-loop control plane (T03 Home callout / T14 Needs-You / dock badge)
 	{ name: 'integration.issue.stop_raised' },
 	{ name: 'integration.issue.stop_resolved' },
@@ -82,9 +82,34 @@ const BROWSER_EVENTS: ReadonlyArray<{ name: string }> = [
 	// Inbound message (union-slots pilot): the gateway's verbatim payload re-emitted with FULL typed
 	// narrowing — the frame schema below composes the generated variant schemas from the owner's client.
 	{ name: 'integration.channel_message.received' },
-]
+] as const satisfies ReadonlyArray<{ name: string }>
 
 const BROWSER_EVENT_NAMES = new Set<string>(BROWSER_EVENTS.map(e => e.name))
+
+/**
+ * Frames with a DEDICATED typed schema in the output union. They are excluded from the generic
+ * passthrough arm's `name` enum: a passthrough arm whose `name` is an open `z.string()` absorbs the
+ * typed frames in the emitted SDK union (narrowing on a literal name can't exclude a `string` arm,
+ * so the payload degrades to the loose envelope — TS2322 on daemon-origin consumers). Keeping the
+ * discriminant sets disjoint makes `name`-narrowing on the daemon SDK yield the SAME typed payload
+ * as the gateway-origin SDK (union-slots spec §2.4 — identical narrowing on every surface).
+ */
+const TYPED_FRAME_NAMES = ['integration.channel_message.received'] as const
+type TypedFrameName = (typeof TYPED_FRAME_NAMES)[number]
+type GenericFrameName = Exclude<(typeof BROWSER_EVENTS)[number]['name'], TypedFrameName>
+const GENERIC_FRAME_NAMES = BROWSER_EVENTS.map(e => e.name).filter(
+	(n): n is GenericFrameName => !(TYPED_FRAME_NAMES as readonly string[]).includes(n),
+)
+
+/**
+ * Enum-object export of the generic frame names, re-exported by `@ui/enums` so the root context's
+ * `openapi.registerEnums` names the emitted component `BrowserIntegrationEventName` (the emitter
+ * matches registered enums by sorted value list; unregistered enums fall back to a path-derived
+ * component name — here the property name `name` → component `Name`).
+ */
+export const BrowserIntegrationEventName = Object.fromEntries(GENERIC_FRAME_NAMES.map(n => [n, n])) as {
+	[K in GenericFrameName]: K
+}
 
 /**
  * The owner an integration event should fan out to on the browser SSE surface — or `undefined` when
@@ -131,12 +156,15 @@ export const ListenEventsControllerInputSchema = z.object({
  * The endpoint's SSE frame union — the SDK derives the typed `ServerEventName` union from this for
  * the frontend `useServerEvents` hook. Two surfaces coexist:
  *   - the generic `integration.*` envelope, the transport reality today: discriminated by the event
- *     `name`, carrying an open `ownerId`-scoped `payload` (what the broadcaster re-emits now);
+ *     `name` — a CLOSED enum of the browser-surface events that have no dedicated typed frame (the
+ *     broadcaster only re-emits BROWSER_EVENT_NAMES, so the closed set IS the transport reality;
+ *     an open `z.string()` here would swallow the typed frames' literal names in the SDK union and
+ *     break daemon-origin narrowing) — carrying an open `ownerId`-scoped `payload`;
  *   - the two frozen enriched `browser.*` frames, locked here so their denormalized shapes ship at
  *     the contract even though broadcast-time delivery is wired in the gateway phase.
  */
 const GenericIntegrationFrameSchema = z.object({
-	name: z.string(),
+	name: z.enum(GENERIC_FRAME_NAMES),
 	ownerId: z.string(),
 	payload: z.object({ ownerId: z.uuid() }).loose(),
 })

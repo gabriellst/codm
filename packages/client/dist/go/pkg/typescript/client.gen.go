@@ -262,6 +262,51 @@ func (e ArtifactKind) Valid() bool {
 	}
 }
 
+// Defines values for BrowserIntegrationEventName.
+const (
+	IntegrationAgentReplyDrafted    BrowserIntegrationEventName = "integration.agent.reply_drafted"
+	IntegrationChannelConnected     BrowserIntegrationEventName = "integration.channel.connected"
+	IntegrationChannelDisconnected  BrowserIntegrationEventName = "integration.channel.disconnected"
+	IntegrationChannelRemotesSynced BrowserIntegrationEventName = "integration.channel.remotes_synced"
+	IntegrationIssueArchived        BrowserIntegrationEventName = "integration.issue.archived"
+	IntegrationIssueCompleted       BrowserIntegrationEventName = "integration.issue.completed"
+	IntegrationIssueOpened          BrowserIntegrationEventName = "integration.issue.opened"
+	IntegrationIssueStopRaised      BrowserIntegrationEventName = "integration.issue.stop_raised"
+	IntegrationIssueStopResolved    BrowserIntegrationEventName = "integration.issue.stop_resolved"
+	IntegrationMessageClassified    BrowserIntegrationEventName = "integration.message.classified"
+	IntegrationThreadAttached       BrowserIntegrationEventName = "integration.thread.attached"
+)
+
+// Valid indicates whether the value is a known member of the BrowserIntegrationEventName enum.
+func (e BrowserIntegrationEventName) Valid() bool {
+	switch e {
+	case IntegrationAgentReplyDrafted:
+		return true
+	case IntegrationChannelConnected:
+		return true
+	case IntegrationChannelDisconnected:
+		return true
+	case IntegrationChannelRemotesSynced:
+		return true
+	case IntegrationIssueArchived:
+		return true
+	case IntegrationIssueCompleted:
+		return true
+	case IntegrationIssueOpened:
+		return true
+	case IntegrationIssueStopRaised:
+		return true
+	case IntegrationIssueStopResolved:
+		return true
+	case IntegrationMessageClassified:
+		return true
+	case IntegrationThreadAttached:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BufferSize.
 const (
 	N100 BufferSize = "100"
@@ -882,6 +927,9 @@ type ApiErrors string
 
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
+
+// BrowserIntegrationEventName defines model for BrowserIntegrationEventName.
+type BrowserIntegrationEventName string
 
 // BufferSize defines model for BufferSize.
 type BufferSize string

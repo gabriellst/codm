@@ -4783,7 +4783,7 @@
                       "type": "object",
                       "properties": {
                         "name": {
-                          "type": "string"
+                          "$ref": "#/components/schemas/BrowserIntegrationEventName"
                         },
                         "ownerId": {
                           "type": "string"
@@ -5129,6 +5129,22 @@
           "XOF",
           "ZAR",
           "ZMW"
+        ]
+      },
+      "BrowserIntegrationEventName": {
+        "type": "string",
+        "enum": [
+          "integration.issue.stop_raised",
+          "integration.issue.stop_resolved",
+          "integration.issue.opened",
+          "integration.issue.completed",
+          "integration.issue.archived",
+          "integration.message.classified",
+          "integration.agent.reply_drafted",
+          "integration.thread.attached",
+          "integration.channel.connected",
+          "integration.channel.disconnected",
+          "integration.channel.remotes_synced"
         ]
       }
     }

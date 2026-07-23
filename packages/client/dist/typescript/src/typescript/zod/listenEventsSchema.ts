@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { browserIntegrationEventNameSchema } from "./browserIntegrationEventNameSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { threadStatusSchema } from "./threadStatusSchema.ts";
 import { z } from "zod/v4";
@@ -358,7 +359,9 @@ get "stopKind"(){
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     })])
     }), z.object({
-    "name": z.string(),
+    get "name"(){
+                return browserIntegrationEventNameSchema
+              },
 "ownerId": z.string(),
 "payload": z.object({
     "ownerId": z.uuid()
