@@ -4,6 +4,7 @@
  */
 import { REPO } from '../../../template.config'
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import { writeFile, mkdir } from 'node:fs/promises'
 import { safeBuild } from '@kubb/core'
 import { pluginOas } from '@kubb/plugin-oas'
@@ -118,6 +119,11 @@ async function writeServiceHttp(plan: Plan): Promise<void> {
 
 function buildKubbConfig(plan: Plan) {
 	const httpImport = `${REPO.sdkPackage}/${plan.source.service}/_http`
+	// Output paths must stay ABSOLUTE (plugin paths resolve against the global
+	// output otherwise), and main() pins cwd to repoRoot: kubb relativizes absolute
+	// outputs against `root` and resolves a subset of writes against the process
+	// CWD — with cwd=packages/client that materialized a stray self-copy under
+	// packages/client/packages/. main() asserts no stray tree post-generate.
 	// Flat output across all four Kubb subdirs. We don't group by tag because the
 	// fallback for untagged operations is the literal string "undefined", which is
 	// uglier than a single flat namespace per service.
@@ -210,6 +216,7 @@ async function emitAggregateClient(plans: Plan[]): Promise<void> {
 
 async function main(): Promise<void> {
 	console.log('client-typescript generator')
+	process.chdir(repoRoot)
 	const sources = await discoverApis(repoRoot)
 	if (sources.length === 0) {
 		console.error('No api services discovered.')
@@ -225,6 +232,11 @@ async function main(): Promise<void> {
 		await emitServiceClient(plan)
 	}
 	await emitAggregateClient(plans)
+	const strays = [
+		path.join(repoRoot, 'packages/client/packages'),
+		...plans.map(p => path.join(p.outputRoot, 'packages')),
+	].filter(p => existsSync(p))
+	if (strays.length > 0) throw new Error(`stray nested gen output at ${strays.join(', ')} — kubb wrote outside the dist root`)
 	console.log('done.')
 }
 

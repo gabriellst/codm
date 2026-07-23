@@ -30,7 +30,8 @@ Eventos como `channel.message_received` carregam payloads cuja forma varia por p
 @variant("WHATSAPP", "IMAGE",    "WhatsAppImageContent", #{ owner: "apiGo" })
 @variant("WHATSAPP", "POLL",     "WhatsAppPollContent",  #{ owner: "apiGo" })
 @unionSlot("platformData", #["platform"])
-@variant("WHATSAPP", "WhatsAppMessageReceivedPlatformData", #{ owner: "apiGo" })
+@variant("WHATSAPP", "WhatsAppChannelMessageReceivedPlatformData", #{ owner: "apiGo" })
+@variant("INTERNAL", "InternalChannelMessageReceivedPlatformData", #{ owner: "apiGo" })
 model ChannelMessageReceivedEvent {
   ...EnvelopeFields;
   channelId: string; messageId: string; platform: ChannelKind; messageType: MessageType;
@@ -163,4 +164,5 @@ primeiro (o mais rico), depois `gateway_platform_event`, `connected/disconnected
 
 - `message_received` migrado: contrato declara, Go importa binding, openapi do gateway com oneOf
   completo, SDK com narrowing, `ListenEvents` TS compondo schemas gerados, rail verde nos 3 checks,
-  diff do verbatim continua mecânico (imports/nomes apenas).
+  diff do verbatim continua mecânico (imports/nomes + casts de adaptação de tipo divulgados —
+  ex.: `Platform` enum→string nos call sites enquanto a reconciliação `ChannelKind` não aterrissa).
