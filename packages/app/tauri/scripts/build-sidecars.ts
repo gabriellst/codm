@@ -1,16 +1,20 @@
 /**
- * Build the two sidecar binaries Tauri bundles via `bundle.externalBin`:
- *   codedm-daemon  — the TS daemon (packages/api/typescript) compiled with `bun build --compile`
- *                    (PGlite inside a bun single-binary was proven by the D2 spike —
- *                    .specs/codedm/2026-07-23-fork-d2-spike.md)
- *   codedm-gateway — the Go gateway (packages/api/go ./cmd/api) via `go build`
+ * Build the sidecar binaries Tauri bundles via `bundle.externalBin` — DRIVEN BY THE
+ * DESKTOP CONTRACT (template.config.ts REPO.desktop.sidecars): binary names, source
+ * workspaces (cwd), entries, and build kinds all come from the contract; this script
+ * owns only the host-triple knowledge and the spawn loop.
  *
  * Tauri resolves external binaries by `<name>-<target-triple>` next to src-tauri,
- * so both outputs land in src-tauri/binaries/ with the host triple suffix.
+ * so outputs land in src-tauri/binaries/ with the host triple suffix.
+ *
+ * PGlite inside a bun single-binary was proven by the D2 spike —
+ * .specs/codedm/2026-07-23-fork-d2-spike.md
  */
 import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { REPO, type SidecarDecl } from '../../../../template.config'
 
+// Genuine toolchain knowledge — platform data, not repo identity (correctly local).
 const HOST_TRIPLES: Record<string, string> = {
 	'darwin-arm64': 'aarch64-apple-darwin',
 	'darwin-x64': 'x86_64-apple-darwin',
@@ -42,28 +46,26 @@ async function run(label: string, cmd: string[], cwd: string): Promise<void> {
 	}
 }
 
-// 1) TS daemon — single-file executable.
-await run(
-	'codedm-daemon',
-	[
-		'bun',
-		'build',
-		'--compile',
-		'./src/index.ts',
-		'--outfile',
-		join(outDir, `codedm-daemon-${triple}${exe}`),
-	],
-	join(repoRoot, 'packages', 'api', 'typescript'),
-)
+/** Build command per declared kind — the contract names the kind, this maps it to a toolchain. */
+function buildCmd(sidecar: SidecarDecl, outfile: string): string[] {
+	switch (sidecar.build.kind) {
+		case 'bun-compile':
+			return ['bun', 'build', '--compile', sidecar.build.entry, '--outfile', outfile]
+		case 'go-build':
+			return ['go', 'build', '-o', outfile, sidecar.build.entry]
+	}
+}
 
-// 2) Go gateway.
-await run(
-	'codedm-gateway',
-	['go', 'build', '-o', join(outDir, `codedm-gateway-${triple}${exe}`), './cmd/api'],
-	join(repoRoot, 'packages', 'api', 'go'),
-)
+const outputs: string[] = []
+for (const sidecar of REPO.desktop.sidecars) {
+	const name = `${REPO.brand}-${sidecar.role}`
+	const outfile = join(outDir, `${name}-${triple}${exe}`)
+	const cwd = join(repoRoot, REPO.workspaces[sidecar.workspace].pkgRoot)
+	await run(name, buildCmd(sidecar, outfile), cwd)
+	outputs.push(`${name}-${triple}${exe}`)
+}
 
-for (const name of [`codedm-daemon-${triple}${exe}`, `codedm-gateway-${triple}${exe}`]) {
+for (const name of outputs) {
 	if (!existsSync(join(outDir, name))) {
 		console.error(`[sidecars] expected output missing: ${name}`)
 		process.exit(1)

@@ -65,13 +65,14 @@ export default tseslint.config([
 			'@typescript-eslint/no-empty-function': 'warn',
 		},
 	},
-	// Desktop-shell seam (.claude/skills/desktop-shell): the react console reaches the
-	// Tauri runtime ONLY through src/lib/native/ — its tauri.ts impl is the single file
-	// allowed to touch @tauri-apps/*. Everywhere else (components, routes, stores,
-	// backends) must import the seam (`@/lib/native`), never the shell API.
+	// Native contract (.claude/skills/desktop-shell): the react console consumes capability
+	// PORTS (lib/native/contract) injected by the NativeProvider — the tauri platform binding
+	// (lib/native/platforms/tauri/) is the ONLY place allowed to touch @tauri-apps/* or the
+	// tauri runtime. Everywhere else (components, routes, stores, contract, browser platform,
+	// backends) must consume the ports (`@/lib/native`), never the shell API.
 	{
 		files: ['packages/**/*.ts', 'packages/**/*.tsx'],
-		ignores: ['packages/app/react/src/lib/native/**'],
+		ignores: ['packages/app/react/src/lib/native/platforms/tauri/**'],
 		rules: {
 			'no-restricted-imports': [
 				'error',
@@ -80,7 +81,7 @@ export default tseslint.config([
 						{
 							group: ['@tauri-apps/*'],
 							message:
-								'@tauri-apps/* is forbidden outside packages/app/react/src/lib/native/ — go through the NativeShell seam (@/lib/native). See .claude/skills/desktop-shell/SKILL.md.',
+								'@tauri-apps/* is forbidden outside packages/app/react/src/lib/native/platforms/tauri/ — consume the native contract ports (@/lib/native) instead. See .claude/skills/desktop-shell/SKILL.md.',
 						},
 					],
 				},

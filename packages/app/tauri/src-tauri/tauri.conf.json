@@ -28,7 +28,15 @@
 	"bundle": {
 		"active": true,
 		"targets": "all",
-		"externalBin": ["binaries/codedm-daemon", "binaries/codedm-gateway"],
-		"icon": ["icons/icon.icns", "icons/icon.ico", "icons/32x32.png", "icons/128x128.png"]
+		"externalBin": [
+			"binaries/codedm-daemon",
+			"binaries/codedm-gateway"
+		],
+		"icon": [
+			"icons/icon.icns",
+			"icons/icon.ico",
+			"icons/32x32.png",
+			"icons/128x128.png"
+		]
 	}
 }

@@ -106,9 +106,10 @@ export interface StampPlan {
 
 /** Root package.json script keys OWNED by a selectable workspace, by kind ({alias} interpolated).
  *  Dropping the workspace deletes exactly these keys. */
-const ROOT_SCRIPT_OWNERSHIP: Record<'backend' | 'frontend', readonly string[]> = {
+const ROOT_SCRIPT_OWNERSHIP: Record<'backend' | 'frontend' | 'shell', readonly string[]> = {
 	backend: ['dev:api:{alias}', 'sdk:{alias}'],
 	frontend: ['dev:app:{alias}'],
+	shell: ['desktop:dev', 'desktop:sidecars', 'desktop:bundle', 'desktop:generate'],
 }
 
 /** Root scripts that only make sense while at least one workspace of the layer ships. */
@@ -206,11 +207,21 @@ export function planStamp(repo: RepoLike, selection: StampSelection): StampPlan 
 		frontend: selection.frontends.length > 0,
 	}
 
-	// Kept = selected backends/frontends + shared workspaces whose coupled layer (if any) survives.
+	// Kept = selected backends/frontends + shared workspaces whose coupled layer (if any) survives
+	// + shells iff every workspace they host (Workspace.requires) is kept.
 	const isKept = ([id, w]: [string, Workspace]): boolean => {
 		if (w.kind === 'shared') {
 			const layer = SHIPS_WITH_LAYER[id]
 			return layer === undefined || layerAlive[layer]
+		}
+		if (w.kind === 'shell') {
+			const required = w.requires ?? []
+			if (required.length === 0) throw new Error(`shell workspace '${id}' declares no requires — a shell must name the workspaces it hosts`)
+			return required.every(rid => {
+				const rw = repo.workspaces[rid]
+				if (rw === undefined) throw new Error(`shell workspace '${id}' requires unknown workspace id '${rid}'`)
+				return selected.has(rw.alias)
+			})
 		}
 		return selected.has(w.alias)
 	}

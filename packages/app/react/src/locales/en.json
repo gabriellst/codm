@@ -542,6 +542,7 @@
 		"addFolder": "Add folder",
 		"addTitle": "Add a workspace",
 		"adding": "Adding…",
+		"browse": "Browse…",
 		"emptyDescription": "Add a project folder and CodeDM will detect its git repo and Claude project.",
 		"emptyTitle": "No workspaces yet",
 		"pathPlaceholder": "~/dev/acme-storefront",

@@ -14,6 +14,7 @@
 // `modulePrefix`). Keep them in lockstep when editing here.
 
 const scope = '@codedm'
+const brand = 'codedm'
 
 /**
  * PER-LANGUAGE identity config — facts owned by a language TOOLCHAIN and shared by every
@@ -106,6 +107,17 @@ const WORKSPACES = {
 		nxProject: 'e2e',
 		devServer: null,
 	},
+	appTauri: {
+		pkgRoot: 'packages/app/tauri',
+		srcRoot: 'packages/app/tauri/src-tauri/src',
+		lang: 'rust',
+		kind: 'shell',
+		alias: 'tauri',
+		nxProject: 'app-tauri',
+		devServer: 'standalone',
+		// A shell ships iff everything it hosts ships (create-template keep-rule for kind 'shell').
+		requires: ['apiTs', 'apiGo', 'appReact'],
+	},
 } as const satisfies Record<string, Workspace>
 // ── STAMP-MANAGED-END: workspaces ──
 
@@ -113,9 +125,13 @@ export type WorkspaceId = keyof typeof WORKSPACES
 export interface Workspace {
 	pkgRoot: string
 	srcRoot: string
-	lang: 'typescript' | 'go' | 'react' | 'astro'
-	kind: 'backend' | 'frontend' | 'shared'
+	lang: 'typescript' | 'go' | 'react' | 'astro' | 'rust'
+	/** 'shell' = a host that wraps other workspaces (desktop shell) — never selectable on its
+	 *  own; it ships iff every workspace in `requires` ships. */
+	kind: 'backend' | 'frontend' | 'shared' | 'shell'
 	alias: string
+	/** kind 'shell' only: the workspaces this shell hosts — the declarative keep-rule. */
+	requires?: readonly string[]
 	/** nx project name (`project.json` "name") — null = workspace not registered with nx (contracts). */
 	nxProject: string | null
 	/** How the workspace joins local dev: 'aggregate' = part of the root `bun dev` run-many;
@@ -123,11 +139,122 @@ export interface Workspace {
 	devServer: 'aggregate' | 'standalone' | null
 }
 
+/**
+ * DESKTOP CONTRACT — the single declaration of the desktop shell (packages/app/tauri).
+ * `scripts/desktop/generate.ts` renders tauri.conf.json + capabilities/default.json +
+ * src-tauri/src/generated.rs FROM this block (drift-gated: `bun desktop:generate --check`,
+ * wired into test:tooling via scripts/desktop/generate.test.ts). `build-sidecars.ts` reads
+ * it for binary names + build cwds. A literal in any of those files that exists here is a
+ * bug — same rule as REPO.env.
+ *
+ * Boot-env value sources (`bootEnv`):
+ *   { from: 'example' }        → REPO.env[key].example (generation-time literal)
+ *   { from: 'dataDir' }        → the shell's runtime data dir (app_data_dir()/data) — Rust-side
+ *   { from: 'desktopOrigins' } → `tauri://localhost,http://localhost:<VITE_PORT example>`
+ *   { value: '...' }           → shell-decision literal (e.g. NODE_ENV=production)
+ */
+const DESKTOP = {
+	/** OS-facing display name (window title, productName). The ONE place the cased brand
+	 *  spelling lives — REPO.brand stays the lowercase token. */
+	displayName: 'CodeDM',
+	/** Reverse-DNS bundle identifier — derived from brand; ALSO the keychain service name
+	 *  (generated.rs IDENTIFIER const). */
+	identifier: `app.${brand}.desktop`,
+	/** Genuine shell decisions — parameters with defaults, no repo-fact source. */
+	window: { label: 'main', width: 1280, height: 800, minWidth: 980, minHeight: 640 },
+	/** Console (webview content) wiring — which workspace renders inside the shell. */
+	console: {
+		workspace: 'appReact',
+		/** Dev-server port key (REPO.env) + path the console mounts under in dev. */
+		devPortEnvKey: 'VITE_PORT',
+		devPath: '/app/',
+		/** SPA output inside the console workspace (produced by `buildTarget`). */
+		distSubpath: 'dist/client',
+		buildTarget: 'build-spa',
+		/** Sidecar roles the webview talks to DIRECTLY (CSP connect-src derives from this —
+		 *  the gateway is reached through the daemon proxy, so it is not listed). */
+		connectsTo: ['daemon'],
+	},
+	/** Supervised sidecars — one entry per subprocess the shell boots + health-checks.
+	 *  binName renders as `<brand>-<role>`; ports/env resolve through REPO.env. */
+	sidecars: [
+		{
+			workspace: 'apiTs',
+			role: 'daemon',
+			portEnvKey: 'API_PORT',
+			/** Readiness probe — proves PGlite migrations ran and controllers registered. */
+			healthPath: '/v1/session',
+			build: { kind: 'bun-compile', entry: './src/index.ts' },
+			bootEnv: {
+				API_PORT: { from: 'example' },
+				CODEDM_DATA_DIR: { from: 'dataDir' },
+				API_GO_URL: { from: 'example' },
+				NODE_ENV: { value: 'production' },
+			},
+		},
+		{
+			workspace: 'apiGo',
+			role: 'gateway',
+			portEnvKey: 'CHANNEL_PORT',
+			/** The gateway's only doc/liveness route. */
+			healthPath: '/api/openapi.json',
+			build: { kind: 'go-build', entry: './cmd/api' },
+			bootEnv: {
+				CHANNEL_PORT: { from: 'example' },
+				CODEDM_DATA_DIR: { from: 'dataDir' },
+				CHANNEL_ALLOWED_ORIGINS: { from: 'desktopOrigins' },
+			},
+		},
+	],
+	/** Native capability services the console consumes through the platform contract
+	 *  (packages/app/react/src/lib/native) — tauri permissions DERIVE from this map
+	 *  (capabilities/default.json is generated). Key = service port name in the contract;
+	 *  empty list = backed by custom shell commands or webview APIs (core:default covers invoke). */
+	services: {
+		// filePicker (contract: FilePickerService) is backed by the tauri plugin-dialog `open`
+		// command — the permission name keeps the tauri plugin's own spelling (`dialog:*`).
+		filePicker: ['dialog:allow-open'],
+		notification: ['notification:default'],
+		badge: ['core:window:allow-set-badge-count'],
+		secrets: [],
+		autostart: ['autostart:allow-is-enabled', 'autostart:allow-enable', 'autostart:allow-disable'],
+		hostInfo: [],
+	},
+} as const satisfies DesktopConfig
+
+export interface DesktopConfig {
+	displayName: string
+	identifier: string
+	window: { label: string; width: number; height: number; minWidth: number; minHeight: number }
+	console: {
+		workspace: WorkspaceId
+		devPortEnvKey: string
+		devPath: string
+		distSubpath: string
+		buildTarget: string
+		connectsTo: readonly string[]
+	}
+	sidecars: readonly SidecarDecl[]
+	services: Readonly<Record<string, readonly string[]>>
+}
+export interface SidecarDecl {
+	/** The workspace this sidecar compiles from (cwd/entry resolve via WORKSPACES). */
+	workspace: WorkspaceId
+	/** Binary role suffix — binName = `<brand>-<role>`. */
+	role: string
+	/** REPO.env key holding the port this sidecar listens on (example = generation value). */
+	portEnvKey: string
+	healthPath: string
+	build: { kind: 'bun-compile' | 'go-build'; entry: string }
+	bootEnv: Readonly<Record<string, BootEnvSource>>
+}
+export type BootEnvSource = { from: 'example' | 'dataDir' | 'desktopOrigins' } | { value: string }
+
 export const REPO = {
 	/** npm scope every workspace package lives under (`<scope>/core-typescript`, …). */
 	scope,
 	/** Human brand label (report titles, generated-doc headers). */
-	brand: 'codedm',
+	brand,
 	/** GitHub URL — eslint rule docs point here. */
 	repoUrl: 'https://github.com/codedm/codedm',
 
@@ -151,6 +278,9 @@ export const REPO = {
 
 	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */
 	rootEnvVar: 'CODEDM_ROOT',
+
+	/** Desktop shell contract (see DESKTOP above) — the source scripts/desktop/generate.ts renders from. */
+	desktop: DESKTOP,
 
 	// ── Layout — ALL DERIVED from WORKSPACES (the single source); do not add literals here ──
 	workspaces: WORKSPACES,
@@ -178,6 +308,7 @@ export const REPO = {
 		contractsGenTs: `${WORKSPACES.contracts.pkgRoot}/generated/typescript`,
 		contractsGenGo: `${WORKSPACES.contracts.pkgRoot}/generated/go`,
 		e2e: WORKSPACES.e2e.pkgRoot,
+		appTauri: WORKSPACES.appTauri.pkgRoot,
 	},
 	// ── STAMP-MANAGED-END: packageRoots ──
 	/** Frontend selection aliases — derived from WORKSPACES (kind: frontend). */

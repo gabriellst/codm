@@ -11,19 +11,24 @@ Tauri v2 host for the CodeDM desktop app. The shell does three things and nothin
    at boot and health-checks them: daemon `GET :3030/v1/session`, gateway
    `GET :3032/api/openapi.json` (60s budget; emits `sidecar:ready` / `sidecar:error` to
    the webview). Build the binaries with `bun x nx run app-tauri:sidecars`.
-3. **Backs the `lib/native` seam** — the react console reaches OS capabilities only via
-   `packages/app/react/src/lib/native/` (pickFolder/notify/badge/secrets/autostart).
-   Secrets are keychain-backed custom commands (`secret_get/set/delete`).
+3. **Backs the tauri platform services of the native contract** — the react console
+   consumes OS capabilities as ports (`packages/app/react/src/lib/native/contract/`:
+   dialog/notification/badge/secrets/autostart/hostInfo), implemented for the desktop
+   under `lib/native/platforms/tauri/services/` and injected by the NativeProvider.
+   Secrets are keychain-backed custom commands (`secret_get/set/delete`); the tauri
+   permissions each service needs are declared in `template.config.ts`
+   `REPO.desktop.services` (capabilities JSON is generated).
 
 Direction rules (enforced; see `.claude/skills/desktop-shell/`):
 - tauri → react only through build config (`devUrl`/`frontendDist` + nx `dependsOn` on
   `app-react:build-spa`). The shell never imports console code.
-- react → tauri only through `lib/native` (`@tauri-apps/*` is eslint-forbidden elsewhere).
+- react → tauri only through `lib/native/platforms/tauri/` (`@tauri-apps/*` is
+  eslint-forbidden elsewhere).
 
 Transport is the **interim local-HTTP** one (console → daemon :3030 → gateway :3032) —
 smallest delta from the web topology and fully reversible: swapping to a
 SQLite-WAL/IPC transport (go-domain branch subject) only moves the readiness URLs and
-the seam bindings, not the console.
+the platform service bindings, not the console.
 
 ## Commands
 

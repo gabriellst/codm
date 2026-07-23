@@ -542,6 +542,7 @@
 		"addFolder": "Adicionar pasta",
 		"addTitle": "Adicionar um espaço de trabalho",
 		"adding": "Adicionando…",
+		"browse": "Procurar…",
 		"emptyDescription": "Adicione uma pasta de projeto e o CodeDM detectará seu repositório git e o projeto Claude.",
 		"emptyTitle": "Nenhum espaço de trabalho ainda",
 		"pathPlaceholder": "~/dev/acme-storefront",

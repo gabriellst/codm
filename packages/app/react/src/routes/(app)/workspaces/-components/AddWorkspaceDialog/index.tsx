@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconPlus } from '@tabler/icons-react'
+import { IconFolderOpen, IconPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listWorkspacesQueryKey, useAddWorkspace } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useFolderPicker } from '@/lib/native'
 
 /** "Add folder" flow: point CodeDM at a project folder; badges are detected server-side. */
 export function AddWorkspaceDialog() {
@@ -24,6 +25,9 @@ export function AddWorkspaceDialog() {
 	const [path, setPath] = useState('')
 	const queryClient = useQueryClient()
 	const addWorkspace = useAddWorkspace()
+	// OS folder picker via the FilePickerService PORT (capability-gated: the browser
+	// binding reports no path-capable picker, so the manual input stays the only affordance).
+	const folderPicker = useFolderPicker(setPath, { title: t('workspaces.addTitle') })
 
 	const submit = () => {
 		const trimmed = path.trim()
@@ -56,14 +60,21 @@ export function AddWorkspaceDialog() {
 				</DialogHeader>
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="workspace-path">{t('workspaces.projectFolder')}</Label>
-					<Input
-						id="workspace-path"
-						className="font-mono"
-						placeholder={t('workspaces.pathPlaceholder')}
-						value={path}
-						onChange={e => setPath(e.target.value)}
-						onKeyDown={e => e.key === 'Enter' && submit()}
-					/>
+					<div className="flex gap-2">
+						<Input
+							id="workspace-path"
+							className="font-mono"
+							placeholder={t('workspaces.pathPlaceholder')}
+							value={path}
+							onChange={e => setPath(e.target.value)}
+							onKeyDown={e => e.key === 'Enter' && submit()}
+						/>
+						{folderPicker.supported && (
+							<Button variant="outline" onClick={folderPicker.pick}>
+								<IconFolderOpen data-icon="inline-start" /> {t('workspaces.browse')}
+							</Button>
+						)}
+					</div>
 				</div>
 				<DialogFooter>
 					<DialogClose render={<Button variant="ghost">{t('common.cancel')}</Button>} />

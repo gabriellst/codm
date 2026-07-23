@@ -1,13 +1,15 @@
 {
 	"$schema": "../gen/schemas/desktop-schema.json",
 	"identifier": "default",
-	"description": "Capabilities the react console's lib/native seam invokes on the main window.",
-	"windows": ["main"],
+	"description": "GENERATED from template.config.ts REPO.desktop.services (bun desktop:generate) — permissions derive from the native services the console consumes; do NOT hand-edit.",
+	"windows": [
+		"main"
+	],
 	"permissions": [
 		"core:default",
-		"core:window:allow-set-badge-count",
 		"dialog:allow-open",
 		"notification:default",
+		"core:window:allow-set-badge-count",
 		"autostart:allow-is-enabled",
 		"autostart:allow-enable",
 		"autostart:allow-disable"

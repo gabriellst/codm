@@ -7,19 +7,19 @@ registry:
 
   patterns:
     - id: DSK-01
-      name: "One seam entry point"
+      name: "Ports consumed via DI, bound once"
       when: always
-      rule: "React code consumes OS capabilities via `import { native } from '@/lib/native'` — the isTauri()-selected NativeShell."
-      wrong: "importing './tauri' / './browser' directly, or calling window.__TAURI__ outside lib/native"
+      rule: "React code consumes OS capabilities via the contract ports — useNative() / useFilePickerService() (or a flow hook like useFolderPicker) from '@/lib/native'. The platform binding is decided ONCE by NativeProvider at the composition root (routes/__root.tsx) via dynamic import."
+      wrong: "importing 'platforms/tauri' / 'platforms/browser' directly, calling window.__TAURI__ outside platforms/tauri, or module-level platform selection in a component"
     - id: DSK-02
-      name: "Capability = interface member"
+      name: "Capability = port + platform services + declared permissions"
       when: "the console needs a new OS integration"
-      rule: "Extend NativeShell in lib/native/types.ts, implement in tauri.ts AND browser.ts, then consume via native.<capability>()."
-      wrong: "ad-hoc invoke() call sites sprinkled through components"
+      rule: "Declare the port in lib/native/contract/<capability>.ts (pure types, promise-based), add it to NativeServices, implement Tauri<Port>Service AND Browser<Port>Service, declare tauri permissions in REPO.desktop.services (+ bun desktop:generate), wire the NativeProvider facade, consume via the hook."
+      wrong: "ad-hoc invoke() call sites sprinkled through components, or hand-editing capabilities/default.json"
     - id: DSK-03
       name: "Honest browser degradation"
       when: always
-      rule: "browser.ts returns honest values (pickFolder → null, autostart.isEnabled → false); it never fakes a desktop capability."
+      rule: "Browser services return honest values (supportsFolderPicker → false, pickFolder → null, autostart.isEnabled → false); they never fake a desktop capability."
       wrong: "returning a fabricated path or pretending a secret store is secure"
     - id: DSK-04
       name: "Shell reaches the console via build config only"
@@ -29,25 +29,30 @@ registry:
     - id: DSK-05
       name: "Sidecar = externalBin + health-check"
       when: "adding or changing a sidecar"
-      rule: "Declare in bundle.externalBin, build via scripts/build-sidecars.ts (name-<target-triple>), and give lib.rs a readiness URL (daemon /v1/session, gateway /api/openapi.json)."
+      rule: "Declare in REPO.desktop.sidecars (bun desktop:generate renders externalBin + generated.rs), build via scripts/build-sidecars.ts (name-<target-triple>); every sidecar has a healthPath readiness URL."
       wrong: "spawning raw processes without a readiness signal, or bundling unmanaged binaries"
     - id: DSK-06
       name: "Custom Rust command shape"
       when: "a capability has no tauri plugin"
-      rule: "#[tauri::command] in src-tauri/src/lib.rs + invoke_handler registration + capability permission in capabilities/default.json"
+      rule: "#[tauri::command] in src-tauri/src/lib.rs + invoke_handler registration + permission declared in REPO.desktop.services (capabilities JSON is generated)"
+    - id: DSK-07
+      name: "Contract stays platform-pure (future expo home)"
+      when: always
+      rule: "lib/native/contract/ holds pure types only — no platform SDK, no react, no DOM globals. It is the future @codedm/native-contract package: an expo host implements the same ports under platforms/expo/services/ against identical types."
+      wrong: "importing @tauri-apps types (or react) inside contract/, or leaking a platform type through a port signature"
 
   bad_practices:
     - id: bp-01
-      name: "@tauri-apps/* outside lib/native"
-      rule: "The shell API is quarantined to packages/app/react/src/lib/native/ — eslint no-restricted-imports enforces it repo-wide."
+      name: "@tauri-apps/* outside platforms/tauri"
+      rule: "The shell API is quarantined to packages/app/react/src/lib/native/platforms/tauri/ — eslint no-restricted-imports enforces it repo-wide (contract/ and platforms/browser/ included)."
       wrong: "import { open } from '@tauri-apps/plugin-dialog' inside a component"
-      right: "const path = await native.pickFolder()"
+      right: "const filePicker = useFilePickerService(); const path = await filePicker.pickFolder()"
       mechanical: true
     - id: bp-02
       name: "UI branching on the host"
-      rule: "Components never test isTauri()/native.host to change behavior — missing capability means extending the seam with honest degradation."
+      rule: "Components never test the platform name to change behavior — they branch on what a port REPORTS (capability), and a missing capability means extending the contract with honest degradation. HostInfoService.platform() is diagnostics only."
       wrong: "if (isTauri()) { showFolderPicker() } else { hideButton() }"
-      right: "const path = await native.pickFolder(); if (path === null) keep the manual input flow"
+      right: "const { supported, pick } = useFolderPicker(setPath); {supported && <Button onClick={pick}>Browse</Button>} — manual input stays either way"
       mechanical: false
     - id: bp-03
       name: "Business logic in the shell"
@@ -61,14 +66,21 @@ registry:
       wrong: "spawn() and immediately render the console against :3030"
       right: "probe /v1/session until 200 (60s budget) → emit sidecar:ready"
       mechanical: false
+    - id: bp-05
+      name: "Untestable native consumption"
+      rule: "Flows that use a port must be provable with a fake injected via NativeProvider services={...} — no tauri required to test the DI (see NativeProvider.test.tsx)."
+      wrong: "component reaching a platform module directly, so the flow only runs inside the desktop shell"
+      right: "renderToString(<NativeProvider services={fakeServices}>…</NativeProvider>) exercising the flow hook against a FakeFilePickerService"
+      mechanical: false
 
   canonical_snippet: |
-    // packages/app/react/src/lib/native/index.ts
-    export const native: NativeShell = isTauri() ? tauriShell : browserShell
+    // routes/__root.tsx — binding decided ONCE at the composition root
+    <NativeProvider>{children}</NativeProvider>
 
-    // a component that needs a folder
-    import { native } from '@/lib/native'
-    const path = await native.pickFolder({ title: t('workspace.pickFolder') })
-    if (path === null) return // browser host or user cancel — manual input stays
+    // a component that needs a folder — capability-gated, never platform-gated
+    import { useFolderPicker } from '@/lib/native'
+    const folderPicker = useFolderPicker(setPath, { title: t('workspaces.addTitle') })
+    // {folderPicker.supported && <Button onClick={folderPicker.pick}>{t('workspaces.browse')}</Button>}
+    // browser host reports no path-capable picker → manual input stays the only affordance
 
   scaffold: null
