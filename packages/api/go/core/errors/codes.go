@@ -2,14 +2,23 @@ package errors
 
 import "net/http"
 
-// Domain error codes
+// Framework error codes — generic, not domain-specific. Bounded contexts add
+// their own codes via RegisterErrorCodes (see internal/<ctx>/errors/codes.go).
+
+// Domain-shape errors (validation primitives every domain re-uses).
+//
+// NOTE(core-adequation): declaration order deliberately KEEPS the codedm
+// original (InvalidID, BusinessRule, InvalidEntity) instead of the template's
+// — the openapi enum scanner emits `enum` + `x-enum-varnames` in declaration
+// order, so the template reorder is wire-visible (the plan's "zero impacto
+// wire" premise was stale) and would break the emitted-spec golden.
 const (
 	CodeInvalidID     ErrorCode = "INVALID_ID"
 	CodeBusinessRule  ErrorCode = "BUSINESS_RULE_VIOLATION"
 	CodeInvalidEntity ErrorCode = "INVALID_ENTITY"
 )
 
-// Application error codes
+// Application error codes (use-case-layer failures).
 const (
 	CodeNotFound         ErrorCode = "NOT_FOUND"
 	CodeEntityConflict   ErrorCode = "ENTITY_CONFLICT"
@@ -18,13 +27,13 @@ const (
 	CodeForbidden        ErrorCode = "FORBIDDEN"
 )
 
-// Interface error codes
+// Interface error codes (HTTP/transport-layer failures).
 const (
 	CodeBadRequest       ErrorCode = "BAD_REQUEST"
 	CodeMethodNotAllowed ErrorCode = "METHOD_NOT_ALLOWED"
 )
 
-// Infrastructure error codes
+// Infrastructure error codes.
 const (
 	CodeDatabaseError          ErrorCode = "DATABASE_ERROR"
 	CodeExternalService        ErrorCode = "EXTERNAL_SERVICE_ERROR"

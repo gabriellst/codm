@@ -8,6 +8,12 @@ import (
 
 var validate = validator.New(validator.WithRequiredStructEnabled())
 
+// RegisterValidation registers a custom validation tag on the shared validator.
+// Downstream modules call this at startup to add domain-specific rules.
+func RegisterValidation(tag string, fn validator.Func) error {
+	return validate.RegisterValidation(tag, fn)
+}
+
 type FieldError struct {
 	Field   string `json:"field"`
 	Tag     string `json:"tag"`
