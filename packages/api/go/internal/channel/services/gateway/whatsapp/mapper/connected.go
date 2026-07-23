@@ -13,7 +13,7 @@ func mapConnected(instanceID uuid.UUID, ownerID string, _ *events.Connected) []t
 	return []types.DomainEventI{
 		ctxevents.NewGatewayConnectedEvent(instanceID, ownerID, ctxevents.GatewayConnectedPayload{
 			ChannelID: instanceID,
-			Platform:  enums.PlatformWhatsApp,
+			Platform:  string(enums.PlatformWhatsApp),
 			OwnerID:   ownerID,
 		}),
 	}
@@ -23,7 +23,7 @@ func mapDisconnected(instanceID uuid.UUID, ownerID string) []types.DomainEventI 
 	return []types.DomainEventI{
 		ctxevents.NewGatewayDisconnectedEvent(instanceID, ownerID, ctxevents.GatewayDisconnectedPayload{
 			ChannelID: instanceID,
-			Platform:  enums.PlatformWhatsApp,
+			Platform:  string(enums.PlatformWhatsApp),
 			OwnerID:   ownerID,
 		}),
 	}
@@ -34,7 +34,7 @@ func mapLoggedOut(instanceID uuid.UUID, ownerID string, v *events.LoggedOut) []t
 		ctxevents.NewGatewayLoggedOutEvent(instanceID, ownerID, ctxevents.ChannelLoggedOutPayload{
 			ChannelID: instanceID,
 			Reason:    v.Reason.String(),
-			Platform:  enums.PlatformWhatsApp,
+			Platform:  string(enums.PlatformWhatsApp),
 			OwnerID:   ownerID,
 		}),
 	}

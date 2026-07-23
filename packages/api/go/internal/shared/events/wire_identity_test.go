@@ -236,23 +236,23 @@ func cases() map[string]any {
 
 		// ── connection trio (platformData deliberately nil — the mapper never
 		//    sets it; the wire therefore carries NO platformData key) ──────
-		"channel.connected": envelope(sharedevents.ChannelConnectedEventName,
+		"channel.connected": envelope(wire.ChannelConnectedEventName,
 			channelevents.GatewayConnectedPayload{
 				ChannelID: channelID,
-				Platform:  channelenums.PlatformWhatsApp,
+				Platform:  string(channelenums.PlatformWhatsApp),
 				OwnerID:   fixedOwner,
 			}),
-		"channel.disconnected": envelope(sharedevents.ChannelDisconnectedEventName,
+		"channel.disconnected": envelope(wire.ChannelDisconnectedEventName,
 			channelevents.GatewayDisconnectedPayload{
 				ChannelID: channelID,
-				Platform:  channelenums.PlatformWhatsApp,
+				Platform:  string(channelenums.PlatformWhatsApp),
 				OwnerID:   fixedOwner,
 			}),
-		"channel.logged_out": envelope(sharedevents.ChannelLoggedOutEventName,
+		"channel.logged_out": envelope(wire.ChannelLoggedOutEventName,
 			channelevents.ChannelLoggedOutPayload{
 				ChannelID: channelID,
 				Reason:    "device_removed",
-				Platform:  channelenums.PlatformWhatsApp,
+				Platform:  string(channelenums.PlatformWhatsApp),
 				OwnerID:   fixedOwner,
 			}),
 
@@ -276,9 +276,6 @@ func TestWireIdentityNameConsts(t *testing.T) {
 	pairs := map[string][2]string{
 		"remote_created": {sharedevents.ChannelRemoteCreatedEventName, wire.ChannelRemoteCreatedEventName},
 		"remote_updated": {sharedevents.ChannelRemoteUpdatedEventName, wire.ChannelRemoteUpdatedEventName},
-		"connected":      {sharedevents.ChannelConnectedEventName, wire.ChannelConnectedEventName},
-		"disconnected":   {sharedevents.ChannelDisconnectedEventName, wire.ChannelDisconnectedEventName},
-		"logged_out":     {sharedevents.ChannelLoggedOutEventName, wire.ChannelLoggedOutEventName},
 		"special_platform_event": {sharedevents.ChannelSpecialPlatformEventName,
 			wire.ChannelSpecialPlatformEventReceivedEventName},
 	}

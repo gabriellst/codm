@@ -115,7 +115,7 @@ func makeGatewayConnectedEvents(n int, ownerID string) []types.DomainEventI {
 		channelID := uuid.New()
 		payload := ctxevents.GatewayConnectedPayload{
 			ChannelID: channelID,
-			Platform:  enums.PlatformWhatsApp,
+			Platform:  string(enums.PlatformWhatsApp),
 			OwnerID:   ownerID,
 		}
 		events[i] = types.NewDomainEvent("channel.gateway_connected", channelID, ownerID, payload)

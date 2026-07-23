@@ -1,24 +1,25 @@
 package events
 
 import (
-	"encoding/json"
+	"template/contracts-go/wire"
 
-	"template/api-go/internal/channel/enums"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelLoggedOutPayload is the data carried by the channel-logged-out events.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type ChannelLoggedOutPayload struct {
-	ChannelID    uuid.UUID       `json:"channelId" validate:"required"`
-	Reason       string          `json:"reason" validate:"required"`
-	Platform     enums.Platform  `json:"platform" validate:"required"`
-	PlatformData json.RawMessage `json:"platformData,omitempty"`
-	OwnerID      string          `json:"ownerId" validate:"required"`
-}
+// ChannelLoggedOutPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go, `wire.ChannelLoggedOutPayload`) —
+// flat-events swap: the payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-logged-out.tsp`.
+//
+// Semantics (unchanged): the platform forcibly logged the session out; Reason
+// is the platform-supplied cause. PlatformData is never set by the mapper today.
+//
+// Disclosed type adaptation: the binding types `Platform` as the wire `string`
+// (verbatim gateway Platform; ChannelKind reconciliation deferred to the
+// enum-harmonization handoff) — publishers cast `string(enums.Platform*)`.
+type ChannelLoggedOutPayload = wire.ChannelLoggedOutPayload
 
 const GatewayLoggedOutEventName = "channel.gateway_logged_out"
 

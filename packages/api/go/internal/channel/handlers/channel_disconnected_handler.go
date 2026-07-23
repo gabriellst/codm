@@ -7,7 +7,7 @@ import (
 	"template/api-go/internal/channel/entities"
 	ctxevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/services/unitofwork"
 	"template/core-go/types"
@@ -70,7 +70,7 @@ func (h *ChannelDisconnectedHandler) Handle(ctx context.Context, event types.Dom
 
 	// Publish integration event AFTER transaction commits
 	if inst != nil {
-		if err := h.externalMediator.Publish(ctx, sharedevents.NewChannelDisconnectedEvent(inst.OwnerID, e.Payload)); err != nil {
+		if err := h.externalMediator.Publish(ctx, types.NewIntegrationEvent(wire.ChannelDisconnectedEventName, inst.OwnerID, e.Payload)); err != nil {
 			slog.Error("failed to publish channel disconnected integration event", "channelId", e.Payload.ChannelID, "error", err)
 		}
 	}

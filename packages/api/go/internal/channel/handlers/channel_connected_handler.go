@@ -8,7 +8,7 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/services/unitofwork"
 	"template/core-go/types"
@@ -85,7 +85,7 @@ func (h *ChannelConnectedHandler) Handle(ctx context.Context, event types.Domain
 
 	// Publish integration event AFTER transaction commits
 	if inst != nil {
-		if err := h.externalMediator.Publish(ctx, sharedevents.NewChannelConnectedEvent(inst.OwnerID, e.Payload)); err != nil {
+		if err := h.externalMediator.Publish(ctx, types.NewIntegrationEvent(wire.ChannelConnectedEventName, inst.OwnerID, e.Payload)); err != nil {
 			slog.Error("failed to publish channel connected integration event", "channelId", e.Payload.ChannelID, "error", err)
 		}
 	}

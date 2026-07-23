@@ -1,23 +1,26 @@
 package events
 
 import (
-	"encoding/json"
+	"template/contracts-go/wire"
 
-	"template/api-go/internal/channel/enums"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// GatewayConnectedPayload is the data carried by the channel-connected events.
-// Owned by the channel domain; shared/events imports this type for the
-// integration wrapper.
-type GatewayConnectedPayload struct {
-	ChannelID    uuid.UUID       `json:"channelId" validate:"required"`
-	Platform     enums.Platform  `json:"platform" validate:"required"`
-	PlatformData json.RawMessage `json:"platformData,omitempty"`
-	OwnerID      string          `json:"ownerId" validate:"required"`
-}
+// GatewayConnectedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go, `wire.ChannelConnectedPayload`) —
+// flat-events swap: the payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-connected.tsp`.
+//
+// Semantics (unchanged): raised when the platform session finishes pairing and
+// is reachable. PlatformData is never set by the mapper today (omitted on the
+// wire).
+//
+// Disclosed type adaptation: the binding types `Platform` as the wire `string`
+// (verbatim gateway Platform; ChannelKind reconciliation deferred to the
+// enum-harmonization handoff) — publishers cast `string(enums.Platform*)`.
+type GatewayConnectedPayload = wire.ChannelConnectedPayload
 
 const GatewayConnectedEventName = "channel.gateway_connected"
 
