@@ -304,8 +304,8 @@ func TestApplyHistorySyncBatch_EmitsSummaryOnlyOnInsert(t *testing.T) {
 			summaryEvt := ctxevents.NewMessagesSyncedEvent(ch.instanceID, ch.ownerID, ctxevents.ChannelMessagesSyncedPayload{
 				ChannelID: ch.instanceID,
 				OwnerID:   ch.ownerID,
-				Total:     len(records),
-				Inserted:  insertedCount,
+				Total:     int32(len(records)),
+				Inserted:  int32(insertedCount),
 			})
 			_ = domainRepo.Save(context.Background(), summaryEvt)
 		}
@@ -337,8 +337,8 @@ func TestApplyHistorySyncBatch_EmitsSummaryOnlyOnInsert(t *testing.T) {
 			summaryEvt := ctxevents.NewMessagesSyncedEvent(ch.instanceID, ch.ownerID, ctxevents.ChannelMessagesSyncedPayload{
 				ChannelID: ch.instanceID,
 				OwnerID:   ch.ownerID,
-				Total:     len(records),
-				Inserted:  insertedCount,
+				Total:     int32(len(records)),
+				Inserted:  int32(insertedCount),
 			})
 			_ = domainRepo.Save(context.Background(), summaryEvt)
 		}

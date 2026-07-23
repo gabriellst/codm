@@ -1,20 +1,20 @@
 package events
 
 import (
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelRemotesSyncedPayload is fired once per bootstrap contact sync pass
-// to let consumers invalidate the sidebar. Carries summary counts only; no
-// per-contact data.
-type ChannelRemotesSyncedPayload struct {
-	ChannelID uuid.UUID `json:"channelId" validate:"required"`
-	OwnerID   string    `json:"ownerId"   validate:"required"`
-	Total     int       `json:"total"     validate:"required"`
-	Inserted  int       `json:"inserted"  validate:"required"`
-}
+// ChannelRemotesSyncedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-remotes-synced.tsp`.
+//
+// Semantics (unchanged): fired once per bootstrap contact sync pass to let
+// consumers invalidate the sidebar. Summary counts only (int32 in the binding).
+type ChannelRemotesSyncedPayload = wire.ChannelRemotesSyncedPayload
 
 const RemotesSyncedEventName = "channel.remotes_synced"
 

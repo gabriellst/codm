@@ -1,20 +1,20 @@
 package events
 
 import (
-	"time"
-
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelRemoteDeletedPayload is the data carried by the remote-deleted domain event.
-type ChannelRemoteDeletedPayload struct {
-	ChannelID uuid.UUID `json:"channelId"`
-	RemoteID  string    `json:"remoteId"`
-	At        time.Time `json:"at"`
-	OwnerID   string    `json:"ownerId"`
-}
+// ChannelRemoteDeletedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-remote-deleted.tsp`.
+//
+// Semantics (unchanged): raised when a Remote aggregate is soft-deleted; the
+// read model stamps deleted_at without removing the row.
+type ChannelRemoteDeletedPayload = wire.ChannelRemoteDeletedPayload
 
 // RemoteDeletedEventName is the in-process domain event name raised when a
 // Remote aggregate is soft-deleted.

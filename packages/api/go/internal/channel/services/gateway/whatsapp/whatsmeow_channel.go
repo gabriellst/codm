@@ -845,8 +845,8 @@ func (c *WhatsmeowChannel) applyHistorySyncBatch(ctx context.Context, hs *events
 		summaryEvt := ctxevents.NewMessagesSyncedEvent(c.instanceID, c.ownerID, ctxevents.ChannelMessagesSyncedPayload{
 			ChannelID: c.instanceID,
 			OwnerID:   c.ownerID,
-			Total:     len(records),
-			Inserted:  insertedCount,
+			Total:     int32(len(records)),
+			Inserted:  int32(insertedCount),
 		})
 		if err := c.domainEventRepo.Save(ctx, summaryEvt); err != nil {
 			slog.Warn("history_sync: failed to save messages_synced event",
@@ -1063,8 +1063,8 @@ func (c *WhatsmeowChannel) projectContactSnapshot(ctx context.Context) {
 	summaryEvt := ctxevents.NewRemotesSyncedEvent(c.instanceID, c.ownerID, ctxevents.ChannelRemotesSyncedPayload{
 		ChannelID: c.instanceID,
 		OwnerID:   c.ownerID,
-		Total:     len(allRemotes),
-		Inserted:  len(allRemotes),
+		Total:     int32(len(allRemotes)),
+		Inserted:  int32(len(allRemotes)),
 	})
 	if err := c.domainEventRepo.Save(ctx, summaryEvt); err != nil {
 		slog.Warn("snapshot: failed to save remotes_synced event", "channelId", c.instanceID, "error", err)

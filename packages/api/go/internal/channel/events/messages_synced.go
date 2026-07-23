@@ -1,19 +1,20 @@
 package events
 
 import (
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelMessagesSyncedPayload is fired once per HistorySync batch that
-// inserted new rows. Carries summary counts only; no per-message data.
-type ChannelMessagesSyncedPayload struct {
-	ChannelID uuid.UUID `json:"channelId" validate:"required"`
-	OwnerID   string    `json:"ownerId"   validate:"required"`
-	Total     int       `json:"total"     validate:"required"`
-	Inserted  int       `json:"inserted"  validate:"required"`
-}
+// ChannelMessagesSyncedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-messages-synced.tsp`.
+//
+// Semantics (unchanged): one HistorySync batch finished inserting message
+// rows. Summary counts only (int32 in the binding).
+type ChannelMessagesSyncedPayload = wire.ChannelMessagesSyncedPayload
 
 const MessagesSyncedEventName = "channel.messages_synced"
 

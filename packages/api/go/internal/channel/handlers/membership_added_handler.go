@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	ctxevents "template/api-go/internal/channel/events"
-	sharedevents "template/api-go/internal/shared/events"
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -33,7 +33,7 @@ func (h *MembershipAddedIntegrationHandler) Handle(ctx context.Context, event ty
 	if err != nil {
 		return err
 	}
-	integrationEvent := sharedevents.NewChannelMembershipAddedEvent(e.OwnerID, e.Payload)
+	integrationEvent := types.NewIntegrationEvent(wire.ChannelMembershipAddedEventName, e.OwnerID, e.Payload)
 	if err := h.externalMediator.Publish(ctx, integrationEvent); err != nil {
 		slog.Error("failed to publish membership_added integration event",
 			"error", err,

@@ -1,21 +1,20 @@
 package events
 
 import (
-	"time"
-
+	"template/contracts-go/wire"
 	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
 
-// ChannelMembershipRemovedPayload is fired when a participant leaves a group.
-type ChannelMembershipRemovedPayload struct {
-	ChannelID uuid.UUID `json:"channelId" validate:"required"`
-	GroupID   string    `json:"groupId"   validate:"required"`
-	MemberID  string    `json:"memberId"  validate:"required"`
-	RemovedAt time.Time `json:"removedAt" validate:"required"`
-	OwnerID   string    `json:"ownerId"   validate:"required"`
-}
+// ChannelMembershipRemovedPayload is retargeted onto the frozen contracts wire binding
+// (packages/contracts/generated/go/wire/events.go) — flat-events swap: the
+// payload DECLARATION is single-sourced from
+// `packages/contracts/wire/events/channel-membership-removed.tsp`.
+//
+// Semantics (unchanged): a participant left (or was removed from) a group;
+// deletes the matching remote_memberships row.
+type ChannelMembershipRemovedPayload = wire.ChannelMembershipRemovedPayload
 
 const MembershipRemovedEventName = "channel.membership_removed"
 
