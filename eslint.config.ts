@@ -65,14 +65,19 @@ export default tseslint.config([
 			'@typescript-eslint/no-empty-function': 'warn',
 		},
 	},
-	// Native contract (.claude/skills/desktop-shell): the react console consumes capability
-	// PORTS (lib/native/contract) injected by the NativeProvider — the tauri platform binding
-	// (lib/native/platforms/tauri/) is the ONLY place allowed to touch @tauri-apps/* or the
-	// tauri runtime. Everywhere else (components, routes, stores, contract, browser platform,
-	// backends) must consume the ports (`@/lib/native`), never the shell API.
+	// Client-side services (.claude/skills/desktop-shell): the react console consumes capability
+	// PORTS (services/<Name>Service) resolved from the DI Container injected by the ServicesProvider.
+	// The tauri runtime (@tauri-apps/* or window.__TAURI__) is legal ONLY in the tauri touchpoints:
+	// the Tauri*Service.ts impls, the tauri environment root, and services/utils/tauri/. Everywhere
+	// else (components, routes, stores, ports, browser impls, backends) must consume the ports via
+	// `@/services`, never the shell API.
 	{
 		files: ['packages/**/*.ts', 'packages/**/*.tsx'],
-		ignores: ['packages/app/react/src/lib/native/platforms/tauri/**'],
+		ignores: [
+			'packages/app/react/src/services/**/Tauri*Service.ts',
+			'packages/app/react/src/services/environments/tauri.ts',
+			'packages/app/react/src/services/utils/tauri/**',
+		],
 		rules: {
 			'no-restricted-imports': [
 				'error',
@@ -81,7 +86,7 @@ export default tseslint.config([
 						{
 							group: ['@tauri-apps/*'],
 							message:
-								'@tauri-apps/* is forbidden outside packages/app/react/src/lib/native/platforms/tauri/ — consume the native contract ports (@/lib/native) instead. See .claude/skills/desktop-shell/SKILL.md.',
+								'@tauri-apps/* is forbidden outside the tauri touchpoints (services/**/Tauri*Service.ts, services/environments/tauri.ts, services/utils/tauri/) — consume the service ports (@/services) instead. See .claude/skills/desktop-shell/SKILL.md.',
 						},
 					],
 				},

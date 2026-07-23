@@ -436,10 +436,10 @@ export const CLASSIFICATION_RULES: Array<{ match: RegExp; artifact: string; skil
 	{ match: /schemas\/.*\.ts$/, artifact: 'schema', skill: 'schema' },
 	{ match: new RegExp(`enums/.*${BACKEND_EXT}$`), artifact: 'enum', skill: 'enum' },
 
-	// Desktop shell — the react native contract (ports + platform services + NativeProvider DI)
+	// Desktop shell — the react client-side services DI (ports + platform services + Container/Token + ServicesProvider)
 	// + the tauri package's TS surface
 	// (Rust sources are outside batch review's TS/Go scope; the skill still owns them).
-	{ match: /packages\/app\/react\/src\/lib\/native\/.*\.tsx?$/, artifact: 'desktop-shell', skill: 'desktop-shell' },
+	{ match: /packages\/app\/react\/src\/services\/.*\.tsx?$/, artifact: 'desktop-shell', skill: 'desktop-shell' },
 	{ match: /packages\/app\/tauri\/.*\.ts$/, artifact: 'desktop-shell', skill: 'desktop-shell' },
 
 	// Frontend — TSX only (web + mobile share the .tsx surface)

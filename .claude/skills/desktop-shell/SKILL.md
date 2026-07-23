@@ -1,6 +1,6 @@
 ---
 name: desktop-shell
-description: Work on the CodeDM desktop shell — the Tauri v2 host (packages/app/tauri), the react native contract (packages/app/react/src/lib/native — ports + platform services + NativeProvider DI), sidecar supervision, or any OS-integration capability (folder picker, notifications, badge, secrets, autostart). Use whenever a task mentions Tauri, the desktop app, sidecars, or an OS capability the react console needs.
+description: Work on the CodeDM desktop shell — the Tauri v2 host (packages/app/tauri), the react client-side services DI (packages/app/react/src/services — ports + platform services + Container/Token + ServicesProvider), sidecar supervision, or any OS-integration capability (folder picker, notifications, badge, secrets, autostart). Use whenever a task mentions Tauri, the desktop app, sidecars, or an OS capability the react console needs.
 ---
 
 # Desktop Shell (Tauri v2)
@@ -52,50 +52,61 @@ only ever do three jobs:
 3. **Back the tauri platform services** — keychain `secret_get/set/delete` commands and
    any future OS capability the contract grows.
 
-## The native contract (react → host) — contract + services + DI
+## Client-side services (react → host) — ports + services + decorator-free DI
 
-The react console NEVER knows the tauri surface. `packages/app/react/src/lib/native/`
-is organized as **ports → platform services → composition-root injection**:
+The react console NEVER knows the tauri surface. `packages/app/react/src/services/` is a
+small DI container (the frontend analogue of the backend's per-context `registry.ts →
+InstanceRegistry → child container`, minus tsyringe/decorators — reflect-metadata is
+friction under Vite and a code-split hazard) organized as **ports → platform services →
+environment registration → composition-root injection**:
 
 ```
-lib/native/
-├── contract/            # PURE TYPES — one port (interface) per capability:
-│   │                    # FilePickerService, NotificationService, BadgeService,
-│   │                    # SecretsService, AutostartService, HostInfoService (+ NativeServices)
-├── platforms/
-│   ├── tauri/           # the ONLY path allowed to touch the tauri runtime
-│   │   ├── invoke.ts    # the ONE runtime touchpoint (window.__TAURI__, withGlobalTauri)
-│   │   └── services/    # Tauri<Port>Service classes, one per port
-│   └── browser/
-│       └── services/    # Browser<Port>Service classes — HONEST degradation
-├── NativeProvider.tsx   # context + binding decided ONCE at bootstrap (dynamic import —
-│                        # the browser bundle never fetches the tauri chunk); lazy facade
-│                        # is legal because every port method is Promise-based
-├── useFolderPicker.ts   # flow hooks composing ports (capability-gated UI affordances)
-└── index.ts             # public surface: NativeProvider, useNative(), useFilePickerService(), types
+services/
+├── core/
+│   ├── token.ts         # Token<T> = { key: symbol; _t?: T }; token(desc) mints one
+│   └── container.ts     # Container: #factories + #cache; register / resolve (SINGLETON default, throws naming the token)
+├── tokens.ts            # one token per port: FilePickerToken, NotificationToken, …
+├── <Cap>Service/        # colocated per capability:
+│   ├── <Cap>Service.ts  #   the PORT (pure-type interface)
+│   ├── Tauri<Cap>Service.ts   # tauri impl — the ONLY concrete-class home (+ browser)
+│   └── Browser<Cap>Service.ts # browser impl — HONEST degradation
+├── environments/        # the code-split lives here (lazy dynamic import):
+│   ├── browser.ts       #   registerBrowser(c) — the ONLY place `new Browser*Service()` is legal
+│   ├── tauri.ts         #   registerTauri(c)   — the ONLY place `new Tauri*Service()` is legal
+│   ├── test.ts          #   registerTest(c) + Fake*Service (backend `mock`-env analogue)
+│   └── index.ts         #   Environment, ENVIRONMENTS (import('./browser'|'./tauri')), detectEnvironment
+├── utils/tauri/         # invoke.ts (the ONE window.__TAURI__ touchpoint) + isTauri.ts
+├── providers/
+│   └── ServicesProvider.tsx  # owns the Container; detect → dynamic-import env → register → context (splash while loading)
+├── hooks/index.ts       # useService(Token) + typed hooks (useFilePicker, useNotification, …)
+└── index.ts             # public surface: ServicesProvider, hooks, tokens, port types
 ```
 
-- **Contract**: `contract/` holds pure types only — no platform SDK imports, no react.
-  It is the future `@codedm/native-contract` package (extraction path documented in
-  `contract/index.ts`): an **expo app implements the same ports** under
-  `platforms/expo/services/*` against identical types; extraction is a verbatim folder
-  move once a second consumer exists.
+- **Ports**: each `<Cap>Service/<Cap>Service.ts` holds pure types only — no platform SDK, no
+  react. The ports are the future `@codedm/native-contract` package: an **expo app implements
+  the same ports** (colocated `Expo<Cap>Service` + an `environments/expo.ts`) against identical
+  types; extraction is a verbatim move once a second consumer exists.
 - **Services**: one concrete class per port per platform. Tauri services go through
-  `platforms/tauri/invoke.ts`; the permissions each service needs are DECLARED in
-  `REPO.desktop.services` (capabilities JSON is generated — never hand-edit it).
-- **DI**: `NativeProvider` mounts at the composition root (`routes/__root.tsx`) and picks
-  the platform module once per page load via dynamic import. Components consume ports via
-  `useNative()` / `useFilePickerService()` — never a platform module. Tests/storybook inject
-  fakes through the `services` prop (see `NativeProvider.test.tsx` — the DI proof runs
-  with zero tauri present).
+  `utils/tauri/invoke.ts`; the permissions each needs are DECLARED in `REPO.desktop.services`
+  (capabilities JSON is generated — never hand-edit it).
+- **DI**: `ServicesProvider` mounts at the composition root (`routes/__root.tsx`), calls
+  `detectEnvironment()` once, DYNAMIC-imports that env's register fn (the browser entry never
+  fetches the tauri chunk — that async boundary is the code-split), builds a `Container`,
+  registers, and publishes it on context (splash while loading). Components consume ports via
+  `useService(Token)` / the typed hooks — never an environment or a `*Service` class.
+  Tests/storybook inject a ready Container (built from `environments/test.ts` fakes) through
+  the `container` prop (see `ServicesProvider.test.tsx` — the DI proof runs with zero tauri).
 
 ## Direction rules (non-negotiable)
 
 - **tauri → react**: build config only (`devUrl`/`frontendDist` + nx `dependsOn`
   `app-react:build-spa`). The shell never imports console source.
-- **react → tauri**: only through `lib/native/platforms/tauri/`. `@tauri-apps/*` anywhere
-  else — including `lib/native/contract/` and the browser platform — is an eslint error
-  (`no-restricted-imports` block in the root `eslint.config.ts`).
+- **react → tauri**: only through the tauri touchpoints — `services/**/Tauri*Service.ts`,
+  `services/environments/tauri.ts`, `services/utils/tauri/`. `@tauri-apps/*` (or
+  `window.__TAURI__`) anywhere else — including the ports and the browser services — is an
+  eslint error (`no-restricted-imports` block in the root `eslint.config.ts`).
+- **`new *Service()` only inside an `environments/` register fn** (the composition root) —
+  never in a component, hook, or the provider.
 - **UI never branches on the host.** If a screen needs "desktop-only" behavior, add a
   capability to the relevant port (or a new port) and let the UI branch on what the port
   REPORTS (`supportsFolderPicker()`), degrading honestly in the browser services — never
@@ -110,18 +121,20 @@ are the two readiness URLs + platform service bindings; the console does not mov
 
 ## Adding a capability (worked shape)
 
-1. Declare the port in `contract/<capability>.ts` (typed, minimal, promise-based) and add
-   it to `NativeServices` in `contract/index.ts`.
-2. Implement `Tauri<Port>Service` in `platforms/tauri/services/` — plugin invoke
-   (`plugin:<name>|<command>` via `invoke.ts`) or a new Rust `#[tauri::command]` in
-   `src-tauri/src/lib.rs`. Declare the permissions in `REPO.desktop.services` +
+1. Declare the port in `services/<Cap>Service/<Cap>Service.ts` (typed, minimal,
+   promise-based) and add a token in `services/tokens.ts` (`token<<Cap>Service>('<Cap>Service')`).
+2. Implement `Tauri<Cap>Service` colocated in `services/<Cap>Service/` — plugin invoke
+   (`plugin:<name>|<command>` via `utils/tauri/invoke.ts`) or a new Rust `#[tauri::command]`
+   in `src-tauri/src/lib.rs`. Declare the permissions in `REPO.desktop.services` +
    `bun desktop:generate` (+ plugin in `Cargo.toml`/`lib.rs` if new).
-3. Implement `Browser<Port>Service` in `platforms/browser/services/` — never fake success.
-4. Wire both `create<Platform>Services()` factories + the lazy facade in
-   `NativeProvider.tsx`; expose a `use<Port>Service()` hook if the port is consumed widely.
-5. Consume the port in the component that owns the interaction (via the hook, or a flow
-   hook like `useFolderPicker`), branching only on reported capability.
-6. Prove the flow with a fake service injected through `NativeProvider services={...}`.
+3. Implement `Browser<Cap>Service` colocated in `services/<Cap>Service/` — never fake success.
+4. Register both in `environments/tauri.ts` and `environments/browser.ts`
+   (`c.register(<Cap>Token, () => new <Plat><Cap>Service())`) and add a `Fake<Cap>Service` +
+   `registerTest` binding in `environments/test.ts`; expose a `use<Cap>()` hook in `hooks/`.
+5. Consume the port in the component that owns the interaction (via the typed hook),
+   branching only on reported capability.
+6. Prove the flow with a fake injected through a test `Container`
+   (`registerTest(c)` + a token override) passed to `ServicesProvider container={...}`.
 
 ## Commands
 

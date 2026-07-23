@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconFolderOpen, IconPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useFolderPicker } from '@/lib/native'
+import { useFilePicker } from '@/services'
 
 /** "Add folder" flow: point CodeDM at a project folder; badges are detected server-side. */
 export function AddWorkspaceDialog() {
@@ -25,9 +25,23 @@ export function AddWorkspaceDialog() {
 	const [path, setPath] = useState('')
 	const queryClient = useQueryClient()
 	const addWorkspace = useAddWorkspace()
-	// OS folder picker via the FilePickerService PORT (capability-gated: the browser
-	// binding reports no path-capable picker, so the manual input stays the only affordance).
-	const folderPicker = useFolderPicker(setPath, { title: t('workspaces.addTitle') })
+	// OS folder picker via the FilePicker PORT (capability-gated: the browser binding
+	// reports no path-capable picker, so the manual input stays the only affordance).
+	const filePicker = useFilePicker()
+	const [canPickFolder, setCanPickFolder] = useState(false)
+	useEffect(() => {
+		let cancelled = false
+		filePicker.supportsFolderPicker().then(supported => {
+			if (!cancelled) setCanPickFolder(supported)
+		})
+		return () => {
+			cancelled = true
+		}
+	}, [filePicker])
+	const pickFolder = async () => {
+		const picked = await filePicker.pickFolder({ title: t('workspaces.addTitle') })
+		if (picked) setPath(picked)
+	}
 
 	const submit = () => {
 		const trimmed = path.trim()
@@ -69,8 +83,8 @@ export function AddWorkspaceDialog() {
 							onChange={e => setPath(e.target.value)}
 							onKeyDown={e => e.key === 'Enter' && submit()}
 						/>
-						{folderPicker.supported && (
-							<Button variant="outline" onClick={folderPicker.pick}>
+						{canPickFolder && (
+							<Button variant="outline" onClick={pickFolder}>
 								<IconFolderOpen data-icon="inline-start" /> {t('workspaces.browse')}
 							</Button>
 						)}
