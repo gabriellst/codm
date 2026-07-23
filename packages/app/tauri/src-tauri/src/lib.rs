@@ -21,24 +21,27 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-const KEYRING_SERVICE: &str = "app.codedm.desktop";
-
 /// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`),
-/// readiness URL parts, and the env the process boots with.
-struct Sidecar {
+/// readiness URL parts, and the env the process boots with. INSTANCES are never
+/// hand-typed in this file — `generated.rs` (rendered from template.config.ts
+/// REPO.desktop by `bun desktop:generate`) is the single source of every
+/// name / port / health path / boot-env literal.
+pub struct Sidecar {
     name: &'static str,
     port: u16,
-    /// Readiness path — TS daemon: `/v1/session` (proves PGlite migrations ran and
-    /// controllers registered); Go gateway: `/api/openapi.json` (its only doc/liveness route).
     health_path: &'static str,
     env: Vec<(String, String)>,
 }
+
+// IDENTIFIER (bundle id = keychain service) + sidecars(data_dir) — generated
+// from the desktop contract; drift-gated by `bun desktop:generate --check`.
+include!("generated.rs");
 
 // ── secrets (keychain) — invoked by lib/native/tauri.ts ─────────────────────────
 
 #[tauri::command]
 fn secret_get(key: String) -> Result<Option<String>, String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, &key).map_err(|e| e.to_string())?;
+    let entry = keyring::Entry::new(IDENTIFIER, &key).map_err(|e| e.to_string())?;
     match entry.get_password() {
         Ok(value) => Ok(Some(value)),
         Err(keyring::Error::NoEntry) => Ok(None),
@@ -48,13 +51,13 @@ fn secret_get(key: String) -> Result<Option<String>, String> {
 
 #[tauri::command]
 fn secret_set(key: String, value: String) -> Result<(), String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, &key).map_err(|e| e.to_string())?;
+    let entry = keyring::Entry::new(IDENTIFIER, &key).map_err(|e| e.to_string())?;
     entry.set_password(&value).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn secret_delete(key: String) -> Result<(), String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, &key).map_err(|e| e.to_string())?;
+    let entry = keyring::Entry::new(IDENTIFIER, &key).map_err(|e| e.to_string())?;
     match entry.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(e) => Err(e.to_string()),
@@ -154,30 +157,9 @@ pub fn run() {
                 .expect("app data dir resolvable")
                 .join("data");
 
-            let daemon = Sidecar {
-                name: "codedm-daemon",
-                port: 3030,
-                health_path: "/v1/session",
-                env: vec![
-                    ("API_PORT".into(), "3030".into()),
-                    ("CODEDM_DATA_DIR".into(), data_dir.to_string_lossy().into_owned()),
-                    ("API_GO_URL".into(), "http://localhost:3032".into()),
-                    ("NODE_ENV".into(), "production".into()),
-                ],
-            };
-            let gateway = Sidecar {
-                name: "codedm-gateway",
-                port: 3032,
-                health_path: "/api/openapi.json",
-                env: vec![
-                    ("CHANNEL_PORT".into(), "3032".into()),
-                    ("CODEDM_DATA_DIR".into(), data_dir.to_string_lossy().into_owned()),
-                    ("CHANNEL_ALLOWED_ORIGINS".into(), "tauri://localhost,http://localhost:5173".into()),
-                ],
-            };
-
-            boot_sidecar(app.handle(), daemon);
-            boot_sidecar(app.handle(), gateway);
+            for sidecar in sidecars(&data_dir.to_string_lossy()) {
+                boot_sidecar(app.handle(), sidecar);
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

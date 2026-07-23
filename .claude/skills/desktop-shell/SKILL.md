@@ -7,6 +7,34 @@ description: Work on the CodeDM desktop shell — the Tauri v2 host (packages/ap
 
 Flat skill — no per-lang variants. Two artifacts, one seam, two direction rules.
 
+## Config is GENERATED from the desktop contract (global convention)
+
+The shell's identity/wiring lives in **`template.config.ts` `REPO.desktop`** — displayName,
+identifier (= keychain service), window params, console wiring (dev port key, devPath,
+distSubpath, buildTarget, connectsTo), sidecars (workspace + role + portEnvKey + healthPath +
+build + bootEnv), and the native `services → tauri permissions` map. Ports and boot-env values
+resolve through `REPO.env` — a literal port/name/path in a shell file that exists in the
+contract is a bug, same rule as the env registry.
+
+`bun desktop:generate` (scripts/desktop/generate.ts) renders three **committed** outputs:
+
+| Output | Content |
+|---|---|
+| `src-tauri/tauri.conf.json` | identity, window, devUrl, frontendDist, externalBin, CSP |
+| `src-tauri/capabilities/default.json` | permissions DERIVED from `REPO.desktop.services` |
+| `src-tauri/src/generated.rs` | `IDENTIFIER` const + `sidecars(data_dir)` (include!-ed by lib.rs) |
+
+Drift is a red build: `bun desktop:generate --check` runs inside `test:tooling`
+(scripts/desktop/generate.test.ts, DSK-01..04 rails — includes a Cargo.toml brand-name check).
+`build-sidecars.ts` also reads the contract (binary names, cwds, entries, build kinds); only
+host-triple knowledge stays local. Genuine shell decisions (window size defaults, health-check
+timing, `sidecar:ready/error` vocabulary, icons, the `data` subdir under `app_data_dir()`)
+stay as parameters in the shell — they have no repo-fact source.
+
+**Adding a sidecar** = add an entry to `REPO.desktop.sidecars` + `bun desktop:generate` —
+never edit tauri.conf.json/lib.rs literals. **Adding a native capability's permission** =
+extend `REPO.desktop.services` (the capability map), regenerate.
+
 ## Mental model
 
 The **product is the react console**; the shell is plumbing. `packages/app/tauri` may
