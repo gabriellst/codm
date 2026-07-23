@@ -472,7 +472,7 @@ Each step extracts its sub-schema from the **complete/strict** SDK mutation sche
 > **Extraction goes through `@/lib/union`** — `pickUnionVariantField(union, match, field)` /
 > `pickUnionVariant(union, match)` match the variant by DISCRIMINANT (typos and bad literals
 > are compile errors). Never raw positional `.def.options[0]` — the index breaks silently
-> when the contract reorders members (registry FRM-P44; expo form FRM-C05 is the same canon).
+> when the contract reorders members (registry FRM-P44).
 
 ```typescript
 import { completeWizardMutationRequestSchema } from '@codedm/client-typescript/typescript'

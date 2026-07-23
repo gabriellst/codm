@@ -165,7 +165,7 @@
 <header class="hero">
   <h1><b>template</b> — How the whole thing flows</h1>
   <p class="lead">A polyglot e-commerce analytics platform built across <b>TypeScript&nbsp;(Bun)</b> and <b>Go</b>,
-  fronted by React, Astro and Expo, backed by one Postgres. This document traces a request from the
+  fronted by React and Astro, backed by one Postgres. This document traces a request from the
   login screen, through connecting an external store, into the Go workers that ingest provider data in
   the background, and back out to the dashboards — naming the real files and mechanisms at each step.</p>
   <div class="pills">
@@ -213,7 +213,6 @@
     <tr><td><span class="path">packages/api/go</span></td><td>Go · fx · net/http · pgx</td><td>Workers, webhook ingest, indexers, schedulers, canonical upserts.</td></tr>
     <tr><td><span class="path">packages/app/react</span></td><td>React · Vite · TanStack</td><td>The app (<code>/app/…</code>): auth, dashboards, mutations.</td></tr>
     <tr><td><span class="path">packages/app/astro</span></td><td>Astro 5 · MDX · Tailwind</td><td>Landing + blog + SEO (served at <code>/</code>).</td></tr>
-    <tr><td><span class="path">packages/app/expo</span></td><td>React Native · Expo</td><td>Native mobile (iOS + Android).</td></tr>
     <tr><td><span class="path">packages/client</span></td><td>Kubb / oapi-codegen</td><td>The generated SDK each frontend &amp; service consumes.</td></tr>
   </table>
 </section>

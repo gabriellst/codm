@@ -1,0 +1,74 @@
+registry:
+  type: frontend
+  layer: shell
+  depends_on: []
+  depended_by: [component, route, store]
+  context_reads: []
+
+  patterns:
+    - id: DSK-01
+      name: "One seam entry point"
+      when: always
+      rule: "React code consumes OS capabilities via `import { native } from '@/lib/native'` — the isTauri()-selected NativeShell."
+      wrong: "importing './tauri' / './browser' directly, or calling window.__TAURI__ outside lib/native"
+    - id: DSK-02
+      name: "Capability = interface member"
+      when: "the console needs a new OS integration"
+      rule: "Extend NativeShell in lib/native/types.ts, implement in tauri.ts AND browser.ts, then consume via native.<capability>()."
+      wrong: "ad-hoc invoke() call sites sprinkled through components"
+    - id: DSK-03
+      name: "Honest browser degradation"
+      when: always
+      rule: "browser.ts returns honest values (pickFolder → null, autostart.isEnabled → false); it never fakes a desktop capability."
+      wrong: "returning a fabricated path or pretending a secret store is secure"
+    - id: DSK-04
+      name: "Shell reaches the console via build config only"
+      when: always
+      rule: "tauri.conf.json devUrl/frontendDist + nx dependsOn app-react:build-spa are the only tauri→react links."
+      wrong: "src-tauri code importing/reading packages/app/react sources"
+    - id: DSK-05
+      name: "Sidecar = externalBin + health-check"
+      when: "adding or changing a sidecar"
+      rule: "Declare in bundle.externalBin, build via scripts/build-sidecars.ts (name-<target-triple>), and give lib.rs a readiness URL (daemon /v1/session, gateway /api/openapi.json)."
+      wrong: "spawning raw processes without a readiness signal, or bundling unmanaged binaries"
+    - id: DSK-06
+      name: "Custom Rust command shape"
+      when: "a capability has no tauri plugin"
+      rule: "#[tauri::command] in src-tauri/src/lib.rs + invoke_handler registration + capability permission in capabilities/default.json"
+
+  bad_practices:
+    - id: bp-01
+      name: "@tauri-apps/* outside lib/native"
+      rule: "The shell API is quarantined to packages/app/react/src/lib/native/ — eslint no-restricted-imports enforces it repo-wide."
+      wrong: "import { open } from '@tauri-apps/plugin-dialog' inside a component"
+      right: "const path = await native.pickFolder()"
+      mechanical: true
+    - id: bp-02
+      name: "UI branching on the host"
+      rule: "Components never test isTauri()/native.host to change behavior — missing capability means extending the seam with honest degradation."
+      wrong: "if (isTauri()) { showFolderPicker() } else { hideButton() }"
+      right: "const path = await native.pickFolder(); if (path === null) keep the manual input flow"
+      mechanical: false
+    - id: bp-03
+      name: "Business logic in the shell"
+      rule: "src-tauri stays product-free: serve webview, supervise sidecars, expose OS commands. Domain behavior lives in the daemon/gateway/console."
+      wrong: "Rust command that classifies messages or touches domain tables"
+      right: "console → SDK → daemon use case; shell only relays OS capabilities"
+      mechanical: false
+    - id: bp-04
+      name: "Sidecar boot without readiness"
+      rule: "Every sidecar bootstrap must poll its readiness URL and surface sidecar:ready/sidecar:error — never assume the daemon is up."
+      wrong: "spawn() and immediately render the console against :3030"
+      right: "probe /v1/session until 200 (60s budget) → emit sidecar:ready"
+      mechanical: false
+
+  canonical_snippet: |
+    // packages/app/react/src/lib/native/index.ts
+    export const native: NativeShell = isTauri() ? tauriShell : browserShell
+
+    // a component that needs a folder
+    import { native } from '@/lib/native'
+    const path = await native.pickFolder({ title: t('workspace.pickFolder') })
+    if (path === null) return // browser host or user cancel — manual input stays
+
+  scaffold: null

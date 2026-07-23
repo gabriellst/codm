@@ -35,7 +35,6 @@
 #     COPY ./packages/api/typescript/package.json ./packages/api/typescript/package.json
 #     COPY ./packages/api/typescript/core/package.json ./packages/api/typescript/core/package.json
 #     COPY ./packages/client/package.json ./packages/client/package.json
-#     COPY ./packages/app/expo/package.json ./packages/app/expo/package.json
 #     COPY ./packages/e2e/package.json ./packages/e2e/package.json
 #     RUN  bun install
 #     ARG  VITE_API_URL

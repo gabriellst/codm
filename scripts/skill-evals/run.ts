@@ -310,7 +310,7 @@ patterns are the grading rubric made code.
 Work order: (1) READ the playbooks the task points you at (.claude/skills/<skill>/... and the
 package CLAUDE.md — they are short and they ARE the grading rubric; code that ignores them
 fails); (2) SCAFFOLD FIRST where a recipe exists — \`bun cli\` scaffolds BOTH frontend
-artifacts (react/expo routes, components, dialogs, forms) AND backend artifacts (bounded
+artifacts (react routes, components, dialogs, forms) AND backend artifacts (bounded
 contexts, entities, use cases, repositories, PROJECTIONS + PROJECTORS, controllers — see
 docs/CLI.md and the skill's scaffold: line); run it and fill the emitted shape in;
 hand-writing artifacts the CLI scaffolds is how house canons get missed; (3) then build; (4) SELF-CHECK
@@ -504,9 +504,9 @@ async function runAgentInTree(task: Task, treeRoot: string): Promise<boolean> {
 		const structuralGaps = (porcelain: string): string[] => {
 			const touched = porcelain.split('\n').map(l => l.slice(3))
 			const gaps: string[] = []
-			if (!touched.some(f => f.startsWith('packages/app/react/src/routes/') || f.startsWith('packages/app/expo/app/')))
+			if (!touched.some(f => f.startsWith('packages/app/react/src/routes/')))
 				gaps.push(
-					'FRONTEND DROPPED — no new files under packages/app/react/src/routes/ (or packages/app/expo/app/): the whole frontend wave (route + data-owning section that owns its query + the realtime useServerEvents subscription + the create dialog) is missing.',
+					'FRONTEND DROPPED — no new files under packages/app/react/src/routes/: the whole frontend wave (route + data-owning section that owns its query + the realtime useServerEvents subscription + the create dialog) is missing.',
 				)
 			if (!touched.some(f => f.startsWith('packages/client/')))
 				gaps.push(
@@ -557,7 +557,6 @@ do NOT stop until every item above exists in the tree. Reply with which worker b
 		const TSC_BY_PREFIX: Record<string, [string, string[]]> = {
 			'packages/api/typescript/': ['packages/api/typescript', ['bun', 'x', 'tsc', '-p', 'tsconfig.build.json', '--noEmit']],
 			'packages/app/react/': ['packages/app/react', ['bun', 'x', 'tsc', '--noEmit']],
-			'packages/app/expo/': ['packages/app/expo', ['bun', 'x', 'tsc', '--noEmit']],
 			'packages/e2e/': ['packages/e2e', ['bun', 'x', 'tsc', '--noEmit']],
 		}
 		const touched = new Set(changes.split('\n').map(l => l.slice(3)))

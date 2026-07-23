@@ -301,44 +301,6 @@ function classifyBackend(rel: string, parts: string[], boundary = BACKEND_BOUNDA
 	return { kind, context: ctx, hints }
 }
 
-// ── Expo (React Native) — routes use `app/` anchor instead of `routes/` ──
-
-function classifyExpo(rel: string, boundary: string): ClassificationResult | null {
-	if (!rel.startsWith(`${boundary}/`)) return null
-	const local = rel.slice(boundary.length + 1)
-
-	// Skip test/spec files
-	if (isTestFile(rel)) return null
-
-	// Helper file filter (utils, types, etc. inside -components/)
-	const last = local.split('/').pop() ?? local
-	const baseNoExt = last.replace(/\.tsx?$/, '')
-	if (FRONTEND_HELPER_BASENAMES.has(baseNoExt) && /-(components|hooks|stores|sections)\//.test(local)) {
-		return null
-	}
-
-	// Expo Router: file-based routing under app/<...>.tsx
-	if (local.startsWith('app/')) {
-		// Layouts and special files: _layout.tsx, +not-found.tsx, etc.
-		if (/\/_layout\.tsx?$/.test(local)) return { kind: 'frontend-route' }
-		if (/\/\+[a-z-]+\.tsx?$/.test(local)) return { kind: 'frontend-route' }
-		// Route files: any .tsx file directly in app/ tree (excluding -<x>/ scoped dirs)
-		if (/\.tsx?$/.test(local) && !/-(components|sections|hooks|stores)\//.test(local)) {
-			return { kind: 'frontend-route' }
-		}
-	}
-
-	// Shared components, hooks, stores, lib — mirror the React layout
-	if (/^components\/ui\/[^/]+\.tsx?$/.test(local)) return { kind: 'frontend-ui-primitive' }
-	if (/^components\/[^/]+(\/index)?\.tsx?$/.test(local)) return { kind: 'frontend-component' }
-	if (/^stores\/[^/]+\.tsx?$/.test(local) && local !== 'stores/index.ts') return { kind: 'frontend-store' }
-	if (/^hooks\/[^/]+\.tsx?$/.test(local)) return { kind: 'frontend-hook' }
-	if (local === 'lib/consts.ts' || local === 'lib/labels.ts') return { kind: 'frontend-label-map' }
-	if (local === 'lib/errors.ts') return { kind: 'frontend-error-handler' }
-
-	return null
-}
-
 // ── Astro — pages and shared components only ──
 
 function classifyAstro(rel: string, boundary: string): ClassificationResult | null {
@@ -378,9 +340,6 @@ export function classify(absOrRepoPath: string): ClassificationResult | null {
 		}
 		case 'app-react':
 			result = classifyFrontend(rel, ws.src)
-			break
-		case 'app-expo':
-			result = classifyExpo(rel, ws.src)
 			break
 		case 'app-astro':
 			result = classifyAstro(rel, ws.src)

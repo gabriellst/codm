@@ -14,7 +14,7 @@
 /*
  * Landing typography (D3): Poppins w800 tight-tracked + w300 pairing carries the
  * hero voice. Anton stays registered as `--font-display` for non-landing surfaces
- * (console/expo masthead) but is NOT used on the landing. IBM Plex Mono is the
+ * (console masthead) but is NOT used on the landing. IBM Plex Mono is the
  * first-class product-vocabulary face (labels, terminal, chips).
  */
 @theme {

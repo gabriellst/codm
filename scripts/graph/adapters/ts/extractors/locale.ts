@@ -10,7 +10,7 @@ const LANGS = LOCALE_LANGS
 export function runLocaleExtraction(graph: Graph, _audit: AuditCollector): { keysExtracted: number } {
 	let keys = 0
 	// Walk every frontend workspace that has a locales dir; each emits its own
-	// per-lang JSON files (e.g. app-react: src/locales/pt.json, app-expo: locales/pt.json).
+	// per-lang JSON files (e.g. app-react: src/locales/pt.json).
 	for (const ws of workspacesByRole('app')) {
 		if (!ws.locales) continue
 		const localesDir = join(ROOT, ws.locales)

@@ -112,9 +112,6 @@ graders:
   - kind: detect
     spec: component-props
     id: detect#component-props
-  - kind: detect
-    spec: route-closure
-    id: detect#route-closure
   # ── e2e layer (B's work) ────────────────────────────────────────────
   - kind: tsc
     spec: e2e

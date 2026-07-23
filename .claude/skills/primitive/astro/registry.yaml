@@ -40,12 +40,12 @@ bad_practices:
   - id: BP-AP-004
     severity: medium
     when: always
-    summary: Primitive imports from `@codedm/app-react` or `@codedm/app-expo`.
+    summary: Primitive imports from `@codedm/app-react`.
     why: Each app workspace is independent; styles are the only shared surface.
     fix: Recreate the primitive locally; share design tokens via `@codedm/app-styles`.
     mechanical: true
     detect:
-      - '@codedm/app-(react|expo)'
+      - '@codedm/app-react'
 
   - id: BP-AP-005
     severity: medium
@@ -69,7 +69,7 @@ patterns:
   - id: P-AP-001
     when: always
     description: CVA recipe authored in `.astro` frontmatter; `class={variants({...})}` emitted on the root element.
-    rationale: Single source of truth for variants — identical to react/expo primitives.
+    rationale: Single source of truth for variants — identical to react primitives.
 
   - id: P-AP-002
     when: always

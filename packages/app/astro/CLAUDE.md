@@ -183,7 +183,7 @@ import ThemeToggle from '~/components/ThemeToggle.tsx'
 - [ ] Colors come from CSS variables / Tailwind utilities mapped to `tokens.css`, never inline hex.
 - [ ] Locale is detected from `Astro.params.locale` or `getLocale(Astro.url)`, never from URL parsing.
 - [ ] Links between locales use `localizedPath(Astro.url, targetLocale)`.
-- [ ] No imports from `@codedm/app-react/*` or `@codedm/app-expo/*` — astro is its own workspace.
+- [ ] No imports from `@codedm/app-react/*` — astro is its own workspace.
 - [ ] SEO: `<title>`, `<meta name="description">`, OG tags, and (for blog posts) `jsonLd` are passed to `BaseLayout`.
 - [ ] Output mode left as `static` unless SSR is genuinely required per-route.
 

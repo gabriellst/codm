@@ -9,8 +9,8 @@ baseRef: ""
 prompt: >
   In the template landing site (packages/app/astro — the public marketing
   surface served at /), build the missing Pricing page. This is an
-  astro-workspace-only task: do not touch the backend, the react app, the
-  expo app, or the SDK (the landing site never imports
+  astro-workspace-only task: do not touch the backend, the react app, or
+  the SDK (the landing site never imports
   @codedm/client-typescript). Before writing code, read the astro skill
   variants — .claude/skills/route/astro/SKILL.md + registry.yaml,
   .claude/skills/component/astro/SKILL.md + registry.yaml and
@@ -167,7 +167,7 @@ graders:
     spec: "packages/app/astro/src/**/*.{astro,tsx}::#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\\b|\\brgba?\\s*\\("
     id: component-astro#BP-AC-003
   - kind: grep-must-not
-    spec: "packages/app/astro/src/**/*.{astro,tsx}::@codedm/(app-react|app-expo|client-typescript)"
+    spec: "packages/app/astro/src/**/*.{astro,tsx}::@codedm/(app-react|client-typescript)"
     id: component-astro#BP-AC-005
   # ── detectors + judge ──────────────────────────────────────────────
   - kind: detect
@@ -254,7 +254,7 @@ notes: >-
   localizedPath; the i18n module itself is .ts so the Nav.astro grep is
   0 at HEAD), get(Entry|Collection)('pricing') zero, no hex/rgb literals
   in .astro/.tsx, no prerender=false, no use(State|Effect|Query)( in
-  .astro, no @codedm/app-react|app-expo|client-typescript imports;
+  .astro, no @codedm/app-react|client-typescript imports;
   registry-scan + import-direction exit 0 at HEAD. The accent canary
   (must-not [áàâã...] — hardcoded pt copy in code) is scoped to
   src/components/** and src/pages/**/pricing.astro ONLY because

@@ -73,7 +73,6 @@ export function graderLabel(grader: GraderSpec): string {
 const TSC_TARGETS: Record<string, { cwd: string; cmd: string[] }> = {
 	backend: { cwd: 'packages/api/typescript', cmd: ['bun', 'x', 'tsc', '-p', 'tsconfig.build.json', '--noEmit'] },
 	'app-react': { cwd: 'packages/app/react', cmd: ['bun', 'x', 'tsc', '--noEmit'] },
-	'app-expo': { cwd: 'packages/app/expo', cmd: ['bun', 'x', 'tsc', '--noEmit'] },
 	e2e: { cwd: 'packages/e2e', cmd: ['bun', 'x', 'tsc', '--noEmit'] },
 }
 
@@ -87,15 +86,7 @@ async function gradeTsc(spec: string, treeRoot: string): Promise<{ pass: boolean
 	}
 }
 
-const DETECTORS = [
-	'registry-scan',
-	'import-direction',
-	'slice-closure',
-	'route-closure',
-	'component-props',
-	'projection-shape',
-	'go-enum-literals',
-] as const
+const DETECTORS = ['registry-scan', 'import-direction', 'slice-closure', 'component-props', 'projection-shape', 'go-enum-literals'] as const
 
 async function gradeDetect(spec: string, treeRoot: string): Promise<{ pass: boolean; detail: string }> {
 	// spec = '<detector> [extra args...]'; defaults to --all (a detached eval tree has no git diff).
@@ -175,7 +166,11 @@ const JUDGE_TIMEOUT_MS = Number(process.env.JUDGE_TIMEOUT_MS || 5 * 60 * 1000)
  * with `VERDICT: PASS` or `VERDICT: FAIL — <reason>`. Anything else (timeout, crash,
  * no verdict line) grades as fail with the evidence attached.
  */
-export async function gradeJudge(spec: string, treeRoot: string, model = process.env.JUDGE_MODEL || 'haiku'): Promise<{ pass: boolean; detail: string }> {
+export async function gradeJudge(
+	spec: string,
+	treeRoot: string,
+	model = process.env.JUDGE_MODEL || 'haiku',
+): Promise<{ pass: boolean; detail: string }> {
 	const prompt = `You are a strict architecture judge inspecting the repository at your cwd.
 Rubric:
 ${spec}

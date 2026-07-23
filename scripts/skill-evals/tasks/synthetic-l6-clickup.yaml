@@ -137,9 +137,6 @@ graders:
     spec: projection-shape
     id: build#detect-projection
   - kind: detect
-    spec: route-closure
-    id: build#detect-routes
-  - kind: detect
     spec: component-props
     id: build#detect-component-props
   # ── CQRS stage — the richer-app payoff: TWO projections of one write model ──

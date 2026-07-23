@@ -87,7 +87,7 @@ const PROJECT_ROOT = process.env.REVIEW_PROJECT_ROOT || resolve(SCRIPT_DIR, '..'
 // them, so a bare 'api/src' / 'app/src' would silently match nothing and
 // leave every support file un-inlined (the dead-inlining bug this layout fixes).
 const BACKEND_TS_ROOT = REPO.workspaceRoots.apiTs
-const APP_SRC_ROOTS = [REPO.workspaceRoots.appReact, `${REPO.packageRoots.appExpo}/src`, REPO.workspaceRoots.appAstro]
+const APP_SRC_ROOTS = [REPO.workspaceRoots.appReact, REPO.workspaceRoots.appAstro]
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -436,6 +436,11 @@ export const CLASSIFICATION_RULES: Array<{ match: RegExp; artifact: string; skil
 	{ match: /schemas\/.*\.ts$/, artifact: 'schema', skill: 'schema' },
 	{ match: new RegExp(`enums/.*${BACKEND_EXT}$`), artifact: 'enum', skill: 'enum' },
 
+	// Desktop shell — the react NativeShell seam + the tauri package's TS surface
+	// (Rust sources are outside batch review's TS/Go scope; the skill still owns them).
+	{ match: /packages\/app\/react\/src\/lib\/native\/.*\.ts$/, artifact: 'desktop-shell', skill: 'desktop-shell' },
+	{ match: /packages\/app\/tauri\/.*\.ts$/, artifact: 'desktop-shell', skill: 'desktop-shell' },
+
 	// Frontend — TSX only (web + mobile share the .tsx surface)
 	{ match: /\/-forms\/.*\.tsx?$/, artifact: 'form', skill: 'form' },
 	{ match: /(-stores|stores)\/.*\.ts$/, artifact: 'store', skill: 'store' },
@@ -511,12 +516,12 @@ export function classifyFile(
 	// Context filter — scope-aware. Path layouts (roots from template.config.ts):
 	//   backend ts:  <workspaceRoots.apiTs>/<ctx>/...
 	//   backend go:  <workspaceRoots.apiGo>/<ctx>/...
-	//   frontend:    packages/app/{react,expo}/src/routes/<ctx>/...
+	//   frontend:    packages/app/react/src/routes/<ctx>/...
 	//                <workspaceRoots.appAstro>/pages/<ctx>/...
 	if (contextFilter) {
 		if (scope === 'frontend') {
 			const ok =
-				new RegExp(`packages/app/(?:react|expo)/(?:src/)?(?:routes|app)/${contextFilter}/`).test(file) ||
+				new RegExp(`packages/app/react/src/routes/${contextFilter}/`).test(file) ||
 				new RegExp(`${REPO.workspaceRoots.appAstro}/pages/${contextFilter}/`).test(file)
 			if (!ok) return null
 		} else if (scope === 'backend') {
@@ -1499,16 +1504,12 @@ function sourcePathToImportAliases(filePath: string): string[] {
 		return patterns
 	}
 
-	// Frontend targets differ in both alias and whether they nest under src/:
-	//   react → '@/*' = ./src/*   ·   astro → '~/*' = ./src/*   ·   expo → '@/*' = ./*
+	// Frontend targets differ in alias: react → '@/*' = ./src/*  ·  astro → '~/*' = ./src/*
 	const reactMatch = filePath.match(/^packages\/app\/react\/src\/(.+)\.tsx?$/)
 	if (reactMatch) return [`'@/${reactMatch[1]}'`]
 
 	const astroMatch = filePath.match(/^packages\/app\/astro\/src\/(.+)\.tsx?$/)
 	if (astroMatch) return [`'~/${astroMatch[1]}'`]
-
-	const expoMatch = filePath.match(/^packages\/app\/expo\/(.+)\.tsx?$/)
-	if (expoMatch) return [`'@/${expoMatch[1]}'`]
 
 	return []
 }

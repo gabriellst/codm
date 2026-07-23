@@ -7,9 +7,17 @@
 		"tsc": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"dependsOn": [{ "projects": "client-typescript", "target": "build" }],
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
 			"inputs": ["{projectRoot}/src/**/*", "{projectRoot}/tsconfig.json", "{projectRoot}/tsr.config.json"],
-			"options": { "command": "bun x tsc --noEmit", "cwd": "packages/app/react" }
+			"options": {
+				"command": "bun x tsc --noEmit",
+				"cwd": "packages/app/react"
+			}
 		},
 		"build": {
 			"executor": "nx:run-commands",
@@ -17,13 +25,35 @@
 			"dependsOn": ["tsc"],
 			"inputs": ["production", "{projectRoot}/vite.config.ts", "{projectRoot}/index.html"],
 			"outputs": ["{projectRoot}/dist"],
-			"options": { "command": "vite build", "cwd": "packages/app/react" }
+			"options": {
+				"command": "vite build",
+				"cwd": "packages/app/react"
+			}
+		},
+		"build-spa": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": ["tsc"],
+			"inputs": ["production", "{projectRoot}/vite.config.ts"],
+			"outputs": ["{projectRoot}/dist"],
+			"options": {
+				"command": "CODEDM_DESKTOP=true vite build && if [ ! -f dist/client/_shell.html ]; then echo 'build-spa: dist/client/_shell.html missing — TanStack Start renamed its SPA shell output; update build-spa in project.json' >&2; exit 1; fi && cp dist/client/_shell.html dist/client/index.html",
+				"cwd": "packages/app/react"
+			}
 		},
 		"dev": {
 			"executor": "nx:run-commands",
 			"cache": false,
-			"dependsOn": [{ "projects": "client-typescript", "target": "build" }],
-			"options": { "command": "vite --host", "cwd": "packages/app/react" }
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"options": {
+				"command": "vite --host",
+				"cwd": "packages/app/react"
+			}
 		},
 		"lint": {
 			"executor": "nx:run-commands",

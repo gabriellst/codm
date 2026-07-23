@@ -1,0 +1,15 @@
+{
+	"name": "@codedm/app-tauri",
+	"version": "0.1.0",
+	"private": true,
+	"description": "CodeDM desktop shell — Tauri v2 host for the react console + TS daemon / Go gateway sidecars.",
+	"scripts": {
+		"tauri": "tauri",
+		"dev": "tauri dev",
+		"bundle": "tauri build",
+		"sidecars": "bun scripts/build-sidecars.ts"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^2.9.6"
+	}
+}

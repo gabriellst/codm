@@ -1,6 +1,6 @@
 ---
 name: form
-description: Create forms with TanStack Form and SDK validation. Routes by working-directory to the matching child — react (Base UI + Maskito) or expo (native Input/NumField/KeyboardAware). No astro variant — forms on landing pages should be implemented as React islands and follow the react child.
+description: Create forms with TanStack Form and SDK validation. Single child — react (Base UI + Maskito). No astro variant — forms on landing pages should be implemented as React islands and follow the react child.
 ---
 
 # Create Form (parent)
@@ -12,28 +12,26 @@ A **form** is the interactive surface between the user and an SDK mutation. It o
 | Working file path                       | Use                                                                                                                                                                   |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/app/react/**`                 | [`./react/SKILL.md`](./react/SKILL.md) + [`./react/registry.yaml`](./react/registry.yaml) — TanStack Form + Base UI primitives, Maskito masks, Dialog forms          |
-| `packages/app/expo/**`                  | [`./expo/SKILL.md`](./expo/SKILL.md) + [`./expo/registry.yaml`](./expo/registry.yaml) — TanStack Form + RN `Input` / `NumField` / `KeyboardAware`, sheet-as-form     |
 | `packages/app/astro/**`                 | **No astro variant.** Forms are an interactive concern; landing pages aren't where they belong. If a form genuinely needs to live on a marketing page (newsletter signup, contact form), implement it as a React island inside `packages/app/astro/src/components/<Name>.tsx` and follow the `react/` child below — but most forms should live in `packages/app/react/`. |
 
 If the path is **ambiguous**, ask the user once and don't proceed until they answer.
 
-## Shared principles (apply on BOTH platforms)
+## Shared principles
 
 1. **SDK schema is the single source of truth.** Forms validate against `xxxMutationRequestSchema` from `@codedm/client-typescript/<service>`. Never hand-roll validation rules.
 2. **TanStack Form owns field state.** `useForm({ defaultValues, validators: { onChange: schema }, onSubmit })`. Never `useState` for form values.
 3. **Submit via the SDK mutation hook.** On success: `toast` / `Toast` + `queryClient.invalidateQueries({ queryKey: ... })`. Never call `fetch` directly.
 4. **Same Zod schema as the controller.** That's the contract the backend enforces too.
-5. **Native primitives win.** Use the platform's input primitives (Base UI on react, RN inputs on expo). Wrap in a `FormField` to wire `id={field.name}` + label.
+5. **Native primitives win.** Use the platform's input primitives (Base UI on react). Wrap in a `FormField` to wire `id={field.name}` + label.
 
 ## When to use this skill
 
 - Adding a create / edit / delete form for any backend mutation.
 - Wrapping a single-step or multi-step wizard.
-- Building a sheet that submits an SDK mutation (expo).
 
 ## When NOT to use this skill
 
-- Building the dialog/sheet shell → `/component` (react) or `/sheet` (expo).
+- Building the dialog shell → `/component` (react).
 - Adding a read-only filter bar → `/component`.
 
 ## Checklist (parent-level)

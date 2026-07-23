@@ -55,10 +55,13 @@ const FIXTURE: RepoLike = {
 			nxProject: 'app-react',
 			devServer: 'aggregate',
 		},
+		// Fixture-universe workspace (NOT a live workspace of this repo): a third frontend
+		// whose alias/paths exercise pruning of a dropped target. 'expo' left the
+		// Workspace.lang union with the expo removal, so the fixture declares a live lang.
 		appExpo: {
 			pkgRoot: 'packages/app/expo',
 			srcRoot: 'packages/app/expo',
-			lang: 'expo',
+			lang: 'react',
 			kind: 'frontend',
 			alias: 'expo',
 			nxProject: 'app-expo',
@@ -91,7 +94,15 @@ const FIXTURE: RepoLike = {
 			nxProject: 'client',
 			devServer: null,
 		},
-		e2e: { pkgRoot: 'packages/e2e', srcRoot: 'packages/e2e', lang: 'typescript', kind: 'shared', alias: 'e2e', nxProject: 'e2e' },
+		e2e: {
+			pkgRoot: 'packages/e2e',
+			srcRoot: 'packages/e2e',
+			lang: 'typescript',
+			kind: 'shared',
+			alias: 'e2e',
+			nxProject: 'e2e',
+			devServer: null,
+		},
 	},
 	env: {
 		COMPOSE_KEY: { consumers: ['compose'], example: 'x' },

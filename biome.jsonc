@@ -51,7 +51,6 @@
 			"!!**/.nx",
 			"!!**/.claude",
 			"!!**/.output",
-			"!!**/.expo",
 			"!!**/.astro",
 			"!!**/.vite",
 			"!!**/coverage",
