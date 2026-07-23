@@ -1,7 +1,9 @@
 import { parse as parseYaml } from 'yaml'
+import { associateUnionSlots, type UnionSlotDecl } from './union-slots'
 
 export type FieldType =
 	| { kind: 'string' }
+	| { kind: 'uuid' }
 	| { kind: 'literal'; value: string }
 	| { kind: 'string-enum'; values: string[] }
 	| { kind: 'enum-ref'; ref: string }
@@ -37,7 +39,16 @@ export interface ParsedEvent {
 	modelName: string
 	wireName: string
 	doc?: string
+	/** Envelope + own properties, merged (envelope-first order; redeclared fields keep the envelope position). */
 	fields: EventField[]
+	/**
+	 * The event model's OWN properties in declaration order — includes envelope fields the
+	 * model explicitly redeclares (e.g. a verbatim payload that carries `ownerId`/`occurredAt`
+	 * inside the payload). This is what payload-struct emission is derived from.
+	 */
+	ownFields: EventField[]
+	/** Union-slot declarations (@unionSlot/@variant), already associated + structurally validated. */
+	unionSlots: UnionSlotDecl[]
 }
 
 export interface ParsedContracts {
@@ -59,6 +70,8 @@ interface OASchema {
 	discriminator?: { propertyName: string }
 	description?: string
 	$ref?: string
+	'x-union-slots'?: Array<{ field: string; discriminators: string[] }>
+	'x-union-variants'?: Array<{ values: string[]; typeName: string; owner: string }>
 }
 
 interface OADoc {
@@ -127,14 +140,18 @@ function tryParseEvent(modelName: string, schema: OASchema, all: Record<string, 
 	const wireName = nameProp?.enum?.[0]
 	if (!wireName) return null
 
-	const fields: EventField[] = Object.entries(props).map(([fieldName, fs]) => ({
+	const toField = ([fieldName, fs]: [string, OASchema]): EventField => ({
 		name: fieldName,
 		type: typeOf(fs),
 		required: requiredSet.has(fieldName),
 		doc: fs.description,
-	}))
+	})
+	const fields: EventField[] = Object.entries(props).map(toField)
+	const ownFields: EventField[] = Object.entries(ownSchema.properties ?? {}).map(toField)
 
-	return { modelName, wireName, doc: schema.description, fields }
+	const unionSlots = associateUnionSlots(modelName, schema['x-union-slots'] ?? [], schema['x-union-variants'] ?? [], Object.keys(props))
+
+	return { modelName, wireName, doc: schema.description, fields, ownFields, unionSlots }
 }
 
 function typeOf(s: OASchema): FieldType {
@@ -157,6 +174,7 @@ function typeOf(s: OASchema): FieldType {
 	if (s.type === 'string') {
 		if (s.format === 'date-time') return { kind: 'date-time' }
 		if (s.format === 'uri') return { kind: 'url' }
+		if (s.format === 'uuid') return { kind: 'uuid' }
 		return { kind: 'string' }
 	}
 	if (s.type === 'integer') {
