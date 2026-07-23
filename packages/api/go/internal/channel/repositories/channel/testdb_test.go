@@ -13,8 +13,8 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/db/dbutil"
-	sqldb "template/api-go/internal/shared/db/sql"
+	"template/core-go/db/dbutil"
+	sqldb "template/core-go/db/sql"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

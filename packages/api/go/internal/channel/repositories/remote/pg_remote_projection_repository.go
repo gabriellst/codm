@@ -11,7 +11,7 @@ import (
 
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/projections"
-	"template/api-go/internal/shared/db/dbutil"
+	"template/core-go/db/dbutil"
 	"template/core-go/services/unitofwork"
 )
 

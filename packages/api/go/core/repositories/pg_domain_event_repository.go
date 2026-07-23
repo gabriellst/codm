@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"template/api-go/internal/shared/services/outbox"
+	"template/core-go/services/outbox"
 	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 )

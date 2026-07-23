@@ -10,7 +10,7 @@ import (
 
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
-	sharedrepos "template/api-go/internal/shared/repositories"
+	sharedrepos "template/core-go/repositories"
 )
 
 // ---------------------------------------------------------------------------

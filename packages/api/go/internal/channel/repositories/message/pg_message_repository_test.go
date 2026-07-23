@@ -17,9 +17,9 @@ import (
 
 	"template/api-go/internal/channel/entities"
 	channelenums "template/api-go/internal/channel/enums"
-	"template/api-go/internal/shared/db/dbutil"
-	sqldb "template/api-go/internal/shared/db/sql"
-	sharedrepos "template/api-go/internal/shared/repositories"
+	"template/core-go/db/dbutil"
+	sqldb "template/core-go/db/sql"
+	sharedrepos "template/core-go/repositories"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

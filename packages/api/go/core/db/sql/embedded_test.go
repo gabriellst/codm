@@ -10,8 +10,8 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 
-	"template/api-go/internal/shared/config"
-	"template/api-go/internal/shared/db/dbutil"
+	"template/core-go/config"
+	"template/core-go/db/dbutil"
 )
 
 func TestNewPostgresDB_FullLifecycle(t *testing.T) {

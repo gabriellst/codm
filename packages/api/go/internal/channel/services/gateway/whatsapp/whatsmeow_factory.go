@@ -14,7 +14,7 @@ import (
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/shared/config"
+	"template/core-go/config"
 	repositories "template/core-go/repositories"
 )
 

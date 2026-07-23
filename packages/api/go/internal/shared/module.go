@@ -6,18 +6,16 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
-	"template/api-go/internal/shared/config"
 	sharedcontrollers "template/api-go/internal/shared/controllers"
-	"template/api-go/internal/shared/db/sql"
 	"template/api-go/internal/shared/middleware"
-	"template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/httprouter"
-	sharedmediator "template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/services/outbox"
 	"template/api-go/public"
+	"template/core-go/config"
+	"template/core-go/db/sql"
 	coremw "template/core-go/middleware"
-	corerepositories "template/core-go/repositories"
+	"template/core-go/repositories"
 	"template/core-go/services/mediator"
+	"template/core-go/services/outbox"
 	"template/core-go/services/unitofwork"
 	"template/core-go/types"
 
@@ -33,7 +31,7 @@ var Module = fx.Module("shared",
 
 	// Infrastructure
 	fx.Provide(fx.Annotate(unitofwork.NewNoopUnitOfWork, fx.As(new(unitofwork.UnitOfWork)))),
-	fx.Provide(fx.Annotate(sharedmediator.NewRedisExternalMediator, fx.As(new(mediator.ExternalMediator)))),
+	fx.Provide(fx.Annotate(mediator.NewRedisExternalMediator, fx.As(new(mediator.ExternalMediator)))),
 
 	// Internal Mediator (domain events via channels)
 	fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
@@ -41,7 +39,7 @@ var Module = fx.Module("shared",
 	// Domain Event Repository (dual-writes to events + outbox)
 	fx.Provide(fx.Annotate(
 		repositories.NewPgDomainEventRepository,
-		fx.As(new(corerepositories.DomainEventRepository)),
+		fx.As(new(repositories.DomainEventRepository)),
 	)),
 
 	// Outbox Dispatcher (polls outbox → dispatches to InternalMediator)

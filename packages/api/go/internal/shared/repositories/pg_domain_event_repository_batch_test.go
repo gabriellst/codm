@@ -1,4 +1,4 @@
-package repositories
+package repositories_test
 
 import (
 	"context"
@@ -15,8 +15,9 @@ import (
 
 	"template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/db/dbutil"
-	sqldb "template/api-go/internal/shared/db/sql"
+	"template/core-go/db/dbutil"
+	sqldb "template/core-go/db/sql"
+	"template/core-go/repositories"
 	"template/core-go/types"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -125,7 +126,7 @@ func makeGatewayConnectedEvents(n int, ownerID string) []types.DomainEventI {
 func TestSaveAll_BatchInsert(t *testing.T) {
 	db, cleanup := newEmbeddedTestDB(t)
 	defer cleanup()
-	repo := NewPgDomainEventRepository(db)
+	repo := repositories.NewPgDomainEventRepository(db)
 
 	// Use a unique owner_id per test invocation so parallel test-package runs
 	// don't collide on the shared.events count (the table is schema-qualified
@@ -159,7 +160,7 @@ func TestSaveAll_BatchInsert(t *testing.T) {
 func TestSaveAll_Idempotent(t *testing.T) {
 	db, cleanup := newEmbeddedTestDB(t)
 	defer cleanup()
-	repo := NewPgDomainEventRepository(db)
+	repo := repositories.NewPgDomainEventRepository(db)
 
 	// Unique owner_id per invocation — parallel runs share shared.events.
 	ownerID := uuid.New().String()
@@ -184,7 +185,7 @@ func TestSaveAll_Idempotent(t *testing.T) {
 func TestSaveAll_Empty(t *testing.T) {
 	db, cleanup := newEmbeddedTestDB(t)
 	defer cleanup()
-	repo := NewPgDomainEventRepository(db)
+	repo := repositories.NewPgDomainEventRepository(db)
 	if err := repo.SaveAll(context.Background(), nil); err != nil {
 		t.Fatalf("empty SaveAll: %v", err)
 	}

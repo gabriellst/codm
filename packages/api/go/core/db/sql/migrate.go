@@ -5,7 +5,7 @@ import (
 	"embed"
 	"fmt"
 
-	"template/api-go/internal/shared/config"
+	"template/core-go/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"

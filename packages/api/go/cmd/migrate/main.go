@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"os"
 
-	"template/api-go/internal/shared/config"
-	migratedb "template/api-go/internal/shared/db/sql"
+	"template/core-go/config"
+	migratedb "template/core-go/db/sql"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

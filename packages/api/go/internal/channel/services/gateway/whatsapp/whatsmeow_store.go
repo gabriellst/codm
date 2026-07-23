@@ -9,7 +9,7 @@ import (
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	waLog "go.mau.fi/whatsmeow/util/log"
 
-	"template/api-go/internal/shared/config"
+	"template/core-go/config"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

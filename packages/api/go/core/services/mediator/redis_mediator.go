@@ -9,8 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"template/api-go/internal/shared/config"
-	coremediator "template/core-go/services/mediator"
+	"template/core-go/config"
 	"template/core-go/types"
 )
 
@@ -29,7 +28,7 @@ type RedisExternalMediator struct {
 	callbacks []func(ctx context.Context, event types.IntegrationEventI)
 }
 
-func NewRedisExternalMediator(cfg *config.Config) (coremediator.ExternalMediator, error) {
+func NewRedisExternalMediator(cfg *config.Config) (ExternalMediator, error) {
 	opts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid redis url: %w", err)
@@ -37,7 +36,7 @@ func NewRedisExternalMediator(cfg *config.Config) (coremediator.ExternalMediator
 	return &RedisExternalMediator{client: redis.NewClient(opts)}, nil
 }
 
-func (m *RedisExternalMediator) Register(_ coremediator.IntegrationEventHandler) {}
+func (m *RedisExternalMediator) Register(_ IntegrationEventHandler) {}
 
 func (m *RedisExternalMediator) RegisterCallback(fn func(ctx context.Context, event types.IntegrationEventI)) {
 	m.mu.Lock()

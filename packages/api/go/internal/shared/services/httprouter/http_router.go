@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"template/api-go/internal/shared/config"
+	"template/core-go/config"
 	"template/core-go/types"
 )
 

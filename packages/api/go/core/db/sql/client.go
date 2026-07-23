@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"template/api-go/internal/shared/config"
+	"template/core-go/config"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
