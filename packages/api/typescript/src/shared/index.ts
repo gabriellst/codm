@@ -25,10 +25,6 @@ import * as sharedEnums from './enums'
 import * as authEnums from '@auth/enums'
 import * as uiEnums from '@ui/enums'
 import * as sharedObjects from './objects'
-// Generic, wire-facing BFF read atoms (Metric/Tally) — safe to register: no refinements,
-// no entity coupling. The `segmented*` factory functions in this barrel are non-Zod and
-// are silently skipped by registerSchemas. See shared/schemas/Metric.ts.
-import * as sharedSchemas from './schemas'
 import { TestIngressController } from './controllers'
 
 // TEST-ONLY gateway ingress seam — mounted ONLY under CODEDM_E2E (the Playwright harness), refused
@@ -99,7 +95,6 @@ openapi.registerEnums({ ...wireEnums, ...sharedEnums, ...authEnums, ...uiEnums }
 // _zod / ~standard marker and are silently skipped by registerSchemas.
 openapi.registerSchemas({
 	...sharedObjects,
-	...sharedSchemas,
 })
 
 export default ctx.router

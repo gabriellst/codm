@@ -1,7 +1,0 @@
-export { UserRegisteredEvent, UserRegisteredEventSchema } from './UserRegisteredEvent'
-export { UserSignedInEvent } from './UserSignedInEvent'
-export { UserSignedOutEvent } from './UserSignedOutEvent'
-export { ProfileUpdatedEvent } from './ProfileUpdatedEvent'
-export { PasswordChangedEvent } from './PasswordChangedEvent'
-export { PasswordResetRequestedEvent } from './PasswordResetRequestedEvent'
-export { PasswordResetEvent } from './PasswordResetEvent'

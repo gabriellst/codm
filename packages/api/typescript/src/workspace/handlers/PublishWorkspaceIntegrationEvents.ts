@@ -5,8 +5,10 @@ import { WorkspaceRemovedEvent } from '../events/WorkspaceRemovedEvent'
 
 /**
  * Write-side bridge (EVT-02/03): the context-private `workspace.removed` fact is republished as the
- * FROZEN `integration.workspace.removed` so BC4/BC5 invalidate references. Only removal crosses —
- * additions never invalidate downstream refs, so there is no `workspace.added` integration event.
+ * FROZEN `integration.workspace.removed`. NO consumer subscribes today — the detach/workspace-
+ * invalidation reactions are the pending C15 cluster; the fact is published because it is contract
+ * (frozen wire), not because a reaction exists. Only removal crosses — additions never invalidate
+ * downstream refs, so there is no `workspace.added` integration event.
  */
 @injectable()
 export class PublishWorkspaceIntegrationEvents extends EventHandler<readonly [typeof WorkspaceRemovedEvent]> {

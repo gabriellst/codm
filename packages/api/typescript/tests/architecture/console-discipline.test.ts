@@ -44,14 +44,6 @@ const EXEMPTIONS: { file: string; why: string }[] = [
 		file: 'index.ts',
 		why: 'composition root / bootstrap + graceful-shutdown + start-failure handlers — must survive even a broken LoggingService binding, and run both before and after the DI-driven request-handling window, so it cannot resolve the injected LoggingService for its startup/shutdown console output.',
 	},
-	{
-		file: 'auth/handlers/UserRegisteredHandler.ts',
-		// TODO(cc-console): replace the placeholder console.log with the injected LoggingService once
-		// handler-side logging is wired (inject LoggingService via the constructor, log via
-		// this.loggingService.info({ content: { ... } })). Scaffold handler — temporary exemption,
-		// remove this entry when the migration lands.
-		why: 'scaffold handler — its body is a placeholder console.log announcing the registered user; must migrate to the injected LoggingService (see the TODO above). Temporary exemption, not a sanctioned console bottom.',
-	},
 ]
 
 interface Violation {

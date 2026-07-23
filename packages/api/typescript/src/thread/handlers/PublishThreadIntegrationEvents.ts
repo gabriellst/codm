@@ -14,7 +14,7 @@ import { DirectMessageSentEvent } from '../events/DirectMessageSentEvent'
 /**
  * Write-side bridge (EVT-02/03): BC4's context-private facts are republished as their FROZEN
  * integration events, born in `packages/contracts`:
- *   thread.attached            → integration.thread.attached            (BC4 → BC5 warm indexing)
+ *   thread.attached            → integration.thread.attached            (frozen fact; NO consumer today — BC5 warm indexing is a pending cluster)
  *   thread.message_classified  → integration.message.classified        (BC4 → BC5 route into issue)
  *   thread.clarification_requested → integration.channel.delivery_requested (ROUTER — ask the question)
  *   thread.direct_message_sent → integration.channel.delivery_requested (OPERATOR — deliver as self)
