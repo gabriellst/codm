@@ -1,3 +1,8 @@
+// SANCTIONED engine-local logger (phase-10 fork D2 — parallel to the core LoggingService by
+// design: the runner needs tiered, glyph-formatted, TTY-aware DEV output, not OTLP records).
+// PROMOTION TRIGGER (audit 2026-07-23): the day a SECOND consumer outside
+// ClaudeCliTerminalLLMRunner/ wants tiered pretty console output, promote this module to
+// @codedm/core-typescript (utils/) instead of copying it — one vocabulary, one formatter.
 import { LOG_TIER_RANK, type LogTier, type ColorEnv, type Color, colorize, supportsColor, parseTier, GLYPH } from './format'
 
 type Severity = 'info' | 'success' | 'warn' | 'error' | 'trace'

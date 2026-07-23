@@ -4,4 +4,7 @@ import './errors' // Side-effect: registers context error codes with the framewo
 import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 
 // The BFF context owns no ports today — query use cases resolve shared kernel services only.
+// BrowserFrameEnricher deliberately has NO Mock/env split: it is DrizzleClient-backed and works in
+// every env (the inbound-routing flow asserts enrichment in MOCK mode against the pglite driver);
+// a no-op mock would silently blind that assertion.
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([])

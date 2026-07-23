@@ -54,7 +54,13 @@ describe('BrowserFrameEnricher', () => {
 		const frames = await testBed.resolve(BrowserFrameEnricher).enrich(
 			new IssueOpenedEvent({
 				ownerId: OPERATOR_ID,
-				payload: { issueId: '019e4d24-0000-7041-9e1c-000000000010', threadId: thread.id.value, key: 'k', title: 't', provider: thread.providers[0] },
+				payload: {
+					issueId: '019e4d24-0000-7041-9e1c-000000000010',
+					threadId: thread.id.value,
+					key: 'k',
+					title: 't',
+					provider: thread.providers[0],
+				},
 			}) as never,
 		)
 

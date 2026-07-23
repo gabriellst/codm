@@ -44,6 +44,55 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 }
 
 /**
+ * TABLE-READ EDGES — cross-context dependencies that ride the DATABASE (drizzle tables imported
+ * from @codedm/contracts/db) instead of code imports. The import-edge rail above cannot see them
+ * (the audit's blind spot: sub-reported coupling erodes the "writing the map IS the audit"
+ * guarantee), so they are DECLARED here and enforced by the table-read leg of
+ * tests/architecture/context-map.test.ts, which resolves every imported table symbol to its owning
+ * pgSchema. `schema` is the OWNING pgSchema name — a CONTEXTS.pgSchema value or a foreign schema
+ * (FOREIGN_PGSCHEMAS, e.g. the Go gateway's).
+ */
+export const TABLE_READ_EDGES: readonly { consumer: ContextModule; schema: string; note: string }[] = [
+	{
+		consumer: 'issue',
+		schema: 'thread',
+		note: 'T04/T12 read models join threads + transcript entries for display fields (read-services cross-tabela, BUILD-LOG:64).',
+	},
+	{
+		consumer: 'workspace',
+		schema: 'thread',
+		note: 'ListWorkspaces + WorkspaceUsageQuery count attached threads per workspace (BUILD-LOG:64).',
+	},
+	{ consumer: 'workspace', schema: 'issue', note: 'WorkspaceUsageQuery counts working issues per workspace (BUILD-LOG:64).' },
+	{
+		consumer: 'thread',
+		schema: 'issue',
+		note: 'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema.',
+	},
+	{ consumer: 'thread', schema: 'workspace', note: 'GetSessionChat resolves the bound workspace display path.' },
+	{
+		consumer: 'thread',
+		schema: 'gateway',
+		note: 'ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116).',
+	},
+	{ consumer: 'ui', schema: 'thread', note: 'BFF read models (dashboard/wizard/checklist) — query-side by design.' },
+	{ consumer: 'ui', schema: 'issue', note: 'BFF read models + BrowserFrameEnricher status derivation.' },
+	{ consumer: 'ui', schema: 'workspace', note: 'BFF read models (dashboard/wizard/checklist).' },
+	{ consumer: 'ui', schema: 'owner', note: 'GetSettings reads the owner row (timezone/language).' },
+	{ consumer: 'ui', schema: 'gateway', note: 'BFF wizard/dashboard read the gateway sync tables (channels/remotes/memberships).' },
+	{
+		consumer: 'owner',
+		schema: 'authentication',
+		note: 'SetActiveOwner targeted single-column session update (better-auth hook pattern; no aggregate).',
+	},
+	{
+		consumer: 'shared',
+		schema: 'gateway',
+		note: 'TestIngressController seeds a connected channel — CODEDM_E2E-gated hermetic seam, never mounted in production.',
+	},
+]
+
+/**
  * Surfaces that may (and may NOT) cross a context boundary — ONE global policy, the house rule
  * "cross-context reads go through Repository/Service" made mechanical. `forbidden` is the load-
  * bearing half (user decision 2026-07-21): entities = write-model leak, usecases = cross-context

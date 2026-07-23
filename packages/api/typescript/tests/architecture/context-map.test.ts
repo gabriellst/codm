@@ -2,7 +2,15 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, relative, resolve, dirname } from 'node:path'
 import { CONTEXTS, FOREIGN_PGSCHEMAS, PENDING_PGSCHEMAS } from '@shared/contexts'
-import { CONTEXT_MAP, CROSS_CONTEXT_POLICY, AMBIENT, POLICY_EXCEPTIONS, ANNOTATED_CYCLES, BOOTSTRAP_FILES } from '@shared/context-map'
+import {
+	CONTEXT_MAP,
+	CROSS_CONTEXT_POLICY,
+	AMBIENT,
+	POLICY_EXCEPTIONS,
+	ANNOTATED_CYCLES,
+	BOOTSTRAP_FILES,
+	TABLE_READ_EDGES,
+} from '@shared/context-map'
 
 /**
  * Context-map guard — enforces the DECLARED context map (src/shared/context-map.ts) against the
@@ -63,7 +71,9 @@ function collectEdges(): Edge[] {
 				}
 			}
 			for (const m of lineText.matchAll(RELATIVE_IMPORT_RE)) {
-				const resolved = relative(API_SRC, resolve(dirname(file), m[1] ?? '')).split('\\').join('/')
+				const resolved = relative(API_SRC, resolve(dirname(file), m[1] ?? ''))
+					.split('\\')
+					.join('/')
 				if (resolved.startsWith('..')) continue
 				const [supplier, surface] = resolved.split('/')
 				if (supplier && surface && MODULES.includes(supplier) && supplier !== consumer) {
@@ -80,8 +90,7 @@ const isAmbient = (supplier: string, surface: string): boolean => {
 	return decl === '*' || (Array.isArray(decl) && decl.includes(surface))
 }
 
-const hasException = (edge: Edge): boolean =>
-	POLICY_EXCEPTIONS.some(e => e.file === edge.file && edge.text.includes(e.imports))
+const hasException = (edge: Edge): boolean => POLICY_EXCEPTIONS.some(e => e.file === edge.file && edge.text.includes(e.imports))
 
 describe('context-map (declared intent map + global surface policy over real imports)', () => {
 	const edges = collectEdges()
@@ -102,9 +111,7 @@ describe('context-map (declared intent map + global surface policy over real imp
 	})
 
 	test('no forbidden surface crosses a boundary (CROSS_CONTEXT_POLICY) without a named exception', () => {
-		const violations = edges.filter(
-			e => (CROSS_CONTEXT_POLICY.forbidden as readonly string[]).includes(e.surface) && !hasException(e),
-		)
+		const violations = edges.filter(e => (CROSS_CONTEXT_POLICY.forbidden as readonly string[]).includes(e.surface) && !hasException(e))
 		const report = violations.map(e => `  ${e.file}:${e.line}  ${e.consumer} → ${e.supplier}/${e.surface}`).join('\n')
 		expect(
 			violations.length,
@@ -174,9 +181,106 @@ describe('context-map (declared intent map + global surface policy over real imp
 
 	// Negative fixture — proves collectEdges + the checks catch an offender shape.
 	test('fixture: a synthetic forbidden edge is classified correctly', () => {
-		const fake: Edge = { file: 'quota/services/X.ts', line: 1, consumer: 'quota', supplier: 'billing', surface: 'entities', text: "import { Invoice } from '@billing/entities'" }
+		const fake: Edge = {
+			file: 'quota/services/X.ts',
+			line: 1,
+			consumer: 'quota',
+			supplier: 'billing',
+			surface: 'entities',
+			text: "import { Invoice } from '@billing/entities'",
+		}
 		expect((CROSS_CONTEXT_POLICY.forbidden as readonly string[]).includes(fake.surface)).toBe(true)
 		expect(hasException(fake)).toBe(false)
 		expect(isAmbient(fake.supplier, fake.surface)).toBe(false)
+	})
+})
+
+describe('context-map — TABLE-READ leg (drizzle tables resolved to their owning pgSchema)', () => {
+	// The import-edge leg above cannot see coupling that rides the DATABASE: a context importing a
+	// foreign table symbol from @codedm/contracts/db depends on the owning schema exactly as if it
+	// imported the owner's repository. This leg resolves every imported table symbol → owning
+	// pgSchema (parsed from the contracts schema sources — zero hand lists) and enforces
+	// TABLE_READ_EDGES the same intent-first way.
+
+	/** table export name → owning pgSchema name, parsed from packages/contracts/db/schema sources. */
+	function tableOwners(): Map<string, string> {
+		const schemaVarToName = new Map<string, string>()
+		const files = readdirSync(CONTRACTS_SCHEMA).filter(f => f.endsWith('.ts') && f !== 'index.ts')
+		for (const f of files) {
+			const src = readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8')
+			for (const m of src.matchAll(/export const (\w+) = pgSchema\('([a-z_]+)'\)/g)) {
+				schemaVarToName.set(m[1] ?? '', m[2] ?? '')
+			}
+		}
+		const owners = new Map<string, string>()
+		for (const f of files) {
+			const src = readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8')
+			for (const m of src.matchAll(/export const (\w+) = (\w+)\.table\(/g)) {
+				const schemaName = schemaVarToName.get(m[2] ?? '')
+				if (schemaName) owners.set(m[1] ?? '', schemaName)
+			}
+		}
+		return owners
+	}
+
+	interface TableRead {
+		file: string
+		line: number
+		consumer: string
+		table: string
+		schema: string
+	}
+
+	function collectTableReads(): TableRead[] {
+		const owners = tableOwners()
+		const ownSchema = new Map<string, string | null>(Object.entries(CONTEXTS).map(([id, c]) => [id, c.pgSchema]))
+		const reads: TableRead[] = []
+		for (const file of listSourceFiles(API_SRC)) {
+			const rel = relative(API_SRC, file).split('\\').join('/')
+			if (BOOTSTRAP_FILES.includes(rel)) continue
+			const consumer = rel.split('/')[0] ?? ''
+			if (!MODULES.includes(consumer)) continue
+			const lines = readFileSync(file, 'utf8').split('\n')
+			lines.forEach((lineText, idx) => {
+				const m = lineText.match(/import \{([^}]*)\} from '@codedm\/contracts\/db'/)
+				if (!m) return
+				for (const raw of (m[1] ?? '').split(',')) {
+					const table = raw.trim().split(' ').at(-1) ?? ''
+					const schema = owners.get(table)
+					if (!schema) continue
+					if (ownSchema.get(consumer) === schema) continue
+					reads.push({ file: rel, line: idx + 1, consumer, table, schema })
+				}
+			})
+		}
+		return reads
+	}
+
+	const reads = collectTableReads()
+
+	test('every cross-schema table read has a declared TABLE_READ_EDGES entry', () => {
+		const undeclared = reads.filter(r => !TABLE_READ_EDGES.some(e => e.consumer === r.consumer && e.schema === r.schema))
+		const report = undeclared.map(r => `  ${r.file}:${r.line}  ${r.consumer} → ${r.schema} (table ${r.table})`).join('\n')
+		expect(
+			undeclared.length,
+			`Cross-schema TABLE read without a declared edge — DB coupling is a dependency decision like ` +
+				`any import: add the edge to TABLE_READ_EDGES (src/shared/context-map.ts) with a note, or ` +
+				`route through the owning context's repository/service:\n${report}`,
+		).toBe(0)
+	})
+
+	test('declared table-read edges are ALIVE (no fossil entries)', () => {
+		const dead = TABLE_READ_EDGES.filter(e => !reads.some(r => r.consumer === e.consumer && r.schema === e.schema))
+		expect(
+			dead.map(e => `${e.consumer} → ${e.schema}`),
+			'Fossil TABLE_READ_EDGES entr(y/ies) — no live table read matches. Remove the entry (re-add with a fresh why when needed).',
+		).toEqual([])
+	})
+
+	test('fixture: the resolver maps a known table to its owning schema', () => {
+		const owners = tableOwners()
+		expect(owners.get('threads')).toBe('thread')
+		expect(owners.get('issues')).toBe('issue')
+		expect(owners.get('channels')).toBe('gateway')
 	})
 })

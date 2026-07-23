@@ -4,11 +4,6 @@ export { MessageClassifiedEvent, MessageClassifiedEventSchema } from './MessageC
 export { ClarificationRequestedEvent, ClarificationRequestedEventSchema } from './ClarificationRequestedEvent'
 export { DirectMessageSentEvent, DirectMessageSentEventSchema } from './DirectMessageSentEvent'
 export { ThreadSteeredEvent, ThreadSteeredEventSchema } from './ThreadSteeredEvent'
-export {
-	ThreadPausedEvent,
-	ThreadPausedEventSchema,
-	ThreadResumedEvent,
-	ThreadResumedEventSchema,
-	ThreadDetachedEvent,
-	ThreadDetachedEventSchema,
-} from './ThreadLifecycleEvents'
+export { ThreadPausedEvent, ThreadPausedEventSchema } from './ThreadPausedEvent'
+export { ThreadResumedEvent, ThreadResumedEventSchema } from './ThreadResumedEvent'
+export { ThreadDetachedEvent, ThreadDetachedEventSchema } from './ThreadDetachedEvent'

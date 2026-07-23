@@ -581,55 +581,20 @@ All helpers live in `packages/api/typescript/tests/support/given/` and are re-ex
 | `users` | `givenUser`, `givenAccount`, `givenUserWithAccount` | auth |
 | `sessions` | `givenActiveSession` | auth |
 | `owners` | `givenOwner`, `givenOwnerWithResponsible` | owner |
-| `identity` | `givenUserProfile`, `givenFcmRegistrationToken` | auth (UserProfile + FCM tokens) |
+| `identity` | `givenUserProfile` | auth (UserProfile) |
+| `workspaces` | `givenWorkspace` | workspace |
+| `threads` | `givenThread` | thread |
+| `issues` | `givenIssue` | issue |
+| `stops` | `givenStop` | issue (repo-direct stop row) |
 | `events` | `givenDomainEvent` | any (cross-context event-as-data) |
 
-## Channel Projection Tests
+## Test Homes
 
-Channel BFF tests work against **projection tables** in the `channel` schema (`channel.channels`, `channel.remotes`, `channel.remote_memberships`, `channel.messages`) that are written by Go projectors — not by the TS process. During TS integration tests nothing runs those projectors, so projection rows must be seeded directly via given helpers.
+Colocated `*.test.ts` in `src/**` (unit / repository / use case / handler), process-level flows in
+`tests/flows/`, repo-wide mechanical rails in `tests/architecture/`, kernel suites in
+`tests/kernel/`, and **`tests/integration/` is a legitimate home** for cross-context integration
+suites that fit none of the colocated homes.
 
-### Given Helpers (channel projection)
-
-Located in `packages/api/tests/support/given/channel/`. Import from `@test/support`:
-
-```ts
-import {
-  givenChannel,
-  givenChannelRemote,
-  givenChannelMessage,
-  givenChannelMembership,
-  givenChannelConversation,
-} from '@test/support'
-```
-
-| Helper | Seeds | Returns |
-|--------|-------|---------|
-| `givenChannel` | `channel.channels` row | `Channel` projection record |
-| `givenChannelRemote` | `channel.remotes` row | `ChannelRemote` projection record |
-| `givenChannelMessage` | `channel.messages` row | `ChannelMessage` projection record |
-| `givenChannelMembership` | `channel.remote_memberships` row | `ChannelMembership` projection record |
-| `givenChannelConversation` | a remote + its messages | `{ remote, messages }` |
-
-### Rule: Never drive channel projection state via events
-
-**TS integration tests must not use `givenEvent` (or any event-dispatch mechanism) to populate channel projection tables.** Events land in `shared.events`/`shared.outbox` but nothing in the TS process projects them. Use the channel given helpers instead.
-
-```ts
-// CORRECT — seed projection row directly
-const channel = await givenChannel(testBed, { ownerId: 'tenant-1' })
-const remote = await givenChannelRemote(testBed, { channelId: channel.id })
-
-// WRONG — events are never projected in TS tests
-await givenEvent(testBed, new ChannelRemoteCreatedEvent(...))
-```
-
-### Schema Drift Test
-
-`packages/api/typescript/src/ui/usecases/channel/channel-schema-drift.test.ts` guards against Go migration / TS Drizzle schema mismatch. It compares the live column list of each `channel.*` table against the Drizzle schema defined at `packages/api/typescript/src/shared/db/drizzle/schema/channel.ts`. If a Go migration adds or renames a column without the TS schema being updated, this test fails.
-
-Failing the drift test means you must update `packages/api/typescript/src/shared/db/drizzle/schema/channel.ts` to match the new Go schema.
-
-> For architecture depth, see `.specs/2026-04-17-aggregate-projection-architecture.md`.
 
 ---
 

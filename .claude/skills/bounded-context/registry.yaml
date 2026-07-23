@@ -9,28 +9,27 @@ registry:
     - id: CTX-01
       name: "Folder structure"
       when: always
-      rule: "entities/, usecases/, controllers/, repositories/, registry.ts, errors/, enums/, events/, handlers/, services/, middlewares/"
+      rule: "entities/, usecases/, controllers/, repositories/, registry.ts, errors/, enums/, events/, handlers/, services/ (middlewares/ is OPTIONAL — in the single-operator base most contexts import OperatorMiddleware from @auth/middlewares instead of owning a middlewares/ folder)"
     - id: CTX-02
       name: "Context bootstrap via BoundedContext.create()"
       when: always
-      rule: "Context `index.ts` calls `BoundedContext.create()` with name, controllers, middlewares, and optionally internalHandlers/externalHandlers. Exports `ctx.container` and `ctx.router`. All boilerplate (child container, tracing, mediators, router) is handled by the abstraction."
+      rule: "Context `index.ts` calls `BoundedContext.create()` with name, controllers, registry, and optionally middlewares/internalHandlers/externalHandlers. Exports `ctx.router` (default export). All boilerplate (child container, tracing, mediators, router) is handled by the abstraction."
       wrong: "Manually creating child containers, resolving mediators, or instantiating Router in context index.ts"
       snippet: |
         import * as controllers from './controllers'
         import * as internalHandlers from './handlers/internal'
         import * as externalHandlers from './handlers/external'
-        import middlewares from './middlewares'
+        import { INSTANCE_REGISTRY } from './registry'
         import { BoundedContext } from '@codedm/core-typescript'
 
         const ctx = await BoundedContext.create({
           name: 'product',
           controllers,
-          middlewares,
           internalHandlers,
           externalHandlers,
+          registry: INSTANCE_REGISTRY,
         })
 
-        export const container = ctx.container
         export default ctx.router
     - id: CTX-03
       name: "Router registration in packages/api/typescript/src/routers.ts"
@@ -39,8 +38,8 @@ registry:
       wrong: "creating context without declaring it in CONTEXTS or wiring its router into the ROUTERS map"
     - id: CTX-04
       name: "Middlewares default export"
-      when: always
-      rule: "export default [AuthAccountMiddleware, ...] or export default [] in middlewares/index.ts"
+      when: "the context owns a middlewares/ folder (OPTIONAL in the single-operator base — most contexts use OperatorMiddleware from @auth/middlewares per-controller instead)"
+      rule: "export default [SomeMiddleware, ...] or export default [] in middlewares/index.ts"
       wrong: "import * as middlewares — namespace import breaks Router"
     - id: CTX-05
       name: "Barrel exports for each layer"
