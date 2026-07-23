@@ -409,3 +409,10 @@ reads/writes the drizzle-owned `gateway.*` / `shared.*` tables directly):
   The generated wire event structs are structurally different from medscall's
   `IntegrationEvent[Payload]` envelopes, so swapping them is a handler rewrite, not a
   sed-grade edit — deferred with the shapes.
+- **`X-Owner-Id` enforcement (dívida registrada — founder, 2026-07-22):** o verbatim
+  medscall NÃO binda `X-Owner-Id` em todos os controllers — `connect_channel.go:11-13`
+  binda só o UUID do channel (tenant-unscoped); `get_or_create_channel`/`list_channels`
+  e 12+ arquivos bindam. Inócuo no codedm single-operator (owner constante), mas se
+  multi-tenant voltar, os endpoints id-keyed (`connect`, `getChannel`) viram furo de
+  tenancy. Não corrigir no verbatim agora (porte determinístico); enforce quando o
+  handoff de schema/tenancy tocar esses controllers.

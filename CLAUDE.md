@@ -272,7 +272,7 @@ Controller (Zod schema)
 **Regras duras:**
 
 - Frontend **só** consome dados do backend pela SDK. Nunca `fetch` direto.
-- Dentro do `api`, **nunca** use o cliente HTTP da SDK (cria ciclo). Para ler outro contexto: importe o `Repository` dele.
+- Dentro do **mesmo** serviço, nunca use o cliente HTTP da SDK para ler outro contexto — importe o `Repository` dele (chamada HTTP a si mesmo = ciclo). **Entre serviços** (api-ts ↔ gateway Go), S2S via SDK é permitido: `client.<service>.method(...)` quando dois serviços precisam se comunicar, e import de **schemas/types gerados** do subpath do serviço dono para compor contratos (ex.: `ListenEvents` compondo `z.discriminatedUnion` dos schemas zod do `/go`) — zero redeclaração de formas. (Ratificado pelo founder, 2026-07-22.)
 - Sempre rode `bun sdk` depois de mexer em controller/schema.
 - Rode `cd packages/app/react && bun tsr generate` depois de criar/mover rota.
 
