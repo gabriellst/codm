@@ -11,7 +11,6 @@ import (
 	"template/api-go/internal/channel/entities"
 	ctxenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
-	sharedenums "template/api-go/internal/shared/enums"
 )
 
 func TestChannel_ReplayLifecycle(t *testing.T) {
@@ -21,13 +20,13 @@ func TestChannel_ReplayLifecycle(t *testing.T) {
 	createdPayload, err := json.Marshal(ctxevents.ChannelCreatedPayload{
 		ChannelID: channelID,
 		Name:      "Test",
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  ctxenums.PlatformWhatsApp,
 		OwnerID:   "owner-1",
 	})
 	require.NoError(t, err)
 	require.NoError(t, ch.Apply(ctxevents.ChannelCreatedEventName, createdPayload))
 	assert.Equal(t, "Test", ch.Name)
-	assert.Equal(t, sharedenums.PlatformWhatsApp, ch.Platform)
+	assert.Equal(t, ctxenums.PlatformWhatsApp, ch.Platform)
 	assert.Equal(t, "owner-1", ch.OwnerID)
 	assert.Equal(t, ctxenums.ChannelStatusCreated, ch.Status)
 	assert.Equal(t, 1, ch.Version)
@@ -63,7 +62,7 @@ func TestChannel_ReplayLifecycle(t *testing.T) {
 func TestChannel_SetConnecting(t *testing.T) {
 	ch, err := entities.NewChannel(entities.NewChannelParams{
 		Name:     "test-channel",
-		Platform: sharedenums.PlatformWhatsApp,
+		Platform: ctxenums.PlatformWhatsApp,
 		OwnerID:  "owner-1",
 	})
 	require.NoError(t, err)

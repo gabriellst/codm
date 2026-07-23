@@ -2,16 +2,16 @@ package controllers
 
 import (
 	"net/http"
+	"template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/usecases"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/errors"
-	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
+	"template/core-go/errors"
+	"template/core-go/types"
 )
 
 type GetOrCreateChannelRequest struct {
-	Platform sharedenums.Platform `from:"query" name:"platform" validate:"required,oneof=WHATSAPP" example:"WHATSAPP"`
-	OwnerID  string               `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
+	Platform enums.Platform `from:"query" name:"platform" validate:"required,oneof=WHATSAPP" example:"WHATSAPP"`
+	OwnerID  string         `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
 }
 
 type GetOrCreateChannelController struct {

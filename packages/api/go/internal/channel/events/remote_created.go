@@ -2,8 +2,7 @@ package events
 
 import (
 	channelenums "template/api-go/internal/channel/enums"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +16,7 @@ type ChannelRemoteCreatedPayload struct {
 	RemoteID   string                  `json:"remoteId"`
 	RemoteType channelenums.RemoteType `json:"remoteType"`
 	OwnerID    string                  `json:"ownerId"`
-	Platform   sharedenums.Platform    `json:"platform"`
+	Platform   channelenums.Platform   `json:"platform"`
 }
 
 // RemoteCreatedEventName is the in-process domain event name raised when a

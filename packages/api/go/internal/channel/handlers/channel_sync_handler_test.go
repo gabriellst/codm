@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 type countingRepo struct {

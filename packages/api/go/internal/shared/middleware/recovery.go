@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 func Recovery(next http.Handler) http.Handler {

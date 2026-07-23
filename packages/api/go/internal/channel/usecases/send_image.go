@@ -9,7 +9,7 @@ import (
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/gateway/whatsapp"
 	"template/api-go/internal/channel/services/registry"
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 	"time"
 )
 

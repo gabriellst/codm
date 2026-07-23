@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/channel/enums"
 )
 
 // Message is a pure read-model record that mirrors the messages
@@ -20,7 +20,7 @@ type Message struct {
 	RemoteID          string          `db:"remote_id"`
 	PlatformMessageID string          `db:"platform_message_id"`
 	Direction         string          `db:"direction"`
-	Platform          sharedenums.Platform `db:"platform"`
+	Platform          enums.Platform  `db:"platform"`
 	SenderRemoteID    string          `db:"sender_remote_id"`
 	Content           json.RawMessage `db:"content"`
 	OccurredAt        time.Time       `db:"occurred_at"`

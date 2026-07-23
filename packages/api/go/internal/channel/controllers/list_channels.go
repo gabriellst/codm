@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"template/api-go/internal/channel/usecases"
-	"template/api-go/internal/shared/errors"
-	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
+	"template/core-go/errors"
+	"template/core-go/types"
 )
 
 type ListChannelsRequest struct {

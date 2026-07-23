@@ -19,7 +19,6 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/shared/db/dbutil"
 	sqldb "template/api-go/internal/shared/db/sql"
-	sharedenums "template/api-go/internal/shared/enums"
 	sharedrepos "template/api-go/internal/shared/repositories"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -174,7 +173,7 @@ func TestPgMessageRepository_Save_AppendsEventsAndUpserts(t *testing.T) {
 		UpdatedAt:         time.Now().UTC(),
 		Version:           1,
 		SenderRemoteID:    "6285555@s.whatsapp.net",
-		Platform:          sharedenums.PlatformWhatsApp,
+		Platform:          channelenums.PlatformWhatsApp,
 		MessageType:       channelenums.MessageTypeText,
 	})
 

@@ -9,8 +9,7 @@ import (
 
 	msgenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // mapMessage produces either channel.message_sent or channel.message_received
@@ -54,7 +53,7 @@ func mapMessage(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 			ObservedAt:        time.Now().UTC(),
 			MessageType:       msgenums.MessageType(msgType),
 			Content:           content,
-			Platform:          sharedenums.PlatformWhatsApp,
+			Platform:          msgenums.PlatformWhatsApp,
 			PlatformData: marshalPlatformData(ctxevents.WhatsAppChannelMessageSentPlatformData{
 				IsGroup: v.Info.IsGroup,
 			}),
@@ -75,7 +74,7 @@ func mapMessage(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 		ObservedAt:        time.Now().UTC(),
 		MessageType:       msgenums.MessageType(msgType),
 		Content:           content,
-		Platform:          string(sharedenums.PlatformWhatsApp),
+		Platform:          string(msgenums.PlatformWhatsApp),
 		PlatformData: marshalPlatformData(ctxevents.WhatsAppChannelMessageReceivedPlatformData{
 			IsEphemeral: v.IsEphemeral,
 			IsViewOnce:  v.IsViewOnce || v.IsViewOnceV2,

@@ -3,7 +3,7 @@ package repositories
 import (
 	"fmt"
 
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 // CheckOptimisticLock verifies that an upsert affected at least one row.

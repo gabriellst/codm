@@ -5,10 +5,10 @@ import (
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/types/events"
 
+	"template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
 	waenums "template/api-go/internal/channel/services/gateway/whatsapp/enums"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // mapReceipt produces either channel.message_delivered or channel.message_seen.
@@ -40,7 +40,7 @@ func mapReceipt(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 			SenderID:   senderJID,
 			MessageIDs: messageIDs,
 			Timestamp:  v.Timestamp.Unix(),
-			Platform:   sharedenums.PlatformWhatsApp,
+			Platform:   enums.PlatformWhatsApp,
 			OwnerID:    ownerID,
 		})
 	case waenums.ReceiptTypeRead, waenums.ReceiptTypePlayed, waenums.ReceiptTypeReadSelf:
@@ -51,7 +51,7 @@ func mapReceipt(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 			MessageIDs: messageIDs,
 			Timestamp:  v.Timestamp.Unix(),
 			Self:       receiptType == waenums.ReceiptTypeReadSelf,
-			Platform:   sharedenums.PlatformWhatsApp,
+			Platform:   enums.PlatformWhatsApp,
 			OwnerID:    ownerID,
 		})
 	default:

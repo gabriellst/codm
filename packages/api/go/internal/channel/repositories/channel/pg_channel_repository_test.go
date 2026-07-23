@@ -10,7 +10,6 @@ import (
 
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
-	sharedenums "template/api-go/internal/shared/enums"
 	sharedrepos "template/api-go/internal/shared/repositories"
 )
 
@@ -23,7 +22,7 @@ import (
 func makeChannelEntity(name, ownerID string) *entities.Channel {
 	ch, err := entities.NewChannel(entities.NewChannelParams{
 		Name:     name,
-		Platform: sharedenums.Platform("WHATSAPP"),
+		Platform: enums.Platform("WHATSAPP"),
 		OwnerID:  ownerID,
 	})
 	if err != nil {

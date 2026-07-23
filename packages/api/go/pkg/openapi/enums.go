@@ -43,7 +43,8 @@ func registerEnums(spec *Spec, w *walker) error {
 		return paths
 	}
 
-	for _, tier := range [][]string{tierPaths("template/api-go/"), tierPaths("template/contracts-go/")} {
+	tierOwn := append(tierPaths("template/api-go/"), tierPaths("template/core-go/")...)
+	for _, tier := range [][]string{tierOwn, tierPaths("template/contracts-go/")} {
 		ownedByEarlierTier := map[string]bool{}
 		for n := range collected {
 			ownedByEarlierTier[n] = true
@@ -111,9 +112,9 @@ func registerEnums(spec *Spec, w *walker) error {
 			continue
 		}
 		spec.putSchema(n, map[string]any{
-			"type":             "string",
-			"enum":             toAnySlice(e.values),
-			"x-enum-varnames":  toAnySlice(e.varNames),
+			"type":            "string",
+			"enum":            toAnySlice(e.values),
+			"x-enum-varnames": toAnySlice(e.varNames),
 		})
 	}
 	return nil

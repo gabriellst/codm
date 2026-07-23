@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // PayloadProvider is implemented by events that carry a raw JSON payload.

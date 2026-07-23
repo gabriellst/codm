@@ -8,7 +8,7 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 
 	remoteevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // mapMarkChatAsRead translates an events.MarkChatAsRead (from AppState

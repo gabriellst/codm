@@ -7,29 +7,44 @@
 		"dev": {
 			"executor": "nx:run-commands",
 			"cache": false,
-			"options": { "command": "go run ./cmd/api", "cwd": "packages/api/go" }
+			"options": {
+				"command": "go run ./cmd/api",
+				"cwd": "packages/api/go"
+			}
 		},
 		"build": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"options": { "command": "go build ./...", "cwd": "packages/api/go" }
+			"options": {
+				"command": "go build ./... && go -C core build ./...",
+				"cwd": "packages/api/go"
+			}
 		},
 		"tsc": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"options": { "command": "go vet ./...", "cwd": "packages/api/go" }
+			"options": {
+				"command": "go vet ./... && go -C core vet ./...",
+				"cwd": "packages/api/go"
+			}
 		},
 		"test": {
 			"executor": "nx:run-commands",
 			"cache": true,
 			"inputs": ["{projectRoot}/**/*.go", "{projectRoot}/go.mod", "{projectRoot}/go.sum", "sharedGlobals"],
-			"options": { "command": "go test ./...", "cwd": "packages/api/go" }
+			"options": {
+				"command": "go test ./... && go -C core test ./...",
+				"cwd": "packages/api/go"
+			}
 		},
 		"emit-openapi": {
 			"executor": "nx:run-commands",
 			"cache": false,
 			"outputs": ["{workspaceRoot}/packages/api/go/public/docs/openapi.json"],
-			"options": { "command": "go run ./cmd/openapi", "cwd": "packages/api/go" }
+			"options": {
+				"command": "go run ./cmd/openapi",
+				"cwd": "packages/api/go"
+			}
 		}
 	}
 }

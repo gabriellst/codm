@@ -3,7 +3,7 @@ package objects
 import (
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 // ID is a value object wrapping a UUID. It supports:

@@ -3,8 +3,8 @@ package events
 import (
 	"encoding/json"
 
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/api-go/internal/channel/enums"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
@@ -13,10 +13,10 @@ import (
 // Owned by the channel domain; shared/events imports this type for the
 // integration wrapper.
 type GatewayConnectedPayload struct {
-	ChannelID    uuid.UUID            `json:"channelId" validate:"required"`
-	Platform     sharedenums.Platform `json:"platform" validate:"required"`
-	PlatformData json.RawMessage      `json:"platformData,omitempty"`
-	OwnerID      string               `json:"ownerId" validate:"required"`
+	ChannelID    uuid.UUID       `json:"channelId" validate:"required"`
+	Platform     enums.Platform  `json:"platform" validate:"required"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
+	OwnerID      string          `json:"ownerId" validate:"required"`
 }
 
 const GatewayConnectedEventName = "channel.gateway_connected"

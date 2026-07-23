@@ -3,17 +3,17 @@ package events
 import (
 	"github.com/google/uuid"
 
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/api-go/internal/channel/enums"
+	"template/core-go/types"
 )
 
 const ChannelCreatedEventName = "channel.channel_created"
 
 type ChannelCreatedPayload struct {
-	ChannelID uuid.UUID            `json:"channelId"`
-	Name      string               `json:"name"`
-	Platform  sharedenums.Platform `json:"platform"`
-	OwnerID   string               `json:"ownerId"`
+	ChannelID uuid.UUID      `json:"channelId"`
+	Name      string         `json:"name"`
+	Platform  enums.Platform `json:"platform"`
+	OwnerID   string         `json:"ownerId"`
 }
 
 type ChannelCreatedEvent = types.DomainEvent[ChannelCreatedPayload]

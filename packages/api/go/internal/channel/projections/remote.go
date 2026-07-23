@@ -3,7 +3,7 @@ package projections
 import (
 	"time"
 
-	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/channel/enums"
 )
 
 // Remote is a pure read-model record that mirrors the remotes
@@ -13,24 +13,24 @@ import (
 // AvatarURL uses an empty string to represent the NULL/absent state, consistent
 // with how other TEXT columns in the codebase avoid sql.NullString.
 type Remote struct {
-	ChannelID          string     `db:"channel_id"`
-	RemoteID           string     `db:"remote_id"`
-	Type               string     `db:"type"`
-	Platform           sharedenums.Platform `db:"platform"`
-	Name               string     `db:"name"`
-	AvatarURL          string     `db:"avatar_url"`
-	IsBlocked          bool       `db:"is_blocked"`
-	PinnedAt           *time.Time `db:"pinned_at"`
-	Archived           bool       `db:"archived"`
-	MuteExpiration     *time.Time `db:"mute_expiration"`
-	MarkedAsUnread     bool       `db:"marked_as_unread"`
-	UnreadMessageCount int        `db:"unread_message_count"`
-	LastMessageAt      *time.Time `db:"last_message_at"`
-	LastMessageID      *string    `db:"last_message_id"`
-	DeletedAt          *time.Time `db:"deleted_at"`
-	CreatedAt          time.Time  `db:"created_at"`
-	UpdatedAt          time.Time  `db:"updated_at"`
-	Version            int64      `db:"version"`
+	ChannelID          string         `db:"channel_id"`
+	RemoteID           string         `db:"remote_id"`
+	Type               string         `db:"type"`
+	Platform           enums.Platform `db:"platform"`
+	Name               string         `db:"name"`
+	AvatarURL          string         `db:"avatar_url"`
+	IsBlocked          bool           `db:"is_blocked"`
+	PinnedAt           *time.Time     `db:"pinned_at"`
+	Archived           bool           `db:"archived"`
+	MuteExpiration     *time.Time     `db:"mute_expiration"`
+	MarkedAsUnread     bool           `db:"marked_as_unread"`
+	UnreadMessageCount int            `db:"unread_message_count"`
+	LastMessageAt      *time.Time     `db:"last_message_at"`
+	LastMessageID      *string        `db:"last_message_id"`
+	DeletedAt          *time.Time     `db:"deleted_at"`
+	CreatedAt          time.Time      `db:"created_at"`
+	UpdatedAt          time.Time      `db:"updated_at"`
+	Version            int64          `db:"version"`
 }
 
 // ApplyMessageReceived bumps the unread counter and advances the preview

@@ -11,7 +11,6 @@ import (
 
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/projections"
-	sharedenums "template/api-go/internal/shared/enums"
 )
 
 // ---------------------------------------------------------------------------
@@ -434,7 +433,7 @@ func TestApplyLatestMessage_ForwardOnly(t *testing.T) {
 		ChannelID: channelID,
 		RemoteID:  remoteID,
 		Type:      string(channelenums.RemoteTypeUser),
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  channelenums.PlatformWhatsApp,
 		Name:      "Alice",
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
@@ -485,7 +484,7 @@ func TestApplyLatestMessage_SentDoesNotBumpUnread(t *testing.T) {
 		ChannelID: channelID,
 		RemoteID:  remoteID,
 		Type:      string(channelenums.RemoteTypeUser),
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  channelenums.PlatformWhatsApp,
 		Name:      "Bob",
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
@@ -525,7 +524,7 @@ func TestApplyHistoricalMessages_DoesNotBumpUnread(t *testing.T) {
 			ChannelID:          channelID,
 			RemoteID:           rid,
 			Type:               string(channelenums.RemoteTypeUser),
-			Platform:           sharedenums.PlatformWhatsApp,
+			Platform:           channelenums.PlatformWhatsApp,
 			Name:               rid,
 			UnreadMessageCount: 3,
 			LastMessageAt:      &existingAt,
@@ -602,7 +601,7 @@ func TestRecomputePreviewIfLatest_GuardMatches_RecomputesToPrevious(t *testing.T
 		ChannelID: channelID,
 		RemoteID:  remoteID,
 		Type:      string(channelenums.RemoteTypeUser),
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  channelenums.PlatformWhatsApp,
 		Name:      "Carol",
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
@@ -658,7 +657,7 @@ func TestRecomputePreviewIfLatest_GuardDoesNotMatch_NoOp(t *testing.T) {
 		ChannelID: channelID,
 		RemoteID:  remoteID,
 		Type:      string(channelenums.RemoteTypeUser),
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  channelenums.PlatformWhatsApp,
 		Name:      "Dan",
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
@@ -703,7 +702,7 @@ func TestRecomputePreviewIfLatest_NoMessagesLeft_Clears(t *testing.T) {
 		ChannelID: channelID,
 		RemoteID:  remoteID,
 		Type:      string(channelenums.RemoteTypeUser),
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  channelenums.PlatformWhatsApp,
 		Name:      "Eve",
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
@@ -750,7 +749,7 @@ func makeRemoteProjection(channelID, remoteID string, rt channelenums.RemoteType
 		ChannelID: channelID,
 		RemoteID:  remoteID,
 		Type:      string(rt),
-		Platform:  sharedenums.PlatformWhatsApp,
+		Platform:  channelenums.PlatformWhatsApp,
 		Name:      "Test Remote",
 		AvatarURL: "https://example.com/avatar.jpg",
 		IsBlocked: false,

@@ -9,7 +9,7 @@ import (
 
 	msgenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 func mapChatPresence(instanceID uuid.UUID, ownerID string, device *store.Device, v *events.ChatPresence) []types.DomainEventI {

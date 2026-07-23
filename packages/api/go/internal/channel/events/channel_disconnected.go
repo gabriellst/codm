@@ -3,14 +3,14 @@ package events
 import (
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 const ChannelDisconnectedEventName = "channel.channel_disconnected"
 
 type ChannelDisconnectedPayload struct {
 	ChannelID uuid.UUID `json:"channelId"`
-	OwnerID  string    `json:"ownerId"`
+	OwnerID   string    `json:"ownerId"`
 }
 
 type ChannelDisconnectedEvent = types.DomainEvent[ChannelDisconnectedPayload]

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 type eventEnvelope struct {

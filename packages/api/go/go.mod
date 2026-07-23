@@ -2,6 +2,10 @@ module template/api-go
 
 go 1.25.0
 
+replace template/core-go => ./core
+
+require template/core-go v0.0.0
+
 require (
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/golang-migrate/migrate/v4 v4.19.1

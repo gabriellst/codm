@@ -7,7 +7,7 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────

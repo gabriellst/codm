@@ -3,8 +3,8 @@ package config
 import (
 	"os"
 	"strings"
-	"template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/errors"
+	"template/core-go/enums"
+	"template/core-go/errors"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"

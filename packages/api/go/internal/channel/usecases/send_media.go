@@ -7,7 +7,7 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/registry"
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 	"time"
 )
 

@@ -8,7 +8,7 @@ import (
 	"template/api-go/internal/channel/services/registry"
 	sharedevents "template/api-go/internal/shared/events"
 	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // MessageReceivedHandler republishes channel.message_received as an

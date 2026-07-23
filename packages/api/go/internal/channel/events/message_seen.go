@@ -1,8 +1,8 @@
 package events
 
 import (
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/api-go/internal/channel/enums"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
@@ -23,14 +23,14 @@ import (
 // Owned by the channel domain; shared/events imports this type for the
 // integration wrapper.
 type ChannelMessageSeenPayload struct {
-	ChannelID  uuid.UUID            `json:"channelId" validate:"required"`
-	RemoteID   string               `json:"remoteId" validate:"required"`
-	SenderID   string               `json:"senderId" validate:"required"`
-	MessageIDs []string             `json:"messageIds"`
-	Timestamp  int64                `json:"timestamp" validate:"required"`
-	Self       bool                 `json:"self"` // true when SenderID == owner (read-self)
-	Platform   sharedenums.Platform `json:"platform" validate:"required"`
-	OwnerID    string               `json:"ownerId" validate:"required"`
+	ChannelID  uuid.UUID      `json:"channelId" validate:"required"`
+	RemoteID   string         `json:"remoteId" validate:"required"`
+	SenderID   string         `json:"senderId" validate:"required"`
+	MessageIDs []string       `json:"messageIds"`
+	Timestamp  int64          `json:"timestamp" validate:"required"`
+	Self       bool           `json:"self"` // true when SenderID == owner (read-self)
+	Platform   enums.Platform `json:"platform" validate:"required"`
+	OwnerID    string         `json:"ownerId" validate:"required"`
 }
 
 const MessageSeenEventName = "channel.message_seen"

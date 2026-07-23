@@ -17,7 +17,7 @@ import (
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	mapperpkg "template/api-go/internal/channel/services/gateway/whatsapp/mapper"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────

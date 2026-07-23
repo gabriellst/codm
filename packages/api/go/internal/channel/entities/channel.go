@@ -8,9 +8,8 @@ import (
 	"template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/entities"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/errors"
+	"template/core-go/entities"
+	"template/core-go/errors"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +18,7 @@ import (
 type Channel struct {
 	entities.BaseEntity
 	Name          string
-	Platform      sharedenums.Platform
+	Platform      enums.Platform
 	OwnerRemoteID string
 	Status        enums.ChannelStatus
 	OwnerID       string
@@ -28,7 +27,7 @@ type Channel struct {
 
 type NewChannelParams struct {
 	Name     string
-	Platform sharedenums.Platform
+	Platform enums.Platform
 	OwnerID  string
 }
 
@@ -64,7 +63,7 @@ func NewChannel(params NewChannelParams) (*Channel, error) {
 type ReconstructChannelParams struct {
 	ID            uuid.UUID
 	Name          string
-	Platform      sharedenums.Platform
+	Platform      enums.Platform
 	OwnerRemoteID string
 	Credentials   json.RawMessage
 	Status        enums.ChannelStatus

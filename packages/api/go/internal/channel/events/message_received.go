@@ -1,8 +1,8 @@
 package events
 
 import (
-	"template/api-go/internal/shared/types"
 	"template/contracts-go/wire"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )

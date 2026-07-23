@@ -13,7 +13,6 @@ import (
 	"template/api-go/internal/channel/entities"
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/shared/db/dbutil"
-	sharedenums "template/api-go/internal/shared/enums"
 	sharedrepos "template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/unitofwork"
 )
@@ -100,8 +99,8 @@ func (r *PgMessageRepository) Find(ctx context.Context, messageID string) (*enti
 		UpdatedAt:         observedAt.UTC(),
 		Version:           int(version),
 		SenderRemoteID:    senderRemoteID,
-		Platform:          sharedenums.PlatformWhatsApp, // default; callers with platform context override
-		MessageType:       channelenums.MessageTypeText, // default; callers with type context override
+		Platform:          channelenums.PlatformWhatsApp, // default; callers with platform context override
+		MessageType:       channelenums.MessageTypeText,  // default; callers with type context override
 	}), nil
 }
 

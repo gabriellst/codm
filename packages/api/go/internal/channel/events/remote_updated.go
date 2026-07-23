@@ -4,7 +4,7 @@ import (
 	"time"
 
 	channelenums "template/api-go/internal/channel/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )

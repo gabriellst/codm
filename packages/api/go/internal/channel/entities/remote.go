@@ -6,9 +6,8 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/entities"
-	"template/api-go/internal/shared/errors"
-	sharedenums "template/api-go/internal/shared/enums"
+	"template/core-go/entities"
+	"template/core-go/errors"
 
 	"github.com/google/uuid"
 )
@@ -26,7 +25,7 @@ type Remote struct {
 	remoteID       string
 	remoteType     channelenums.RemoteType
 	ownerID        string
-	platform       sharedenums.Platform
+	platform       channelenums.Platform
 	deletedAt      *time.Time
 	pinnedAt       *time.Time
 	archived       bool
@@ -36,11 +35,11 @@ type Remote struct {
 
 // Accessors — exported read-only getters for repository hydration and use cases.
 
-func (r *Remote) ChannelID() uuid.UUID               { return r.channelID }
+func (r *Remote) ChannelID() uuid.UUID                { return r.channelID }
 func (r *Remote) RemoteID() string                    { return r.remoteID }
 func (r *Remote) RemoteType() channelenums.RemoteType { return r.remoteType }
 func (r *Remote) OwnerID() string                     { return r.ownerID }
-func (r *Remote) Platform() sharedenums.Platform      { return r.platform }
+func (r *Remote) Platform() channelenums.Platform     { return r.platform }
 func (r *Remote) DeletedAt() *time.Time               { return r.deletedAt }
 func (r *Remote) PinnedAt() *time.Time                { return r.pinnedAt }
 func (r *Remote) Archived() bool                      { return r.archived }
@@ -57,7 +56,7 @@ type NewRemoteParams struct {
 	RemoteID   string
 	RemoteType channelenums.RemoteType
 	OwnerID    string
-	Platform   sharedenums.Platform
+	Platform   channelenums.Platform
 }
 
 // NewRemote creates a new Remote aggregate and raises a RemoteCreatedEvent.
@@ -104,7 +103,7 @@ type ReconstructRemoteParams struct {
 	RemoteID       string
 	RemoteType     channelenums.RemoteType
 	OwnerID        string
-	Platform       sharedenums.Platform
+	Platform       channelenums.Platform
 	DeletedAt      *time.Time
 	PinnedAt       *time.Time
 	Archived       bool

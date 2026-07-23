@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"template/api-go/internal/shared/errors"
 	"template/api-go/pkg/validation"
+	"template/core-go/errors"
 )
 
 // DecodeRequest decodes an HTTP request into a struct that defines the full request schema.
@@ -154,4 +154,3 @@ func DecodeRequest[T any](r *http.Request) (T, error) {
 
 	return input, nil
 }
-

@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 
 	msgenums "template/api-go/internal/channel/enums"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +20,7 @@ type ChannelMessageEditedPayload struct {
 	Timestamp   int64                `json:"timestamp" validate:"required"`
 	MessageType msgenums.MessageType `json:"messageType" validate:"required"`
 	Content     json.RawMessage      `json:"content,omitempty"`
-	Platform    sharedenums.Platform `json:"platform" validate:"required"`
+	Platform    msgenums.Platform    `json:"platform" validate:"required"`
 	OwnerID     string               `json:"ownerId" validate:"required"`
 }
 

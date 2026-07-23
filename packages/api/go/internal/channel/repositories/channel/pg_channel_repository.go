@@ -12,7 +12,6 @@ import (
 
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
-	sharedenums "template/api-go/internal/shared/enums"
 	sharedrepos "template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/unitofwork"
 )
@@ -336,7 +335,7 @@ func scanChannelEntity(row rowScanner) (*entities.Channel, error) {
 	return entities.ReconstructChannel(entities.ReconstructChannelParams{
 		ID:            id,
 		Name:          name,
-		Platform:      sharedenums.Platform(platformStr),
+		Platform:      enums.Platform(platformStr),
 		OwnerRemoteID: ownerRemoteID,
 		Credentials:   creds,
 		Status:        enums.ChannelStatus(statusStr),

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // LogExternalMediator implements ExternalMediator by printing events to stdout.
@@ -18,7 +18,8 @@ func NewLogExternalMediator() ExternalMediator {
 
 func (m *LogExternalMediator) Register(_ IntegrationEventHandler) {}
 
-func (m *LogExternalMediator) RegisterCallback(_ func(ctx context.Context, event types.IntegrationEventI)) {}
+func (m *LogExternalMediator) RegisterCallback(_ func(ctx context.Context, event types.IntegrationEventI)) {
+}
 
 func (m *LogExternalMediator) Publish(_ context.Context, event types.IntegrationEventI) error {
 	payload, err := json.MarshalIndent(event, "", "  ")

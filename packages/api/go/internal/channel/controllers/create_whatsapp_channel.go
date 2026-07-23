@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"net/http"
+	"template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	"template/api-go/internal/channel/usecases"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/errors"
-	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
+	"template/core-go/errors"
+	"template/core-go/types"
 )
 
 type CreateWhatsAppChannelRequest struct {
@@ -50,7 +50,7 @@ func (c *CreateWhatsAppChannelController) Handle(w http.ResponseWriter, r *http.
 
 	output, err := c.handler.Execute(r.Context(), usecases.CreateChannelInput{
 		Name:     req.Name,
-		Platform: sharedenums.PlatformWhatsApp,
+		Platform: enums.PlatformWhatsApp,
 		OwnerID:  req.OwnerID,
 	})
 	if err != nil {

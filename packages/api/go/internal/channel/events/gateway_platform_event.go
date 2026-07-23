@@ -3,8 +3,8 @@ package events
 import (
 	"encoding/json"
 
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/api-go/internal/channel/enums"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
@@ -25,7 +25,7 @@ type ChannelSpecialPlatformEventPayload struct {
 	ChannelID uuid.UUID                       `json:"channelId" validate:"required"`
 	EventName string                          `json:"eventName" validate:"required"`
 	EventType ChannelSpecialPlatformEventType `json:"eventType" validate:"required"`
-	Platform  sharedenums.Platform            `json:"platform" validate:"required"`
+	Platform  enums.Platform                  `json:"platform" validate:"required"`
 	Payload   json.RawMessage                 `json:"payload" validate:"required"`
 	OwnerID   string                          `json:"ownerId" validate:"required"`
 }

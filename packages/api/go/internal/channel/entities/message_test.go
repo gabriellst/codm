@@ -13,8 +13,7 @@ import (
 	ctxenums "template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
-	sharedenums "template/api-go/internal/shared/enums"
-	sharederrors "template/api-go/internal/shared/errors"
+	sharederrors "template/core-go/errors"
 )
 
 // ---------------------------------------------------------------------------
@@ -33,7 +32,7 @@ func newTestMessage(t *testing.T, direction ctxenums.Direction) *entities.Messag
 		OwnerID:           "owner-1",
 		OccurredAt:        time.Now().UTC(),
 		SenderRemoteID:    "5511999887766@s.whatsapp.net",
-		Platform:          sharedenums.PlatformWhatsApp,
+		Platform:          ctxenums.PlatformWhatsApp,
 		MessageType:       ctxenums.MessageTypeText,
 		CreatedAt:         time.Now().UTC(),
 		UpdatedAt:         time.Now().UTC(),
@@ -127,7 +126,7 @@ func TestMessage_ReconstructMessage_DoesNotRaiseEvents(t *testing.T) {
 		OccurredAt:        time.Now().UTC(),
 		EditedAt:          &editedAt,
 		SenderRemoteID:    "5511@s.whatsapp.net",
-		Platform:          sharedenums.PlatformWhatsApp,
+		Platform:          ctxenums.PlatformWhatsApp,
 		MessageType:       ctxenums.MessageTypeText,
 		CreatedAt:         time.Now().UTC(),
 		UpdatedAt:         time.Now().UTC(),

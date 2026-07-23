@@ -12,7 +12,6 @@ import (
 	"template/api-go/internal/channel/entities"
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/shared/db/dbutil"
-	sharedenums "template/api-go/internal/shared/enums"
 	sharedrepos "template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/unitofwork"
 )
@@ -104,7 +103,7 @@ func (r *PgRemoteRepository) Find(ctx context.Context, channelID, remoteID strin
 		RemoteID:       remoteID,
 		RemoteType:     channelenums.RemoteType(remoteType),
 		OwnerID:        ownerID,
-		Platform:       sharedenums.Platform(platform),
+		Platform:       channelenums.Platform(platform),
 		DeletedAt:      dbutil.TimePtr(deletedAt),
 		PinnedAt:       dbutil.TimePtr(pinnedAt),
 		Archived:       archived,

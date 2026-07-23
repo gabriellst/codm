@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 type integrationEnvelope struct {

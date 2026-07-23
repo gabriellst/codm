@@ -13,11 +13,11 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 
+	"template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/shared/db/dbutil"
 	sqldb "template/api-go/internal/shared/db/sql"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -114,7 +114,7 @@ func makeGatewayConnectedEvents(n int, ownerID string) []types.DomainEventI {
 		channelID := uuid.New()
 		payload := ctxevents.GatewayConnectedPayload{
 			ChannelID: channelID,
-			Platform:  sharedenums.PlatformWhatsApp,
+			Platform:  enums.PlatformWhatsApp,
 			OwnerID:   ownerID,
 		}
 		events[i] = types.NewDomainEvent("channel.gateway_connected", channelID, ownerID, payload)

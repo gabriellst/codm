@@ -12,7 +12,6 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/projections"
 	"template/api-go/internal/shared/db/dbutil"
-	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/services/unitofwork"
 )
 
@@ -613,7 +612,7 @@ func scanRemote(row rowScanner) (*projections.Remote, error) {
 	if err != nil {
 		return nil, err
 	}
-	rem.Platform = sharedenums.Platform(platform)
+	rem.Platform = channelenums.Platform(platform)
 	if avatarURL.Valid {
 		rem.AvatarURL = avatarURL.String
 	}

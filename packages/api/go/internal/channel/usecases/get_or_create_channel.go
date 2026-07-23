@@ -9,23 +9,22 @@ import (
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/services/unitofwork"
 )
 
 type GetOrCreateChannelInput struct {
-	Platform sharedenums.Platform `validate:"required,oneof=WHATSAPP" json:"platform"`
-	OwnerID  string               `validate:"required"`
+	Platform enums.Platform `validate:"required,oneof=WHATSAPP" json:"platform"`
+	OwnerID  string         `validate:"required"`
 }
 
 type GetOrCreateChannelOutput struct {
-	ID            string               `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	Name          string               `json:"name" example:"whatsapp-default"`
-	Platform      sharedenums.Platform `json:"platform" example:"WHATSAPP"`
-	OwnerRemoteID string               `json:"ownerRemoteId" example:""`
-	Status        enums.ChannelStatus  `json:"status" example:"CREATED"`
-	CreatedAt     string               `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
-	Created       bool                 `json:"created" example:"false"`
+	ID            string              `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	Name          string              `json:"name" example:"whatsapp-default"`
+	Platform      enums.Platform      `json:"platform" example:"WHATSAPP"`
+	OwnerRemoteID string              `json:"ownerRemoteId" example:""`
+	Status        enums.ChannelStatus `json:"status" example:"CREATED"`
+	CreatedAt     string              `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
+	Created       bool                `json:"created" example:"false"`
 }
 
 type GetOrCreateChannelHandler struct {

@@ -10,7 +10,7 @@ import (
 
 	channelenums "template/api-go/internal/channel/enums"
 	remoteevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 func mapContact(instanceID uuid.UUID, ownerID string, device *store.Device, v *events.Contact) []types.DomainEventI {

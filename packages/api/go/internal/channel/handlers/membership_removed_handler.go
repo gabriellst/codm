@@ -7,7 +7,7 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	sharedevents "template/api-go/internal/shared/events"
 	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // MembershipRemovedIntegrationHandler republishes channel.membership_removed as

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"template/api-go/internal/shared/config"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 const scalarHTML = `<!DOCTYPE html>

@@ -6,23 +6,22 @@ import (
 	"template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/errors"
 	"template/api-go/internal/shared/services/unitofwork"
+	"template/core-go/errors"
 )
 
 type CreateChannelInput struct {
-	Name     string               `validate:"required,min=1,max=100"`
-	Platform sharedenums.Platform `validate:"required,oneof=WHATSAPP" json:"platform"`
-	OwnerID  string               `validate:"omitempty"`
+	Name     string         `validate:"required,min=1,max=100"`
+	Platform enums.Platform `validate:"required,oneof=WHATSAPP" json:"platform"`
+	OwnerID  string         `validate:"omitempty"`
 }
 
 type CreateChannelOutput struct {
-	ID        string               `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	Name      string               `json:"name" example:"my-channel"`
-	Platform  sharedenums.Platform `json:"platform" example:"WHATSAPP"`
-	Status    enums.ChannelStatus  `json:"status" example:"CREATED"`
-	CreatedAt string               `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
+	ID        string              `json:"id" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	Name      string              `json:"name" example:"my-channel"`
+	Platform  enums.Platform      `json:"platform" example:"WHATSAPP"`
+	Status    enums.ChannelStatus `json:"status" example:"CREATED"`
+	CreatedAt string              `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
 }
 
 type CreateChannelHandler struct {

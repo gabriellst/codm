@@ -16,7 +16,7 @@ import (
 	"template/api-go/internal/shared/repositories"
 	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/services/unitofwork"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 	"time"
 
 	"go.uber.org/fx"

@@ -13,8 +13,7 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // mapHistorySync translates a whatsmeow HistorySync into a gateway progress event only.
@@ -173,7 +172,7 @@ func buildHistoryMessageRecord(
 		RemoteID:          remoteID,
 		PlatformMessageID: msgID,
 		Direction:         string(direction),
-		Platform:          sharedenums.PlatformWhatsApp,
+		Platform:          channelenums.PlatformWhatsApp,
 		SenderRemoteID:    senderRemoteID,
 		Content:           content,
 		OccurredAt:        occurredAt,

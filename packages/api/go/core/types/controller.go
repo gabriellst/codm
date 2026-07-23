@@ -3,7 +3,7 @@ package types
 import (
 	"net/http"
 
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 // ControllerMetadata defines the declarative metadata for route registration

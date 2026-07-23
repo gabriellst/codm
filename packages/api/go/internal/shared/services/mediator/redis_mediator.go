@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"template/api-go/internal/shared/config"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/types/events"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // MapEvent converts a raw whatsmeow event into zero or more DomainEvents.

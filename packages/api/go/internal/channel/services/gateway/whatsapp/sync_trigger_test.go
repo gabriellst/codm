@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"template/api-go/internal/shared/repositories"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // fakeDomainEventRepo records Save/SaveAll calls for assertion.

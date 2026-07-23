@@ -11,7 +11,7 @@ import (
 
 	"template/api-go/internal/shared/services/outbox"
 	"template/api-go/internal/shared/services/unitofwork"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // PgDomainEventRepository implements DomainEventRepository with Postgres.

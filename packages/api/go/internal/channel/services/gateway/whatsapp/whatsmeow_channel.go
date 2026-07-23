@@ -17,7 +17,6 @@ import (
 	"template/api-go/internal/channel/services/gateway"
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
 	mapperpkg "template/api-go/internal/channel/services/gateway/whatsapp/mapper"
-	sharedenums "template/api-go/internal/shared/enums"
 	repositories "template/api-go/internal/shared/repositories"
 	"time"
 
@@ -221,7 +220,7 @@ func (c *WhatsmeowChannel) GetQRChannel(ctx context.Context) (<-chan gateway.QRC
 					ChannelID: c.instanceID,
 					EventName: waevents.EventNameQRCodeUpdated,
 					EventType: ctxevents.PlatformEventQRCodeUpdated,
-					Platform:  sharedenums.PlatformWhatsApp,
+					Platform:  channelenums.PlatformWhatsApp,
 					Payload:   marshalPlatformData(waevents.WhatsAppQRCodeUpdated{Code: evt.Code}),
 					OwnerID:   c.ownerID,
 				})
@@ -291,7 +290,7 @@ func (c *WhatsmeowChannel) emitMessageSent(ctx context.Context, remoteID string,
 		ObservedAt:        time.Now().UTC(),
 		MessageType:       msgType,
 		Content:           result.PersistContent,
-		Platform:          sharedenums.PlatformWhatsApp,
+		Platform:          channelenums.PlatformWhatsApp,
 		PlatformData: marshalPlatformData(ctxevents.WhatsAppChannelMessageSentPlatformData{
 			IsGroup: isGroup,
 		}),
@@ -1015,7 +1014,7 @@ func (c *WhatsmeowChannel) projectContactSnapshot(ctx context.Context) {
 			ChannelID: c.instanceID.String(),
 			RemoteID:  snapshot.RemoteID,
 			Type:      snapshot.RemoteType,
-			Platform:  sharedenums.PlatformWhatsApp,
+			Platform:  channelenums.PlatformWhatsApp,
 			Name:      snapshot.Name,
 			// AvatarURL is empty here — filled in by Phase 2 (hydrateContactAvatars).
 			CreatedAt: now,

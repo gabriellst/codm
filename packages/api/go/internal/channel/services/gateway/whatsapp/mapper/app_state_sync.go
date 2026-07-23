@@ -6,7 +6,7 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // mapAppStateSyncComplete emits channel.gateway.sync_complete only when the

@@ -11,7 +11,7 @@ import (
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // applyToRemote is a shared helper that encapsulates the find → nil-warn →

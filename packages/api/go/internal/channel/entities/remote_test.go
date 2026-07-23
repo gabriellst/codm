@@ -12,7 +12,7 @@ import (
 	ctxenums "template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
-	sharederrors "template/api-go/internal/shared/errors"
+	sharederrors "template/core-go/errors"
 )
 
 // ---------------------------------------------------------------------------

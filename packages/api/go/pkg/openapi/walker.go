@@ -145,7 +145,7 @@ func (w *walker) forEachController(fn func(*controllerType) error) error {
 
 // lookupControllerInterface resolves types.Controller from the shared/types package.
 func (w *walker) lookupControllerInterface() *types.Interface {
-	p, ok := w.byPath["template/api-go/internal/shared/types"]
+	p, ok := w.byPath["template/core-go/types"]
 	if !ok {
 		return nil
 	}

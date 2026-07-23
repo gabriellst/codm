@@ -12,7 +12,6 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
-	sharedenums "template/api-go/internal/shared/enums"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -501,7 +500,7 @@ func TestMessageReceivedProjector_SkipsPlatformInternal(t *testing.T) {
 		OccurredAt:        time.Unix(ts, 0).UTC(),
 		ObservedAt:        time.Now().UTC(),
 		MessageType:       "TEXT",
-		Platform:          string(sharedenums.PlatformInternal),
+		Platform:          string(channelenums.PlatformInternal),
 		OwnerID:           "tenant",
 	})
 
@@ -538,7 +537,7 @@ func TestMessageSentProjector_SkipsPlatformInternal(t *testing.T) {
 		OccurredAt:        time.Unix(ts, 0).UTC(),
 		ObservedAt:        time.Now().UTC(),
 		MessageType:       "TEXT",
-		Platform:          sharedenums.PlatformInternal,
+		Platform:          channelenums.PlatformInternal,
 		OwnerID:           "tenant",
 	})
 

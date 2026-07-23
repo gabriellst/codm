@@ -15,7 +15,7 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
 	remoteevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 func TestMapHistorySync_InitialBootstrap(t *testing.T) {

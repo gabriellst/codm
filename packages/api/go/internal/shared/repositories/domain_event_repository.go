@@ -3,7 +3,7 @@ package repositories
 import (
 	"context"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // DomainEventRepository persists domain events to the event store and outbox.

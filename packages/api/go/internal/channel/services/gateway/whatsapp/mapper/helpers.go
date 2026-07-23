@@ -8,7 +8,7 @@ import (
 	waMeowTypes "go.mau.fi/whatsmeow/types"
 
 	"template/api-go/internal/channel/services/gateway/whatsapp/jidutil"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // resolvePN converts a LID JID to its phone number JID using the device store.

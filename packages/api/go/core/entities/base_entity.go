@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/objects"
-	"template/api-go/internal/shared/types"
+	"template/core-go/objects"
+	"template/core-go/types"
 )
 
 // BaseEntity is the base struct for all domain entities.

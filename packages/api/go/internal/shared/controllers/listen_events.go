@@ -15,8 +15,8 @@ import (
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
 	sharedevents "template/api-go/internal/shared/events"
 	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
+	"template/core-go/types"
 )
 
 // sseEventWhitelist defines which domain events are forwarded directly to SSE clients.

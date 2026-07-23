@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 
 	"github.com/go-playground/validator/v10"
 )

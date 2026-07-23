@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 // ErrorResponse is an alias for errors.AppError used in swag annotations.

@@ -7,9 +7,8 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/entities"
-	"template/api-go/internal/shared/errors"
-	sharedenums "template/api-go/internal/shared/enums"
+	"template/core-go/entities"
+	"template/core-go/errors"
 
 	"github.com/google/uuid"
 )
@@ -34,7 +33,7 @@ type Message struct {
 	deletedAt         *time.Time
 	// Extra fields for event-payload composition (not invariants).
 	senderRemoteID string
-	platform       sharedenums.Platform
+	platform       channelenums.Platform
 	messageType    channelenums.MessageType
 }
 
@@ -49,7 +48,7 @@ func (m *Message) OwnerID() string                   { return m.ownerID }
 func (m *Message) OccurredAt() time.Time             { return m.occurredAt }
 func (m *Message) EditedAt() *time.Time              { return m.editedAt }
 func (m *Message) DeletedAt() *time.Time             { return m.deletedAt }
-func (m *Message) Platform() sharedenums.Platform    { return m.platform }
+func (m *Message) Platform() channelenums.Platform   { return m.platform }
 
 // ---------------------------------------------------------------------------
 // Reconstruction (no events, no validation)
@@ -71,7 +70,7 @@ type ReconstructMessageParams struct {
 	UpdatedAt         time.Time
 	Version           int
 	SenderRemoteID    string
-	Platform          sharedenums.Platform
+	Platform          channelenums.Platform
 	MessageType       channelenums.MessageType
 }
 

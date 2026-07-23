@@ -9,9 +9,8 @@ import (
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
-	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/services/mediator"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -41,7 +40,7 @@ func (p *MessageReceivedProjector) Handle(ctx context.Context, event types.Domai
 		return err
 	}
 	pl := e.Payload
-	if pl.Platform == string(sharedenums.PlatformInternal) {
+	if pl.Platform == string(channelenums.PlatformInternal) {
 		return nil
 	}
 	msg := &projections.Message{
@@ -50,7 +49,7 @@ func (p *MessageReceivedProjector) Handle(ctx context.Context, event types.Domai
 		RemoteID:          pl.RemoteID,
 		PlatformMessageID: pl.MessageID,
 		Direction:         string(channelenums.DirectionReceived),
-		Platform:          sharedenums.Platform(pl.Platform),
+		Platform:          channelenums.Platform(pl.Platform),
 		SenderRemoteID:    pl.SenderID,
 		Content:           pl.Content,
 		OccurredAt:        pl.OccurredAt,
@@ -95,7 +94,7 @@ func (p *MessageSentProjector) Handle(ctx context.Context, event types.DomainEve
 		return err
 	}
 	pl := e.Payload
-	if pl.Platform == sharedenums.PlatformInternal {
+	if pl.Platform == channelenums.PlatformInternal {
 		return nil
 	}
 	msg := &projections.Message{

@@ -3,7 +3,7 @@ package events
 import (
 	"github.com/google/uuid"
 
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 const ChannelDeletedEventName = "channel.channel_deleted"

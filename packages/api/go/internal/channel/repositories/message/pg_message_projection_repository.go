@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"template/api-go/internal/channel/enums"
 	"template/api-go/internal/channel/projections"
 	"template/api-go/internal/shared/db/dbutil"
-	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/services/unitofwork"
 )
 
@@ -430,7 +430,7 @@ func scanMessage(row msgRowScanner) (*projections.Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg.Platform = sharedenums.Platform(platform)
+	msg.Platform = enums.Platform(platform)
 	msg.Content = json.RawMessage(content)
 	msg.DeliveredAt = dbutil.TimePtr(deliveredAt)
 	msg.SeenAt = dbutil.TimePtr(seenAt)

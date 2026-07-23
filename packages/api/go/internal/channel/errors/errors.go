@@ -3,7 +3,7 @@ package errors
 import (
 	"net/http"
 
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 const (

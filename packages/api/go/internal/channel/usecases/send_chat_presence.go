@@ -6,7 +6,7 @@ import (
 	channelerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/registry"
-	"template/api-go/internal/shared/errors"
+	"template/core-go/errors"
 )
 
 type SendChatPresenceInput struct {

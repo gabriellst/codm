@@ -2,7 +2,7 @@ package events
 
 import (
 	channelevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/shared/types"
+	"template/core-go/types"
 )
 
 const ChannelSpecialPlatformEventName = "integration.channel_special_platform_event.received"

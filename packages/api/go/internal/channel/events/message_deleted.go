@@ -1,8 +1,8 @@
 package events
 
 import (
-	sharedenums "template/api-go/internal/shared/enums"
-	"template/api-go/internal/shared/types"
+	"template/api-go/internal/channel/enums"
+	"template/core-go/types"
 
 	"github.com/google/uuid"
 )
@@ -12,11 +12,11 @@ import (
 // one deletion event — the original sent/received event stays in
 // shared.events for audit.
 type ChannelMessageDeletedPayload struct {
-	ChannelID uuid.UUID            `json:"channelId" validate:"required"`
-	MessageID string               `json:"messageId" validate:"required"`
-	RemoteID  string               `json:"remoteId" validate:"required"`
-	Platform  sharedenums.Platform `json:"platform" validate:"required"`
-	OwnerID   string               `json:"ownerId" validate:"required"`
+	ChannelID uuid.UUID      `json:"channelId" validate:"required"`
+	MessageID string         `json:"messageId" validate:"required"`
+	RemoteID  string         `json:"remoteId" validate:"required"`
+	Platform  enums.Platform `json:"platform" validate:"required"`
+	OwnerID   string         `json:"ownerId" validate:"required"`
 }
 
 const MessageDeletedEventName = "channel.message_deleted"
