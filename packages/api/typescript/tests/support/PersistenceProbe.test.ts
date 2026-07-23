@@ -63,8 +63,11 @@ describe('PersistenceProbe', () => {
 
 	it('persistedEvents filters by entityId (uuid column) and ownerId', async () => {
 		const target = testId('probe', 'target')
-		await domainEventRepository.save(makeEvent({ entityId: target }))
-		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'other') }))
+		// Distinct payloads: BaseEvent.id hashes {name, payload, time} (entityId is stamped after
+		// super()), so two same-payload events created within the same ISO-millisecond collide on
+		// events_pkey — a real flake under full-suite CPU contention.
+		await domainEventRepository.save(makeEvent({ entityId: target, itemId: 'item-target' }))
+		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'other'), itemId: 'item-other' }))
 
 		const rows = await testBed.probe().persistedEvents({ name: ProbeTestEvent.name, entityId: target })
 		expect(rows).toHaveLength(1)
@@ -72,8 +75,8 @@ describe('PersistenceProbe', () => {
 	})
 
 	it('count() matches the row counts for the registered ProbeTable entries it can reach unfiltered', async () => {
-		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'e1') }))
-		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'e2') }))
+		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'e1'), itemId: 'item-e1' }))
+		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'e2'), itemId: 'item-e2' }))
 
 		const probe = testBed.probe()
 		expect(await probe.count('shared.events', { name: ProbeTestEvent.name })).toBe(2)
