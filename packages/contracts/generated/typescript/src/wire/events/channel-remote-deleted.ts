@@ -4,9 +4,10 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. A remote was soft-deleted (contact removed / left permanently). Descends the medscall integration.channel.remote_deleted. The gateway.remotes read model stamps deleted_at without removing the row. ownerId travels on the envelope. */
 export const ChannelRemoteDeletedEventSchema = z.integrationEvent('integration.channel.remote_deleted', {
-	channelId: z.string(),
+	channelId: z.uuid(),
 	remoteId: z.string(),
-	deletedAt: z.date(),
+	at: z.date(),
+	ownerId: z.string(),
 })
 
 export class ChannelRemoteDeletedEvent extends BaseIntegrationEvent<typeof ChannelRemoteDeletedEventSchema> {

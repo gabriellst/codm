@@ -75,7 +75,7 @@ type ChannelChatPresenceUpdatedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	ChatID string `json:"chatId"`
 	SenderID string `json:"senderId"`
 	State ChatPresenceType `json:"state"`
@@ -86,37 +86,37 @@ func (e ChannelChatPresenceUpdatedEvent) EventName() string { return ChannelChat
 
 // ChannelChatPresenceUpdatedPayload — payload of integration.channel.chat_presence_updated, generated from the contract declaration.
 type ChannelChatPresenceUpdatedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	ChatID string `json:"chatId" validate:"required"`
 	SenderID string `json:"senderId" validate:"required"`
 	State ChatPresenceType `json:"state" validate:"required"`
 	ObservedAt time.Time `json:"observedAt" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelConnectedEventName is the wire discriminator for ChannelConnectedEvent.
 const ChannelConnectedEventName = "integration.channel.connected"
 
 // ChannelConnectedEvent — wire shape of integration.channel.connected.
-// BC1 Channel Gateway -> BC4 Thread & Routing. A channel finished pairing and is reachable. Descends medscall integration.channel.connected.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A channel finished pairing and is reachable. Descends medscall integration.channel.connected. Flat-events sanctioned amendment (wire-identity invariant, pilot precedent): the payload is the VERBATIM gateway shape — the earlier aspirational harmonized shape (kind/accountDetail/pairedAt) was never on the wire; kind→ChannelKind reconciliation and any shape harmonization are deferred to the enum-harmonization handoff.
 type ChannelConnectedEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
-	Kind ChannelKind `json:"kind"`
-	AccountDetail string `json:"accountDetail"`
-	PairedAt time.Time `json:"pairedAt"`
+	ChannelID uuid.UUID `json:"channelId"`
+	Platform string `json:"platform"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
 }
 
 func (e ChannelConnectedEvent) EventName() string { return ChannelConnectedEventName }
 
 // ChannelConnectedPayload — payload of integration.channel.connected, generated from the contract declaration.
 type ChannelConnectedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
-	Kind ChannelKind `json:"kind" validate:"required"`
-	AccountDetail string `json:"accountDetail" validate:"required"`
-	PairedAt time.Time `json:"pairedAt" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	Platform string `json:"platform" validate:"required"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelDeliveryRequestedEventName is the wire discriminator for ChannelDeliveryRequestedEvent.
@@ -157,48 +157,52 @@ type ChannelDeliveryRequestedPayload struct {
 const ChannelDisconnectedEventName = "integration.channel.disconnected"
 
 // ChannelDisconnectedEvent — wire shape of integration.channel.disconnected.
-// BC1 Channel Gateway -> BC4 Thread & Routing. A channel session was torn down; the core parks the affected threads. Descends medscall integration.channel.disconnected.
+// BC1 Channel Gateway -> BC4 Thread & Routing. A channel session was torn down; the core parks the affected threads. Descends medscall integration.channel.disconnected. Flat-events sanctioned amendment (wire-identity invariant, pilot precedent): the payload is the VERBATIM gateway shape — the earlier aspirational harmonized shape (kind/affectedThreadIds) was never on the wire; affected-thread derivation is a consumer-side read, and kind→ChannelKind reconciliation is deferred to the enum-harmonization handoff.
 type ChannelDisconnectedEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
-	Kind ChannelKind `json:"kind"`
-	AffectedThreadIDs []string `json:"affectedThreadIds"`
+	ChannelID uuid.UUID `json:"channelId"`
+	Platform string `json:"platform"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
 }
 
 func (e ChannelDisconnectedEvent) EventName() string { return ChannelDisconnectedEventName }
 
 // ChannelDisconnectedPayload — payload of integration.channel.disconnected, generated from the contract declaration.
 type ChannelDisconnectedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
-	Kind ChannelKind `json:"kind" validate:"required"`
-	AffectedThreadIDs []string `json:"affectedThreadIds" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	Platform string `json:"platform" validate:"required"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelLoggedOutEventName is the wire discriminator for ChannelLoggedOutEvent.
 const ChannelLoggedOutEventName = "integration.channel.logged_out"
 
 // ChannelLoggedOutEvent — wire shape of integration.channel.logged_out.
-// BC1 Channel Gateway. The platform forcibly logged the gateway session out (device unlinked, ban, credential revocation) — distinct from a graceful disconnect. Descends the medscall integration.channel.logged_out. reason is the platform-supplied cause; platformData is dropped (per-platform opaque). ownerId travels on the envelope.
+// BC1 Channel Gateway. The platform forcibly logged the gateway session out (device unlinked, ban, credential revocation) — distinct from a graceful disconnect. Descends the medscall integration.channel.logged_out. reason is the platform-supplied cause. Flat-events sanctioned amendment (wire-identity invariant, pilot precedent): platformData and the redeclared ownerId are the verbatim gateway payload fields.
 type ChannelLoggedOutEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	Reason string `json:"reason"`
-	Platform ChannelKind `json:"platform"`
+	Platform string `json:"platform"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
 }
 
 func (e ChannelLoggedOutEvent) EventName() string { return ChannelLoggedOutEventName }
 
 // ChannelLoggedOutPayload — payload of integration.channel.logged_out, generated from the contract declaration.
 type ChannelLoggedOutPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	Reason string `json:"reason" validate:"required"`
-	Platform ChannelKind `json:"platform" validate:"required"`
+	Platform string `json:"platform" validate:"required"`
+	PlatformData json.RawMessage `json:"platformData,omitempty"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelMembershipAddedEventName is the wire discriminator for ChannelMembershipAddedEvent.
@@ -211,7 +215,7 @@ type ChannelMembershipAddedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	GroupID string `json:"groupId"`
 	MemberID string `json:"memberId"`
 	IsAdmin bool `json:"isAdmin"`
@@ -222,11 +226,12 @@ func (e ChannelMembershipAddedEvent) EventName() string { return ChannelMembersh
 
 // ChannelMembershipAddedPayload — payload of integration.channel.membership_added, generated from the contract declaration.
 type ChannelMembershipAddedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	GroupID string `json:"groupId" validate:"required"`
 	MemberID string `json:"memberId" validate:"required"`
 	IsAdmin bool `json:"isAdmin"`
 	JoinedAt time.Time `json:"joinedAt" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelMembershipRemovedEventName is the wire discriminator for ChannelMembershipRemovedEvent.
@@ -239,7 +244,7 @@ type ChannelMembershipRemovedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	GroupID string `json:"groupId"`
 	MemberID string `json:"memberId"`
 	RemovedAt time.Time `json:"removedAt"`
@@ -249,10 +254,11 @@ func (e ChannelMembershipRemovedEvent) EventName() string { return ChannelMember
 
 // ChannelMembershipRemovedPayload — payload of integration.channel.membership_removed, generated from the contract declaration.
 type ChannelMembershipRemovedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	GroupID string `json:"groupId" validate:"required"`
 	MemberID string `json:"memberId" validate:"required"`
 	RemovedAt time.Time `json:"removedAt" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelMessageDeletedEventName is the wire discriminator for ChannelMessageDeletedEvent.
@@ -291,24 +297,25 @@ type ChannelMessageDeliveredEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	RemoteID string `json:"remoteId"`
 	SenderID string `json:"senderId"`
 	MessageIDs []string `json:"messageIds"`
 	Timestamp int64 `json:"timestamp"`
-	Platform ChannelKind `json:"platform"`
+	Platform string `json:"platform"`
 }
 
 func (e ChannelMessageDeliveredEvent) EventName() string { return ChannelMessageDeliveredEventName }
 
 // ChannelMessageDeliveredPayload — payload of integration.channel_message.delivered, generated from the contract declaration.
 type ChannelMessageDeliveredPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	RemoteID string `json:"remoteId" validate:"required"`
 	SenderID string `json:"senderId" validate:"required"`
 	MessageIDs []string `json:"messageIds" validate:"required"`
 	Timestamp int64 `json:"timestamp" validate:"required"`
-	Platform ChannelKind `json:"platform" validate:"required"`
+	Platform string `json:"platform" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelMessageEditedEventName is the wire discriminator for ChannelMessageEditedEvent.
@@ -417,26 +424,27 @@ type ChannelMessageSeenEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	RemoteID string `json:"remoteId"`
 	SenderID string `json:"senderId"`
 	MessageIDs []string `json:"messageIds"`
 	Timestamp int64 `json:"timestamp"`
 	Self bool `json:"self"`
-	Platform ChannelKind `json:"platform"`
+	Platform string `json:"platform"`
 }
 
 func (e ChannelMessageSeenEvent) EventName() string { return ChannelMessageSeenEventName }
 
 // ChannelMessageSeenPayload — payload of integration.channel_message.seen, generated from the contract declaration.
 type ChannelMessageSeenPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	RemoteID string `json:"remoteId" validate:"required"`
 	SenderID string `json:"senderId" validate:"required"`
 	MessageIDs []string `json:"messageIds" validate:"required"`
 	Timestamp int64 `json:"timestamp" validate:"required"`
 	Self bool `json:"self"`
-	Platform ChannelKind `json:"platform" validate:"required"`
+	Platform string `json:"platform" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelMessageSentEventName is the wire discriminator for ChannelMessageSentEvent.
@@ -489,7 +497,7 @@ type ChannelMessagesSyncedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	Total int32 `json:"total"`
 	Inserted int32 `json:"inserted"`
 }
@@ -498,7 +506,8 @@ func (e ChannelMessagesSyncedEvent) EventName() string { return ChannelMessagesS
 
 // ChannelMessagesSyncedPayload — payload of integration.channel.messages_synced, generated from the contract declaration.
 type ChannelMessagesSyncedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 	Total int32 `json:"total" validate:"required"`
 	Inserted int32 `json:"inserted" validate:"required"`
 }
@@ -573,7 +582,7 @@ type ChannelPresenceUpdatedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	RemoteID string `json:"remoteId"`
 	Unavailable bool `json:"unavailable"`
 	LastSeen *int64 `json:"lastSeen,omitempty"`
@@ -584,11 +593,12 @@ func (e ChannelPresenceUpdatedEvent) EventName() string { return ChannelPresence
 
 // ChannelPresenceUpdatedPayload — payload of integration.channel.presence_updated, generated from the contract declaration.
 type ChannelPresenceUpdatedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	RemoteID string `json:"remoteId" validate:"required"`
 	Unavailable bool `json:"unavailable"`
 	LastSeen *int64 `json:"lastSeen,omitempty"`
 	ObservedAt time.Time `json:"observedAt" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelRemoteCreatedEventName is the wire discriminator for ChannelRemoteCreatedEvent.
@@ -627,18 +637,19 @@ type ChannelRemoteDeletedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	RemoteID string `json:"remoteId"`
-	DeletedAt time.Time `json:"deletedAt"`
+	At time.Time `json:"at"`
 }
 
 func (e ChannelRemoteDeletedEvent) EventName() string { return ChannelRemoteDeletedEventName }
 
 // ChannelRemoteDeletedPayload — payload of integration.channel.remote_deleted, generated from the contract declaration.
 type ChannelRemoteDeletedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
 	RemoteID string `json:"remoteId" validate:"required"`
-	DeletedAt time.Time `json:"deletedAt" validate:"required"`
+	At time.Time `json:"at" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 }
 
 // ChannelRemoteUpdatedEventName is the wire discriminator for ChannelRemoteUpdatedEvent.
@@ -681,7 +692,7 @@ type ChannelRemotesSyncedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	Total int32 `json:"total"`
 	Inserted int32 `json:"inserted"`
 }
@@ -690,7 +701,8 @@ func (e ChannelRemotesSyncedEvent) EventName() string { return ChannelRemotesSyn
 
 // ChannelRemotesSyncedPayload — payload of integration.channel.remotes_synced, generated from the contract declaration.
 type ChannelRemotesSyncedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 	Total int32 `json:"total" validate:"required"`
 	Inserted int32 `json:"inserted" validate:"required"`
 }
@@ -733,7 +745,7 @@ type ChannelSyncCompletedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	CompletedAt time.Time `json:"completedAt"`
 }
 
@@ -741,7 +753,8 @@ func (e ChannelSyncCompletedEvent) EventName() string { return ChannelSyncComple
 
 // ChannelSyncCompletedPayload — payload of integration.channel.sync_completed, generated from the contract declaration.
 type ChannelSyncCompletedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 	CompletedAt time.Time `json:"completedAt" validate:"required"`
 }
 
@@ -755,7 +768,7 @@ type ChannelSyncProgressEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	HistorySyncType HistorySyncType `json:"historySyncType"`
 	Percent int32 `json:"percent"`
 }
@@ -764,7 +777,8 @@ func (e ChannelSyncProgressEvent) EventName() string { return ChannelSyncProgres
 
 // ChannelSyncProgressPayload — payload of integration.channel.sync_progress, generated from the contract declaration.
 type ChannelSyncProgressPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 	HistorySyncType HistorySyncType `json:"historySyncType" validate:"required"`
 	Percent int32 `json:"percent" validate:"required"`
 }
@@ -779,7 +793,7 @@ type ChannelSyncStartedEvent struct {
 	EntityID   string    `json:"entityId"`
 	OwnerID    string    `json:"ownerId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
+	ChannelID uuid.UUID `json:"channelId"`
 	StartedAt time.Time `json:"startedAt"`
 }
 
@@ -787,7 +801,8 @@ func (e ChannelSyncStartedEvent) EventName() string { return ChannelSyncStartedE
 
 // ChannelSyncStartedPayload — payload of integration.channel.sync_started, generated from the contract declaration.
 type ChannelSyncStartedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
+	ChannelID uuid.UUID `json:"channelId" validate:"required"`
+	OwnerID string `json:"ownerId" validate:"required"`
 	StartedAt time.Time `json:"startedAt" validate:"required"`
 }
 

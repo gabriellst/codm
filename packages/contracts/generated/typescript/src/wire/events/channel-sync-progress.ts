@@ -5,7 +5,8 @@ import { HistorySyncType } from '../enums'
 
 /** BC1 Channel Gateway. Progress metrics for an ongoing sync session. Descends the medscall integration.channel.sync_progress. historySyncType names the whatsmeow batch class (initial | recent); percent is 0-100. ownerId travels on the envelope. */
 export const ChannelSyncProgressEventSchema = z.integrationEvent('integration.channel.sync_progress', {
-	channelId: z.string(),
+	channelId: z.uuid(),
+	ownerId: z.string(),
 	historySyncType: z.enum(HistorySyncType),
 	percent: z.number().int(),
 })

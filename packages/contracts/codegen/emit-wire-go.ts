@@ -187,7 +187,12 @@ export function emitGoEvents(events: ParsedEvent[]): string {
 		// Payload fields (everything that's not envelope or name)
 		for (const f of ev.fields) {
 			if (ENVELOPE_FIELDS.has(f.name)) continue
-			const goField = pascalToGoField(f.name)
+			// The FLAT event struct carries the EventName() discriminator method; a verbatim
+			// payload field named `eventName` (channel_special_platform_event.received) would
+			// collide with it, so ONLY the flat struct renames the Go ident — the json tag
+			// (the wire truth) is untouched, and the PAYLOAD struct (method-less) keeps the
+			// verbatim ident.
+			const goField = pascalToGoField(f.name) === 'EventName' ? 'PayloadEventName' : pascalToGoField(f.name)
 			const ty = goType(f.type)
 			// Slices are already nilable — never emit `*[]T`; a nil slice models "absent".
 			// json.RawMessage (kind "unknown", the opaque union slots) is a []byte slice too.

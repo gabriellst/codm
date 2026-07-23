@@ -4,11 +4,12 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. A participant joined a group. Descends the medscall integration.channel.membership_added. Writes a gateway.remote_memberships row (channelId, groupId, memberId). isAdmin captures the join-time role; the promoted/demoted transitions are modeled by the dormant MembershipAction enum. ownerId travels on the envelope. */
 export const ChannelMembershipAddedEventSchema = z.integrationEvent('integration.channel.membership_added', {
-	channelId: z.string(),
+	channelId: z.uuid(),
 	groupId: z.string(),
 	memberId: z.string(),
 	isAdmin: z.boolean(),
 	joinedAt: z.date(),
+	ownerId: z.string(),
 })
 
 export class ChannelMembershipAddedEvent extends BaseIntegrationEvent<typeof ChannelMembershipAddedEventSchema> {

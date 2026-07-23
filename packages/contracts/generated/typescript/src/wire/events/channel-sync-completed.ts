@@ -4,7 +4,8 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. A sync session finished. Descends the medscall integration.channel.sync_completed. ownerId travels on the envelope. */
 export const ChannelSyncCompletedEventSchema = z.integrationEvent('integration.channel.sync_completed', {
-	channelId: z.string(),
+	channelId: z.uuid(),
+	ownerId: z.string(),
 	completedAt: z.date(),
 })
 

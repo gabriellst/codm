@@ -4,7 +4,8 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. One HistorySync batch finished inserting message rows. Descends the medscall integration.channel.messages_synced. Summary counts only (no per-message data) — lets consumers invalidate the thread/message views. ownerId travels on the envelope. */
 export const ChannelMessagesSyncedEventSchema = z.integrationEvent('integration.channel.messages_synced', {
-	channelId: z.string(),
+	channelId: z.uuid(),
+	ownerId: z.string(),
 	total: z.number().int(),
 	inserted: z.number().int(),
 })

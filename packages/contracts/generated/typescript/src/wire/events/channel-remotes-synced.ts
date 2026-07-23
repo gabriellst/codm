@@ -4,7 +4,8 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. One bootstrap contact-sync pass finished inserting remote rows. Descends the medscall integration.channel.remotes_synced (the source's contacts_synced fact). Summary counts only — lets consumers invalidate the sidebar/remote list. ownerId travels on the envelope. */
 export const ChannelRemotesSyncedEventSchema = z.integrationEvent('integration.channel.remotes_synced', {
-	channelId: z.string(),
+	channelId: z.uuid(),
+	ownerId: z.string(),
 	total: z.number().int(),
 	inserted: z.number().int(),
 })

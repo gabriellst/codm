@@ -5,11 +5,12 @@ import { ChatPresenceType } from '../enums'
 
 /** BC1 Channel Gateway. A typing/recording indicator inside a specific chat. Descends the medscall integration.channel.chat_presence_updated (whatsmeow *events.ChatPresence). state names the transient indicator (composing | recording | paused). ownerId travels on the envelope. */
 export const ChannelChatPresenceUpdatedEventSchema = z.integrationEvent('integration.channel.chat_presence_updated', {
-	channelId: z.string(),
+	channelId: z.uuid(),
 	chatId: z.string(),
 	senderId: z.string(),
 	state: z.enum(ChatPresenceType),
 	observedAt: z.date(),
+	ownerId: z.string(),
 })
 
 export class ChannelChatPresenceUpdatedEvent extends BaseIntegrationEvent<typeof ChannelChatPresenceUpdatedEventSchema> {

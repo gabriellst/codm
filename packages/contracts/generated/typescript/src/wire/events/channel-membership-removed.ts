@@ -4,10 +4,11 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. A participant left (or was removed from) a group. Descends the medscall integration.channel.membership_removed. Deletes the matching gateway.remote_memberships row. ownerId travels on the envelope. */
 export const ChannelMembershipRemovedEventSchema = z.integrationEvent('integration.channel.membership_removed', {
-	channelId: z.string(),
+	channelId: z.uuid(),
 	groupId: z.string(),
 	memberId: z.string(),
 	removedAt: z.date(),
+	ownerId: z.string(),
 })
 
 export class ChannelMembershipRemovedEvent extends BaseIntegrationEvent<typeof ChannelMembershipRemovedEventSchema> {

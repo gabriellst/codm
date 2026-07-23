@@ -4,11 +4,12 @@ import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
 
 /** BC1 Channel Gateway. A contact's overall availability changed (online/offline, lastSeen advanced). Descends the medscall integration.channel.presence_updated (whatsmeow *events.Presence). Carries the raw unavailable boolean + optional lastSeen unix timestamp; the PresenceType enum is the harmonized named-state companion. ownerId travels on the envelope. */
 export const ChannelPresenceUpdatedEventSchema = z.integrationEvent('integration.channel.presence_updated', {
-	channelId: z.string(),
+	channelId: z.uuid(),
 	remoteId: z.string(),
 	unavailable: z.boolean(),
 	lastSeen: z.number().int().optional(),
 	observedAt: z.date(),
+	ownerId: z.string(),
 })
 
 export class ChannelPresenceUpdatedEvent extends BaseIntegrationEvent<typeof ChannelPresenceUpdatedEventSchema> {
