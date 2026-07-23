@@ -22,6 +22,9 @@ func NewMessageReceivedHandler(ext mediator.ExternalMediator, reg registry.Chann
 	return &MessageReceivedHandler{externalMediator: ext, registry: reg}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageReceivedHandler)(nil)
+
 func (h *MessageReceivedHandler) EventName() string {
 	return ctxevents.MessageReceivedEventName
 }

@@ -16,6 +16,9 @@ func NewGatewayPlatformEventHandler(ext mediator.ExternalMediator) *GatewayPlatf
 	return &GatewayPlatformEventHandler{ext: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*GatewayPlatformEventHandler)(nil)
+
 func (h *GatewayPlatformEventHandler) EventName() string {
 	return ctxevents.GatewayPlatformEventName
 }

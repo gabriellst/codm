@@ -20,6 +20,9 @@ func NewSyncProgressIntegrationHandler(ext mediator.ExternalMediator) *SyncProgr
 	return &SyncProgressIntegrationHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*SyncProgressIntegrationHandler)(nil)
+
 func (h *SyncProgressIntegrationHandler) EventName() string {
 	return ctxevents.SyncProgressEventName
 }

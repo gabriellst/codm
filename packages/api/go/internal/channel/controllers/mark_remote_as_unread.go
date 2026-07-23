@@ -24,6 +24,9 @@ func NewMarkRemoteAsUnreadController(h *usecases.MarkRemoteAsUnreadHandler) *Mar
 	return &MarkRemoteAsUnreadController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*MarkRemoteAsUnreadController)(nil)
+
 func (c *MarkRemoteAsUnreadController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

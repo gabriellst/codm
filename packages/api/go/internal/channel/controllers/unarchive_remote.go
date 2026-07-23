@@ -24,6 +24,9 @@ func NewUnarchiveRemoteController(h *usecases.UnarchiveRemoteHandler) *Unarchive
 	return &UnarchiveRemoteController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*UnarchiveRemoteController)(nil)
+
 func (c *UnarchiveRemoteController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

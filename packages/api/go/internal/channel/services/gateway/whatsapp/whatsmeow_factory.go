@@ -19,6 +19,9 @@ import (
 )
 
 // WhatsmeowChannelFactory creates WhatsmeowChannel instances using a shared sqlstore container.
+// compile-time interface check.
+var _ gateway.ChannelFactory = (*WhatsmeowChannelFactory)(nil)
+
 type WhatsmeowChannelFactory struct {
 	container       *sqlstore.Container
 	db              *sql.DB

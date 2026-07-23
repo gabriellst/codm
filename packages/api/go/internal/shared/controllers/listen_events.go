@@ -147,6 +147,9 @@ func NewListenEventsController(internalM mediator.InternalMediator, externalM me
 	}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*ListenEventsController)(nil)
+
 func (c *ListenEventsController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "",

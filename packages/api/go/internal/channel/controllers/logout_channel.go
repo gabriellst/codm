@@ -20,6 +20,9 @@ func NewLogoutChannelController(handler *usecases.LogoutChannelHandler) *LogoutC
 	return &LogoutChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*LogoutChannelController)(nil)
+
 func (c *LogoutChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

@@ -31,6 +31,9 @@ func NewChannelLoggedOutHandler(
 	}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*ChannelLoggedOutHandler)(nil)
+
 func (h *ChannelLoggedOutHandler) EventName() string {
 	return ctxevents.GatewayLoggedOutEventName
 }

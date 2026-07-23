@@ -6,6 +6,7 @@ import (
 
 	ctxevents "template/api-go/internal/channel/events"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
+	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/types"
 )
 
@@ -24,6 +25,9 @@ type MembershipAddedProjector struct {
 func NewMembershipAddedProjector(repo remoterepo.RemoteProjectionRepository) *MembershipAddedProjector {
 	return &MembershipAddedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MembershipAddedProjector)(nil)
 
 func (p *MembershipAddedProjector) EventName() string {
 	return ctxevents.MembershipAddedEventName
@@ -68,6 +72,9 @@ type MembershipRemovedProjector struct {
 func NewMembershipRemovedProjector(repo remoterepo.RemoteProjectionRepository) *MembershipRemovedProjector {
 	return &MembershipRemovedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MembershipRemovedProjector)(nil)
 
 func (p *MembershipRemovedProjector) EventName() string {
 	return ctxevents.MembershipRemovedEventName

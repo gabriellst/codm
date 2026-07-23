@@ -9,7 +9,7 @@ import (
 )
 
 type SendLinkRequest struct {
-	ChannelID string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	ChannelID    string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
 	RemoteID     string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
 	URL          string `from:"body" json:"url"          validate:"required,url" example:"https://example.com/article"`
 	Title        string `from:"body" json:"title"        validate:"omitempty,max=255" example:"Interesting Article"`
@@ -25,6 +25,9 @@ func NewSendLinkController(handler *usecases.SendLinkHandler) *SendLinkControlle
 	return &SendLinkController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendLinkController)(nil)
+
 func (c *SendLinkController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -32,10 +35,10 @@ func (c *SendLinkController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send a link with preview",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendLinkRequest{},
-		Response:    usecases.SendLinkOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendLinkRequest{},
+		Response: usecases.SendLinkOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -47,7 +50,7 @@ func (c *SendLinkController) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendLinkInput{
-		ChannelID: req.ChannelID,
+		ChannelID:    req.ChannelID,
 		RemoteID:     req.RemoteID,
 		URL:          req.URL,
 		Title:        req.Title,

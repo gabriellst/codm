@@ -21,6 +21,9 @@ func NewRemoteDeletedIntegrationHandler(ext mediator.ExternalMediator) *RemoteDe
 	return &RemoteDeletedIntegrationHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteDeletedIntegrationHandler)(nil)
+
 func (h *RemoteDeletedIntegrationHandler) EventName() string {
 	return ctxevents.RemoteDeletedEventName
 }

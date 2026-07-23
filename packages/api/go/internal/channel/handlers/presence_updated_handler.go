@@ -18,6 +18,9 @@ func NewPresenceUpdatedIntegrationHandler(ext mediator.ExternalMediator) *Presen
 	return &PresenceUpdatedIntegrationHandler{ext: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*PresenceUpdatedIntegrationHandler)(nil)
+
 func (h *PresenceUpdatedIntegrationHandler) EventName() string {
 	return ctxevents.PresenceUpdatedEventName
 }

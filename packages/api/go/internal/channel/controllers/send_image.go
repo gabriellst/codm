@@ -10,10 +10,10 @@ import (
 
 type SendImageRequest struct {
 	ChannelID string   `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	RemoteID     string   `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
-	MediaURL     string   `from:"body" json:"mediaUrl"     validate:"required,url" example:"https://example.com/image.png"`
-	Caption      string   `from:"body" json:"caption"      validate:"omitempty,max=1024" example:"Check this out"`
-	Mentioned    []string `from:"body" json:"mentioned"    validate:"omitempty" example:"5511999999999"`
+	RemoteID  string   `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
+	MediaURL  string   `from:"body" json:"mediaUrl"     validate:"required,url" example:"https://example.com/image.png"`
+	Caption   string   `from:"body" json:"caption"      validate:"omitempty,max=1024" example:"Check this out"`
+	Mentioned []string `from:"body" json:"mentioned"    validate:"omitempty" example:"5511999999999"`
 }
 
 type SendImageController struct {
@@ -24,6 +24,9 @@ func NewSendImageController(handler *usecases.SendImageHandler) *SendImageContro
 	return &SendImageController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendImageController)(nil)
+
 func (c *SendImageController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -31,10 +34,10 @@ func (c *SendImageController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send an image message",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendImageRequest{},
-		Response:    usecases.SendImageOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendImageRequest{},
+		Response: usecases.SendImageOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -47,10 +50,10 @@ func (c *SendImageController) Handle(w http.ResponseWriter, r *http.Request) {
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendImageInput{
 		ChannelID: req.ChannelID,
-		RemoteID:     req.RemoteID,
-		MediaURL:     req.MediaURL,
-		Caption:      req.Caption,
-		Mentioned:    req.Mentioned,
+		RemoteID:  req.RemoteID,
+		MediaURL:  req.MediaURL,
+		Caption:   req.Caption,
+		Mentioned: req.Mentioned,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

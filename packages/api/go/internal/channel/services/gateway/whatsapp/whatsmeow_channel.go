@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
+	"sync"
 	channelenums "template/api-go/internal/channel/enums"
 	msgenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
@@ -17,8 +19,6 @@ import (
 	mapperpkg "template/api-go/internal/channel/services/gateway/whatsapp/mapper"
 	sharedenums "template/api-go/internal/shared/enums"
 	repositories "template/api-go/internal/shared/repositories"
-	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -38,6 +38,9 @@ import (
 )
 
 // WhatsmeowChannel wraps a whatsmeow.Client to implement the gateway.Channel interface.
+// compile-time interface check.
+var _ gateway.Channel = (*WhatsmeowChannel)(nil)
+
 type WhatsmeowChannel struct {
 	instanceID      uuid.UUID
 	ownerID         string

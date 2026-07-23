@@ -24,6 +24,9 @@ func NewArchiveRemoteController(h *usecases.ArchiveRemoteHandler) *ArchiveRemote
 	return &ArchiveRemoteController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*ArchiveRemoteController)(nil)
+
 func (c *ArchiveRemoteController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

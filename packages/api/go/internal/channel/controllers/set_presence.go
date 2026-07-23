@@ -22,6 +22,9 @@ func NewSetPresenceController(handler *usecases.SetPresenceHandler) *SetPresence
 	return &SetPresenceController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SetPresenceController)(nil)
+
 func (c *SetPresenceController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -29,10 +32,10 @@ func (c *SetPresenceController) Metadata() types.ControllerMetadata {
 		Method:      "PUT",
 		Description: "Set channel presence",
 		Tags:        []string{"Channel"},
-	
-		Request:     SetPresenceRequest{},
-		Response:    nil,
-		Status:      http.StatusNoContent,
+
+		Request:  SetPresenceRequest{},
+		Response: nil,
+		Status:   http.StatusNoContent,
 	}
 }
 

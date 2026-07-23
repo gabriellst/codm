@@ -24,6 +24,9 @@ func NewUnpinRemoteController(h *usecases.UnpinRemoteHandler) *UnpinRemoteContro
 	return &UnpinRemoteController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*UnpinRemoteController)(nil)
+
 func (c *UnpinRemoteController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

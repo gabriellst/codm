@@ -10,6 +10,7 @@ import (
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
+	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/types"
 )
 
@@ -50,6 +51,9 @@ type RemoteCreatedProjector struct {
 func NewRemoteCreatedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteCreatedProjector {
 	return &RemoteCreatedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteCreatedProjector)(nil)
 
 func (p *RemoteCreatedProjector) EventName() string { return ctxevents.RemoteCreatedEventName }
 
@@ -94,6 +98,9 @@ func NewRemoteDeletedProjector(repo remoterepo.RemoteProjectionRepository) *Remo
 	return &RemoteDeletedProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteDeletedProjector)(nil)
+
 func (p *RemoteDeletedProjector) EventName() string { return ctxevents.RemoteDeletedEventName }
 
 func (p *RemoteDeletedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -131,6 +138,9 @@ type RemoteUpdatedProjector struct {
 func NewRemoteUpdatedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUpdatedProjector {
 	return &RemoteUpdatedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteUpdatedProjector)(nil)
 
 func (p *RemoteUpdatedProjector) EventName() string { return ctxevents.RemoteUpdatedEventName }
 
@@ -178,6 +188,9 @@ func NewRemotePinnedProjector(repo remoterepo.RemoteProjectionRepository) *Remot
 	return &RemotePinnedProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemotePinnedProjector)(nil)
+
 func (p *RemotePinnedProjector) EventName() string { return ctxevents.RemotePinnedEventName }
 
 func (p *RemotePinnedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -201,6 +214,9 @@ type RemoteUnpinnedProjector struct {
 func NewRemoteUnpinnedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnpinnedProjector {
 	return &RemoteUnpinnedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteUnpinnedProjector)(nil)
 
 func (p *RemoteUnpinnedProjector) EventName() string { return ctxevents.RemoteUnpinnedEventName }
 
@@ -226,6 +242,9 @@ func NewRemoteArchivedProjector(repo remoterepo.RemoteProjectionRepository) *Rem
 	return &RemoteArchivedProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteArchivedProjector)(nil)
+
 func (p *RemoteArchivedProjector) EventName() string { return ctxevents.RemoteArchivedEventName }
 
 func (p *RemoteArchivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -250,6 +269,9 @@ func NewRemoteUnarchivedProjector(repo remoterepo.RemoteProjectionRepository) *R
 	return &RemoteUnarchivedProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteUnarchivedProjector)(nil)
+
 func (p *RemoteUnarchivedProjector) EventName() string { return ctxevents.RemoteUnarchivedEventName }
 
 func (p *RemoteUnarchivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -273,6 +295,9 @@ type RemoteMutedProjector struct {
 func NewRemoteMutedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteMutedProjector {
 	return &RemoteMutedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteMutedProjector)(nil)
 
 func (p *RemoteMutedProjector) EventName() string { return ctxevents.RemoteMutedEventName }
 
@@ -307,6 +332,9 @@ func NewRemoteUnmutedProjector(repo remoterepo.RemoteProjectionRepository) *Remo
 	return &RemoteUnmutedProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteUnmutedProjector)(nil)
+
 func (p *RemoteUnmutedProjector) EventName() string { return ctxevents.RemoteUnmutedEventName }
 
 func (p *RemoteUnmutedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -330,6 +358,9 @@ type RemoteMarkedAsUnreadProjector struct {
 func NewRemoteMarkedAsUnreadProjector(repo remoterepo.RemoteProjectionRepository) *RemoteMarkedAsUnreadProjector {
 	return &RemoteMarkedAsUnreadProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteMarkedAsUnreadProjector)(nil)
 
 func (p *RemoteMarkedAsUnreadProjector) EventName() string {
 	return ctxevents.RemoteMarkedAsUnreadEventName
@@ -360,6 +391,9 @@ func NewRemoteChatSeenProjector(repo remoterepo.RemoteProjectionRepository) *Rem
 	return &RemoteChatSeenProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteChatSeenProjector)(nil)
+
 func (p *RemoteChatSeenProjector) EventName() string { return ctxevents.RemoteChatSeenEventName }
 
 func (p *RemoteChatSeenProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -387,6 +421,9 @@ type RemoteOnMessageReceivedProjector struct {
 func NewRemoteOnMessageReceivedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteOnMessageReceivedProjector {
 	return &RemoteOnMessageReceivedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteOnMessageReceivedProjector)(nil)
 
 func (p *RemoteOnMessageReceivedProjector) EventName() string {
 	return ctxevents.MessageReceivedEventName
@@ -444,6 +481,9 @@ func NewRemoteOnMessageDeletedProjector(
 	return &RemoteOnMessageDeletedProjector{msgRepo: msgRepo, remoteRepo: remoteRepo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteOnMessageDeletedProjector)(nil)
+
 func (p *RemoteOnMessageDeletedProjector) EventName() string {
 	return ctxevents.MessageDeletedEventName
 }
@@ -479,6 +519,9 @@ type RemoteOnMessageSentProjector struct {
 func NewRemoteOnMessageSentProjector(repo remoterepo.RemoteProjectionRepository) *RemoteOnMessageSentProjector {
 	return &RemoteOnMessageSentProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteOnMessageSentProjector)(nil)
 
 func (p *RemoteOnMessageSentProjector) EventName() string { return ctxevents.MessageSentEventName }
 

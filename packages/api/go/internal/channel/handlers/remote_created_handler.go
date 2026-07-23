@@ -21,6 +21,9 @@ func NewRemoteCreatedIntegrationHandler(ext mediator.ExternalMediator) *RemoteCr
 	return &RemoteCreatedIntegrationHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteCreatedIntegrationHandler)(nil)
+
 func (h *RemoteCreatedIntegrationHandler) EventName() string {
 	return ctxevents.RemoteCreatedEventName
 }

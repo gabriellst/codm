@@ -20,6 +20,9 @@ func NewDeleteChannelController(handler *usecases.DeleteChannelHandler) *DeleteC
 	return &DeleteChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*DeleteChannelController)(nil)
+
 func (c *DeleteChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -27,10 +30,10 @@ func (c *DeleteChannelController) Metadata() types.ControllerMetadata {
 		Method:      "DELETE",
 		Description: "Delete a channel",
 		Tags:        []string{"Channel"},
-	
-		Request:     DeleteChannelRequest{},
-		Response:    usecases.DeleteChannelOutput{},
-		Status:      http.StatusOK,
+
+		Request:  DeleteChannelRequest{},
+		Response: usecases.DeleteChannelOutput{},
+		Status:   http.StatusOK,
 	}
 }
 

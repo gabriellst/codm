@@ -20,6 +20,9 @@ func NewConnectChannelController(handler *usecases.ConnectChannelHandler) *Conne
 	return &ConnectChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*ConnectChannelController)(nil)
+
 func (c *ConnectChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -27,10 +30,10 @@ func (c *ConnectChannelController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Connect channel (returns QR code)",
 		Tags:        []string{"Channel"},
-	
-		Request:     ConnectChannelRequest{},
-		Response:    usecases.ConnectChannelOutput{},
-		Status:      http.StatusOK,
+
+		Request:  ConnectChannelRequest{},
+		Response: usecases.ConnectChannelOutput{},
+		Status:   http.StatusOK,
 	}
 }
 

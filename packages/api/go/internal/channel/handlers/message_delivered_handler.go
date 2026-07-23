@@ -20,6 +20,9 @@ func NewMessageDeliveredHandler(ext mediator.ExternalMediator) *MessageDelivered
 	return &MessageDeliveredHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageDeliveredHandler)(nil)
+
 func (h *MessageDeliveredHandler) EventName() string {
 	return ctxevents.MessageDeliveredEventName
 }

@@ -20,6 +20,9 @@ func NewGetChannelController(handler *usecases.GetChannelHandler) *GetChannelCon
 	return &GetChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*GetChannelController)(nil)
+
 func (c *GetChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -27,10 +30,10 @@ func (c *GetChannelController) Metadata() types.ControllerMetadata {
 		Method:      "GET",
 		Description: "Get channel by ID",
 		Tags:        []string{"Channel"},
-	
-		Request:     GetChannelRequest{},
-		Response:    usecases.GetChannelOutput{},
-		Status:      http.StatusOK,
+
+		Request:  GetChannelRequest{},
+		Response: usecases.GetChannelOutput{},
+		Status:   http.StatusOK,
 	}
 }
 

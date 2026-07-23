@@ -20,6 +20,9 @@ func NewRestartChannelController(handler *usecases.RestartChannelHandler) *Resta
 	return &RestartChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*RestartChannelController)(nil)
+
 func (c *RestartChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

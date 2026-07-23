@@ -21,6 +21,9 @@ func NewSyncStartedIntegrationHandler(ext mediator.ExternalMediator) *SyncStarte
 	return &SyncStartedIntegrationHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*SyncStartedIntegrationHandler)(nil)
+
 func (h *SyncStartedIntegrationHandler) EventName() string {
 	return ctxevents.SyncStartedEventName
 }

@@ -21,6 +21,9 @@ type ChannelRegistryImpl struct {
 	factory  gateway.ChannelFactory
 }
 
+// compile-time interface check.
+var _ ChannelRegistry = (*ChannelRegistryImpl)(nil)
+
 func NewChannelRegistry(factory gateway.ChannelFactory) *ChannelRegistryImpl {
 	return &ChannelRegistryImpl{
 		channels: make(map[uuid.UUID]gateway.Channel),

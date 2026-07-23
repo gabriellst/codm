@@ -7,6 +7,7 @@ import (
 
 	ctxevents "template/api-go/internal/channel/events"
 	repositories "template/api-go/internal/shared/repositories"
+	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/types"
 )
 
@@ -20,6 +21,9 @@ type SyncStartedHandler struct {
 func NewSyncStartedHandler(repo repositories.DomainEventRepository) *SyncStartedHandler {
 	return &SyncStartedHandler{domainEventRepo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*SyncStartedHandler)(nil)
 
 func (h *SyncStartedHandler) EventName() string {
 	return ctxevents.GatewayConnectedEventName
@@ -54,6 +58,9 @@ func NewSyncProgressHandler(repo repositories.DomainEventRepository) *SyncProgre
 	return &SyncProgressHandler{domainEventRepo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*SyncProgressHandler)(nil)
+
 func (h *SyncProgressHandler) EventName() string {
 	return ctxevents.GatewayHistorySyncEventName
 }
@@ -87,6 +94,9 @@ type SyncCompletedHandler struct {
 func NewSyncCompletedHandler(repo repositories.DomainEventRepository) *SyncCompletedHandler {
 	return &SyncCompletedHandler{domainEventRepo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*SyncCompletedHandler)(nil)
 
 func (h *SyncCompletedHandler) EventName() string {
 	return ctxevents.GatewaySyncCompleteEventName

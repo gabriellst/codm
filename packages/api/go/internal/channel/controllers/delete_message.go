@@ -10,8 +10,8 @@ import (
 
 type DeleteMessageRequest struct {
 	ChannelID string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	RemoteID     string `from:"body" json:"remoteId"    validate:"required" example:"5511999999999@s.whatsapp.net"`
-	MessageID    string `from:"body" json:"messageId"    validate:"required" example:"3EB0B430A6B7FBEC1200"`
+	RemoteID  string `from:"body" json:"remoteId"    validate:"required" example:"5511999999999@s.whatsapp.net"`
+	MessageID string `from:"body" json:"messageId"    validate:"required" example:"3EB0B430A6B7FBEC1200"`
 }
 
 type DeleteMessageController struct {
@@ -22,6 +22,9 @@ func NewDeleteMessageController(handler *usecases.DeleteMessageHandler) *DeleteM
 	return &DeleteMessageController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*DeleteMessageController)(nil)
+
 func (c *DeleteMessageController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -29,10 +32,10 @@ func (c *DeleteMessageController) Metadata() types.ControllerMetadata {
 		Method:      "DELETE",
 		Description: "Delete a message",
 		Tags:        []string{"Messaging"},
-	
-		Request:     DeleteMessageRequest{},
-		Response:    usecases.DeleteMessageOutput{},
-		Status:      http.StatusOK,
+
+		Request:  DeleteMessageRequest{},
+		Response: usecases.DeleteMessageOutput{},
+		Status:   http.StatusOK,
 	}
 }
 
@@ -45,8 +48,8 @@ func (c *DeleteMessageController) Handle(w http.ResponseWriter, r *http.Request)
 
 	output, err := c.handler.Execute(r.Context(), usecases.DeleteMessageInput{
 		ChannelID: req.ChannelID,
-		RemoteID:    req.RemoteID,
-		MessageID:    req.MessageID,
+		RemoteID:  req.RemoteID,
+		MessageID: req.MessageID,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

@@ -24,6 +24,9 @@ func NewPinRemoteController(h *usecases.PinRemoteHandler) *PinRemoteController {
 	return &PinRemoteController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*PinRemoteController)(nil)
+
 func (c *PinRemoteController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

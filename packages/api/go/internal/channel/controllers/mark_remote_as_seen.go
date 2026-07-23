@@ -24,6 +24,9 @@ func NewMarkRemoteAsSeenController(h *usecases.MarkRemoteAsSeenHandler) *MarkRem
 	return &MarkRemoteAsSeenController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*MarkRemoteAsSeenController)(nil)
+
 func (c *MarkRemoteAsSeenController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

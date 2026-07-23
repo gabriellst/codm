@@ -24,6 +24,9 @@ func NewUnmuteRemoteController(h *usecases.UnmuteRemoteHandler) *UnmuteRemoteCon
 	return &UnmuteRemoteController{handler: h}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*UnmuteRemoteController)(nil)
+
 func (c *UnmuteRemoteController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",

@@ -17,6 +17,9 @@ import (
 // Mock Remote Projection Repository
 // ──────────────────────────────────────────────────────────────────────────────
 
+// compile-time assertion: the mock must track the real interface.
+var _ remoterepo.RemoteProjectionRepository = (*mockRemoteProjectionRepo)(nil)
+
 type mockRemoteProjectionRepo struct {
 	rows map[string]*projections.Remote // key: channelID+"|"+remoteID
 

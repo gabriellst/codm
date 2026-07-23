@@ -9,8 +9,8 @@ import (
 )
 
 type CheckIsOnPlatformRequest struct {
-	ChannelID string   `from:"body" json:"channelId"  validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	Identifiers  []string `from:"body" json:"identifiers"   validate:"required,min=1" example:"5511999999999"`
+	ChannelID   string   `from:"body" json:"channelId"  validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	Identifiers []string `from:"body" json:"identifiers"   validate:"required,min=1" example:"5511999999999"`
 }
 
 type CheckIsOnPlatformController struct {
@@ -21,6 +21,9 @@ func NewCheckIsOnPlatformController(handler *usecases.CheckIsOnPlatformHandler) 
 	return &CheckIsOnPlatformController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*CheckIsOnPlatformController)(nil)
+
 func (c *CheckIsOnPlatformController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -28,10 +31,10 @@ func (c *CheckIsOnPlatformController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Check if identifiers are on the platform",
 		Tags:        []string{"Messaging"},
-	
-		Request:     CheckIsOnPlatformRequest{},
-		Response:    usecases.CheckIsOnPlatformOutput{},
-		Status:      http.StatusOK,
+
+		Request:  CheckIsOnPlatformRequest{},
+		Response: usecases.CheckIsOnPlatformOutput{},
+		Status:   http.StatusOK,
 	}
 }
 
@@ -43,8 +46,8 @@ func (c *CheckIsOnPlatformController) Handle(w http.ResponseWriter, r *http.Requ
 	}
 
 	output, err := c.handler.Execute(r.Context(), usecases.CheckIsOnPlatformInput{
-		ChannelID: req.ChannelID,
-		Identifiers:  req.Identifiers,
+		ChannelID:   req.ChannelID,
+		Identifiers: req.Identifiers,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

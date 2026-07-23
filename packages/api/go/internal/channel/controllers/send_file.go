@@ -10,10 +10,10 @@ import (
 
 type SendFileRequest struct {
 	ChannelID string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	RemoteID     string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
-	MediaURL     string `from:"body" json:"mediaUrl"     validate:"required,url" example:"https://example.com/document.pdf"`
-	FileName     string `from:"body" json:"fileName"     validate:"omitempty,max=255" example:"document.pdf"`
-	MimeType     string `from:"body" json:"mimeType"     validate:"omitempty,max=127" example:"application/pdf"`
+	RemoteID  string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
+	MediaURL  string `from:"body" json:"mediaUrl"     validate:"required,url" example:"https://example.com/document.pdf"`
+	FileName  string `from:"body" json:"fileName"     validate:"omitempty,max=255" example:"document.pdf"`
+	MimeType  string `from:"body" json:"mimeType"     validate:"omitempty,max=127" example:"application/pdf"`
 }
 
 type SendFileController struct {
@@ -24,6 +24,9 @@ func NewSendFileController(handler *usecases.SendFileHandler) *SendFileControlle
 	return &SendFileController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendFileController)(nil)
+
 func (c *SendFileController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -31,10 +34,10 @@ func (c *SendFileController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send a file/document message",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendFileRequest{},
-		Response:    usecases.SendFileOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendFileRequest{},
+		Response: usecases.SendFileOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -47,10 +50,10 @@ func (c *SendFileController) Handle(w http.ResponseWriter, r *http.Request) {
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendFileInput{
 		ChannelID: req.ChannelID,
-		RemoteID:     req.RemoteID,
-		MediaURL:     req.MediaURL,
-		FileName:     req.FileName,
-		MimeType:     req.MimeType,
+		RemoteID:  req.RemoteID,
+		MediaURL:  req.MediaURL,
+		FileName:  req.FileName,
+		MimeType:  req.MimeType,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

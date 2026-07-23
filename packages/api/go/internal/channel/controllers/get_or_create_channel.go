@@ -1,11 +1,11 @@
 package controllers
 
 import (
+	"net/http"
 	"template/api-go/internal/channel/usecases"
 	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
-	"net/http"
 )
 
 type GetOrCreateChannelRequest struct {
@@ -21,6 +21,9 @@ func NewGetOrCreateChannelController(handler *usecases.GetOrCreateChannelHandler
 	return &GetOrCreateChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*GetOrCreateChannelController)(nil)
+
 func (c *GetOrCreateChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -28,10 +31,10 @@ func (c *GetOrCreateChannelController) Metadata() types.ControllerMetadata {
 		Method:      "GET",
 		Description: "Get or create channel for current tenant and platform",
 		Tags:        []string{"Channel"},
-	
-		Request:     GetOrCreateChannelRequest{},
-		Response:    usecases.GetOrCreateChannelOutput{},
-		Status:      http.StatusOK,
+
+		Request:  GetOrCreateChannelRequest{},
+		Response: usecases.GetOrCreateChannelOutput{},
+		Status:   http.StatusOK,
 	}
 }
 
@@ -45,7 +48,7 @@ func (c *GetOrCreateChannelController) Handle(w http.ResponseWriter, r *http.Req
 
 	output, err := c.handler.Execute(r.Context(), usecases.GetOrCreateChannelInput{
 		Platform: req.Platform,
-		OwnerID: req.OwnerID,
+		OwnerID:  req.OwnerID,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

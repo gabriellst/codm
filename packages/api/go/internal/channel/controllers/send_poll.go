@@ -9,7 +9,7 @@ import (
 )
 
 type SendPollRequest struct {
-	ChannelID   string                `from:"body" json:"channelId"      validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	ChannelID       string                `from:"body" json:"channelId"      validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
 	RemoteID        string                `from:"body" json:"remoteId"        validate:"required" example:"5511999999999@s.whatsapp.net"`
 	PollName        string                `from:"body" json:"pollName"        validate:"required,max=255" example:"What do you prefer?"`
 	Options         []usecases.PollOption `from:"body" json:"options"         validate:"required,min=2,max=12,dive"`
@@ -24,6 +24,9 @@ func NewSendPollController(handler *usecases.SendPollHandler) *SendPollControlle
 	return &SendPollController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendPollController)(nil)
+
 func (c *SendPollController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -31,10 +34,10 @@ func (c *SendPollController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send a poll message",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendPollRequest{},
-		Response:    usecases.SendPollOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendPollRequest{},
+		Response: usecases.SendPollOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -46,7 +49,7 @@ func (c *SendPollController) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendPollInput{
-		ChannelID:      req.ChannelID,
+		ChannelID:       req.ChannelID,
 		RemoteID:        req.RemoteID,
 		PollName:        req.PollName,
 		Options:         req.Options,

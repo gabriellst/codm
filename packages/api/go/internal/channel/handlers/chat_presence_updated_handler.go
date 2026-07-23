@@ -18,6 +18,9 @@ func NewChatPresenceUpdatedIntegrationHandler(ext mediator.ExternalMediator) *Ch
 	return &ChatPresenceUpdatedIntegrationHandler{ext: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*ChatPresenceUpdatedIntegrationHandler)(nil)
+
 func (h *ChatPresenceUpdatedIntegrationHandler) EventName() string {
 	return ctxevents.ChatPresenceUpdatedEventName
 }

@@ -10,6 +10,7 @@ import (
 	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	sharedenums "template/api-go/internal/shared/enums"
+	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/types"
 )
 
@@ -28,6 +29,9 @@ type MessageReceivedProjector struct {
 func NewMessageReceivedProjector(repo messagerepo.MessageProjectionRepository) *MessageReceivedProjector {
 	return &MessageReceivedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageReceivedProjector)(nil)
 
 func (p *MessageReceivedProjector) EventName() string { return ctxevents.MessageReceivedEventName }
 
@@ -79,6 +83,9 @@ type MessageSentProjector struct {
 func NewMessageSentProjector(repo messagerepo.MessageProjectionRepository) *MessageSentProjector {
 	return &MessageSentProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageSentProjector)(nil)
 
 func (p *MessageSentProjector) EventName() string { return ctxevents.MessageSentEventName }
 
@@ -132,6 +139,9 @@ func NewMessageEditedProjector(repo messagerepo.MessageProjectionRepository) *Me
 	return &MessageEditedProjector{repo: repo}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageEditedProjector)(nil)
+
 func (p *MessageEditedProjector) EventName() string { return ctxevents.MessageEditedEventName }
 
 func (p *MessageEditedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
@@ -170,6 +180,9 @@ type MessageDeletedProjector struct {
 func NewMessageDeletedProjector(repo messagerepo.MessageProjectionRepository) *MessageDeletedProjector {
 	return &MessageDeletedProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageDeletedProjector)(nil)
 
 func (p *MessageDeletedProjector) EventName() string { return ctxevents.MessageDeletedEventName }
 
@@ -211,6 +224,9 @@ type MessageDeliveredProjector struct {
 func NewMessageDeliveredProjector(repo messagerepo.MessageProjectionRepository) *MessageDeliveredProjector {
 	return &MessageDeliveredProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageDeliveredProjector)(nil)
 
 func (p *MessageDeliveredProjector) EventName() string { return ctxevents.MessageDeliveredEventName }
 
@@ -265,6 +281,9 @@ type MessageSeenProjector struct {
 func NewMessageSeenProjector(repo messagerepo.MessageProjectionRepository) *MessageSeenProjector {
 	return &MessageSeenProjector{repo: repo}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MessageSeenProjector)(nil)
 
 func (p *MessageSeenProjector) EventName() string { return ctxevents.MessageSeenEventName }
 

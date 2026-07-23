@@ -1,11 +1,11 @@
 package controllers
 
 import (
+	"net/http"
 	"template/api-go/internal/channel/usecases"
 	sharedenums "template/api-go/internal/shared/enums"
 	"template/api-go/internal/shared/types"
 	"template/api-go/pkg/httputil"
-	"net/http"
 )
 
 type CreateWhatsAppChannelRequest struct {
@@ -21,6 +21,9 @@ func NewCreateWhatsAppChannelController(handler *usecases.CreateChannelHandler) 
 	return &CreateWhatsAppChannelController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*CreateWhatsAppChannelController)(nil)
+
 func (c *CreateWhatsAppChannelController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -28,10 +31,10 @@ func (c *CreateWhatsAppChannelController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Create a new WhatsApp channel",
 		Tags:        []string{"Channel"},
-	
-		Request:     CreateWhatsAppChannelRequest{},
-		Response:    usecases.CreateChannelOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  CreateWhatsAppChannelRequest{},
+		Response: usecases.CreateChannelOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -45,7 +48,7 @@ func (c *CreateWhatsAppChannelController) Handle(w http.ResponseWriter, r *http.
 	output, err := c.handler.Execute(r.Context(), usecases.CreateChannelInput{
 		Name:     req.Name,
 		Platform: sharedenums.PlatformWhatsApp,
-		OwnerID: req.OwnerID,
+		OwnerID:  req.OwnerID,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

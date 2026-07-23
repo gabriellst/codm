@@ -9,9 +9,9 @@ import (
 )
 
 type SendStickerRequest struct {
-	ChannelID string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	RemoteID     string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
-	StickerURL   string `from:"body" json:"stickerUrl"   validate:"required,url" example:"https://example.com/sticker.webp"`
+	ChannelID  string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	RemoteID   string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
+	StickerURL string `from:"body" json:"stickerUrl"   validate:"required,url" example:"https://example.com/sticker.webp"`
 }
 
 type SendStickerController struct {
@@ -22,6 +22,9 @@ func NewSendStickerController(handler *usecases.SendStickerHandler) *SendSticker
 	return &SendStickerController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendStickerController)(nil)
+
 func (c *SendStickerController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -29,10 +32,10 @@ func (c *SendStickerController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send a sticker message",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendStickerRequest{},
-		Response:    usecases.SendStickerOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendStickerRequest{},
+		Response: usecases.SendStickerOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -44,9 +47,9 @@ func (c *SendStickerController) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendStickerInput{
-		ChannelID: req.ChannelID,
-		RemoteID:     req.RemoteID,
-		StickerURL:   req.StickerURL,
+		ChannelID:  req.ChannelID,
+		RemoteID:   req.RemoteID,
+		StickerURL: req.StickerURL,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

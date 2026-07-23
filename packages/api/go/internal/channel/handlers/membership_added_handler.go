@@ -21,6 +21,9 @@ func NewMembershipAddedIntegrationHandler(ext mediator.ExternalMediator) *Member
 	return &MembershipAddedIntegrationHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*MembershipAddedIntegrationHandler)(nil)
+
 func (h *MembershipAddedIntegrationHandler) EventName() string {
 	return ctxevents.MembershipAddedEventName
 }

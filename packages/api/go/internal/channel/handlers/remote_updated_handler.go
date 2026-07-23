@@ -21,6 +21,9 @@ func NewRemoteUpdatedHandler(ext mediator.ExternalMediator) *RemoteUpdatedHandle
 	return &RemoteUpdatedHandler{externalMediator: ext}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*RemoteUpdatedHandler)(nil)
+
 func (h *RemoteUpdatedHandler) EventName() string {
 	return ctxevents.RemoteUpdatedEventName
 }

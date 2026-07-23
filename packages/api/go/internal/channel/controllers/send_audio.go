@@ -10,8 +10,8 @@ import (
 
 type SendAudioRequest struct {
 	ChannelID string `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	RemoteID     string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
-	AudioURL     string `from:"body" json:"audioUrl"     validate:"required,url" example:"https://example.com/audio.ogg"`
+	RemoteID  string `from:"body" json:"remoteId"     validate:"required" example:"5511999999999@s.whatsapp.net"`
+	AudioURL  string `from:"body" json:"audioUrl"     validate:"required,url" example:"https://example.com/audio.ogg"`
 }
 
 type SendAudioController struct {
@@ -22,6 +22,9 @@ func NewSendAudioController(handler *usecases.SendAudioHandler) *SendAudioContro
 	return &SendAudioController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendAudioController)(nil)
+
 func (c *SendAudioController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -29,10 +32,10 @@ func (c *SendAudioController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send an audio message",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendAudioRequest{},
-		Response:    usecases.SendAudioOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendAudioRequest{},
+		Response: usecases.SendAudioOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -45,8 +48,8 @@ func (c *SendAudioController) Handle(w http.ResponseWriter, r *http.Request) {
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendAudioInput{
 		ChannelID: req.ChannelID,
-		RemoteID:     req.RemoteID,
-		AudioURL:     req.AudioURL,
+		RemoteID:  req.RemoteID,
+		AudioURL:  req.AudioURL,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

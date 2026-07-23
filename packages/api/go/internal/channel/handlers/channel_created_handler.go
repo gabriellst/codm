@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	ctxevents "template/api-go/internal/channel/events"
+	"template/api-go/internal/shared/services/mediator"
 	"template/api-go/internal/shared/types"
 )
 
@@ -12,6 +13,9 @@ type ChannelCreatedHandler struct{}
 func NewChannelCreatedHandler() *ChannelCreatedHandler {
 	return &ChannelCreatedHandler{}
 }
+
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*ChannelCreatedHandler)(nil)
 
 func (h *ChannelCreatedHandler) EventName() string {
 	return ctxevents.ChannelCreatedEventName

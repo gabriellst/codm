@@ -5,11 +5,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	msgenums "template/api-go/internal/channel/enums"
-	"template/api-go/internal/channel/services/gateway"
 	"net/http"
 	"net/url"
 	"strings"
+	msgenums "template/api-go/internal/channel/enums"
+	"template/api-go/internal/channel/services/gateway"
 
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"

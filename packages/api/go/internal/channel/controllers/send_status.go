@@ -9,12 +9,12 @@ import (
 )
 
 type SendStatusRequest struct {
-	ChannelID   string                  `from:"body" json:"channelId"      validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	StatusType      msgenums.MessageType    `from:"body" json:"statusType"      validate:"required,oneof=TEXT IMAGE VIDEO AUDIO" example:"TEXT"`
-	Content         string                  `from:"body" json:"content"         validate:"required" example:"Hello, this is my status!"`
-	Caption         string                  `from:"body" json:"caption"         validate:"omitempty,max=1024" example:"My caption"`
-	BackgroundColor string                  `from:"body" json:"backgroundColor" validate:"omitempty" example:"#FF5733"`
-	Font            string                  `from:"body" json:"font"            validate:"omitempty" example:"SERIF"`
+	ChannelID       string               `from:"body" json:"channelId"      validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	StatusType      msgenums.MessageType `from:"body" json:"statusType"      validate:"required,oneof=TEXT IMAGE VIDEO AUDIO" example:"TEXT"`
+	Content         string               `from:"body" json:"content"         validate:"required" example:"Hello, this is my status!"`
+	Caption         string               `from:"body" json:"caption"         validate:"omitempty,max=1024" example:"My caption"`
+	BackgroundColor string               `from:"body" json:"backgroundColor" validate:"omitempty" example:"#FF5733"`
+	Font            string               `from:"body" json:"font"            validate:"omitempty" example:"SERIF"`
 }
 
 type SendStatusController struct {
@@ -25,6 +25,9 @@ func NewSendStatusController(handler *usecases.SendStatusHandler) *SendStatusCon
 	return &SendStatusController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendStatusController)(nil)
+
 func (c *SendStatusController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -32,10 +35,10 @@ func (c *SendStatusController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send a status/story update",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendStatusRequest{},
-		Response:    usecases.SendStatusOutput{},
-		Status:      http.StatusCreated,
+
+		Request:  SendStatusRequest{},
+		Response: usecases.SendStatusOutput{},
+		Status:   http.StatusCreated,
 	}
 }
 
@@ -47,7 +50,7 @@ func (c *SendStatusController) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendStatusInput{
-		ChannelID:      req.ChannelID,
+		ChannelID:       req.ChannelID,
 		StatusType:      req.StatusType,
 		Content:         req.Content,
 		Caption:         req.Caption,

@@ -9,9 +9,9 @@ import (
 )
 
 type SendChatPresenceRequest struct {
-	ChannelID string                     `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
-	RemoteID     string                     `from:"body" json:"remoteId"    validate:"required" example:"5511999999999@s.whatsapp.net"`
-	Presence     msgenums.ChatPresenceType  `from:"body" json:"presence"     validate:"required,oneof=composing recording paused" example:"composing"`
+	ChannelID string                    `from:"body" json:"channelId" validate:"required,uuid" example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+	RemoteID  string                    `from:"body" json:"remoteId"    validate:"required" example:"5511999999999@s.whatsapp.net"`
+	Presence  msgenums.ChatPresenceType `from:"body" json:"presence"     validate:"required,oneof=composing recording paused" example:"composing"`
 }
 
 type SendChatPresenceController struct {
@@ -22,6 +22,9 @@ func NewSendChatPresenceController(handler *usecases.SendChatPresenceHandler) *S
 	return &SendChatPresenceController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*SendChatPresenceController)(nil)
+
 func (c *SendChatPresenceController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "messaging",
@@ -29,10 +32,10 @@ func (c *SendChatPresenceController) Metadata() types.ControllerMetadata {
 		Method:      "POST",
 		Description: "Send chat presence indicator",
 		Tags:        []string{"Messaging"},
-	
-		Request:     SendChatPresenceRequest{},
-		Response:    usecases.SendChatPresenceOutput{},
-		Status:      http.StatusOK,
+
+		Request:  SendChatPresenceRequest{},
+		Response: usecases.SendChatPresenceOutput{},
+		Status:   http.StatusOK,
 	}
 }
 
@@ -45,8 +48,8 @@ func (c *SendChatPresenceController) Handle(w http.ResponseWriter, r *http.Reque
 
 	output, err := c.handler.Execute(r.Context(), usecases.SendChatPresenceInput{
 		ChannelID: req.ChannelID,
-		RemoteID:    req.RemoteID,
-		Presence:     req.Presence,
+		RemoteID:  req.RemoteID,
+		Presence:  req.Presence,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

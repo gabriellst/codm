@@ -9,9 +9,9 @@ import (
 )
 
 type ListChannelsRequest struct {
-	Limit    int    `from:"query" name:"limit" validate:"omitempty,min=1,max=100"`
-	Offset   int    `from:"query" name:"offset" validate:"omitempty,min=0"`
-	OwnerID  string `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
+	Limit   int    `from:"query" name:"limit" validate:"omitempty,min=1,max=100"`
+	Offset  int    `from:"query" name:"offset" validate:"omitempty,min=0"`
+	OwnerID string `from:"header" name:"X-Owner-Id" validate:"required,uuid" swaggerignore:"true"`
 }
 
 type ListChannelsController struct {
@@ -22,6 +22,9 @@ func NewListChannelsController(handler *usecases.ListChannelsHandler) *ListChann
 	return &ListChannelsController{handler: handler}
 }
 
+// compile-time interface check.
+var _ types.Controller = (*ListChannelsController)(nil)
+
 func (c *ListChannelsController) Metadata() types.ControllerMetadata {
 	return types.ControllerMetadata{
 		Context:     "channel",
@@ -29,10 +32,10 @@ func (c *ListChannelsController) Metadata() types.ControllerMetadata {
 		Method:      "GET",
 		Description: "List channels",
 		Tags:        []string{"Channel"},
-	
-		Request:     ListChannelsRequest{},
-		Response:    usecases.ListChannelsOutput{},
-		Status:      http.StatusOK,
+
+		Request:  ListChannelsRequest{},
+		Response: usecases.ListChannelsOutput{},
+		Status:   http.StatusOK,
 	}
 }
 
@@ -46,8 +49,8 @@ func (c *ListChannelsController) Handle(w http.ResponseWriter, r *http.Request) 
 
 	output, err := c.handler.Execute(r.Context(), usecases.ListChannelsInput{
 		OwnerID: req.OwnerID,
-		Limit:    req.Limit,
-		Offset:   req.Offset,
+		Limit:   req.Limit,
+		Offset:  req.Offset,
 	})
 	if err != nil {
 		httputil.RespondError(w, err)

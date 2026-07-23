@@ -35,6 +35,9 @@ func NewChannelConnectedHandler(
 	}
 }
 
+// compile-time interface check.
+var _ mediator.DomainEventHandler = (*ChannelConnectedHandler)(nil)
+
 func (h *ChannelConnectedHandler) EventName() string {
 	return ctxevents.GatewayConnectedEventName
 }
