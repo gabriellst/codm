@@ -1,4 +1,5 @@
 import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { ContactKind } from '@codedm/contracts-typescript/wire/enums'
 
 /** Context-private fact: the router asked a disambiguation question (max one open per sender). The
  *  internal bridge orders the ROUTER-identity delivery via `integration.channel.delivery_requested`. */
@@ -8,7 +9,7 @@ export const ClarificationRequestedEventSchema = z.domainEvent({
 	channelId: z.string(),
 	contactExternalId: z.string(),
 	contactDisplayName: z.string(),
-	contactKind: z.string(),
+	contactKind: z.enum(ContactKind),
 	question: z.string(),
 	candidateIssueIds: z.array(z.string()),
 })

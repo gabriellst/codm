@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { asc, eq, sql } from 'drizzle-orm'
-import { DrizzleClient } from '@codedm/core-typescript'
+import { DrizzleClient, Id } from '@codedm/core-typescript'
 import { terminalLines } from '@codedm/contracts/db'
 import { TerminalLineRepository, type TerminalLineRow } from './TerminalLineRepository'
 
@@ -20,17 +20,18 @@ export class DrizzleTerminalLineRepository extends TerminalLineRepository {
 			.where(eq(terminalLines.issueId, issueId))
 		const next = seqRows[0]?.next ?? 1
 		const at = new Date()
-		await dbc.insert(terminalLines).values({ ownerId, issueId, seq: next, line, at })
-		return { seq: next, line, at }
+		const id = Id.value()
+		await dbc.insert(terminalLines).values({ id, ownerId, issueId, seq: next, line, at })
+		return { id, seq: next, line, at }
 	}
 
 	async listByIssue(issueId: string, tx?: DrizzleClient): Promise<TerminalLineRow[]> {
 		const dbc = tx ?? this.db
 		const rows = await dbc
-			.select({ seq: terminalLines.seq, line: terminalLines.line, at: terminalLines.at })
+			.select({ id: terminalLines.id, seq: terminalLines.seq, line: terminalLines.line, at: terminalLines.at })
 			.from(terminalLines)
 			.where(eq(terminalLines.issueId, issueId))
 			.orderBy(asc(terminalLines.seq))
-		return rows.map(r => ({ seq: r.seq, line: r.line, at: r.at }))
+		return rows.map(r => ({ id: r.id, seq: r.seq, line: r.line, at: r.at }))
 	}
 }

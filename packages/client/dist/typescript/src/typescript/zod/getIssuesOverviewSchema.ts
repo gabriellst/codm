@@ -7,8 +7,8 @@ import { issueStatusSchema } from "./issueStatusSchema.ts";
 import { z } from "zod/v4";
 
 export const getIssuesOverviewQueryParamsSchema = z.object({
-    "includeArchived": z.boolean().default(false)
-    })
+    "includeArchived": z.optional(z.boolean())
+    }).optional()
 
 /**
  * @description All issues across every thread, grouped by status (T04)

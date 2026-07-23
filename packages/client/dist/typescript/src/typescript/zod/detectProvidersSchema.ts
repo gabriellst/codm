@@ -5,13 +5,10 @@
 
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { providerStatusSchema } from "./providerStatusSchema.ts";
-import { refreshSchema } from "./refreshSchema.ts";
 import { z } from "zod/v4";
 
 export const detectProvidersQueryParamsSchema = z.object({
-    get "refresh"(){
-                return refreshSchema.optional()
-              }
+    "refresh": z.optional(z.boolean())
     }).optional()
 
 /**

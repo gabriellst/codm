@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError, Id } from '@codedm/core-typescript'
+import { Handler, z, BaseError } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { IssueRepository } from '../repositories/IssueRepository'
 import { TerminalLineRepository } from '../repositories/TerminalLineRepository'
@@ -29,8 +29,9 @@ export class SteerIssue extends Handler<typeof SteerIssueInputSchema, typeof Ste
 		issue.assertNotArchived()
 
 		return this.withTransaction(tx, async tx => {
-			await this.terminalLines.append(issue.id.value, issue.ownerId, `steer: ${input.text}`, tx)
-			return { entryId: Id.value() }
+			// The REAL appended row id — never a freshly minted phantom uuid.
+			const row = await this.terminalLines.append(issue.id.value, issue.ownerId, `steer: ${input.text}`, tx)
+			return { entryId: row.id }
 		})
 	}
 }

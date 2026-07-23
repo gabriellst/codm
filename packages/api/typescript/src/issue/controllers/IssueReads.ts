@@ -9,7 +9,9 @@ import { GetNeedsYouPanel, GetNeedsYouPanelOutputSchema } from '../usecases/GetN
 // T04 IssuesOverview
 export const GetIssuesOverviewControllerInputSchema = z.object({
 	ctx: z.object({ ownerId: z.uuid() }),
-	query: z.object({ includeArchived: z.coerce.boolean().default(false) }),
+	// z.stringToBoolean() (z.stringbool) — NEVER z.coerce.boolean(), which turns the query string
+	// 'false' into true (any non-empty string is truthy), silently flipping an explicit opt-out.
+	query: z.object({ includeArchived: z.stringToBoolean().default(false) }),
 })
 export const GetIssuesOverviewControllerOutputSchema = GetIssuesOverviewOutputSchema
 
@@ -34,7 +36,10 @@ export class GetIssuesOverviewController extends Controller<
 }
 
 // T11 SessionIssues
-export const GetSessionIssuesControllerInputSchema = z.object({ ctx: z.object({ ownerId: z.uuid() }), params: z.object({ threadId: z.uuid() }) })
+export const GetSessionIssuesControllerInputSchema = z.object({
+	ctx: z.object({ ownerId: z.uuid() }),
+	params: z.object({ threadId: z.uuid() }),
+})
 export const GetSessionIssuesControllerOutputSchema = GetSessionIssuesOutputSchema
 
 @injectable()
@@ -58,11 +63,17 @@ export class GetSessionIssuesController extends Controller<
 }
 
 // T12 IssueDetail
-export const GetIssueDetailControllerInputSchema = z.object({ ctx: z.object({ ownerId: z.uuid() }), params: z.object({ issueId: z.uuid() }) })
+export const GetIssueDetailControllerInputSchema = z.object({
+	ctx: z.object({ ownerId: z.uuid() }),
+	params: z.object({ issueId: z.uuid() }),
+})
 export const GetIssueDetailControllerOutputSchema = GetIssueDetailOutputSchema
 
 @injectable()
-export class GetIssueDetailController extends Controller<typeof GetIssueDetailControllerInputSchema, typeof GetIssueDetailControllerOutputSchema> {
+export class GetIssueDetailController extends Controller<
+	typeof GetIssueDetailControllerInputSchema,
+	typeof GetIssueDetailControllerOutputSchema
+> {
 	readonly path = '/issues/:issueId'
 	readonly method = 'get' as const
 	readonly description = 'One issue drill-down: terminal log, routed messages, stops (T12)'
@@ -79,7 +90,10 @@ export class GetIssueDetailController extends Controller<typeof GetIssueDetailCo
 }
 
 // T14 NeedsYouPanel
-export const GetNeedsYouPanelControllerInputSchema = z.object({ ctx: z.object({ ownerId: z.uuid() }), params: z.object({ threadId: z.uuid() }) })
+export const GetNeedsYouPanelControllerInputSchema = z.object({
+	ctx: z.object({ ownerId: z.uuid() }),
+	params: z.object({ threadId: z.uuid() }),
+})
 export const GetNeedsYouPanelControllerOutputSchema = GetNeedsYouPanelOutputSchema
 
 @injectable()

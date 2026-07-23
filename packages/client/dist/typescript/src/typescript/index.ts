@@ -100,7 +100,6 @@ export type { PauseThread200, PauseThreadMutation, PauseThreadMutationResponse, 
 export type { ProviderKind, ProviderKindEnumKey } from "./types/ProviderKind.ts";
 export type { ProviderStatus, ProviderStatusEnumKey } from "./types/ProviderStatus.ts";
 export type { RecordArtifact200, RecordArtifactMutation, RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "./types/RecordArtifact.ts";
-export type { Refresh, RefreshEnumKey } from "./types/Refresh.ts";
 export type { RemoveWorkspace200, RemoveWorkspaceMutation, RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "./types/RemoveWorkspace.ts";
 export type { ResolveStop200, ResolveStopMutation, ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "./types/ResolveStop.ts";
 export type { RestoreIssue200, RestoreIssueMutation, RestoreIssueMutationResponse, RestoreIssuePathParams } from "./types/RestoreIssue.ts";
@@ -409,7 +408,6 @@ export { MessageTypeEnum } from "./types/MessageType.ts";
 export { OwnerKindEnum } from "./types/OwnerKind.ts";
 export { ProviderKindEnum } from "./types/ProviderKind.ts";
 export { ProviderStatusEnum } from "./types/ProviderStatus.ts";
-export { RefreshEnum } from "./types/Refresh.ts";
 export { SenderIdentityEnum } from "./types/SenderIdentity.ts";
 export { StopKindEnum } from "./types/StopKind.ts";
 export { StopResolutionEnum } from "./types/StopResolution.ts";
@@ -461,7 +459,6 @@ export { pauseThread200Schema, pauseThreadMutationResponseSchema, pauseThreadPat
 export { providerKindSchema } from "./zod/providerKindSchema.ts";
 export { providerStatusSchema } from "./zod/providerStatusSchema.ts";
 export { recordArtifact200Schema, recordArtifactMutationRequestSchema, recordArtifactMutationResponseSchema, recordArtifactPathParamsSchema } from "./zod/recordArtifactSchema.ts";
-export { refreshSchema } from "./zod/refreshSchema.ts";
 export { removeWorkspace200Schema, removeWorkspaceMutationResponseSchema, removeWorkspacePathParamsSchema } from "./zod/removeWorkspaceSchema.ts";
 export { resolveStop200Schema, resolveStopMutationRequestSchema, resolveStopMutationResponseSchema, resolveStopPathParamsSchema } from "./zod/resolveStopSchema.ts";
 export { restoreIssue200Schema, restoreIssueMutationResponseSchema, restoreIssuePathParamsSchema } from "./zod/restoreIssueSchema.ts";

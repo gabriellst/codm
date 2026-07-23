@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
+import { BaseError, EventHandler } from '@codedm/core-typescript'
 import { IssueOpenedEvent, IssueCompletedEvent, IssueStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
 import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { Id } from '@codedm/core-typescript'
@@ -66,8 +66,13 @@ export class MaterializeIssueFromExecution extends EventHandler<
 					title: STOP_TITLES[event.payload.kind] ?? 'The agent needs you',
 					detail: '',
 				})
-			} catch {
-				// STOP_CRITERION_DISABLED / ISSUE_ARCHIVED / ISSUE_NOT_FOUND — the stop is simply not recorded.
+			} catch (error) {
+				// ONLY the sanctioned no-op outcomes are swallowed (the stop is simply not recorded).
+				// Anything else — a DB outage included — must rethrow so the outbox retries instead of
+				// silently eating the needs-you signal.
+				const swallowed: readonly string[] = ['STOP_CRITERION_DISABLED', 'ISSUE_ARCHIVED', 'ISSUE_NOT_FOUND']
+				if (error instanceof BaseError && swallowed.includes(error.name)) return
+				throw error
 			}
 		}
 	}

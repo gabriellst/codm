@@ -1,4 +1,5 @@
 import { injectable } from 'tsyringe-neo'
+import { Id } from '@codedm/core-typescript'
 import { TerminalLineRepository, type TerminalLineRow } from './TerminalLineRepository'
 
 @injectable()
@@ -7,7 +8,7 @@ export class MockTerminalLineRepository extends TerminalLineRepository {
 
 	async append(issueId: string, _ownerId: string, line: string): Promise<TerminalLineRow> {
 		const rows = this.byIssue.get(issueId) ?? []
-		const row: TerminalLineRow = { seq: rows.length + 1, line, at: new Date() }
+		const row: TerminalLineRow = { id: Id.value(), seq: rows.length + 1, line, at: new Date() }
 		rows.push(row)
 		this.byIssue.set(issueId, rows)
 		return row

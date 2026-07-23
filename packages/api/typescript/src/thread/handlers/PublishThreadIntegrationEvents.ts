@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-import { ContactKind, SenderIdentity } from '@codedm/contracts-typescript/wire/enums'
+import { SenderIdentity } from '@codedm/contracts-typescript/wire/enums'
 import {
 	ThreadAttachedEvent as ThreadAttachedIntegrationEvent,
 	MessageClassifiedEvent as MessageClassifiedIntegrationEvent,
@@ -60,7 +60,7 @@ export class PublishThreadIntegrationEvents extends EventHandler<
 						channelId: event.payload.channelId,
 						contactExternalId: event.payload.contactExternalId,
 						contactDisplayName: event.payload.contactDisplayName,
-						contactKind: event.payload.contactKind as ContactKind,
+						contactKind: event.payload.contactKind,
 						text: event.payload.question,
 						senderIdentity: SenderIdentity.ROUTER,
 					},
@@ -77,7 +77,7 @@ export class PublishThreadIntegrationEvents extends EventHandler<
 						channelId: event.payload.channelId,
 						contactExternalId: event.payload.contactExternalId,
 						contactDisplayName: event.payload.contactDisplayName,
-						contactKind: event.payload.contactKind as ContactKind,
+						contactKind: event.payload.contactKind,
 						text: event.payload.text,
 						senderIdentity: SenderIdentity.OPERATOR,
 					},

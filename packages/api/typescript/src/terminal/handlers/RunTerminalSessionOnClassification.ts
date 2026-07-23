@@ -57,7 +57,10 @@ export class RunTerminalSessionOnClassification extends EventHandler<typeof Mess
 	}
 
 	async handle(event: this['input']): Promise<void> {
-		const ownerId = event.ownerId ?? ''
+		// Defensive drop (the declared posture above): an envelope without an owner is unroutable —
+		// never forge one with `?? ''` (RunTerminalSession's z.uuid() would reject it downstream).
+		const ownerId = event.ownerId
+		if (!ownerId) return
 		const { threadId, entryId, issueId } = event.payload
 
 		const thread = await this.threads.findById(threadId)

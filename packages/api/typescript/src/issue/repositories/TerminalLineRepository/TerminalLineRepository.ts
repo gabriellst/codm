@@ -1,6 +1,8 @@
 import type { Transaction } from '@codedm/core-typescript'
 
 export interface TerminalLineRow {
+	/** The row's real identity (terminal_lines.id) — returned so callers never mint phantom ids. */
+	id: string
 	seq: number
 	line: string
 	at: Date

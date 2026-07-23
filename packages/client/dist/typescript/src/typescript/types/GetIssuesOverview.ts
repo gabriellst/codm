@@ -7,7 +7,6 @@ import type { IssueStatus } from "./IssueStatus.ts";
 
 export type GetIssuesOverviewQueryParams = {
     /**
-     * @default false
      * @type boolean | undefined
     */
     includeArchived?: boolean;

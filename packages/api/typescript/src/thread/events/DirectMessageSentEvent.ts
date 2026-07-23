@@ -1,4 +1,5 @@
 import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { ContactKind } from '@codedm/contracts-typescript/wire/enums'
 
 /** Context-private fact: the operator spoke directly on the channel (only while paused). The
  *  internal bridge orders the OPERATOR-identity delivery via `integration.channel.delivery_requested`. */
@@ -8,7 +9,7 @@ export const DirectMessageSentEventSchema = z.domainEvent({
 	channelId: z.string(),
 	contactExternalId: z.string(),
 	contactDisplayName: z.string(),
-	contactKind: z.string(),
+	contactKind: z.enum(ContactKind),
 	text: z.string(),
 })
 

@@ -490,10 +490,9 @@
             "in": "query",
             "name": "refresh",
             "schema": {
-              "$ref": "#/components/schemas/Refresh"
+              "type": "boolean"
             },
-            "required": false,
-            "example": "false"
+            "required": false
           }
         ],
         "responses": {
@@ -1754,7 +1753,6 @@
             "in": "query",
             "name": "includeArchived",
             "schema": {
-              "default": false,
               "type": "boolean"
             },
             "required": false
@@ -6586,13 +6584,6 @@
         "enum": [
           "ORGANIZATION",
           "INDIVIDUAL"
-        ]
-      },
-      "Refresh": {
-        "type": "string",
-        "enum": [
-          "true",
-          "false"
         ]
       },
       "ProviderKind": {

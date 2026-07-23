@@ -5,13 +5,12 @@
 
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { ProviderStatus } from "./ProviderStatus.ts";
-import type { Refresh } from "./Refresh.ts";
 
 export type DetectProvidersQueryParams = {
     /**
-     * @type string | undefined
+     * @type boolean | undefined
     */
-    refresh?: Refresh;
+    refresh?: boolean;
 };
 
 /**

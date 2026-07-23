@@ -7,10 +7,11 @@ import { ProviderDetector } from '../services/ProviderDetector'
 export const DetectProvidersInputSchema = z
 	.object({
 		// `?refresh=true` forces a re-probe (C07 RescanProviders); otherwise the cached catalog is served.
-		query: z.object({ refresh: z.enum(['true', 'false']).optional() }).optional(),
+		// z.stringToBoolean() (z.stringbool) is the house boolean-query shape — no string enum + manual compare.
+		query: z.object({ refresh: z.stringToBoolean().optional() }).optional(),
 		ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
 	})
-	.example([{ query: { refresh: 'false' }, ctx: { session: { ownerId: '00000000-0000-4000-8000-000000000001' } } }])
+	.example([{ query: { refresh: false }, ctx: { session: { ownerId: '00000000-0000-4000-8000-000000000001' } } }])
 
 export const DetectProvidersOutputSchema = z
 	.object({
@@ -53,7 +54,7 @@ export class DetectProvidersController extends Controller<typeof DetectProviders
 	}
 
 	async handle(request: this['input']): Promise<this['output']> {
-		const refresh = request.query?.refresh === 'true'
+		const refresh = request.query?.refresh ?? false
 		const providers = await this.providerDetector.detect({ refresh })
 		return { status: HttpStatusCode.OK, data: { providers } }
 	}
