@@ -1,7 +1,22 @@
 # Phase 10 — Foundation terminal-runner extraction (grounded plan)
 
-Status: **BLOCKED on 4 founder design decisions** (Forks A–D below). De-risking done,
-one fork-independent slice landed (`3bc545b5`). This is the `.plans/` artifact mandated
+Status: **RATIFICADO (founder, 2026-07-23)** — decisões, verbatim:
+- **FORK A = A1** (alargar o seam para o shape completo do engine whatscode).
+- **FORK B = sessão por issue** (`issueId` como identidade; `chatId` vira mapeamento issue/thread).
+- **FORK C = ADOTAR o `AgentStreamRegistry`** do whatscode inteiro (opção 1 — NÃO o fold preferido
+  pelo plano): re-chaveado por `issueId` (Fork B), absorvendo as responsabilidades do
+  `TerminalSessionRegistry` atual — o guard single-active-per-issue É invariante e migra para
+  dentro do registry adotado; `TerminalSessionRegistry` é superseded.
+- **FORK D = D2 DEFINITIVO — spike PASSOU nos 2 critérios** (2026-07-23, wf_17ad780a-92e):
+  Bun.Terminal dirigiu o claude REAL (trust-prompt respondido, TUI alcançada, resize, kill limpo,
+  zero zumbis) e PGlite funcionou dentro de `bun build --compile` (embedding dos 3 assets
+  obrigatório — receita exata). API surface, gotchas e receita:
+  `.specs/codedm/2026-07-23-fork-d2-spike.md` (+ scripts em `.specs/codedm/spike-d2/`).
+  Fallback D1 (run-under-Node + nvm shim) DESCARTADO — sem shim nvm em dev/build/e2e.
+- **Emendas = como recomendado**: `StopKind += AUTH_REQUIRED` (+ admissibilidade em
+  `StopResolution`); `idle_evicted` domínio-only (sem wire); `action_detected` só frame SSE.
+
+De-risking done, one fork-independent slice landed (`3bc545b5`). This is the `.plans/` artifact mandated
 for a structural multi-context port (CLAUDE.md: "grill the design and write a `.plans/`
 plan before touching code"; audit-distillation: skipping it caused repeated full-context
 rewrites). The founder GO (BUILD-LOG L74) authorized the *extraction*; it did not resolve

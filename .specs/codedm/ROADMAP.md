@@ -1,4 +1,4 @@
-# CodeDM — Roadmap pós-bootstrap (founder, 2026-07-22)
+# CodeDM — Roadmap (founder, revisado 2026-07-23)
 
 ## Decisão estratégica: Windows importa, mas valida-se em dev PRIMEIRO
 Continuamos na arquitetura atual (domínio TS + Bun, gateway Go) até o app funcionar como deve em
@@ -6,26 +6,47 @@ dev. O porte do domínio para Go (binário único, ConPTY/Windows uniforme) fica
 planejada — viável contexto-a-contexto graças ao contrato congelado. Critério de disparo: dev
 validado + decisão de distribuição Windows.
 
-## Fluxo (ordem do founder)
-1. **Finalizar UI** — ui-round-1 em execução (8 findings, .specs/codedm/ui-findings/ROUND1.md);
-   rounds seguintes conforme teste manual do founder.
-2. **Tauri** (fase 11) — shell desktop: app/{react,tauri}; seam lib/native (isTauri; @tauri-apps/*
-   proibido fora); expo REMOVIDO; sidecars via externalBin; skill desktop-shell.
-   ⚠ Inclui o pré-requisito: EXTRAÇÃO FOUNDATION (fase 10 waves — forks A-D aguardam ratificação;
-   D REVISADO: Bun.Terminal nativo (bun≥1.3.5, POSIX) em vez de run-under-Node — spike valida
-   PGlite dentro de `bun build --compile`). Sem o runner real, "Testar app" não testa agente real.
-3. **Testar app** — teste de fogo: WhatsApp pareado de verdade + claude-code real numa issue real.
-4. **Polimento do app + solidificação do framework desktop com Tauri** — o que aprendermos vira
-   o toolkit desktop do template (packaging dos sidecars, updater, assinatura, seam nativo).
-5. **Melhoria do template completo** — template, tooling, skills e método de BOOTSTRAP para máxima
-   autonomia; documentar/melhorar a ORQUESTRAÇÃO DE AGENTES (fases-workflow, grade-loops, triagem,
-   BUILD-LOG como artefato). Fonte: template/.specs/2026-07-22-codedm-bootstrap-retrospective.md
+## Fluxo (ordem dos fatos — founder, 2026-07-23)
+
+1. **Alinhamento backend Go+TS** — EM EXECUÇÃO (madrugada 22→23-jul).
+   - ✅ Pairing = padrão medscall proxy (contexto `external`, ChannelProxy wildcard, GREEN 96).
+   - ✅ Conformidade Go FIX-NOW (7 lotes, GREEN 91) + auditoria 8-dimensões commitada.
+   - ✅ Core adequation: `template/core-go` materializado, api-go fino consumindo o kernel
+     (GREEN 90) — "just like typescript".
+   - ✅ Union-slots piloto `message_received` (13/13, rail à prova de mutação, narrowing nas
+     2 origens).
+   - ✈ Em voo: upstream pro template (3 bugs + union-slots machinery) ∥ flat-events
+     (envelope pre-work + swap dos eventos de forma estável + deleção dos hand-rolled).
+   - Restam: lote 7 (mv `pkg/openapi`→core + decisão de markers), schema-handoff (hazard das
+     colunas medscall, UoW real, `ChannelStatus`/`ContactKind`), tenancy (session/spoof-guard),
+     consolidação de projectors 22→3, consumer XREADGROUP real, dívidas sem fase dona
+     (dual-write exactly-once).
+2. **Fase 10 — foundation runner** — ⚠ GATE: forks A-D aguardam ratificação do founder
+   (A1 recomendado — motor completo; D REVISADO: Bun.Terminal nativo bun≥1.3.5 + spike PGlite em
+   `bun build --compile`). Plano: `.plans/2026-07-22-phase10-foundation-terminal-extraction.md`.
+   Emendas de contrato pendentes junto (StopKind += AUTH_REQUIRED etc.).
+3. **Tauri (fase 11)** — shell desktop: app/{react,tauri}; seam lib/native (isTauri;
+   `@tauri-apps/*` proibido fora); expo REMOVIDO; sidecars daemon+gateway via externalBin;
+   skill desktop-shell. **Pode andar EM PARALELO à fase 10**: o scaffolding do shell não depende
+   do runner real (que só é pré-requisito do teste de fogo). Decisão de transporte desktop
+   (HTTP-local vs SQLite-WAL — ver DB-as-mediator) entra no design desta fase.
+4. **Testar app** — teste de fogo (WhatsApp pareado real + claude-code real numa issue real).
+   PULÁVEL por ora (founder, 23-jul) — fica atrás do runner real da fase 10.
+5. **Melhoria do template completo** — template, tooling, skills e método de BOOTSTRAP para
+   máxima autonomia; documentar/melhorar a ORQUESTRAÇÃO DE AGENTES (fases-workflow, grade-loops,
+   triagem, BUILD-LOG como artefato). Fonte: template/.specs/2026-05-22-codedm-bootstrap-retrospective.md
    (+ adendo com as 32 minúcias) — TODOs priorizados: rail event-liveness, preflight de premissa
    nos evals (SKIP-STALE), StampSelection.contexts, fresh-install gate, gate de branch/SHA no
    source-map, sanitize-map centralizado, promote --at-base, etc.
+   **Parcialmente ANTECIPADA (23-jul)**: 3 bugs reais + union-slots machinery + fix do blind spot
+   de CI do core-go já subiram pro template (wf_f4e73db9-687); seam `app_middlewares` decidido
+   codedm-only (dissolve na tenancy).
 6. **Domínio em Go com outros contextos** — o porte final (4-7 fases estimadas): SQLite+sqlc,
-   motor de terminal com creack/pty (ConPTY no Windows), contextos sobre o kernel Go já provado;
-   console react + e2e + contrato sobrevivem.
+   motor de terminal com creack/pty (ConPTY no Windows), contextos sobre o kernel `core-go` já
+   materializado; console react + e2e + contrato sobrevivem.
+   **RATIFICADO (founder, 23-jul): o domínio Go reescrito vive em CONTEXTOS PRÓPRIOS, distintos
+   do `channel`** — o channel permanece o bounded context do gateway (whatsmeow/canais);
+   workspace/thread/issue/artifact/terminal nascem como contextos Go novos sobre o core-go.
 
 ## DB-as-mediator (ideia do founder — substituir Redis por Postgres/SQLite)
 Direção correta e alinhada com o precedente do kernel (PostgresCommandQueue já existe). Nuances a
@@ -42,17 +63,19 @@ resolver no design:
   cena por completo como dependência obrigatória.
 
 ## Pendências de ratificação (founder)
-- Forks da extração: A (A1 recomendado — motor completo) · B (issueId como identidade) ·
-  C (fundir no TerminalSessionRegistry) · D REVISADO (Bun.Terminal + spike compile/PGlite).
+- **Forks da extração (GATE da fase 10)**: A (A1 recomendado — motor completo) · B (issueId como
+  identidade) · C (fundir no TerminalSessionRegistry) · D REVISADO (Bun.Terminal + spike
+  compile/PGlite).
 - Emendas de contrato: StopKind += AUTH_REQUIRED (rec sim); idle_evicted domínio-only;
   action_detected só frame SSE.
 - Transporte desktop: HTTP-local vs SQLite-WAL (acima).
+- Fase dona do dual-write events+outbox (exactly-once) e da atomicidade real do UoW.
 
-## Union types de provider no contrato — DESIGN RATIFICADO (founder, 22-jul noite)
-Declaração única no contrato, forma com o dono, união em codegen:
-- TypeSpec: @unionSlot(campo, discriminadores) + @variant(valores..., nomeDoTipo, { owner: <id da tabela WORKSPACES> }) — owner validado contra o manifest (inexistente = erro de compilação do contrato).
-- Contracts codegen ESTAMPA os comentários @union/@variant no struct Go GERADO → o scanner AST verbatim (pkg/openapi) resolve os nomes nos pacotes do workspace DONO e builda oneOf+discriminator → Kubb → uniões tipadas na SDK.
-- Formas das variantes vivem SEMPRE no serviço dono (hoje: apiGo/adapter WhatsApp); consumidores importam o binding gerado, nunca redeclaram.
-- RAIL union-parity: resolver por linguagem (v1: Go via scanner; TS via schema zod exportado; futuros = 1 resolver/linguagem, padrão detectLang) — nome não resolvido no dono = gate vermelho; import direto de forma alheia fora do binding = violação.
-- Implementação: FILA imediatamente após pairing-conclude + astro-landing aterrissarem.
-- ADENDO (founder, mesma noite): a união COMPLETA deve aparecer em TODA superfície emissora — Go: responses/SSE com slot de união (ex.: listen_events) emitem oneOf+discriminator no openapi do gateway (scanner já cobre com as anotações estampadas); TS: ListenEvents/endpoints do daemon compõem z.discriminatedUnion IMPORTANDO os schemas zod gerados do client do dono (nunca redeclarando), e o emitter TS publica a união no openapi do daemon. RAIL: response com slot de união sem oneOf completo no openapi emitido = vermelho, nos dois stacks.
+## Union types de provider no contrato — IMPLEMENTADO (piloto 23-jul)
+Design ratificado 22-jul (declaração única, forma com o dono, união em codegen, união completa em
+toda superfície emissora, rail union-parity) — spec normativa: `union-slots-spec.md`.
+Estado: **piloto `message_received` ponta a ponta no codedm** (decorators + estampagem + manifest +
+scanner multi-slot + `ListenEvents` compondo schemas gerados + rail nos 3 checks à prova de
+mutação, narrowing nas 2 origens); **machinery generalizada pro template em voo**
+(wf_f4e73db9-687, fixture-based). Migração dos demais eventos: fase flat-events (em voo) +
+bloqueados por harmonização de enum (schema-handoff).
