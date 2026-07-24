@@ -19,6 +19,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { posix } from 'node:path'
 import { resolve } from 'node:path'
 import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
+import { WINDOW } from '@codedm/app-tauri/window'
 import { REPO, type BootEnvSource, type SidecarDecl } from '../../template.config'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
@@ -115,6 +116,9 @@ export function renderTauriConf(): string {
 					height: REPO.desktop.window.height,
 					minWidth: REPO.desktop.window.minWidth,
 					minHeight: REPO.desktop.window.minHeight,
+					// Presentation (integrated title bar) is owned by @codedm/app-tauri/window — a house
+					// standard, not a per-product knob. Spread AFTER the size/label so it always wins.
+					...WINDOW,
 				},
 			],
 			security: {

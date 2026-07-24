@@ -7,7 +7,8 @@
 	"exports": {
 		"./commands": "./commands/index.ts",
 		"./sidecars": "./sidecars/index.ts",
-		"./capabilities": "./capabilities/index.ts"
+		"./capabilities": "./capabilities/index.ts",
+		"./window": "./window/index.ts"
 	},
 	"scripts": {
 		"tauri": "tauri",
