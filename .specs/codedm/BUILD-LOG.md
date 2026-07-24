@@ -478,3 +478,20 @@ O sidecar Tauri do daemon TS (`bun desktop:sidecars` → `bun build --compile ./
 **Gates (exit codes):** `cd packages/api/typescript && bun test` **578/0** (caminho PGlite não-compilado intacto) · root `bun tsc` **7/7** · `test:tooling` **290/0** (inclui `desktop/generate.test.ts` drift + `tsc:scripts`) · `bun sdk` **2× diff 0** · `bun env:generate --check` **0** · `bun desktop:generate --check` **0** · **`bun desktop:sidecars` builda** (daemon + gateway + migrations staged) · **binário daemon compilado boota standalone → `/v1/session` 200** (`API_PORT=3932 CODEDM_DATA_DIR=<tmp> CODEDM_MIGRATIONS_DIR=<staged> NODE_ENV=production JWT_SECRET/BETTER_AUTH_SECRET=<set> ./codedm-daemon-aarch64-apple-darwin` → log "Migrations applied (embedded PGlite)" + PG data dir real; secrets são exigência de produção, não do packaging) · **gateway sidecar `/api/openapi.json` 200** (não regride, Go intocado) · **node-boot `node dist/server.js` /v1/session 200** · **e2e 5 passed / 2 skipped** · `git diff --stat -- packages/api/go packages/app/astro` **vazio**. **Sem `--no-verify`** — todos verdes à máquina. (obs: `packages/app/react/src/services/BadgeService/TauriBadgeService.ts` tinha um reorder de import **pré-existente** no working tree no início da sessão — não tocado.)
 
 **CANDIDATO A UPSTREAM (template-fullstack):** a receita inteira — `compiledPgliteAssets()` gated-por-`/$bunfs` no `PGliteDriver`, a `BootEnvSource` `resourceDir` + staging de migrations em `build-sidecars`/`generate`/`lib.rs`, e o `--outdir`+delete-órfãos no node-build — é produto-agnóstica (qualquer fork com daemon-em-single-binary + PGlite embarcado precisa dela) e sobe pro template.
+
+## DESKTOP RODÁVEL — stack completa compila + sidecars healthy (23-jul, retomada Opus)
+O park da Fase C ("Rust toolchain ausente") foi LEVANTADO e o app desktop agora builda ponta a ponta:
+- **Rust instalado** via Homebrew (cargo 1.97.1) + deps Tauri baixadas (cargo fetch).
+- **Sidecars single-file** (bun desktop:sidecars): daemon TS (bun --compile, 71MB) + gateway Go
+  (go build, 43MB). Ambos BOOTAM standalone com o env do supervisor (generated.rs) e passam nos
+  health-checks: daemon /v1/session=200, gateway /api/openapi.json=200, teardown limpo.
+- **Daemon single-binary CORRIGIDO** (920e6c7b/c42de8f0): a receita do spike D2 (embed pglite
+  wasm/data/initdb) cabeada no PGliteDriver + migrations staged via CODEDM_MIGRATIONS_DIR — o
+  daemon compilado aplica as migrations PGlite embutidas e sobe (antes: ENOENT pglite.data).
+- **Shell Tauri COMPILA** (cargo build exit 0 → target/debug/codedm-desktop 42MB). Único fixup: o
+  icons/ tracked estava AUSENTE (generate_context!() falhava) → gerado set PLACEHOLDER via tauri
+  icon (d716d9b6, substituir pelo ícone real da marca).
+Verificação MECÂNICA completa: tudo compila, sidecars healthy. RESTA (do founder, requer tela):
+`bun desktop:dev` abrir a janela nativa + console react renderizar; depois o teste de fogo
+(WhatsApp real + mensagem → issue → sessão claude real). Débito: transporte interino HTTP-local
+(edge/SQLite-WAL-mediator = follow-up, ver go-domain-design §5.4); ícone real da marca.
