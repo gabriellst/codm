@@ -6,6 +6,40 @@
 
 ---
 
+## Handoff — current state & how to resume (2026-07-24)
+
+*Read this first if you're picking the work up. The rest of the document is the timeless "why"; this section is the mutable "where".*
+
+**Landed on `main` (`188e2fc3`), all gates green + verified:**
+
+- **Channel Phase 1** — rich `gateway.channels` model (migration `0009`) + enum reconcile (ts/go/wire).
+- **Channel Phase 2** — Go conforms to the contract: `sqlc`-pull from a committed `schema.sql`, golang-migrate set deleted, test harness reschemed. **Resolve works end-to-end** (verified `200`, `ChannelCreated` persisted).
+- **Outbox dispatcher uuid-cast fix** (`20f0c8bb`) — was silently dispatching *nothing*; now drains + advances the projection.
+- **Desktop typed-commands + package reorg + integrated title bar** (`AppChrome`) — merged.
+- The enum-ripple fix (`ConnectChannelDialog`) + this spec.
+
+**Branches / worktrees:**
+
+| Worktree / branch | State | Action |
+|---|---|---|
+| `channel-rich-sqlc`, `desktop-typed-commands` | **merged into main** | worktrees removable |
+| `desktop-deparametrize` (`71b723ae`) | de-param **committed** (code-over-config; `REPO.desktop.sidecars`/`BootEnvSource`/`generated.rs` gone). **NOT merged.** A subagent is finishing the `config/` consolidation there (all of `REPO.desktop` + the generator → the package; ~13 files uncommitted, **in flight — don't touch that tree**). | review + merge to main once it lands green |
+| `go-domain` (`fec1e623`) | preserved from a prior session (foundations/design) | the next big task — **E1** |
+
+**Running (dev setup):** `bun dev:api` (daemon `:3030` = PGlite · gateway `:3032` = Postgres) + vite `:5173` + the desktop shell window. The single-binary sidecars were swapped for dev servers to get logs. Clean restart: kill codedm procs → `bun desktop:dev`, or `bun dev:api` + a browser at `:5173`.
+
+**Open threads (non-blocking):**
+
+- **e2e tsc** — `thread.ts` still references the old `CONTACT` enum value (Phase-1 renamed `ContactKind` CONTACT→USER); a one-line enum-ref update, same class as the `ConnectChannelDialog` fix.
+- **The channels *list* still shows `DISCONNECTED`** — the daemon's PGlite read-model isn't synced from the gateway's Postgres (§2, the split-DB). Not a bug to patch — **this is exactly what go-domain (E1) removes.**
+- **Sidecar observability + zombie cleanup** (D6) — the shell doesn't pipe sidecar logs; kill stale procs on relaunch.
+
+**How this feeds the upstream:** every merged pattern above is codedm's proving-ground for a §6 row — the template has none of it yet. Recommended upstream order: **E1 (go-domain) first** (the structural keystone that unblocks read-model correctness) → desktop rows **D1–D7** (build on de-param + the config-consolidation once merged) → Go-canonical **G1–G4** (already realized here; mostly extraction) → meta guardrails **M1–M3**.
+
+**Immediate next step (founder's plan):** **go-domain** — unify daemon + gateway onto one embedded DB, deleting the split-DB and the cross-service-projection need. Merge the `desktop-deparametrize` config-consolidation to main first (or in parallel) so the desktop machinery is clean and independent of the DB unification.
+
+---
+
 ## 0. The one principle everything else is a corollary of
 
 > **Config/codegen earns its cost only when a value (a) crosses a language/process boundary, (b) varies per product, AND (c) isn't trivially derivable. Fail any one → it's code, colocated where it's used.**
