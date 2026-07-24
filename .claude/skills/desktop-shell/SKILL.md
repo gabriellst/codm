@@ -12,16 +12,25 @@ Flat skill — no per-lang variants. Two artifacts, one contract, two direction 
 The shell's identity/wiring lives in **`template.config.ts` `REPO.desktop`** — displayName,
 identifier (= keychain service), window params, console wiring (dev port key, devPath,
 distSubpath, buildTarget, connectsTo), sidecars (workspace + role + portEnvKey + healthPath +
-build + bootEnv), and the native `services → tauri permissions` map. Ports and boot-env values
-resolve through `REPO.env` — a literal port/name/path in a shell file that exists in the
-contract is a bug, same rule as the env registry.
+build + bootEnv), and the native **`capabilities`** list — ABSTRACT capability keys only
+(`['filePicker','notification','badge','secrets','autostart','hostInfo']`), never a Tauri
+permission string. Ports and boot-env values resolve through `REPO.env` — a literal
+port/name/path in a shell file that exists in the contract is a bug, same rule as the env
+registry.
+
+The `capability → Tauri permissions[]` map is NOT in the abstract contract — it lives in the
+shell package at **`@codedm/app-tauri/capabilities`** (`CAPABILITY_PERMISSIONS`). The contract
+knows only *what* capabilities exist; the shell package knows *how* each maps to Tauri's
+permission grammar. `scripts/desktop/generate.ts` imports that map and renders
+`default.json` by mapping `REPO.desktop.capabilities` through it — **fail-loud** on a
+capability key with no mapping.
 
 `bun desktop:generate` (scripts/desktop/generate.ts) renders three **committed** outputs:
 
 | Output | Content |
 |---|---|
 | `src-tauri/tauri.conf.json` | identity, window, devUrl, frontendDist, externalBin, CSP |
-| `src-tauri/capabilities/default.json` | permissions DERIVED from `REPO.desktop.services` |
+| `src-tauri/capabilities/default.json` | permissions from `REPO.desktop.capabilities` mapped through `CAPABILITY_PERMISSIONS` (`@codedm/app-tauri/capabilities`) |
 | `src-tauri/src/generated.rs` | `IDENTIFIER` const + `sidecars(data_dir)` (include!-ed by lib.rs) |
 
 Drift is a red build: `bun desktop:generate --check` runs inside `test:tooling`
@@ -32,8 +41,10 @@ timing, `sidecar:ready/error` vocabulary, icons, the `data` subdir under `app_da
 stay as parameters in the shell — they have no repo-fact source.
 
 **Adding a sidecar** = add an entry to `REPO.desktop.sidecars` + `bun desktop:generate` —
-never edit tauri.conf.json/lib.rs literals. **Adding a native capability's permission** =
-extend `REPO.desktop.services` (the capability map), regenerate.
+never edit tauri.conf.json/lib.rs literals. **Adding a native capability** = add the abstract
+key to `REPO.desktop.capabilities` AND its permission list to `CAPABILITY_PERMISSIONS` in
+`@codedm/app-tauri/capabilities`, then regenerate. The two must agree — a key in the contract
+with no entry in the map fails the render loudly.
 
 ## Mental model
 
@@ -50,7 +61,41 @@ only ever do three jobs:
    emits `sidecar:ready` / `sidecar:error` to the webview. Binaries:
    `bun x nx run app-tauri:sidecars` (suffix = host target triple).
 3. **Back the tauri platform services** — keychain `secret_get/set/delete` commands and
-   any future OS capability the contract grows.
+   any future OS capability the contract grows. Custom commands are **typed end-to-end**
+   (see "Typed commands" below) — no stringly `invoke`.
+
+## Typed commands (native calls are typed end-to-end)
+
+There is **no stringly `invoke<T>(command: string)`** — that touchpoint is retired. The react
+console reaches the host through two typed channels, both owned by `@codedm/app-tauri`:
+
+1. **Custom Rust commands → tauri-specta.** The shell's own `#[tauri::command]`s
+   (`secret_get/set/delete`) are annotated `#[specta::specta]`, collected in a
+   `tauri_specta::Builder` in `src-tauri/src/lib.rs`, and exported as typed TS bindings to
+   `packages/app/tauri/bindings.ts` by an export test that runs on `cargo test` (committed +
+   drift-checked). The name, args, and return type all flow from the Rust — one source of
+   truth. `TauriSecretsService` imports `{ commands } from '@codedm/app-tauri/commands'` and
+   calls `commands.secretGet(key)` — no hand-typed `invoke<string|null>('secret_get',…)`.
+   *Fallback (if specta v2 / tauri-specta v2 version-compat blocks the Rust build): a
+   hand-written typed `commands.ts` in `@codedm/app-tauri` with the same shape — react imports
+   `commands.secretGet` identically, types hand-synced. This build did NOT need the fallback.*
+2. **Plugin / core capabilities → typed npm APIs directly.** Each `Tauri<Cap>Service` imports
+   the typed `@tauri-apps/plugin-*` / `@tauri-apps/api/*` API — no re-wrapping façade:
+   - `TauriFilePickerService` → `import { open } from '@tauri-apps/plugin-dialog'`
+   - `TauriNotificationService` → `@tauri-apps/plugin-notification`
+   - `TauriAutostartService` → `@tauri-apps/plugin-autostart`
+   - `TauriBadgeService` → `getCurrentWindow().setBadgeCount()` from `@tauri-apps/api/window`
+   - `TauriSecretsService` → `@codedm/app-tauri/commands` (channel 1)
+
+   `@tauri-apps/*` imports are lint-allowed ONLY inside `Tauri*Service.ts` (the
+   `no-restricted-imports` allowlist). Invariant: `@tauri-apps/*` must never resolve into the
+   react **main/browser** chunk — only the code-split tauri chunk (the registry seam guarantees
+   this; the build gate re-checks it).
+
+> Upstream-ready blueprint: this is the standard for the desktop-shell pattern. `template-fullstack`
+> has no `packages/app/tauri` yet — when it grows a desktop shell, mirror this shape (specta for
+> custom commands, typed npm APIs for plugins, abstract capability keys in the contract, the
+> capability→permission map + bindings owned by the shell package, generate.ts importing the map).
 
 ## Client-side services (react → host) — ports + services + decorator-free DI
 
@@ -77,7 +122,8 @@ services/
 │   ├── tauri.ts         #   default export: Bindings of Tauri*Service class references
 │   ├── test.ts          #   default export: Bindings of Fake*Service + the Fake classes (backend `mock`-env analogue)
 │   └── index.ts         #   Environment, ENVIRONMENTS (import('./browser'|'./tauri') → default), detectEnvironment
-├── utils/tauri/         # invoke.ts (the ONE window.__TAURI__ touchpoint) + isTauri.ts
+├── utils/tauri/         # isTauri.ts (env probe) — the stringly invoke.ts is RETIRED;
+│   │                    #   typed calls go through @codedm/app-tauri/commands + @tauri-apps/*
 ├── providers/
 │   └── ServicesProvider.tsx  # owns the Container; detect → dynamic-import env record → container.load → context (splash while loading)
 ├── hooks/index.ts       # useService(Token) + typed hooks (useFilePicker, useNotification, …)
@@ -91,8 +137,11 @@ services/
 - **Services**: one concrete class per port per platform, constructed ONLY by the Container.
   A service with a dependency declares `static deps = [OtherToken] as const` and the Container
   resolves + injects it recursively — no factory closures, no `new` in the registry. Tauri
-  services go through `utils/tauri/invoke.ts`; the permissions each needs are DECLARED in
-  `REPO.desktop.services` (capabilities JSON is generated — never hand-edit it).
+  services call the host through **typed** channels — `@codedm/app-tauri/commands` (specta
+  bindings) for custom commands, `@tauri-apps/plugin-*`/`@tauri-apps/api/*` for plugin/core (see
+  "Typed commands" above); the capability each needs is listed in `REPO.desktop.capabilities`
+  and mapped to permissions in `@codedm/app-tauri/capabilities` (capabilities JSON is generated
+  — never hand-edit it).
 - **DI**: `ServicesProvider` mounts at the composition root (`routes/__root.tsx`), calls
   `detectEnvironment()` once, DYNAMIC-imports that env's DECLARATIVE bindings record (the browser
   entry never fetches the tauri chunk — that async boundary is the code-split), builds a
@@ -106,9 +155,10 @@ services/
 - **tauri → react**: build config only (`devUrl`/`frontendDist` + nx `dependsOn`
   `app-react:build-spa`). The shell never imports console source.
 - **react → tauri**: only through the tauri touchpoints — `services/**/Tauri*Service.ts`,
-  `services/registry/tauri.ts`, `services/utils/tauri/`. `@tauri-apps/*` (or
-  `window.__TAURI__`) anywhere else — including the ports and the browser services — is an
-  eslint error (`no-restricted-imports` block in the root `eslint.config.ts`).
+  `services/registry/tauri.ts`, `services/utils/tauri/`. `@tauri-apps/*`,
+  `@codedm/app-tauri/commands` (or `window.__TAURI__`) anywhere else — including the ports and
+  the browser services — is an eslint error (`no-restricted-imports` block in the root
+  `eslint.config.ts`).
 - **`new <Something>Service` appears NOWHERE by hand** — the registry is declarative class
   references and the Container's generic `new K(...)` in `resolve` is the single construction
   site. Never `new` a service in a component, hook, the provider, the registry, or a test
@@ -129,10 +179,14 @@ are the two readiness URLs + platform service bindings; the console does not mov
 
 1. Declare the port in `services/<Cap>Service/<Cap>Service.ts` (typed, minimal,
    promise-based) and add a token in `services/tokens.ts` (`token<<Cap>Service>('<Cap>Service')`).
-2. Implement `Tauri<Cap>Service` colocated in `services/<Cap>Service/` — plugin invoke
-   (`plugin:<name>|<command>` via `utils/tauri/invoke.ts`) or a new Rust `#[tauri::command]`
-   in `src-tauri/src/lib.rs`. Declare the permissions in `REPO.desktop.services` +
-   `bun desktop:generate` (+ plugin in `Cargo.toml`/`lib.rs` if new).
+2. Implement `Tauri<Cap>Service` colocated in `services/<Cap>Service/` — import the typed
+   `@tauri-apps/plugin-*` / `@tauri-apps/api/*` API directly, or (for a NEW custom command)
+   add `#[tauri::command] #[specta::specta]` in `src-tauri/src/lib.rs`, register it in the
+   `tauri_specta::Builder` (regen `bindings.ts` via `cargo test`), and import
+   `{ commands } from '@codedm/app-tauri/commands'`. Add the abstract key to
+   `REPO.desktop.capabilities` AND its permission list to `CAPABILITY_PERMISSIONS` in
+   `@codedm/app-tauri/capabilities`, then `bun desktop:generate` (+ plugin in
+   `Cargo.toml`/`lib.rs` if new).
 3. Implement `Browser<Cap>Service` colocated in `services/<Cap>Service/` — never fake success.
 4. Add the `[<Cap>Token, <Plat><Cap>Service]` pair to the DECLARATIVE record in
    `registry/tauri.ts` and `registry/browser.ts` (class references, ZERO `new`), and a

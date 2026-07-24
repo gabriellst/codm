@@ -221,20 +221,12 @@ const DESKTOP = {
 			},
 		},
 	],
-	/** Native capability services the console consumes through the platform contract
-	 *  (packages/app/react/src/lib/native) — tauri permissions DERIVE from this map
-	 *  (capabilities/default.json is generated). Key = service port name in the contract;
-	 *  empty list = backed by custom shell commands or webview APIs (core:default covers invoke). */
-	services: {
-		// filePicker (contract: FilePickerService) is backed by the tauri plugin-dialog `open`
-		// command — the permission name keeps the tauri plugin's own spelling (`dialog:*`).
-		filePicker: ['dialog:allow-open'],
-		notification: ['notification:default'],
-		badge: ['core:window:allow-set-badge-count'],
-		secrets: [],
-		autostart: ['autostart:allow-is-enabled', 'autostart:allow-enable', 'autostart:allow-disable'],
-		hostInfo: [],
-	},
+	/** Native capabilities the console consumes through the platform contract
+	 *  (packages/app/react/src/services). ABSTRACT keys only — the capability → Tauri
+	 *  permission map lives in the shell package (@codedm/app-tauri/capabilities,
+	 *  CAPABILITY_PERMISSIONS); scripts/desktop/generate.ts maps these keys through it to
+	 *  render capabilities/default.json. This contract never spells a Tauri permission. */
+	capabilities: ['filePicker', 'notification', 'badge', 'secrets', 'autostart', 'hostInfo'],
 } as const satisfies DesktopConfig
 
 export interface DesktopConfig {
@@ -252,7 +244,7 @@ export interface DesktopConfig {
 		connectsTo: readonly string[]
 	}
 	sidecars: readonly SidecarDecl[]
-	services: Readonly<Record<string, readonly string[]>>
+	capabilities: readonly string[]
 }
 export interface SidecarDecl {
 	/** The workspace this sidecar compiles from (cwd/entry resolve via WORKSPACES). */

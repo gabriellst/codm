@@ -38,9 +38,15 @@ pub struct Sidecar {
 // from the desktop contract; drift-gated by `bun desktop:generate --check`.
 include!("generated.rs");
 
-// ── secrets (keychain) — invoked by lib/native/tauri.ts ─────────────────────────
+// ── secrets (keychain) — invoked by @codedm/app-tauri/commands (specta-typed) ────
+//
+// Each command is `#[specta::specta]` in addition to `#[tauri::command]` so its
+// name, args, and Result type are collected into the `tauri_specta::Builder`
+// (see `specta_builder()`), which exports the TS bindings the react
+// `TauriSecretsService` imports. One source of truth: the Rust signature.
 
 #[tauri::command]
+#[specta::specta]
 fn secret_get(key: String) -> Result<Option<String>, String> {
     let entry = keyring::Entry::new(IDENTIFIER, &key).map_err(|e| e.to_string())?;
     match entry.get_password() {
@@ -51,18 +57,36 @@ fn secret_get(key: String) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 fn secret_set(key: String, value: String) -> Result<(), String> {
     let entry = keyring::Entry::new(IDENTIFIER, &key).map_err(|e| e.to_string())?;
     entry.set_password(&value).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
+#[specta::specta]
 fn secret_delete(key: String) -> Result<(), String> {
     let entry = keyring::Entry::new(IDENTIFIER, &key).map_err(|e| e.to_string())?;
     match entry.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(e) => Err(e.to_string()),
     }
+}
+
+// ── tauri-specta builder ─────────────────────────────────────────────────────────
+
+/// The single `tauri_specta::Builder` collecting every `#[specta::specta]`
+/// custom command. Consumed twice: once by `run()` to register the invoke
+/// handler, and once by the export test to emit `../bindings.ts`. Keeping one
+/// constructor guarantees the running handler and the committed bindings never
+/// drift.
+fn specta_builder() -> tauri_specta::Builder {
+    tauri_specta::Builder::<tauri::Wry>::new()
+        .commands(tauri_specta::collect_commands![
+            secret_get,
+            secret_set,
+            secret_delete
+        ])
 }
 
 // ── sidecar supervision ─────────────────────────────────────────────────────────
@@ -142,6 +166,8 @@ fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
 }
 
 pub fn run() {
+    let builder = specta_builder();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -150,7 +176,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![secret_get, secret_set, secret_delete])
+        .invoke_handler(builder.invoke_handler())
         .setup(|app| {
             let data_dir = app
                 .path()
@@ -169,4 +195,32 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// ── typed bindings export ─────────────────────────────────────────────────────────
+//
+// `cargo test` writes the specta-generated TS bindings to
+// `packages/app/tauri/bindings.ts` (committed, drift-checkable). The react
+// `TauriSecretsService` imports `commands.secretGet(key)` from
+// `@codedm/app-tauri/commands` — name + args + return type are the Rust
+// signature, verbatim. Re-run `cargo test` after touching any `secret_*`
+// command and commit the regenerated file.
+#[cfg(test)]
+mod export_bindings {
+    use super::specta_builder;
+    use specta_typescript::Typescript;
+
+    #[test]
+    fn export_typescript_bindings() {
+        // ../bindings.ts relative to src-tauri/ = packages/app/tauri/bindings.ts
+        // `@ts-nocheck` header: the specta template always emits a couple of unused helpers
+        // (TAURI_CHANNEL, __makeEvents__) that trip the react console's noUnusedLocals — the file
+        // is generated + drift-checked, so it opts out of type-checking rather than being edited.
+        specta_builder()
+            .export(
+                Typescript::default().header("// @ts-nocheck"),
+                concat!(env!("CARGO_MANIFEST_DIR"), "/../bindings.ts"),
+            )
+            .expect("failed to export tauri-specta TypeScript bindings");
+    }
 }

@@ -6,7 +6,9 @@
 //   packages/app/tauri/src-tauri/tauri.conf.json          — identity, window, devUrl, frontendDist,
 //                                                           externalBin, CSP
 //   packages/app/tauri/src-tauri/capabilities/default.json — permissions DERIVED from
-//                                                           REPO.desktop.services
+//                                                           REPO.desktop.capabilities mapped
+//                                                           through @codedm/app-tauri/capabilities
+//                                                           (CAPABILITY_PERMISSIONS)
 //   packages/app/tauri/src-tauri/src/generated.rs          — IDENTIFIER const + sidecars(data_dir)
 //                                                           (include!-ed by lib.rs — lib.rs never
 //                                                           hand-types a name/port/health path)
@@ -16,6 +18,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { posix } from 'node:path'
 import { resolve } from 'node:path'
+import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
 import { REPO, type BootEnvSource, type SidecarDecl } from '../../template.config'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
@@ -133,7 +136,21 @@ export function renderTauriConf(): string {
 }
 
 export function renderCapabilities(): string {
-	const permissions = ['core:default', ...Object.values(REPO.desktop.services).flat()]
+	// Each abstract capability key resolves to its Tauri permissions via the shell-owned map
+	// (@codedm/app-tauri/capabilities). Fail loud on a capability with no mapping — the contract
+	// declared a native capability the shell package doesn't know how to grant.
+	const permsFor = CAPABILITY_PERMISSIONS as Record<string, readonly string[] | undefined>
+	const permissions = [
+		'core:default',
+		...REPO.desktop.capabilities.flatMap(cap => {
+			const perms = permsFor[cap]
+			if (perms === undefined)
+				throw new Error(
+					`desktop capability '${cap}' has no permission mapping in @codedm/app-tauri/capabilities (CAPABILITY_PERMISSIONS)`,
+				)
+			return perms
+		}),
+	]
 	const capability = {
 		$schema: '../gen/schemas/desktop-schema.json',
 		identifier: 'default',

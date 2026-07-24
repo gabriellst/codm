@@ -2,11 +2,12 @@
 // tauri.conf.json / capabilities/default.json / generated.rs must be EXACTLY what
 // scripts/desktop/generate.ts renders from template.config.ts REPO.desktop. Any hand-edit
 // of a generated file, or contract change without regeneration, is a red build.
+import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { REPO } from '../../template.config'
-import { cargoNameDrift, OUTPUTS, renderGeneratedRs, renderTauriConf } from './generate'
+import { cargoNameDrift, OUTPUTS, renderCapabilities, renderGeneratedRs, renderTauriConf } from './generate'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 
@@ -38,6 +39,20 @@ describe('desktop contract (REPO.desktop)', () => {
 			expect(rendered).toContain(`name: "${REPO.brand}-${sidecar.role}"`)
 			expect(rendered).toContain(`health_path: "${sidecar.healthPath}"`)
 		}
+	})
+
+	it('DSK-06: capabilities render through the shell-owned CAPABILITY_PERMISSIONS map (every key mapped)', () => {
+		// The abstract contract (REPO.desktop.capabilities) holds ONLY capability keys; the
+		// capability → Tauri permission map lives in @codedm/app-tauri/capabilities. Every declared
+		// capability MUST have a mapping there — renderCapabilities throws otherwise.
+		const map = CAPABILITY_PERMISSIONS as Record<string, readonly string[] | undefined>
+		for (const cap of REPO.desktop.capabilities) {
+			expect(map[cap], `capability '${cap}' has no permission mapping in @codedm/app-tauri/capabilities`).toBeDefined()
+		}
+		// Rendering is behaviour-preserving: core:default + each capability's mapped permissions, in order.
+		const rendered = JSON.parse(renderCapabilities()) as { permissions: string[] }
+		const expected = ['core:default', ...REPO.desktop.capabilities.flatMap(cap => map[cap] ?? [])]
+		expect(rendered.permissions).toEqual(expected)
 	})
 
 	it('DSK-05: desktop dev serves the root-based SPA (devUrl = ROOT, beforeDevCommand = dev-spa target)', () => {

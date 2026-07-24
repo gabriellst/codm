@@ -1,16 +1,18 @@
-import { invoke } from '../utils/tauri/invoke'
+import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart'
 import type { AutostartService } from './AutostartService'
 
+/** Launch-on-login via the typed tauri plugin-autostart API. The `autostart:allow-*`
+ *  permissions derive from REPO.desktop.capabilities.autostart → CAPABILITY_PERMISSIONS. */
 export class TauriAutostartService implements AutostartService {
 	isEnabled(): Promise<boolean> {
-		return invoke<boolean>('plugin:autostart|is_enabled')
+		return isEnabled()
 	}
 
 	async enable(): Promise<void> {
-		await invoke('plugin:autostart|enable')
+		await enable()
 	}
 
 	async disable(): Promise<void> {
-		await invoke('plugin:autostart|disable')
+		await disable()
 	}
 }
