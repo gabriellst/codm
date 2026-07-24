@@ -9,9 +9,9 @@
 //                                                           REPO.desktop.capabilities mapped
 //                                                           through @codedm/app-tauri/capabilities
 //                                                           (CAPABILITY_PERMISSIONS)
-//   packages/app/tauri/src-tauri/src/generated.rs          — IDENTIFIER const + sidecars(data_dir)
-//                                                           (include!-ed by lib.rs — lib.rs never
-//                                                           hand-types a name/port/health path)
+//   packages/app/tauri/src-tauri/src/sidecars/generated.rs — IDENTIFIER const + sidecars(data_dir)
+//                                                           (include!-ed by src/sidecars/mod.rs — the
+//                                                           shell never hand-types a name/port/health path)
 //
 // Usage: `bun desktop:generate` (writes) · `bun desktop:generate --check` (exit 1 on drift —
 // wired into test:tooling via scripts/desktop/generate.test.ts).
@@ -166,7 +166,7 @@ export function renderGeneratedRs(): string {
 	const lines: string[] = [
 		'// GENERATED from template.config.ts REPO.desktop by scripts/desktop/generate.ts — do NOT hand-edit.',
 		'// Regenerate: `bun desktop:generate` · drift gate: `bun desktop:generate --check` (test:tooling).',
-		'// include!-ed by lib.rs AFTER the `Sidecar` struct definition.',
+		'// include!-ed by src/sidecars/mod.rs AFTER the `Sidecar` struct definition.',
 		'',
 		'/// Bundle identifier — also the keychain service name (REPO.desktop.identifier).',
 		`pub const IDENTIFIER: &str = "${REPO.desktop.identifier}";`,
@@ -216,7 +216,7 @@ export function cargoNameDrift(): string[] {
 export const OUTPUTS: readonly { path: string; render: () => string }[] = [
 	{ path: posix.join(srcTauriDir, 'tauri.conf.json'), render: renderTauriConf },
 	{ path: posix.join(srcTauriDir, 'capabilities/default.json'), render: renderCapabilities },
-	{ path: posix.join(srcTauriDir, 'src/generated.rs'), render: renderGeneratedRs },
+	{ path: posix.join(srcTauriDir, 'src/sidecars/generated.rs'), render: renderGeneratedRs },
 ]
 
 if (import.meta.main) {

@@ -2,8 +2,8 @@ import { commands } from '@codedm/app-tauri/commands'
 import type { SecretsService } from './SecretsService'
 
 /** OS keychain via the shell's custom `secret_*` commands, typed end-to-end by
- *  tauri-specta (packages/app/tauri/bindings.ts — name/args/return come from the Rust
- *  `#[specta::specta]` handlers in src-tauri/src/lib.rs). `commands.*` returns a
+ *  tauri-specta (packages/app/tauri/commands/bindings.ts — name/args/return come from the Rust
+ *  `#[specta::specta]` handlers in src-tauri/src/commands/secrets.rs). `commands.*` returns a
  *  `Result<T, string>`; an `error` status is a shell/keychain failure — surface it. */
 export class TauriSecretsService implements SecretsService {
 	async get(key: string): Promise<string | null> {

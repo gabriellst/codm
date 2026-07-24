@@ -1,6 +1,6 @@
 // GENERATED from template.config.ts REPO.desktop by scripts/desktop/generate.ts — do NOT hand-edit.
 // Regenerate: `bun desktop:generate` · drift gate: `bun desktop:generate --check` (test:tooling).
-// include!-ed by lib.rs AFTER the `Sidecar` struct definition.
+// include!-ed by src/sidecars/mod.rs AFTER the `Sidecar` struct definition.
 
 /// Bundle identifier — also the keychain service name (REPO.desktop.identifier).
 pub const IDENTIFIER: &str = "app.codedm.desktop";

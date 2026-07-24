@@ -142,8 +142,8 @@ export interface Workspace {
 /**
  * DESKTOP CONTRACT — the single declaration of the desktop shell (packages/app/tauri).
  * `scripts/desktop/generate.ts` renders tauri.conf.json + capabilities/default.json +
- * src-tauri/src/generated.rs FROM this block (drift-gated: `bun desktop:generate --check`,
- * wired into test:tooling via scripts/desktop/generate.test.ts). `build-sidecars.ts` reads
+ * src-tauri/src/sidecars/generated.rs FROM this block (drift-gated: `bun desktop:generate --check`,
+ * wired into test:tooling via scripts/desktop/generate.test.ts). `sidecars/build.ts` reads
  * it for binary names + build cwds. A literal in any of those files that exists here is a
  * bug — same rule as REPO.env.
  *

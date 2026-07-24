@@ -6,7 +6,7 @@
 		"sidecars": {
 			"executor": "nx:run-commands",
 			"cache": false,
-			"options": { "command": "bun scripts/build-sidecars.ts", "cwd": "packages/app/tauri" }
+			"options": { "command": "bun sidecars/build.ts", "cwd": "packages/app/tauri" }
 		},
 		"dev": {
 			"executor": "nx:run-commands",
