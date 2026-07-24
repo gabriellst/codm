@@ -1,17 +1,20 @@
 // scripts/desktop/generate.ts — renders the desktop shell's config surfaces FROM the desktop
-// contract (template.config.ts REPO.desktop + WORKSPACES + REPO.env). Mirrors scripts/env/generate.ts:
-// the contract is the single structural truth; this file is its compiler.
+// contract (template.config.ts REPO.desktop + WORKSPACES + REPO.env) and the PACKAGE sidecar
+// manifest (@codedm/app-tauri/sidecars). The sidecar SET + boot ENV are code (the manifest +
+// the Rust supervisor), NOT config — this file only compiles the two committed JSON surfaces.
 //
 // Outputs (committed generated files, like .env.example):
 //   packages/app/tauri/src-tauri/tauri.conf.json          — identity, window, devUrl, frontendDist,
-//                                                           externalBin, CSP
+//                                                           externalBin, CSP, bundle.resources
 //   packages/app/tauri/src-tauri/capabilities/default.json — permissions DERIVED from
 //                                                           REPO.desktop.capabilities mapped
 //                                                           through @codedm/app-tauri/capabilities
 //                                                           (CAPABILITY_PERMISSIONS)
-//   packages/app/tauri/src-tauri/src/sidecars/generated.rs — IDENTIFIER const + sidecars(data_dir)
-//                                                           (include!-ed by src/sidecars/mod.rs — the
-//                                                           shell never hand-types a name/port/health path)
+//
+// The sidecar boot env + the `IDENTIFIER` are NO LONGER generated: env is inline in the Rust
+// supervisor (src/sidecars/mod.rs), and the keychain service name is read at runtime from
+// `app.config().identifier`. `externalBin` / the CSP port / `bundle.resources` derive from the
+// package manifest, not a generated .rs.
 //
 // Usage: `bun desktop:generate` (writes) · `bun desktop:generate --check` (exit 1 on drift —
 // wired into test:tooling via scripts/desktop/generate.test.ts).
@@ -19,13 +22,20 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { posix } from 'node:path'
 import { resolve } from 'node:path'
 import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
+import { SIDECARS, type SidecarManifestEntry } from '@codedm/app-tauri/sidecars'
 import { WINDOW } from '@codedm/app-tauri/window'
-import { REPO, type BootEnvSource, type SidecarDecl } from '../../template.config'
+import { REPO } from '../../template.config'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 
 const shell = REPO.workspaces.appTauri
 const srcTauriDir = posix.join(shell.pkgRoot, 'src-tauri')
+
+// The Drizzle migrations dir travels as a bundle resource: `build.ts` stages it under
+// `binaries/migrations`, `bundle.resources` copies it to the app resource dir at `migrations`, and
+// the daemon's `CODEDM_MIGRATIONS_DIR` (set inline in the Rust supervisor) resolves
+// `resource_dir/migrations`. One explicit line here, mirrored in build.ts + mod.rs.
+const MIGRATIONS_RESOURCE = { 'binaries/migrations': 'migrations' } as const
 
 // ── contract resolution helpers (fail-loud: an unknown key is a contract bug) ──
 
@@ -35,46 +45,16 @@ function envExample(key: string): string {
 	return decl.example
 }
 
-function sidecarPort(sidecar: SidecarDecl): number {
+function sidecarPort(sidecar: SidecarManifestEntry): number {
 	const port = Number(envExample(sidecar.portEnvKey))
 	if (!Number.isInteger(port) || port <= 0)
 		throw new Error(`env key '${sidecar.portEnvKey}' example is not a port: '${envExample(sidecar.portEnvKey)}'`)
 	return port
 }
 
-const binName = (sidecar: SidecarDecl): string => `${REPO.brand}-${sidecar.role}`
+const binName = (sidecar: SidecarManifestEntry): string => `${REPO.brand}-${sidecar.role}`
 
 const vitePort = (): string => envExample(REPO.desktop.console.devPortEnvKey)
-
-/** The dev/webview origins a desktop sidecar must allow — fixed tauri scheme + the dev console. */
-const desktopOrigins = (): string => `tauri://localhost,http://localhost:${vitePort()}`
-
-function resolveBootEnv(key: string, source: BootEnvSource): { literal: string } | { rust: string } {
-	if ('value' in source) return { literal: source.value }
-	switch (source.from) {
-		case 'example':
-			return { literal: envExample(key) }
-		case 'desktopOrigins':
-			return { literal: desktopOrigins() }
-		case 'dataDir':
-			return { rust: 'data_dir.into()' }
-		case 'resourceDir':
-			// Resolved at runtime relative to the bundle's resource dir (build-sidecars stages the asset
-			// under `binaries/<subpath>`; tauri.conf `bundle.resources` copies it to `resource_dir/<subpath>`).
-			return { rust: `resource_dir.join(${JSON.stringify(source.subpath)}).to_string_lossy().into_owned()` }
-	}
-}
-
-/** subpaths of every `resourceDir` boot-env value across all sidecars (drives resources + the rust param). */
-function resourceDirSubpaths(): string[] {
-	const subpaths: string[] = []
-	for (const sidecar of REPO.desktop.sidecars) {
-		for (const source of Object.values(sidecar.bootEnv)) {
-			if ('from' in source && source.from === 'resourceDir') subpaths.push(source.subpath)
-		}
-	}
-	return subpaths
-}
 
 // ── renderers ────────────────────────────────────────────────────────────────
 
@@ -84,10 +64,11 @@ export function renderTauriConf(): string {
 	if (consoleWs.nxProject === null) throw new Error(`console workspace '${console_.workspace}' has no nx project`)
 	// Config paths resolve relative to src-tauri/ (where tauri.conf.json lives).
 	const frontendDist = posix.relative(srcTauriDir, posix.join(consoleWs.pkgRoot, console_.distSubpath))
-	// CSP connect-src derives from the DECLARED console→sidecar relation (console.connectsTo).
+	// CSP connect-src derives from the DECLARED console→sidecar relation (console.connectsTo),
+	// resolving each role against the package manifest for its port.
 	const connectSrc = console_.connectsTo
 		.map(role => {
-			const sidecar = REPO.desktop.sidecars.find(s => s.role === role)
+			const sidecar = SIDECARS.find(s => s.role === role)
 			if (sidecar === undefined) throw new Error(`console.connectsTo names unknown sidecar role '${role}'`)
 			return sidecar
 		})
@@ -128,12 +109,12 @@ export function renderTauriConf(): string {
 		bundle: {
 			active: true,
 			targets: 'all',
-			externalBin: REPO.desktop.sidecars.map(s => `binaries/${binName(s)}`),
+			externalBin: SIDECARS.map(s => `binaries/${binName(s)}`),
 			icon: ['icons/icon.icns', 'icons/icon.ico', 'icons/32x32.png', 'icons/128x128.png'],
 			// Assets a compiled sidecar can't inline (the Drizzle migrations) are staged by
-			// build-sidecars under `binaries/<subpath>` and copied into the app resource dir at
-			// `<subpath>`; the sidecar's `resourceDir` boot-env resolves `resource_dir/<subpath>`.
-			resources: Object.fromEntries(resourceDirSubpaths().map(sub => [`binaries/${sub}`, sub])),
+			// build.ts under `binaries/migrations` and copied into the app resource dir at
+			// `migrations`; the daemon's inline `CODEDM_MIGRATIONS_DIR` resolves `resource_dir/migrations`.
+			resources: MIGRATIONS_RESOURCE,
 		},
 	}
 	return `${JSON.stringify(conf, null, '\t')}\n`
@@ -166,41 +147,6 @@ export function renderCapabilities(): string {
 	return `${JSON.stringify(capability, null, '\t')}\n`
 }
 
-export function renderGeneratedRs(): string {
-	const lines: string[] = [
-		'// GENERATED from template.config.ts REPO.desktop by scripts/desktop/generate.ts — do NOT hand-edit.',
-		'// Regenerate: `bun desktop:generate` · drift gate: `bun desktop:generate --check` (test:tooling).',
-		'// include!-ed by src/sidecars/mod.rs AFTER the `Sidecar` struct definition.',
-		'',
-		'/// Bundle identifier — also the keychain service name (REPO.desktop.identifier).',
-		`pub const IDENTIFIER: &str = "${REPO.desktop.identifier}";`,
-		'',
-		'/// Supervised sidecars — one entry per REPO.desktop.sidecars[]. Ports/env resolve from',
-		'/// REPO.env examples at generation time; `data_dir` (app-data subdir) and `resource_dir`',
-		'/// (bundle resource dir, for staged assets like the migrations) are the runtime paths the',
-		'/// shell computes — the only boot-env values that cannot be generation-time literals.',
-		`pub fn sidecars(data_dir: &str, ${resourceDirSubpaths().length > 0 ? 'resource_dir' : '_resource_dir'}: &std::path::Path) -> Vec<Sidecar> {`,
-		'    vec![',
-	]
-	for (const sidecar of REPO.desktop.sidecars) {
-		lines.push(
-			'        Sidecar {',
-			`            name: "${binName(sidecar)}",`,
-			`            port: ${sidecarPort(sidecar)},`,
-			`            health_path: "${sidecar.healthPath}",`,
-			'            env: vec![',
-		)
-		for (const [key, source] of Object.entries(sidecar.bootEnv)) {
-			const resolved = resolveBootEnv(key, source)
-			const valueExpr = 'literal' in resolved ? `"${resolved.literal}".into()` : resolved.rust
-			lines.push(`                ("${key}".into(), ${valueExpr}),`)
-		}
-		lines.push('            ],', '        },')
-	}
-	lines.push('    ]', '}', '')
-	return lines.join('\n')
-}
-
 // ── Cargo.toml identity check (name is stamped once, not generated — but drift is a bug) ──
 
 export function cargoNameDrift(): string[] {
@@ -220,7 +166,6 @@ export function cargoNameDrift(): string[] {
 export const OUTPUTS: readonly { path: string; render: () => string }[] = [
 	{ path: posix.join(srcTauriDir, 'tauri.conf.json'), render: renderTauriConf },
 	{ path: posix.join(srcTauriDir, 'capabilities/default.json'), render: renderCapabilities },
-	{ path: posix.join(srcTauriDir, 'src/sidecars/generated.rs'), render: renderGeneratedRs },
 ]
 
 if (import.meta.main) {

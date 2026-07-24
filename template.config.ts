@@ -140,25 +140,25 @@ export interface Workspace {
 }
 
 /**
- * DESKTOP CONTRACT — the single declaration of the desktop shell (packages/app/tauri).
- * `scripts/desktop/generate.ts` renders tauri.conf.json + capabilities/default.json +
- * src-tauri/src/sidecars/generated.rs FROM this block (drift-gated: `bun desktop:generate --check`,
- * wired into test:tooling via scripts/desktop/generate.test.ts). `sidecars/build.ts` reads
- * it for binary names + build cwds. A literal in any of those files that exists here is a
- * bug — same rule as REPO.env.
+ * DESKTOP CONTRACT — the abstract, product-facing declaration of the desktop shell
+ * (packages/app/tauri): identity, window, the console wiring, and the native capabilities.
+ * `scripts/desktop/generate.ts` renders tauri.conf.json + capabilities/default.json FROM this
+ * block (drift-gated: `bun desktop:generate --check`, wired into test:tooling via
+ * scripts/desktop/generate.test.ts).
  *
- * Boot-env value sources (`bootEnv`):
- *   { from: 'example' }        → REPO.env[key].example (generation-time literal)
- *   { from: 'dataDir' }        → the shell's runtime data dir (app_data_dir()/data) — Rust-side
- *   { from: 'desktopOrigins' } → `tauri://localhost,http://localhost:<VITE_PORT example>`
- *   { value: '...' }           → shell-decision literal (e.g. NODE_ENV=production)
+ * The sidecar SET is NOT here — it is package code: the lean cross-boundary list lives in
+ * packages/app/tauri/sidecars/manifest.ts (read by build.ts + generate.ts), and each sidecar's
+ * boot ENV is inline in the Rust supervisor (src-tauri/src/sidecars/mod.rs). The keychain service
+ * name is read at runtime from `app.config().identifier` (no generated const). A single-package
+ * shell doesn't earn a contract for its own process list.
  */
 const DESKTOP = {
 	/** OS-facing display name (window title, productName). The ONE place the cased brand
 	 *  spelling lives — REPO.brand stays the lowercase token. */
 	displayName: 'CodeDM',
-	/** Reverse-DNS bundle identifier — derived from brand; ALSO the keychain service name
-	 *  (generated.rs IDENTIFIER const). */
+	/** Reverse-DNS bundle identifier — derived from brand. Rendered into tauri.conf.json
+	 *  `identifier`; the shell reads it back at runtime (`app.config().identifier`) as the
+	 *  keychain service name. */
 	identifier: `app.${brand}.desktop`,
 	/** Genuine shell decisions — parameters with defaults, no repo-fact source. */
 	window: { label: 'main', width: 1280, height: 800, minWidth: 980, minHeight: 640 },
@@ -181,46 +181,10 @@ const DESKTOP = {
 		distSubpath: 'dist/client',
 		buildTarget: 'build-spa',
 		/** Sidecar roles the webview talks to DIRECTLY (CSP connect-src derives from this —
-		 *  the gateway is reached through the daemon proxy, so it is not listed). */
+		 *  the gateway is reached through the daemon proxy, so it is not listed). Roles resolve
+		 *  against the package sidecar manifest (packages/app/tauri/sidecars/manifest.ts). */
 		connectsTo: ['daemon'],
 	},
-	/** Supervised sidecars — one entry per subprocess the shell boots + health-checks.
-	 *  binName renders as `<brand>-<role>`; ports/env resolve through REPO.env. */
-	sidecars: [
-		{
-			workspace: 'apiTs',
-			role: 'daemon',
-			portEnvKey: 'API_PORT',
-			/** Readiness probe — proves PGlite migrations ran and controllers registered. */
-			healthPath: '/v1/session',
-			build: { kind: 'bun-compile', entry: './src/index.ts' },
-			bootEnv: {
-				API_PORT: { from: 'example' },
-				CODEDM_DATA_DIR: { from: 'dataDir' },
-				// The Drizzle migrations directory. A `bun build --compile` binary has no node_modules
-				// and the drizzle migrator reads the folder via node fs (which cannot walk `/$bunfs`),
-				// so the migrations are STAGED as a bundle resource (build-sidecars copies them; the
-				// shell resolves resource_dir/<subpath> at runtime) rather than embedded. Without this
-				// the daemon dies in migrateEmbeddedDatabase before it ever listens.
-				CODEDM_MIGRATIONS_DIR: { from: 'resourceDir', subpath: 'migrations' },
-				API_GO_URL: { from: 'example' },
-				NODE_ENV: { value: 'production' },
-			},
-		},
-		{
-			workspace: 'apiGo',
-			role: 'gateway',
-			portEnvKey: 'CHANNEL_PORT',
-			/** The gateway's only doc/liveness route. */
-			healthPath: '/api/openapi.json',
-			build: { kind: 'go-build', entry: './cmd/api' },
-			bootEnv: {
-				CHANNEL_PORT: { from: 'example' },
-				CODEDM_DATA_DIR: { from: 'dataDir' },
-				CHANNEL_ALLOWED_ORIGINS: { from: 'desktopOrigins' },
-			},
-		},
-	],
 	/** Native capabilities the console consumes through the platform contract
 	 *  (packages/app/react/src/services). ABSTRACT keys only — the capability → Tauri
 	 *  permission map lives in the shell package (@codedm/app-tauri/capabilities,
@@ -243,26 +207,8 @@ export interface DesktopConfig {
 		buildTarget: string
 		connectsTo: readonly string[]
 	}
-	sidecars: readonly SidecarDecl[]
 	capabilities: readonly string[]
 }
-export interface SidecarDecl {
-	/** The workspace this sidecar compiles from (cwd/entry resolve via WORKSPACES). */
-	workspace: WorkspaceId
-	/** Binary role suffix — binName = `<brand>-<role>`. */
-	role: string
-	/** REPO.env key holding the port this sidecar listens on (example = generation value). */
-	portEnvKey: string
-	healthPath: string
-	build: { kind: 'bun-compile' | 'go-build'; entry: string }
-	bootEnv: Readonly<Record<string, BootEnvSource>>
-}
-export type BootEnvSource =
-	| { from: 'example' | 'dataDir' | 'desktopOrigins' }
-	// A file/dir STAGED into the bundle's resource dir (build-sidecars copies it); the shell resolves
-	// `resource_dir/<subpath>` at runtime. For assets a compiled binary can't inline (the migrations dir).
-	| { from: 'resourceDir'; subpath: string }
-	| { value: string }
 
 export const REPO = {
 	/** npm scope every workspace package lives under (`<scope>/core-typescript`, …). */

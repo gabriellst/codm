@@ -1,13 +1,14 @@
 // Drift gate for the desktop contract (mirrors the env-model ENV-04 rail): the committed
-// tauri.conf.json / capabilities/default.json / generated.rs must be EXACTLY what
-// scripts/desktop/generate.ts renders from template.config.ts REPO.desktop. Any hand-edit
+// tauri.conf.json / capabilities/default.json must be EXACTLY what scripts/desktop/generate.ts
+// renders from template.config.ts REPO.desktop + the package sidecar manifest. Any hand-edit
 // of a generated file, or contract change without regeneration, is a red build.
 import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
+import { SIDECARS } from '@codedm/app-tauri/sidecars'
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { REPO } from '../../template.config'
-import { cargoNameDrift, OUTPUTS, renderCapabilities, renderGeneratedRs, renderTauriConf } from './generate'
+import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 
@@ -23,22 +24,28 @@ describe('desktop contract (REPO.desktop)', () => {
 		expect(cargoNameDrift()).toEqual([])
 	})
 
-	it('DSK-03: sidecar workspaces + env keys resolve (renderers fail loud on dangling refs)', () => {
-		// The renderers throw on unknown env keys / workspaces / roles — rendering IS the assertion.
+	it('DSK-03: sidecar manifest workspaces + port env keys resolve (renderers fail loud on dangling refs)', () => {
+		// renderTauriConf throws on an unknown console→sidecar role or a non-port env example —
+		// rendering IS the assertion. The manifest's own refs (workspace, portEnvKey) must resolve too.
 		expect(renderTauriConf().length).toBeGreaterThan(0)
-		expect(renderGeneratedRs().length).toBeGreaterThan(0)
-		for (const sidecar of REPO.desktop.sidecars) {
-			expect(REPO.workspaces[sidecar.workspace], `sidecar '${sidecar.role}' names unknown workspace`).toBeDefined()
+		for (const sidecar of SIDECARS) {
+			expect(REPO.workspaces[sidecar.build.workspace], `sidecar '${sidecar.role}' names unknown workspace`).toBeDefined()
+			expect(
+				(REPO.env as Record<string, unknown>)[sidecar.portEnvKey],
+				`sidecar '${sidecar.role}' names unknown port env key '${sidecar.portEnvKey}'`,
+			).toBeDefined()
 		}
 	})
 
-	it('DSK-04: the contract is live — changing a value changes the rendering (drift detectable)', () => {
-		const rendered = renderGeneratedRs()
-		expect(rendered).toContain(`pub const IDENTIFIER: &str = "app.${REPO.brand}.desktop";`)
-		for (const sidecar of REPO.desktop.sidecars) {
-			expect(rendered).toContain(`name: "${REPO.brand}-${sidecar.role}"`)
-			expect(rendered).toContain(`health_path: "${sidecar.healthPath}"`)
+	it('DSK-04: tauri.conf reflects the manifest — externalBin + identity + migrations resource', () => {
+		const conf = JSON.parse(renderTauriConf()) as {
+			identifier: string
+			bundle: { externalBin: string[]; resources: Record<string, string> }
 		}
+		expect(conf.identifier).toBe(REPO.desktop.identifier)
+		expect(conf.bundle.externalBin).toEqual(SIDECARS.map(s => `binaries/${REPO.brand}-${s.role}`))
+		// The one staged asset a compiled sidecar can't inline (the Drizzle migrations).
+		expect(conf.bundle.resources).toEqual({ 'binaries/migrations': 'migrations' })
 	})
 
 	it('DSK-06: capabilities render through the shell-owned CAPABILITY_PERMISSIONS map (every key mapped)', () => {
