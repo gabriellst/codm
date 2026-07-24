@@ -1,6 +1,6 @@
 /**
  * Build the sidecar binaries Tauri bundles via `bundle.externalBin` — DRIVEN BY THE PACKAGE
- * SIDECAR MANIFEST (./manifest.ts, SIDECARS): binary roles, source workspaces (cwd), entries,
+ * SIDECAR MANIFEST (./sidecars.ts, SIDECARS): binary roles, source workspaces (cwd), entries,
  * and build kinds all come from the manifest; this script owns only the host-triple knowledge
  * and the spawn loop. `REPO` is read only for the brand (binary-name prefix) and workspace roots.
  *
@@ -13,7 +13,7 @@
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { REPO } from '../../../../template.config'
-import { SIDECARS, type SidecarManifestEntry } from './manifest'
+import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 
 // Genuine toolchain knowledge — platform data, not repo identity (correctly local).
 const HOST_TRIPLES: Record<string, string> = {
@@ -94,9 +94,9 @@ export async function buildSidecars(): Promise<void> {
 	console.log(`[sidecars] done → src-tauri/binaries/ (${triple})`)
 }
 
-// Run as a standalone script (`bun sidecars/build.ts`) — the package "sidecars" script and the
-// nx `sidecars` target both invoke it this way. Importing the module (e.g. via `./index.ts` for
-// its exported types) does NOT trigger a build.
+// Run as a standalone script (`bun config/build-sidecars.ts`) — the package "sidecars" script and
+// the nx `sidecars` target both invoke it this way. Importing the module (e.g. for SIDECARS types)
+// does NOT trigger a build.
 if (import.meta.main) {
 	await buildSidecars()
 }

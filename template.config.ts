@@ -139,77 +139,6 @@ export interface Workspace {
 	devServer: 'aggregate' | 'standalone' | null
 }
 
-/**
- * DESKTOP CONTRACT — the abstract, product-facing declaration of the desktop shell
- * (packages/app/tauri): identity, window, the console wiring, and the native capabilities.
- * `scripts/desktop/generate.ts` renders tauri.conf.json + capabilities/default.json FROM this
- * block (drift-gated: `bun desktop:generate --check`, wired into test:tooling via
- * scripts/desktop/generate.test.ts).
- *
- * The sidecar SET is NOT here — it is package code: the lean cross-boundary list lives in
- * packages/app/tauri/sidecars/manifest.ts (read by build.ts + generate.ts), and each sidecar's
- * boot ENV is inline in the Rust supervisor (src-tauri/src/sidecars/mod.rs). The keychain service
- * name is read at runtime from `app.config().identifier` (no generated const). A single-package
- * shell doesn't earn a contract for its own process list.
- */
-const DESKTOP = {
-	/** OS-facing display name (window title, productName). The ONE place the cased brand
-	 *  spelling lives — REPO.brand stays the lowercase token. */
-	displayName: 'CodeDM',
-	/** Reverse-DNS bundle identifier — derived from brand. Rendered into tauri.conf.json
-	 *  `identifier`; the shell reads it back at runtime (`app.config().identifier`) as the
-	 *  keychain service name. */
-	identifier: `app.${brand}.desktop`,
-	/** Genuine shell decisions — parameters with defaults, no repo-fact source. */
-	window: { label: 'main', width: 1280, height: 800, minWidth: 980, minHeight: 640 },
-	/** Console (webview content) wiring — which workspace renders inside the shell. */
-	console: {
-		workspace: 'appReact',
-		/** Dev-server port key (REPO.env) + path the console mounts under in WEB dev (nitro on,
-		 *  base '/app/'). This is the browser mount — NOT what the desktop webview loads. */
-		devPortEnvKey: 'VITE_PORT',
-		devPath: '/app/',
-		/** Desktop dev: the nx target that serves the console as a root-based SPA
-		 *  (`CODEDM_DESKTOP=true vite --host` → nitro OFF, base '/', VITE_PORT). Symmetric to
-		 *  `buildTarget`'s build-spa. The shell's beforeDevCommand runs THIS, not `dev`. */
-		devTarget: 'dev-spa',
-		/** Base path the tauri webview loads in dev. The desktop SPA serves at root '/' (dev-spa /
-		 *  build-spa set base '/'), so devUrl is the ROOT — not the web '/app/' mount. Declared
-		 *  explicitly rather than derived, so the generator never hardcodes a convention. */
-		devBasePath: '/',
-		/** SPA output inside the console workspace (produced by `buildTarget`). */
-		distSubpath: 'dist/client',
-		buildTarget: 'build-spa',
-		/** Sidecar roles the webview talks to DIRECTLY (CSP connect-src derives from this —
-		 *  the gateway is reached through the daemon proxy, so it is not listed). Roles resolve
-		 *  against the package sidecar manifest (packages/app/tauri/sidecars/manifest.ts). */
-		connectsTo: ['daemon'],
-	},
-	/** Native capabilities the console consumes through the platform contract
-	 *  (packages/app/react/src/services). ABSTRACT keys only — the capability → Tauri
-	 *  permission map lives in the shell package (@codedm/app-tauri/capabilities,
-	 *  CAPABILITY_PERMISSIONS); scripts/desktop/generate.ts maps these keys through it to
-	 *  render capabilities/default.json. This contract never spells a Tauri permission. */
-	capabilities: ['filePicker', 'notification', 'badge', 'secrets', 'autostart', 'hostInfo'],
-} as const satisfies DesktopConfig
-
-export interface DesktopConfig {
-	displayName: string
-	identifier: string
-	window: { label: string; width: number; height: number; minWidth: number; minHeight: number }
-	console: {
-		workspace: WorkspaceId
-		devPortEnvKey: string
-		devPath: string
-		devTarget: string
-		devBasePath: string
-		distSubpath: string
-		buildTarget: string
-		connectsTo: readonly string[]
-	}
-	capabilities: readonly string[]
-}
-
 export const REPO = {
 	/** npm scope every workspace package lives under (`<scope>/core-typescript`, …). */
 	scope,
@@ -238,9 +167,6 @@ export const REPO = {
 
 	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */
 	rootEnvVar: 'CODEDM_ROOT',
-
-	/** Desktop shell contract (see DESKTOP above) — the source scripts/desktop/generate.ts renders from. */
-	desktop: DESKTOP,
 
 	// ── Layout — ALL DERIVED from WORKSPACES (the single source); do not add literals here ──
 	workspaces: WORKSPACES,

@@ -16,8 +16,8 @@ Tauri v2 host for the CodeDM desktop app. The shell does three things and nothin
    dialog/notification/badge/secrets/autostart/hostInfo), implemented for the desktop
    under `lib/native/platforms/tauri/services/` and injected by the NativeProvider.
    Secrets are keychain-backed custom commands (`secret_get/set/delete`); the tauri
-   permissions each service needs are declared in `template.config.ts`
-   `REPO.desktop.services` (capabilities JSON is generated).
+   permissions each service needs are declared in
+   `config/capabilities.ts` (`CAPABILITIES` + `CAPABILITY_PERMISSIONS`; capabilities JSON is generated).
 
 Direction rules (enforced; see `.claude/skills/desktop-shell/`):
 - tauri → react only through build config (`devUrl`/`frontendDist` + nx `dependsOn` on

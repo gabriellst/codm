@@ -1,47 +1,49 @@
-// scripts/desktop/generate.ts — renders the desktop shell's config surfaces FROM the desktop
-// contract (template.config.ts REPO.desktop + WORKSPACES + REPO.env) and the PACKAGE sidecar
-// manifest (@codedm/app-tauri/sidecars). The sidecar SET + boot ENV are code (the manifest +
-// the Rust supervisor), NOT config — this file only compiles the two committed JSON surfaces.
+// packages/app/tauri/config/generate.ts — renders the desktop shell's config surfaces FROM the
+// LOCAL config in this folder (./app, ./window, ./capabilities, ./sidecars) plus the abstract
+// contract (template.config.ts — only REPO.brand / REPO.workspaces / REPO.env). The sidecar SET +
+// boot ENV are code (the manifest + the Rust supervisor), NOT config — this file only compiles the
+// two committed JSON surfaces.
 //
 // Outputs (committed generated files, like .env.example):
-//   packages/app/tauri/src-tauri/tauri.conf.json          — identity, window, devUrl, frontendDist,
-//                                                           externalBin, CSP, bundle.resources
-//   packages/app/tauri/src-tauri/capabilities/default.json — permissions DERIVED from
-//                                                           REPO.desktop.capabilities mapped
-//                                                           through @codedm/app-tauri/capabilities
-//                                                           (CAPABILITY_PERMISSIONS)
+//   ../src-tauri/tauri.conf.json          — identity, window, devUrl, frontendDist,
+//                                            externalBin, CSP, bundle.resources
+//   ../src-tauri/capabilities/default.json — permissions DERIVED from ./capabilities CAPABILITIES
+//                                            mapped through CAPABILITY_PERMISSIONS
 //
-// The sidecar boot env + the `IDENTIFIER` are NO LONGER generated: env is inline in the Rust
-// supervisor (src/sidecars/mod.rs), and the keychain service name is read at runtime from
+// The sidecar boot env + the `IDENTIFIER` are NO LONGER generated as a .rs: env is inline in the
+// Rust supervisor (src/sidecars/mod.rs), and the keychain service name is read at runtime from
 // `app.config().identifier`. `externalBin` / the CSP port / `bundle.resources` derive from the
-// package manifest, not a generated .rs.
+// package sidecar manifest, not a generated .rs.
 //
 // Usage: `bun desktop:generate` (writes) · `bun desktop:generate --check` (exit 1 on drift —
-// wired into test:tooling via scripts/desktop/generate.test.ts).
+// wired into test:tooling via ./generate.test.ts).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { posix } from 'node:path'
 import { resolve } from 'node:path'
-import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
-import { SIDECARS, type SidecarManifestEntry } from '@codedm/app-tauri/sidecars'
-import { WINDOW } from '@codedm/app-tauri/window'
-import { REPO } from '../../template.config'
+import { REPO } from '../../../../template.config'
+import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
+import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { SIDECARS, type SidecarManifestEntry } from './sidecars'
+import { WINDOW, WINDOW_FRAME } from './window'
 
-const ROOT = resolve(import.meta.dirname, '..', '..')
+// config/ → tauri → app → packages → repo root (four levels up). Output paths stay repo-relative
+// (derived from REPO.workspaces.appTauri.pkgRoot) so they resolve to the same src-tauri/ files.
+const ROOT = resolve(import.meta.dirname, '..', '..', '..', '..')
 
 const shell = REPO.workspaces.appTauri
 const srcTauriDir = posix.join(shell.pkgRoot, 'src-tauri')
 
-// The Drizzle migrations dir travels as a bundle resource: `build.ts` stages it under
+// The Drizzle migrations dir travels as a bundle resource: `build-sidecars.ts` stages it under
 // `binaries/migrations`, `bundle.resources` copies it to the app resource dir at `migrations`, and
 // the daemon's `CODEDM_MIGRATIONS_DIR` (set inline in the Rust supervisor) resolves
-// `resource_dir/migrations`. One explicit line here, mirrored in build.ts + mod.rs.
+// `resource_dir/migrations`. One explicit line here, mirrored in build-sidecars.ts + mod.rs.
 const MIGRATIONS_RESOURCE = { 'binaries/migrations': 'migrations' } as const
 
 // ── contract resolution helpers (fail-loud: an unknown key is a contract bug) ──
 
 function envExample(key: string): string {
 	const decl = (REPO.env as Record<string, { example: string } | undefined>)[key]
-	if (decl === undefined) throw new Error(`desktop contract references env key '${key}' — not declared in REPO.env`)
+	if (decl === undefined) throw new Error(`desktop config references env key '${key}' — not declared in REPO.env`)
 	return decl.example
 }
 
@@ -54,12 +56,12 @@ function sidecarPort(sidecar: SidecarManifestEntry): number {
 
 const binName = (sidecar: SidecarManifestEntry): string => `${REPO.brand}-${sidecar.role}`
 
-const vitePort = (): string => envExample(REPO.desktop.console.devPortEnvKey)
+const vitePort = (): string => envExample(CONSOLE.devPortEnvKey)
 
 // ── renderers ────────────────────────────────────────────────────────────────
 
 export function renderTauriConf(): string {
-	const console_ = REPO.desktop.console
+	const console_ = CONSOLE
 	const consoleWs = REPO.workspaces[console_.workspace]
 	if (consoleWs.nxProject === null) throw new Error(`console workspace '${console_.workspace}' has no nx project`)
 	// Config paths resolve relative to src-tauri/ (where tauri.conf.json lives).
@@ -76,9 +78,9 @@ export function renderTauriConf(): string {
 		.join(' ')
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
-		productName: REPO.desktop.displayName,
+		productName: DISPLAY_NAME,
 		version: '0.1.0',
-		identifier: REPO.desktop.identifier,
+		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the
 			// ROOT — `console_.devBasePath` — NOT the web '/app/' mount (`console_.devPath`).
@@ -91,13 +93,13 @@ export function renderTauriConf(): string {
 			withGlobalTauri: true,
 			windows: [
 				{
-					label: REPO.desktop.window.label,
-					title: REPO.desktop.displayName,
-					width: REPO.desktop.window.width,
-					height: REPO.desktop.window.height,
-					minWidth: REPO.desktop.window.minWidth,
-					minHeight: REPO.desktop.window.minHeight,
-					// Presentation (integrated title bar) is owned by @codedm/app-tauri/window — a house
+					label: WINDOW_FRAME.label,
+					title: DISPLAY_NAME,
+					width: WINDOW_FRAME.width,
+					height: WINDOW_FRAME.height,
+					minWidth: WINDOW_FRAME.minWidth,
+					minHeight: WINDOW_FRAME.minHeight,
+					// Presentation (integrated title bar) is owned by ./window WINDOW — a house
 					// standard, not a per-product knob. Spread AFTER the size/label so it always wins.
 					...WINDOW,
 				},
@@ -112,7 +114,7 @@ export function renderTauriConf(): string {
 			externalBin: SIDECARS.map(s => `binaries/${binName(s)}`),
 			icon: ['icons/icon.icns', 'icons/icon.ico', 'icons/32x32.png', 'icons/128x128.png'],
 			// Assets a compiled sidecar can't inline (the Drizzle migrations) are staged by
-			// build.ts under `binaries/migrations` and copied into the app resource dir at
+			// build-sidecars.ts under `binaries/migrations` and copied into the app resource dir at
 			// `migrations`; the daemon's inline `CODEDM_MIGRATIONS_DIR` resolves `resource_dir/migrations`.
 			resources: MIGRATIONS_RESOURCE,
 		},
@@ -122,16 +124,16 @@ export function renderTauriConf(): string {
 
 export function renderCapabilities(): string {
 	// Each abstract capability key resolves to its Tauri permissions via the shell-owned map
-	// (@codedm/app-tauri/capabilities). Fail loud on a capability with no mapping — the contract
-	// declared a native capability the shell package doesn't know how to grant.
+	// (./capabilities). Fail loud on a capability with no mapping — the config declared a native
+	// capability the shell package doesn't know how to grant.
 	const permsFor = CAPABILITY_PERMISSIONS as Record<string, readonly string[] | undefined>
 	const permissions = [
 		'core:default',
-		...REPO.desktop.capabilities.flatMap(cap => {
+		...CAPABILITIES.flatMap(cap => {
 			const perms = permsFor[cap]
 			if (perms === undefined)
 				throw new Error(
-					`desktop capability '${cap}' has no permission mapping in @codedm/app-tauri/capabilities (CAPABILITY_PERMISSIONS)`,
+					`desktop capability '${cap}' has no permission mapping in ./capabilities (CAPABILITY_PERMISSIONS)`,
 				)
 			return perms
 		}),
@@ -141,7 +143,7 @@ export function renderCapabilities(): string {
 		identifier: 'default',
 		description:
 			'GENERATED from template.config.ts REPO.desktop.services (bun desktop:generate) — permissions derive from the native services the console consumes; do NOT hand-edit.',
-		windows: [REPO.desktop.window.label],
+		windows: [WINDOW_FRAME.label],
 		permissions,
 	}
 	return `${JSON.stringify(capability, null, '\t')}\n`
@@ -184,12 +186,12 @@ if (import.meta.main) {
 				current = null
 			}
 			if (current !== out.render()) {
-				console.error(`✗ ${out.path} is out of sync with template.config.ts REPO.desktop — run: bun desktop:generate`)
+				console.error(`✗ ${out.path} is out of sync with the desktop config — run: bun desktop:generate`)
 				drifted = true
 			}
 		}
 		if (drifted) process.exit(1)
-		console.log(`✓ desktop shell config in sync with the contract (${OUTPUTS.length} files)`)
+		console.log(`✓ desktop shell config in sync (${OUTPUTS.length} files)`)
 	} else {
 		for (const out of OUTPUTS) {
 			writeFileSync(resolve(ROOT, out.path), out.render())

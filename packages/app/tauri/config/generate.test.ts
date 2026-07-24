@@ -1,22 +1,25 @@
-// Drift gate for the desktop contract (mirrors the env-model ENV-04 rail): the committed
-// tauri.conf.json / capabilities/default.json must be EXACTLY what scripts/desktop/generate.ts
-// renders from template.config.ts REPO.desktop + the package sidecar manifest. Any hand-edit
-// of a generated file, or contract change without regeneration, is a red build.
-import { CAPABILITY_PERMISSIONS } from '@codedm/app-tauri/capabilities'
-import { SIDECARS } from '@codedm/app-tauri/sidecars'
+// Drift gate for the desktop config (mirrors the env-model ENV-04 rail): the committed
+// tauri.conf.json / capabilities/default.json must be EXACTLY what ./generate.ts renders from the
+// LOCAL config (./app, ./window, ./capabilities, ./sidecars) + the abstract contract
+// (template.config.ts REPO.brand/workspaces/env). Any hand-edit of a generated file, or a config
+// change without regeneration, is a red build.
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { REPO } from '../../template.config'
+import { REPO } from '../../../../template.config'
+import { CONSOLE, IDENTIFIER } from './app'
+import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
+import { SIDECARS } from './sidecars'
 
-const ROOT = resolve(import.meta.dirname, '..', '..')
+// config/ → tauri → app → packages → repo root (four levels up).
+const ROOT = resolve(import.meta.dirname, '..', '..', '..', '..')
 
-describe('desktop contract (REPO.desktop)', () => {
-	it('DSK-01: every committed output is exactly the contract rendering (bun desktop:generate)', () => {
+describe('desktop config (packages/app/tauri/config)', () => {
+	it('DSK-01: every committed output is exactly the config rendering (bun desktop:generate)', () => {
 		for (const out of OUTPUTS) {
 			const committed = readFileSync(resolve(ROOT, out.path), 'utf8')
-			expect(committed === out.render(), `${out.path} is out of sync with REPO.desktop — run: bun desktop:generate`).toBe(true)
+			expect(committed === out.render(), `${out.path} is out of sync with the desktop config — run: bun desktop:generate`).toBe(true)
 		}
 	})
 
@@ -42,29 +45,29 @@ describe('desktop contract (REPO.desktop)', () => {
 			identifier: string
 			bundle: { externalBin: string[]; resources: Record<string, string> }
 		}
-		expect(conf.identifier).toBe(REPO.desktop.identifier)
+		expect(conf.identifier).toBe(IDENTIFIER)
 		expect(conf.bundle.externalBin).toEqual(SIDECARS.map(s => `binaries/${REPO.brand}-${s.role}`))
 		// The one staged asset a compiled sidecar can't inline (the Drizzle migrations).
 		expect(conf.bundle.resources).toEqual({ 'binaries/migrations': 'migrations' })
 	})
 
 	it('DSK-06: capabilities render through the shell-owned CAPABILITY_PERMISSIONS map (every key mapped)', () => {
-		// The abstract contract (REPO.desktop.capabilities) holds ONLY capability keys; the
-		// capability → Tauri permission map lives in @codedm/app-tauri/capabilities. Every declared
-		// capability MUST have a mapping there — renderCapabilities throws otherwise.
+		// The abstract config (CAPABILITIES) holds ONLY capability keys; the capability → Tauri
+		// permission map lives in ./capabilities. Every declared capability MUST have a mapping
+		// there — renderCapabilities throws otherwise.
 		const map = CAPABILITY_PERMISSIONS as Record<string, readonly string[] | undefined>
-		for (const cap of REPO.desktop.capabilities) {
-			expect(map[cap], `capability '${cap}' has no permission mapping in @codedm/app-tauri/capabilities`).toBeDefined()
+		for (const cap of CAPABILITIES) {
+			expect(map[cap], `capability '${cap}' has no permission mapping in ./capabilities`).toBeDefined()
 		}
 		// Rendering is behaviour-preserving: core:default + each capability's mapped permissions, in order.
 		const rendered = JSON.parse(renderCapabilities()) as { permissions: string[] }
-		const expected = ['core:default', ...REPO.desktop.capabilities.flatMap(cap => map[cap] ?? [])]
+		const expected = ['core:default', ...CAPABILITIES.flatMap(cap => map[cap] ?? [])]
 		expect(rendered.permissions).toEqual(expected)
 	})
 
 	it('DSK-05: desktop dev serves the root-based SPA (devUrl = ROOT, beforeDevCommand = dev-spa target)', () => {
 		const conf = JSON.parse(renderTauriConf()) as { build: { devUrl: string; beforeDevCommand: string } }
-		const console_ = REPO.desktop.console
+		const console_ = CONSOLE
 		const consoleWs = REPO.workspaces[console_.workspace]
 		const vitePort = REPO.env.VITE_PORT.example
 		// devUrl is the ROOT (desktop base '/'), NOT the web '/app/' mount — the whole bug.
