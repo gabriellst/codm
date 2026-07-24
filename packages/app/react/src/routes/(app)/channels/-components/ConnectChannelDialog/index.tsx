@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useQueryClient } from '@tanstack/react-query'
 import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-react'
 import { getHomeDashboardQueryKey } from '@codedm/client-typescript/typescript'
-import { ChannelStatusEnum, PlatformEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codedm/client-typescript/go'
+import { ChannelKindEnum, ChannelStatusEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codedm/client-typescript/go'
 import { extractErrorCode, getErrorTranslation } from '@/lib'
 import { channelGlyph } from '@/components/console/glyphs'
 import { Button } from '@/components/ui/button'
@@ -44,7 +44,7 @@ export function ConnectChannelDialog({ trigger }: { trigger?: ReactElement }) {
 	// though the resolved channel id is unchanged.
 	const [attempt, setAttempt] = useState(0)
 
-	const resolve = useGetOrCreateChannel({ platform: PlatformEnum.WHATSAPP }, { query: { enabled: open } })
+	const resolve = useGetOrCreateChannel({ platform: ChannelKindEnum.WHATSAPP }, { query: { enabled: open } })
 	const channelId = resolve.data?.id ?? null
 
 	const connect = useConnectChannel()
