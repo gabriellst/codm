@@ -28,7 +28,7 @@ export function PageHeader({
 	const { t } = useTranslation()
 	return (
 		<div className={cn('flex items-start justify-between gap-4', className)}>
-			<div className="flex min-w-0 flex-1 items-start gap-3">
+			<div className="flex min-w-0 flex-1 items-center gap-3">
 				{back && (
 					<Button
 						variant="secondary"

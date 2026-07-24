@@ -34,8 +34,6 @@ const LANG_CONFIG = {
 	go: { modulePrefix: 'template' },
 } as const
 
-const goModulePrefix = LANG_CONFIG.go.modulePrefix
-
 /**
  * WORKSPACES — the first-class table of repo workspaces. LANGUAGE IS A DECLARED PROPERTY here,
  * never inferred from a folder/package NAME (a fork's TS backend may be named `main-back`; a Go
@@ -287,7 +285,7 @@ export const REPO = {
 	/** Per-language SDK package-name prefixes the graph/detectors key off. */
 	sdkPackagePrefixes: {
 		typescript: `${scope}/client`,
-		go: `${goModulePrefix}/client`,
+		go: `${LANG_CONFIG.go.modulePrefix}/client`,
 	},
 
 	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */
