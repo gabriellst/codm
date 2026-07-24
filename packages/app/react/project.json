@@ -65,7 +65,7 @@
 				}
 			],
 			"options": {
-				"command": "CODEDM_DESKTOP=true vite --host",
+				"command": "PORT= CODEDM_DESKTOP=true CODEDM_DESKTOP_DEV=true vite --host",
 				"cwd": "packages/app/react"
 			}
 		},

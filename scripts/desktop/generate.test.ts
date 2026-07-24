@@ -50,7 +50,8 @@ describe('desktop contract (REPO.desktop)', () => {
 		expect(console_.devBasePath).toBe('/')
 		expect(conf.build.devUrl).toBe(`http://localhost:${vitePort}/`)
 		expect(conf.build.devUrl.endsWith('/app/')).toBe(false)
-		// beforeDevCommand runs the SPA/desktop dev target (nitro OFF), never the web `dev`.
+		// beforeDevCommand runs the SPA/desktop dev target (base '/', nitro kept for the dev
+		// document server — stripped only for build-spa), never the web `dev`.
 		expect(console_.devTarget).toBe('dev-spa')
 		expect(conf.build.beforeDevCommand).toBe(`bun x nx run ${consoleWs.nxProject}:${console_.devTarget}`)
 	})
