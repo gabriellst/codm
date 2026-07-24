@@ -330,17 +330,14 @@ func (e BufferSize) Valid() bool {
 
 // Defines values for ChannelKind.
 const (
-	INSTAGRAMDM ChannelKind = "INSTAGRAM_DM"
-	TELEGRAM    ChannelKind = "TELEGRAM"
-	WHATSAPP    ChannelKind = "WHATSAPP"
+	INTERNAL ChannelKind = "INTERNAL"
+	WHATSAPP ChannelKind = "WHATSAPP"
 )
 
 // Valid indicates whether the value is a known member of the ChannelKind enum.
 func (e ChannelKind) Valid() bool {
 	switch e {
-	case INSTAGRAMDM:
-		return true
-	case TELEGRAM:
+	case INTERNAL:
 		return true
 	case WHATSAPP:
 		return true
@@ -352,8 +349,10 @@ func (e ChannelKind) Valid() bool {
 // Defines values for ChannelStatus.
 const (
 	CONNECTED    ChannelStatus = "CONNECTED"
+	CONNECTING   ChannelStatus = "CONNECTING"
+	CREATED      ChannelStatus = "CREATED"
+	DELETED      ChannelStatus = "DELETED"
 	DISCONNECTED ChannelStatus = "DISCONNECTED"
-	PAIRING      ChannelStatus = "PAIRING"
 )
 
 // Valid indicates whether the value is a known member of the ChannelStatus enum.
@@ -361,9 +360,13 @@ func (e ChannelStatus) Valid() bool {
 	switch e {
 	case CONNECTED:
 		return true
-	case DISCONNECTED:
+	case CONNECTING:
 		return true
-	case PAIRING:
+	case CREATED:
+		return true
+	case DELETED:
+		return true
+	case DISCONNECTED:
 		return true
 	default:
 		return false
@@ -417,19 +420,19 @@ func (e ClassificationMethod) Valid() bool {
 
 // Defines values for ContactKind.
 const (
-	ContactKindBROADCAST ContactKind = "BROADCAST"
-	ContactKindCONTACT   ContactKind = "CONTACT"
-	ContactKindGROUP     ContactKind = "GROUP"
+	BROADCAST ContactKind = "BROADCAST"
+	GROUP     ContactKind = "GROUP"
+	USER      ContactKind = "USER"
 )
 
 // Valid indicates whether the value is a known member of the ContactKind enum.
 func (e ContactKind) Valid() bool {
 	switch e {
-	case ContactKindBROADCAST:
+	case BROADCAST:
 		return true
-	case ContactKindCONTACT:
+	case GROUP:
 		return true
-	case ContactKindGROUP:
+	case USER:
 		return true
 	default:
 		return false
@@ -876,19 +879,19 @@ func (e ProviderStatus) Valid() bool {
 
 // Defines values for SenderIdentity.
 const (
-	AGENT    SenderIdentity = "AGENT"
-	OPERATOR SenderIdentity = "OPERATOR"
-	ROUTER   SenderIdentity = "ROUTER"
+	SenderIdentityAGENT    SenderIdentity = "AGENT"
+	SenderIdentityOPERATOR SenderIdentity = "OPERATOR"
+	SenderIdentityROUTER   SenderIdentity = "ROUTER"
 )
 
 // Valid indicates whether the value is a known member of the SenderIdentity enum.
 func (e SenderIdentity) Valid() bool {
 	switch e {
-	case AGENT:
+	case SenderIdentityAGENT:
 		return true
-	case OPERATOR:
+	case SenderIdentityOPERATOR:
 		return true
-	case ROUTER:
+	case SenderIdentityROUTER:
 		return true
 	default:
 		return false

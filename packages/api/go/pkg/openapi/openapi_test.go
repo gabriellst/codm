@@ -46,7 +46,7 @@ func TestEmitterHappyPath(t *testing.T) {
 		"ErrorResponse",
 		"ServerEvent",
 		"ServerEventName",
-		"Platform",
+		"ChannelKind",
 		"MessageType",
 	} {
 		if _, ok := schemas[name]; !ok {
@@ -70,10 +70,10 @@ func TestEmitterHappyPath(t *testing.T) {
 		t.Error("ServerEvent missing discriminator")
 	}
 
-	// 4. Platform enum has x-enum-varnames.
-	platform := schemas["Platform"].(map[string]any)
-	if _, ok := platform["x-enum-varnames"]; !ok {
-		t.Error("Platform missing x-enum-varnames")
+	// 4. ChannelKind enum (the reconciled Platform alias) has x-enum-varnames.
+	channelKind := schemas["ChannelKind"].(map[string]any)
+	if _, ok := channelKind["x-enum-varnames"]; !ok {
+		t.Error("ChannelKind missing x-enum-varnames")
 	}
 
 	// 5. At least one `@union`-annotated struct rendered as oneOf.

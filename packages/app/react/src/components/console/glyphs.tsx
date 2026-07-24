@@ -1,6 +1,4 @@
 import {
-	IconBrandInstagram,
-	IconBrandTelegram,
 	IconBrandWhatsapp,
 	IconHexagon,
 	IconMessageDots,
@@ -14,18 +12,20 @@ import type { ChannelKind, IssueStatus, ProviderKind, StopResolution } from '@co
 
 export const channelGlyph: Record<ChannelKind, Icon> = {
 	WHATSAPP: IconBrandWhatsapp,
-	INSTAGRAM_DM: IconBrandInstagram,
-	TELEGRAM: IconBrandTelegram,
+	INTERNAL: IconTerminal2,
 }
 
 export const channelLabel: Record<ChannelKind, string> = {
 	WHATSAPP: 'WhatsApp',
-	INSTAGRAM_DM: 'Instagram DM',
-	TELEGRAM: 'Telegram',
+	INTERNAL: 'Internal',
 }
 
-/** All channel kinds in display order — used to render the full connectivity list. */
-export const CHANNEL_KINDS: ChannelKind[] = ['WHATSAPP', 'INSTAGRAM_DM', 'TELEGRAM']
+/**
+ * User-connectable channel kinds in display order — used to render the connectivity list.
+ * INTERNAL is the daemon's own in-process channel (message projector), not a bridge the
+ * operator pairs, so it's deliberately excluded here while remaining in the glyph/label maps.
+ */
+export const CHANNEL_KINDS: ChannelKind[] = ['WHATSAPP']
 
 // ── Providers (agent CLIs) ─────────────────────────────────────────────────────
 

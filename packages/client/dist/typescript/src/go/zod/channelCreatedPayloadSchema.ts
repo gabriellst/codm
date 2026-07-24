@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import { platformSchema } from "./platformSchema.ts";
+import { channelKindSchema } from "./channelKindSchema.ts";
 import { z } from "zod/v4";
 
 export const channelCreatedPayloadSchema = z.object({
@@ -11,6 +11,6 @@ export const channelCreatedPayloadSchema = z.object({
 "name": z.string(),
 "ownerId": z.string(),
 get "platform"(){
-                return platformSchema
+                return channelKindSchema
               }
     })

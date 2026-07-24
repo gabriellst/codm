@@ -3,18 +3,18 @@
 * Do not edit manually.
 */
 
-import { platformSchema } from "./platformSchema.ts";
-import { remoteTypeSchema } from "./remoteTypeSchema.ts";
+import { channelKindSchema } from "./channelKindSchema.ts";
+import { contactKindSchema } from "./contactKindSchema.ts";
 import { z } from "zod/v4";
 
 export const channelRemoteCreatedPayloadSchema = z.object({
     "channelId": z.uuid(),
 "ownerId": z.string(),
 get "platform"(){
-                return platformSchema
+                return channelKindSchema
               },
 "remoteId": z.string(),
 get "remoteType"(){
-                return remoteTypeSchema
+                return contactKindSchema
               }
     })

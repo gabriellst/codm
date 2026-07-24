@@ -117,7 +117,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		// Every channel the operator owns (any status) scopes the contact directory; the CONNECTED
 		// subset drives the attach gate + the channel picker.
 		const ownerChannels = await this.db
-			.select({ channelId: channels.id, kind: channels.kind, status: channels.status })
+			.select({ channelId: channels.id, kind: channels.platform, status: channels.status })
 			.from(channels)
 			.where(eq(channels.ownerId, input.ownerId))
 

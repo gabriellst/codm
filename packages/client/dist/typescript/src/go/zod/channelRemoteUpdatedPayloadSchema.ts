@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import { remoteTypeSchema } from "./remoteTypeSchema.ts";
+import { contactKindSchema } from "./contactKindSchema.ts";
 import { z } from "zod/v4";
 
 export const channelRemoteUpdatedPayloadSchema = z.object({
@@ -14,6 +14,6 @@ export const channelRemoteUpdatedPayloadSchema = z.object({
 "ownerId": z.string(),
 "remoteId": z.string(),
 get "type"(){
-                return remoteTypeSchema
+                return contactKindSchema
               }
     })

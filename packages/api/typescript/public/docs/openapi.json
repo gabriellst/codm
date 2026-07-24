@@ -932,7 +932,7 @@
                       "channelId": "019e4d24-6524-7041-9e1c-8108180cddae",
                       "externalId": "5511999999999@s.whatsapp.net",
                       "displayName": "Ada",
-                      "kind": "CONTACT"
+                      "kind": "USER"
                     },
                     "workspaceId": "019e4d24-6524-7041-9e1c-8108180cddb0",
                     "providers": [
@@ -6890,7 +6890,7 @@
       "ContactKind": {
         "type": "string",
         "enum": [
-          "CONTACT",
+          "USER",
           "GROUP",
           "BROADCAST"
         ]
@@ -6908,8 +6908,7 @@
         "type": "string",
         "enum": [
           "WHATSAPP",
-          "INSTAGRAM_DM",
-          "TELEGRAM"
+          "INTERNAL"
         ]
       },
       "ThreadStatus": {
@@ -6986,9 +6985,11 @@
       "ChannelStatus": {
         "type": "string",
         "enum": [
+          "CREATED",
+          "CONNECTING",
+          "CONNECTED",
           "DISCONNECTED",
-          "PAIRING",
-          "CONNECTED"
+          "DELETED"
         ]
       },
       "Language": {

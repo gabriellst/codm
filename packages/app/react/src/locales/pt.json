@@ -208,9 +208,11 @@
 			"LINK": "Deploy de preview"
 		},
 		"ChannelStatus": {
+			"CREATED": "Criado",
+			"CONNECTING": "Conectando…",
 			"CONNECTED": "Conectado",
 			"DISCONNECTED": "Não conectado",
-			"PAIRING": "Pareando…"
+			"DELETED": "Excluído"
 		},
 		"CurrencyCode": {
 			"AED": "Dirham (AED)",

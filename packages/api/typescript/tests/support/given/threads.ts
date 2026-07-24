@@ -26,7 +26,7 @@ export async function givenThread(testBed: TestBed, overrides: ThreadOverrides =
 		contactRef: {
 			externalId: contactExternalId,
 			displayName: overrides.contactDisplayName ?? 'Test Contact',
-			kind: overrides.contactKind ?? ContactKind.CONTACT,
+			kind: overrides.contactKind ?? ContactKind.USER,
 		},
 		workspaceId: overrides.workspaceId ?? Id.value(),
 		providers: overrides.providers ?? [ProviderKind.CLAUDE_CODE],

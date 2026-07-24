@@ -1,8 +1,10 @@
 namespace TemplateContracts;
 
-@doc("Connection health of a Channel. DISCONNECTED (no session) → PAIRING (QR/OAuth in progress) → CONNECTED (reachable). Descends the medscall channel status.")
+@doc("Connection lifecycle of a Channel. CREATED (row minted) → CONNECTING (QR/OAuth pairing in progress) → CONNECTED (reachable) → DISCONNECTED (session torn down); DELETED is the soft-delete tombstone. Reconciled to the rich gateway value-set (Go domain is authoritative). Persisted as the `status` column on channel-side projections (Go-owned).")
 enum ChannelStatus {
-  DISCONNECTED: "DISCONNECTED",
-  PAIRING: "PAIRING",
+  CREATED: "CREATED",
+  CONNECTING: "CONNECTING",
   CONNECTED: "CONNECTED",
+  DISCONNECTED: "DISCONNECTED",
+  DELETED: "DELETED",
 }

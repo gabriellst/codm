@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const contactKindSchema = z.enum(["CONTACT", "GROUP", "BROADCAST"])
+export const contactKindSchema = z.enum(["USER", "GROUP", "BROADCAST"])

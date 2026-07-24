@@ -3,8 +3,8 @@
 * Do not edit manually.
 */
 
+import type { ChannelKind } from "./ChannelKind.ts";
 import type { ChannelStatus } from "./ChannelStatus.ts";
-import type { Platform } from "./Platform.ts";
 
 export type CreateChannelOutput = {
     /**
@@ -22,7 +22,7 @@ export type CreateChannelOutput = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: ChannelKind;
     /**
      * @type string
     */

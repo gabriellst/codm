@@ -3,8 +3,8 @@
 * Do not edit manually.
 */
 
+import { channelKindSchema } from "./channelKindSchema.ts";
 import { channelStatusSchema } from "./channelStatusSchema.ts";
-import { platformSchema } from "./platformSchema.ts";
 import { z } from "zod/v4";
 
 export const createChannelOutputSchema = z.object({
@@ -12,7 +12,7 @@ export const createChannelOutputSchema = z.object({
 "id": z.string(),
 "name": z.string(),
 get "platform"(){
-                return platformSchema
+                return channelKindSchema
               },
 get "status"(){
                 return channelStatusSchema

@@ -6,7 +6,7 @@ import { Thread } from './Thread'
 const base = {
 	ownerId: '00000000-0000-4000-8000-000000000001',
 	channelId: '00000000-0000-4000-8000-0000000000aa',
-	contactRef: { externalId: 'c1', displayName: 'Contact', kind: ContactKind.CONTACT },
+	contactRef: { externalId: 'c1', displayName: 'Contact', kind: ContactKind.USER },
 	workspaceId: '00000000-0000-4000-8000-0000000000bb',
 	providers: [ProviderKind.CLAUDE_CODE],
 	participants: [

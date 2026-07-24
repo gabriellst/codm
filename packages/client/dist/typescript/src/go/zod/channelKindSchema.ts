@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const channelKindSchema = z.enum(["WHATSAPP", "INSTAGRAM_DM", "TELEGRAM"])
+export const channelKindSchema = z.enum(["WHATSAPP", "INTERNAL"])

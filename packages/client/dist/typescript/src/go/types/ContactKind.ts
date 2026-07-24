@@ -5,7 +5,7 @@
 
 
 export const ContactKindEnum = {
-    CONTACT: "CONTACT",
+    USER: "USER",
     GROUP: "GROUP",
     BROADCAST: "BROADCAST"
 } as const;

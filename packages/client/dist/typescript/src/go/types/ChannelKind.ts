@@ -6,8 +6,7 @@
 
 export const ChannelKindEnum = {
     WHATSAPP: "WHATSAPP",
-    INSTAGRAM_DM: "INSTAGRAM_DM",
-    TELEGRAM: "TELEGRAM"
+    INTERNAL: "INTERNAL"
 } as const;
 
 export type ChannelKindEnumKey = (typeof ChannelKindEnum)[keyof typeof ChannelKindEnum];

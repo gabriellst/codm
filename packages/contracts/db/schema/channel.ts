@@ -14,7 +14,7 @@ import {
 	foreignKey,
 } from 'drizzle-orm/pg-core'
 // Enum column types — single-sourced from the generated wire binding (type-only, erased at compile).
-import type { ContactKind, ChannelKind, Direction } from '../../generated/typescript/src/wire/enums'
+import type { ContactKind, ChannelKind, ChannelStatus, Direction } from '../../generated/typescript/src/wire/enums'
 
 /**
  * `gateway` — the Channel Gateway (BC1) schema (Go-owned read model).
@@ -22,9 +22,11 @@ import type { ContactKind, ChannelKind, Direction } from '../../generated/typesc
  * Tables:
  *   - `channels` — one row per platform session (WhatsApp today), materialized
  *     from the gateway's domain lifecycle events by the Go status projectors
- *     (packages/api/go/internal/channel/). It is the source of truth for
- *     reconnection (`account_detail` = the paired account's canonical remote id)
- *     and backs the gateway's own list/get read endpoints.
+ *     (packages/api/go/internal/channel/). RICH shape (Go domain authoritative):
+ *     platform + name + owner_remote_id (the paired account's canonical remote id,
+ *     used to rebuild the whatsmeow device on reconnect) + credentials + status +
+ *     optimistic-concurrency `version`. Backs the gateway's own list/get read
+ *     endpoints and get-or-create keyed on (owner_id, platform).
  *   - `remotes` — the contact / group / broadcast projection, one row per remote
  *     per channel. Driven by remote_created/updated/deleted + the message/receipt
  *     lifecycle (unread + preview pointers). Ports medscall channel migrations
@@ -58,26 +60,36 @@ export const channels = gatewaySchema.table(
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
 
-		// Single-operator daemon: the ownerId axis is collapsed to one constant.
-		ownerId: uuid('owner_id').notNull(),
+		// The owning operator/tenant. TEXT (not uuid) — the Go domain model is
+		// authoritative and scans this into a Go `string` (tests use non-uuid ids).
+		ownerId: text('owner_id').notNull(),
 
-		// wire.ChannelKind — WHATSAPP | INSTAGRAM_DM | TELEGRAM. Stored as the raw
-		// frozen enum value, not a local pgEnum mirror (cross-boundary enum canon).
-		kind: text('kind').notNull(),
+		// wire.ChannelKind — WHATSAPP | INTERNAL. Stored as the raw frozen enum
+		// value, not a local pgEnum mirror (cross-boundary enum canon).
+		platform: text('platform').$type<ChannelKind>().notNull(),
 
-		// wire.ChannelStatus — DISCONNECTED | PAIRING | CONNECTED.
-		status: text('status').notNull().default('DISCONNECTED'),
+		// Human-readable label for the session.
+		name: text('name').notNull(),
 
 		// The paired account's canonical remote id (phone JID for WhatsApp), used
 		// to rebuild the whatsmeow device on reconnect. Empty until first pairing.
-		accountDetail: text('account_detail').notNull().default(''),
+		ownerRemoteId: text('owner_remote_id').notNull().default(''),
+
+		// Opaque connection credentials (session/device payload), platform-shaped.
+		credentials: jsonb('credentials').notNull().default({}),
+
+		// wire.ChannelStatus — CREATED | CONNECTING | CONNECTED | DISCONNECTED | DELETED.
+		status: text('status').$type<ChannelStatus>().notNull(),
 
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+		// Optimistic-concurrency counter for the find -> applyEvent -> save path.
+		version: bigint('version', { mode: 'number' }).notNull().default(0),
 	},
 	t => ({
-		// Get-or-create keys off (owner, kind): one session per platform per operator.
-		ownerKindIdx: index('channels_owner_kind_idx').on(t.ownerId, t.kind),
+		ownerIdx: index('idx_channels_owner_id').on(t.ownerId),
+		// Get-or-create keys off (owner, platform): one session per platform per operator.
+		ownerPlatformIdx: index('idx_channels_owner_platform').on(t.ownerId, t.platform),
 	}),
 )
 

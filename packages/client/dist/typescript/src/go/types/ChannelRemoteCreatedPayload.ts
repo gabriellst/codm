@@ -3,8 +3,8 @@
 * Do not edit manually.
 */
 
-import type { Platform } from "./Platform.ts";
-import type { RemoteType } from "./RemoteType.ts";
+import type { ChannelKind } from "./ChannelKind.ts";
+import type { ContactKind } from "./ContactKind.ts";
 
 export type ChannelRemoteCreatedPayload = {
     /**
@@ -18,7 +18,7 @@ export type ChannelRemoteCreatedPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: ChannelKind;
     /**
      * @type string
     */
@@ -26,5 +26,5 @@ export type ChannelRemoteCreatedPayload = {
     /**
      * @type string
     */
-    remoteType: RemoteType;
+    remoteType: ContactKind;
 };

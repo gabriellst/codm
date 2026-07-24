@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { Platform } from "./Platform.ts";
+import type { ChannelKind } from "./ChannelKind.ts";
 
 export type ChannelMessageDeletedPayload = {
     /**
@@ -21,7 +21,7 @@ export type ChannelMessageDeletedPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: ChannelKind;
     /**
      * @type string
     */

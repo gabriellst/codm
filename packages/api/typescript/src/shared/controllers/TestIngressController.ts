@@ -47,7 +47,7 @@ const InboundMessageBody = z.object({
 	messageId: z.string().min(1).optional(),
 	senderExternalId: z.string().min(1).optional(),
 	contactDisplayName: z.string().min(1).default('Ada'),
-	contactKind: z.enum(ContactKind).default(ContactKind.CONTACT),
+	contactKind: z.enum(ContactKind).default(ContactKind.USER),
 	isGroup: z.boolean().default(false),
 	text: z.string().min(1),
 	quotedEntryId: z.uuid().optional(),
@@ -93,13 +93,15 @@ export class TestIngressController extends Controller<typeof TestIngressInputSch
 				.values({
 					id: channelId,
 					ownerId,
-					kind: body.platform,
+					platform: body.platform,
+					name: body.platform,
 					status: ChannelStatus.CONNECTED,
-					accountDetail: body.accountDetail,
+					ownerRemoteId: body.accountDetail,
+					credentials: {},
 				})
 				.onConflictDoUpdate({
 					target: channels.id,
-					set: { status: ChannelStatus.CONNECTED, accountDetail: body.accountDetail, updatedAt: new Date() },
+					set: { status: ChannelStatus.CONNECTED, ownerRemoteId: body.accountDetail, updatedAt: new Date() },
 				})
 			return { status: HttpStatusCode.OK, data: { ok: true, channelId } }
 		}

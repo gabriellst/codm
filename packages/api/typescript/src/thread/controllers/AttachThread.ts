@@ -18,7 +18,7 @@ export const AttachThreadControllerInputSchema = z
 					channelId: '019e4d24-6524-7041-9e1c-8108180cddae',
 					externalId: '5511999999999@s.whatsapp.net',
 					displayName: 'Ada',
-					kind: ContactKind.CONTACT,
+					kind: ContactKind.USER,
 				},
 				workspaceId: '019e4d24-6524-7041-9e1c-8108180cddb0',
 				providers: [ProviderKind.CLAUDE_CODE],

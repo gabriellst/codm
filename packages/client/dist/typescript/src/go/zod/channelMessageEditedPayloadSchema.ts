@@ -3,8 +3,8 @@
 * Do not edit manually.
 */
 
+import { channelKindSchema } from "./channelKindSchema.ts";
 import { messageTypeSchema } from "./messageTypeSchema.ts";
-import { platformSchema } from "./platformSchema.ts";
 import { z } from "zod/v4";
 
 export const channelMessageEditedPayloadSchema = z.object({
@@ -16,7 +16,7 @@ get "messageType"(){
               },
 "ownerId": z.string(),
 get "platform"(){
-                return platformSchema
+                return channelKindSchema
               },
 "remoteId": z.string(),
 "senderId": z.string(),

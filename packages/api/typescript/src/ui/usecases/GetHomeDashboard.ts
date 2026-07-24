@@ -50,7 +50,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 				threadId: threads.id,
 				displayName: threads.contactDisplayName,
 				workspacePath: workspaces.path,
-				channelKind: channels.kind,
+				channelKind: channels.platform,
 				providers: threads.providers,
 				status: threads.status,
 				updatedAt: threads.updatedAt,
@@ -87,7 +87,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		const issuesOpened = allIssues.filter(i => i.createdAt >= dayStart).length
 		const issuesClosed = allIssues.filter(i => i.completedAt !== null && i.completedAt !== undefined && i.completedAt >= dayStart).length
 
-		const channelRows = await this.db.select({ kind: channels.kind, status: channels.status }).from(channels).where(eq(channels.ownerId, input.ownerId))
+		const channelRows = await this.db.select({ kind: channels.platform, status: channels.status }).from(channels).where(eq(channels.ownerId, input.ownerId))
 
 		return {
 			agentsRunningNow,

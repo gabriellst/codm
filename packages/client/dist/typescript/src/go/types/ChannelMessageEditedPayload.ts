@@ -3,8 +3,8 @@
 * Do not edit manually.
 */
 
+import type { ChannelKind } from "./ChannelKind.ts";
 import type { MessageType } from "./MessageType.ts";
-import type { Platform } from "./Platform.ts";
 
 export type ChannelMessageEditedPayload = {
     /**
@@ -27,7 +27,7 @@ export type ChannelMessageEditedPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: ChannelKind;
     /**
      * @type string
     */

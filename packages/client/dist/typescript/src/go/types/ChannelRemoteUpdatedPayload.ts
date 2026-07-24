@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { RemoteType } from "./RemoteType.ts";
+import type { ContactKind } from "./ContactKind.ts";
 
 export type ChannelRemoteUpdatedPayload = {
     /**
@@ -33,5 +33,5 @@ export type ChannelRemoteUpdatedPayload = {
     /**
      * @type string
     */
-    type: RemoteType;
+    type: ContactKind;
 };

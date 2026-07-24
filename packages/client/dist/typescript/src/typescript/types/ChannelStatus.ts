@@ -5,9 +5,11 @@
 
 
 export const ChannelStatusEnum = {
+    CREATED: "CREATED",
+    CONNECTING: "CONNECTING",
+    CONNECTED: "CONNECTED",
     DISCONNECTED: "DISCONNECTED",
-    PAIRING: "PAIRING",
-    CONNECTED: "CONNECTED"
+    DELETED: "DELETED"
 } as const;
 
 export type ChannelStatusEnumKey = (typeof ChannelStatusEnum)[keyof typeof ChannelStatusEnum];

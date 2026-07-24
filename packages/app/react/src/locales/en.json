@@ -208,9 +208,11 @@
 			"LINK": "Preview deploy"
 		},
 		"ChannelStatus": {
+			"CREATED": "Created",
+			"CONNECTING": "Connecting…",
 			"CONNECTED": "Connected",
 			"DISCONNECTED": "Not connected",
-			"PAIRING": "Pairing…"
+			"DELETED": "Deleted"
 		},
 		"CurrencyCode": {
 			"AED": "UAE Dirham (AED)",

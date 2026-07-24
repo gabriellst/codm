@@ -1,8 +1,7 @@
 namespace TemplateContracts;
 
-@doc("Messaging platform a Channel bridges. Frozen for three (founder decision 4); only WHATSAPP is realized in the first gateway phase — INSTAGRAM_DM and TELEGRAM are reserved variants. Descends the medscall Platform enum. Persisted on channel-side projections (Go-owned).")
+@doc("Messaging platform a Channel bridges. Reconciled to the rich gateway value-set (Go domain is authoritative): WHATSAPP is the realized bridge; INTERNAL is the daemon's own in-process channel (used by the message projector). Descends the medscall Platform enum. Persisted as the `platform` column on channel-side projections (Go-owned). The Go domain Platform enum aliases this wire enum.")
 enum ChannelKind {
   WHATSAPP: "WHATSAPP",
-  INSTAGRAM_DM: "INSTAGRAM_DM",
-  TELEGRAM: "TELEGRAM",
+  INTERNAL: "INTERNAL",
 }

@@ -59,13 +59,12 @@ type ChannelKind string
 
 const (
 	ChannelKindWHATSAPP ChannelKind = "WHATSAPP"
-	ChannelKindINSTAGRAM_DM ChannelKind = "INSTAGRAM_DM"
-	ChannelKindTELEGRAM ChannelKind = "TELEGRAM"
+	ChannelKindINTERNAL ChannelKind = "INTERNAL"
 )
 
 func ParseChannelKind(s string) (ChannelKind, error) {
 	switch ChannelKind(s) {
-	case ChannelKindWHATSAPP, ChannelKindINSTAGRAM_DM, ChannelKindTELEGRAM:
+	case ChannelKindWHATSAPP, ChannelKindINTERNAL:
 		return ChannelKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid ChannelKind: %q", s)
@@ -75,14 +74,16 @@ func ParseChannelKind(s string) (ChannelKind, error) {
 type ChannelStatus string
 
 const (
-	ChannelStatusDISCONNECTED ChannelStatus = "DISCONNECTED"
-	ChannelStatusPAIRING ChannelStatus = "PAIRING"
+	ChannelStatusCREATED ChannelStatus = "CREATED"
+	ChannelStatusCONNECTING ChannelStatus = "CONNECTING"
 	ChannelStatusCONNECTED ChannelStatus = "CONNECTED"
+	ChannelStatusDISCONNECTED ChannelStatus = "DISCONNECTED"
+	ChannelStatusDELETED ChannelStatus = "DELETED"
 )
 
 func ParseChannelStatus(s string) (ChannelStatus, error) {
 	switch ChannelStatus(s) {
-	case ChannelStatusDISCONNECTED, ChannelStatusPAIRING, ChannelStatusCONNECTED:
+	case ChannelStatusCREATED, ChannelStatusCONNECTING, ChannelStatusCONNECTED, ChannelStatusDISCONNECTED, ChannelStatusDELETED:
 		return ChannelStatus(s), nil
 	default:
 		return "", fmt.Errorf("invalid ChannelStatus: %q", s)
@@ -127,14 +128,14 @@ func ParseClassificationMethod(s string) (ClassificationMethod, error) {
 type ContactKind string
 
 const (
-	ContactKindCONTACT ContactKind = "CONTACT"
+	ContactKindUSER ContactKind = "USER"
 	ContactKindGROUP ContactKind = "GROUP"
 	ContactKindBROADCAST ContactKind = "BROADCAST"
 )
 
 func ParseContactKind(s string) (ContactKind, error) {
 	switch ContactKind(s) {
-	case ContactKindCONTACT, ContactKindGROUP, ContactKindBROADCAST:
+	case ContactKindUSER, ContactKindGROUP, ContactKindBROADCAST:
 		return ContactKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid ContactKind: %q", s)

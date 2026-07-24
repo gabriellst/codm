@@ -3,7 +3,7 @@
 * Do not edit manually.
 */
 
-import type { Platform } from "./Platform.ts";
+import type { ChannelKind } from "./ChannelKind.ts";
 
 export type ChannelCreatedPayload = {
     /**
@@ -21,5 +21,5 @@ export type ChannelCreatedPayload = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: ChannelKind;
 };

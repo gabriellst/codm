@@ -64,7 +64,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
 		const [workspaceRow] = await this.db.select({ path: workspaces.path }).from(workspaces).where(eq(workspaces.id, thread.workspaceId)).limit(1)
-		const [channelRow] = await this.db.select({ kind: channels.kind }).from(channels).where(eq(channels.id, thread.channelId)).limit(1)
+		const [channelRow] = await this.db.select({ kind: channels.platform }).from(channels).where(eq(channels.id, thread.channelId)).limit(1)
 
 		const entries = await this.db.select().from(transcriptEntries).where(eq(transcriptEntries.threadId, input.threadId)).orderBy(asc(transcriptEntries.at))
 		const stopRows = await this.db.select().from(stops).where(and(eq(stops.threadId, input.threadId), isNull(stops.resolvedAt)))

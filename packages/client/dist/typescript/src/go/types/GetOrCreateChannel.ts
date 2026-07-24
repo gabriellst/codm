@@ -3,15 +3,15 @@
 * Do not edit manually.
 */
 
+import type { ChannelKind } from "./ChannelKind.ts";
 import type { ErrorResponse } from "./ErrorResponse.ts";
 import type { GetOrCreateChannelOutput } from "./GetOrCreateChannelOutput.ts";
-import type { Platform } from "./Platform.ts";
 
 export type GetOrCreateChannelQueryParams = {
     /**
      * @type string
     */
-    platform: Platform;
+    platform: ChannelKind;
 };
 
 /**

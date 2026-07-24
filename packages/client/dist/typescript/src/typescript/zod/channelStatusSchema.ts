@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const channelStatusSchema = z.enum(["DISCONNECTED", "PAIRING", "CONNECTED"])
+export const channelStatusSchema = z.enum(["CREATED", "CONNECTING", "CONNECTED", "DISCONNECTED", "DELETED"])

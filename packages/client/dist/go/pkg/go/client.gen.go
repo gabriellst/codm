@@ -85,19 +85,16 @@ func (e BufferSize) Valid() bool {
 
 // Defines values for ChannelKind.
 const (
-	ChannelKindINSTAGRAMDM ChannelKind = "INSTAGRAM_DM"
-	ChannelKindTELEGRAM    ChannelKind = "TELEGRAM"
-	ChannelKindWHATSAPP    ChannelKind = "WHATSAPP"
+	PlatformInternal ChannelKind = "INTERNAL"
+	PlatformWhatsApp ChannelKind = "WHATSAPP"
 )
 
 // Valid indicates whether the value is a known member of the ChannelKind enum.
 func (e ChannelKind) Valid() bool {
 	switch e {
-	case ChannelKindINSTAGRAMDM:
+	case PlatformInternal:
 		return true
-	case ChannelKindTELEGRAM:
-		return true
-	case ChannelKindWHATSAPP:
+	case PlatformWhatsApp:
 		return true
 	default:
 		return false
@@ -199,19 +196,19 @@ func (e ConnectionStatus) Valid() bool {
 
 // Defines values for ContactKind.
 const (
-	ContactKindBROADCAST ContactKind = "BROADCAST"
-	ContactKindCONTACT   ContactKind = "CONTACT"
-	ContactKindGROUP     ContactKind = "GROUP"
+	RemoteTypeBroadcast ContactKind = "BROADCAST"
+	RemoteTypeGroup     ContactKind = "GROUP"
+	RemoteTypeUser      ContactKind = "USER"
 )
 
 // Valid indicates whether the value is a known member of the ContactKind enum.
 func (e ContactKind) Valid() bool {
 	switch e {
-	case ContactKindBROADCAST:
+	case RemoteTypeBroadcast:
 		return true
-	case ContactKindCONTACT:
+	case RemoteTypeGroup:
 		return true
-	case ContactKindGROUP:
+	case RemoteTypeUser:
 		return true
 	default:
 		return false
@@ -896,24 +893,6 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
-// Defines values for Platform.
-const (
-	PlatformInternal Platform = "INTERNAL"
-	PlatformWhatsApp Platform = "WHATSAPP"
-)
-
-// Valid indicates whether the value is a known member of the Platform enum.
-func (e Platform) Valid() bool {
-	switch e {
-	case PlatformInternal:
-		return true
-	case PlatformWhatsApp:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for PresenceType.
 const (
 	PresenceTypeAvailable   PresenceType = "AVAILABLE"
@@ -1022,27 +1001,6 @@ func (e ReceiptType) Valid() bool {
 	case ReceiptTypeRead:
 		return true
 	case ReceiptTypeReadSelf:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for RemoteType.
-const (
-	RemoteTypeBroadcast RemoteType = "BROADCAST"
-	RemoteTypeGroup     RemoteType = "GROUP"
-	RemoteTypeUser      RemoteType = "USER"
-)
-
-// Valid indicates whether the value is a known member of the RemoteType enum.
-func (e RemoteType) Valid() bool {
-	switch e {
-	case RemoteTypeBroadcast:
-		return true
-	case RemoteTypeGroup:
-		return true
-	case RemoteTypeUser:
 		return true
 	default:
 		return false
@@ -2293,7 +2251,7 @@ type ChannelCreatedPayload struct {
 	ChannelId openapi_types.UUID `json:"channelId"`
 	Name      string             `json:"name"`
 	OwnerId   string             `json:"ownerId"`
-	Platform  Platform           `json:"platform"`
+	Platform  ChannelKind        `json:"platform"`
 }
 
 // ChannelDisconnectedPayload defines model for ChannelDisconnectedPayload.
@@ -2489,7 +2447,7 @@ type ChannelMessageDeletedPayload struct {
 	ChannelId openapi_types.UUID `json:"channelId"`
 	MessageId string             `json:"messageId"`
 	OwnerId   string             `json:"ownerId"`
-	Platform  Platform           `json:"platform"`
+	Platform  ChannelKind        `json:"platform"`
 	RemoteId  string             `json:"remoteId"`
 }
 
@@ -2511,7 +2469,7 @@ type ChannelMessageEditedPayload struct {
 	MessageId   string             `json:"messageId"`
 	MessageType MessageType        `json:"messageType"`
 	OwnerId     string             `json:"ownerId"`
-	Platform    Platform           `json:"platform"`
+	Platform    ChannelKind        `json:"platform"`
 	RemoteId    string             `json:"remoteId"`
 	SenderId    string             `json:"senderId"`
 	Timestamp   int                `json:"timestamp"`
@@ -2985,9 +2943,9 @@ type ChannelRemoteChatSeenPayload struct {
 type ChannelRemoteCreatedPayload struct {
 	ChannelId  openapi_types.UUID `json:"channelId"`
 	OwnerId    string             `json:"ownerId"`
-	Platform   Platform           `json:"platform"`
+	Platform   ChannelKind        `json:"platform"`
 	RemoteId   string             `json:"remoteId"`
-	RemoteType RemoteType         `json:"remoteType"`
+	RemoteType ContactKind        `json:"remoteType"`
 }
 
 // ChannelRemoteDeletedPayload defines model for ChannelRemoteDeletedPayload.
@@ -3055,7 +3013,7 @@ type ChannelRemoteUpdatedPayload struct {
 	ObservedAt  time.Time                 `json:"observedAt"`
 	OwnerId     string                    `json:"ownerId"`
 	RemoteId    string                    `json:"remoteId"`
-	Type        RemoteType                `json:"type"`
+	Type        ContactKind               `json:"type"`
 }
 
 // ChannelRemotesSyncedPayload defines model for ChannelRemotesSyncedPayload.
@@ -3164,7 +3122,7 @@ type CreateChannelOutput struct {
 	CreatedAt time.Time     `json:"createdAt"`
 	Id        string        `json:"id"`
 	Name      string        `json:"name"`
-	Platform  Platform      `json:"platform"`
+	Platform  ChannelKind   `json:"platform"`
 	Status    ChannelStatus `json:"status"`
 }
 
@@ -3284,7 +3242,7 @@ type GetChannelOutput struct {
 	Id            string        `json:"id"`
 	Name          string        `json:"name"`
 	OwnerRemoteId string        `json:"ownerRemoteId"`
-	Platform      Platform      `json:"platform"`
+	Platform      ChannelKind   `json:"platform"`
 	Status        ChannelStatus `json:"status"`
 }
 
@@ -3295,7 +3253,7 @@ type GetOrCreateChannelOutput struct {
 	Id            string        `json:"id"`
 	Name          string        `json:"name"`
 	OwnerRemoteId string        `json:"ownerRemoteId"`
-	Platform      Platform      `json:"platform"`
+	Platform      ChannelKind   `json:"platform"`
 	Status        ChannelStatus `json:"status"`
 }
 
@@ -3517,7 +3475,7 @@ type ListChannelsItem struct {
 	Credentials interface{}   `json:"credentials"`
 	Id          string        `json:"id"`
 	Name        string        `json:"name"`
-	Platform    Platform      `json:"platform"`
+	Platform    ChannelKind   `json:"platform"`
 	Status      ChannelStatus `json:"status"`
 }
 
@@ -3567,9 +3525,6 @@ type MessageType string
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
 
-// Platform defines model for Platform.
-type Platform string
-
 // PollMessageData defines model for PollMessageData.
 type PollMessageData struct {
 	Options  []string `json:"options"`
@@ -3608,9 +3563,6 @@ type ReactionMessageData struct {
 
 // ReceiptType defines model for ReceiptType.
 type ReceiptType string
-
-// RemoteType defines model for RemoteType.
-type RemoteType string
 
 // RestartChannelOutput defines model for RestartChannelOutput.
 type RestartChannelOutput struct {
@@ -3865,7 +3817,7 @@ type ListChannelsParams struct {
 
 // GetOrCreateChannelParams defines parameters for GetOrCreateChannel.
 type GetOrCreateChannelParams struct {
-	Platform Platform `form:"platform" json:"platform"`
+	Platform ChannelKind `form:"platform" json:"platform"`
 }
 
 // CreateWhatsAppChannelJSONBody defines parameters for CreateWhatsAppChannel.

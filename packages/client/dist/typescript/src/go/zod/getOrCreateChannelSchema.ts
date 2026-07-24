@@ -3,14 +3,14 @@
 * Do not edit manually.
 */
 
+import { channelKindSchema } from "./channelKindSchema.ts";
 import { errorResponseSchema } from "./errorResponseSchema.ts";
 import { getOrCreateChannelOutputSchema } from "./getOrCreateChannelOutputSchema.ts";
-import { platformSchema } from "./platformSchema.ts";
 import { z } from "zod/v4";
 
 export const getOrCreateChannelQueryParamsSchema = z.object({
     get "platform"(){
-                return platformSchema
+                return channelKindSchema
               }
     })
 
