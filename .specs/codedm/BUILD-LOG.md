@@ -495,3 +495,14 @@ Verificação MECÂNICA completa: tudo compila, sidecars healthy. RESTA (do foun
 `bun desktop:dev` abrir a janela nativa + console react renderizar; depois o teste de fogo
 (WhatsApp real + mensagem → issue → sessão claude real). Débito: transporte interino HTTP-local
 (edge/SQLite-WAL-mediator = follow-up, ver go-domain-design §5.4); ícone real da marca.
+
+## DESKTOP-DEV FLOW CORRIGIDO — `bun desktop:dev` sobe no modo SPA (23-jul, Opus)
+**Bug:** `bun desktop:dev` travava e a janela nunca abria. O `beforeDevCommand` gerado era `bun x nx run app-react:dev` = `vite --host` em modo WEB, onde o plugin nitro (TanStack Start, ativo quando NÃO desktop) lê `PORT=3030` do `.env` e sobe em **3030** com base `/app/`; mas o `devUrl` do tauri.conf era `http://localhost:5173/app/` → o Tauri esperava 5173 pra sempre e a webview (que quer o modo SPA: `CODEDM_DESKTOP=true` → nitro OFF → vite na 5173, base `/`) nunca casava.
+
+**Fix contract-first (nenhum `if` de convenção no gerador):**
+- **`dev-spa`** novo alvo em `packages/app/react/project.json` — simétrico ao `build-spa`: `CODEDM_DESKTOP=true vite --host`, `cache:false`, mesmo `dependsOn client-typescript:build` do `dev`. Com `CODEDM_DESKTOP=true` o `vite.config.ts` desliga o nitro e vale `server.port 5173` + base `/`.
+- **`REPO.desktop.console`** (`template.config.ts`) ganhou dois campos declarativos: `devTarget: 'dev-spa'` (o alvo de dev do console em modo SPA/desktop) e `devBasePath: '/'` (a base que a webview carrega em dev). `devPath: '/app/'` **permanece** documentado como a base WEB (nitro), o contraste que motiva `devBasePath`. Escolhi `devBasePath` explícito em vez de derivar `/` do fato "é desktop" — sem convenção hardcoded no compilador.
+- **`scripts/desktop/generate.ts`**: `devUrl` → `http://localhost:${vitePort()}${console_.devBasePath}` (RAIZ, não `${devPath}`); `beforeDevCommand` → `bun x nx run ${nxProject}:${console_.devTarget}` (dev-spa). `generate.test.ts` ganhou DSK-05 (devUrl = raiz + beforeDevCommand = dev-spa, derivados do contrato → drift-detectável).
+- **Regenerado** `bun desktop:generate`: `tauri.conf.json` agora tem `devUrl: http://localhost:5173/` + `beforeDevCommand: bun x nx run app-react:dev-spa` (capabilities/generated.rs sem mudança — coerentes). Config gerado commitado junto.
+
+**Gates (exit codes):** root `bun tsc` **7/7=0** (inclui `app-react:tsc`) · `bun run test:tooling` **291/0** (inclui `desktop/generate.test.ts` DSK-05) · `bun env:generate --check` **0** · `bun desktop:generate --check` **0** + **idempotente** (md5 run1==run2) · **vite modo desktop serve raiz na 5173** — evidência: `CODEDM_DESKTOP=true vite --host` reportou `Local: http://localhost:5173/` (5173 + `/`, nitro ausente) · `git diff --stat -- packages/api/go packages/app/astro packages/app/react/src/services packages/contracts` **vazio**. **Sem `--no-verify`.** RESTA (do founder, requer tela): `bun desktop:dev` abrir a janela nativa e a webview renderizar o console.

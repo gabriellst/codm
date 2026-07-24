@@ -165,9 +165,18 @@ const DESKTOP = {
 	/** Console (webview content) wiring — which workspace renders inside the shell. */
 	console: {
 		workspace: 'appReact',
-		/** Dev-server port key (REPO.env) + path the console mounts under in dev. */
+		/** Dev-server port key (REPO.env) + path the console mounts under in WEB dev (nitro on,
+		 *  base '/app/'). This is the browser mount — NOT what the desktop webview loads. */
 		devPortEnvKey: 'VITE_PORT',
 		devPath: '/app/',
+		/** Desktop dev: the nx target that serves the console as a root-based SPA
+		 *  (`CODEDM_DESKTOP=true vite --host` → nitro OFF, base '/', VITE_PORT). Symmetric to
+		 *  `buildTarget`'s build-spa. The shell's beforeDevCommand runs THIS, not `dev`. */
+		devTarget: 'dev-spa',
+		/** Base path the tauri webview loads in dev. The desktop SPA serves at root '/' (dev-spa /
+		 *  build-spa set base '/'), so devUrl is the ROOT — not the web '/app/' mount. Declared
+		 *  explicitly rather than derived, so the generator never hardcodes a convention. */
+		devBasePath: '/',
 		/** SPA output inside the console workspace (produced by `buildTarget`). */
 		distSubpath: 'dist/client',
 		buildTarget: 'build-spa',
@@ -236,6 +245,8 @@ export interface DesktopConfig {
 		workspace: WorkspaceId
 		devPortEnvKey: string
 		devPath: string
+		devTarget: string
+		devBasePath: string
 		distSubpath: string
 		buildTarget: string
 		connectsTo: readonly string[]

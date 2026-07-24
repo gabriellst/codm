@@ -4,9 +4,9 @@
 	"version": "0.1.0",
 	"identifier": "app.codedm.desktop",
 	"build": {
-		"devUrl": "http://localhost:5173/app/",
+		"devUrl": "http://localhost:5173/",
 		"frontendDist": "../../react/dist/client",
-		"beforeDevCommand": "bun x nx run app-react:dev",
+		"beforeDevCommand": "bun x nx run app-react:dev-spa",
 		"beforeBuildCommand": "bun x nx run app-react:build-spa"
 	},
 	"app": {

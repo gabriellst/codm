@@ -39,4 +39,19 @@ describe('desktop contract (REPO.desktop)', () => {
 			expect(rendered).toContain(`health_path: "${sidecar.healthPath}"`)
 		}
 	})
+
+	it('DSK-05: desktop dev serves the root-based SPA (devUrl = ROOT, beforeDevCommand = dev-spa target)', () => {
+		const conf = JSON.parse(renderTauriConf()) as { build: { devUrl: string; beforeDevCommand: string } }
+		const console_ = REPO.desktop.console
+		const consoleWs = REPO.workspaces[console_.workspace]
+		const vitePort = REPO.env.VITE_PORT.example
+		// devUrl is the ROOT (desktop base '/'), NOT the web '/app/' mount — the whole bug.
+		expect(conf.build.devUrl).toBe(`http://localhost:${vitePort}${console_.devBasePath}`)
+		expect(console_.devBasePath).toBe('/')
+		expect(conf.build.devUrl).toBe(`http://localhost:${vitePort}/`)
+		expect(conf.build.devUrl.endsWith('/app/')).toBe(false)
+		// beforeDevCommand runs the SPA/desktop dev target (nitro OFF), never the web `dev`.
+		expect(console_.devTarget).toBe('dev-spa')
+		expect(conf.build.beforeDevCommand).toBe(`bun x nx run ${consoleWs.nxProject}:${console_.devTarget}`)
+	})
 })

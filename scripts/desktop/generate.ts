@@ -95,9 +95,11 @@ export function renderTauriConf(): string {
 		version: '0.1.0',
 		identifier: REPO.desktop.identifier,
 		build: {
-			devUrl: `http://localhost:${vitePort()}${console_.devPath}`,
+			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the
+			// ROOT — `console_.devBasePath` — NOT the web '/app/' mount (`console_.devPath`).
+			devUrl: `http://localhost:${vitePort()}${console_.devBasePath}`,
 			frontendDist,
-			beforeDevCommand: `bun x nx run ${consoleWs.nxProject}:dev`,
+			beforeDevCommand: `bun x nx run ${consoleWs.nxProject}:${console_.devTarget}`,
 			beforeBuildCommand: `bun x nx run ${consoleWs.nxProject}:${console_.buildTarget}`,
 		},
 		app: {

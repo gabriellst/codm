@@ -55,6 +55,20 @@
 				"cwd": "packages/app/react"
 			}
 		},
+		"dev-spa": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"options": {
+				"command": "CODEDM_DESKTOP=true vite --host",
+				"cwd": "packages/app/react"
+			}
+		},
 		"lint": {
 			"executor": "nx:run-commands",
 			"cache": true,
