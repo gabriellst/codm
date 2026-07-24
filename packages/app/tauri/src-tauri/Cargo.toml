@@ -25,3 +25,6 @@ keyring = { version = "3", features = ["apple-native", "windows-native", "sync-s
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.22", features = ["derive"] }
+specta-typescript = "=0.0.9"

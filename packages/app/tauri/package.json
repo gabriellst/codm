@@ -2,12 +2,25 @@
 	"name": "@codedm/app-tauri",
 	"version": "0.1.0",
 	"private": true,
+	"type": "module",
 	"description": "CodeDM desktop shell — Tauri v2 host for the react console + TS daemon / Go gateway sidecars.",
+	"exports": {
+		"./commands": "./commands/index.ts",
+		"./sidecars": "./sidecars/index.ts",
+		"./capabilities": "./capabilities/index.ts",
+		"./window": "./window/index.ts"
+	},
 	"scripts": {
 		"tauri": "tauri",
 		"dev": "tauri dev",
 		"bundle": "tauri build",
-		"sidecars": "bun scripts/build-sidecars.ts"
+		"sidecars": "bun sidecars/build.ts"
+	},
+	"dependencies": {
+		"@tauri-apps/api": "^2.11.1",
+		"@tauri-apps/plugin-autostart": "^2.5.1",
+		"@tauri-apps/plugin-dialog": "^2.7.2",
+		"@tauri-apps/plugin-notification": "^2.3.3"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2.9.6"

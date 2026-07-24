@@ -1,14 +1,16 @@
-import { invoke } from '../utils/tauri/invoke'
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 import type { NotificationService } from './NotificationService'
 
+/** OS notifications via the typed tauri plugin-notification API. `notification:default`
+ *  derives from REPO.desktop.capabilities.notification → CAPABILITY_PERMISSIONS. */
 export class TauriNotificationService implements NotificationService {
 	async notify(input: { title: string; body?: string }): Promise<void> {
-		let granted = await invoke<boolean>('plugin:notification|is_permission_granted')
+		let granted = await isPermissionGranted()
 		if (!granted) {
-			const permission = await invoke<string>('plugin:notification|request_permission')
+			const permission = await requestPermission()
 			granted = permission === 'granted'
 		}
 		if (!granted) return
-		await invoke('plugin:notification|notify', { options: { title: input.title, body: input.body } })
+		sendNotification({ title: input.title, body: input.body })
 	}
 }
