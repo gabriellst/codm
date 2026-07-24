@@ -40,8 +40,17 @@ Delivers: existing Go binary's hand-SQL finds its columns → `resolve` returns 
 5. **Migrate + smoke**: `bun migrate:dev` → `curl /v1/external/channel/channel/channels/resolve?platform=WHATSAPP` (with operator) → **200**.
 - Gates: contracts build · drizzle migrate idempotent · api-ts tsc+test · go build+test · sdk 2× · resolve 200.
 
-## Phase 2 — sqlc pull + delete the orphaned Go migrations (HARDENING)
-Delivers: single schema source + compile-time drift guard; the bug class can't recur.
+## Phase 2 — Go conforms to contract + sqlc pull + delete orphaned Go migrations (HARDENING + UNBLOCK)
+Delivers: single schema source + compile-time drift guard; the bug class can't recur — AND unblocks the resolve (Phase 1 alone doesn't).
+
+**Live-discovered divergence (2026-07-24, blocking):** Phase 1 unblocked the channel query, but the resolve then failed on the SHARED event-sourcing layer — the Go `core-go` `PgDomainEventRepository` (core/repositories/pg_domain_event_repository.go) writes `INSERT INTO shared.events (id,name,entity_id,owner_id,payload,time,updated_at)` and `shared.outbox (id,name,source,owner_id,payload,time,created_at,updated_at)`, but the contract (infrastructure.ts) has `shared.events(id,name,entity_id,owner_id,payload,source,occurred_at)` and `shared.outbox(id,name,entity_id,owner_id,payload,source,processed_at,attempts,last_error,created_at)`. So the Go writes non-existent `time`/`updated_at` and omits `source`/`entity_id`. Blocks EVERY Go command that raises a domain event.
+
+**Direction (founder-confirmed): for SHARED infra the Go conforms to the CONTRACT** (`occurred_at`/`source`, drop `time`/`updated_at`) — the OPPOSITE of the channel model (contract went rich to match Go). `infrastructure.ts` is the deliberate shared shape used by TS + Go.
+
+**Discovery-first (avoid whack-a-mole):** step 5.0 produces the FULL Go-hand-written-SQL ↔ contract column diff across ALL shared + gateway tables (shared.events, shared.outbox + its dispatcher READ/UPDATE + mark-processed, gateway.channels/remotes/messages/remote_memberships) so every divergence is fixed in one pass. sqlc generates the MODELS (drift-guard on SELECT scans); the hand-written SQL column-name literals are reconciled manually to the contract.
+
+5.0 **Audit**: full Go-SQL ↔ contract column diff (all tables above) → the reconcile work-list.
+5.1 **Reconcile Go SQL to the contract**: fix column names in pg_domain_event_repository.go (events/outbox insert), the outbox dispatcher read/update/mark-processed, and any remaining gateway repo drift — to the contract columns. core/types/events.go json tags stay (wire shape ≠ DB columns).
 6. **sqlc config** (`packages/api/go/sqlc.yaml`): schema source = **option A** (contract `packages/contracts/db/migrations` with a `--> statement-breakpoint` strip) — **spike-gated**: if sqlc's parser chokes on multi-schema/`CREATE SCHEMA`/qualified idents, fall back to **option B** (migrate a throwaway DB, `pg_dump --schema-only` the `gateway` schema → committed `schema.sql` → sqlc). Generate models into e.g. `internal/channel/db/`; enum columns overridden onto `template/contracts-go/wire`.
 7. **Repos adopt generated structs** (map §5): fixed-shape queries can use sqlc; dynamic/batch stay hand-written but over the generated structs (so a schema change breaks the build).
 8. **Delete** `packages/api/go/core/db/sql/migrations` (+ 18 down); remove/repoint `cmd/migrate` + `migrate.go`/`embedded.go`; **keep** `client.go`/`WithSearchPath` (still targets the `gateway` search_path).

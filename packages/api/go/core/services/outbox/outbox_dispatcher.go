@@ -318,7 +318,7 @@ func (d *OutboxDispatcher) finalize(ctx context.Context, result dispatchResult) 
 				"attempts", newAttempts,
 			)
 			if _, err = tx.ExecContext(ctx,
-				`UPDATE shared.outbox SET attempts = $1, updated_at = NOW() WHERE id = $2`,
+				`UPDATE shared.outbox SET attempts = $1 WHERE id = $2`,
 				newAttempts, row.id,
 			); err != nil {
 				return fmt.Errorf("dead-letter row %s: %w", row.id, err)
@@ -326,7 +326,7 @@ func (d *OutboxDispatcher) finalize(ctx context.Context, result dispatchResult) 
 		} else {
 			// Retry: clear processed_at so the next poll cycle picks it up.
 			if _, err = tx.ExecContext(ctx,
-				`UPDATE shared.outbox SET attempts = $1, processed_at = NULL, updated_at = NOW() WHERE id = $2`,
+				`UPDATE shared.outbox SET attempts = $1, processed_at = NULL WHERE id = $2`,
 				newAttempts, row.id,
 			); err != nil {
 				return fmt.Errorf("retry row %s: %w", row.id, err)
@@ -337,7 +337,7 @@ func (d *OutboxDispatcher) finalize(ctx context.Context, result dispatchResult) 
 	// Release skipped rows (clear processed_at).
 	if len(result.skipped) > 0 {
 		if _, err = tx.ExecContext(ctx,
-			`UPDATE shared.outbox SET processed_at = NULL, updated_at = NOW() WHERE id = ANY($1::text[])`,
+			`UPDATE shared.outbox SET processed_at = NULL WHERE id = ANY($1::text[])`,
 			result.skipped,
 		); err != nil {
 			return fmt.Errorf("release skipped rows: %w", err)

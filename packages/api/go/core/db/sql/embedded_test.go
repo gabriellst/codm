@@ -46,18 +46,19 @@ func TestNewPostgresDB_FullLifecycle(t *testing.T) {
 		t.Fatal("expected non-nil *sql.DB")
 	}
 
-	// RunMigrations replays the full migration set, including DDL on the global
-	// `shared` schema (e.g. CREATE INDEX ... ON shared.events) that is not
-	// concurrency-safe. Serialize it against the parallel repository test
-	// binaries sharing this database. See dbutil.LockMigrations.
+	// ApplySchema builds the schema from the committed contract snapshot
+	// (schema.sql), including DDL on the global `shared` schema (e.g.
+	// CREATE INDEX ... ON shared.events) that is not concurrency-safe.
+	// Serialize it against the parallel repository test binaries sharing this
+	// database. See dbutil.LockMigrations.
 	unlock, lockErr := dbutil.LockMigrations(context.Background(), db)
 	if lockErr != nil {
 		t.Fatalf("LockMigrations: %v", lockErr)
 	}
-	err := RunMigrations(db, cfg)
+	err := ApplySchema(db, cfg.ServiceName)
 	unlock()
 	if err != nil {
-		t.Fatalf("failed to run migrations: %v", err)
+		t.Fatalf("failed to apply schema: %v", err)
 	}
 
 	var tableCount int

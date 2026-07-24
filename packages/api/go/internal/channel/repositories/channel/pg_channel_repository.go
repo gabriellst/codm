@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	channeldb "template/api-go/internal/channel/db/gen"
 	"template/api-go/internal/channel/entities"
 	"template/api-go/internal/channel/enums"
 	sharedrepos "template/core-go/repositories"
@@ -297,52 +298,50 @@ func (r *PgChannelRepository) txOrDB(ctx context.Context) queryExecContext {
 // scanChannelEntity scans a row from the channels table into a Channel entity
 // via ReconstructChannel — no events fired, no validation applied.
 //
+// The scan target is the sqlc-generated channeldb.GatewayChannel struct, not a
+// bag of local vars: this is the drift guard with teeth. The SELECT column list
+// in each query maps 1:1 onto these generated fields, so a contract column
+// rename/drop regenerates GatewayChannel and breaks THIS build (a missing field
+// reference below) rather than silently returning a column-not-exist error at
+// runtime — the exact lean/rich divergence class this phase closes.
+//
 // Note: connected_at and disconnected_at columns are intentionally omitted from
 // the SELECT column list because entities.Channel does not carry those fields.
 // They are retained in the table for the projector and future analytics use.
 func scanChannelEntity(row rowScanner) (*entities.Channel, error) {
-	var (
-		idStr         string
-		ownerID       string
-		platformStr   string
-		name          string
-		ownerRemoteID string
-		credsRaw      []byte
-		statusStr     string
-		createdAt     time.Time
-		updatedAt     time.Time
-		version       int
-	)
+	var m channeldb.GatewayChannel
 	err := row.Scan(
-		&idStr, &ownerID, &platformStr, &name, &ownerRemoteID,
-		&credsRaw, &statusStr,
-		&createdAt, &updatedAt, &version,
+		&m.ID, &m.OwnerID, &m.Platform, &m.Name, &m.OwnerRemoteID,
+		&m.Credentials, &m.Status,
+		&m.CreatedAt, &m.UpdatedAt, &m.Version,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("scanChannelEntity: invalid uuid %q: %w", idStr, err)
+	if !m.ID.Valid {
+		return nil, fmt.Errorf("scanChannelEntity: null channel id")
 	}
+	id := uuid.UUID(m.ID.Bytes)
 
-	creds := json.RawMessage(credsRaw)
+	creds := json.RawMessage(m.Credentials)
 	if len(creds) == 0 {
 		creds = json.RawMessage("{}")
 	}
 
+	// enums.Platform / enums.ChannelStatus are type aliases of the wire enums
+	// that back the generated fields, so these assign without conversion.
 	return entities.ReconstructChannel(entities.ReconstructChannelParams{
 		ID:            id,
-		Name:          name,
-		Platform:      enums.Platform(platformStr),
-		OwnerRemoteID: ownerRemoteID,
+		Name:          m.Name,
+		Platform:      m.Platform,
+		OwnerRemoteID: m.OwnerRemoteID,
 		Credentials:   creds,
-		Status:        enums.ChannelStatus(statusStr),
-		OwnerID:       ownerID,
-		CreatedAt:     createdAt.UTC(),
-		UpdatedAt:     updatedAt.UTC(),
-		Version:       version,
+		Status:        m.Status,
+		OwnerID:       m.OwnerID,
+		CreatedAt:     m.CreatedAt.Time.UTC(),
+		UpdatedAt:     m.UpdatedAt.Time.UTC(),
+		Version:       int(m.Version),
 	}), nil
 }
 

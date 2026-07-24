@@ -63,7 +63,7 @@ func (r *PgDomainEventRepository) insertChunk(ctx context.Context, db execContex
 	eventsValues := make([]string, 0, len(chunk))
 	eventsArgs := make([]any, 0, len(chunk)*7)
 	outboxValues := make([]string, 0, len(chunk))
-	outboxArgs := make([]any, 0, len(chunk)*8)
+	outboxArgs := make([]any, 0, len(chunk)*7)
 
 	ePos := 1
 	oPos := 1
@@ -79,26 +79,33 @@ func (r *PgDomainEventRepository) insertChunk(ctx context.Context, db execContex
 			eventsPayload = pp.GetPayload()
 		}
 		id := r.eventID(event)
+		entityID := event.GetEntityID().String()
+		// occurred_at follows the envelope's own timestamp so the audit log reflects
+		// when the fact happened, not when it was flushed. Fall back to `now`.
+		occurredAt := r.occurredAt(outboxPayload, now)
 
+		// Contract columns: shared.events(id, name, entity_id, owner_id, payload, source, occurred_at).
 		eventsValues = append(eventsValues, fmt.Sprintf(
 			"($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
 			ePos, ePos+1, ePos+2, ePos+3, ePos+4, ePos+5, ePos+6))
 		eventsArgs = append(eventsArgs,
-			id, event.GetEventName(), event.GetEntityID().String(),
-			event.GetOwnerID(), eventsPayload, now, now)
+			id, event.GetEventName(), entityID,
+			event.GetOwnerID(), eventsPayload, outbox.OutboxSource, occurredAt)
 		ePos += 7
 
+		// Contract columns: shared.outbox(id, name, entity_id, owner_id, payload, source, created_at);
+		// processed_at/attempts/last_error take their column defaults.
 		outboxValues = append(outboxValues, fmt.Sprintf(
-			"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
-			oPos, oPos+1, oPos+2, oPos+3, oPos+4, oPos+5, oPos+6, oPos+7))
+			"($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			oPos, oPos+1, oPos+2, oPos+3, oPos+4, oPos+5, oPos+6))
 		outboxArgs = append(outboxArgs,
-			id, event.GetEventName(), outbox.OutboxSource, event.GetOwnerID(),
-			outboxPayload, now, now, now)
-		oPos += 8
+			id, event.GetEventName(), entityID, event.GetOwnerID(),
+			outboxPayload, outbox.OutboxSource, now)
+		oPos += 7
 	}
 
 	eventsSQL := fmt.Sprintf(
-		`INSERT INTO shared.events (id, name, entity_id, owner_id, payload, time, updated_at)
+		`INSERT INTO shared.events (id, name, entity_id, owner_id, payload, source, occurred_at)
 		 VALUES %s
 		 ON CONFLICT (id) DO NOTHING`,
 		strings.Join(eventsValues, ","),
@@ -108,7 +115,7 @@ func (r *PgDomainEventRepository) insertChunk(ctx context.Context, db execContex
 	}
 
 	outboxSQL := fmt.Sprintf(
-		`INSERT INTO shared.outbox (id, name, source, owner_id, payload, time, created_at, updated_at)
+		`INSERT INTO shared.outbox (id, name, entity_id, owner_id, payload, source, created_at)
 		 VALUES %s
 		 ON CONFLICT (id) DO NOTHING`,
 		strings.Join(outboxValues, ","),
@@ -118,6 +125,20 @@ func (r *PgDomainEventRepository) insertChunk(ctx context.Context, db execContex
 	}
 
 	return nil
+}
+
+// occurredAt extracts the envelope's `time` field from the marshalled event so the
+// events audit log records when the fact happened. The wire envelope keeps `time`
+// (see core/types/events.go); only the DB column it lands in (occurred_at) differs.
+// Falls back to `fallback` when the payload has no usable timestamp.
+func (r *PgDomainEventRepository) occurredAt(envelope json.RawMessage, fallback time.Time) time.Time {
+	var env struct {
+		Time time.Time `json:"time"`
+	}
+	if err := json.Unmarshal(envelope, &env); err == nil && !env.Time.IsZero() {
+		return env.Time
+	}
+	return fallback
 }
 
 func (r *PgDomainEventRepository) eventID(event types.DomainEventI) string {

@@ -8,9 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 
 	"template/core-go/db/dbutil"
@@ -49,39 +46,18 @@ func newChannelTestDB(t *testing.T) (*sql.DB, func()) {
 		t.Fatalf("db.Ping: %v", err)
 	}
 
-	if _, err := db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)); err != nil {
-		db.Close()
-		t.Fatalf("create schema: %v", err)
-	}
-
-	migrationsFS := sqldb.MigrationsFS()
-	source, err := iofs.New(migrationsFS, "migrations")
-	if err != nil {
-		db.Close()
-		t.Fatalf("iofs.New: %v", err)
-	}
-	driver, err := postgres.WithInstance(db, &postgres.Config{
-		SchemaName:      schema,
-		MigrationsTable: "schema_migrations",
-	})
-	if err != nil {
-		db.Close()
-		t.Fatalf("postgres.WithInstance: %v", err)
-	}
-	m, err := migrate.NewWithInstance("iofs", source, "postgres", driver)
-	if err != nil {
-		db.Close()
-		t.Fatalf("migrate.NewWithInstance: %v", err)
-	}
+	// Build the schema from the committed contract snapshot (schema.sql).
+	// ApplySchema touches the global `shared` schema (not concurrency-safe),
+	// so serialize against parallel test binaries via LockMigrations.
 	unlock, err := dbutil.LockMigrations(context.Background(), db)
 	if err != nil {
 		db.Close()
 		t.Fatalf("LockMigrations: %v", err)
 	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := sqldb.ApplySchema(db, schema); err != nil {
 		unlock()
 		db.Close()
-		t.Fatalf("migrate.Up: %v", err)
+		t.Fatalf("ApplySchema: %v", err)
 	}
 	unlock()
 

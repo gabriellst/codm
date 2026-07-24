@@ -1,1 +1,0 @@
-ALTER TABLE channels ADD COLUMN IF NOT EXISTS connection_state TEXT NOT NULL DEFAULT 'close';
