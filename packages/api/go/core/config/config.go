@@ -14,9 +14,14 @@ type Config struct {
 	Port                 string            `validate:"required"`
 	DatabaseURL          string            `validate:"required"`
 	WhatsmeowDatabaseURL string            `validate:"required"`
-	RedisURL             string            `validate:"required"`
 	ChannelEventGroupID  string            `validate:"required"`
 	Environment          enums.Environment `validate:"required,oneof=DEVELOPMENT STAGING PRODUCTION"`
+
+	// DataDir is the SQLite substrate location for the go-domain outbox-as-transport
+	// mediator. Empty selects a per-platform default resolved INSIDE the store
+	// constructor (NewSqliteStore) — the env is read once here and handed off in one
+	// hop; the data-dir dance never leaks through the layers (go-domain-design.md §5).
+	DataDir string
 
 	// Channel
 	ServiceName       string `validate:"required"`
@@ -37,7 +42,6 @@ func Load() (*Config, error) {
 		Port:                 getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3032")),
 		DatabaseURL:          getEnvOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable"),
 		WhatsmeowDatabaseURL: getEnvOrDefault("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable"),
-		RedisURL:             getEnvOrDefault("REDIS_URL", "redis://localhost:6379"),
 		ChannelEventGroupID:  getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codedm-gateway"),
 		Environment:          enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
 
@@ -47,6 +51,7 @@ func Load() (*Config, error) {
 		GlobalAPIKey:      getEnvOrDefault("CHANNEL_GLOBAL_API_KEY", os.Getenv("GLOBAL_API_KEY")),
 		WhatsmeowLogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),
 		AllowedOrigins:    parseOrigins(getEnvOrDefault("CHANNEL_ALLOWED_ORIGINS", os.Getenv("ALLOWED_ORIGINS"))),
+		DataDir:           getEnvOrDefault("CODEDM_DATA_DIR", ""),
 	}
 
 	validate := validator.New()

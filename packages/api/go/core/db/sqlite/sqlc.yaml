@@ -1,0 +1,30 @@
+# sqlc config — SQLite substrate (go-domain port, Phase 0.2). PULL direction:
+# the Go structs + typed queries are GENERATED from the contract schema, never
+# hand-declared. core-go owns no schema of its own.
+#
+# Regenerate after any schema-sqlite migration:
+#   1. (cd packages/contracts && bun x drizzle-kit generate --config=db/schema-sqlite/drizzle.config.ts)
+#   2. cp the new migration into db/sqlite/migrations/ and re-transcribe db/sqlite/schema.sql
+#      (backticks -> double quotes, drop `--> statement-breakpoint`):
+#        tr '\140' '"' < db/sqlite/migrations/<file>.sql | sed 's/--> statement-breakpoint//g' > db/sqlite/schema.sql
+#   3. (cd packages/api/go/core/db/sqlite && sqlc generate)
+#
+# WHY schema.sql is a normalized transcript, NOT migrations/*.sql: sqlc's sqlite
+# parser rejects drizzle-kit's raw output (backtick identifiers + the
+# `--> statement-breakpoint` separators). The Drizzle migration stays the source
+# of truth for the shape and is what the SqliteStore actually applies at boot via
+# //go:embed; schema.sql only feeds sqlc's typegen (proven equivalent — see the
+# round-trip test which applies the REAL migration, not this transcript).
+#
+# sqlc generates the MODELS for the whole schema (a compile-time drift guard) plus
+# typed queries for query/*.sql. The generated gen/ is committed so `go test`
+# runs without sqlc installed.
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "schema.sql"
+    queries: "query"
+    gen:
+      go:
+        package: "sqlitedb"
+        out: "gen"

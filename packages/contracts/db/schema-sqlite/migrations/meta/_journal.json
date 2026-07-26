@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784882381039,
+      "tag": "0000_flaky_carmella_unuscione",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784883554224,
+      "tag": "0001_careful_firebrand",
+      "breakpoints": true
+    }
+  ]
+}
