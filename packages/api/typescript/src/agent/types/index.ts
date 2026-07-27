@@ -1,3 +1,7 @@
+// Fase 5 — the base class every internal agent extends (§4.5). `run()` is a concrete TEMPLATE METHOD;
+// the single point of variation is `buildRequest`.
+export * from './Agent'
+
 // Agent-abstraction contract lock (GOAL-agent-abstraction, Fase 1).
 export * from './AgentInput'
 export * from './AgentMcpInvocation'

@@ -7,7 +7,7 @@ import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { RunIssueTurn } from '../usecases/RunIssueTurn'
-import { uniqueSlugKey } from '../services/IssueClassifier'
+import { uniqueSlugKey } from '../services/IssueRouter'
 
 /**
  * The severed-saga closer (phase-6b). BC4 Thread & Routing demultiplexes an inbound message into an

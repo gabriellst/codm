@@ -1,4 +1,4 @@
-// Per-env DI bindings for the terminal (agent-runtime) context.
+// Per-env DI bindings for the `agent` context (the agent runtime).
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
 import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
@@ -7,6 +7,8 @@ import { AgentRunner, ClaudeAgentRunner, StubAgentRunner, E2eStubAgentRunner } f
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { AgentSessionRepository, DrizzleAgentSessionRepository, MockAgentSessionRepository } from './repositories'
+import { IssueRouter } from './services/IssueRouter'
+import { ClassifyIssueAgent, ClassifyIssuePromptBuilder, IssueWorkAgent, IssueWorkPromptBuilder } from './agents'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the `real`
@@ -68,4 +70,26 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: DrizzleAgentSessionRepository,
 		real: DrizzleAgentSessionRepository,
 	},
+	// ── The internal agents (§4.8) ────────────────────────────────────────────────────────────────
+	//
+	// CLASS TOKENS, same implementation in all three envs — an agent has no mock/real split because it
+	// holds no I/O of its own: everything that touches the world is the `AgentRunner` above, which DOES
+	// have one. That is what keeps "no test spawns a CLI" a property of the DI env (§8 rule 8) while the
+	// agents under test stay the real ones.
+	//
+	// There is deliberately NO name→agent map and NO factory. `AgentName` is identity — the label on a
+	// log line, a span and a run-token claim — never a resolution key; resolution is
+	// `container.resolve(IssueWorkAgent)`, which a rename breaks at compile time instead of at runtime.
+	// AC-5.3 greps for exactly that absence.
+	// TRANSIENT (`useClass`), not singleton, and the reason is the seam above: an agent holds nothing
+	// but a reference to the `AgentRunner` and its prompt builder, so a singleton buys no shared state
+	// — while it WOULD capture whichever runner was bound at first construction. That is precisely the
+	// binding §8 rule 8 swaps per env (and `TestBed.override` swaps per suite), so a cached agent would
+	// quietly keep driving the previous one. One allocation per resolve, and the graph stays honest.
+	{ token: ClassifyIssuePromptBuilder, mock: { useClass: ClassifyIssuePromptBuilder }, real: { useClass: ClassifyIssuePromptBuilder } },
+	{ token: IssueWorkPromptBuilder, mock: { useClass: IssueWorkPromptBuilder }, real: { useClass: IssueWorkPromptBuilder } },
+	{ token: ClassifyIssueAgent, mock: { useClass: ClassifyIssueAgent }, real: { useClass: ClassifyIssueAgent } },
+	{ token: IssueWorkAgent, mock: { useClass: IssueWorkAgent }, real: { useClass: IssueWorkAgent } },
+	// The routing POLICY over the classification agent — what `thread/usecases/ClassifyMessage` injects.
+	{ token: IssueRouter, mock: { useClass: IssueRouter }, real: { useClass: IssueRouter } },
 ])

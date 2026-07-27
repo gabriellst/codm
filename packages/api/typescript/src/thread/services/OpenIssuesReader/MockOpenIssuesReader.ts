@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { OpenIssueRef } from '@agent/services/IssueClassifier'
+import type { OpenIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
 /** Test double — no open issues by default (every inbound resolves to NEW_ISSUE). Tests that exercise

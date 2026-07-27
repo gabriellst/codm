@@ -2,7 +2,8 @@ import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { IssueClassifier } from '@agent/services/IssueClassifier'
+import { IssueRouter } from '@agent/services/IssueRouter'
+import { WorkspaceRepository } from '@workspace/repositories'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { ClarificationRepository } from '../repositories/ClarificationRepository'
@@ -21,12 +22,26 @@ export const ClassifyMessageOutputSchema = z.object({
 })
 
 /**
- * C17 ClassifyMessage — demultiplexes one inbound entry into an issue via the phase-5 IssueClassifier
- * (reply-quote > context-match ≥ threshold > new-issue > clarification). Reply-quotes are resolved
- * to an issueId here (channel-native quotedEntryId → the quoted entry's issueId) and passed to the
- * classifier as authoritative. Publishes `thread.message_classified` (bridged to
- * `integration.message.classified`, which the terminal engine consumes to spawn/continue the
- * session); an ambiguous decision opens a clarification (max one open per sender) instead.
+ * C17 ClassifyMessage — demultiplexes one inbound entry into an issue via the agent context's
+ * `IssueRouter` (reply-quote > context-match ≥ threshold > new-issue > clarification). Reply-quotes
+ * are resolved to an issueId here (channel-native quotedEntryId → the quoted entry's issueId) and
+ * passed to the router as authoritative. Publishes `thread.message_classified` (bridged to
+ * `integration.message.classified`, which the agent context consumes to run the turn); an ambiguous
+ * decision opens a clarification (max one open per sender) instead.
+ *
+ * ### Why a use case invokes an agent-context service at all (§5.2)
+ * The medscall forbids it — there, an agent produces the user-visible reply, which is a side effect
+ * and therefore a handler's job. Here the routing DECISION has to be consumed inside this very
+ * transaction (the transcript line and the clarification are persisted with it), so making it
+ * event-driven would split one decision across two transactions and buy a saga for nothing. What is
+ * injected is the ROUTER, not the agent: the reply-quote shortcut, the confidence floor, the slug
+ * minting and the clarify fallback are policy owned by the agent context, and pulling them up here
+ * would spread one decision across two contexts.
+ *
+ * `cwd` for the classification run is the thread's bound WORKSPACE path, resolved here — never
+ * `process.cwd()`. §4.6 is explicit that an implicit process cwd is the worst possible default in a
+ * product that runs inside the user's real repositories, and a thread cannot be attached without a
+ * workspace, so the row is always there to read.
  */
 @injectable()
 export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, typeof ClassifyMessageOutputSchema> {
@@ -39,7 +54,8 @@ export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, 
 		private readonly transcript: TranscriptRepository,
 		private readonly clarifications: ClarificationRepository,
 		private readonly openIssues: OpenIssuesReader,
-		private readonly classifier: IssueClassifier,
+		private readonly workspaces: WorkspaceRepository,
+		private readonly router: IssueRouter,
 	) {
 		super()
 	}
@@ -56,7 +72,13 @@ export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, 
 		const openIssues = await this.openIssues.openIssues(input.threadId)
 		const buffer = (await this.transcript.recentByThread(input.threadId, this.bufferLimit(thread.bufferSize))).map(e => e.text)
 
-		const decision = await this.classifier.classify({
+		const workspace = await this.workspaces.findById(thread.workspaceId)
+		if (!workspace) throw new BaseError<ApplicationErrors>('WORKSPACE_NOT_FOUND', `no workspace ${thread.workspaceId}`)
+
+		const decision = await this.router.classify({
+			ownerId: thread.ownerId,
+			threadId: input.threadId,
+			cwd: workspace.path,
 			message: entry.text,
 			quotedIssueId,
 			openIssues,

@@ -1,3 +1,12 @@
+// ⚠️ FROZEN FASE-3 ARTIFACT — DOES NOT COMPILE AGAINST HEAD, and that is recorded rather than fixed.
+// It is a point-in-time smoke record (§8 rule 8: the only contact with a real CLI), not a maintained
+// entry point: it is outside every tsconfig `include` and outside every gate. Two later phases moved
+// under it — Fase 4.5 replaced `StreamJsonAgentRunner` with one runner class per CLI
+// (`ClaudeAgentRunner`) and dropped `provider` from the request, and Fase 5 split `IssueClassifier`
+// into `ClassifyIssueAgent` + `IssueRouter`. Fase 5 re-pointed the PATHS below with the `git mv` so
+// the file still says where things live; it deliberately did not rewrite the run, because a smoke
+// record edited after the fact stops being a record. Re-run it by porting to `ClaudeAgentRunner` +
+// `IssueRouter` in the phase that next needs the evidence.
 /**
  * FASE 3 — VERTICAL SMOKE (GOAL-agent-abstraction.md §7 Fase 3, AC-3.6 second half).
  *

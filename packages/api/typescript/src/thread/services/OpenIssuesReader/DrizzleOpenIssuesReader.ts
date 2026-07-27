@@ -3,7 +3,7 @@ import { and, eq, ne } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
 import { issues, transcriptEntries } from '@codedm/contracts/db'
 import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
-import type { OpenIssueRef } from '@agent/services/IssueClassifier'
+import type { OpenIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
 @injectable()

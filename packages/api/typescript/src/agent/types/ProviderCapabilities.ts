@@ -1,3 +1,6 @@
+import type Z from 'zod'
+import { z } from '@codedm/core-typescript'
+
 /**
  * What a probe discovered a provider binary can actually DO (GOAL-agent-abstraction §4.7, as amended
  * by Fase 4.5).
@@ -14,12 +17,20 @@
  * depends on whether detection has run yet, and two runs in one process can disagree for reasons
  * invisible at the call site. Here the caller threads it through, so argv stays a pure function of its
  * arguments (AC-1.2, still asserted mechanically over `ClaudeAgentRunner.buildArgs`).
+ *
+ * Declared as a SCHEMA with the type derived from it (Fase 5), not as a bare `interface`. The probe
+ * result now travels through `IssueWorkAgent`'s input schema on its way from the use case that
+ * resolved it to the `buildRequest` that renders it into argv, and a runtime contract needs a runtime
+ * declaration. One declaration, both halves: a flag added here reaches argv AND the agent input
+ * without a second mirror to keep in sync (§8 rule 4 — a re-declared value-set is a modelling error).
  */
-export interface ProviderCapabilities {
+export const ProviderCapabilitiesSchema = z.object({
 	/** `--include-partial-messages` is supported → token-level deltas instead of whole-message chunks. */
-	partialMessages?: boolean
+	partialMessages: z.boolean().optional(),
 	/** The CLI accepts an MCP server config → our tools can be declared at all. */
-	mcpConfig?: boolean
+	mcpConfig: z.boolean().optional(),
 	/** Native session resume (`--resume` / `--session-id`) → no rendered transcript in the prompt. */
-	sessionResume?: boolean
-}
+	sessionResume: z.boolean().optional(),
+})
+
+export type ProviderCapabilities = Z.output<typeof ProviderCapabilitiesSchema>

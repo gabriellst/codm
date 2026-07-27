@@ -41,8 +41,15 @@ const ClassifyIssueInputSchema = z.agentInput({
 
 type ClassifyIssueInput = Z.output<typeof ClassifyIssueInputSchema>
 
-/** The envelope is readable on the CONCRETE type — no cast, no intersection needed. */
-export function readEnvelopeFromConcreteInput(input: ClassifyIssueInput): { cwdLength: number; ownerId: string; issueId: string } {
+/**
+ * The envelope is readable on the CONCRETE type — no cast, no intersection needed.
+ *
+ * `issueId` reads `string | undefined` since Fase 5 made it OPTIONAL on the envelope, and this file
+ * is where that shows: AC-1.4 asks that `input.cwd` / `input.ownerId` / `input.issueId` be READABLE
+ * without a cast, which they are. The reason it is optional is structural — `ClassifyIssueAgent` runs
+ * BEFORE an issue exists, so the id is its output, never its input (see `BaseAgentInputSchema`).
+ */
+export function readEnvelopeFromConcreteInput(input: ClassifyIssueInput): { cwdLength: number; ownerId: string; issueId: string | undefined } {
 	return {
 		cwdLength: input.cwd.length, // ← AC-1.4: `input.cwd.length`
 		ownerId: input.ownerId, // ← AC-1.4: `input.ownerId`
@@ -68,7 +75,7 @@ export const classifyInputSatisfiesConstraint: AgentInputSchemaConstraint = Clas
 export function readEnvelopeThroughGeneric<S extends AgentInputSchemaConstraint>(
 	_schema: S,
 	input: Z.output<S> & AgentInputEnvelope,
-): { cwdLength: number; ownerId: string; issueId: string; threadId: string } {
+): { cwdLength: number; ownerId: string; issueId: string | undefined; threadId: string } {
 	return {
 		cwdLength: input.cwd.length,
 		ownerId: input.ownerId,
@@ -102,6 +109,6 @@ export function contextIsOptional(envelope: AgentInputEnvelope): Record<string, 
  * `ownerId` is a uuid STRING at runtime, and the same value the run token's claims carry (§4.6). This
  * pins the output type: were it ever branded or widened, the assignment would fail here first.
  */
-export function envelopeIdsAreStrings(envelope: AgentInputEnvelope): [string, string, string] {
+export function envelopeIdsAreStrings(envelope: AgentInputEnvelope): [string, string | undefined, string] {
 	return [envelope.ownerId, envelope.issueId, envelope.threadId]
 }

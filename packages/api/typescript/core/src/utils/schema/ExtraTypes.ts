@@ -40,10 +40,30 @@ import { BaseIntegrationEventSchema } from '../../types/BaseIntegrationEvent'
  *   about the same id.
  * - `context` is the open slot, and it is where multi-tenant agent config lands
  *   when it exists (D10) — never on `AgentRunRequest`.
+ *
+ * AMENDED IN FASE 5 — `issueId` is OPTIONAL, and the reason is structural, not
+ * temporary. The CodeDM agent universe has exactly two members and one of them
+ * runs BEFORE an issue exists: `ClassifyIssueAgent` decides whether an inbound
+ * message CONTINUES an open issue, OPENS a new one, or is too ambiguous to route
+ * — the issue id is its OUTPUT, never its input. Fase 1 froze `issueId` as
+ * required because §4.6 was written from the `IssueWorkAgent` side only; nothing
+ * in the repo could supply one at classification time, and the two honest ways to
+ * satisfy a required field there were both worse: forge a uuid that identifies
+ * nothing (the exact "identity from nowhere" §4.4 exists to prevent), or mint a
+ * throwaway one per classification run. Overriding the key per-agent via
+ * `.extend()` is not available either — `AgentInputSchemaConstraint` pins the
+ * envelope's shape, so a `ZodOptional<ZodUUID>` and a `ZodUUID` are mutually
+ * unassignable there in EITHER direction.
+ *
+ * The identity guarantee is unchanged where it is actually load-bearing: the run
+ * token (§4.4) is minted only for an agent with a non-empty tool scope, and the
+ * only such agent is `IssueWorkAgent`, which always runs against a resolved
+ * issue. Fase 6 narrows `issueId` at the single mint site in `agent/types/Agent.ts`
+ * — the one place that holds both the envelope and the request.
  */
 export const BaseAgentInputSchema = z.object({
 	ownerId: z.uuid(),
-	issueId: z.uuid(),
+	issueId: z.uuid().optional(),
 	threadId: z.uuid(),
 	cwd: z.string(),
 	context: z.record(z.string(), z.unknown()).optional(),

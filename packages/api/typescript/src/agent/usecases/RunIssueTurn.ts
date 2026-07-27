@@ -3,7 +3,7 @@ import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError, LoggingService } from '@codedm/core-typescript'
 import type { Transaction, BaseInfrastructureErrors } from '@codedm/core-typescript'
 import { AgentModelId, ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner } from '../services/AgentRunner'
+import { IssueWorkAgent } from '../agents/IssueWorkAgent'
 import { RUNNER_SUPPORTED_PROVIDERS } from '../registry'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
@@ -14,8 +14,8 @@ import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
-import type { TerminalApplicationErrors } from '../errors'
-import { AgentMessageRole, AgentName, ResumeInvalidationReason, AgentRunOutcome } from '../enums'
+import type { AgentApplicationErrors } from '../errors'
+import { ResumeInvalidationReason, AgentRunOutcome } from '../enums'
 
 export const RunIssueTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -111,7 +111,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	readonly outputSchema = RunIssueTurnOutputSchema
 
 	constructor(
-		private readonly runner: AgentRunner,
+		private readonly agent: IssueWorkAgent,
 		private readonly providerDetector: ProviderDetector,
 		private readonly registry: AgentStreamRegistry,
 		private readonly sessions: AgentSessionRepository,
@@ -195,7 +195,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
 		const detection = await this.providerDetector.resolve(provider)
 		if (!detection || detection.status !== ProviderStatus.DETECTED) {
-			throw new BaseError<TerminalApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)
+			throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)
 		}
 		if (!RUNNER_SUPPORTED_PROVIDERS.includes(provider)) {
 			throw new BaseError<BaseInfrastructureErrors>(
@@ -209,10 +209,20 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	private async drainRun(input: this['input'], detection: ProviderDetection, session: SessionPlan): Promise<RunObservations> {
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.issueId })
 
-		for await (const event of this.runner.run({
-			agentName: AgentName.ISSUE_WORK,
+		// The AGENT, not the runner (Fase 5, §4.8): `IssueWorkAgent.buildRequest` is the one place allowed
+		// to assemble an `AgentRunRequest`, and the base's template-method `run()` is what stamps the
+		// agent identity onto it (and, from Fase 6, mints the run token and attaches `mcp`). What this use
+		// case resolved — the detected binary + its probed caps, and the session plan — travels IN the
+		// agent's input, because detection (§4.7, incl. the RUNNER_SUPPORTED_PROVIDERS misrouting guard)
+		// and the resume decision (§4.10) are use-case concerns by contract.
+		for await (const event of this.agent.run({
+			ownerId: input.ownerId,
+			issueId: input.issueId,
+			threadId: input.threadId,
 			cwd: input.workspacePath,
-			messages: [{ role: AgentMessageRole.USER, content: input.prompt }],
+			prompt: input.prompt,
+			key: input.key,
+			title: input.title,
 			model: input.model ?? AgentModelId.DEFAULT,
 			// EXACTLY ONE of the two is set. `buildArgs` treats them as mutually exclusive by
 			// construction, so handing it both would make the argv version-dependent.

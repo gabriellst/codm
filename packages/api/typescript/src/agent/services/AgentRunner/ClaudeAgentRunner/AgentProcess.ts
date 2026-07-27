@@ -1,6 +1,6 @@
 import { spawn as spawnChild } from 'node:child_process'
 import { BaseError } from '@codedm/core-typescript'
-import type { TerminalApplicationErrors } from '../../../errors'
+import type { AgentApplicationErrors } from '../../../errors'
 
 export interface AgentProcessSpec {
 	cmd: readonly string[]
@@ -59,7 +59,7 @@ export const nodeAgentProcessSpawner: AgentProcessSpawner = spec => {
 			detached: true,
 		})
 	} catch (cause) {
-		throw new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)
+		throw new BaseError<AgentApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)
 	}
 
 	// Node reports spawn failures (ENOENT) ASYNCHRONOUSLY on 'error', not by throwing above. Attaching
@@ -72,7 +72,7 @@ export const nodeAgentProcessSpawner: AgentProcessSpawner = spec => {
 
 	const exited = new Promise<number>((resolve, reject) => {
 		child.once('error', cause =>
-			reject(new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)),
+			reject(new BaseError<AgentApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)),
 		)
 		child.once('close', code => resolve(code ?? 0))
 	})
