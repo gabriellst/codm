@@ -24,39 +24,47 @@ import (
 	_ "template/api-go/internal/channel/errors"
 )
 
+// Module wires the channel bounded context over the SHARED SQLite store.
+//
+// Every repository below resolves *sqlite.SqliteStore (provided by core.Module)
+// — the single codedm.db file the TS daemon will also open. That is the fix for
+// the split-DB symptom the console showed: the gateway used to write channel
+// state to Postgres while the ui read PGlite, so a freshly connected channel
+// still rendered DISCONNECTED. One store, one truth.
 var Module = fx.Module("channel",
-	// Infrastructure - whatsmeow channel factory
-	fx.Provide(whatsapp.NewSQLStore),
+	// Infrastructure — whatsmeow's device/session store on a dedicated FK-on
+	// handle over the SAME file, plus the channel factory built on it.
+	fx.Provide(whatsapp.NewWhatsmeowStore),
 	fx.Provide(fx.Annotate(
 		whatsapp.NewWhatsmeowChannelFactory,
 		fx.As(new(gateway.ChannelFactory)),
 	)),
 
 	// Repository — projection-backed implementation (T6). Reads and writes the
-	// `channels` table directly; appends domain events to shared.events via
-	// DomainEventRepository inside Save. Strict 404 on miss (no event replay).
+	// `gateway_channels` table directly; appends domain events to shared_events
+	// via DomainEventRepository inside Save. Strict 404 on miss (no event replay).
 	fx.Provide(fx.Annotate(
-		channelrepo.NewPgChannelRepository,
+		channelrepo.NewSqliteChannelRepository,
 		fx.As(new(channelrepo.ChannelRepository)),
 	)),
 
 	// Projection repositories (T7/T8) — read/write projection tables.
 	fx.Provide(fx.Annotate(
-		remoterepo.NewPgRemoteProjectionRepository,
+		remoterepo.NewSqliteRemoteProjectionRepository,
 		fx.As(new(remoterepo.RemoteProjectionRepository)),
 	)),
 	fx.Provide(fx.Annotate(
-		messagerepo.NewPgMessageProjectionRepository,
+		messagerepo.NewSqliteMessageProjectionRepository,
 		fx.As(new(messagerepo.MessageProjectionRepository)),
 	)),
 
 	// Write-side repositories (needed by future use cases: Pin/Archive/Mute).
 	fx.Provide(fx.Annotate(
-		remoterepo.NewPgRemoteRepository,
+		remoterepo.NewSqliteRemoteRepository,
 		fx.As(new(remoterepo.RemoteRepository)),
 	)),
 	fx.Provide(fx.Annotate(
-		messagerepo.NewPgMessageRepository,
+		messagerepo.NewSqliteMessageRepository,
 		fx.As(new(messagerepo.MessageRepository)),
 	)),
 
@@ -358,7 +366,7 @@ func registerDomainEventHandlers(
 	// Remote projectors — write to remotes projection (T8).
 	m.Register(projectors.NewRemoteCreatedProjector(remoteProjRepo))
 	m.Register(projectors.NewRemoteDeletedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteUpdatedProjector(remoteProjRepo))
+	m.Register(projectors.NewRemoteUpdatedProjector(remoteProjRepo, repo))
 	m.Register(projectors.NewRemotePinnedProjector(remoteProjRepo))
 	m.Register(projectors.NewRemoteUnpinnedProjector(remoteProjRepo))
 	m.Register(projectors.NewRemoteArchivedProjector(remoteProjRepo))

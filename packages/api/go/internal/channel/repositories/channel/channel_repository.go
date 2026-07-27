@@ -8,10 +8,10 @@ import (
 
 // ChannelRepository is the read/write contract for the Channel aggregate.
 //
-// The production implementation is PgChannelRepository (T6), which reads and
-// writes directly to the `channels` projection table. Domain events are still
-// appended to shared.events via DomainEventRepository inside Save so the audit
-// log remains intact.
+// The production implementation is SqliteChannelRepository, which reads and
+// writes the `gateway_channels` table in the shared store directly. Domain
+// events are still appended to shared_events via DomainEventRepository inside
+// Save so the audit log remains intact.
 //
 // Not-found semantics: Find, FindByName, and FindByOwnerAndPlatform return
 // (nil, nil) when the target channel does not exist — strict 404, no replay.

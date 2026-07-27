@@ -14,7 +14,7 @@ import (
 	"template/core-go/types"
 )
 
-// SqliteDomainEventRepository is the SQLite twin of PgDomainEventRepository: it
+// SqliteDomainEventRepository is the event store for every context: it
 // DUAL-writes each pulled domain event to BOTH the shared_events audit log (the
 // durable event store) AND the shared_outbox dispatch queue, over the shared
 // SqliteStore. The audit row keeps the unwrapped inner payload + the fact's own
@@ -99,6 +99,13 @@ func (r *SqliteDomainEventRepository) queriesFromContext(ctx context.Context) *s
 		return r.store.Queries().WithTx(tx)
 	}
 	return r.store.Queries()
+}
+
+// execContext is the write surface shared by *sql.DB and *sql.Tx, so the outbox
+// insert can target either the unit of work's transaction or the autocommit
+// handle. (Declared here since the pg repository that used to own it is gone.)
+type execContext interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
 // execFromContext returns the unit-of-work transaction when present, else the

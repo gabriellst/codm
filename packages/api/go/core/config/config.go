@@ -10,21 +10,23 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config is the process configuration. There is NO database URL: the service
+// persists to the shared SQLite store, whose only input is DataDir. Postgres —
+// and with it DATABASE_URL, WHATSMEOW_DATABASE_URL and the search_path
+// ServiceName — is gone from the Go side entirely.
 type Config struct {
-	Port                 string            `validate:"required"`
-	DatabaseURL          string            `validate:"required"`
-	WhatsmeowDatabaseURL string            `validate:"required"`
-	ChannelEventGroupID  string            `validate:"required"`
-	Environment          enums.Environment `validate:"required,oneof=DEVELOPMENT STAGING PRODUCTION"`
+	Port                string            `validate:"required"`
+	ChannelEventGroupID string            `validate:"required"`
+	Environment         enums.Environment `validate:"required,oneof=DEVELOPMENT STAGING PRODUCTION"`
 
-	// DataDir is the SQLite substrate location for the go-domain outbox-as-transport
-	// mediator. Empty selects a per-platform default resolved INSIDE the store
-	// constructor (NewSqliteStore) — the env is read once here and handed off in one
-	// hop; the data-dir dance never leaks through the layers (go-domain-design.md §5).
+	// DataDir is the SQLite substrate location — the ONE store the gateway rows,
+	// the event log, the outbox and whatsmeow's session tables all live in. Empty
+	// selects a per-platform default resolved INSIDE the store constructor
+	// (NewSqliteStore): the env is read once, here, and handed off in a single hop,
+	// so the data-dir dance never leaks through the layers.
 	DataDir string
 
 	// Channel
-	ServiceName       string `validate:"required"`
 	GlobalAPIKey      string
 	WhatsmeowLogLevel enums.LogLevel `validate:"omitempty,oneof=DEBUG INFO WARN ERROR"`
 	AllowedOrigins    []string
@@ -39,15 +41,10 @@ func Load() (*Config, error) {
 	_ = godotenv.Overload(".env")
 
 	cfg := &Config{
-		Port:                 getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3032")),
-		DatabaseURL:          getEnvOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable"),
-		WhatsmeowDatabaseURL: getEnvOrDefault("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable"),
-		ChannelEventGroupID:  getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codedm-gateway"),
-		Environment:          enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
+		Port:                getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3032")),
+		ChannelEventGroupID: getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codedm-gateway"),
+		Environment:         enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
 
-		// Schema-namespace retarget (classification §D.0/§E.1): channel projections
-		// live under the contracts `gateway` pgSchema; ServiceName drives search_path.
-		ServiceName:       getEnvOrDefault("CHANNEL_SERVICE_NAME", getEnvOrDefault("SERVICE_NAME", "gateway")),
 		GlobalAPIKey:      getEnvOrDefault("CHANNEL_GLOBAL_API_KEY", os.Getenv("GLOBAL_API_KEY")),
 		WhatsmeowLogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),
 		AllowedOrigins:    parseOrigins(getEnvOrDefault("CHANNEL_ALLOWED_ORIGINS", os.Getenv("ALLOWED_ORIGINS"))),

@@ -7,11 +7,63 @@ import (
 
 	"github.com/google/uuid"
 
+	"template/api-go/internal/channel/entities"
 	channelenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
+	channelrepo "template/api-go/internal/channel/repositories/channel"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 )
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Mock Channel Repository — only Find is exercised (platform resolution on the
+// RemoteUpdated stub path); the rest exists to satisfy the interface.
+// ──────────────────────────────────────────────────────────────────────────────
+
+var _ channelrepo.ChannelRepository = (*mockChannelRepo)(nil)
+
+type mockChannelRepo struct {
+	channels map[string]*entities.Channel
+}
+
+func newMockChannelRepo() *mockChannelRepo {
+	return &mockChannelRepo{channels: make(map[string]*entities.Channel)}
+}
+
+// seed registers a channel under the given id with the given platform.
+func (m *mockChannelRepo) seed(id uuid.UUID, platform channelenums.Platform) {
+	m.channels[id.String()] = entities.ReconstructChannel(entities.ReconstructChannelParams{
+		ID:       id,
+		Name:     "seeded",
+		Platform: platform,
+		Status:   channelenums.ChannelStatusCreated,
+		OwnerID:  "tenant",
+	})
+}
+
+func (m *mockChannelRepo) Find(_ context.Context, id string) (*entities.Channel, error) {
+	return m.channels[id], nil
+}
+
+func (m *mockChannelRepo) FindByName(context.Context, string) (*entities.Channel, error) {
+	return nil, nil
+}
+
+func (m *mockChannelRepo) FindByOwnerAndPlatform(context.Context, string, string) (*entities.Channel, error) {
+	return nil, nil
+}
+
+func (m *mockChannelRepo) FindAll(context.Context, string, int, int) ([]*entities.Channel, int, error) {
+	return nil, 0, nil
+}
+
+func (m *mockChannelRepo) FindAllActive(context.Context) ([]*entities.Channel, error) {
+	return nil, nil
+}
+
+func (m *mockChannelRepo) Save(context.Context, *entities.Channel) error { return nil }
+
+func (m *mockChannelRepo) Delete(context.Context, string) error { return nil }
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Mock Remote Projection Repository
@@ -262,7 +314,7 @@ func TestRemoteUpdatedProjector_UpdatesNameAndType(t *testing.T) {
 	remoteID := "group-1@g.us"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteUpdatedProjector(repo)
+	p := NewRemoteUpdatedProjector(repo, newMockChannelRepo())
 	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   remoteID,
@@ -281,6 +333,63 @@ func TestRemoteUpdatedProjector_UpdatesNameAndType(t *testing.T) {
 	}
 	if row.Type != string(channelenums.RemoteTypeGroup) {
 		t.Errorf("type mismatch: got %s", row.Type)
+	}
+}
+
+// The stub path (no existing remote row) must carry a platform: the column is a
+// closed set under a CHECK constraint in the SQLite store, so an empty string is
+// rejected outright and the whole projection write is lost. The platform is not
+// on the event payload, so it is resolved from the owning channel.
+func TestRemoteUpdatedProjector_StubResolvesPlatformFromChannel(t *testing.T) {
+	repo := newMockRemoteRepo()
+	channels := newMockChannelRepo()
+	channelID := uuid.New()
+	channels.seed(channelID, channelenums.PlatformWhatsApp)
+
+	p := NewRemoteUpdatedProjector(repo, channels)
+	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
+		ChannelID:  channelID,
+		RemoteID:   "ghost@s.whatsapp.net",
+		Type:       channelenums.RemoteTypeUser,
+		Name:       "Ghost",
+		ObservedAt: time.Now().UTC(),
+		OwnerID:    "tenant",
+	})
+
+	if err := p.Handle(context.Background(), evt); err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	row := repo.rows[repo.key(channelID.String(), "ghost@s.whatsapp.net")]
+	if row == nil {
+		t.Fatal("expected a stub row to be created")
+	}
+	if row.Platform != channelenums.PlatformWhatsApp {
+		t.Errorf("platform mismatch: want %q got %q", channelenums.PlatformWhatsApp, row.Platform)
+	}
+}
+
+// An unresolvable channel must FAIL rather than write a platform-less row: the
+// event is redelivered by the outbox (the channel row may not be committed yet),
+// which is recoverable — a rejected write is not.
+func TestRemoteUpdatedProjector_StubFailsWhenChannelUnknown(t *testing.T) {
+	repo := newMockRemoteRepo()
+	channelID := uuid.New()
+
+	p := NewRemoteUpdatedProjector(repo, newMockChannelRepo())
+	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
+		ChannelID:  channelID,
+		RemoteID:   "ghost@s.whatsapp.net",
+		Type:       channelenums.RemoteTypeUser,
+		Name:       "Ghost",
+		ObservedAt: time.Now().UTC(),
+		OwnerID:    "tenant",
+	})
+
+	if err := p.Handle(context.Background(), evt); err == nil {
+		t.Fatal("expected an error when the owning channel cannot be resolved")
+	}
+	if len(repo.savedRows) != 0 {
+		t.Errorf("expected no row to be written, got %d", len(repo.savedRows))
 	}
 }
 
@@ -641,8 +750,10 @@ func TestRemoteUpdatedProjector_CreatesStubWhenNotFound(t *testing.T) {
 	repo := newMockRemoteRepo()
 	channelID := uuid.New()
 	remoteID := "ghost-group@g.us"
+	channels := newMockChannelRepo()
+	channels.seed(channelID, channelenums.PlatformWhatsApp)
 
-	p := NewRemoteUpdatedProjector(repo)
+	p := NewRemoteUpdatedProjector(repo, channels)
 	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   remoteID,

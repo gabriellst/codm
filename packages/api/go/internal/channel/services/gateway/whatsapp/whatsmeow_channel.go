@@ -690,9 +690,11 @@ func (c *WhatsmeowChannel) fetchAppStateSkipValidation(ctx context.Context, name
 	// concurrent sync has partially written MACs. Without this, DecodePatches
 	// fails with a duplicate PK on whatsmeow_app_state_mutation_macs because
 	// the same index_mac can appear in both the snapshot and subsequent patches.
+	// SQLite dialect: `?` placeholders (the handle is the WhatsmeowStore's, opened
+	// with the modernc driver on the shared file — `$N` is not its parameter form).
 	if c.db != nil && c.device.ID != nil {
 		if _, err := c.db.ExecContext(ctx,
-			`DELETE FROM whatsmeow_app_state_mutation_macs WHERE jid = $1 AND name = $2`,
+			`DELETE FROM whatsmeow_app_state_mutation_macs WHERE jid = ? AND name = ?`,
 			c.device.ID.String(), string(name),
 		); err != nil {
 			slog.Warn("app state MAC cleanup failed",

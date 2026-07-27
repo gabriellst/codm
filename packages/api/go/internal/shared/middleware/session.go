@@ -6,11 +6,17 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
-// Session reads the BetterAuth session cookie, queries the authentication.session
-// table to resolve ownerId, and injects it as the X-Owner-Id request header.
-// Controllers read it via `from:"header" name:"X-Owner-Id"`.
+// Session reads the BetterAuth session cookie, queries the
+// authentication_sessions table in the SHARED SQLite store to resolve the active
+// ownerId, and injects it as the X-Owner-Id request header. Controllers read it
+// via `from:"header" name:"X-Owner-Id"`.
+//
+// db is the shared store's handle (SqliteStore.DB()) — the same file the TS
+// daemon writes sessions to, which is what makes the lookup resolvable at all;
+// the previous Postgres query targeted a database this process no longer opens.
 func Session(db *sql.DB) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -34,18 +40,18 @@ func Session(db *sql.DB) func(next http.Handler) http.Handler {
 
 			// NOTE(template-parity debt): the template Dels X-Owner-Id here as a
 			// spoof guard and re-sets it from the session lookup. codedm cannot
-			// do that yet — identity arrives via the api-ts pairing proxy
+			// do that yet — identity also arrives via the api-ts pairing proxy
 			// (external/utils/forwardToChannel stamps X-Owner-Id server-side,
-			// overwriting any client value) and this cookie lookup queries a
-			// table/column that doesn't exist in the contracts schema
-			// (authentication.session/owner_id vs sessions/active_owner_id), so
-			// a Del would leave every proxied request anonymous. Direct :3032
-			// access is CORS-gated + single-operator. Revisit in tenancy phase.
+			// overwriting any client value), so a Del would leave every proxied
+			// request anonymous. Direct :3032 access is CORS-gated +
+			// single-operator. Revisit in tenancy phase.
 
+			// SQLite dialect: `?` placeholder, and expires_at is INTEGER unix-millis
+			// (no NOW()) — bound from the process clock like every other ms column.
 			var ownerId sql.NullString
 			err = db.QueryRowContext(r.Context(),
-				`SELECT owner_id FROM authentication.session WHERE token = $1 AND expires_at > NOW()`,
-				token,
+				`SELECT active_owner_id FROM authentication_sessions WHERE token = ? AND expires_at > ?`,
+				token, time.Now().UnixMilli(),
 			).Scan(&ownerId)
 
 			if err != nil {

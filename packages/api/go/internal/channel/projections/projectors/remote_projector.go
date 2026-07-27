@@ -2,12 +2,14 @@ package projectors
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	channelenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
 	"template/api-go/internal/channel/projections"
+	channelrepo "template/api-go/internal/channel/repositories/channel"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/core-go/services/mediator"
@@ -132,11 +134,18 @@ func (p *RemoteDeletedProjector) Handle(ctx context.Context, event types.DomainE
 // ──────────────────────────────────────────────────────────────────────────────
 
 type RemoteUpdatedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
+	repo        remoterepo.RemoteProjectionRepository
+	channelRepo channelrepo.ChannelRepository
 }
 
-func NewRemoteUpdatedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUpdatedProjector {
-	return &RemoteUpdatedProjector{repo: repo}
+// NewRemoteUpdatedProjector takes the channel repository in addition to the
+// projection repo: the stub path below has to resolve the remote's platform, and
+// a remote's platform is by definition its channel's.
+func NewRemoteUpdatedProjector(
+	repo remoterepo.RemoteProjectionRepository,
+	channelRepo channelrepo.ChannelRepository,
+) *RemoteUpdatedProjector {
+	return &RemoteUpdatedProjector{repo: repo, channelRepo: channelRepo}
 }
 
 // compile-time interface check.
@@ -158,14 +167,20 @@ func (p *RemoteUpdatedProjector) Handle(ctx context.Context, event types.DomainE
 			"channelId", e.Payload.ChannelID,
 			"remoteId", e.Payload.RemoteID,
 		)
+		// ChannelRemoteUpdatedPayload does not carry Platform, and the column is a
+		// closed set (CHECK platform IN (...)) — an empty string is REJECTED by the
+		// store, which would drop the whole stub write. Resolve it from the owning
+		// channel, the authoritative source: a remote's platform is its channel's.
+		platform, err := p.resolvePlatform(ctx, e.Payload.ChannelID.String())
+		if err != nil {
+			return err
+		}
 		now := time.Now().UTC()
 		row = &projections.Remote{
 			ChannelID: e.Payload.ChannelID.String(),
 			RemoteID:  e.Payload.RemoteID,
 			Type:      string(e.Payload.Type),
-			// TODO: Platform is not carried by ChannelRemoteUpdatedPayload; it will
-			// be empty on this stub path. A subsequent remote_created event (which
-			// does carry Platform) will fill it in via RemoteCreatedProjector.
+			Platform:  platform,
 			CreatedAt: now,
 		}
 	}
@@ -174,6 +189,21 @@ func (p *RemoteUpdatedProjector) Handle(ctx context.Context, event types.DomainE
 	row.Type = string(e.Payload.Type)
 	row.UpdatedAt = time.Now().UTC()
 	return p.repo.Save(ctx, row)
+}
+
+// resolvePlatform reads the owning channel's platform. A missing channel is a
+// hard error rather than a silent empty write: without it the row cannot satisfy
+// the platform CHECK, so failing here lets the outbox retry (the channel row may
+// simply not be committed yet) instead of poisoning the projection.
+func (p *RemoteUpdatedProjector) resolvePlatform(ctx context.Context, channelID string) (channelenums.Platform, error) {
+	ch, err := p.channelRepo.Find(ctx, channelID)
+	if err != nil {
+		return "", err
+	}
+	if ch == nil {
+		return "", fmt.Errorf("remote updated projector: channel %s not found — cannot resolve platform for stub remote", channelID)
+	}
+	return ch.Platform, nil
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

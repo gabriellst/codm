@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
@@ -14,7 +13,6 @@ import (
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/channel/services/gateway"
-	"template/core-go/config"
 	repositories "template/core-go/repositories"
 )
 
@@ -30,23 +28,19 @@ type WhatsmeowChannelFactory struct {
 	messageProjRepo messagerepo.MessageProjectionRepository
 }
 
-// NewWhatsmeowChannelFactory creates a new factory backed by the given sqlstore container.
-// Opens a dedicated *sql.DB to the whatsmeow database for MAC cleanup operations that
-// require direct SQL (not available through the whatsmeow store interface).
+// NewWhatsmeowChannelFactory creates a new factory backed by the WhatsmeowStore.
+// It reuses that store's handle (the FK-on pool on the shared SQLite file) for
+// the MAC-cleanup statements that need direct SQL — no second connection to open,
+// and no separate database to drift from the container's own tables.
 func NewWhatsmeowChannelFactory(
-	container *sqlstore.Container,
+	store *WhatsmeowStore,
 	repo repositories.DomainEventRepository,
 	remoteRepo remoterepo.RemoteProjectionRepository,
 	messageRepo messagerepo.MessageProjectionRepository,
-	cfg *config.Config,
 ) (*WhatsmeowChannelFactory, error) {
-	db, err := sql.Open("pgx", cfg.WhatsmeowDatabaseURL)
-	if err != nil {
-		return nil, err
-	}
 	return &WhatsmeowChannelFactory{
-		container:       container,
-		db:              db,
+		container:       store.Container,
+		db:              store.DB,
 		domainEventRepo: repo,
 		remoteProjRepo:  remoteRepo,
 		messageProjRepo: messageRepo,
@@ -118,14 +112,11 @@ func (f *WhatsmeowChannelFactory) CreateWithJID(integrationID uuid.UUID, jidStr 
 	return ch, nil
 }
 
-// Close releases the underlying *sql.DB opened by NewWhatsmeowChannelFactory.
-// It is safe to call Close multiple times or on a nil db field.
-func (f *WhatsmeowChannelFactory) Close() error {
-	if f.db != nil {
-		return f.db.Close()
-	}
-	return nil
-}
+// Close is a no-op on the db: the factory BORROWS the WhatsmeowStore's handle
+// rather than owning one, and that store closes its own pool from its fx OnStop
+// hook. Closing here would yank the pool out from under the sqlstore container
+// while whatsmeow is still shutting its sessions down.
+func (f *WhatsmeowChannelFactory) Close() error { return nil }
 
 // findDeviceByUserJID scans all devices in the store and returns the first one whose
 // phone number (user part of the JID) matches the given JID string, ignoring the device suffix.

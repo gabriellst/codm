@@ -4,38 +4,40 @@ import (
 	"testing"
 )
 
-func TestLoad_DatabaseURLDefault(t *testing.T) {
-	t.Setenv("DATABASE_URL", "")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
+// Config no longer carries a database URL — the store's only input is the data
+// dir, and an unset one is legal (the store constructor resolves a per-platform
+// default). These cover the remaining defaults.
+
+func TestLoad_DataDirDefaultsToEmpty(t *testing.T) {
+	t.Setenv("CODEDM_DATA_DIR", "")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if cfg.DatabaseURL != "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable" {
-		t.Errorf("expected DatabaseURL to fall back to the codedm default, got %q", cfg.DatabaseURL)
+	// Empty is the sentinel for "resolve the per-platform default inside
+	// NewSqliteStore" — config must NOT invent a path of its own.
+	if cfg.DataDir != "" {
+		t.Errorf("expected DataDir to stay empty so the store resolves it, got %q", cfg.DataDir)
 	}
 }
 
-func TestLoad_DatabaseURLCustom(t *testing.T) {
-	t.Setenv("DATABASE_URL", "postgres://custom:custom@remotehost:5432/mydb?sslmode=require")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
+func TestLoad_DataDirCustom(t *testing.T) {
+	t.Setenv("CODEDM_DATA_DIR", "/tmp/codedm-config-test")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if cfg.DatabaseURL != "postgres://custom:custom@remotehost:5432/mydb?sslmode=require" {
-		t.Errorf("expected DatabaseURL to be custom URL, got %q", cfg.DatabaseURL)
+	if cfg.DataDir != "/tmp/codedm-config-test" {
+		t.Errorf("expected DataDir to be the custom path, got %q", cfg.DataDir)
 	}
 }
 
 func TestLoad_EnvironmentDefault(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "")
-	t.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
 
 	cfg, err := Load()
 	if err != nil {
@@ -47,22 +49,16 @@ func TestLoad_EnvironmentDefault(t *testing.T) {
 	}
 }
 
-func TestLoad_ServiceNameDefault(t *testing.T) {
-	// Schema-namespace retarget (classification §D.0/§E.1): the channel projections
-	// live under the contracts `gateway` pgSchema, so the ServiceName (= search_path)
-	// default is `gateway`, not medscall's `channel`. Clear both env keys to exercise
-	// the code default.
-	t.Setenv("CHANNEL_SERVICE_NAME", "")
-	t.Setenv("SERVICE_NAME", "")
-	t.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
-	t.Setenv("WHATSMEOW_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable")
+func TestLoad_PortDefault(t *testing.T) {
+	t.Setenv("CHANNEL_PORT", "")
+	t.Setenv("PORT", "")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if cfg.ServiceName != "gateway" {
-		t.Errorf("expected ServiceName to be 'gateway', got %q", cfg.ServiceName)
+	if cfg.Port != "3032" {
+		t.Errorf("expected Port to fall back to '3032', got %q", cfg.Port)
 	}
 }

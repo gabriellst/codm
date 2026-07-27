@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"template/core-go/config"
-	"template/core-go/db/sql"
 	"template/core-go/db/sqlite"
 	"template/core-go/middleware"
 	"template/core-go/repositories"
@@ -32,16 +31,20 @@ var Module = fx.Module("shared",
 	// Config
 	fx.Provide(config.Load),
 
-	// Database
-	fx.Provide(sql.NewPostgresDB),
-
-	// Infrastructure
-	fx.Provide(fx.Annotate(unitofwork.NewNoopUnitOfWork, fx.As(new(unitofwork.UnitOfWork)))),
-
-	// SQLite substrate + the outbox-as-transport external mediator (Redis retired).
-	// The store owns its whole lifecycle behind NewSqliteStore; provideSqliteStore
-	// only hands it the data-dir from config and closes it on shutdown.
+	// Database — the SINGLE shared SQLite store. Postgres is gone: there is no
+	// *sql.DB provider in the graph any more, so the process boots with no server
+	// to reach and no Ping to fail. The store owns its whole lifecycle behind
+	// NewSqliteStore; provideSqliteStore only hands it the data-dir from config
+	// (the single boot hop) and closes it on shutdown.
 	fx.Provide(provideSqliteStore),
+
+	// Unit of Work — the REAL SQLite one (BEGIN IMMEDIATE), replacing the Noop.
+	// An aggregate's row writes, its shared_events audit rows and its shared_outbox
+	// dispatch rows now commit (or roll back) atomically, and a successful commit
+	// nudges the domain notify strategy so the dispatcher drains without poll latency.
+	fx.Provide(fx.Annotate(provideSqliteUnitOfWork, fx.As(new(unitofwork.UnitOfWork)))),
+
+	// Outbox-as-transport external mediator over the same store (Redis retired).
 	fx.Provide(fx.Annotate(provideSqlExternalMediator, fx.As(new(mediator.ExternalMediator)))),
 
 	// Domain-event wake-up strategy for the SQLite substrate — SHARED between the
@@ -58,21 +61,12 @@ var Module = fx.Module("shared",
 	// Internal Mediator (domain events via channels)
 	fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
 
-	// Domain Event Repository (dual-writes to events + outbox)
-	fx.Provide(fx.Annotate(
-		repositories.NewPgDomainEventRepository,
-		fx.As(new(repositories.DomainEventRepository)),
-	)),
-
-	// SQLite domain-event repository — the audit-log event store for the
-	// SQLite-backed contexts (workspace/owner and the rest of the go-domain port).
-	// Provided as its CONCRETE type, NOT bound to the DomainEventRepository
-	// interface: that binding belongs to the pg impl above (channel), and a second
-	// interface provider would collide. SQLite repos depend on the concrete type.
+	// Domain Event Repository — the SQLite dual-write (shared_events audit log +
+	// shared_outbox dispatch queue) is now THE implementation for every context.
+	// Provided once as its concrete type and re-exposed as the interface, so the
+	// repos that ask for either get the SAME instance over the SAME store.
 	fx.Provide(repositories.NewSqliteDomainEventRepository),
-
-	// Outbox Dispatcher (polls outbox → dispatches to InternalMediator)
-	fx.Provide(outbox.NewOutboxDispatcher),
+	fx.Provide(asDomainEventRepository),
 
 	// HTTP Router
 	fx.Provide(httprouter.NewHttpRouter),
@@ -91,9 +85,25 @@ var Module = fx.Module("shared",
 		),
 	),
 	fx.Invoke(startMediators),
-	fx.Invoke(startOutboxDispatcher),
 	fx.Invoke(startSqliteOutboxDispatcher),
 )
+
+// asDomainEventRepository re-exposes the concrete SQLite repository under the
+// interface every context depends on. A plain widening provider (not a second
+// constructor) so there is exactly ONE repository instance in the graph.
+func asDomainEventRepository(r *repositories.SqliteDomainEventRepository) repositories.DomainEventRepository {
+	return r
+}
+
+// provideSqliteUnitOfWork builds the real UnitOfWork over the store's db, sharing
+// the domain notify strategy with the SqliteOutboxDispatcher: committing a unit
+// wakes the dispatcher immediately instead of waiting out its poll interval.
+func provideSqliteUnitOfWork(
+	store *sqlite.SqliteStore,
+	notify *mediator.SqliteWalPollingStrategy,
+) *unitofwork.SqliteUnitOfWork {
+	return unitofwork.NewSqliteUnitOfWork(store.DB(), notify)
+}
 
 // registerMiddlewares installs the framework middlewares and then every
 // app-contributed middleware (value group "app_middlewares").
@@ -210,21 +220,6 @@ func startSqliteOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.SqliteOutbo
 		OnStop: func(ctx context.Context) error {
 			dispatcher.Stop()
 			slog.Info("sqlite outbox dispatcher stopped")
-			return nil
-		},
-	})
-}
-
-func startOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.OutboxDispatcher) {
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			dispatcher.Start(ctx)
-			slog.Info("outbox dispatcher started")
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			dispatcher.Stop()
-			slog.Info("outbox dispatcher stopped")
 			return nil
 		},
 	})

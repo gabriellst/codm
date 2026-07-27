@@ -11,9 +11,9 @@ import (
 // projection table. It is written by the messageProjector and read directly
 // by query handlers. No domain logic, no invariants, no events.
 //
-// Content is stored as JSONB in Postgres and represented as json.RawMessage
-// here, consistent with how the channel entity and event repository handle
-// JSONB payloads throughout the codebase.
+// Content is stored as TEXT holding JSON in the SQLite store and represented as
+// json.RawMessage here, consistent with how the channel entity and the event
+// repository handle JSON payloads throughout the codebase.
 type Message struct {
 	ID                string          `db:"id"`
 	ChannelID         string          `db:"channel_id"`

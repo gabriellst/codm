@@ -15,13 +15,13 @@
 package shared
 
 import (
-	stdsql "database/sql"
 	"net/http"
 
 	sharedcontrollers "template/api-go/internal/shared/controllers"
 	"template/api-go/internal/shared/middleware"
 	"template/api-go/public"
 	"template/core-go/config"
+	"template/core-go/db/sqlite"
 	"template/core-go/services/httprouter"
 	"template/core-go/types"
 
@@ -49,13 +49,16 @@ var Module = fx.Module("shared",
 
 // newAuthMiddleware composes Session → APIKey as a single middleware so the
 // intra-chain order is deterministic (fx value groups have no ordering).
-func newAuthMiddleware(cfg *config.Config, db *stdsql.DB) types.Middleware {
+// The session lookup now runs against the SHARED SQLite store (the same file the
+// TS daemon will own once its own phase lands), not a separate Postgres — which
+// is the whole point of the split-DB fix.
+func newAuthMiddleware(cfg *config.Config, store *sqlite.SqliteStore) types.Middleware {
 	return func(next http.Handler) http.Handler {
 		h := next
 		if cfg.GlobalAPIKey != "" {
 			h = middleware.APIKey(cfg.GlobalAPIKey)(h)
 		}
-		return middleware.Session(db)(h)
+		return middleware.Session(store.DB())(h)
 	}
 }
 
