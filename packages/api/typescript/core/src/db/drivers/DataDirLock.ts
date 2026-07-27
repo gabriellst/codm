@@ -39,7 +39,10 @@ export class DataDirLockedError extends Error {
  * never contend for the same path while "one instance per role" still holds.
  *
  * EXPORTED because the lock-cleanup call sites (the e2e runner, the node smoke script) must import
- * this rule instead of re-typing the path in three places.
+ * this rule instead of re-typing the path in three places. Both of them are SCRIPTS, so this module
+ * is ALSO published as its own `@codedm/core-typescript/db/lock` subpath: it imports node builtins
+ * only, and reaching it through the package root would drag the DI container and the fastify graph
+ * into a runner that only wants to delete a file.
  */
 export function lockPathFor(dataDir: string): string {
 	return path.join(dataDir, 'daemon.lock')

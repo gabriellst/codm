@@ -4210,7 +4210,27 @@ test -z "$(git status --porcelain -- .env.example)"
 #### T27 — Sites de limpeza de lock (os dois no-ops silenciosos)
 
 **Arquivos:** `packages/e2e/scripts/run-e2e.ts` (~125),
-`packages/api/typescript/scripts/smoke-node-boot.ts` (~78).
+`packages/api/typescript/scripts/smoke-node-boot.ts` (~78),
+**+ (execução)** `packages/api/typescript/core/package.json` (subpath `./db/lock`),
+`packages/e2e/package.json` (devDep workspace do core),
+`packages/api/typescript/core/src/db/drivers/DataDirLock.ts` (docblock),
+`packages/e2e/playwright.config.ts` + `packages/e2e/tests/README.md` (prosa PGlite obsoleta).
+
+> **CARRY-FORWARD DO BLOCO 2 — o gate ABSOLUTO de pglite fecha aqui.** T11/T23 excluíam
+> `scripts/build.ts` e `scripts/smoke-node-boot.ts` **por nome**; T24 os limpou e restaurou a forma
+> absoluta em `packages/api/typescript`. Sobrava `packages/e2e`: 5 linhas em `run-e2e.ts`, 1 em
+> `playwright.config.ts`, 1 em `tests/README.md` — prosa que descrevia o harness como "EMBEDDED
+> file-backed PGlite" e que a partir do bloco 2 é simplesmente **falsa** (não é prosa histórica;
+> afirma o presente). T27 reescreve as 7 para o store SQLite. Depois disto:
+>
+> ```
+> $ git grep -n "pglite\|PGlite" -- packages
+> packages/api/go/internal/channel/module.go:32:// state to Postgres while the ui read PGlite, so a freshly connected channel
+> ```
+>
+> **Esse único hit é a exceção deliberada e FICA**: é prosa **histórica** (`used to write … while
+> the ui read PGlite`) documentando exatamente o bug de split-DB que esta fase mata — apagá-la é o
+> "AC satisfeito deletando prosa" que o §8 proíbe.
 
 **O que muda.** Os dois removem o lockfile **irmão** por caminho hardcoded
 (`` `${dataDir}.lock` `` e `` `${join(dataDir,'data')}.lock` ``). Depois de T10 esses caminhos
@@ -4238,6 +4258,20 @@ grep -q "lockPathFor" packages/api/typescript/scripts/smoke-node-boot.ts
 #    vazio. T10 é quem exporta (ver o item novo lá).
 grep -qE '^export function lockPathFor' packages/api/typescript/core/src/db/drivers/DataDirLock.ts
 ( cd packages/api/typescript && bun run smoke:node )
+# ⚠️ ACRESCENTADO NA EXECUÇÃO: o e2e é OUTRO pacote, então "importá-lo" exige contrato.
+#    `@codedm/core-typescript` não exporta `./db`; o barrel `.` arrasta o container de DI + fastify
+#    para dentro de um runner que só quer apagar um arquivo. T27 abre o subpath
+#    `@codedm/core-typescript/db/lock` → `src/db/drivers/DataDirLock.ts` (só node builtins) e
+#    adiciona a devDep workspace no e2e. Sem isso, "importar o helper" vira caminho relativo
+#    atravessando pacote.
+grep -q '"./db/lock"' packages/api/typescript/core/package.json
+grep -q '"@codedm/core-typescript"' packages/e2e/package.json
+( cd packages/e2e && bun x tsc --noEmit )
+# ⚠️ VERMELHO E PARKED (2026-07-27) — `04-inbound-issue` falha (`WORKING` vs `COMPLETED`).
+#    MEDIDO em A/B numa worktree em 0bd72e72 (T26, ANTES desta task): falha IDÊNTICA lá, e o mesmo
+#    spec PASSA sozinho no HEAD ⇒ pré-existente e dependente de paralelismo, não regressão de T27.
+#    `bun e2e` não estava nos gates de T23, então esta é a 1ª execução da suíte depois do flip.
+#    Evidência e hipótese de mecanismo em .specs/codedm/OVERNIGHT-BLOCKED.md.
 bun e2e
 ```
 

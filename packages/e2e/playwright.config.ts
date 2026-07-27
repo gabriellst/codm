@@ -21,7 +21,7 @@ export default defineConfig({
 	// servers boot in seconds standalone).
 	webServer: [
 		{
-			// Real-mode daemon over embedded PGlite, booted the RUN-UNDER-NODE way: `node dist/server.js`
+			// Real-mode daemon over the embedded SQLite store, booted the RUN-UNDER-NODE way: `node dist/server.js`
 			// (the artifact we ship), NOT `bun run ./src` (a runtime we don't). scripts/run-e2e.ts builds
 			// the node bundle first and exports CODEDM_NODE_BIN (nvm-resolved), CODEDM_E2E + the scratch
 			// CODEDM_DATA_DIR. A bare `bun x playwright` (no runner) falls back to PATH `node`.

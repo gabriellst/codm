@@ -293,3 +293,53 @@ ser puxadas. Não há como fazer essa linha passar sem falsificá-la.
 **Dono / o que destrava:** rodar `docker build -f docker/Dockerfile.api -t codedm-api:sqlite-check .`
 num host com Docker capaz de puxar imagem. Enquanto isso não acontece, **o alvo linux do daemon
 está não-verificado** — o mesmo status em que a questão aberta 6 já colocava linux/win32.
+
+---
+
+## 2026-07-27 — T27: `bun e2e` está VERMELHO, e é PRÉ-EXISTENTE ao bloco 3 (PARK)
+
+**Task:** T27 (bloco 3), cujo AC termina em `bun e2e`. **Status:** a task fecha; o `bun e2e` **não
+passa**, e a atribuição foi medida em A/B — **não** é regressão de T27.
+
+**O sintoma, exato:**
+```
+[e2e] › tests/04-inbound-issue.spec.ts:19:0 › inbound message → issue appears with slug label → session runs
+  Expected: "WORKING"
+  Received: "COMPLETED"        (04-inbound-issue.spec.ts:44)
+1 failed · 2 skipped · 4 passed
+```
+
+**A/B — a prova de que não é do bloco 3.** Rodado em **worktree destacada** em `0bd72e72` (T26, o
+commit ANTERIOR a T27), com `bun install` próprio para a worktree ter as workspace deps:
+
+| árvore | resultado |
+|---|---|
+| HEAD com T27 aplicado | `1 failed / 2 skipped / 4 passed` — falha em `WORKING` vs `COMPLETED` |
+| `0bd72e72` (T26, sem T27) | **`1 failed / 2 skipped / 4 passed` — MESMA falha, mesma linha, mesmo par esperado/recebido** |
+| `bun e2e tests/04-inbound-issue.spec.ts` isolado (HEAD com T27) | **1 passed** |
+
+Ou seja: (i) idêntico antes de T27 ⇒ não é T27; (ii) passa sozinho e falha na suíte inteira ⇒ é
+**dependente de execução paralela**, não determinístico-por-código.
+
+**Por que T27 não poderia causar isso (leitura do diff, para fechar o argumento).** T27 mexe em:
+export adicional no `package.json` do core (aditivo), devDep do e2e (aditivo), docblock do
+`DataDirLock`, e as **duas linhas de teardown** — que rodam DEPOIS do Playwright terminar. Nada
+disso executa durante o spec.
+
+**Hipótese de mecanismo (NÃO verificada — quem for consertar começa por aqui, sem tomar como
+fato).** O assert exige o estado intermediário `WORKING`; com os 2 workers do Playwright
+compartilhando **um** daemon e **um** data dir, o outbox dispatcher fica quente e o poll adaptativo
+(100ms–30s, T17) despacha a conclusão do stub runner **antes** do assert; sozinho, o dispatcher
+está ocioso, faz back-off e o estado intermediário ainda está lá quando o spec olha. Se isso se
+confirmar, o defeito é do SPEC (assevera uma janela temporal), não do dispatcher — mas o
+diagnóstico tem que ser feito, não presumido.
+
+**Por que não foi consertado aqui.** (1) Não é regressão desta task nem deste bloco; (2) o escopo
+declarado é T24–T27 (packaging/boot/lock) e mexer em semântica de spec/dispatcher dentro dele
+misturaria dois riscos; (3) `bun e2e` **não** está na lista de gates de T23 — a janela vermelha
+fechou sem ele, então esta é a primeira vez que a suíte roda depois do flip.
+
+**Dono / o que destrava:** decidir se `04-inbound-issue` passa a esperar `WORKING` de forma
+robusta (polling do estado, ou seam que segura o runner) em vez de depender do timing do
+dispatcher. Cabe no bloco 4, junto de T29 (que já testa partição de lane e revival), ou numa task
+própria de estabilização de e2e.

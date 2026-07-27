@@ -1,7 +1,7 @@
 # CodeDM E2E flows
 
 Cross-stack canonical flows exercised through Playwright against the REAL stack the harness can boot
-on its own: the TS daemon in `real` mode over an EMBEDDED file-backed PGlite (a scratch
+on its own: the TS daemon in `real` mode over an EMBEDDED file-backed SQLite store (a scratch
 `CODEDM_DATA_DIR`, no external Postgres/Redis) plus the app-react console — booted by
 `playwright.config.ts` webServer, orchestrated by `scripts/run-e2e.ts`.
 

@@ -15,6 +15,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { lockPathFor } from '../core/src/db/drivers/DataDirLock'
 
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -74,8 +75,12 @@ async function main(): Promise<void> {
 		await new Promise(r => setTimeout(r, 1500))
 		if (child.exitCode === null) child.kill('SIGKILL')
 		try {
+			// The lock now lives INSIDE the data dir (see lockPathFor) — and the child boots with
+			// CODEDM_DATA_DIR = `<dataDir>/data`, so that is the dir to ask about. The rule is imported,
+			// never re-typed: the old hardcoded sibling path became a silent no-op the moment the lock
+			// moved, and this is a scratch dir where a no-op teardown looks exactly like a working one.
+			rmSync(lockPathFor(join(dataDir, 'data')), { force: true })
 			rmSync(dataDir, { recursive: true, force: true })
-			rmSync(`${join(dataDir, 'data')}.lock`, { force: true })
 		} catch {
 			// best effort
 		}

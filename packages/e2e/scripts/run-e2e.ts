@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { lockPathFor } from '@codedm/core-typescript/db/lock'
 
 const E2E_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const API_TS_ROOT = resolve(E2E_ROOT, '../api/typescript')
@@ -28,15 +29,16 @@ function resolveNodeBin(): string {
 
 /**
  * CodeDM e2e runner. Boots the REAL stack the harness can stand up on its own — the TS daemon in
- * `real` mode over an EMBEDDED, file-backed PGlite (founder decision 3: no external Postgres), plus
+ * `real` mode over the EMBEDDED, file-backed SQLite store (founder decision 3: no external Postgres), plus
  * the app-react console — and runs Playwright against it.
  *
  * The Go Channel Gateway is NOT booted; gateway ingress is simulated at the integration-event seam by
  * the TEST-ONLY `/v1/_test/gateway` endpoint (mounted only under CODEDM_E2E). So this runner needs no
- * Postgres, no Redis, no Docker — just a scratch data dir the embedded PGlite migrates on boot.
+ * Postgres, no Redis, no Docker — just a scratch data dir the daemon migrates on boot.
  *
  * What it owns:
- *   - a fresh scratch CODEDM_DATA_DIR per run (embedded PGlite roots here; dropped on exit);
+ *   - a fresh scratch CODEDM_DATA_DIR per run (codedm.db + its -wal/-shm and daemon.lock root here;
+ *     dropped on exit);
  *   - the two dev ports (pre-kills stale listeners — a watch-mode orphan pointing at a dropped dir is
  *     always wrong), pinned per-server so the api (fastify) and app (vite) don't collide on $PORT;
  *   - CODEDM_E2E=true, which flips the daemon's `real` bindings to the hermetic seams (in-process
@@ -54,7 +56,7 @@ function runCaptureExitCode(command: string, args: string[], env: NodeJS.Process
 }
 
 async function main() {
-	// Scratch, file-backed PGlite data dir — the embedded `real` driver roots here and migrates on
+	// Scratch, file-backed SQLite data dir — the embedded `real` driver roots here and migrates on
 	// boot (idempotent). A fresh dir per run = a fresh database with no cross-run state.
 	const dataDir = mkdtempSync(join(tmpdir(), 'codedm-e2e-data-'))
 
@@ -105,7 +107,7 @@ async function main() {
 		}
 	}
 
-	console.log(`[e2e] embedded PGlite data dir: ${dataDir}`)
+	console.log(`[e2e] embedded SQLite data dir: ${dataDir}`)
 
 	let exitCode = 1
 	try {
@@ -121,8 +123,11 @@ async function main() {
 	} finally {
 		console.log(`[e2e] removing scratch data dir: ${dataDir}`)
 		try {
+			// The lock now lives INSIDE the data dir, scoped by role (see lockPathFor), so the recursive
+			// drop already takes it — but the rule is imported rather than re-typed, and the explicit
+			// removal stays, so a future retarget cannot leave a silent no-op here.
+			rmSync(lockPathFor(dataDir), { force: true })
 			rmSync(dataDir, { recursive: true, force: true })
-			rmSync(`${dataDir}.lock`, { force: true })
 		} catch (err) {
 			console.error(`[e2e] teardown failed:`, err)
 		}
