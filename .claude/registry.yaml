@@ -134,10 +134,12 @@ components:
   db-schema:
     skill: db-modelling
     patterns:
-      - "packages/contracts/db/schema/*.ts"
+      - "packages/contracts/db/schema-sqlite/*.ts"
       - "!*/index.ts"
+      - "!*/_enum.ts"
+      - "!*/drizzle.config.ts"
     layer: infrastructure
-    note: "Drizzle schema lives in the contracts package; plain text + jsonb columns, no pgEnum, no $type<>()."
+    note: "Drizzle schema lives in the contracts package, single flat SQLite dialect: sqliteTable('<namespace>_<table>', …) — the pgSchema namespace is the table-name prefix. Closed sets are text() + .$type<Enum>() (enum imported from @codedm/contracts-typescript/wire/enums) + enumCheck(...) for the CHECK constraint, never a hand-written literal union. Timestamps are integer({ mode: 'timestamp_ms' }); documents are text({ mode: 'json' })."
 
   # ─── Backend: Interface Layer ────────────────────────────────────────
   controller:

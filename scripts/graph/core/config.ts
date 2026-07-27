@@ -173,8 +173,8 @@ export function workspaceForFile(repoPath: string): Workspace | undefined {
 
 // ── Special-case paths inside workspaces ─────────────────────────────────────
 
-/** Drizzle schema directory (moved from api/src/shared/db to contracts). */
-export const DRIZZLE_SCHEMA_DIR = `${PKG.contracts}/db/schema`
+/** Drizzle schema directory (moved from api/src/shared/db to contracts; SQLite dialect since Phase 0). */
+export const DRIZZLE_SCHEMA_DIR = `${PKG.contracts}/db/schema-sqlite`
 
 /** Import-specifier substring that identifies a Drizzle schema import. */
 export const DRIZZLE_SCHEMA_IMPORT_MARKER = REPO.dbOrmSchemaSpecifier

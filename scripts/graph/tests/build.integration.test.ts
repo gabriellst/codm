@@ -47,10 +47,17 @@ describe('full graph integration (polyglot)', () => {
 		expect((byKind['contract-enum'] ?? 0) + (byKind['contract-event'] ?? 0)).toBeGreaterThan(0)
 	})
 
-	it('drizzle extractor emits db-table nodes from contracts/db/schema', () => {
+	it('drizzle extractor emits db-table nodes from contracts/db/schema-sqlite', () => {
 		const result = buildOnce()
 		const tables = [...result.graph.nodes.values()].filter(n => n.kind === 'db-table')
-		expect(tables.length).toBeGreaterThan(0)
+		// 25 tables across 9 pgSchema namespaces today. A FLOOR is asserted rather than the exact
+		// count (adding a table must not break tooling), but the silent drop to 0 that a stale schema
+		// path produces — the extractor returns { tablesExtracted: 0 } when the dir is missing — fails.
+		expect(tables.length).toBeGreaterThanOrEqual(25)
+		// The namespace must come from the sqliteTable() literal PREFIX, not the file name: file names
+		// would read auth / channel / infrastructure instead of authentication / gateway / shared.
+		const namespaces = [...new Set(tables.map(t => t.context))].sort()
+		expect(namespaces).toEqual(['artifact', 'authentication', 'gateway', 'issue', 'owner', 'shared', 'terminal', 'thread', 'workspace'])
 	})
 
 	it('locale extractor emits locale-key nodes for at least one frontend', () => {

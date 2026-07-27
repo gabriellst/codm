@@ -1,5 +1,11 @@
-// Drizzle schema extractor — reads packages/contracts/db/schema/*.ts and
+// Drizzle schema extractor — reads packages/contracts/db/schema-sqlite/*.ts and
 // emits db-table nodes plus fk-references edges.
+//
+// Dialect note (Phase 0 — the daemon/gateway share one SQLite file): the contracts schema is a
+// single FLAT dialect, so the owning namespace is NOT the file name — it is the prefix of the
+// `sqliteTable()` literal (`terminal_terminal_llm_sessions` → `terminal`). Keeping the file name
+// would attribute `authentication_users` to a context called `auth` and `shared_events` to one
+// called `infrastructure`: file names, not namespaces.
 //
 // (Phase 2: still lives under the TS adapter for convenience. Phase 4 will
 //  promote this to a dedicated contracts adapter alongside wire enums/events.)
@@ -27,29 +33,45 @@ export function runDrizzleExtraction(graph: Graph, _audit: AuditCollector): { ta
 	let tablesExtracted = 0
 	for (const file of project.getSourceFiles()) {
 		const repoPath = repoRelative(file.getFilePath())
-		// Only top-level *.ts files inside the schema dir (skip index/barrel files).
+		// Only top-level *.ts files inside the schema dir (skip the barrel, the enumCheck helper and
+		// the drizzle-kit config — none of them declares a table).
 		const tail = repoPath.slice(DRIZZLE_SCHEMA_DIR.length + 1)
 		if (tail.includes('/') || !tail.endsWith('.ts')) continue
-		const schemaName = tail.replace(/\.ts$/, '')
-		if (schemaName === 'index') continue
-		tablesExtracted += extractTablesFromFile(graph, file, schemaName, repoPath)
+		if (NON_TABLE_FILES.has(tail)) continue
+		tablesExtracted += extractTablesFromFile(graph, file, tail.replace(/\.ts$/, ''), repoPath)
 	}
 
 	return { tablesExtracted }
 }
 
-function extractTablesFromFile(graph: Graph, file: SourceFile, schemaName: string, repoPath: string): number {
+const NON_TABLE_FILES = new Set(['index.ts', '_enum.ts', 'drizzle.config.ts'])
+
+/**
+ * Owning namespace of a table declaration.
+ *
+ * `sqliteTable('<namespace>_<table>')` — flat dialect, namespace is the run before the FIRST `_`
+ * (no pgSchema name in this repo contains `_`, so the split is deterministic). `pgTable` /
+ * `<schema>.table(` keep the historical file-name fallback.
+ */
+function namespaceOf(calleeText: string, tableName: string, fileFallback: string): string {
+	if (calleeText !== 'sqliteTable') return fileFallback
+	const prefix = tableName.slice(0, tableName.indexOf('_'))
+	return prefix === '' ? fileFallback : prefix
+}
+
+function extractTablesFromFile(graph: Graph, file: SourceFile, fileName: string, repoPath: string): number {
 	let count = 0
 	// Pattern A: `export const TABLE = pgTable('table_name', { ... })`
 	// Pattern B: `export const TABLE = someSchema.table('table_name', { ... })`
+	// Pattern C: `export const TABLE = sqliteTable('<namespace>_table_name', { ... })`
 
 	for (const variable of file.getVariableDeclarations()) {
 		const init = variable.getInitializer()
 		if (!init || !Node.isCallExpression(init)) continue
 		const callExpr = init.getExpression()
 		const calleeText = callExpr.getText()
-		const isPgTable = calleeText === 'pgTable' || calleeText.endsWith('.table')
-		if (!isPgTable) continue
+		const isTable = calleeText === 'pgTable' || calleeText === 'sqliteTable' || calleeText.endsWith('.table')
+		if (!isTable) continue
 
 		const args = init.getArguments()
 		const tableNameArg = args[0]
@@ -57,6 +79,8 @@ function extractTablesFromFile(graph: Graph, file: SourceFile, schemaName: strin
 		const tableNameLiteral =
 			Node.isStringLiteral(tableNameArg) || Node.isNoSubstitutionTemplateLiteral(tableNameArg) ? tableNameArg.getLiteralValue() : null
 		if (!tableNameLiteral) continue
+
+		const schemaName = namespaceOf(calleeText, tableNameLiteral, fileName)
 
 		const symbolName = variable.getName()
 		const id = dbTableId(schemaName, symbolName)

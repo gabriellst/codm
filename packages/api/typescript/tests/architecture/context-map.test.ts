@@ -26,8 +26,24 @@ import {
  */
 
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
-const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema')
+const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema-sqlite')
 const MODULES = Object.keys(CONTEXTS)
+
+// The contracts DB schema is a single flat SQLite dialect: the pgSchema NAMESPACE is encoded as the
+// table-name PREFIX (`terminal` namespace → `terminal_*` tables), one namespace per file. No repo
+// pgSchema name contains `_`, so "the run before the FIRST `_` of the sqliteTable() literal" is a
+// deterministic namespace parser — zero hand lists, same guarantee the pgSchema('…') literal gave.
+const SCHEMA_NON_TABLE_FILES = new Set(['index.ts', '_enum.ts', 'drizzle.config.ts'])
+
+/** Table-declaring files of the contracts schema (barrel, enum helper and drizzle-kit config excluded). */
+function listContractsSchemaFiles(): string[] {
+	return readdirSync(CONTRACTS_SCHEMA).filter(f => f.endsWith('.ts') && !SCHEMA_NON_TABLE_FILES.has(f))
+}
+
+// `export const <symbol> = sqliteTable('<namespace>_<table>'`. The `\s*` after the paren is
+// load-bearing: only 6 of the 25 tables fit the call on one line — the other 19 break after
+// `sqliteTable(`, and a newline-intolerant regex would collect 2 namespaces against 9 declared.
+const SQLITE_TABLE_RE = /export const (\w+) = sqliteTable\(\s*'([a-z]+)_/g
 
 const ALIAS_IMPORT_RE = /from '@([a-z-]+)\/([a-z0-9-]+)/g
 const RELATIVE_IMPORT_RE = /from '(\.\.?\/[^']*)'/g
@@ -160,7 +176,7 @@ describe('context-map (declared intent map + global surface policy over real imp
 		expect(true).toBe(true)
 	})
 
-	test('pgSchema parity: declared CONTEXTS pgSchemas == contracts/db/schema pgSchema() literals', () => {
+	test('pgSchema parity: declared CONTEXTS pgSchemas == contracts/db/schema-sqlite table-name prefixes', () => {
 		const declared: string[] = [
 			...Object.values(CONTEXTS).flatMap(c => (c.pgSchema === null ? [] : [c.pgSchema as string])),
 			// Schemas owned by non-TS backends — declared in the same spine (intent precedes derivation).
@@ -168,11 +184,13 @@ describe('context-map (declared intent map + global surface policy over real imp
 			// TS-owned schemas forward-declared by the contract lock, ahead of their context build-out.
 			...PENDING_PGSCHEMAS,
 		].sort()
-		const inContracts = readdirSync(CONTRACTS_SCHEMA)
-			.filter(f => f.endsWith('.ts') && f !== 'index.ts')
-			.flatMap(f => [...readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8').matchAll(/pgSchema\('([a-z_]+)'\)/g)].map(m => m[1] ?? ''))
-			.filter(Boolean)
-			.sort()
+		const inContracts = [
+			...new Set(
+				listContractsSchemaFiles()
+					.flatMap(f => [...readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8').matchAll(SQLITE_TABLE_RE)].map(m => m[2] ?? ''))
+					.filter(Boolean),
+			),
+		].sort()
 		expect(
 			{ declared, inContracts },
 			'CONTEXTS.pgSchema and the contracts schema files drifted — a context owns exactly the schema it declares.',
@@ -202,23 +220,12 @@ describe('context-map — TABLE-READ leg (drizzle tables resolved to their ownin
 	// pgSchema (parsed from the contracts schema sources — zero hand lists) and enforces
 	// TABLE_READ_EDGES the same intent-first way.
 
-	/** table export name → owning pgSchema name, parsed from packages/contracts/db/schema sources. */
+	/** table export name → owning pgSchema namespace, parsed from packages/contracts/db/schema-sqlite. */
 	function tableOwners(): Map<string, string> {
-		const schemaVarToName = new Map<string, string>()
-		const files = readdirSync(CONTRACTS_SCHEMA).filter(f => f.endsWith('.ts') && f !== 'index.ts')
-		for (const f of files) {
-			const src = readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8')
-			for (const m of src.matchAll(/export const (\w+) = pgSchema\('([a-z_]+)'\)/g)) {
-				schemaVarToName.set(m[1] ?? '', m[2] ?? '')
-			}
-		}
 		const owners = new Map<string, string>()
-		for (const f of files) {
+		for (const f of listContractsSchemaFiles()) {
 			const src = readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8')
-			for (const m of src.matchAll(/export const (\w+) = (\w+)\.table\(/g)) {
-				const schemaName = schemaVarToName.get(m[2] ?? '')
-				if (schemaName) owners.set(m[1] ?? '', schemaName)
-			}
+			for (const m of src.matchAll(SQLITE_TABLE_RE)) owners.set(m[1] ?? '', m[2] ?? '')
 		}
 		return owners
 	}
@@ -279,6 +286,9 @@ describe('context-map — TABLE-READ leg (drizzle tables resolved to their ownin
 
 	test('fixture: the resolver maps a known table to its owning schema', () => {
 		const owners = tableOwners()
+		// Blindness must be an ERROR, not a silence: a parser that resolves nothing makes the whole
+		// TABLE-READ leg vacuously green (and the liveness test below fossil-flags every real edge).
+		expect(owners.size, 'tableOwners() resolved NO table — the contracts schema parser went blind.').toBeGreaterThan(0)
 		expect(owners.get('threads')).toBe('thread')
 		expect(owners.get('issues')).toBe('issue')
 		expect(owners.get('channels')).toBe('gateway')

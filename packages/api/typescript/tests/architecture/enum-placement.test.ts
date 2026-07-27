@@ -35,7 +35,11 @@ import * as WireEnums from '@codedm/contracts-typescript/wire/enums'
 const CROSS_BOUNDARY_ENUMS = Object.keys(WireEnums).filter(k => /^[A-Z]/.test(k))
 
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
-const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema')
+const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema-sqlite')
+
+// Non-table files in the schema dir — the barrel, the CHECK-constraint helper (`enumCheck`) and the
+// drizzle-kit config. They declare no table, so scanning them widens CMPL-01 past what it guards.
+const SCHEMA_NON_TABLE_FILES = new Set(['index.ts', '_enum.ts', 'drizzle.config.ts'])
 
 // A top-level `type Name = 'lit' | 'lit' …` string-literal union alias — the mirror shape. A branded
 // single alias (`type QuotaKey = string`) is deliberately NOT matched (it names no members), and a
@@ -57,7 +61,7 @@ interface Violation {
 
 function listSchemaFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true })
-		.filter(e => e.isFile() && e.name.endsWith('.ts') && !e.name.endsWith('.test.ts'))
+		.filter(e => e.isFile() && e.name.endsWith('.ts') && !e.name.endsWith('.test.ts') && !SCHEMA_NON_TABLE_FILES.has(e.name))
 		.map(e => join(dir, e.name))
 }
 
@@ -109,14 +113,20 @@ function scanSrcEnumDefs(root: string): Violation[] {
 }
 
 describe('enum-placement (cross-boundary enums live only in contracts, never mirrored in src/schema)', () => {
-	test('CMPL-01: no inline string-literal enum mirror in contracts/db/schema', () => {
+	test('CMPL-01: no inline string-literal enum mirror in contracts/db/schema-sqlite', () => {
+		// Non-vacuity first: a green scan over ZERO files is the failure mode this rail cannot have
+		// (it is exactly what a stale CONTRACTS_SCHEMA path would produce). 9 namespace files today.
+		const scanned = listSchemaFiles(CONTRACTS_SCHEMA)
+		expect(scanned.length, 'CMPL-01 scanned no contracts schema file — the path went stale, the rail is vacuous.').toBeGreaterThanOrEqual(9)
+
 		const violations = scanSchemaMirrors(CONTRACTS_SCHEMA)
 		const report = violations.map(v => `  ${v.file}:${v.line}  →  ${v.text}`).join('\n')
 		expect(
 			violations.length,
-			`Contracts DB schema mirrors an enum as an inline string-literal union — import the enum TYPE ` +
-				`from the generated binding ('../../generated/typescript/src/wire/enums') and use ` +
-				`.$type<Enum>() instead, so the closed set is single-sourced in packages/contracts:\n${report}`,
+			`Contracts DB schema mirrors an enum as an inline string-literal union — import the enum from the ` +
+				`generated binding ('@codedm/contracts-typescript/wire/enums') and bind the value-set ON THE COLUMN ` +
+				`with text() + .$type<Enum>() + enumCheck(...) (a CHECK constraint), never with a hand-written ` +
+				`literal union. .$type<>() alone types the TS side and leaves the database unconstrained:\n${report}`,
 		).toBe(0)
 	})
 
