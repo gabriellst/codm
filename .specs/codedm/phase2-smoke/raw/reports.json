@@ -1,0 +1,97 @@
+[
+  {
+    "id": "s1-text",
+    "command": "/Applications/cmux.app/Contents/Resources/bin/claude -p --input-format stream-json --output-format stream-json --verbose --permission-mode bypassPermissions",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 3902,
+    "lines": 6,
+    "nonJsonLines": 0,
+    "kinds": {
+      "system/hook_started [no-parent-key]": 1,
+      "system/hook_response [no-parent-key]": 1,
+      "system/init [no-parent-key]": 1,
+      "assistant [parent=null]": 1,
+      "rate_limit_event [no-parent-key]": 1,
+      "result/success [no-parent-key]": 1
+    },
+    "sawTerminal": true,
+    "msTerminalToExit": 580,
+    "exitedBeforeStdinEnd": false,
+    "stderr": ""
+  },
+  {
+    "id": "s2-tool",
+    "command": "/Applications/cmux.app/Contents/Resources/bin/claude -p --input-format stream-json --output-format stream-json --verbose --permission-mode bypassPermissions",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 9231,
+    "lines": 8,
+    "nonJsonLines": 0,
+    "kinds": {
+      "system/hook_started [no-parent-key]": 1,
+      "system/hook_response [no-parent-key]": 1,
+      "system/init [no-parent-key]": 1,
+      "assistant [parent=null]": 2,
+      "user [parent=null]": 1,
+      "rate_limit_event [no-parent-key]": 1,
+      "result/success [no-parent-key]": 1
+    },
+    "sawTerminal": true,
+    "msTerminalToExit": 573,
+    "exitedBeforeStdinEnd": false,
+    "stderr": ""
+  },
+  {
+    "id": "s3-subagent",
+    "command": "/Applications/cmux.app/Contents/Resources/bin/claude -p --input-format stream-json --output-format stream-json --verbose --permission-mode bypassPermissions",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 17843,
+    "lines": 18,
+    "nonJsonLines": 0,
+    "kinds": {
+      "system/hook_started [no-parent-key]": 1,
+      "system/hook_response [no-parent-key]": 1,
+      "system/init [no-parent-key]": 1,
+      "system/thinking_tokens [no-parent-key]": 2,
+      "assistant [parent=null]": 3,
+      "system/task_started [no-parent-key]": 1,
+      "user [parent=SET]": 2,
+      "rate_limit_event [no-parent-key]": 1,
+      "system/task_progress [no-parent-key]": 1,
+      "assistant [parent=SET]": 1,
+      "system/task_updated [no-parent-key]": 1,
+      "system/task_notification [no-parent-key]": 1,
+      "user [parent=null]": 1,
+      "result/success [no-parent-key]": 1
+    },
+    "sawTerminal": true,
+    "msTerminalToExit": 379,
+    "exitedBeforeStdinEnd": false,
+    "stderr": ""
+  },
+  {
+    "id": "s4-partial",
+    "command": "/Applications/cmux.app/Contents/Resources/bin/claude -p --input-format stream-json --output-format stream-json --verbose --permission-mode bypassPermissions --include-partial-messages",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 2970,
+    "lines": 14,
+    "nonJsonLines": 0,
+    "kinds": {
+      "system/hook_started [no-parent-key]": 1,
+      "system/hook_response [no-parent-key]": 1,
+      "system/init [no-parent-key]": 1,
+      "system/status [no-parent-key]": 1,
+      "stream_event [parent=null]": 7,
+      "assistant [parent=null]": 1,
+      "rate_limit_event [no-parent-key]": 1,
+      "result/success [no-parent-key]": 1
+    },
+    "sawTerminal": true,
+    "msTerminalToExit": 570,
+    "exitedBeforeStdinEnd": false,
+    "stderr": ""
+  }
+]
