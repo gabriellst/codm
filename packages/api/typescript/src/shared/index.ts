@@ -26,6 +26,7 @@ import * as authEnums from '@auth/enums'
 import * as uiEnums from '@ui/enums'
 import * as sharedObjects from './objects'
 import { TestIngressController } from './controllers'
+import { PruneOutbox } from './usecases/PruneOutbox'
 
 // TEST-ONLY gateway ingress seam — mounted ONLY under CODEDM_E2E (the Playwright harness), refused
 // under NODE_ENV=production by src/boot.ts, and never emitted to the SDK/OpenAPI
@@ -38,6 +39,11 @@ const ctx = await BoundedContext.create({
 	root: true,
 	controllers: testControllers,
 	registry: ALL_REGISTRIES,
+	// Outbox retention. Both claimants TOMBSTONE on success instead of deleting (a deleted id is a
+	// re-insertable id for the Go `INSERT ... ON CONFLICT DO NOTHING` re-persist), so nothing
+	// reclaims the space — on a desktop app that is the user's own disk. The WINDOW is 7 days
+	// (PruneOutbox.RETENTION_MS); the sweep runs daily, so a tombstone lives 7-8 days.
+	jobs: [{ handler: PruneOutbox, repeat: { every: 24 * 60 * 60 * 1000 } }],
 	setup: async container => {
 		// Spec emission (bun sdk / emit-openapi) imports the composition root ONLY to collect routers —
 		// booting infra there would open the real data dir and poll an empty DB.
