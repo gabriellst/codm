@@ -1,9 +1,10 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError, LoggingService } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import type { Transaction, BaseInfrastructureErrors } from '@codedm/core-typescript'
 import { AgentModelId, ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../services/AgentRunner'
+import { RUNNER_SUPPORTED_PROVIDERS } from '../registry'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
@@ -168,11 +169,39 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * `caps` is threaded to `run()` beside `binaryPath` rather than read from an ambient map, which is
 	 * the whole point of §4.7: `ClaudeAgentRunner.buildArgs` stays a pure function of its arguments, so
 	 * the argv can never depend on whether detection happened to have run yet.
+	 *
+	 * ### The misrouting guard (Fase 4.5 hazard fix)
+	 * Detection succeeding says only that a binary is INSTALLED — `PROVIDER_BINARIES` declares real
+	 * `bin` names for codex/opencode so they show up correctly in `DetectProviders`, even though
+	 * neither has a runner yet (they are DETECT-ONLY, see `ProviderDetector.ts`). Without this second
+	 * check, a thread attached to codex, on a machine where the codex CLI happens to be on PATH, would
+	 * fall through to `this.runner.run()` and silently be driven by whichever runner IS bound —
+	 * `ClaudeAgentRunner`'s argv, stream format and session semantics, applied to the wrong CLI.
+	 *
+	 * `RUNNER_SUPPORTED_PROVIDERS` (`registry.ts`) is the DI wiring's own declaration of what the
+	 * bound `AgentRunner` can actually drive — today always just `CLAUDE_CODE`, since exactly one CLI
+	 * has a runner and the binding is direct rather than a `ProviderKind`-keyed lookup. It is checked
+	 * HERE, at the use case, rather than added as a field on `AgentRunner` itself: AC-4.5.3 forbids a
+	 * runner from naming a `ProviderKind` at all (`git grep ProviderKind\.(CLAUDE|CODEX|OPENCODE) --
+	 * services/AgentRunner` must stay 0 hits) — the resolution belongs to the WIRING layer, exactly as
+	 * the `AgentRunner` binding comment in `registry.ts` already says.
+	 *
+	 * `NOT_IMPLEMENTED` is core's EXISTING base code for "this concrete implementation does not
+	 * support the requested operation" (see `RedisExternalMediator.execute`, `SqlExternalMediator`,
+	 * `MockCommandQueue`) — reused here rather than minting a new context code, which §5.1 of the goal
+	 * reserves for Fase 6. It is also the semantically HONEST choice: `PROVIDER_NOT_DETECTED` would
+	 * falsely tell the operator to install a binary that is already installed.
 	 */
 	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
 		const detection = await this.providerDetector.resolve(provider)
 		if (!detection || detection.status !== ProviderStatus.DETECTED) {
 			throw new BaseError<TerminalApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)
+		}
+		if (!RUNNER_SUPPORTED_PROVIDERS.includes(provider)) {
+			throw new BaseError<BaseInfrastructureErrors>(
+				'NOT_IMPLEMENTED',
+				`no AgentRunner implementation exists for provider ${provider} — the bound runner only drives ${RUNNER_SUPPORTED_PROVIDERS.join(', ')}`,
+			)
 		}
 		return detection
 	}

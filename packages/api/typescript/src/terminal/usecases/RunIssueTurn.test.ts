@@ -3,10 +3,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codedm/core-typescript'
-import { ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind, ProviderStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { AgentRunner } from '../services/AgentRunner'
+import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
 import { AgentSessionRepository } from '../repositories'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
@@ -160,6 +161,46 @@ describe('RunIssueTurn use case', () => {
 		await expect(useCase.execute({ ...baseInput(issueId), provider: ProviderKind.CODEX })).rejects.toThrow(
 			expect.objectContaining({ name: 'PROVIDER_NOT_DETECTED' }) as BaseError,
 		)
+	})
+
+	/**
+	 * THE MISROUTING HAZARD THIS SUITE CLOSES. `DetectProviders` reports codex identically to
+	 * claude-code, and `AttachThread` only checks installation — so a machine where the codex BINARY
+	 * happens to be on PATH lets a thread declare `providers: ['CODEX']` even though no runner drives
+	 * it. Before this guard, `resolveProvider` would return normally (detection succeeded) and
+	 * `drainRun` would fall through to `this.runner.run()` — silently executing the turn with
+	 * whichever runner IS bound (`StubAgentRunner` here, `ClaudeAgentRunner` in `real`).
+	 *
+	 * Overriding `ProviderDetector` (not `AgentRunner`) is what proves the RIGHT layer is doing the
+	 * rejecting: the bound runner stays the ordinary `StubAgentRunner` — the guard is `RunIssueTurn`
+	 * comparing `input.provider` against `RUNNER_SUPPORTED_PROVIDERS` (`terminal/registry.ts`), the DI
+	 * wiring's own declaration of what the bound runner drives, so a codex request is refused before
+	 * `run()` is ever reached without the runner class itself ever naming a `ProviderKind` (AC-4.5.3).
+	 *
+	 * Placed AFTER "rejects a provider that is not installed": `testBed.override` replaces the
+	 * container binding for the rest of the suite (it is not undone by `reset()`), so this must run
+	 * once the CODEX-not-installed case above has already observed the pristine catalog. The override
+	 * only supplies a CODEX entry — `MockProviderDetector`'s CLAUDE_CODE default (including
+	 * `caps.sessionResume`) still falls through untouched, which is why every test that runs after
+	 * this one (all of them use `baseInput()`'s default CLAUDE_CODE) is unaffected.
+	 */
+	it('fails loudly — names the provider and refuses to run — when the provider is DETECTED but no runner exists for it', async () => {
+		testBed.override(
+			ProviderDetector,
+			MockProviderDetector.with({
+				[ProviderKind.CODEX]: { name: ProviderKind.CODEX, status: ProviderStatus.DETECTED, binaryPath: '/usr/local/bin/codex', version: '1.0.0' },
+			}),
+		)
+		const useCase = testBed.resolve(RunIssueTurn)
+		const issueId = testId('run-issue-turn', 'issue-codex-no-runner')
+
+		const failure = await useCase.execute({ ...baseInput(issueId), provider: ProviderKind.CODEX }).then(
+			() => undefined,
+			(error: unknown) => error,
+		)
+
+		expect(failure).toEqual(expect.objectContaining({ name: 'NOT_IMPLEMENTED' }) as BaseError)
+		expect((failure as BaseError).message).toContain(ProviderKind.CODEX)
 	})
 
 	it('maps a TRANSPORT stop to a STOPPED outcome + a stop-raised fact (runner overridden last)', async () => {

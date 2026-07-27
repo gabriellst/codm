@@ -2,6 +2,7 @@
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
 import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
+import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner, ClaudeAgentRunner, StubAgentRunner, E2eStubAgentRunner } from './services/AgentRunner'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
@@ -17,6 +18,29 @@ import { AgentSessionRepository, DrizzleAgentSessionRepository, MockAgentSession
 const E2E = process.env.CODEDM_E2E === 'true'
 const realRunner = E2E ? E2eStubAgentRunner : ClaudeAgentRunner
 const realProviderDetector = E2E ? MockProviderDetector : SystemProviderDetector
+
+/**
+ * Which `ProviderKind`s the `AgentRunner` binding just below can ACTUALLY drive — read by
+ * `RunIssueTurn.resolveProvider` before ever calling `run()` (closes a Fase 4.5 misrouting hazard).
+ *
+ * `DetectProviders` reports codex/opencode identically to claude-code (installation status only —
+ * `ProviderDetector`'s `PROVIDER_BINARIES` declares real `bin` names for all three so they show up
+ * correctly in the catalog), and `AttachThread` only checks that the CLI is INSTALLED, never that a
+ * runner exists for it. So a machine where the codex binary happens to be on PATH lets a thread
+ * declare `providers: ['CODEX']` even though codex is DETECT-ONLY today (no runner class). Without
+ * this list, that thread's turns would fall through to `this.runner.run()` and be silently driven by
+ * whichever runner IS bound here — `ClaudeAgentRunner`'s argv, stream format and session semantics,
+ * applied to the wrong CLI.
+ *
+ * Deliberately a FLAT constant, not a `ProviderKind`-keyed lookup: every env below binds a
+ * claude-only runner (`ClaudeAgentRunner` in `real`, `StubAgentRunner`/`E2eStubAgentRunner`
+ * standing in for it elsewhere), so the supported set is identical across `mock`/`integration`/`real`
+ * today. It grows into a real per-`ProviderKind → runner` lookup the day a second CLI lands
+ * (Fase 6+) — see the `AgentRunner` binding comment below for why that lookup lives HERE and not on
+ * the runner classes themselves (AC-4.5.3 forbids a runner from branching, or even naming, a
+ * `ProviderKind`).
+ */
+export const RUNNER_SUPPORTED_PROVIDERS: readonly ProviderKind[] = [ProviderKind.CLAUDE_CODE]
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// THE ONE-METHOD SEAM (§4.1) — `run()` plus `shutdown()`, and nothing else. `ClaudeAgentRunner`

@@ -434,7 +434,10 @@ método no seam.
 ```ts
 export interface AgentRunRequest<OutputSchema extends ZodType | undefined = undefined> {
 	agentName: AgentName              // identidade p/ telemetria + logs (medscall AgentName)
-	provider: ProviderKind            // wire enum já existente (provider-kind.tsp)
+	// `provider: ProviderKind` foi REMOVIDO na Fase 4.5 — com um runner por CLI ele era uma chave de
+	// resolução que não resolve nada: quem recebe o request JÁ É o runner daquele CLI. A resolução
+	// kind → runner acontece na DI (`terminal/registry.ts`). Mantê-lo obrigava toda spec a construir
+	// um `ProviderKind` DENTRO do próprio runner, que é exatamente o que a AC-4.5.3 proíbe.
 	cwd: string                       // workspace absoluto da thread
 	systemPrompt?: string
 	messages: AgentMessage[]          // o turno; múltiplas mensagens = mesmo turno vivo
@@ -1123,7 +1126,19 @@ export function agentInput<T extends ZodRawShape>(properties: T) {
 - `context` é o slot aberto — e é onde **config multi-tenant aterrissa quando existir** (D10),
   nunca no `AgentRunRequest`.
 
-### 4.7 `ProviderDef` — o literal de dado por CLI externo
+### 4.7 `ProviderDef` — ⚠️ SUPERSEDED PELA FASE 4.5, mantido só como histórico
+
+> **NÃO IMPLEMENTAR O QUE ESTÁ ABAIXO.** `ProviderDef`, `PROVIDER_DEFS` e `defs/*` foram **deletados**
+> na Fase 4.5 e a seção fica apenas para explicar de onde o desenho veio. O que vale hoje: a unidade de
+> variação é **o CLI**, e cada um é uma classe concreta (`ClaudeAgentRunner`) que carrega o que era o
+> def — `binary` (bin/versionArgs/helpArgs/capabilityFlags), `buildArgs`, aliases de modelo, render do
+> `--mcp-config` — como membros **estáticos** seus. Ver a seção "### Fase 4.5" para o raciocínio
+> completo, incluindo a contradição que matou este desenho (`streamFormat: 'plain'` num literal exige
+> do runner exatamente o branch que a própria regra proibia).
+>
+> O que **sobreviveu** do que está abaixo: `ProviderCapabilities` (a metade *probada* em runtime, hoje
+> em `types/ProviderCapabilities.ts` e ainda produzida pelo `ProviderDetector`) e `ProviderKind` (o wire
+> enum, que é vocabulário de domínio). O campo `provider` do `AgentRunRequest` **não** sobreviveu (§4.2).
 
 ```ts
 // agent/providers/ProviderDef.ts
