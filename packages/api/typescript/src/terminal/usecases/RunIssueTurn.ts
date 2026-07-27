@@ -126,7 +126,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			const detection = await this.resolveProvider(input.provider)
 			// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
 			// produces has to exist by the time the stream starts.
-			const session = await this.resolveSession(input)
+			const session = await this.resolveSession(input, detection)
 
 			// FACT — spawn/opened, persisted before streaming so issue.opened fires at spawn time.
 			await this.withTransaction(tx, async tx => {
@@ -239,9 +239,30 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * The id is minted here in both branches (see the class docblock): the row's identity must not
 	 * depend on the provider reporting one back.
 	 */
-	private async resolveSession(input: this['input']): Promise<SessionPlan> {
+	private async resolveSession(input: this['input'], detection: ProviderDetection): Promise<SessionPlan> {
 		const existing = await this.sessions.findByIssueId(input.issueId)
 		if (!existing) return { resumed: false, id: uuidv7() }
+
+		// Gate on the PROVIDER's own capability BEFORE ever asking the row to resume — a CLI that
+		// cannot natively resume a session (`caps.sessionResume` unset) must never be handed
+		// `--resume`, no matter what the row says. Read from `ProviderDetection.caps` — the
+		// RUNTIME-PROBED shape (§4.7) — rather than a static per-provider flag on `ProviderDef`,
+		// because `caps` is the half of this that Fase 4.5 keeps: `ProviderDef`/`PROVIDER_DEFS` die
+		// and their static fields move onto the concrete runner, but `ProviderDetector` stays and
+		// keeps returning `caps: ProviderCapabilities` unchanged (AC-5.9) — so this check survives
+		// that refactor without this file needing to change again.
+		if (!detection.caps?.sessionResume) {
+			this.logging.warn({
+				content: {
+					message: 'provider has no native session resume capability — starting a fresh provider session',
+					issueId: input.issueId,
+					threadId: input.threadId,
+					provider: input.provider,
+					abandonedSessionId: existing.agentSessionId,
+				},
+			})
+			return { resumed: false, id: uuidv7() }
+		}
 
 		const decision = existing.resumeDecision({
 			model: input.model ?? AgentModelId.DEFAULT,
@@ -277,13 +298,19 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		})
 	}
 
-	/** Durable per-issue session record: resume identity, the premises it holds, and last-turn recency. */
-	private async upsertSessionRecord(input: this['input'], agentSessionId: string | null, tx: Transaction): Promise<void> {
-		if (!agentSessionId) return
+	/**
+	 * Durable per-issue session record: resume identity, the premises it holds, and last-turn recency.
+	 *
+	 * `agentSessionId` is `string`, not `string | null` — the ONE call site passes
+	 * `observed.agentSessionId ?? session.id`, and `session.id` is always minted (see the class
+	 * docblock), so the fallback never actually falls through to nothing. Typing it as always-present
+	 * says so instead of guarding against a case that cannot occur here.
+	 */
+	private async upsertSessionRecord(input: this['input'], agentSessionId: string, tx: Transaction): Promise<void> {
 		const model = input.model ?? AgentModelId.DEFAULT
 		const existing = await this.sessions.findByIssueId(input.issueId, tx)
 		if (existing) {
-			existing.recordTurn({ agentSessionId, model, lastMessageId: input.messageId })
+			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, lastMessageId: input.messageId })
 			await this.sessions.save(existing, tx)
 			return
 		}

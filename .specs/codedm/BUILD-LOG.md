@@ -2186,4 +2186,61 @@ Fase 4.5 (um runner por CLI, `ProviderDef` morre, `providers/`+`mcp/` viram `ser
 Fase 5 (`git mv terminal → agent`, chave de `CONTEXTS`, `ANNOTATED_CYCLES`, agents). A decisão sobre
 `TerminalSessionResumedEvent`/`KilledEvent` que a Fase 3 deixou aberta **segue aberta**: o resume
 nativo é observável pelo log de invalidação e pelo argv, e nenhum consumidor pediu o evento — não se
+
+## FASE 4 — resíduo do review adversarial (4 findings consertados, 27-jul)
+
+O review adversarial da Fase 4 (PASS 91) apontou quatro achados no `AgentSession`/`RunIssueTurn`.
+Nenhum tocou a assinatura de `resumeDecision` nem o conjunto fechado das 4 guardas (AC-4.2/AC-4.9) —
+os quatro são consertos dentro do que já existia.
+
+**1) [MEDIUM] `CWD_CHANGED` nunca convergia.** `recordTurn` deliberadamente não dobrava `cwd` — a
+justificativa registrada era "dobrar apagaria a evidência de onde `CWD_CHANGED` é decidido". Essa
+justificativa estava ERRADA: a evidência é a COMPARAÇÃO que `resolveSession` faz ANTES de chamar
+`recordTurn` (o cwd deste turno contra o cwd da linha NAQUELE momento) — não o valor da linha depois.
+Sem o fold, a linha ficava presa no cwd da criação PARA SEMPRE: o turno que roda sob um cwd novo (a
+guarda disparou, uma sessão CLI nova foi cunhada PARA aquele cwd) devolvia um resultado que o
+`DrizzleAgentSessionRepository.save` regravava — mas com o MESMO valor antigo, porque a entidade nunca
+tinha o novo. O UPSERT já tinha `cwd` no `SET` (comentário dizendo "isso é o que faz `CWD_CHANGED`
+convergir") — a inversão que o reviewer apontou é exatamente isso: repositório e entidade concordando
+em persistir um valor que nunca mudava. Conserto: **a entidade dobra `cwd`** em `recordTurn` — dono
+único é o par (entidade decide o valor, repositório só persiste o que a entidade tem). O docstring
+antigo foi corrigido, não só o código. Prova: `RunIssueTurn.test.ts` ganhou um teste de 3 turnos (cwd
+A → cwd B → cwd B de novo) que assere a guarda disparando **exatamente uma vez** (turno 2, via
+`MockLoggingService`) e o turno 3 resumindo (`session.resumeId` definido, `session.newId` ausente).
+`AgentSession.test.ts` e `DrizzleAgentSessionRepository.test.ts` ganharam casos irmãos no nível da
+entidade e do round-trip via SQLite real.
+
+**2) [LOW] O rename derruba as linhas.** `0002_pink_star_brand.sql` é CREATE TABLE
+`agent_agent_sessions` + DROP TABLE `terminal_terminal_llm_sessions`, sem INSERT...SELECT. A decisão
+(d) — fresh start — cobre SÓ o flip PGlite→SQLite da Fase 0 (SQLite nasce vazio); esta tabela já vive
+no substrato SQLite desde a Fase 0 e pode ter linhas reais quando esta migration rodar, então é uma
+decisão SEPARADA, tomada agora: **descartar as linhas é intencional e seguro aqui**, e a razão está
+escrita como comentário SQL no topo do próprio `CREATE TABLE` (branch pré-release; a linha é um cache
+de resumabilidade, não fato de negócio — perdê-la só custa um `--resume`, o turno seguinte cai no
+mesmo caminho "sem sessão existente" que uma issue nova já usa; não há backfill seguro para `model`
+sem inventar dado que nunca existiu). Verificado que o comentário é inócuo para o pipeline: o
+`_journal.json` do drizzle-kit guarda só tag/timestamp (não hash de conteúdo, então não diverge do que
+o próximo `generate` compara), e os dois appliers (`LibsqlDriver.ts`, `store.go`) rodam cada chunk
+`--> statement-breakpoint` como uma string via driver SQL nativo, que trata `--` como comentário
+padrão. `bun scripts/db/sync-sqlite-migrations.ts` rodado depois para propagar o comentário à cópia Go
+— `--check` confirma byte-identidade.
+
+**3) [LOW] `resolveSession` ignorava a capacidade do provider.** Nada consultava
+`ProviderDetection.caps.sessionResume` antes de decidir resumir — um provider sem resume nativo
+receberia `--resume` de qualquer jeito (na prática inofensivo hoje porque `codex`/`opencode` ignoram
+`resumeSessionId` no próprio `buildArgs`, mas por acidente, não por design). Conserto: `resolveSession`
+agora recebe a `ProviderDetection` já resolvida em `handle()` e checa `detection.caps?.sessionResume`
+ANTES de perguntar à entidade — ausente, loga e força sessão nova, sem nem olhar a linha. Deliberado:
+lido de `caps` (o resultado PROBADO em runtime, `ProviderDetection.caps: ProviderCapabilities`), não
+de um campo estático em `ProviderDef.resumesSessionViaCli` — porque `caps` é a metade que a Fase 4.5
+mantém (`ProviderDef`/`PROVIDER_DEFS` morrem e seus campos estáticos viram campo/método da runner
+concreta, mas `ProviderDetector` continua existindo e devolvendo `caps` sem mudança de forma, AC-5.9).
+Ou seja: este conserto atravessa a Fase 4.5 sem precisar tocar este arquivo de novo. `MockProviderDetector`
+ganhou `caps: { sessionResume: true }` no default de `CLAUDE_CODE` (o binário real declara `--resume`
+no `--help`) para as suítes de resume multi-turno continuarem verdes sob o novo gate.
+
+**4) [LOW] Branch morto em `upsertSessionRecord`.** `if (!agentSessionId) return` nunca disparava — o
+único call site passa `observed.agentSessionId ?? session.id`, e `session.id` é sempre cunhado
+(`SessionPlan` nunca nasce sem id). Removido; o parâmetro virou `string` (não `string | null`), que é
+a forma honesta do que sempre foi verdade no call site.
 cria produtor para evento que ninguém escuta.

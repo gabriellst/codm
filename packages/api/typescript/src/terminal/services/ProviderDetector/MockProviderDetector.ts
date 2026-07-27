@@ -17,6 +17,11 @@ export class MockProviderDetector extends ProviderDetector {
 			status: ProviderStatus.DETECTED,
 			binaryPath: '/usr/local/bin/claude',
 			version: '1.0.0 (mock)',
+			// Real claude-code declares `--resume` in its help text (`claudeProviderDef.capabilityFlags`),
+			// so the deterministic mock reports the same capability — otherwise `RunIssueTurn.resolveSession`'s
+			// capability gate (GOAL-agent-abstraction §4.10) would force every mocked turn fresh, breaking
+			// the multi-turn resume suites that this detector backs.
+			caps: { sessionResume: true },
 		},
 		[ProviderKind.CODEX]: { name: ProviderKind.CODEX, status: ProviderStatus.NOT_INSTALLED },
 		[ProviderKind.OPENCODE]: { name: ProviderKind.OPENCODE, status: ProviderStatus.NOT_INSTALLED },

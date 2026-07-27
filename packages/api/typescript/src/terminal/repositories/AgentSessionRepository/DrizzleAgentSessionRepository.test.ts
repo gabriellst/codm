@@ -84,6 +84,7 @@ describe('DrizzleAgentSessionRepository (integration)', () => {
 		session.recordTurn({
 			agentSessionId: testId('agent-session-repo', 'agent-session-2'),
 			model: AgentModelId.OPUS,
+			cwd: '/tmp/workspace',
 			lastMessageId: testId('agent-session-repo', 'entry-2'),
 		})
 		await repo.save(session)
@@ -93,6 +94,25 @@ describe('DrizzleAgentSessionRepository (integration)', () => {
 		expect(found?.model).toBe(AgentModelId.OPUS)
 		expect(found?.lastMessageId).toBe(testId('agent-session-repo', 'entry-2'))
 		expect(found?.version).toBeGreaterThanOrEqual(2)
+	})
+
+	it('save UPSERTs the folded cwd too — recordTurn onto a NEW cwd persists it, converging the guard', async () => {
+		const session = makeSession()
+		await repo.save(session)
+		session.recordTurn({
+			agentSessionId: testId('agent-session-repo', 'agent-session-3'),
+			model: AgentModelId.SONNET,
+			cwd: '/tmp/other-workspace',
+			lastMessageId: testId('agent-session-repo', 'entry-3'),
+		})
+		await repo.save(session)
+
+		const found = await repo.findById(session.id.value)
+		expect(found?.cwd).toBe('/tmp/other-workspace')
+		expect(found?.resumeDecision({ model: AgentModelId.SONNET, cwd: '/tmp/other-workspace', cursor: session.lastMessageId })).toEqual({
+			resume: true,
+			id: testId('agent-session-repo', 'agent-session-3'),
+		})
 	})
 
 	it('the model column accepts DEFAULT — a session that never named a model is still a valid row', async () => {

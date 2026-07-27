@@ -36,6 +36,7 @@ describe('AgentSession entity', () => {
 		s.recordTurn({
 			agentSessionId: testId('agent-session-entity', 'agent-session-2'),
 			model: AgentModelId.OPUS,
+			cwd: base.cwd,
 			lastMessageId: testId('agent-session-entity', 'entry-2'),
 			at: later,
 		})
@@ -45,10 +46,17 @@ describe('AgentSession entity', () => {
 		expect(s.lastTurnAt).toBe(later)
 	})
 
-	it('recordTurn() leaves cwd alone — the evidence CWD_CHANGED is decided from', () => {
+	it('recordTurn() folds cwd — the row adopts the NEW cwd as the reference point for the next resume comparison', () => {
 		const s = AgentSession.create(base)
-		s.recordTurn({ agentSessionId: 'sid-2', model: base.model })
-		expect(s.cwd).toBe(base.cwd)
+		s.recordTurn({ agentSessionId: 'sid-2', model: base.model, cwd: '/tmp/other-workspace' })
+		expect(s.cwd).toBe('/tmp/other-workspace')
+
+		// This is the convergence property itself: comparing the SAME cwd again now resumes instead
+		// of invalidating a second time.
+		expect(s.resumeDecision({ model: base.model, cwd: '/tmp/other-workspace', cursor: s.lastMessageId })).toEqual({
+			resume: true,
+			id: 'sid-2',
+		})
 	})
 
 	describe('resumeDecision() — the four invalidation guards (AC-4.2, one test per reason)', () => {

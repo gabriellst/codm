@@ -2,7 +2,7 @@ import { testId } from '@test/support'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
+import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codedm/core-typescript'
 import { ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
@@ -13,7 +13,7 @@ import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEve
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'
 import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
-import { TerminalRunOutcome, type TransportStopKind } from '../enums'
+import { ResumeInvalidationReason, TerminalRunOutcome, type TransportStopKind } from '../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../types'
 
 /** A runner whose one run ends on a TRANSPORT stop — drives the STOPPED branch deterministically. */
@@ -175,5 +175,58 @@ describe('RunIssueTurn use case', () => {
 		expect(await eventRepo.findByType(TerminalSessionStartedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(TerminalStopRaisedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(TerminalSessionCompletedEvent)).toHaveLength(0)
+	})
+
+	/**
+	 * CWD_CHANGED convergence (Fase 4 review fix). Three turns on ONE issue: same cwd, a cwd that
+	 * MOVES, then that same new cwd again. Before the fix, `AgentSession.recordTurn` never folded
+	 * `cwd`, so the row stayed pinned to the FIRST cwd forever — turn 3 would invalidate again
+	 * (CWD_CHANGED fires on every turn, never converges). The definition of "converges" is exactly
+	 * what this test asserts: the guard fires EXACTLY ONCE (turn 2) and turn 3 resumes.
+	 */
+	it('CWD_CHANGED converges: fires exactly once when the workspace moves, then the next turn under the SAME new cwd resumes', async () => {
+		const runner = new CapturingRunner()
+		testBed.override(AgentRunner, runner)
+		const logging = testBed.resolve(LoggingService) as MockLoggingService
+		const sessions = testBed.resolve(AgentSessionRepository)
+		const useCase = testBed.resolve(RunIssueTurn)
+		const issueId = testId('run-issue-turn', 'issue-cwd-convergence')
+
+		// ── TURN 1 — brand-new session, established under cwd A. ──────────────────────────────────
+		const entry1 = testId('run-issue-turn', 'entry-cwd-1')
+		await useCase.execute({ ...baseInput(issueId), workspacePath: '/tmp/workspace-a', messageId: entry1 })
+		expect(runner.requests[0]?.session?.newId).toBeDefined()
+		expect((await sessions.findByIssueId(issueId))?.cwd).toBe('/tmp/workspace-a')
+
+		// ── TURN 2 — cwd MOVES to B. The guard MUST fire, exactly here. ───────────────────────────
+		logging.clearLogs()
+		const entry2 = testId('run-issue-turn', 'entry-cwd-2')
+		await useCase.execute({ ...baseInput(issueId), workspacePath: '/tmp/workspace-b', messageId: entry2, priorMessageId: entry1 })
+
+		// FRESH, not resumed — a new session id is minted for the new cwd.
+		expect(runner.requests[1]?.session?.newId).toBeDefined()
+		expect(runner.requests[1]?.session?.resumeId).toBeUndefined()
+
+		// The guard fired exactly once, and said why.
+		const warningsAfterTurn2 = logging.getLogsByLevel('warn').map(entry => entry.args.content)
+		const cwdInvalidationsAfterTurn2 = warningsAfterTurn2.filter(content => content?.reason === ResumeInvalidationReason.CWD_CHANGED)
+		expect(cwdInvalidationsAfterTurn2).toHaveLength(1)
+
+		// CONVERGENCE: the row now tracks the NEW cwd — the reference point the NEXT turn compares
+		// against is B, not the stale A.
+		const afterTurn2 = await sessions.findByIssueId(issueId)
+		expect(afterTurn2?.cwd).toBe('/tmp/workspace-b')
+
+		// ── TURN 3 — SAME cwd as turn 2 (B). The guard must NOT fire again: this turn resumes. ────
+		logging.clearLogs()
+		const entry3 = testId('run-issue-turn', 'entry-cwd-3')
+		await useCase.execute({ ...baseInput(issueId), workspacePath: '/tmp/workspace-b', messageId: entry3, priorMessageId: entry2 })
+
+		expect(runner.requests[2]?.session?.resumeId).toBeDefined()
+		expect(runner.requests[2]?.session?.newId).toBeUndefined()
+
+		// No further CWD_CHANGED invalidation — the guard converged instead of latching.
+		const warningsAfterTurn3 = logging.getLogsByLevel('warn').map(entry => entry.args.content)
+		expect(warningsAfterTurn3.some(content => content?.reason === ResumeInvalidationReason.CWD_CHANGED)).toBe(false)
 	})
 })

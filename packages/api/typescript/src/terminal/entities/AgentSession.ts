@@ -85,13 +85,24 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 
 	/**
 	 * Fold ONE completed turn into the row: the (possibly new) CLI session id, the model it ran
-	 * under, and how far the conversation got. `cwd` is NOT folded here — a turn cannot move the
-	 * workspace, and re-writing it from the run's input would erase the very evidence `CWD_CHANGED`
-	 * is decided from.
+	 * under, how far the conversation got, and the cwd the turn actually ran in.
+	 *
+	 * `cwd` IS folded — reversing an earlier version of this method, which left it alone on the
+	 * theory that re-writing it would erase the evidence `CWD_CHANGED` is decided from. That theory
+	 * was wrong: the evidence is the COMPARISON `resolveSession` makes BEFORE this call runs (this
+	 * turn's cwd against the row's cwd AS IT STOOD then), not the row's value afterwards. Leaving
+	 * `cwd` un-folded meant the row could never advance past whatever cwd it was first created
+	 * under — so once a turn ran under a NEW cwd (the guard fired, a fresh CLI session was minted
+	 * FOR that cwd), the very next turn compared against the STALE value again and re-invalidated,
+	 * forever. Folding the cwd this turn actually ran under is what makes the row track the tree the
+	 * CURRENT `agentSessionId` is running in — which is the only cwd the NEXT turn should be
+	 * compared against, and is exactly what makes `CWD_CHANGED` converge (fire once, then resume)
+	 * instead of latch (fire on every turn from then on).
 	 */
-	recordTurn(data: { agentSessionId: string; model: AgentModelId; lastMessageId?: string; at?: Date }): void {
+	recordTurn(data: { agentSessionId: string; model: AgentModelId; cwd: string; lastMessageId?: string; at?: Date }): void {
 		this.agentSessionId = data.agentSessionId
 		this.model = data.model
+		this.cwd = data.cwd
 		if (data.lastMessageId !== undefined) this.lastMessageId = data.lastMessageId
 		this.lastTurnAt = data.at ?? new Date()
 		this.validate()
