@@ -65,6 +65,17 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+# Acceptance evidence is a DELIVERABLE, not noise. `*.log` above is a runtime-output rule, but the
+# transcript of the smoke run a phase CLOSES ON is the artifact itself, and its AC asserts the file
+# is TRACKED (`git ls-files --error-unmatch`) — unsatisfiable while the blanket rule applies.
+#
+# This has already bitten silently once: .specs/codedm/phase10-smoke/real-smoke-run.log sits on
+# disk believed committed, while `git ls-files` lists only the .ts beside it. It is NOT un-ignored
+# here on purpose — that is another phase's evidence (and a FAIL verdict at that), so widening this
+# to `!.specs/**/*.log` is that phase owner's call to make with their own artifact in hand, not a
+# side effect of this one. Narrow by phase until then.
+!.specs/codedm/phase0-smoke/*.log
+
 pids
 *.pid
 *.seed

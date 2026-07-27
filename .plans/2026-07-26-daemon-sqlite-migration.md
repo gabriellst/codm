@@ -4676,11 +4676,37 @@ nunca o `curl -sf`.
 **Arquivos:**
 - `packages/api/typescript/scripts/smoke-shared-store.ts` (**novo — É O DELIVERABLE**; caminho
   fixado pela AC-0.5 do goal, `.specs/codedm/GOAL-agent-abstraction.md:1623`);
-- `.specs/codedm/phase0-smoke/smoke-shared-store.log` (a saída do run **real**, commitada — mesmo
-  padrão já usado em `.specs/codedm/phase10-smoke/`, que traz script + `real-smoke-run.log`
-  commitados lado a lado);
+- `.specs/codedm/phase0-smoke/smoke-shared-store.log` (a saída do run **real**, commitada);
+- `.gitignore` (**acrescentado na execução** — ver a correção do precedente abaixo);
 - `.plans/artifacts/2026-07-26-acceptance.md` (registro do aceite: RSS, variante da prova, sonda
   de T07B).
+
+> **CORREÇÃO — o precedente citado NÃO EXISTE, e o AC de "commitado" era insatisfazível.** A
+> iteração 7 dizia "mesmo padrão já usado em `.specs/codedm/phase10-smoke/`, que traz script +
+> `real-smoke-run.log` commitados lado a lado". RODADO:
+> ```
+> $ git add .specs/codedm/phase0-smoke/smoke-shared-store.log
+> The following paths are ignored by one of your .gitignore files:
+> .specs/codedm/phase0-smoke/smoke-shared-store.log
+> $ git check-ignore -v .specs/codedm/phase0-smoke/smoke-shared-store.log
+> .gitignore:62:*.log	.specs/codedm/phase0-smoke/smoke-shared-store.log
+> $ git ls-files .specs/codedm/phase10-smoke/
+> .specs/codedm/phase10-smoke/jsonl-experiment.ts
+> .specs/codedm/phase10-smoke/real-smoke.ts          ← só os .ts; o .log NUNCA foi commitado
+> $ ls .specs/codedm/phase10-smoke/
+> jsonl-experiment.ts  real-smoke-run.log  real-smoke.ts   ← ele existe em disco, e só em disco
+> ```
+> `.gitignore:62` é um `*.log` de escopo repo-wide, então o `git ls-files --error-unmatch` do AC
+> **não podia** passar — e o precedente que o justificava é um arquivo que todo mundo achava
+> commitado e nunca esteve. É a mesma classe de defeito que a §8 chama de vacuamente positivo, só
+> que do outro lado: o artefato de evidência some em silêncio.
+>
+> Saída aplicada: uma **negação estreita** em `.gitignore` — `!.specs/codedm/phase0-smoke/*.log`.
+> Deliberadamente **não** `!.specs/**/*.log`: isso desconde também o `real-smoke-run.log` da
+> phase 10, que é evidência de OUTRA fase (e de um run com `VERDICT: FAIL`), e arrastá-lo para o
+> commit desta task seria escopo alheio. Alargar é decisão do dono daquela fase, com o artefato
+> dele na mão. **Regra derivada: todo AC que exige um artefato TRACKED roda `git check-ignore -v`
+> sobre o caminho antes de virar AC.**
 
 > **REESCRITA NA ITERAÇÃO 7 — a FORMA desta task era o defeito.** Quatro rodadas de review
 > encontraram um blocker **novo** aqui, toda vez, enquanto os ACs simples do resto do plano
@@ -4992,6 +5018,24 @@ if (grep -q "CONNECTED") {}                                        EXIT=1 (repro
 if (channel.status !== 'CONNECTED') fail()                         EXIT=0              EXIT=0
 await db.execute("INSERT INTO gateway_channels VALUES (1)")         EXIT=0              EXIT=1 (reprova)
 ```
+
+> **EXECUÇÃO — os dois gates de forma casam PROSA, não só código, e as duas classes apareceram.**
+> RODADO contra o script real:
+> 1. **no-substring-gate.** O docblock do script explicava a armadilha R1 citando o one-liner
+>    literal (`… | grep -q CONNECTED`) e o gate casou **a explicação**:
+>    `smoke-shared-store.ts:23: * contains \`CONNECT\` — measured: \`printf … | grep -q CONNECTED\``.
+>    O gate é um `grep` literal e **não distingue uma assertiva de uma explicação de por que a
+>    assertiva é errada**. Saída aplicada: **reescrever a frase sem soletrar o one-liner** — o fato
+>    medido continua no arquivo, o gate volta a discriminar. Deletar a explicação seria o
+>    "AC satisfeito deletando prosa" que a §8 proíbe; alargar o gate o enfraqueceria.
+> 2. **no-write-sql-gate.** O gate é `grep -niE '(INSERT|UPDATE|DELETE)[[:space:]]+(INTO|FROM|…)'`
+>    e é **case-insensitive**, então a frase inglesa "a direct SQL INSERT **from** a test" casa
+>    (`INSERT` + espaço + `from`). Redigido como "a direct SQL **write by the script**".
+>
+> ⚠️ E os dois `! grep` **não abortam sob `set -e`** (POSIX: `-e` é ignorado quando o comando é
+> precedido de `!`). Rodando o bloco de AC inteiro num shell só, um gate reprovado **passa
+> silenciosamente** — o que denuncia é a ausência do `echo ok:` correspondente. Ao rodar o bloco,
+> **contar as linhas `ok:`**, não só olhar o exit final.
 
 E as formas de `jq` de igualdade exata, RODADAS (mesma tabela da iteração 6, revalidada):
 
