@@ -336,3 +336,148 @@ func TestMigrationHandleIsSeparateAndClosed(t *testing.T) {
 		t.Fatalf("regime handle lost WAL after the migration pass: %q", mode)
 	}
 }
+
+// TestConcurrentBoot is the CROSS-LANGUAGE half of T28's proof of decision (b)(4).
+//
+// THE WINDOW. Both appliers run at boot over ONE ledger in ONE file, in whatever order the two
+// processes happen to start. If the "is it applied?" question is answered OUTSIDE the write
+// transaction — as this loop's lock-free pre-check deliberately is — then two cold boots can both
+// answer "no", serialize on the write lock, and the loser re-executes the file. Migration 0000 is
+// 25 CREATE TABLE with no IF NOT EXISTS and 0001 is ALTER TABLE ... ADD, so that is a hard error,
+// not a no-op. applyOne closes it by RE-ASKING the ledger as its first statement inside the tx.
+//
+// A SEQUENTIAL TEST CANNOT SEE IT: whoever boots second hits the fast path and never opens the
+// window. Every racer here must observe an EMPTY ledger before any of them takes the write lock,
+// which is what the filesystem barrier arranges — the TS child pays its whole start-up cost (bun,
+// module graph, libsql load, opening the file), creates its --ready file, and only then spins on
+// --start. This process creates --start and releases its own goroutines from the same instant.
+//
+// AND IT IS CROSS-LANGUAGE ON PURPOSE. The Go appliers alone would only prove modernc interlocks
+// with modernc. The property the phase actually ships is that a modernc BEGIN IMMEDIATE and a
+// libsql BEGIN IMMEDIATE interlock over the same file — different bindings, different processes,
+// one SQLite write lock. So the peer here is the real TS applier
+// (packages/api/typescript/scripts/apply-migrations-once.ts), spawned as a real process.
+//
+// Run it repeatedly — the race is probabilistic: go test ./core/db/sqlite/... -run ConcurrentBoot -count=20
+func TestConcurrentBoot(t *testing.T) {
+	const goRacers = 3
+
+	bun, err := exec.LookPath("bun")
+	if err != nil {
+		// NOT t.Skip: skipping turns "the cross-language race was never exercised" into a green
+		// run, which is the exact class of vacuous pass this phase's gates exist to reject.
+		t.Fatalf("bun is required for the cross-language half of this test: %v", err)
+	}
+	applier, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "typescript", "scripts", "apply-migrations-once.ts"))
+	if err != nil {
+		t.Fatalf("resolve applier script: %v", err)
+	}
+	if _, err := os.Stat(applier); err != nil {
+		t.Fatalf("TS applier script missing at %q: %v", applier, err)
+	}
+
+	dir := t.TempDir()
+	readyFile := filepath.Join(dir, "ready-ts")
+	startFile := filepath.Join(dir, "start")
+
+	child := exec.Command(bun, applier, "--data-dir", dir, "--ready", readyFile, "--start", startFile)
+	var childOut strings.Builder
+	child.Stdout = &childOut
+	child.Stderr = &childOut
+	if err := child.Start(); err != nil {
+		t.Fatalf("spawn TS applier: %v", err)
+	}
+	defer func() { _ = child.Process.Kill() }()
+
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		if _, err := os.Stat(readyFile); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("TS applier never reached the barrier; output so far:\n%s", childOut.String())
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+
+	// Every Go racer is parked on `release` BEFORE the TS child is let go, so the whole field
+	// starts from one instant and all of them see the empty ledger.
+	release := make(chan struct{})
+	errs := make(chan error, goRacers)
+	for i := 0; i < goRacers; i++ {
+		go func() {
+			<-release
+			store, err := NewSqliteStore(dir)
+			if err != nil {
+				errs <- err
+				return
+			}
+			_ = store.Close()
+			errs <- nil
+		}()
+	}
+
+	if err := os.WriteFile(startFile, []byte("go"), 0o644); err != nil {
+		t.Fatalf("write start barrier: %v", err)
+	}
+	close(release)
+
+	for i := 0; i < goRacers; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("go applier %d failed: %v", i, err)
+		}
+	}
+	if err := child.Wait(); err != nil {
+		t.Fatalf("TS applier exited non-zero (%v); output:\n%s", err, childOut.String())
+	}
+	if !strings.Contains(childOut.String(), "APPLIER_APPLIED") {
+		t.Fatalf("TS applier did not report success; output:\n%s", childOut.String())
+	}
+
+	// Post-conditions, read on a handle none of the racers used.
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(dir, dbFileName)+regimeDSNSuffix)
+	if err != nil {
+		t.Fatalf("open verification handle: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	var ledgerRows int
+	if err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", migrationsTable)).Scan(&ledgerRows); err != nil {
+		t.Fatalf("count ledger: %v", err)
+	}
+	// One row per embedded .sql file — NOT one per racer, which is what a re-apply would leave.
+	wantLedger := 0
+	entries, err := migrationsFS.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("ReadDir(migrations): %v", err)
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			wantLedger++
+		}
+	}
+	if ledgerRows != wantLedger {
+		t.Fatalf("ledger holds %d rows, want %d (one per migration file)", ledgerRows, wantLedger)
+	}
+
+	var tables int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> " +
+			"'" + migrationsTable + "'",
+	).Scan(&tables); err != nil {
+		t.Fatalf("count tables: %v", err)
+	}
+	// 25 drizzle tables. No whatsmeow here: that schema is upgraded by the channel module's own
+	// store, which this test does not boot.
+	if tables != 25 {
+		t.Fatalf("found %d application tables, want 25", tables)
+	}
+
+	var foreign int
+	if err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'").Scan(&foreign); err != nil {
+		t.Fatalf("check for the drizzle migrator ledger: %v", err)
+	}
+	if foreign != 0 {
+		t.Fatal("__drizzle_migrations exists — the drizzle migrator is forbidden on the shared file (it is a second ledger the Go side cannot see)")
+	}
+}

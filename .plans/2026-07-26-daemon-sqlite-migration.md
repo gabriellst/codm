@@ -4280,25 +4280,72 @@ bun e2e
 
 #### T28 — Teste de boot CONCORRENTE (a prova do TOCTOU de T04)
 
-**Arquivos:** `packages/api/typescript/tests/kernel/concurrent-boot.test.ts` (novo) ou script
-sob `scripts/`; `packages/api/go/core/db/sqlite/store_test.go`.
+**Arquivos:** `packages/api/typescript/tests/kernel/concurrent-boot.test.ts` (novo);
+`packages/api/typescript/scripts/apply-migrations-once.ts` (novo — o applier TS como **processo**,
+com barreira de arquivo; ver a correção (2) abaixo); `packages/api/go/core/db/sqlite/store_test.go`.
 
 **O que muda.** Um teste sequencial (Go migra, depois TS abre) **não reproduz** o TOCTOU. É
 preciso duas execuções **concorrentes** contra um data dir frio:
 
 1. Criar dir temporário vazio.
-2. Disparar **simultaneamente** o applier Go e o applier TS (dois processos de verdade, ou
-   dois handles em goroutine/worker — o essencial é que ambos vejam a ledger vazia antes de
-   qualquer `BEGIN IMMEDIATE`).
+2. Disparar **simultaneamente** o applier Go e o applier TS (**dois processos de verdade** — ver a
+   correção (2): "dois handles no mesmo processo" é inválido do lado TS). O essencial é que ambos
+   vejam a ledger vazia antes de qualquer `BEGIN IMMEDIATE`, e é isso que a **barreira de
+   arquivo** garante: o filho paga todo o custo de boot, cria `--ready`, e só então gira em
+   `--start`; o par cria `--start` e larga junto.
 3. Assertivas: nenhum dos dois erra; `sqlite_master` tem as 25 tabelas; `_sqlite_migrations`
    tem exatamente **2** linhas (0000 e 0001), **não** 4; `__drizzle_migrations` não existe.
 4. Repetir 20× (o TOCTOU é probabilístico).
+
+> **CORREÇÃO (1) — a linha Go da AC era INEXECUTÁVEL. `core/` é OUTRO módulo Go.** RODADO:
+> ```
+> $ ( cd packages/api/go && go test ./core/db/sqlite/... -run ConcurrentBoot -count=1 )
+> pattern ./core/db/sqlite/...: main module (template/api-go) does not contain package template/api-go/core/db/sqlite
+> FAIL	./core/db/sqlite/... [setup failed]
+> $ head -1 packages/api/go/core/go.mod   ⇒ module template/core-go
+> $ ls go.work packages/api/go/go.work    ⇒ No such file or directory (nos dois)
+> ```
+> `packages/api/go/go.mod` é `template/api-go` e **não** contém `core/`; sem `go.work`, o padrão
+> `./core/...` não resolve. A forma correta ancora no módulo dono:
+> `( cd packages/api/go/core && go test ./db/sqlite/... -run ConcurrentBoot -count=20 )`.
+>
+> **CORREÇÃO (2) — "dois handles em goroutine/worker" é válido em Go e INVÁLIDO em TS.** Em Go
+> um goroutine bloqueado só bloqueia sua thread. No TS **não**: `busy_timeout` do client libsql
+> local é uma espera nativa **BLOQUEANTE**, que trava o event loop inteiro. MEDIDO (dois clients,
+> um arquivo, `busy_timeout = 3000`, `setInterval` de 50ms atravessando a espera):
+> ```
+> WAITED_MS=3262   TIMER_TICKS_DURING_WAIT=0   ERROR=LibsqlError: SQLITE_BUSY
+> ```
+> **Zero ticks.** Logo um segundo driver no mesmo processo não "espera a vez": ele congela o loop
+> de que o DETENTOR precisa para chegar ao próprio `COMMIT`, e os dois morrem em `SQLITE_BUSY` no
+> fim do orçamento — MEDIDO com 4 drivers in-process: `migration 0000 waited 96418ms on another
+> writer`, depois `SQLITE_BUSY ×3`. Isso **não contradiz nenhuma decisão da §3**: é o corolário
+> duro da regra que `src/shared/index.ts` e `TestBed` já aplicam (**um** driver memoizado por
+> processo) — e mostra que o custo de violá-la não é contenção, é deadlock. A concorrência que
+> esta fase de fato shippa é **entre processos**, onde cada esperador bloqueia só a própria
+> thread; é a única forma que o teste TS assevera.
+>
+> **CONTROLE NEGATIVO — RODADO nos dois lados** (sem ele, um teste de corrida verde não distingue
+> "a corrida foi vencida" de "não houve corrida"):
+> ```
+> TS  — re-check dentro da tx desabilitado em applyOneMigration ⇒ FALHA na 1ª rodada:
+>       SqliteError: table `authentication_accounts` already exists (SQLITE_ERROR)
+> Go  — re-check dentro da tx desabilitado em applyOne ⇒ FALHA em 4 das 5 rodadas:
+>       go applier N failed: … statement "CREATE TABLE `authentication_accounts` …":
+>       SQL logic error: table `authentication_accounts` already exists (1)
+> ```
+> Com o re-check no lugar: TS 20 rodadas × 3 processos ⇒ 120 asserts verdes em 7,2s; Go
+> `-count=20` ⇒ `ok template/core-go/db/sqlite 6.557s`.
 
 **AC.**
 ```bash
 cd "$(git rev-parse --show-toplevel)"   # ÂNCORA (iteração 5)
 ( cd packages/api/typescript && bun test tests/kernel/concurrent-boot.test.ts )
-( cd packages/api/go && go test ./core/db/sqlite/... -run ConcurrentBoot -count=20 )
+# ÂNCORA NO MÓDULO DONO — `packages/api/go` é `template/api-go` e NÃO contém `core/` (correção 1).
+( cd packages/api/go/core && go test ./db/sqlite/... -run ConcurrentBoot -count=20 )
+# o peer cross-linguagem existe e é um PROCESSO (correção 2) — não um segundo handle in-process
+test -f packages/api/typescript/scripts/apply-migrations-once.ts
+grep -q 'apply-migrations-once' packages/api/go/core/db/sqlite/store_test.go
 ```
 
 ---
