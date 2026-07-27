@@ -106,9 +106,25 @@ export class SqlExternalMediator extends ExternalMediator {
 		}
 	}
 
-	/** Alias of dispatch, fire-and-forget. Same rule: no row is written. */
+	/**
+	 * Alias of dispatch — awaited, NOT fire-and-forget. Same rule as `dispatch`: no row is written.
+	 *
+	 * MUST await: every `Publish*IntegrationEvents` handler in this codebase re-publishes several
+	 * integration events for the SAME entity from a single domain-event handler, in a sequence that
+	 * only holds if each `publish()` delivers before the next line runs (e.g. terminal's
+	 * `issue.opened` must reach `OpenIssue` before `issue.completed` reaches `CompleteIssue`, since
+	 * `CompleteIssue` treats "issue not found yet" as an idempotent no-op with no retry — see
+	 * RunTerminalSessionOnClassification / PublishTerminalIntegrationEvents). A fire-and-forget
+	 * `void tryCatchAsync(...)` here breaks that ordering: the outer `DrizzleOutboxDispatcher` owner
+	 * loop moves on to dispatch the NEXT row (completed) while THIS row's fan-out (opened) is still an
+	 * unawaited floating promise, so the two can race and land out of order — silently and
+	 * permanently dropping the completion. Confirmed by reproduction: `CompleteIssue` observed
+	 * `found=false` while `OpenIssue`'s save was still in flight. Unlike `RedisExternalMediator`
+	 * (where `publish` hands off to a real transport and decoupling is the point), this mediator's
+	 * `publish` is pure same-process fan-out — there is no transport to justify not awaiting it.
+	 */
 	async publish(event: BaseEvent): Promise<void> {
-		void tryCatchAsync(() => this.dispatch(event))
+		await this.dispatch(event)
 	}
 
 	async execute<T extends Handler>(_handler: T['name'], _input: T['input']): Promise<T['output']> {
