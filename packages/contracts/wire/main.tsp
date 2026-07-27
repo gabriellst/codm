@@ -44,6 +44,10 @@ import "./enums/transcript-kind.tsp";
 import "./enums/sender-identity.tsp";
 import "./enums/buffer-size.tsp";
 import "./enums/attach-flow-style.tsp";
+// Persistence-lane discriminator of the SINGLE shared_outbox table in the shared SQLite
+// store. Cross-boundary because BOTH backends write rows into that one table and each
+// consumer claims only its own lane — the value is a contract between two processes.
+import "./enums/outbox-source.tsp";
 
 import "./events/index.tsp";
 

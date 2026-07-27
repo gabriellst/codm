@@ -380,6 +380,23 @@ func ParseMessageType(s string) (MessageType, error) {
 	}
 }
 
+type OutboxSource string
+
+const (
+	OutboxSourceapi OutboxSource = "api"
+	OutboxSourcegateway OutboxSource = "gateway"
+	OutboxSourceintegration OutboxSource = "integration"
+)
+
+func ParseOutboxSource(s string) (OutboxSource, error) {
+	switch OutboxSource(s) {
+	case OutboxSourceapi, OutboxSourcegateway, OutboxSourceintegration:
+		return OutboxSource(s), nil
+	default:
+		return "", fmt.Errorf("invalid OutboxSource: %q", s)
+	}
+}
+
 type OwnerKind string
 
 const (

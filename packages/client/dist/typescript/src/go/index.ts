@@ -204,6 +204,7 @@ export type { MarkRemoteAsUnread204, MarkRemoteAsUnreadError, MarkRemoteAsUnread
 export type { MembershipAction, MembershipActionEnumKey } from "./types/MembershipAction.ts";
 export type { MessageType, MessageTypeEnumKey } from "./types/MessageType.ts";
 export type { MuteRemote204, MuteRemoteError, MuteRemoteMutation, MuteRemoteMutationRequest, MuteRemoteMutationResponse } from "./types/MuteRemote.ts";
+export type { OutboxSource, OutboxSourceEnumKey } from "./types/OutboxSource.ts";
 export type { OwnerKind, OwnerKindEnumKey } from "./types/OwnerKind.ts";
 export type { PinRemote204, PinRemoteError, PinRemoteMutation, PinRemoteMutationRequest, PinRemoteMutationResponse } from "./types/PinRemote.ts";
 export type { PollMessageData } from "./types/PollMessageData.ts";
@@ -555,6 +556,7 @@ export { LanguageEnum } from "./types/Language.ts";
 export { LogLevelEnum } from "./types/LogLevel.ts";
 export { MembershipActionEnum } from "./types/MembershipAction.ts";
 export { MessageTypeEnum } from "./types/MessageType.ts";
+export { OutboxSourceEnum } from "./types/OutboxSource.ts";
 export { OwnerKindEnum } from "./types/OwnerKind.ts";
 export { PresenceTypeEnum } from "./types/PresenceType.ts";
 export { ProviderKindEnum } from "./types/ProviderKind.ts";
@@ -735,6 +737,7 @@ export { markRemoteAsUnread204Schema, markRemoteAsUnreadErrorSchema, markRemoteA
 export { membershipActionSchema } from "./zod/membershipActionSchema.ts";
 export { messageTypeSchema } from "./zod/messageTypeSchema.ts";
 export { muteRemote204Schema, muteRemoteErrorSchema, muteRemoteMutationRequestSchema, muteRemoteMutationResponseSchema } from "./zod/muteRemoteSchema.ts";
+export { outboxSourceSchema } from "./zod/outboxSourceSchema.ts";
 export { ownerKindSchema } from "./zod/ownerKindSchema.ts";
 export { pinRemote204Schema, pinRemoteErrorSchema, pinRemoteMutationRequestSchema, pinRemoteMutationResponseSchema } from "./zod/pinRemoteSchema.ts";
 export { pollMessageDataSchema } from "./zod/pollMessageDataSchema.ts";

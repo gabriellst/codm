@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"template/contracts-go/wire"
 	"template/core-go/config"
 	"template/core-go/db/sqlite"
 	"template/core-go/middleware"
@@ -25,7 +26,12 @@ import (
 // table. The SqlExternalMediator claims only rows of this source whose event name
 // has a registered ingress handler; the domain-event OutboxDispatcher polls its
 // own ("gateway") slice, so the two never contend over the same rows.
-const integrationOutboxSource = "integration"
+//
+// The value comes from the cross-boundary contract (packages/contracts wire enum
+// OutboxSource), not from a local literal: the TS daemon writes its own `api` rows
+// into the SAME shared_outbox table, so the lane set is a contract between two
+// processes. string(...) keeps it a plain string constant for the call site below.
+const integrationOutboxSource = string(wire.OutboxSourceintegration)
 
 var Module = fx.Module("shared",
 	// Config

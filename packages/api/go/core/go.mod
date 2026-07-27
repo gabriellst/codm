@@ -32,4 +32,7 @@ require (
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
+	template/contracts-go v0.0.0
 )
+
+replace template/contracts-go => ../../../contracts/generated/go

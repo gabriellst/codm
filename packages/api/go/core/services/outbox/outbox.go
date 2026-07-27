@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
@@ -32,7 +33,12 @@ const (
 // outbox table. Each consumer polls only its own slice: the domain-event
 // dispatcher claims "gateway", the integration mediator claims "integration",
 // so the two never contend over the same rows.
-const OutboxSource = "gateway"
+//
+// The value is NOT a local literal: the lane set is a cross-boundary contract
+// (packages/contracts wire enum OutboxSource) because the TS daemon writes its
+// own `api` rows into the SAME table. The string(...) conversion keeps this a
+// plain string constant, so the query args and struct fields below are unchanged.
+const OutboxSource = string(wire.OutboxSourcegateway)
 
 // outboxRow is a single claimed outbox row plus its decoded event envelope.
 type outboxRow struct {

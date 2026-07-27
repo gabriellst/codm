@@ -875,6 +875,27 @@ func (e MessageType) Valid() bool {
 	}
 }
 
+// Defines values for OutboxSource.
+const (
+	OutboxSourceapi         OutboxSource = "api"
+	OutboxSourcegateway     OutboxSource = "gateway"
+	OutboxSourceintegration OutboxSource = "integration"
+)
+
+// Valid indicates whether the value is a known member of the OutboxSource enum.
+func (e OutboxSource) Valid() bool {
+	switch e {
+	case OutboxSourceapi:
+		return true
+	case OutboxSourcegateway:
+		return true
+	case OutboxSourceintegration:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OwnerKind.
 const (
 	OwnerKindINDIVIDUAL   OwnerKind = "INDIVIDUAL"
@@ -3521,6 +3542,9 @@ type MembershipAction string
 
 // MessageType defines model for MessageType.
 type MessageType string
+
+// OutboxSource defines model for OutboxSource.
+type OutboxSource string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
