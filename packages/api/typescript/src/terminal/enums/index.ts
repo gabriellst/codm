@@ -9,3 +9,5 @@ export * from './AgentMessageRole'
 export * from './AgentToolCallStatus'
 export * from './FactSource'
 export * from './TransportStopKind'
+// Durable session + native resume (GOAL-agent-abstraction §4.10, Fase 4).
+export * from './ResumeInvalidationReason'

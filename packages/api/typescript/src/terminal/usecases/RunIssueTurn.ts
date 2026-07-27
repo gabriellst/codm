@@ -1,20 +1,20 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { Handler, z, BaseError } from '@codedm/core-typescript'
+import { Handler, z, BaseError, LoggingService } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../services/AgentRunner'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
-import { TerminalLLMSessionRepository } from '../repositories'
-import { TerminalLLMSession } from '../entities/TerminalLLMSession'
+import { AgentSessionRepository } from '../repositories'
+import { AgentSession } from '../entities/AgentSession'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'
 import { TerminalStopRaisedEvent } from '../events/TerminalStopRaisedEvent'
 import type { TerminalApplicationErrors } from '../errors'
-import { AgentMessageRole, AgentName, TerminalRunOutcome } from '../enums'
+import { AgentMessageRole, AgentName, ResumeInvalidationReason, TerminalRunOutcome } from '../enums'
 
 export const RunIssueTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -25,6 +25,16 @@ export const RunIssueTurnInputSchema = z.object({
 	provider: z.enum(ProviderKind),
 	workspacePath: z.string().trim().min(1),
 	prompt: z.string().trim().min(1),
+	/** The transcript entry being fed — becomes the session's cursor once the turn commits. */
+	messageId: z.uuid(),
+	/**
+	 * The conversation position this turn continues FROM: the issue transcript's latest entry BEFORE
+	 * `messageId`. Absent on a brand-new issue. Compared against the persisted cursor to catch a
+	 * conversation that advanced past what the CLI session actually consumed.
+	 */
+	priorMessageId: z.uuid().optional(),
+	/** Which model to ask the provider CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
+	model: z.enum(AgentModelId).optional(),
 })
 
 export const RunIssueTurnOutputSchema = z.object({
@@ -38,6 +48,16 @@ export const RunIssueTurnOutputSchema = z.object({
 interface RunObservations {
 	outcome: TerminalOutcome
 	agentSessionId: string | null
+}
+
+/**
+ * How this turn will address the provider's session: continue the persisted one (`--resume <id>`) or
+ * open a new one under an id we mint (`--session-id <id>`). Never neither — a turn with no session
+ * identity at all is a turn whose successor cannot resume it.
+ */
+interface SessionPlan {
+	resumed: boolean
+	id: string
 }
 
 /**
@@ -56,6 +76,21 @@ interface RunObservations {
  *   and "the pseudo-terminal died". Neither is observable over pipes, where every turn is its own
  *   process and a dead child is simply a run that ended. Native `--resume` makes resumption observable
  *   again on its own terms in Fase 4, which is the phase §5.3 assigns those two event classes to.
+ *
+ * ### What Fase 4 ADDED: multi-turn context, and the four guards on it
+ * A second turn on the same issue does NOT re-render the transcript into the prompt. It hands the CLI
+ * the session id the previous turn persisted (`--resume`), which is the whole reason the durable row
+ * exists. That is only safe while the premises the row was written under still hold, so every turn
+ * asks `AgentSession.resumeDecision` first and, when the answer is no, runs FRESH under a minted
+ * `--session-id` and LOGS the named reason (`logResumeInvalidated`). No silent reset — AC-4.4. The
+ * goal permits either a structured log or an `AGENT_RESUME_INVALIDATED` error code (§5.1) and the log
+ * is the honest one: an invalidated resume is not a failure, the turn runs perfectly well.
+ *
+ * The `session` field is ALWAYS populated — `resumeId` or a freshly minted `newId`, never neither.
+ * Letting the CLI mint its own id would leave the row's identity dependent on the stream reporting
+ * one (`ProviderDef.capturesSessionIdFromStream`), i.e. on a provider capability, for a value the
+ * next turn's resume depends on. We mint; a CLI that reports a different id back still wins, because
+ * `--resume` must be given whatever the CLI actually stored.
  * - **No outcome inference.** The conclusion arrives as ONE `finished` event; the accumulator
  *   translates it rather than re-deriving it from the frames.
  * - **`fact` events are not persisted here** — they arrive unstamped, by seam design (AC-1.11), and
@@ -78,7 +113,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		private readonly runner: AgentRunner,
 		private readonly providerDetector: ProviderDetector,
 		private readonly registry: AgentStreamRegistry,
-		private readonly sessions: TerminalLLMSessionRepository,
+		private readonly sessions: AgentSessionRepository,
+		private readonly logging: LoggingService,
 	) {
 		super()
 	}
@@ -88,6 +124,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		this.registry.beginSession(input.issueId)
 		try {
 			const detection = await this.resolveProvider(input.provider)
+			// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
+			// produces has to exist by the time the stream starts.
+			const session = await this.resolveSession(input)
 
 			// FACT — spawn/opened, persisted before streaming so issue.opened fires at spawn time.
 			await this.withTransaction(tx, async tx => {
@@ -102,13 +141,13 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			})
 
 			// TRANSPORT — stream the run's frames to the SSE observer, strictly outside any tx.
-			const observed = await this.drainRun(input, detection)
+			const observed = await this.drainRun(input, detection, session)
 
 			// FACT — the run's conclusion.
 			const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
 			await this.withTransaction(tx, async tx => {
 				await this.persistOutcome(input, observed.outcome, stopId, tx)
-				await this.upsertSessionRecord(input, observed.agentSessionId, tx)
+				await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
 			})
 
 			return {
@@ -138,7 +177,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		return detection
 	}
 
-	private async drainRun(input: this['input'], detection: ProviderDetection): Promise<RunObservations> {
+	private async drainRun(input: this['input'], detection: ProviderDetection, session: SessionPlan): Promise<RunObservations> {
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.issueId })
 
 		for await (const event of this.runner.run({
@@ -146,6 +185,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			provider: input.provider,
 			cwd: input.workspacePath,
 			messages: [{ role: AgentMessageRole.USER, content: input.prompt }],
+			model: input.model ?? AgentModelId.DEFAULT,
+			// EXACTLY ONE of the two is set. `buildArgs` treats them as mutually exclusive by
+			// construction, so handing it both would make the argv version-dependent.
+			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 			binaryPath: detection.binaryPath,
 			caps: detection.caps,
 		})) {
@@ -189,23 +232,71 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		)
 	}
 
-	/** Durable per-issue session record: resume identity + last-turn recency. */
+	/**
+	 * Decide, BEFORE the spawn, whether this turn continues the issue's existing CLI session or opens
+	 * a new one — and, when it opens a new one, say why in a structured log.
+	 *
+	 * The id is minted here in both branches (see the class docblock): the row's identity must not
+	 * depend on the provider reporting one back.
+	 */
+	private async resolveSession(input: this['input']): Promise<SessionPlan> {
+		const existing = await this.sessions.findByIssueId(input.issueId)
+		if (!existing) return { resumed: false, id: uuidv7() }
+
+		const decision = existing.resumeDecision({
+			model: input.model ?? AgentModelId.DEFAULT,
+			cwd: input.workspacePath,
+			cursor: input.priorMessageId,
+		})
+		if (decision.resume) return { resumed: true, id: decision.id }
+
+		this.logResumeInvalidated(input, existing.agentSessionId, decision.reason)
+		return { resumed: false, id: uuidv7() }
+	}
+
+	/**
+	 * AC-4.4 — the ONE place a resume is dropped, and it is never silent.
+	 *
+	 * `warn`, not `info`: an invalidated resume means the next turn starts without the conversation
+	 * the operator believes it has, which is exactly the class of thing someone reads logs to find
+	 * out about after the fact. It is not an error — the turn runs — which is why it is not a
+	 * `BaseError` and why §5.1's `AGENT_RESUME_INVALIDATED` code is deliberately NOT created.
+	 */
+	private logResumeInvalidated(input: this['input'], abandonedSessionId: string, reason: ResumeInvalidationReason): void {
+		this.logging.warn({
+			content: {
+				message: 'agent session resume invalidated — starting a fresh provider session',
+				reason,
+				issueId: input.issueId,
+				threadId: input.threadId,
+				provider: input.provider,
+				model: input.model ?? AgentModelId.DEFAULT,
+				cwd: input.workspacePath,
+				abandonedSessionId,
+			},
+		})
+	}
+
+	/** Durable per-issue session record: resume identity, the premises it holds, and last-turn recency. */
 	private async upsertSessionRecord(input: this['input'], agentSessionId: string | null, tx: Transaction): Promise<void> {
 		if (!agentSessionId) return
+		const model = input.model ?? AgentModelId.DEFAULT
 		const existing = await this.sessions.findByIssueId(input.issueId, tx)
 		if (existing) {
-			existing.recordTurn(agentSessionId)
+			existing.recordTurn({ agentSessionId, model, lastMessageId: input.messageId })
 			await this.sessions.save(existing, tx)
 			return
 		}
 		await this.sessions.save(
-			TerminalLLMSession.create({
+			AgentSession.create({
 				ownerId: input.ownerId,
 				issueId: input.issueId,
 				threadId: input.threadId,
 				provider: input.provider,
 				cwd: input.workspacePath,
-				claudeSessionId: agentSessionId,
+				agentSessionId,
+				model,
+				lastMessageId: input.messageId,
 			}),
 			tx,
 		)

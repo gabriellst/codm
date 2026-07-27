@@ -34,10 +34,14 @@ import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-/** Drizzle tables created by migration 0000 — `grep -c 'CREATE TABLE' 0000_*.sql` ⇒ 25. */
+/**
+ * Drizzle tables standing after the FULL apply. 0000 creates 25; 0002 (the Fase-4 agent-session
+ * rename) creates one and drops one, so the total is unchanged — which is worth asserting in its own
+ * right, since a rename that forgot its DROP would surface here as 26.
+ */
 const DRIZZLE_TABLE_COUNT = 25
-/** Ledger rows after a full apply: one per `.sql` file (0000, 0001) — never 4, which is the bug. */
-const MIGRATION_FILE_COUNT = 2
+/** Ledger rows after a full apply: one per `.sql` file (0000, 0001, 0002) — never 2× that, the bug. */
+const MIGRATION_FILE_COUNT = 3
 /** Racers per round. Three, so a bug that needs more than a pair to surface still has room. */
 const RACERS = 3
 /** Cold data dirs. The race is probabilistic, so it is repeated — the plan's T28 asks for 20. */

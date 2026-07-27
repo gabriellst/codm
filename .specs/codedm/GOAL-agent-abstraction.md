@@ -1258,7 +1258,8 @@ invalidação de resume do spec (`:34-36`) — `model_changed`, `cwd_changed`, `
 `conversation_advanced` — que viram **um método de invariante na entidade**:
 
 ```ts
-resumeDecision(ctx: { model: AgentModelId; cwd: string }): { resume: true; id: string } | { resume: false; reason: ResumeInvalidationReason }
+// CORRIGIDO na Fase 4 — a assinatura de dois campos não decide `conversation_advanced`. Ver AC-4.9.
+resumeDecision(ctx: { model: AgentModelId; cwd: string; cursor?: string }): { resume: true; id: string } | { resume: false; reason: ResumeInvalidationReason }
 ```
 
 Sem novo value object: a guarda não é reusada em lugar nenhum, e `CLAUDE.md` manda default no mais
@@ -2099,9 +2100,79 @@ cláusula a Fase 4 fecha verde com o `react tsc` vermelho e o estrago só aparec
 saída preferida continua sendo não criar o código** (log estruturado, permitido pelo AC-4.4): aí nada
 disso se aplica e o ripple inteiro vive na Fase 6 com os outros dois códigos.
 **AC-4.7** **O rename de tabela fechou NESTA fase, em uma migration só**:
-`git grep -n "terminal_terminal_llm_sessions" -- packages` → **0 hits**; `agent_agent_sessions` existe
-em `db/schema-sqlite/`; e `git diff --stat <base-da-fase>..HEAD -- packages/contracts/db/schema-sqlite/migrations`
+`git grep -n "terminal_terminal_llm_sessions" -- packages ':!*/migrations/*'` → **0 hits de código
+vivo**; `agent_agent_sessions` existe em `db/schema-sqlite/`; e
+`git diff --stat <base-da-fase>..HEAD -- packages/contracts/db/schema-sqlite/migrations`
 mostra **exatamente um** arquivo SQL novo. A Fase 5 não pode acrescentar migration alguma.
+
+> **CORREÇÃO DE CONTRATO (executor da Fase 4, 27-jul) — o grep original pedia `-- packages` sem
+> exclusão, e isso é INSATISFAZÍVEL, não "quase satisfazível".** O nome antigo é criado pela migration
+> `0000_flaky_carmella_unuscione.sql`, que é IMUTÁVEL por construção: o ledger `_sqlite_migrations` é
+> chaveado por FILENAME e o gate de paridade byte-a-byte contra a cópia `//go:embed` do Go compara
+> conteúdo — reescrever 0000 dessincronizaria todo banco já migrado e romperia o gate. Medido no
+> fechamento da fase: **20 hits, todos em história imutável** — 4 em
+> `contracts/db/schema-sqlite/migrations/0000_*.sql`, os mesmos 4 na cópia derivada
+> `api/go/core/db/sqlite/migrations/0000_*.sql`, 5 em `meta/0000_snapshot.json` e 5 em
+> `meta/0001_snapshot.json` (snapshots do drizzle-kit, reescrevê-los quebra o `generate` seguinte).
+> Restam **2 hits fora de `migrations/`** e ambos são a frase *"renomeado de X para Y"* —
+> `contracts/db/schema-sqlite/agent.ts` e `src/shared/contexts.ts` — deliberadamente mantidos: apagar
+> o nome antigo do WHY de um rename é apagar a única pista de quem for ler o `0000` amanhã. O que a AC
+> mede é **referência VIVA** (tabela lida/escrita pelo nome antigo), e é isso que o grep acima checa.
+
+**AC-4.8 (nasceu do conserto da AC-4.7 — o pgSchema anda junto com a TABELA, não com a pasta)**
+`CONTEXTS.terminal.pgSchema === 'agent'` já **nesta** fase, com a chave ainda `terminal`.
+
+> **CORREÇÃO DE CONTRATO (executor da Fase 4, 27-jul).** A §5.1 alocava a linha inteira
+> `CONTEXTS.terminal: { pgSchema: 'terminal' }` → `CONTEXTS.agent: { pgSchema: 'agent' }` à Fase 5,
+> junto do `git mv`. Isso e a AC-4.7 são **mutuamente exclusivos**: dois rails de arquitetura cruzam
+> `CONTEXTS[*].pgSchema` com a realidade e ficam VERMELHOS durante o intervalo inteiro entre as duas
+> fases. Medido antes do conserto, com a tabela já renomeada e a `contexts.ts` intocada:
+>
+> ```
+> ✗ pgSchema parity: declared CONTEXTS pgSchemas == contracts/db/schema-sqlite table-name prefixes
+>     + "agent",   (em contracts, não declarado)
+>     - "terminal" (declarado, sem nenhuma tabela `terminal_*` restante)
+> ✗ every cross-schema table read has a declared TABLE_READ_EDGES entry
+>     terminal/repositories/AgentSessionRepository/DrizzleAgentSessionRepository.ts:4
+>       terminal → agent (table agentSessions)
+> ```
+>
+> Nenhuma das duas saídas alternativas é aceitável: adicionar `agent` a `PENDING_PGSCHEMAS` deixaria
+> `terminal` declarado sem tabela alguma (o rail exige conjunto IGUAL nos dois sentidos), e declarar um
+> `TABLE_READ_EDGES` `terminal → agent` registraria como acoplamento cross-contexto o que é o contexto
+> lendo a PRÓPRIA tabela. Então o rename se parte no eixo certo: **o VALOR `pgSchema` migra na fase em
+> que a TABELA migra (4), a CHAVE migra na fase em que o DIRETÓRIO migra (5)**. A Fase 5 continua dona
+> da chave, do `git mv`, do `ANNOTATED_CYCLES` e do `name: CONTEXTS.agent` — nada foi retirado dela.
+
+**AC-4.9 (correção da assinatura de `resumeDecision` — §4.10)** A `ctx` carrega **três** campos:
+`{ model: AgentModelId; cwd: string; cursor?: string }`.
+
+> **CORREÇÃO DE CONTRATO (executor da Fase 4, 27-jul).** A §4.10 escreve
+> `resumeDecision(ctx: { model, cwd })` e, duas linhas acima, exige que ESSE método decida as quatro
+> razões. Com dois campos ele decide **duas**: `model_changed` e `cwd_changed` comparam `ctx` contra a
+> linha, e `missing_cursor` é estado puro da linha (`lastMessageId` ausente) — mas
+> `conversation_advanced` **não é decidível a partir de nada que a entidade veja**. Ela afirma que a
+> conversa andou ALÉM do que a sessão do CLI consumiu, e "onde a conversa está agora" é observação de
+> fora. Sem o terceiro campo a quarta guarda ou não existe ou vira um `return false` mudo — exatamente
+> o reset silencioso que a AC-4.4 proíbe. `cursor` é a posição de onde ESTE turno continua: o último
+> entry do transcript DA ISSUE antes da mensagem sendo alimentada, calculado por
+> `RunTerminalSessionOnClassification.conversationCursor` (issue-scoped de propósito — uma mensagem
+> roteada para uma issue irmã nunca chegou a esta sessão e não pode invalidá-la). `undefined` falha
+> fechado, nunca resume por omissão.
+
+**AC-4.10 (onde a "e2e multi-turno" da AC-4.3 mora, e por quê)** A prova multi-turno é
+`packages/api/typescript/tests/flows/agent-session-resume.flow.test.ts`, no env `integration`.
+
+> **CORREÇÃO DE CONTRATO (executor da Fase 4, 27-jul).** A AC-4.3 pede duas provas do mesmo fato — **o
+> argv** e **o estado da linha** — e **nenhuma das duas é observável do navegador**. O harness
+> Playwright fala com o daemon por HTTP; expor um argv ou uma linha de `agent_agent_sessions` na wire
+> só para poder assertar sobre eles criaria superfície de API test-only que este goal não autoriza (e
+> que a §8 regra 5 cobraria na OpenAPI). Então o "end to end" desta AC é o end-to-end do próprio
+> daemon: repositório real, transcript real, handler real, `ProviderDef` real, SQLite real, e só o
+> BINÁRIO estubado (§8 regra 8). O argv é construído passando a request capturada por
+> `claudeProviderDef.buildArgs` — a mesma função que o `StreamJsonAgentRunner` chama — e não por
+> asserção sobre `request.session`, que passaria mesmo se `buildArgs` engolisse a flag. A suíte
+> Playwright segue em **5 passed / 2 skipped**, inalterada.
 
 ### Fase 4.5 — Um runner por CLI; `ProviderDef` morre (emenda do founder, 27-jul)
 

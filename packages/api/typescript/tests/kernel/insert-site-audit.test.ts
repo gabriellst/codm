@@ -23,16 +23,16 @@ import {
 	events,
 	idempotencyKeys,
 	outbox,
-	terminalLLMSessions,
+	agentSessions,
 	terminalLines,
 	threadClarifications,
 	transcriptEntries,
 } from '@codedm/contracts/db'
-import { ArtifactKind, ChannelKind, ChannelStatus, ProviderKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, ArtifactKind, ChannelKind, ChannelStatus, ProviderKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { ArtifactRepository } from '@artifact/repositories/ArtifactRepository'
 import { Artifact } from '@artifact/entities/Artifact'
-import { TerminalLLMSessionRepository } from '@terminal/repositories/TerminalLLMSessionRepository'
-import { TerminalLLMSession } from '@terminal/entities/TerminalLLMSession'
+import { AgentSessionRepository } from '@terminal/repositories/AgentSessionRepository'
+import { AgentSession } from '@terminal/entities/AgentSession'
 import { TerminalLineRepository } from '@issue/repositories/TerminalLineRepository'
 import { ClarificationRepository } from '@thread/repositories/ClarificationRepository'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
@@ -141,20 +141,21 @@ describe('insert-site audit — every db-generated id and notNull timestamp surv
 		await assertLanded('artifact_artifacts', ['id', 'recorded_at'])
 	})
 
-	it('terminal_terminal_llm_sessions — via TerminalLLMSessionRepository', async () => {
+	it('agent_agent_sessions — via AgentSessionRepository', async () => {
 		const thread = await givenThread(testBed, { ownerId: OWNER })
 		const issue = await givenIssue(testBed, { ownerId: OWNER, threadId: thread.id.value })
-		await testBed.resolve(TerminalLLMSessionRepository).save(
-			TerminalLLMSession.create({
+		await testBed.resolve(AgentSessionRepository).save(
+			AgentSession.create({
 				ownerId: OWNER,
 				issueId: issue.id.value,
 				threadId: thread.id.value,
 				provider: ProviderKind.CLAUDE_CODE,
 				cwd: '/tmp/audit',
-				claudeSessionId: 'sess-audit',
+				agentSessionId: 'sess-audit',
+				model: AgentModelId.DEFAULT,
 			}),
 		)
-		await assertLanded('terminal_terminal_llm_sessions', ['id', 'created_at', 'updated_at'])
+		await assertLanded('agent_agent_sessions', ['id', 'created_at', 'updated_at'])
 	})
 
 	it('thread_transcript_entries — via TranscriptRepository (id minted in the repository)', async () => {
@@ -235,7 +236,7 @@ describe('insert-site audit — every db-generated id and notNull timestamp surv
 			events,
 			idempotencyKeys,
 			outbox,
-			terminalLLMSessions,
+			agentSessions,
 			terminalLines,
 			threadClarifications,
 			transcriptEntries,

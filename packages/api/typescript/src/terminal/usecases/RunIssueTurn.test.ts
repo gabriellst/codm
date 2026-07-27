@@ -8,7 +8,7 @@ import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { AgentRunner } from '../services/AgentRunner'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
-import { TerminalLLMSessionRepository } from '../repositories'
+import { AgentSessionRepository } from '../repositories'
 import { TerminalSessionStartedEvent } from '../events/TerminalSessionStartedEvent'
 import { TerminalReplyDraftedEvent } from '../events/TerminalReplyDraftedEvent'
 import { TerminalSessionCompletedEvent } from '../events/TerminalSessionCompletedEvent'
@@ -64,6 +64,7 @@ describe('RunIssueTurn use case', () => {
 		provider: ProviderKind.CLAUDE_CODE,
 		workspacePath: '/tmp/workspace',
 		prompt: 'fix the coupon focus bug',
+		messageId: testId('run-issue-turn', 'entry-1'),
 	})
 
 	beforeAll(async () => {
@@ -110,13 +111,13 @@ describe('RunIssueTurn use case', () => {
 
 	it('upserts the durable session row from the session id the terminal event reported', async () => {
 		const useCase = testBed.resolve(RunIssueTurn)
-		const sessions = testBed.resolve(TerminalLLMSessionRepository)
+		const sessions = testBed.resolve(AgentSessionRepository)
 		const issueId = testId('run-issue-turn', 'issue-session')
 
 		await useCase.execute(baseInput(issueId))
 
 		const row = await sessions.findByIssueId(issueId)
-		expect(row?.claudeSessionId).toBe('stub-session')
+		expect(row?.agentSessionId).toBe('stub-session')
 	})
 
 	it('drives the seam with the workspace as cwd and ONE user message — no mcp, no outputSchema', async () => {

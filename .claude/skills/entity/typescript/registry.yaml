@@ -465,6 +465,16 @@ registry:
       name: "Using { message: '...' } in .refine() instead of { error: '...' as DomainErrors }"
       severity: critical
       mechanical: true
+      # entity-only, for the reason bp-10 below is entity-only. The regex has NO `.refine(` anchor —
+      # it is a proxy that matches an object literal opening with `message: '…'`. Inside an entity
+      # schema that shape is nearly always the refinement message this rule is about. Travelling
+      # through `context_reads: [entity]` into usecase/service/handler it becomes a match on the
+      # UNIVERSAL shape of a structured log payload: `this.logging.warn({ content: { message: '…' } })`
+      # is the house convention (SystemProviderDetector, StreamJsonAgentRunner), and the `as
+      # DomainErrors` cast in the `right:` block below is entity vocabulary that does not even typecheck
+      # in a use case. It fired on `RunIssueTurn.logResumeInvalidated`, the AC-4.4 no-silent-reset log —
+      # the one place GOAL-agent-abstraction §4.10 REQUIRES a named reason to be logged.
+      scope: self
       detect:
         - '\{\s*message:\s*[''"]'
       wrong: |

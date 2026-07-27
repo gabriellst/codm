@@ -85,7 +85,27 @@ export class RunTerminalSessionOnClassification extends EventHandler<typeof Mess
 			provider,
 			workspacePath: workspace.path,
 			prompt: entry.text,
+			messageId: entryId,
+			priorMessageId: await this.conversationCursor(resolved.issueId, entryId),
 		})
+	}
+
+	/**
+	 * Where the issue's conversation stood BEFORE this message — the value the resume guard compares
+	 * against the session row's own cursor (`AgentSession.resumeDecision`, Fase 4).
+	 *
+	 * Read from the ISSUE's transcript, not the thread's: one thread multiplexes many issues, and a
+	 * message routed to a sibling issue never reached THIS CLI session, so it must not invalidate it.
+	 * A mismatch here means a message DID enter this issue without a turn consuming it — one of the
+	 * defensive drops above, or a turn that died before committing — and resuming would then answer
+	 * the newest message with a context that silently skipped the ones in between.
+	 *
+	 * `undefined` for a brand-new issue (nothing tagged with it yet), which is correct: there is no
+	 * prior position to continue from, and there is no session row to resume either.
+	 */
+	private async conversationCursor(issueId: string, entryId: string): Promise<string | undefined> {
+		const entries = await this.transcript.listByIssue(issueId)
+		return entries.filter(e => e.entryId !== entryId).at(-1)?.entryId
 	}
 
 	/**

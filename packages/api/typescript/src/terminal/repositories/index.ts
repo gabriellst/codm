@@ -1,1 +1,1 @@
-export * from './TerminalLLMSessionRepository'
+export * from './AgentSessionRepository'

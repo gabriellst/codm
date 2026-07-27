@@ -21,11 +21,19 @@ export const CONTEXTS = {
 	auth: { pgSchema: 'authentication' },
 	owner: { pgSchema: 'owner' },
 	shared: { pgSchema: 'shared' },
-	// terminal (agent-runtime) — the terminal engine: runtime spine + PTY runner + provider
-	// detection + classification service. Its outbound facts are the frozen `integration.issue.*`
-	// events on the shared outbox. Phase-10 (foundation runner extraction) promoted it to owning the
-	// `terminal` schema: `terminal_llm_sessions`, the durable per-issue session record (Fork B).
-	terminal: { pgSchema: 'terminal' },
+	// terminal (agent-runtime) — the agent runtime: the one-method `AgentRunner` seam, provider
+	// detection and classification. Its outbound facts are the frozen `integration.issue.*` events on
+	// the shared outbox.
+	//
+	// The KEY is still `terminal` while the pgSchema is already `agent`, and that split is deliberate
+	// rather than drift. GOAL-agent-abstraction §5.1 assigns the TABLE rename
+	// (`terminal_terminal_llm_sessions` → `agent_agent_sessions`) to Fase 4, in the same single
+	// migration as the new resume columns, and the CODE rename (`git mv terminal → agent`, this key,
+	// the annotated cycle) to Fase 5. Two rails cross-check the pair — pgSchema parity against the
+	// contracts schema files, and the cross-schema TABLE_READ leg — so the pgSchema value has to move
+	// in the phase the TABLE moves, or both go red on a rename that is only half done. Fase 5 renames
+	// the key and this note goes away with it.
+	terminal: { pgSchema: 'agent' },
 	// BC2 Workspace Registry (TS-owned) — the `workspace` schema, promoted out of PENDING_PGSCHEMAS.
 	workspace: { pgSchema: 'workspace' },
 	// BC4 Thread & Routing (Core, TS-owned) — the `thread` schema, promoted out of PENDING_PGSCHEMAS.

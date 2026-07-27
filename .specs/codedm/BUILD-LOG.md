@@ -2023,3 +2023,167 @@ Fase 4: `AgentSession` (rename `claudeSessionId → agentSessionId`, `+model`, `
 `resumeDecision`), **UMA** migration que também renomeia `terminal_terminal_llm_sessions →
 agent_agent_sessions` (AC-4.7), e a decisão sobre `TerminalSessionResumedEvent`/`KilledEvent` +
 `TerminalSessionKillReason`, que esta fase deixou explicitamente sem produtor.
+
+---
+
+# 2026-07-27 — FASE 4: a sessão fica DURÁVEL e o resume passa a ser real
+
+`agent-abstraction`. Um commit. Multi-turno deixa de ser "re-render do transcript no prompt" e passa
+a ser o que a Fase 2 mediu: `--session-id` no primeiro turno, `--resume` no seguinte, com quatro
+guardas explícitas em cima disso.
+
+## O QUE VIROU
+
+**`TerminalLLMSession` → `AgentSession`** (`git mv`, história preservada), com `claudeSessionId →
+agentSessionId` (o nome antigo amarrava um conceito durável a um binário), mais **duas colunas
+novas** — `model` (`AgentModelId`, `text` + CHECK, default `DEFAULT`) e `lastMessageId` (nullable).
+Elas não são decoração: são as **premissas persistidas** que `resumeDecision` compara. Repositório,
+mock e registry DI acompanharam o rename.
+
+**`AgentSession.resumeDecision(ctx)` — a invariante.** Ordenada da premissa mais estrutural para a
+menos, para que a razão reportada seja a que o leitor tem de consertar primeiro: `MODEL_CHANGED` →
+`CWD_CHANGED` → `MISSING_CURSOR` → `CONVERSATION_ADVANCED`. **Nenhum ramo devolve `false` pelado** —
+é isso que torna a AC-4.4 checável em vez de aspiracional. `cwd` NÃO é reescrito por `recordTurn`,
+porque reescrevê-lo apagaria a evidência de que `CWD_CHANGED` é decidido.
+
+**`RunIssueTurn`** ganhou `messageId` (o entry sendo alimentado, vira o cursor) e `priorMessageId`
+(de onde o turno continua) na entrada, decide a sessão ANTES do fato `opened` commitar, e passa
+`session: { resumeId }` **ou** `{ newId }` — nunca os dois, nunca nenhum. O id é **cunhado por nós**
+nos dois ramos: deixar o CLI cunhar faria a identidade da linha depender de
+`capturesSessionIdFromStream`, isto é, de uma capacidade do provider, para um valor de que o turno
+SEGUINTE depende.
+
+**`RunTerminalSessionOnClassification.conversationCursor`** lê o transcript **da issue** (não da
+thread) e devolve o último entry antes da mensagem atual. Issue-scoped de propósito: uma thread
+multiplexa várias issues, e uma mensagem roteada para uma issue irmã nunca chegou a ESTA sessão do
+CLI — invalidá-la por isso seria um falso positivo permanente.
+
+**UMA migration, `0002_pink_star_brand.sql`**, em `contracts/db/schema-sqlite/migrations/` + a cópia
+byte-idêntica em `api/go/core/db/sqlite/migrations/` via `db:sync-go`, mais o transcript `schema.sql`
+re-escrito e `sqlc generate` (o `gen/models.go` virou `AgentAgentSession`). Sob a decisão (d) —
+fresh start — o drizzle-kit emitiu CREATE+DROP em vez de RENAME, e isso foi **mantido como gerado**:
+um RENAME à mão não reproduz o DDL do snapshot (o CHECK de `model` é table-level e `ALTER TABLE ADD
+COLUMN` não o cria; o nome do CHECK antigo sobreviveria ao rename), e uma migration hand-editada
+divergiria do snapshot que o `generate` seguinte compara. Total de tabelas antes e depois: **25** —
+o smoke assere isso, e é como se prova que o DROP não foi esquecido.
+
+**`AGENT_RESUME_INVALIDATED` NÃO foi criado.** A §5.1 permite log estruturado OU o código de erro, e o
+log é o honesto: um resume invalidado **não é falha** — o turno roda perfeitamente, só roda do zero.
+Sem código novo, o ripple de 4 paradas da §5.1 não se abre nesta fase (os outros dois códigos seguem
+na Fase 6, como o goal já aloca). O `warn` sai de `RunIssueTurn.logResumeInvalidated` com `reason`,
+`issueId`, `threadId`, `provider`, `model`, `cwd` e `abandonedSessionId`.
+
+## DEFEITOS DE CONTRATO ENCONTRADOS — os quatro estão consertados NO GOAL, não absorvidos
+
+1. **AC-4.7 pedia `git grep "terminal_terminal_llm_sessions" -- packages` → 0 hits, o que é
+   INSATISFAZÍVEL.** O nome é criado pela migration `0000`, que é imutável por construção: o ledger
+   `_sqlite_migrations` é chaveado por FILENAME e o gate de paridade compara CONTEÚDO contra a cópia
+   `//go:embed`. Medido: **20 hits, todos em história imutável** (4+4 nos dois `0000_*.sql`, 5 em
+   `meta/0000_snapshot.json`, 5 em `meta/0001_snapshot.json`). Fora de `migrations/` restam **2**, e
+   ambos são a frase "renomeado de X para Y". AC reescrita para `':!*/migrations/*'` — o que ela mede
+   é referência VIVA.
+2. **A §5.1 alocava `CONTEXTS.terminal.pgSchema` à Fase 5, e isso colide com a AC-4.7.** Com a tabela
+   renomeada e a `contexts.ts` intocada, **dois rails ficam vermelhos** pelo intervalo inteiro entre
+   as duas fases — medido antes do conserto: `pgSchema parity` (`+agent` em contracts, `-terminal`
+   declarado sem tabela) e `every cross-schema table read has a declared TABLE_READ_EDGES entry`
+   (`terminal → agent (table agentSessions)`). Nenhuma saída lateral serve: `PENDING_PGSCHEMAS`
+   deixaria `terminal` declarado sem tabela (o rail exige conjunto igual nos DOIS sentidos), e um
+   `TABLE_READ_EDGES` registraria como acoplamento cross-contexto o contexto lendo a própria tabela.
+   Conserto: **o VALOR anda com a TABELA (Fase 4), a CHAVE anda com o DIRETÓRIO (Fase 5)**. Nova
+   **AC-4.8**. A Fase 5 não perdeu nada — chave, `git mv`, `ANNOTATED_CYCLES` e `name: CONTEXTS.agent`
+   seguem lá.
+3. **A assinatura `resumeDecision(ctx: { model, cwd })` da §4.10 não decide `conversation_advanced`.**
+   Com dois campos decide-se `model_changed`, `cwd_changed` e `missing_cursor` (estado puro da linha);
+   a quarta afirma que a conversa andou além do que a sessão consumiu, e "onde a conversa está agora" é
+   observação de fora. Sem o terceiro campo a guarda ou não existe ou vira um `return false` mudo —
+   exatamente o reset silencioso que a AC-4.4 proíbe. `ctx` ganhou `cursor?: string`. Nova **AC-4.9**.
+4. **A "e2e multi-turno" da AC-4.3 não cabe no Playwright.** As duas provas que ela exige — o argv e o
+   estado da linha — não são observáveis do navegador, e expor qualquer uma delas na wire só para
+   assertar criaria superfície de API test-only que o goal não autoriza. Ela virou
+   `tests/flows/agent-session-resume.flow.test.ts` no env `integration`: repositório, transcript,
+   handler, `ProviderDef` e SQLite REAIS, só o binário estubado (§8 regra 8). O argv é construído
+   passando a request capturada por `claudeProviderDef.buildArgs` — a mesma função que o runner chama
+   — e não por asserção sobre `request.session`, que passaria mesmo se `buildArgs` engolisse a flag.
+   Nova **AC-4.10**. A suíte Playwright segue **5 passed / 2 skipped**, inalterada.
+
+## DETECTOR CONSERTADO (o gate pegou, e a correção foi na REGRA — mesma espécie do bp-10)
+
+`bun detect` subiu de **39 → 40** em `registry-scan`: `entity#bp-03` ("`{ message: '...' }` em
+`.refine()`") disparou em `RunIssueTurn.ts`, que **não tem `.refine()` nenhum**. O regex
+(`\{\s*message:\s*['"]`) não tem âncora em `.refine(` — é um proxy que casa com um object literal
+abrindo em `message: '…'`. Dentro de uma entidade essa forma é quase sempre a mensagem de refinement;
+viajando por `context_reads: [entity]` para usecase/service/handler ela vira a forma **universal** de
+um payload de log estruturado (`this.logging.warn({ content: { message: '…' } })` é a convenção da
+casa, em `SystemProviderDetector` e `StreamJsonAgentRunner`), e o `as DomainErrors` do bloco `right:`
+nem typecheca num use case. Bateu justamente em `logResumeInvalidated` — o único lugar onde a §4.10
+EXIGE que a razão seja logada. Conserto: **`scope: self`** na regra, exatamente o que `ed73105c` fez
+com o `bp-10` pelo mesmo motivo (a nota do bp-10 já chamava o bp-03 de "o falso positivo que já está
+nos autos"). Era a **única** ocorrência de `entity#bp-03` no repo inteiro, então a regra não perdeu
+nenhum achado real. Depois: lista de findings **byte-idêntica ao HEAD anterior** (`diff` vazio).
+
+## DÍVIDA PRÉ-EXISTENTE CONSERTADA DE PASSAGEM (dois contadores hard-coded que a migration expôs)
+
+- `tests/kernel/concurrent-boot.test.ts` — `MIGRATION_FILE_COUNT = 2` → `3`, e o comentário de
+  `DRIZZLE_TABLE_COUNT = 25` agora diz POR QUE o total não muda num rename (CREATE+DROP).
+- `scripts/smoke-shared-store.ts` — o literal `ledger === '2'` virou **contagem derivada** de
+  `readdirSync(contracts/db/schema-sqlite/migrations)`. Um smoke que precisa ser bumpado à mão para
+  continuar verdadeiro acaba sendo bumpado para o que ele imprimiu.
+
+## GATES (todos rodados de verdade, nesta árvore)
+
+- `bun tsc` — 7/7 projetos verdes.
+- `bun run test` — **689 pass / 0 fail** (110 arquivos); `bun lint` 3/3; `bun test:tooling` **298 pass**.
+- `bun run contracts` **2× idempotente** ("No schema changes, nothing to migrate" na segunda; `git
+  status` idêntico); `bun sdk` **2× idempotente** (27 entradas antes e depois, zero drift).
+- `react tsc` + `e2e tsc` verdes.
+- Go `build` + `vet` + `test` verdes nos **dois** módulos (`core` e `api`).
+- Runtime e2e (`packages/e2e`, `bun scripts/run-e2e.ts`) — **5 passed / 2 skipped**, a baseline exata.
+- `smoke-shared-store` — `RESULT=ok`, com `_sqlite_migrations count=3 (expected 3)` e `25 drizzle
+  tables` sobre a migration NOVA aplicada pelos dois processos sobre um ledger só.
+- `bun run detect` — **39 / 0 / 37 / 33 / 3 / 2** antes e depois (registry-scan / import-direction /
+  slice-closure / component-props / projection-shape / go-enum-literals). **Não cresceu.**
+
+## ACs
+
+- **AC-4.1** ✅ `DrizzleAgentSessionRepository.test.ts`, env `integration`, 6 casos: round-trip das
+  três premissas (`agentSessionId`/`model`/`lastMessageId`), `undefined` para issue desconhecida,
+  cursor ausente voltando **absent e não `null`** (+ o guard nomeando `MISSING_CURSOR` depois do
+  rehydrate), a linha rehidratada sendo resumível, o UPSERT avançando id/model/cursor e bumpando
+  `version`, e `AgentModelId.DEFAULT` como valor legítimo.
+- **AC-4.2** ✅ `AgentSession.test.ts`, **uma por razão** + 3 extras: o caminho feliz, um caso provando
+  que a razão mais estrutural ganha quando várias premissas quebram juntas, e o `cursor` ausente
+  falhando FECHADO. 12 casos.
+- **AC-4.3** ✅ `agent-session-resume.flow.test.ts`, caso 1. Turno 1 → `--session-id` presente,
+  `--resume` ausente; linha com `agentSessionId = 'cli-session-abc'`, `lastMessageId = entry1`,
+  `model = DEFAULT`, `cwd = workspace.path`. Turno 2 → `--resume cli-session-abc` no argv,
+  `--session-id` AUSENTE; **mesma** linha (`id` idêntico), `lastMessageId = entry2`, `version` maior.
+  E a prova de que o contexto veio da sessão do CLI: a segunda request carrega **uma** mensagem, a
+  segunda mensagem, sem transcript renderizado. Ver AC-4.10 para por que não é Playwright.
+- **AC-4.4** ✅ mesmo arquivo, caso 2: uma mensagem entra na issue sem turno consumi-la, o turno
+  seguinte roda FRESCO (`--session-id`, sem `--resume`) **e** emite o `warn` com
+  `reason: CONVERSATION_ADVANCED`, `issueId` e `abandonedSessionId` — asserido sobre o
+  `MockLoggingService`, não sobre stdout.
+- **AC-4.5** ✅ `git grep -n "claudeSessionId\|listRecentForPrewarm" -- packages/api/typescript/src`
+  → **0 hits**.
+- **AC-4.6** ✅ ver GATES. O `bun sdk` 2× + `react tsc` foram rodados **mesmo não sendo exigidos**
+  (nenhum código de erro criado ⇒ a cláusula condicional não dispara) — custam pouco e fecham a porta
+  que a própria AC descreve.
+- **AC-4.7** ✅ na forma corrigida: **0 hits vivos** fora de `migrations/` (os 2 restantes são o WHY do
+  rename); `agent_agent_sessions` existe em `db/schema-sqlite/agent.ts`; `git diff --stat 8898f611..`
+  sobre `migrations/` mostra **1** arquivo SQL novo (`0002_pink_star_brand.sql`) + o `_journal.json`.
+- **AC-4.8 / AC-4.9 / AC-4.10** ✅ — as três nasceram dos defeitos acima e estão escritas no goal.
+
+## PARA A FASE 4.5 (a emenda do founder que pousou em `a78a684f` durante esta fase)
+
+`agent-session-resume.flow.test.ts` importa `claudeProviderDef` de `@terminal/providers/defs/claude`
+para construir o argv. A Fase 4.5 **mata `ProviderDef`** e move `providers/` para `services/`, então
+essa asserção precisa ser re-apontada para o `ClaudeAgentRunner` — é o mesmo argv, montado por outro
+dono. Não é dívida desta fase; é o hand-off explícito para não se descobrir isso por `tsc` vermelho.
+
+## PRÓXIMO PASSO
+
+Fase 4.5 (um runner por CLI, `ProviderDef` morre, `providers/`+`mcp/` viram `services/`), e só então a
+Fase 5 (`git mv terminal → agent`, chave de `CONTEXTS`, `ANNOTATED_CYCLES`, agents). A decisão sobre
+`TerminalSessionResumedEvent`/`KilledEvent` que a Fase 3 deixou aberta **segue aberta**: o resume
+nativo é observável pelo log de invalidação e pelo argv, e nenhum consumidor pediu o evento — não se
+cria produtor para evento que ninguém escuta.

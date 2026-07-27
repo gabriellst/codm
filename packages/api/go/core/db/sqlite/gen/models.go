@@ -8,6 +8,22 @@ import (
 	"database/sql"
 )
 
+type AgentAgentSession struct {
+	ID             string
+	OwnerID        string
+	IssueID        string
+	ThreadID       string
+	Provider       string
+	Cwd            string
+	AgentSessionID string
+	Model          string
+	LastMessageID  sql.NullString
+	LastTurnAt     int64
+	CreatedAt      int64
+	UpdatedAt      int64
+	Version        int64
+}
+
 type ArtifactArtifact struct {
 	ID         string
 	OwnerID    string
@@ -246,20 +262,6 @@ type SharedScheduledCommand struct {
 	DeadAt        sql.NullInt64
 	CreatedAt     int64
 	UpdatedAt     int64
-}
-
-type TerminalTerminalLlmSession struct {
-	ID              string
-	OwnerID         string
-	IssueID         string
-	ThreadID        string
-	Provider        string
-	Cwd             string
-	ClaudeSessionID string
-	LastTurnAt      int64
-	CreatedAt       int64
-	UpdatedAt       int64
-	Version         int64
 }
 
 type ThreadConsumedMessage struct {

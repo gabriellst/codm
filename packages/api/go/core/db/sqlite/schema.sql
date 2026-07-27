@@ -260,23 +260,26 @@ CREATE TABLE "issue_stops" (
 
 CREATE INDEX "stops_issue_id_idx" ON "issue_stops" ("issue_id");
 CREATE INDEX "stops_thread_id_idx" ON "issue_stops" ("thread_id");
-CREATE TABLE "terminal_terminal_llm_sessions" (
+CREATE TABLE "agent_agent_sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_id" text NOT NULL,
 	"issue_id" text NOT NULL,
 	"thread_id" text NOT NULL,
 	"provider" text NOT NULL,
 	"cwd" text NOT NULL,
-	"claude_session_id" text NOT NULL,
+	"agent_session_id" text NOT NULL,
+	"model" text DEFAULT 'DEFAULT' NOT NULL,
+	"last_message_id" text,
 	"last_turn_at" integer NOT NULL,
 	"created_at" integer NOT NULL,
 	"updated_at" integer NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "terminal_terminal_llm_sessions_provider_check" CHECK("terminal_terminal_llm_sessions"."provider" IN ('CLAUDE_CODE', 'CODEX', 'OPENCODE'))
+	CONSTRAINT "agent_agent_sessions_provider_check" CHECK("agent_agent_sessions"."provider" IN ('CLAUDE_CODE', 'CODEX', 'OPENCODE')),
+	CONSTRAINT "agent_agent_sessions_model_check" CHECK("agent_agent_sessions"."model" IN ('DEFAULT', 'SONNET', 'OPUS', 'HAIKU'))
 );
 
-CREATE UNIQUE INDEX "terminal_llm_sessions_issue_unq" ON "terminal_terminal_llm_sessions" ("issue_id");
-CREATE INDEX "terminal_llm_sessions_last_turn_idx" ON "terminal_terminal_llm_sessions" ("last_turn_at");
+CREATE UNIQUE INDEX "agent_sessions_issue_unq" ON "agent_agent_sessions" ("issue_id");
+CREATE INDEX "agent_sessions_last_turn_idx" ON "agent_agent_sessions" ("last_turn_at");
 CREATE TABLE "issue_terminal_lines" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_id" text NOT NULL,

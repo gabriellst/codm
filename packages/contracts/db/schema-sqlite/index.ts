@@ -3,7 +3,7 @@
  *
  * A one-flat-dialect mirror of the pg schema at db/schema/ (Option A,
  * go-domain-design.md decision (a)): the 9 pgSchema namespaces collapse to
- * table-name prefixes (owner_/authentication_/workspace_/thread_/issue_/terminal_/
+ * table-name prefixes (owner_/authentication_/workspace_/thread_/issue_/agent_/
  * artifact_/gateway_/shared_), enums become text + CHECK, and pg types map
  * uuid→text · timestamptz→integer{timestamp_ms} · jsonb→text{json} ·
  * text[]→text{json} · bigint→integer · boolean→integer{boolean}.
@@ -19,7 +19,7 @@ export * from './infrastructure'
 export * from './workspace'
 export * from './thread'
 export * from './issue'
-export * from './terminal'
+export * from './agent'
 export * from './artifact'
 
 export * from './channel'

@@ -317,8 +317,18 @@ async function main(): Promise<number> {
 		const [journal = ''] = readFile(dbPath, 'PRAGMA journal_mode;')
 		check(journal === 'wal', 'journal_mode', journal)
 
+		// COUNTED from the contracts source, not hard-coded: the literal that used to sit here went
+		// stale the first time a migration was added (the Fase-4 agent-session rename), and a smoke
+		// that has to be hand-bumped to stay true will eventually be bumped to whatever it printed.
+		const expectedLedgerRows = readdirSync(join(repoRoot, 'packages/contracts/db/schema-sqlite/migrations')).filter(f =>
+			f.endsWith('.sql'),
+		).length
 		const [ledger = '0'] = readFile(dbPath, 'SELECT count(*) FROM _sqlite_migrations;')
-		check(ledger === '2', 'ONE ledger, one row per migration file', `_sqlite_migrations count=${ledger}`)
+		check(
+			ledger === String(expectedLedgerRows),
+			'ONE ledger, one row per migration file',
+			`_sqlite_migrations count=${ledger} (expected ${expectedLedgerRows})`,
+		)
 		const [foreign = '0'] = readFile(dbPath, "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations';")
 		check(foreign === '0', 'no second ledger', `__drizzle_migrations count=${foreign}`)
 

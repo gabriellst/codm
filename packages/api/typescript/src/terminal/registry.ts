@@ -5,7 +5,7 @@ import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { AgentRunner, StreamJsonAgentRunner, StubAgentRunner, E2eStubAgentRunner } from './services/AgentRunner'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
-import { TerminalLLMSessionRepository, DrizzleTerminalLLMSessionRepository, MockTerminalLLMSessionRepository } from './repositories'
+import { AgentSessionRepository, DrizzleAgentSessionRepository, MockAgentSessionRepository } from './repositories'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the `real`
@@ -32,9 +32,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: AgentStreamRegistry, mock: AgentStreamRegistry, integration: AgentStreamRegistry, real: AgentStreamRegistry },
 	// Durable per-issue session record (Fork B): resume identity + last-turn recency.
 	{
-		token: TerminalLLMSessionRepository,
-		mock: MockTerminalLLMSessionRepository,
-		integration: DrizzleTerminalLLMSessionRepository,
-		real: DrizzleTerminalLLMSessionRepository,
+		token: AgentSessionRepository,
+		mock: MockAgentSessionRepository,
+		integration: DrizzleAgentSessionRepository,
+		real: DrizzleAgentSessionRepository,
 	},
 ])
