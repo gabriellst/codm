@@ -193,9 +193,9 @@ func (s *SqliteStore) applyMigrations(ctx context.Context) error {
 	}
 
 	// The set to apply is derived from readdir → filter .sql → sort, NOT from
-	// drizzle-kit's meta/_journal.json. The journal is drizzle-kit bookkeeping and
-	// stays out of the runtime — which is why the //go:embed dir legitimately has no
-	// meta/. The TS applier derives its set the same way, so the two agree by
+	// drizzle-kit's meta/ journal. That journal is drizzle-kit bookkeeping and stays
+	// out of the runtime — which is why the //go:embed dir legitimately has no meta/
+	// at all. The TS applier derives its set the same way, so the two agree by
 	// construction and the ledger key is the full filename, `.sql` included.
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
