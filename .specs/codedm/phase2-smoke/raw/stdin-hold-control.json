@@ -1,0 +1,9 @@
+{
+  "holdMs": 20000,
+  "sawTerminalFrame": true,
+  "msSinceTerminalFrame": 17358,
+  "framesAfterTerminal": 0,
+  "stillAliveWithStdinOpen": true,
+  "exitCodeIfExited": null,
+  "verdict": "child STAYED ALIVE with stdin open — stdin.end() is genuinely the turn-ending act"
+}
