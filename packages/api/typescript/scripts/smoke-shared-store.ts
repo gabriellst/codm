@@ -311,7 +311,7 @@ async function main(): Promise<number> {
 		const entries = readdirSync(dataDir).sort()
 		check(
 			entries.includes('codedm.db') && entries.includes('codedm.db-wal') && entries.includes('codedm.db-shm'),
-			'one WAL database, no PGlite-style subdirectory',
+			'one WAL database, and no per-directory database layout beside it',
 			entries.join(' '),
 		)
 		const [journal = ''] = readFile(dbPath, 'PRAGMA journal_mode;')
