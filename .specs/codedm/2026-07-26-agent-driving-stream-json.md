@@ -79,3 +79,51 @@ engine was judged "resists a Go port" *because of the PTY/TUI/JSONL coupling*. T
 survive this finding: if the engine ever needs to move to Go, `os/exec` + a JSONL scanner is a
 straightforward port. This does not by itself argue for revisiting the 2-sidecar decision — it just means
 the door is no longer welded shut.
+
+---
+
+## Adendo (founder, 26-jul): NÓS também declaramos tools — via MCP
+
+O claude não fica restrito às tools dele + às do repo: aceita **servidores MCP nossos**
+(`--mcp-config`, com `--allowedTools`/`--disallowedTools` para escopo). O open-design faz exatamente
+isso (`apps/daemon/src/mcp-config.ts`: injeta os servidores configurados "so the agent surfaces their
+tools to the model", tanto no mapa `mcpServers` do Claude Code quanto no `mcpServers` do ACP, com
+storage em `<dataDir>/mcp-config.json`). **CodeDM não tem MCP hoje — é lacuna, não limitação.**
+
+### Por que isso é estrutural, não um extra
+
+**1. Mata a assimetria de tools entre CodeDM e medscall.** A objeção "no medscall o servidor executa
+as tools, no CodeDM o CLI executa sozinho" deixa de valer: com um servidor MCP nosso, o agent chama e
+**o nosso daemon executa** — a mesma forma. `tools` volta a ser conceito de domínio compartilhável,
+não detalhe de backend.
+
+**2. Troca INFERÊNCIA por DECLARAÇÃO — é o ganho grande.** Hoje o desenho deduz o que aconteceu lendo
+a saída do agent. Com tools nossas, o agent **declara** com payload tipado:
+
+| Inferir (frágil) | Declarar (tipado) |
+|---|---|
+| deduzir do `stop_reason` que a issue terminou | `complete_issue(summary)` |
+| parsear texto atrás de "preciso de aprovação" | `raise_stop(kind, detail)` — `StopKind` já é enum do wire |
+| raspar output atrás de arquivo gerado | `record_artifact(kind, name, ref)` |
+| heurística para detectar pedido de esclarecimento | `ask_operator(question)` |
+
+Isso ataca de frente a fatia PARKED da materialização de issue: ela dependia de "o engine de terminal
+produzir os eventos de execução". Com MCP, **o próprio agent emite o fato de domínio** — sem parser,
+sem heurística. Os eventos de integração congelados (`issue.opened`/`completed`/`stop_raised`) passam
+a ter uma origem explícita e tipada.
+
+**3. Simetria com os agents internos.** Uma tool MCP é uma função com schema de entrada e saída — a
+MESMA forma do `Agent` (inputSchema/outputSchema). Um agent interno pode ser **exposto como tool** ao
+agent externo (ex.: o claude chama `classify_issue` quando não sabe onde encaixar algo). Uma
+abstração, dois pontos de uso.
+
+### Consequências para o goal
+
+- `ProviderDef` ganha as capacidades de tool (`mcpConfigFlag`, `allowedToolsFlag`) como **dado**, nunca
+  como branch no runner — providers sem MCP simplesmente não declaram.
+- Nasce um servidor MCP do CodeDM (in-process ou stdio) expondo as tools de domínio acima, com os
+  schemas Zod já existentes.
+- O caminho de `AgentTurnFact` deixa de ser majoritariamente inferência sobre frames e passa a ser
+  **majoritariamente chamada de tool** — os frames viram observabilidade/UI, não a fonte de verdade
+  do domínio.
+- Escopo por agent: `ClassifyIssueAgent` roda sem tools; `IssueWorkAgent` roda com o conjunto completo.
