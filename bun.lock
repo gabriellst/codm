@@ -280,13 +280,11 @@
       "name": "@codedm/e2e",
       "dependencies": {
         "@codedm/client-typescript": "workspace:*",
-        "pg": "^8.13.0",
       },
       "devDependencies": {
         "@playwright/test": "^1.59.1",
         "@types/bun": "^1.3.11",
         "@types/node": "^25.6.0",
-        "@types/pg": "^8.11.10",
         "playwright": "^1.59.1",
       },
     },

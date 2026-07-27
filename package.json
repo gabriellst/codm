@@ -42,7 +42,6 @@
 		"e2e": "nx run e2e:test",
 		"test:e2e": "nx run e2e:test",
 		"test:e2e:headed": "bun --cwd packages/e2e test:headed",
-		"test:e2e:cleanup": "bun --cwd packages/e2e cleanup:dbs",
 		"sdk": "nx run client:generate",
 		"sdk:typescript": "nx run client:generate",
 		"sdk:go": "nx run client:generate",

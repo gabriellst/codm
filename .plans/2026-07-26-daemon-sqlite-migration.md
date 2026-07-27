@@ -4160,6 +4160,14 @@ cd "$(git rev-parse --show-toplevel)"   # ÂNCORA (iteração 5)
 ! grep -qi 'postgres' docker/docker-compose.yml
 ! grep -qi 'pglite\|"pg"' docker/Dockerfile.api
 docker compose -f docker/docker-compose.yml config     # exit 0, YAML válido
+# ⚠️ PARKED NA EXECUÇÃO (2026-07-27) — o daemon Docker deste host não puxa imagem NENHUMA
+#    (`docker pull alpine:3.20` ⇒ 90s sem uma linha; `docker pull docker/dockerfile:1` ⇒ >600s;
+#    o `curl` do host no registry devolve 401, então é o daemon, não a rede). As duas bases
+#    (`oven/bun:latest`, distroless) também não estão em cache local, então nem com BuildKit
+#    desligado sai. A linha FICA no AC — não foi afrouxada; está registrada com medição em
+#    .specs/codedm/OVERNIGHT-BLOCKED.md, junto do que foi verificado no lugar e do que
+#    permanece NÃO provado (o alvo linux: `bun install`/build no builder e o prebuild
+#    `@libsql/linux-*-gnu`, mesma superfície das questões abertas 6 e 7).
 docker build -f docker/Dockerfile.api -t codedm-api:sqlite-check .
 # contrato de env: a DECLARAÇÃO de DATABASE_URL morre.
 # ⚠️ INSATISFAZÍVEL ATÉ A ITERAÇÃO 6. A forma anterior (`! grep -q 'DATABASE_URL' template.config.ts`)

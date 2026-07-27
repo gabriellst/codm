@@ -248,3 +248,48 @@ arquivo, a maioria é comentário; **este** executa.
    necessária, só a execução na ordem que o plano já fixa.
 
 **Dono:** executor do bloco 3 (T24). Nada a decidir; registrar aqui é o ponto.
+
+---
+
+## 2026-07-27 — T26: `docker build -f docker/Dockerfile.api` é INEXECUTÁVEL neste host (PARK)
+
+**Task:** T26 (bloco 3). **Status:** a task fecha; **uma linha** do AC não foi executada, e a razão
+é do ambiente, não do código.
+
+**A linha:**
+```bash
+docker build -f docker/Dockerfile.api -t codedm-api:sqlite-check .
+```
+
+**O que foi MEDIDO (não inferido).** O daemon do Docker deste host não consegue puxar imagem
+nenhuma; nada relacionado ao Dockerfile:
+
+| comando | resultado |
+|---|---|
+| `docker build -f docker/Dockerfile.api …` | trava em `#2 resolve image config for docker-image://docker.io/docker/dockerfile:1` — **>600s sem sair do passo 2**, morto por timeout |
+| `docker pull docker/dockerfile:1` | **>600s sem saída**, morto por timeout |
+| `docker pull alpine:3.20` | **90s sem UMA linha de saída**, morto |
+| `curl -m 8 https://registry-1.docker.io/v2/` | `401` — ou seja, **a rede do HOST alcança o registry**; quem não alcança é o daemon |
+| `docker image ls \| grep -iE 'bun\|distroless\|nodejs'` | **0 hits** — nenhuma das duas imagens-base está em cache local |
+| `docker context ls` | `desktop-linux *` (Docker Desktop), socket ok — o daemon responde a comandos locais |
+
+Ou seja: `docker build` **não é satisfazível aqui de forma alguma** — nem com BuildKit desligado,
+porque as duas bases (`oven/bun:latest`, `gcr.io/distroless/nodejs22-debian12`) também teriam que
+ser puxadas. Não há como fazer essa linha passar sem falsificá-la.
+
+**O que FOI executado no lugar (e que NÃO é a mesma coisa — dito explicitamente):**
+- `docker compose -f docker/docker-compose.yml config` ⇒ **exit 0** (a outra linha docker do AC).
+- A substância da mudança no `Dockerfile.api` é o `COPY --from=builder …/dist ./`: verificado
+  **contra o dist real** produzido por T24 — `dist/schema-sqlite/migrations` (2 `.sql`) e
+  `dist/node_modules/{libsql,@libsql/darwin-arm64,…}` existem, então o comentário reescrito
+  descreve o que de fato viaja. O que **não** foi provado é a imagem: o `bun install` dentro do
+  builder, o `bun run build` sob linux, e o prebuild de triple LINUX (`@libsql/linux-*-gnu`) —
+  este último é a parte com risco real, e é a mesma superfície da questão aberta 7
+  (prebuilds cross-triple) e da questão aberta 6 (interop em linux/win32).
+- Nota já escrita no próprio Dockerfile: o runner distroless é `nodejs22-debian12` (**glibc**),
+  que é o que o prebuild `@libsql/linux-*-gnu` staged exige; trocar para base musl/alpine exigiria
+  o prebuild musl.
+
+**Dono / o que destrava:** rodar `docker build -f docker/Dockerfile.api -t codedm-api:sqlite-check .`
+num host com Docker capaz de puxar imagem. Enquanto isso não acontece, **o alvo linux do daemon
+está não-verificado** — o mesmo status em que a questão aberta 6 já colocava linux/win32.

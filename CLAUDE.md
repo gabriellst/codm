@@ -105,7 +105,6 @@ bun migrate:create           # gera nova migração Drizzle
 # E2E (Playwright sobe os dev servers via webServer)
 bun e2e
 bun test:e2e:headed
-bun test:e2e:cleanup         # drop de DBs de teste residuais
 
 # Review automatizado
 bun review                   # revisa arquivos alterados no git diff

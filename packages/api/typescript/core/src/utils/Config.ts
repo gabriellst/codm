@@ -23,7 +23,6 @@ const RawEnvSchema = z.object({
 	API_PORT: z.coerce.number().default(3030),
 	API_URL: z.string().optional(),
 	APP_URL: z.string().optional(),
-	DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/postgres'),
 	// Data directory for the REAL daemon (founder decision 3: 2 processes, one embedded DB — no
 	// external Postgres). It holds `codedm.db`, the SINGLE shared SQLite file that the Go gateway
 	// opens too, plus its `-wal`/`-shm` companions and this daemon's `daemon.lock`; migrations apply

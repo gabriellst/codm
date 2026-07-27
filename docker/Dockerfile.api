@@ -16,12 +16,9 @@ FROM oven/bun:latest AS builder
 
 WORKDIR /app
 
-# Build args — a live DATABASE_URL lets the build apply pending migrations
-# (Railway-style deploy). Absent, the migration step is skipped.
-ARG DATABASE_URL
-ARG DATABASE_PUBLIC_URL
-ENV DATABASE_URL=$DATABASE_URL
-ENV DATABASE_PUBLIC_URL=$DATABASE_PUBLIC_URL
+# No database build args. The daemon owns an EMBEDDED SQLite file under CODEDM_DATA_DIR and
+# applies the migrations itself, idempotently, on boot — there is no external database to point
+# a build at, and nothing to migrate ahead of time.
 
 COPY package.json bun.lock tsconfig.json tsconfig.base.json ./
 
@@ -43,18 +40,6 @@ COPY ./packages/e2e/package.json ./packages/e2e/package.json
 
 RUN bun install
 
-# Apply Drizzle migrations (contracts owns the schema + migrations). Best-effort:
-# a build without DB access still produces a runnable image.
-RUN if [ -n "$DATABASE_PUBLIC_URL" ]; then \
-      echo "Running Drizzle migrations with public URL…"; \
-      DATABASE_URL="$DATABASE_PUBLIC_URL" bun --cwd packages/contracts run drizzle:migrate || echo "Warning: migrations failed or skipped"; \
-    elif [ -n "$DATABASE_URL" ]; then \
-      echo "Running Drizzle migrations…"; \
-      bun --cwd packages/contracts run drizzle:migrate || echo "Warning: migrations failed or skipped"; \
-    else \
-      echo "No database URL provided, skipping migrations"; \
-    fi
-
 ENV NODE_ENV=production
 
 # Bundle the API to a single Node-runnable file (packages/api/typescript/dist/server.js).
@@ -65,13 +50,18 @@ FROM gcr.io/distroless/nodejs22-debian12 AS runner
 
 WORKDIR /app
 
-# The bundle keeps native/runtime deps (pg, OpenTelemetry, BullMQ) external, so
+# The bundle keeps native/runtime deps (libsql, OpenTelemetry, BullMQ) external, so
 # the installed node_modules travels with it for runtime resolution.
 #
 # Ship the WHOLE dist/ (not just server.js): the node build stages assets the bundle cannot inline —
-# dist/migrations (the Drizzle output the rewritten import.meta.url resolves to) and
-# dist/node_modules/@electric-sql/pglite (the external embedded-DB package + its WASM/.data assets).
+# dist/schema-sqlite/migrations (the drizzle-kit output the rewritten import.meta.url resolves to)
+# and dist/node_modules/{libsql,@libsql/*} (the SQLite driver closure, including the host-triple
+# native prebuild that no bundler can inline).
 # Node's walk-up from /app/server.js finds dist/node_modules first, then /app/node_modules.
+#
+# NOTE: the distroless runner is `nodejs22-debian12` — a glibc image, which is what the staged
+# `@libsql/linux-*-gnu` prebuild needs. Moving the runner to a musl/alpine base would need the
+# musl prebuild staged instead.
 COPY --from=builder /app/packages/api/typescript/dist ./
 COPY --from=builder /app/node_modules ./node_modules
 
