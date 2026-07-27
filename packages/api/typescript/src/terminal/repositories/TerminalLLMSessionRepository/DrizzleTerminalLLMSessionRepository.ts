@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { desc, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
 import { terminalLLMSessions } from '@codedm/contracts/db'
 import type { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
@@ -30,15 +30,6 @@ export class DrizzleTerminalLLMSessionRepository extends TerminalLLMSessionRepos
 		})
 		if (!result.success || !result.data) return undefined
 		return this.toDomain(result.data)
-	}
-
-	async listRecentForPrewarm(limit: number, tx?: DrizzleClient): Promise<TerminalLLMSession[]> {
-		const dbc = tx ?? this.db
-		const result = await tryCatchAsync(async () =>
-			dbc.select().from(terminalLLMSessions).orderBy(desc(terminalLLMSessions.lastTurnAt)).limit(limit),
-		)
-		if (!result.success || !result.data) return []
-		return result.data.map(r => this.toDomain(r))
 	}
 
 	async save(entity: TerminalLLMSession, tx?: DrizzleClient): Promise<TerminalLLMSession> {

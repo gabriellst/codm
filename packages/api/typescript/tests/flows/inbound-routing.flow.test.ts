@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import type { z, ZodType } from 'zod'
+import type { ZodType } from 'zod'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { MockOutboxDispatcher } from '@codedm/core-typescript'
 import { ChannelKind, MessageType, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
@@ -11,13 +11,9 @@ import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIn
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { PublishTerminalIntegrationEvents } from '@terminal/handlers/PublishTerminalIntegrationEvents'
 import { RunTerminalSessionOnClassification } from '@terminal/handlers/RunTerminalSessionOnClassification'
-import {
-	TerminalLLMRunner,
-	type AgentGenerateRequest,
-	type TerminalLLMRunnerStreamRequest,
-	type TerminalLLMSessionSnapshot,
-	type TerminalRuntimeEvent,
-} from '@terminal/services/TerminalLLMRunner'
+import { AgentRunner } from '@terminal/services/AgentRunner'
+import { TerminalRunOutcome } from '@terminal/enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
 import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
@@ -29,7 +25,7 @@ import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
  * CAPTURED on the external mediator (no DB), the point of mock mode. The reachable saga is driven
  * IN-PROCESS with a stub runner (no provider CLI, no LLM): the gateway fact → `ConsumeInboundMessage`
  * → `ClassifyMessage` emits `integration.message.classified`; the phase-6b closer
- * `RunTerminalSessionOnClassification` consumes it → `RunTerminalSession` → the terminal facts bridge
+ * `RunTerminalSessionOnClassification` consumes it → `RunIssueTurn` → the terminal facts bridge
  * to `integration.issue.opened` / completed; `MaterializeIssueFromExecution` materializes the Issue
  * row and the `BrowserFrameEnricher` synthesizes the `browser.*` SSE frame.
  *
@@ -37,23 +33,33 @@ import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
  * repository specs (integration) — a flow spec asserts the cross-context hand-offs, not DB reads.
  */
 
-/** Stub runner: `generate()` → a NEW_ISSUE classification decision; `stream()` → a clean session. */
-class NewIssueStubRunner extends TerminalLLMRunner {
-	async generate<OutputSchema extends ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<z.output<OutputSchema>> {
-		return { decision: 'NEW_ISSUE', title: 'Ship the coupon fix' } as z.output<OutputSchema>
+/**
+ * Stub `AgentRunner` — ONE method, and the `outputSchema` on the request is what makes a run a
+ * classification (§4.2). With it: a NEW_ISSUE decision. Without it: canned reply frames and a clean
+ * terminal event, so `RunIssueTurn` drives the whole transport-fan + outcome-mapping path.
+ */
+class NewIssueStubRunner extends AgentRunner {
+	async *run<OutputSchema extends ZodType | undefined = undefined>(
+		request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent> {
+		if (request.outputSchema) {
+			const output = { decision: 'NEW_ISSUE', title: 'Ship the coupon fix' }
+			yield {
+				type: 'finished',
+				result: { outcome: TerminalRunOutcome.COMPLETED, replyText: JSON.stringify(output), sessionId: null, output, failed: false },
+			}
+			return
+		}
+		const lines = [`$ ${request.provider} (stub) in ${request.cwd}`, ...request.messages.map(m => m.content), 'done']
+		for (const [index, text] of lines.entries()) {
+			yield { type: 'frame', frame: { kind: 'assistant_text', messageId: `stub-${index}`, text, parentToolUseId: null } }
+		}
+		yield {
+			type: 'finished',
+			result: { outcome: TerminalRunOutcome.COMPLETED, replyText: lines.join('\n'), sessionId: 'stub-session', failed: false },
+		}
 	}
-	async *stream(request: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
-		const at = new Date().toISOString()
-		yield { type: 'output', line: { at, line: `$ ${request.provider} (stub) in ${request.cwd}`, stream: 'stdout' } }
-		yield { type: 'output', line: { at, line: request.prompt, stream: 'stdout' } }
-		yield { type: 'output', line: { at, line: 'done', stream: 'stdout' } }
-		yield { type: 'exit', code: 0 }
-	}
-	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
-		return null
-	}
-	async killSession(_issueId: string): Promise<void> {}
-	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
+	async shutdown(): Promise<void> {}
 }
 
 describe('Flow (mock): inbound → classify → spawn → issue opened → SSE', () => {
@@ -117,7 +123,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	})
 
 	it('an invocable inbound is classified → integration.message.classified is published (captured)', async () => {
-		testBed.override(TerminalLLMRunner, new NewIssueStubRunner())
+		testBed.override(AgentRunner, new NewIssueStubRunner())
 		const outbox = await wireBridges()
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
@@ -131,8 +137,8 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		expect(classified).toHaveLength(1)
 	})
 
-	it('classified → RunTerminalSession → issue OPENED fires live, materializes the Issue + an SSE frame', async () => {
-		testBed.override(TerminalLLMRunner, new NewIssueStubRunner())
+	it('classified → RunIssueTurn → issue OPENED fires live, materializes the Issue + an SSE frame', async () => {
+		testBed.override(AgentRunner, new NewIssueStubRunner())
 		const outbox = await wireBridges()
 
 		// A workspace bound to the thread so the closer can resolve the run cwd.

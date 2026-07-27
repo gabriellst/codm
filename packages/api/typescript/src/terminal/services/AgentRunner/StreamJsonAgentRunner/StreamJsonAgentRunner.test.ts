@@ -95,9 +95,21 @@ const line = (value: unknown): string => `${JSON.stringify(value)}\n`
 
 const INIT = line({ type: 'system', subtype: 'init', session_id: 'sess-1', model: 'claude-opus-5[1m]' })
 const HOOK = line({ type: 'system', subtype: 'hook_started', hook_name: 'SessionStart:startup' })
-const TEXT = line({ type: 'assistant', message: { id: 'msg_1', role: 'assistant', content: [{ type: 'text', text: 'SMOKE-OK' }] }, parent_tool_use_id: null })
+const TEXT = line({
+	type: 'assistant',
+	message: { id: 'msg_1', role: 'assistant', content: [{ type: 'text', text: 'SMOKE-OK' }] },
+	parent_tool_use_id: null,
+})
 const usage = { input_tokens: 2, cache_creation_input_tokens: 9188, cache_read_input_tokens: 15273, output_tokens: 10 }
-const RESULT = line({ type: 'result', subtype: 'success', is_error: false, stop_reason: 'end_turn', result: 'SMOKE-OK', session_id: 'sess-1', usage })
+const RESULT = line({
+	type: 'result',
+	subtype: 'success',
+	is_error: false,
+	stop_reason: 'end_turn',
+	result: 'SMOKE-OK',
+	session_id: 'sess-1',
+	usage,
+})
 
 describe('StreamJsonAgentRunner — the happy turn', () => {
 	it('yields frames, facts and exactly ONE finished event, with finished LAST', async () => {
@@ -107,7 +119,11 @@ describe('StreamJsonAgentRunner — the happy turn', () => {
 
 		expect(events.filter(e => e.type === 'finished')).toHaveLength(1)
 		expect(events.at(-1)?.type).toBe('finished')
-		expect(events.filter(e => e.type === 'frame').map(e => (e as { frame: { kind: string } }).frame.kind)).toEqual(['system_init', 'assistant_text', 'result'])
+		expect(events.filter(e => e.type === 'frame').map(e => (e as { frame: { kind: string } }).frame.kind)).toEqual([
+			'system_init',
+			'assistant_text',
+			'result',
+		])
 	})
 
 	it('folds the transcript and the terminal usage aggregate into domain facts', async () => {
@@ -117,7 +133,12 @@ describe('StreamJsonAgentRunner — the happy turn', () => {
 
 		expect(facts[0]).toBeInstanceOf(AgentMessageEvent)
 		expect(facts[1]).toBeInstanceOf(AgentUsageEvent)
-		expect((facts[1] as AgentUsageEvent).payload).toEqual({ inputTokens: 2, outputTokens: 10, cacheCreationInputTokens: 9188, cacheReadInputTokens: 15273 })
+		expect((facts[1] as AgentUsageEvent).payload).toEqual({
+			inputTokens: 2,
+			outputTokens: 10,
+			cacheCreationInputTokens: 9188,
+			cacheReadInputTokens: 15273,
+		})
 	})
 
 	it('reports COMPLETED with the terminal reply text and the session id', async () => {
@@ -125,15 +146,50 @@ describe('StreamJsonAgentRunner — the happy turn', () => {
 
 		const finished = (await drain(makeRunner(spawner).run(request()))).at(-1)
 
-		expect(finished).toMatchObject({ type: 'finished', result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'SMOKE-OK', sessionId: 'sess-1', failed: false } })
+		expect(finished).toMatchObject({
+			type: 'finished',
+			result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'SMOKE-OK', sessionId: 'sess-1', failed: false },
+		})
 	})
 
 	it('writes the turn to stdin as stream-json JSONL, one line per message', async () => {
 		const fake = fakeSpawner([INIT, TEXT, RESULT])
 
-		await drain(makeRunner(fake.spawner).run(request({ systemPrompt: 'be terse', messages: [{ role: AgentMessageRole.USER, content: 'do the thing' }] })))
+		await drain(
+			makeRunner(fake.spawner).run(
+				request({ systemPrompt: 'be terse', messages: [{ role: AgentMessageRole.USER, content: 'do the thing' }] }),
+			),
+		)
 
-		expect(JSON.parse(fake.process().writes.join('').trim())).toEqual({ type: 'user', message: { role: 'user', content: 'be terse\n\ndo the thing' } })
+		expect(JSON.parse(fake.process().writes.join('').trim())).toEqual({
+			type: 'user',
+			message: { role: 'user', content: 'be terse\n\ndo the thing' },
+		})
+	})
+
+	it('an outputSchema puts a JSON-only directive carrying the derived JSON Schema on the LAST stdin line', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+		const schema = z.object({ decision: z.string(), confidence: z.number().nullish() })
+
+		await drain(
+			makeRunner(fake.spawner).run(request({ messages: [{ role: AgentMessageRole.USER, content: 'route this' }], outputSchema: schema })),
+		)
+
+		const written = fake.process().writes.join('').trim()
+		const content = (JSON.parse(written) as { message: { content: string } }).message.content
+		expect(content.startsWith('route this')).toBe(true)
+		expect(content).toContain('exactly ONE JSON object')
+		// The SCHEMA itself travels, derived from the same Zod object that validates the reply — one
+		// source of truth, rather than a prose paraphrase that drifts.
+		expect(content).toContain(JSON.stringify(z.toJSONSchema(schema)))
+	})
+
+	it('a run WITHOUT an outputSchema carries no directive — the switch is the field, and it is off', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+
+		await drain(makeRunner(fake.spawner).run(request({ messages: [{ role: AgentMessageRole.USER, content: 'just work' }] })))
+
+		expect(fake.process().writes.join('')).not.toContain('exactly ONE JSON object')
 	})
 
 	it('builds argv from the ProviderDef, never from a provider branch in the runner', async () => {
@@ -187,10 +243,26 @@ describe('StreamJsonAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () =
 		// The AMENDED risk (D1): a sub-agent emits NO result frame at all, so the danger is the run
 		// never closing, not a sub-agent closing it early. Scope is keyed on `parent_tool_use_id`.
 		const SUB = 'toolu_01WpAVhnCvdR8Ywmh4rK4jed'
-		const subToolUse = line({ type: 'assistant', message: { id: 'msg_sub', content: [{ type: 'tool_use', id: 'toolu_inner', name: 'Read', input: {} }] }, parent_tool_use_id: SUB })
-		const subToolResult = line({ type: 'user', message: { content: [{ tool_use_id: 'toolu_inner', type: 'tool_result', content: 'inner' }] }, parent_tool_use_id: SUB })
-		const parentToolUse = line({ type: 'assistant', message: { id: 'msg_p', content: [{ type: 'tool_use', id: SUB, name: 'Agent', input: {} }] }, parent_tool_use_id: null })
-		const parentToolResult = line({ type: 'user', message: { content: [{ tool_use_id: SUB, type: 'tool_result', content: [{ type: 'text', text: 'SMOKE' }] }] }, parent_tool_use_id: null })
+		const subToolUse = line({
+			type: 'assistant',
+			message: { id: 'msg_sub', content: [{ type: 'tool_use', id: 'toolu_inner', name: 'Read', input: {} }] },
+			parent_tool_use_id: SUB,
+		})
+		const subToolResult = line({
+			type: 'user',
+			message: { content: [{ tool_use_id: 'toolu_inner', type: 'tool_result', content: 'inner' }] },
+			parent_tool_use_id: SUB,
+		})
+		const parentToolUse = line({
+			type: 'assistant',
+			message: { id: 'msg_p', content: [{ type: 'tool_use', id: SUB, name: 'Agent', input: {} }] },
+			parent_tool_use_id: null,
+		})
+		const parentToolResult = line({
+			type: 'user',
+			message: { content: [{ tool_use_id: SUB, type: 'tool_result', content: [{ type: 'text', text: 'SMOKE' }] }] },
+			parent_tool_use_id: null,
+		})
 
 		const fake = fakeSpawner([INIT, parentToolUse, subToolUse, subToolResult, parentToolResult, TEXT, RESULT])
 		const events = await drain(makeRunner(fake.spawner).run(request()))
@@ -198,7 +270,10 @@ describe('StreamJsonAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () =
 		// The run closed at the ONE result frame, position 7 — not at the sub-agent's work.
 		expect(fake.process().stdinClosedAfter).toBe(7)
 
-		const toolFacts = events.filter(e => e.type === 'fact').map(e => (e as { fact: unknown }).fact).filter(f => f instanceof AgentToolCallEvent)
+		const toolFacts = events
+			.filter(e => e.type === 'fact')
+			.map(e => (e as { fact: unknown }).fact)
+			.filter(f => f instanceof AgentToolCallEvent)
 		// Exactly the PARENT's call. The inner pair is transport-only; nothing is lost, because the
 		// sub-agent's work is summarized in the parent's own tool_result.
 		expect(toolFacts).toHaveLength(1)
@@ -210,12 +285,19 @@ describe('StreamJsonAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () =
 	})
 
 	it('materializes a tool_use left open when the turn ended as a FAILED fact', async () => {
-		const orphan = line({ type: 'assistant', message: { id: 'm', content: [{ type: 'tool_use', id: 'toolu_orphan', name: 'Bash', input: {} }] }, parent_tool_use_id: null })
+		const orphan = line({
+			type: 'assistant',
+			message: { id: 'm', content: [{ type: 'tool_use', id: 'toolu_orphan', name: 'Bash', input: {} }] },
+			parent_tool_use_id: null,
+		})
 		const { spawner } = fakeSpawner([INIT, orphan, RESULT])
 
 		const events = await drain(makeRunner(spawner).run(request()))
 
-		const toolFact = events.filter(e => e.type === 'fact').map(e => (e as { fact: unknown }).fact).find(f => f instanceof AgentToolCallEvent) as AgentToolCallEvent
+		const toolFact = events
+			.filter(e => e.type === 'fact')
+			.map(e => (e as { fact: unknown }).fact)
+			.find(f => f instanceof AgentToolCallEvent) as AgentToolCallEvent
 		expect(toolFact.payload).toMatchObject({ toolUseId: 'toolu_orphan', status: 'FAILED' })
 	})
 })
@@ -223,7 +305,8 @@ describe('StreamJsonAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () =
 describe('StreamJsonAgentRunner — structured output NEVER throws mid-drain (AC-2.3)', () => {
 	const DecisionSchema = z.object({ decision: z.enum(['MATCH_ISSUE', 'NEW_ISSUE']), confidence: z.number() })
 
-	const jsonResult = (text: string): string => line({ type: 'result', subtype: 'success', is_error: false, stop_reason: 'end_turn', result: text, session_id: 'sess-1', usage })
+	const jsonResult = (text: string): string =>
+		line({ type: 'result', subtype: 'success', is_error: false, stop_reason: 'end_turn', result: text, session_id: 'sess-1', usage })
 
 	it('returns the validated object on the terminal event when the reply parses', async () => {
 		const { spawner } = fakeSpawner([INIT, jsonResult('{"decision":"NEW_ISSUE","confidence":0.9}')])
@@ -372,6 +455,9 @@ describe('StreamJsonAgentRunner — a provider with NO stream-json is a DEF, not
 		// `promptViaStdin: false`, not because the runner asked which provider this is.
 		expect(fake.process().spec.cmd).toEqual(['codex', 'exec', 'do the thing'])
 		expect(fake.process().spec.stdin).toBe(false)
-		expect(events.at(-1)).toMatchObject({ type: 'finished', result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'first line\nsecond line' } })
+		expect(events.at(-1)).toMatchObject({
+			type: 'finished',
+			result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'first line\nsecond line' },
+		})
 	})
 })

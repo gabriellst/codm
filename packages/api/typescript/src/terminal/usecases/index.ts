@@ -1,1 +1,1 @@
-export { RunTerminalSession, RunTerminalSessionInputSchema, RunTerminalSessionOutputSchema } from './RunTerminalSession'
+export { RunIssueTurn, RunIssueTurnInputSchema, RunIssueTurnOutputSchema } from './RunIssueTurn'

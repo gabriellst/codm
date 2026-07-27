@@ -9,8 +9,9 @@ import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
  * over one backend. Here they are not: after the stream-json decision, classifying and executing are
  * the same spawn, the same stdin format, the same stdout parser and the same end-of-turn signal. A
  * second method would encode ZERO domain information — the only real difference is whether an
- * `outputSchema` was passed, and that is a FIELD on the request. `TerminalLLMRunner.generate` is kept
- * alive as a thin adapter over this method precisely so the seam does not have to grow one.
+ * `outputSchema` was passed, and that is a FIELD on the request. Fase 2 proved the claim by keeping the
+ * old wide seam alive as a thin adapter over this method; Fase 3 deleted that seam outright, and both
+ * consumers now call this one.
  *
  * ### Why `AsyncIterable` rather than `Promise`
  * Streaming is the GENERAL case and structured output the degenerate one; the inverse is not true.
@@ -25,7 +26,9 @@ import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
  * `eventParser`, never a second method here.
  */
 export abstract class AgentRunner {
-	abstract run<OutputSchema extends ZodType | undefined = undefined>(request: AgentRunRequest<OutputSchema>): AsyncIterable<AgentRuntimeEvent>
+	abstract run<OutputSchema extends ZodType | undefined = undefined>(
+		request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent>
 
 	/** Release every process this runner still owns. Idempotent. */
 	abstract shutdown(): Promise<void>

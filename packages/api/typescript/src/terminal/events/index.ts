@@ -3,9 +3,15 @@ export { TerminalReplyDraftedEvent, TerminalReplyDraftedEventSchema } from './Te
 export { TerminalSessionCompletedEvent, TerminalSessionCompletedEventSchema } from './TerminalSessionCompletedEvent'
 export { TerminalStopRaisedEvent, TerminalStopRaisedEventSchema } from './TerminalStopRaisedEvent'
 // Engine lifecycle facts (phase-10 port; domain-only — no wire counterparts).
+//
+// PRODUCER-LESS since Fase 3, and deliberately still declared. Both were PTY vocabulary — "the live
+// REPL was reused", "the pseudo-terminal died" — and neither is observable over pipes, so `RunIssueTurn`
+// stopped raising them when the engine was deleted. §5.3 assigns the keep-or-delete call to FASE 4,
+// where native `--resume` decides what resumption is still worth observing; deleting them early would
+// prejudge that with no information. `TerminalSessionIdleEvictedEvent` was the third of this family
+// and DID die here — nothing ever constructed it, in any phase.
 export { TerminalSessionResumedEvent, TerminalSessionResumedEventSchema } from './TerminalSessionResumedEvent'
 export { TerminalSessionKilledEvent, TerminalSessionKilledEventSchema } from './TerminalSessionKilledEvent'
-export { TerminalSessionIdleEvictedEvent, TerminalSessionIdleEvictedEventSchema } from './TerminalSessionIdleEvictedEvent'
 
 // ── Agent turn facts (GOAL-agent-abstraction §4.3, Fase 1 contract lock) ────────────────────────
 // The SECOND of the three signal categories. Frozen HERE, BEFORE the codec that will produce them

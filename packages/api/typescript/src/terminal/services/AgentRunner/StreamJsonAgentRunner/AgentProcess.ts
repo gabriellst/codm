@@ -32,12 +32,22 @@ export interface AgentProcess {
 
 export type AgentProcessSpawner = (spec: AgentProcessSpec) => AgentProcess
 
+/** How long a killed process group gets to exit on SIGTERM before SIGKILL follows (§4.11). */
+const KILL_GRACE_MS = 2_000
+
 /**
  * The real spawner: plain pipes, no PTY.
  *
  * `detached: true` gives the child its own process group so `kill()` can take down the whole tree —
  * a provider CLI spawns children of its own (hooks, MCP servers), and killing only the parent leaks
  * them. This is also what makes the watchdog's kill actually a kill.
+ *
+ * `kill()` is GRACEFUL-THEN-FORCED, and the order matters for the same reason the group does: SIGTERM
+ * to the GROUP first, so the CLI gets a chance to tear down the children it spawned itself, then
+ * SIGKILL to the group after a grace window for the case where it does not. Going straight to SIGKILL
+ * denies every descendant that chance — exactly the leak the group kill exists to prevent. The
+ * escalation timer is `unref`'d: a pending kill must never be the reason a process (or a test runner)
+ * stays alive.
  */
 export const nodeAgentProcessSpawner: AgentProcessSpawner = spec => {
 	const [bin, ...args] = spec.cmd
@@ -61,11 +71,31 @@ export const nodeAgentProcessSpawner: AgentProcessSpawner = spec => {
 	})
 
 	const exited = new Promise<number>((resolve, reject) => {
-		child.once('error', cause => reject(new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)))
+		child.once('error', cause =>
+			reject(new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)),
+		)
 		child.once('close', code => resolve(code ?? 0))
 	})
 
 	const empty = (async function* () {})()
+
+	let killed = false
+	/**
+	 * Signal the whole process GROUP. Returns whether the group still existed — a `false` means there
+	 * is nothing left to escalate to, which is why the caller stops rather than arming a timer.
+	 */
+	const signalGroup = (signal: 'SIGTERM' | 'SIGKILL'): boolean => {
+		if (child.pid === undefined) return false
+		try {
+			process.kill(-child.pid, signal)
+			return true
+		} catch {
+			// ESRCH (already reaped) or EPERM (never became a group leader): fall back to the direct
+			// child, which is the only pid we can still name.
+			child.kill(signal)
+			return false
+		}
+	}
 
 	return {
 		stdout: child.stdout ?? empty,
@@ -78,13 +108,17 @@ export const nodeAgentProcessSpawner: AgentProcessSpawner = spec => {
 			child.stdin?.end()
 		},
 		kill() {
-			try {
-				// Negative pid = the process GROUP, available because of `detached: true`.
-				if (child.pid !== undefined) process.kill(-child.pid, 'SIGKILL')
-			} catch {
-				// Already gone, or never started — either way there is nothing left to kill.
-				child.kill('SIGKILL')
-			}
+			if (killed) return
+			killed = true
+			// Negative pid = the process GROUP, available because of `detached: true`.
+			if (!signalGroup('SIGTERM')) return
+			const escalation = setTimeout(() => signalGroup('SIGKILL'), KILL_GRACE_MS)
+			escalation.unref?.()
+			// A group that exits on SIGTERM must not keep a live timer around for the grace window.
+			void exited.then(
+				() => clearTimeout(escalation),
+				() => clearTimeout(escalation),
+			)
 		},
 		exited,
 	}

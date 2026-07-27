@@ -40,6 +40,10 @@ import {
 // Calling it explicitly in start(), then DYNAMICALLY importing `./routers` after it, is what forces
 // the ordering: migrate → then contexts create against the already-migrated singleton.
 import { migrateEmbeddedDatabase } from '@shared/registry'
+// The agent seam, imported for its SHUTDOWN token only (see the 'agent runs' step below). Statically:
+// it is a pure type + abstract class module with no DB reach, so it does not need the deferral that
+// `./routers` does, and a dynamic import here is what forced the duck-typed `any` this phase removes.
+import { AgentRunner } from '@terminal/services/AgentRunner/AgentRunner'
 import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.
@@ -108,15 +112,14 @@ async function start(): Promise<void> {
 		}
 
 		await step('http server', () => mainRouter.stop())
-		// Phase-10 terminal engine: tear down live claude PTYs (graceful EOT → SIGTERM → SIGKILL)
-		// BEFORE the outbox/db drain so no PTY zombie survives the daemon. Duck-typed: only the
-		// real ClaudeCliTerminalLLMRunner exposes shutdown(); stubs don't and are skipped.
-		await step('terminal sessions', async () => {
-			const { TerminalLLMRunner } = await import('@terminal/services/TerminalLLMRunner')
-			// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
-			const runner = container.resolve(TerminalLLMRunner as any) as { shutdown?: () => Promise<void> }
-			if (typeof runner.shutdown === 'function') await runner.shutdown()
-		})
+		// Agent runtime: kill every live provider PROCESS GROUP before the outbox/db drain, so no CLI —
+		// nor any child it spawned — outlives the daemon. `shutdown()` is DECLARED on the `AgentRunner`
+		// seam (§4.11), which is exactly what removed the duck-typing this step used to need: it
+		// dynamically imported the old token and probed `typeof runner.shutdown === 'function'` because
+		// only one of four implementations had the method. With one execution method plus `shutdown` on
+		// the abstract class, every binding answers it and this is an ordinary typed resolve.
+		// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
+		await step('agent runs', () => (container.resolve(AgentRunner as any) as AgentRunner).shutdown())
 		await step('outbox dispatcher', () => (container.resolve(OutboxDispatcher as any) as OutboxDispatcher).stop())
 		await step('mediator listeners', () => {
 			;(container.resolve(InternalMediator as any) as InternalMediator).removeAllListeners()

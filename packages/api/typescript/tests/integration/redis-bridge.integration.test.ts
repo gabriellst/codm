@@ -1,20 +1,16 @@
 import { RedisClient } from 'bun'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import type { z as Zod, ZodType } from 'zod'
+import type { ZodType } from 'zod'
 import { TestBed, givenThread } from '@test/support'
 import { RedisExternalMediator, Config, type Handler } from '@codedm/core-typescript'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import {
-	TerminalLLMRunner,
-	type AgentGenerateRequest,
-	type TerminalLLMRunnerStreamRequest,
-	type TerminalLLMSessionSnapshot,
-	type TerminalRuntimeEvent,
-} from '@terminal/services/TerminalLLMRunner'
+import { AgentRunner } from '@terminal/services/AgentRunner'
+import { TerminalRunOutcome } from '@terminal/enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
 
 /**
  * PROVES the Go→TS bridge end to end over a REAL Redis (phase 9-1). The Go channel gateway publishes
@@ -77,18 +73,23 @@ if (!REACHABLE) {
 const describeBridge = REACHABLE ? describe : describe.skip
 
 /** Deterministic classifier stub → NEW_ISSUE, so classify emits `thread.message_classified`. */
-class NewIssueStubRunner extends TerminalLLMRunner {
-	async generate<OutputSchema extends ZodType>(_r: AgentGenerateRequest<OutputSchema>): Promise<Zod.output<OutputSchema>> {
-		return { decision: 'NEW_ISSUE', title: 'Fix the login bug' } as Zod.output<OutputSchema>
+class NewIssueStubRunner extends AgentRunner {
+	async *run<OutputSchema extends ZodType | undefined = undefined>(
+		request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent> {
+		const output = request.outputSchema ? { decision: 'NEW_ISSUE', title: 'Fix the login bug' } : undefined
+		yield {
+			type: 'finished',
+			result: {
+				outcome: TerminalRunOutcome.COMPLETED,
+				replyText: JSON.stringify(output ?? 'done'),
+				sessionId: null,
+				output,
+				failed: false,
+			},
+		}
 	}
-	async *stream(_r: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
-		yield { type: 'exit', code: 0 }
-	}
-	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
-		return null
-	}
-	async killSession(_issueId: string): Promise<void> {}
-	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
+	async shutdown(): Promise<void> {}
 }
 
 /**
@@ -145,7 +146,7 @@ describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + clas
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
 		// Deterministic classification (NEW_ISSUE) — set BEFORE resolving the consumer graph.
-		testBed.override(TerminalLLMRunner, new NewIssueStubRunner())
+		testBed.override(AgentRunner, new NewIssueStubRunner())
 
 		producer = new RedisClient(REDIS_URL)
 		await producer.connect()

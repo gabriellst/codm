@@ -6,9 +6,4 @@ export abstract class TerminalLLMSessionRepository extends Repository<TerminalLL
 	abstract findById(id: string, tx?: Transaction): Promise<TerminalLLMSession | undefined>
 	/** Fork B: session identity = issueId — the lookup the engine resume path uses. */
 	abstract findByIssueId(issueId: string, tx?: Transaction): Promise<TerminalLLMSession | undefined>
-	/**
-	 * Recency-ordered list used by the startup prewarm sweep to pick the top-N sessions to
-	 * pre-warm. Order: `last_turn_at DESC`, `LIMIT ?`.
-	 */
-	abstract listRecentForPrewarm(limit: number, tx?: Transaction): Promise<TerminalLLMSession[]>
 }

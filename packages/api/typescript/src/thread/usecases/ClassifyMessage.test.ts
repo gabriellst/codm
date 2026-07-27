@@ -3,7 +3,8 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenIssue } from '@test/support'
 import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
 import { ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { TerminalLLMRunner } from '@terminal/services/TerminalLLMRunner'
+import { AgentRunner } from '@terminal/services/AgentRunner'
+import { TerminalRunOutcome } from '@terminal/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ClassifyMessage } from './ClassifyMessage'
 import { TranscriptRepository } from '../repositories/TranscriptRepository'
@@ -33,11 +34,25 @@ describe('ClassifyMessage — classification routes + clarification invariant', 
 	beforeEach(async () => {
 		await testBed.reset()
 		nextDecision = {} // inert default → CLARIFY
+		// The ONE seam: a classification is `run({ outputSchema })` drained to its single terminal
+		// event, whose `output` is the decision. No `generate` method exists to fake any more.
 		const fakeRunner = {
-			generate: async () => nextDecision,
-			stream: () => (async function* () {})(),
-		} as unknown as TerminalLLMRunner
-		testBed.override(TerminalLLMRunner, fakeRunner)
+			run: () =>
+				(async function* () {
+					yield {
+						type: 'finished',
+						result: {
+							outcome: TerminalRunOutcome.COMPLETED,
+							replyText: JSON.stringify(nextDecision),
+							sessionId: null,
+							output: nextDecision,
+							failed: false,
+						},
+					}
+				})(),
+			shutdown: async () => {},
+		} as unknown as AgentRunner
+		testBed.override(AgentRunner, fakeRunner)
 	})
 	afterAll(async () => {
 		await testBed.destroy()

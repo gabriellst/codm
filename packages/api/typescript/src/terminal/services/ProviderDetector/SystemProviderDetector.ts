@@ -168,7 +168,7 @@ export class SystemProviderDetector extends ProviderDetector {
 	 * no lighter-weight structured logger at this layer". That reasoning was wrong twice over, and
 	 * `tests/architecture/console-discipline.test.ts` caught it: this class is `@injectable()` and
 	 * is resolved from the container in the `real` env, so it can take `LoggingService` in the
-	 * constructor exactly like `SessionPrewarmService` does — it is not bootstrap/DI-less code, which
+	 * constructor like every other injectable service here — it is not bootstrap/DI-less code, which
 	 * is the only thing that guard exempts. And a raw `console.*` here never reaches Loki and carries
 	 * no trace correlation, which is precisely the failure that matters for a probe: a degraded
 	 * provider is diagnosed from logs, after the fact, on a machine nobody is watching.

@@ -6,13 +6,13 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { WorkspaceRepository } from '@workspace/repositories'
-import { RunTerminalSession } from '../usecases/RunTerminalSession'
+import { RunIssueTurn } from '../usecases/RunIssueTurn'
 import { uniqueSlugKey } from '../services/IssueClassifier'
 
 /**
  * The severed-saga closer (phase-6b). BC4 Thread & Routing demultiplexes an inbound message into an
  * issue and publishes the FROZEN `integration.message.classified`; THIS is the terminal engine's
- * trigger — the one runtime caller of `RunTerminalSession`. Consuming the fact here (never in a use
+ * trigger — the one runtime caller of `RunIssueTurn`. Consuming the fact here (never in a use
  * case) keeps the classification/routing seam clean and the engine consumed strictly by event.
  *
  * Resolution (all via existing cross-context READ seams — repositories/readers, never the SDK):
@@ -28,7 +28,7 @@ import { uniqueSlugKey } from '../services/IssueClassifier'
  *   - NEW ISSUE (`issueId` absent): mint a fresh id + a slug key UNIQUE within the thread
  *     (`uniqueSlugKey`, mirroring the classifier), titled from the message.
  *
- * `RunTerminalSession` then runs the (stubbed-in-tests) runner and persists context-private
+ * `RunIssueTurn` then runs the (stubbed-in-tests) runner and persists context-private
  * `terminal.*` facts; the existing `PublishTerminalIntegrationEvents` bridge republishes them so
  * `integration.issue.opened` / `agent.reply_drafted` / `issue.completed` / `issue.stop_raised` fire
  * live — and `MaterializeIssueFromExecution` materializes the Issue row from `issue.opened`.
@@ -39,8 +39,7 @@ import { uniqueSlugKey } from '../services/IssueClassifier'
  * PHASE-10 FOLD (ONE inbound path): whatscode's `ChannelMessageReceivedHandler` +
  * `InboundDroppedNoMappingEvent` are NOT ported as artifacts — their surviving responsibilities
  * live here (mapping resolution → BC4 classification; drop semantics → these defensive returns;
- * session upsert → RunTerminalSession's durable session-row write) and the startup prewarm lives
- * in `SessionPrewarmService` (recency over terminal_llm_sessions).
+ * session upsert → RunIssueTurn's durable session-row write).
  */
 @injectable()
 export class RunTerminalSessionOnClassification extends EventHandler<typeof MessageClassifiedEvent> {
@@ -51,14 +50,14 @@ export class RunTerminalSessionOnClassification extends EventHandler<typeof Mess
 		private readonly workspaces: WorkspaceRepository,
 		private readonly transcript: TranscriptRepository,
 		private readonly openIssues: OpenIssuesReader,
-		private readonly runTerminalSession: RunTerminalSession,
+		private readonly runIssueTurn: RunIssueTurn,
 	) {
 		super()
 	}
 
 	async handle(event: this['input']): Promise<void> {
 		// Defensive drop (the declared posture above): an envelope without an owner is unroutable —
-		// never forge one with `?? ''` (RunTerminalSession's z.uuid() would reject it downstream).
+		// never forge one with `?? ''` (RunIssueTurn's z.uuid() would reject it downstream).
 		const ownerId = event.ownerId
 		if (!ownerId) return
 		const { threadId, entryId, issueId } = event.payload
@@ -77,7 +76,7 @@ export class RunTerminalSessionOnClassification extends EventHandler<typeof Mess
 
 		const resolved = await this.resolveIssue(threadId, issueId, entry.text)
 
-		await this.runTerminalSession.execute({
+		await this.runIssueTurn.execute({
 			ownerId,
 			issueId: resolved.issueId,
 			threadId,

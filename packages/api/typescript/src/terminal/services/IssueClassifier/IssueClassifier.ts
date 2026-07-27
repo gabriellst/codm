@@ -2,10 +2,10 @@ import { injectable } from 'tsyringe-neo'
 import type { z as Zod } from 'zod'
 import { z, BaseError } from '@codedm/core-typescript'
 import { ClassificationMethod, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
-import { TerminalLLMRunner } from '../TerminalLLMRunner'
+import { AgentRunner } from '../AgentRunner'
 import type { TerminalApplicationErrors } from '../../errors'
 import { uniqueSlugKey } from './slug'
-import { ClassificationVerdict } from '../../enums'
+import { AgentMessageRole, AgentName, ClassificationVerdict } from '../../enums'
 
 /** An open issue the classifier may route an inbound message to. */
 export interface OpenIssueRef {
@@ -42,7 +42,7 @@ export type ClassificationDecision =
 	| { kind: 'NEW_ISSUE'; slugKey: string; title: string; confidence?: number }
 	| { kind: 'CLARIFY'; question: string; candidateIssueIds: string[] }
 
-/** The structured shape the runner's `generate()` returns. Nullish fields since the LLM omits the
+/** The structured shape the classification run returns. Nullish fields since the LLM omits the
  *  ones that don't apply to its chosen decision. */
 const LlmDecisionSchema = z.object({
 	decision: z.enum(ClassificationVerdict),
@@ -61,8 +61,20 @@ const LlmDecisionSchema = z.object({
  *
  * Resolution order (the modeling's authoritative order):
  *   1. REPLY-QUOTE — deterministic, BEFORE any LLM call: a reply-quote to an open issue routes there.
- *   2. CONTEXT-MATCH / NEW / CLARIFY — an LLM structured-generate (`TerminalLLMRunner.generate`) over the
- *      message + open issues + context buffer; a match below `threshold` degrades to a clarification.
+ *   2. CONTEXT-MATCH / NEW / CLARIFY — ONE `AgentRunner.run({ outputSchema })` over the message +
+ *      open issues + context buffer; a match below `threshold` degrades to a clarification.
+ *
+ * ### Why this talks to the ONE-METHOD seam and not to a `generate` method of its own (§4.1/§4.2)
+ * Classification is not a second runtime. It is `run()` with an `outputSchema` — the single switch
+ * that makes a call structured — and with no `mcp`, because a classifier declares nothing. There is no
+ * second method to call, so the ergonomics of "just give me the object" are served by draining the
+ * same iteration to its one terminal event. The window-shrinking JSON scavenger the old one-shot path
+ * needed is gone with it: the final assistant text arrives already delimited by a frame.
+ *
+ * The seam's contract is never to throw mid-drain (§4.3 rule 4); THIS layer's contract is the opposite
+ * — a caller of `classify()` gets a decision or a NAMED error. Translating one into the other is this
+ * method's job, and `CLASSIFICATION_FAILED` is where both a transport stop and a failed structural
+ * validation land.
  *
  * Tested against a stubbed runner — never a real LLM (house rule: no real provider calls in tests).
  */
@@ -71,7 +83,7 @@ export class IssueClassifier {
 	/** Default confidence floor for a context match — configurable per-call via `ClassifyInput.threshold`. */
 	static readonly DEFAULT_THRESHOLD = 0.6
 
-	constructor(private readonly runner: TerminalLLMRunner) {}
+	constructor(private readonly runner: AgentRunner) {}
 
 	async classify(input: ClassifyInput): Promise<ClassificationDecision> {
 		// 1. Deterministic reply-quote shortcut — authoritative, wins over context matching, no LLM.
@@ -113,17 +125,50 @@ export class IssueClassifier {
 		}
 	}
 
+	/**
+	 * ONE run, drained to its ONE terminal event (§4.2: "Classificação = `run({…, outputSchema,
+	 * messages:[oneUserMessage]})`, sem `mcp`").
+	 *
+	 * `cwd` is passed EXPLICITLY rather than left to the seam, because the seam has no default and
+	 * should not grow one. A classification run carries no `mcp`, therefore no tool scope, therefore no
+	 * reach into the filesystem — the process cwd is the honest answer here, and writing it at the call
+	 * site keeps that judgement visible instead of buried in the runner.
+	 *
+	 * `result.output` is `unknown` on the seam and is narrowed by CAST rather than re-parsed: the
+	 * runner sets it only when `outputSchema.safeParse` succeeded, so a second parse here would re-run
+	 * the same validation and, worse, would give a fake runner in a test a different verdict than the
+	 * real one. The `failed` / `output === undefined` guard above is what makes the cast sound.
+	 */
 	private async generateDecision(input: ClassifyInput): Promise<Zod.output<typeof LlmDecisionSchema>> {
-		try {
-			return await this.runner.generate({
-				provider: input.provider ?? ProviderKind.CLAUDE_CODE,
-				systemPrompt: SYSTEM_PROMPT,
-				prompt: buildClassificationPrompt(input),
-				outputSchema: LlmDecisionSchema,
-			})
-		} catch (cause) {
-			throw new BaseError<TerminalApplicationErrors>('CLASSIFICATION_FAILED', `classification generate failed: ${String(cause)}`)
+		for await (const event of this.runner.run({
+			agentName: AgentName.CLASSIFY_ISSUE,
+			provider: input.provider ?? ProviderKind.CLAUDE_CODE,
+			cwd: process.cwd(),
+			systemPrompt: SYSTEM_PROMPT,
+			messages: [{ role: AgentMessageRole.USER, content: buildClassificationPrompt(input) }],
+			outputSchema: LlmDecisionSchema,
+		})) {
+			if (event.type !== 'finished') continue
+			const { result } = event
+			if (result.stop) {
+				throw new BaseError<TerminalApplicationErrors>(
+					'CLASSIFICATION_FAILED',
+					`classification stopped: ${result.stop.kind} — ${result.stop.detail}`,
+				)
+			}
+			if (result.failed || result.output === undefined) {
+				throw new BaseError<TerminalApplicationErrors>(
+					'CLASSIFICATION_FAILED',
+					result.failure ?? 'classification produced no parseable structured output',
+				)
+			}
+			return result.output as Zod.output<typeof LlmDecisionSchema>
 		}
+
+		// `run()` yields exactly one `finished` event, always last — unreachable unless that invariant
+		// breaks. Named rather than silent: an implicit `undefined` here would surface as a confusing
+		// schema error three layers up, in a use case that never called the runner.
+		throw new BaseError<TerminalApplicationErrors>('CLASSIFICATION_FAILED', 'classification run produced no terminal event')
 	}
 }
 

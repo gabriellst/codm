@@ -1859,3 +1859,167 @@ Fase 3: virar `IssueClassifier` para `run({ outputSchema })` (o adaptador `gener
 virar `RunTerminalSession` para `AgentRuntimeEvent`, e só então deletar o subtree PTY, `extractJson`,
 `mergeLineStreams`, `SessionPrewarm` e os enums de TUI — tudo na mesma fase, porque é a combinação
 que mantém o comportamento coerente.
+
+---
+
+# 2026-07-27 — FASE 3: os dois consumidores viram, e o motor antigo MORRE
+
+`agent-abstraction`. Um commit. **-5815 / +1177 linhas.** Esta é a fase em que o comportamento muda,
+e a deleção é a entrega — não um efeito colateral dela.
+
+## O QUE VIROU
+
+**`IssueClassifier` → `run({ outputSchema })`.** Injeta `AgentRunner` (era `TerminalLLMRunner`),
+drena a iteração até o único `finished`, e traduz: `result.stop` → `CLASSIFICATION_FAILED`,
+`result.failed || output === undefined` → `CLASSIFICATION_FAILED`, caso contrário devolve
+`result.output`. O contrato do seam é **nunca lançar no meio do drain** (§4.3 regra 4); o contrato
+DESTA camada é o oposto — decisão ou erro nomeado. Traduzir um no outro é o trabalho do método.
+`cwd` vai **explícito** (`process.cwd()`): um run de classificação não tem `mcp`, logo não tem escopo
+de tool, logo não alcança o filesystem — e escrever isso no call site mantém o juízo visível em vez de
+enterrá-lo no runner.
+
+**`RunTerminalSession` → `RunIssueTurn`** (`git mv`, história preservada), consumindo
+`AgentRuntimeEvent`. `persistLifecycle` **sumiu inteiro**: `resumed`/`killed` eram vocabulário de PTY
+("o REPL vivo foi reusado", "o pseudo-terminal morreu") e nenhum dos dois é observável sobre pipes,
+onde cada turno é o seu próprio processo. A disciplina de **duas transações com o stream estritamente
+fora de tx** está preservada verbatim. `binaryPath` **e** `caps` são threaded da detecção para o
+request (§4.7 — `buildArgs` puro, sem mapa ambiente).
+
+**`TerminalOutputAccumulator` encolheu de verdade.** Tinha DOIS caminhos de conclusão concorrentes
+(`turn_completed` → junta `reply`s vs `exit === 0` → junta stdout); o segundo existia só para o
+one-shot. Agora há UMA conclusão e ela **não é inferida aqui**: `outcome()` traduz o
+`AgentRunResult` do único evento terminal. Um accumulator que re-derivasse o desfecho a partir dos
+frames seria uma segunda opinião, mais quieta, sobre o mesmo run.
+
+**`shutdown()` no seam mata o duck-typing.** O passo de shutdown do daemon fazia
+`await import('@terminal/services/TerminalLLMRunner')` + `typeof runner.shutdown === 'function'`
+porque só 1 das 4 implementações tinha o método. Com `run` + `shutdown` na classe abstrata, virou
+resolve tipado comum.
+
+## O QUE MORREU (5815 linhas)
+
+`services/TerminalLLMRunner/**` inteiro — o seam largo de 5 membros, `types.ts`
+(`TerminalRuntimeEvent`, `AgentGenerateRequest`, `SessionKillReason`), `oneshot.ts` (`buildCommand`
+com o parâmetro `mode`, `defaultBinary`, **`extractJson`**, **`mergeLineStreams`**), o subtree PTY
+`ClaudeCliTerminalLLMRunner/**` (spawner, transcript, ClaudeBootSequence, tui/, ansi, SessionMap,
+SessionStore, queue, BinaryProbe, logger/, testFakePty + 6 suítes), e os três stubs do token antigo.
+Mais: `services/SessionPrewarm/**` (+ o `setup:` de `terminal/index.ts` e
+`TerminalLLMSessionRepository.listRecentForPrewarm` nas 3 implementações),
+`events/TerminalSessionIdleEvictedEvent.ts` (exportado, **nunca construído**, em fase nenhuma),
+`enums/TuiMarker.ts`, `enums/TurnEndSignal.ts`.
+
+**NASCEM:** `services/AgentRunner/{StubAgentRunner,E2eStubAgentRunner}/` (o binding `mock`/`integration`
+que era `null` desde a Fase 2 agora tem dono), `AgentRunner.test.ts` (reflexão, AC-3.1),
+`StreamJsonAgentRunner/cancellation.test.ts` (AC-3.3).
+
+## DEFEITO DE CONTRATO ENCONTRADO PELO SMOKE — E ELE É REAL
+
+**Primeira execução do smoke com o `claude` de verdade: `ATTEMPT-FAILED`,
+`CLASSIFICATION_FAILED: terminal reply text was not JSON`.** Isolado com um `run({ outputSchema })`
+direto, o registro terminal foi:
+
+```json
+{ "outcome": "COMPLETED", "replyText": "NEW_ISSUE: Fix unresponsive login button click",
+  "failed": true, "failure": "terminal reply text was not JSON" }
+```
+
+Decisão **correta, em prosa**. Nada no pipeline jamais dizia ao modelo para responder em JSON.
+
+**Onde o contrato erra.** §4.2 justifica deletar o `extractJson` assim: *"com stream-json o texto
+final do assistant vem já delimitado por frame, e a validação é `outputSchema.safeParse` sobre ele"*.
+É **meia verdade**: o frame resolve onde o texto **termina**, não se o texto **é** JSON. Com o
+scavenger deletado e nenhuma instrução acrescentada, a metade estruturada do seam **não funcionava**
+contra um CLI real. Latente desde a Fase 2 (`generate()` virou adaptador lá) e **inencontrável**
+antes: §8 regra 8 proíbe teste spawnar CLI, e o smoke da Fase 2 só capturou frames crus. A AC-3.6 é
+a primeira vez que o caminho estruturado encontrou o binário.
+
+**Reparo:** `StreamJsonAgentRunner` acrescenta `structuredOutputDirective(schema)` **se e só se**
+`request.outputSchema` existe — instrução JSON-only carregando o **JSON Schema derivado do mesmo
+objeto Zod que valida a resposta** (`z.toJSONSchema`), uma fonte de verdade em vez de uma paráfrase
+que deriva. Mora no **runner** porque §4.2 chama `outputSchema` de *"o ÚNICO botão que faz disto
+classificação"*, e um botão que todo chamador precisa também lembrar de explicar no próprio prompt
+não é um botão. Vai por **último**, depois do corpo do turno (recência de instrução).
+**`extractJson` continua morto**: o conserto é fazer o modelo emitir JSON, não voltar a escavar JSON
+de prosa. O parse segue `JSON.parse` estrito + `safeParse`, e resposta não-conforme segue virando
+`failed: true` no evento terminal, nunca throw. Travado por 2 testes unitários sobre o processo falso.
+
+Medido depois: `output: { decision: "NEW_ISSUE", title: "Fix unresponsive login button click handler" }`,
+`failed: false`. Smoke completo `verdict: OK` — registro em `.specs/codedm/phase3-smoke/`.
+
+## OUTRAS DIVERGÊNCIAS DE CONTRATO — declaradas, não absorvidas
+
+1. **`TuiActionType` NÃO morreu, e não podia.** A Fase 3 manda matar "os enums de TUI", mas
+   `TuiActionType` tipa `TerminalActionFrameSchema` — schema de **wire** — e re-chaveá-lo em `tool`
+   (`z.string()`) é explicitamente **Fase 7** (§4.9), com ripple de SDK + `react tsc` + `e2e tsc`.
+   **AC-7.4** é quem grepa os três para zero. Morreram os dois que só o subtree PTY usava
+   (`TuiMarker`, `TurnEndSignal`). Consequência visível: o accumulator **não** emite mais
+   `browser.terminal_action_detected`; um `tool_use` vira **linha de output** (`⏺ Edit(file_path: …)`),
+   então a observabilidade não some e nenhum schema de wire se move nesta fase.
+2. **`TerminalSessionKillReason` fica.** A §5.3 o agrupa com os enums de TUI como "MORREM", mas
+   `TerminalSessionKilledEvent` tipa o payload nele — e a §5.3 **adia para a Fase 4** a decisão sobre
+   esse evento. Matar o enum agora exigiria matar junto um artefato explicitamente adiado. Ele e o
+   `TerminalSessionResumedEvent` ficam **sem produtor**, com isso escrito no barril.
+3. **AC-3.4 pede `git grep "await import(" -- src/index.ts` → 0 hits "no passo de shutdown".** O
+   arquivo tem **1** hit fora do shutdown (`await import('./routers')`, linha 64) e ele é
+   **load-bearing**: é o que serializa a migração antes do composition root. O passo de shutdown tem
+   0. Grep literal no arquivo inteiro retornaria 1 — a AC precisa do escopo que o próprio texto dela
+   já diz.
+4. **AC-3.7 pede `bun detect:baseline` + "`bun detect` verde", e as duas coisas juntas são
+   impossíveis com a ferramenta atual.** `--update-baseline` **engole todos os achados vivos**: rodá-lo
+   verbatim teria ADICIONADO **22** chaves novas de supressão (react components, tauri, contracts —
+   nada desta fase), que é exatamente o oposto de *"ratchet só desce"* na mesma AC. Feito em vez
+   disso: purga **remove-only** das chaves cujo **caminho não existe mais** — 9 fósseis, **0 adições**.
+   As 2 de `RunTerminalSession.ts` (AC-3.7) e a de `TerminalSessionRegistry` (fóssil, prevista pela
+   AC-5.10) saem; as **3 de `DetectProviders.ts` ficam**, porque a AC-5.10 conta com elas na Fase 5.
+   Fósseis extra removidos, de fases anteriores: `NodePgDriver`, `PGliteDriver`×2,
+   `PostgresCommandQueue`, `shared/schemas/Metric.ts`, `astro .../blog/index.astro`.
+   `bun detect` **39 findings / 23 errors** — desceu de 40/24 exatamente pelo `entity#bp-03` do
+   `SessionPrewarmService` deletado. **O `service#bp-03` do `AgentStreamRegistry` NÃO desapareceu** —
+   o brief previa os dois sumindo, mas a §5.3 marca `AgentStreamRegistry` como **FICA**.
+5. **Script do smoke não mora em `.specs/`.** Ele importa `reflect-metadata` +
+   `@codedm/core-typescript`, que só resolvem de dentro de `packages/api/typescript/node_modules` (não
+   são hoisted para a raiz). O da Fase 2 podia ficar lá porque só importava `node:*`. **Registro** em
+   `.specs/codedm/phase3-smoke/`, **executável** em `packages/api/typescript/scripts/phase3-smoke.ts`.
+6. **Fatos observados (`AgentTurnFact`) ainda não são persistidos.** Eles chegam **sem carimbo** de
+   `ownerId`/`entityId` — por desenho do seam (AC-1.11: identidade viaja dentro do token opaco) — e o
+   próprio `StreamJsonToTurnFactAccumulator` documenta que quem carimba é *"o `Agent` base e o use case
+   que persiste o stream (Fase 5)"*. `RunIssueTurn` os ignora **com isso dito em voz alta** no
+   accumulator e no use case, em vez de inventar identidade que o seam recusa a carregar.
+
+## ACs
+
+- **AC-3.1** ✅ `AgentRunner.prototype` = exatamente `['run','shutdown']` (teste de reflexão, 3 casos)
+  + `git grep "generate(\|prewarm(\|getSession(\|killSession(" -- packages/api/typescript/src` → **0**.
+- **AC-3.2** ✅ `tests/architecture/pty-isolation.test.ts` **estendido** (arquivo único; nenhum
+  `ImportGraphIsolation.test.ts` criado). Terceira família `FORBIDDEN_SPAWN_REFS` com o **seu próprio**
+  allowed-set de 2 prefixos (`AgentRunner`, `ProviderDetector`), `ALLOWED_PREFIX` reapontado para
+  `terminal/services/AgentRunner` (**não** `agent/` — isso é Fase 5/AC-5.9), e um caso novo provando que
+  o subtree PTY **sumiu** em vez de ficar quarentenado. 7 pass.
+  Grep repo-wide `new Bun.Terminal|from 'node-pty'|claude/projects` sobre
+  `api/typescript/src`, `core/src`, `packages/app`, `packages/e2e` → **0 hits**.
+- **AC-3.3** ✅ `cancellation.test.ts`, 4 casos. O caso real spawna `/bin/sh -c 'echo $$; sleep 300 &
+  echo $!; wait'` e prova por `process.kill(pid,0)` que **filho E neto** morreram. **Controle negativo
+  medido** antes de escrever o teste: matando só o filho direto → `{"childAlive":false,
+  "grandchildAlive":true}`. `kill()` passou a ser SIGTERM-no-**grupo** → SIGKILL após 2s de graça
+  (§4.11), com o timer `unref`'d.
+- **AC-3.4** ✅ `as any` + `@ts-expect-error` em `src/` + `tests/`: **31 no HEAD, 31 agora** — nenhum
+  novo. Em `src/index.ts` o de `TerminalLLMRunner` virou o de `AgentRunner` (mesmo padrão das outras
+  4 resoluções do arquivo) e o duck-typing `typeof runner.shutdown === 'function'` **saiu**.
+  Ver divergência 3 sobre o grep literal.
+- **AC-3.5** ✅ `ls .../ClaudeCliTerminalLLMRunner` → *No such file or directory*.
+- **AC-3.6** ✅ **as duas metades**. Gates: `bun tsc` 7/7, `bun run test` **676 pass / 0 fail**,
+  `bun lint` 3/3, `bun test:tooling` 298 pass, `bun run contracts` + `bun sdk` **2× idempotente**
+  (zero drift em `generated/`+`client/` — esta fase não toca wire), `react tsc` + `e2e tsc` verdes,
+  go `build/vet/test` verdes nos **dois** módulos, runtime e2e `bun scripts/run-e2e.ts`
+  **5 passed / 2 skipped** (baseline exata; `04-inbound-issue` roda pelo `E2eStubAgentRunner` novo).
+  Smoke real: **`verdict: OK`** — ver a seção de defeito acima.
+- **AC-3.7** ✅ `git grep -c "RunTerminalSession" scripts/detectors/registry-scan.baseline.json` → **0**;
+  `bun detect` 39/23. Ver divergência 4 para por que a re-baseline foi remove-only.
+- **AC-3.8** ✅ `allowlist-liveness.test.ts` 6 pass — nenhum allowlist ficou fóssil.
+
+## PRÓXIMO PASSO
+
+Fase 4: `AgentSession` (rename `claudeSessionId → agentSessionId`, `+model`, `+lastMessageId`,
+`resumeDecision`), **UMA** migration que também renomeia `terminal_terminal_llm_sessions →
+agent_agent_sessions` (AC-4.7), e a decisão sobre `TerminalSessionResumedEvent`/`KilledEvent` +
+`TerminalSessionKillReason`, que esta fase deixou explicitamente sem produtor.

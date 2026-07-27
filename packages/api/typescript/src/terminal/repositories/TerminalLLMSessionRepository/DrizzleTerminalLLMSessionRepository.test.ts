@@ -59,17 +59,4 @@ describe('DrizzleTerminalLLMSessionRepository (integration)', () => {
 		expect(found?.claudeSessionId).toBe(testId('terminal-session-repo', 'claude-session-2'))
 		expect(found?.version).toBeGreaterThanOrEqual(2)
 	})
-
-	it('listRecentForPrewarm orders by lastTurnAt DESC and honors the limit', async () => {
-		const old = makeSession()
-		old.recordTurn(old.claudeSessionId, new Date(Date.now() - 60_000))
-		const fresh = makeSession()
-		fresh.recordTurn(fresh.claudeSessionId, new Date())
-		await repo.save(old)
-		await repo.save(fresh)
-
-		const top = await repo.listRecentForPrewarm(1)
-		expect(top).toHaveLength(1)
-		expect(top[0]?.issueId).toBe(fresh.issueId)
-	})
 })

@@ -1,37 +1,50 @@
-import { describe, expect, it, mock } from 'bun:test'
-import type { z, ZodType } from 'zod'
+import { describe, expect, it } from 'bun:test'
+import type { ZodType } from 'zod'
 import { BaseError } from '@codedm/core-typescript'
-import { ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
-import {
-	TerminalLLMRunner,
-	type AgentGenerateRequest,
-	type TerminalLLMRunnerStreamRequest,
-	type TerminalLLMSessionSnapshot,
-	type TerminalRuntimeEvent,
-} from '../TerminalLLMRunner'
+import { ClassificationMethod, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentRunner } from '../AgentRunner'
+import { TerminalRunOutcome, type TransportStopKind } from '../../enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { IssueClassifier, type OpenIssueRef } from './IssueClassifier'
 
 /**
- * Stubbed runner — never spawns a subprocess, never calls a real LLM. `generate()` returns the
- * canned decision set on `nextDecision`; `stream()` is unused by the classifier and throws if
- * touched. `generateCalls` records how often the LLM path was taken (asserting the reply-quote
- * shortcut never consults it).
+ * Stubbed `AgentRunner` — never spawns a subprocess, never calls a real LLM.
+ *
+ * It answers the ONE seam method and nothing else, which is the point of this phase: the classifier no
+ * longer has a `generate` method to stub, it has a `run` that yields one terminal event carrying
+ * `output`. The `run` mock records how often the LLM path was taken (proving the reply-quote shortcut
+ * never consults it), and `nextEvents` lets a test stage a transport stop or a validation failure —
+ * both of which the seam reports as DATA rather than throwing (§4.3 rule 4).
  */
-class StubbedRunner extends TerminalLLMRunner {
+class StubbedRunner extends AgentRunner {
 	nextDecision: Record<string, unknown> = { decision: 'CLARIFY' }
-	generate = mock(async <OutputSchema extends ZodType>(_request: AgentGenerateRequest<OutputSchema>): Promise<z.output<OutputSchema>> => {
-		return this.nextDecision as z.output<OutputSchema>
-	})
-	// biome-ignore lint/correctness/useYield: intentionally throws before yielding — the classifier must never stream
-	// eslint-disable-next-line require-yield
-	async *stream(_request: TerminalLLMRunnerStreamRequest): AsyncIterable<TerminalRuntimeEvent> {
-		throw new Error('stream() must not be called by the classifier')
+	/** When set, replaces the canned terminal event entirely. */
+	nextEvents: AgentRuntimeEvent[] | undefined
+
+	/** Every request the classifier built — the count IS the "did it consult the LLM?" assertion. */
+	readonly requests: AgentRunRequest<ZodType | undefined>[] = []
+
+	run<OutputSchema extends ZodType | undefined = undefined>(request: AgentRunRequest<OutputSchema>): AsyncIterable<AgentRuntimeEvent> {
+		this.requests.push(request)
+		const decision = this.nextDecision
+		const events: AgentRuntimeEvent[] = this.nextEvents ?? [
+			{
+				type: 'finished',
+				result: {
+					outcome: TerminalRunOutcome.COMPLETED,
+					replyText: JSON.stringify(decision),
+					sessionId: null,
+					output: request.outputSchema ? decision : undefined,
+					failed: false,
+				},
+			},
+		]
+		return (async function* () {
+			for (const event of events) yield event
+		})()
 	}
-	async getSession(_issueId: string): Promise<TerminalLLMSessionSnapshot | null> {
-		return null
-	}
-	async killSession(_issueId: string): Promise<void> {}
-	async prewarm(_opts: { issueId: string; cwd: string; systemPrompt?: string }): Promise<void> {}
+
+	async shutdown(): Promise<void> {}
 }
 
 const openIssues: OpenIssueRef[] = [
@@ -47,7 +60,7 @@ describe('IssueClassifier', () => {
 		const decision = await classifier.classify({ message: 'and also this', quotedIssueId: 'issue-nav', openIssues })
 
 		expect(decision).toEqual({ kind: 'MATCH_ISSUE', method: ClassificationMethod.REPLY_QUOTE, issueId: 'issue-nav' })
-		expect(runner.generate).toHaveBeenCalledTimes(0)
+		expect(runner.requests).toHaveLength(0)
 	})
 
 	it('ignores a reply-quote that points at a non-open issue and falls through to the LLM', async () => {
@@ -58,7 +71,7 @@ describe('IssueClassifier', () => {
 		const decision = await classifier.classify({ message: 'brand new thing', quotedIssueId: 'issue-gone', openIssues })
 
 		expect(decision.kind).toBe('NEW_ISSUE')
-		expect(runner.generate).toHaveBeenCalledTimes(1)
+		expect(runner.requests).toHaveLength(1)
 	})
 
 	it('MATCH_ISSUE above threshold → CONTEXT_MATCH on the returned issue', async () => {
@@ -116,18 +129,65 @@ describe('IssueClassifier', () => {
 		const classifier = new IssueClassifier(runner)
 
 		const decision = await classifier.classify({ message: 'it is broken', openIssues })
-		expect(decision).toEqual({ kind: 'CLARIFY', question: 'Is this about Pix or the mobile nav?', candidateIssueIds: ['issue-pix', 'issue-nav'] })
+		expect(decision).toEqual({
+			kind: 'CLARIFY',
+			question: 'Is this about Pix or the mobile nav?',
+			candidateIssueIds: ['issue-pix', 'issue-nav'],
+		})
 	})
 
-	it('wraps a runner failure in CLASSIFICATION_FAILED', async () => {
+	it('turns a TRANSPORT stop into CLASSIFICATION_FAILED — the seam reports it, this layer names it', async () => {
 		const runner = new StubbedRunner()
-		runner.generate = mock(async () => {
-			throw new Error('provider offline')
-		})
+		runner.nextEvents = [
+			{
+				type: 'finished',
+				result: {
+					outcome: TerminalRunOutcome.STOPPED,
+					replyText: '',
+					sessionId: null,
+					failed: false,
+					stop: { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: 'provider offline' },
+				},
+			},
+		]
 		const classifier = new IssueClassifier(runner)
 
 		await expect(classifier.classify({ message: 'x', openIssues })).rejects.toThrow(
 			expect.objectContaining({ name: 'CLASSIFICATION_FAILED' }) as BaseError,
 		)
+	})
+
+	it('turns a FAILED structured validation into CLASSIFICATION_FAILED — never a thrown parse error', async () => {
+		const runner = new StubbedRunner()
+		runner.nextEvents = [
+			{
+				type: 'finished',
+				result: {
+					outcome: TerminalRunOutcome.COMPLETED,
+					replyText: 'I am not JSON',
+					sessionId: null,
+					failed: true,
+					failure: 'terminal reply text was not JSON',
+				},
+			},
+		]
+		const classifier = new IssueClassifier(runner)
+
+		await expect(classifier.classify({ message: 'x', openIssues })).rejects.toThrow(
+			expect.objectContaining({ name: 'CLASSIFICATION_FAILED' }) as BaseError,
+		)
+	})
+
+	it('drains the run to its terminal event and passes NO mcp — a classifier declares nothing', async () => {
+		const runner = new StubbedRunner()
+		runner.nextDecision = { decision: 'CLARIFY', question: 'which one?' }
+		const classifier = new IssueClassifier(runner)
+
+		await classifier.classify({ message: 'x', openIssues })
+
+		const request = runner.requests[0]
+		expect(request?.outputSchema).toBeDefined()
+		expect(request?.mcp).toBeUndefined()
+		expect(request?.messages).toHaveLength(1)
 	})
 })

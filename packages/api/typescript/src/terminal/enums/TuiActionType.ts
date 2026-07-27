@@ -1,7 +1,11 @@
 /**
  * Closed vocabulary of claude TUI action types observable on lines that begin
- * with `⏺ <Tool>(args)`. Each entry maps to one registry pattern in
- * `services/TerminalLLMRunner/ClaudeCliTerminalLLMRunner/tui/actionRegistry.ts`.
+ * with `⏺ <Tool>(args)`. It was the output of a regex parser over the TUI; that parser is gone
+ * (Fase 3) because `--output-format stream-json` reports the real tool name directly.
+ *
+ * STILL LIVE, and only as the key of `TerminalActionFrameSchema` — a WIRE schema. Re-keying that
+ * frame onto the real `tool` name (`z.string()`, open set) is Fase 7 (§4.9), because it is a contract
+ * change with an SDK + `react tsc` + `e2e tsc` ripple. AC-7.4 is what finally greps this to zero.
  *
  * `UNKNOWN` is the fallback for a line that looks action-shaped (starts with
  * `⏺ `) but doesn't match a known tool name — surfaces new claude tools as

@@ -18,10 +18,6 @@ export class MockTerminalLLMSessionRepository extends TerminalLLMSessionReposito
 		return undefined
 	}
 
-	async listRecentForPrewarm(limit: number, _tx?: Transaction): Promise<TerminalLLMSession[]> {
-		return [...this.store.values()].sort((a, b) => b.lastTurnAt.getTime() - a.lastTurnAt.getTime()).slice(0, limit)
-	}
-
 	async save(entity: TerminalLLMSession, _tx?: Transaction): Promise<TerminalLLMSession> {
 		entity.incrementVersion()
 		this.store.set(entity.id.value, entity)

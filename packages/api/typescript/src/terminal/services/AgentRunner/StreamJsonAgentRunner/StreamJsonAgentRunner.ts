@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { ZodType } from 'zod'
+import { z, type ZodType } from 'zod'
 import { AgentStopReason, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { LoggingService } from '@codedm/core-typescript'
 import { TerminalRunOutcome, type TransportStopKind } from '../../../enums'
@@ -73,9 +73,12 @@ export class StreamJsonAgentRunner extends AgentRunner {
 		this.inactivityMs = options.inactivityMs ?? Number(process.env.CODEDM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
 	}
 
-	async *run<OutputSchema extends ZodType | undefined = undefined>(request: AgentRunRequest<OutputSchema>): AsyncIterable<AgentRuntimeEvent> {
+	async *run<OutputSchema extends ZodType | undefined = undefined>(
+		request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent> {
 		const def = providerDef(request.provider)
-		const warn = (message: string): void => this.logging.warn({ content: { message, agentName: request.agentName, provider: request.provider } })
+		const warn = (message: string): void =>
+			this.logging.warn({ content: { message, agentName: request.agentName, provider: request.provider } })
 
 		const codec = new StreamJsonCodec({ onWarn: warn })
 		// UNSTAMPED on purpose — the runner has no `ownerId`/`issueId` to stamp with, by design
@@ -102,7 +105,10 @@ export class StreamJsonAgentRunner extends AgentRunner {
 		} catch (cause) {
 			// Even a spawn that fails synchronously must arrive as the terminal event, not as a throw —
 			// the consumer's drain loop is the only place it can be handled uniformly.
-			yield { type: 'finished', result: failure(TerminalRunOutcome.STOPPED, `${StopKind.SERVER_ERROR}: ${String(cause)}`, StopKind.SERVER_ERROR) }
+			yield {
+				type: 'finished',
+				result: failure(TerminalRunOutcome.STOPPED, `${StopKind.SERVER_ERROR}: ${String(cause)}`, StopKind.SERVER_ERROR),
+			}
 			return
 		}
 		this.live.add(proc)
@@ -221,7 +227,14 @@ export class StreamJsonAgentRunner extends AgentRunner {
 
 			yield {
 				type: 'finished',
-				result: this.buildResult(request, { terminal, sessionId, exitCode, watchdogFired, stderr: stderrChunks.join(''), plainText: plainLines.join('\n') }),
+				result: this.buildResult(request, {
+					terminal,
+					sessionId,
+					exitCode,
+					watchdogFired,
+					stderr: stderrChunks.join(''),
+					plainText: plainLines.join('\n'),
+				}),
 			}
 		} finally {
 			request.signal?.removeEventListener('abort', onAbort)
@@ -239,7 +252,14 @@ export class StreamJsonAgentRunner extends AgentRunner {
 	 */
 	private buildResult<OutputSchema extends ZodType | undefined>(
 		request: AgentRunRequest<OutputSchema>,
-		observed: { terminal?: TerminalResultRecord; sessionId: string | null; exitCode: number; watchdogFired: boolean; stderr: string; plainText: string },
+		observed: {
+			terminal?: TerminalResultRecord
+			sessionId: string | null
+			exitCode: number
+			watchdogFired: boolean
+			stderr: string
+			plainText: string
+		},
 	): AgentRunResult {
 		const replyText = observed.terminal?.text ?? observed.plainText
 		const stop = this.classifyStop(observed)
@@ -260,7 +280,13 @@ export class StreamJsonAgentRunner extends AgentRunner {
 		try {
 			candidate = JSON.parse(replyText.trim())
 		} catch {
-			return { outcome: TerminalRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, failed: true, failure: 'terminal reply text was not JSON' }
+			return {
+				outcome: TerminalRunOutcome.COMPLETED,
+				replyText,
+				sessionId: observed.sessionId,
+				failed: true,
+				failure: 'terminal reply text was not JSON',
+			}
 		}
 		const parsed = request.outputSchema.safeParse(candidate)
 		return parsed.success
@@ -268,7 +294,12 @@ export class StreamJsonAgentRunner extends AgentRunner {
 			: { outcome: TerminalRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, failed: true, failure: parsed.error.message }
 	}
 
-	private classifyStop(observed: { terminal?: TerminalResultRecord; exitCode: number; watchdogFired: boolean; stderr: string }): AgentRunResult['stop'] {
+	private classifyStop(observed: {
+		terminal?: TerminalResultRecord
+		exitCode: number
+		watchdogFired: boolean
+		stderr: string
+	}): AgentRunResult['stop'] {
 		// TRANSPORT evidence ONLY: process stderr and the CLI's own API-layer diagnosis
 		// (`apiErrorStatus`, sourced from `api_error_status` on the terminal `result` frame). The
 		// assistant's reply text is deliberately EXCLUDED — it is the model's own words, and matching
@@ -290,10 +321,16 @@ export class StreamJsonAgentRunner extends AgentRunner {
 		}
 
 		if (observed.watchdogFired) {
-			return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: `no output for ${this.inactivityMs}ms — killed by the inactivity watchdog` }
+			return {
+				kind: StopKind.SERVER_ERROR as TransportStopKind,
+				detail: `no output for ${this.inactivityMs}ms — killed by the inactivity watchdog`,
+			}
 		}
 		if (observed.exitCode !== 0) {
-			return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: `provider exited with code ${observed.exitCode}${observed.stderr ? `: ${observed.stderr.trim()}` : ''}` }
+			return {
+				kind: StopKind.SERVER_ERROR as TransportStopKind,
+				detail: `provider exited with code ${observed.exitCode}${observed.stderr ? `: ${observed.stderr.trim()}` : ''}`,
+			}
 		}
 		return undefined
 	}
@@ -309,6 +346,35 @@ function failure(outcome: TerminalRunOutcome, detail: string, kind: TransportSto
 }
 
 /**
+ * MAKE `outputSchema` MEAN SOMETHING TO THE MODEL — the instruction that turns a run structured.
+ *
+ * MEASURED, and it is why this function exists (Fase-3 vertical smoke,
+ * `.specs/codedm/phase3-smoke/raw/vertical.json`): asked to classify an inbound message with an
+ * `outputSchema` and NOTHING else, the real `claude` replied
+ * `NEW_ISSUE: Fix unresponsive login button click` — a correct decision, in PROSE. §4.2 justified
+ * deleting the old shrinking-window JSON scavenger on the grounds that "with stream-json the final
+ * assistant text arrives already delimited by a frame", and that reasoning is HALF true: framing fixes
+ * where the text ENDS, not whether the text is JSON. Nothing else in the pipeline ever tells the model
+ * what shape to answer in, so without this the structured half of the seam cannot work at all.
+ *
+ * The schema is sent as JSON Schema derived from the Zod type, so there is ONE source of truth: the
+ * same object that validates the reply is the one that describes it. A hand-written prose description
+ * would be a second, silently-drifting copy of the contract.
+ *
+ * It lives in the RUNNER rather than in a caller because `outputSchema` is a field of the seam, not of
+ * the classifier — §4.2 makes it "the ONE switch that turns this call into classification", and a
+ * switch every caller has to remember to also explain in its own prompt is not a switch. And it is
+ * appended LAST, after the turn body, because instruction recency is what the model actually obeys.
+ */
+function structuredOutputDirective(schema: ZodType): string {
+	return [
+		'Reply with exactly ONE JSON object and nothing else: no prose, no explanation, no markdown code fence.',
+		'It must validate against this JSON Schema:',
+		JSON.stringify(z.toJSONSchema(schema)),
+	].join('\n')
+}
+
+/**
  * The turn as ONE plain-text prompt — the shape every CLI understands.
  *
  * The system prompt is PREPENDED rather than passed as a flag, and that is a deliberate limit of this
@@ -318,9 +384,9 @@ function failure(outcome: TerminalRunOutcome, detail: string, kind: TransportSto
  * is where it lands — as a field read, never as a `provider === …` branch.
  */
 function renderPrompt(request: AgentRunRequest<ZodType | undefined>): string {
-	const body = request.messages.map(m => m.content).join('\n\n')
-	if (!request.systemPrompt) return body
-	return body.length > 0 ? `${request.systemPrompt}\n\n${body}` : request.systemPrompt
+	const parts = [request.systemPrompt, request.messages.map(m => m.content).join('\n\n')]
+	if (request.outputSchema) parts.push(structuredOutputDirective(request.outputSchema))
+	return parts.filter(part => part && part.length > 0).join('\n\n')
 }
 
 /**
@@ -332,9 +398,19 @@ function renderPrompt(request: AgentRunRequest<ZodType | undefined>): string {
  * user turn, which is not what it is.
  */
 function renderStreamJsonStdin(request: AgentRunRequest<ZodType | undefined>): string {
-	const [first, ...rest] = request.messages
-	const head = first ? [{ ...first, content: request.systemPrompt ? `${request.systemPrompt}\n\n${first.content}` : first.content }] : []
-	return [...head, ...rest].map(m => `${JSON.stringify({ type: 'user', message: { role: 'user', content: m.content } })}\n`).join('')
+	const contents = request.messages.map(m => m.content)
+	if (request.systemPrompt) contents[0] = contents[0] ? `${request.systemPrompt}\n\n${contents[0]}` : request.systemPrompt
+	// The structured-output directive rides on the LAST line of the turn, for the recency reason stated
+	// on `structuredOutputDirective`. A line of its own would still be the same turn (stdin stays open
+	// until the terminal frame), but it would read as a separate user message rather than as part of
+	// the ask, and the model treats those differently.
+	if (request.outputSchema) {
+		const directive = structuredOutputDirective(request.outputSchema)
+		const last = contents.length - 1
+		if (last < 0) contents.push(directive)
+		else contents[last] = `${contents[last]}\n\n${directive}`
+	}
+	return contents.map(content => `${JSON.stringify({ type: 'user', message: { role: 'user', content } })}\n`).join('')
 }
 
 async function drainToStrings(stream: AsyncIterable<Uint8Array | string>, sink: string[]): Promise<void> {
