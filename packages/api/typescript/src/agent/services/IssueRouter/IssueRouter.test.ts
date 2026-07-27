@@ -7,7 +7,7 @@ import { AgentRunner } from '../AgentRunner'
 import { AgentRunOutcome, AgentName, type TransportStopKind } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { ClassifyIssueAgent, ClassifyIssuePromptBuilder } from '../../agents/ClassifyIssueAgent'
-import { IssueRouter, type RouteMessageInput } from './IssueRouter'
+import { DefaultIssueRouter, type RouteMessageInput } from './IssueRouter'
 
 /**
  * Stubbed `AgentRunner` — never spawns a subprocess, never calls a real LLM.
@@ -66,7 +66,7 @@ const route = (overrides: Partial<RouteMessageInput> = {}): RouteMessageInput =>
 /** The real router over the real agent over a stubbed runner — only the process boundary is faked. */
 const build = () => {
 	const runner = new StubbedRunner()
-	const router = new IssueRouter(new ClassifyIssueAgent(runner, new ClassifyIssuePromptBuilder()))
+	const router = new DefaultIssueRouter(new ClassifyIssueAgent(runner, new ClassifyIssuePromptBuilder()))
 	return { runner, router }
 }
 

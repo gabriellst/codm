@@ -7,7 +7,7 @@ import { AgentRunner, ClaudeAgentRunner, StubAgentRunner, E2eStubAgentRunner } f
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { AgentSessionRepository, DrizzleAgentSessionRepository, MockAgentSessionRepository } from './repositories'
-import { IssueRouter } from './services/IssueRouter'
+import { IssueRouter, DefaultIssueRouter } from './services/IssueRouter'
 import { ClassifyIssueAgent, ClassifyIssuePromptBuilder, IssueWorkAgent, IssueWorkPromptBuilder } from './agents'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
@@ -91,5 +91,17 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: ClassifyIssueAgent, mock: { useClass: ClassifyIssueAgent }, real: { useClass: ClassifyIssueAgent } },
 	{ token: IssueWorkAgent, mock: { useClass: IssueWorkAgent }, real: { useClass: IssueWorkAgent } },
 	// The routing POLICY over the classification agent — what `thread/usecases/ClassifyMessage` injects.
-	{ token: IssueRouter, mock: { useClass: IssueRouter }, real: { useClass: IssueRouter } },
+	//
+	// `DefaultIssueRouter` in ALL THREE envs, and the `mock` column is the interesting one. The usual
+	// service shape binds the Mock there, but this service's only I/O is the `ClassifyIssueAgent` it
+	// drives, whose only I/O is the `AgentRunner` bound above — already a stub outside `real`. Binding
+	// the canned router by default would therefore replace REAL policy (reply-quote shortcut,
+	// confidence floor, slug minting) with a fixed answer in exactly the suites that exist to exercise
+	// the inbound→classify→run choreography end to end. Measured, not assumed: doing so turned two flow
+	// tests red, because a runner staged to answer NEW_ISSUE no longer reached any policy.
+	//
+	// `MockIssueRouter` is exported and is the right double for a consumer test that wants to FIX the
+	// decision and assert what `ClassifyMessage` persists around it — reached via
+	// `testBed.override(IssueRouter, new MockIssueRouter())`, per-suite, rather than as the env default.
+	{ token: IssueRouter, mock: { useClass: DefaultIssueRouter }, real: { useClass: DefaultIssueRouter } },
 ])

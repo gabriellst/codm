@@ -63,12 +63,26 @@ export type ClassificationDecision =
  * would have had to live in the thread use case, i.e. split across two contexts. The use case injects
  * the router; the router injects the agent. The Partnership edge is unchanged and still annotated.
  */
-@injectable()
-export class IssueRouter {
+export abstract class IssueRouter {
 	/** Default confidence floor for a context match — configurable per-call via `RouteMessageInput.threshold`. */
 	static readonly DEFAULT_THRESHOLD = 0.6
 
-	constructor(private readonly agent: ClassifyIssueAgent) {}
+	abstract classify(input: RouteMessageInput): Promise<ClassificationDecision>
+}
+
+/**
+ * The real policy, over the real `ClassifyIssueAgent`. The abstract port above exists for the usual
+ * reason a service has one here: `thread/usecases/ClassifyMessage` injects the ROUTER, and a test of
+ * that use case wants a deterministic decision without reaching an agent at all — that is what
+ * `MockIssueRouter` is for. The agent's own stubbing seam (the `AgentRunner` DI binding) stays
+ * available for tests that DO want the policy exercised end to end, which is what
+ * `IssueRouter.test.ts` does.
+ */
+@injectable()
+export class DefaultIssueRouter extends IssueRouter {
+	constructor(private readonly agent: ClassifyIssueAgent) {
+		super()
+	}
 
 	async classify(input: RouteMessageInput): Promise<ClassificationDecision> {
 		// 1. Deterministic reply-quote shortcut — authoritative, wins over context matching, no model call.
