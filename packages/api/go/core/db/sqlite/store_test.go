@@ -10,10 +10,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -239,5 +241,98 @@ func TestOutboxRoundTrip(t *testing.T) {
 	}
 	if !reread.ProcessedAt.Valid || reread.ProcessedAt.Int64 != processedAt {
 		t.Fatalf("processed_at not persisted: %+v", reread.ProcessedAt)
+	}
+}
+
+// TestApplyOne_SkipsMigrationRecordedByAnotherWriter is the TOCTOU guard of the shared
+// ledger, exercised at the level where the race actually resolves.
+//
+// The race: the TS daemon and this gateway boot against the SAME file, both pass the
+// lock-free pre-check of applyMigrations ("not applied"), and both call applyOne. Whoever
+// takes the write lock second MUST NOT re-execute the file — migration 0000 is 25
+// CREATE TABLE with no IF NOT EXISTS, so re-execution is a fatal error, not a no-op.
+//
+// This drives exactly that second caller: a store is booted (so every migration is applied
+// AND recorded), then applyOne is invoked again for the SAME name, as if the pre-check had
+// gone stale. It must observe the ledger row from INSIDE its own transaction and return nil
+// without running a statement. Before the in-transaction re-check this failed with
+// "table ... already exists".
+func TestApplyOne_SkipsMigrationRecordedByAnotherWriter(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	names, err := migrationsFS.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("ReadDir(migrations): %v", err)
+	}
+	applied := 0
+	for _, e := range names {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
+			continue
+		}
+		applied++
+		// Sanity: the boot really did record it, so the skip below is the branch under test
+		// and not an accidental fresh apply.
+		wasApplied, err := store.migrationApplied(ctx, store.DB(), e.Name())
+		if err != nil {
+			t.Fatalf("migrationApplied(%q): %v", e.Name(), err)
+		}
+		if !wasApplied {
+			t.Fatalf("expected %q to be recorded in the ledger after boot", e.Name())
+		}
+		if err := store.applyOne(ctx, store.DB(), e.Name()); err != nil {
+			t.Fatalf("applyOne(%q) on an already-recorded migration must skip, got: %v", e.Name(), err)
+		}
+	}
+	if applied == 0 {
+		t.Fatal("no embedded .sql migrations found — the test asserted nothing")
+	}
+
+	// And the skip did not duplicate the ledger row (the INSERT never ran).
+	for _, e := range names {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
+			continue
+		}
+		var rows int
+		if err := store.DB().QueryRowContext(ctx,
+			fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE name = ?", migrationsTable), e.Name(),
+		).Scan(&rows); err != nil {
+			t.Fatalf("count ledger rows for %q: %v", e.Name(), err)
+		}
+		if rows != 1 {
+			t.Fatalf("ledger holds %d rows for %q, want exactly 1", rows, e.Name())
+		}
+	}
+}
+
+// TestMigrationHandleIsSeparateAndClosed pins the mechanism decision (c)(6) chose: the
+// migration pass runs on its OWN sql.Open with busy_timeout(30000), and the regime pool the
+// application queries use keeps busy_timeout(5000). Asserting the two DSNs rather than a
+// live PRAGMA is deliberate — the migration handle is closed before this test can observe a
+// connection from it, which is exactly the property being pinned.
+func TestMigrationHandleIsSeparateAndClosed(t *testing.T) {
+	if !strings.Contains(migrationDSNSuffix, "busy_timeout(30000)") {
+		t.Fatalf("migration DSN lost its 30s busy_timeout: %q", migrationDSNSuffix)
+	}
+	if !strings.Contains(regimeDSNSuffix, "busy_timeout(5000)") {
+		t.Fatalf("regime DSN must stay at 5s for parity with the TS side: %q", regimeDSNSuffix)
+	}
+	if migrationDSNSuffix == regimeDSNSuffix {
+		t.Fatal("migration and regime DSNs must differ in exactly the busy_timeout")
+	}
+	// Same file, same journal mode, same _txlock — only the timeout differs.
+	if strings.Replace(migrationDSNSuffix, "busy_timeout(30000)", "busy_timeout(5000)", 1) != regimeDSNSuffix {
+		t.Fatalf("migration DSN diverged from the regime DSN beyond busy_timeout:\n mig=%q\n reg=%q",
+			migrationDSNSuffix, regimeDSNSuffix)
+	}
+
+	// The store still works after the migration handle was opened and closed at boot.
+	store := newTestStore(t)
+	var mode string
+	if err := store.DB().QueryRow("PRAGMA journal_mode").Scan(&mode); err != nil {
+		t.Fatalf("PRAGMA journal_mode: %v", err)
+	}
+	if mode != "wal" {
+		t.Fatalf("regime handle lost WAL after the migration pass: %q", mode)
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -43,9 +44,28 @@ const (
 	dbFileName = "codedm.db"
 	// migrationsTable is the store's own applied-migrations ledger, making boot
 	// idempotent: a squashed migration applied once is skipped on every reboot.
+	//
+	// The DDL that creates it (applyMigrations, below) is BYTE-IDENTICAL to the one
+	// the TS daemon runs against the same file. `CREATE TABLE IF NOT EXISTS` is a
+	// no-op for whoever arrives second, so "one ledger, two writers" is only true
+	// while the two strings stay equal — do not reformat it.
 	migrationsTable = "_sqlite_migrations"
 	// statementBreakpoint is drizzle-kit's inter-statement separator.
 	statementBreakpoint = "--> statement-breakpoint"
+
+	// regimeDSNSuffix is the DSN every application query runs under.
+	// migrationDSNSuffix differs in exactly one number: a migration may legitimately
+	// wait out a long writer at boot, application queries may not. Both are spelled
+	// out instead of built from a shared fmt template on purpose — the busy_timeout
+	// of each handle is a load-bearing number that this phase's gates (and the TS
+	// side's pragma order) grep for, and a %d would hide it.
+	regimeDSNSuffix    = "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_txlock=immediate"
+	migrationDSNSuffix = "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(30000)&_txlock=immediate"
+
+	// migrationSlowWait is the threshold past which a migration is reported as having
+	// waited on another writer. It is the regime busy_timeout: anything slower than
+	// that would have FAILED on the regime handle, so it is exactly the interesting line.
+	migrationSlowWait = 5 * time.Second
 )
 
 // SqliteStore is a live, migrated, single-instance-locked SQLite database plus
@@ -91,7 +111,7 @@ func NewSqliteStore(dataDir string) (*SqliteStore, error) {
 	// first write, which is what the SqliteUnitOfWork and the outbox claim loops
 	// want (no deferred→upgrade SQLITE_BUSY window). Read-only transactions
 	// (BeginTx with ReadOnly) still begin deferred; there are none today.
-	dsn := "file:" + dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_txlock=immediate"
+	dsn := "file:" + dbPath + regimeDSNSuffix
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		release()
@@ -143,14 +163,40 @@ func (s *SqliteStore) Close() error {
 // ledger, each in its own transaction, in lexical filename order. Idempotent:
 // already-applied migrations are skipped, so re-running on every boot over a
 // populated db is a no-op.
+//
+// TWO WRITERS, ONE LEDGER. The TS daemon runs the SAME applier over the SAME file,
+// in whatever order the two processes happen to boot. That is not a problem as long
+// as the "is it applied?" question is answered ATOMICALLY with the apply — see
+// applyOne. This function's own pre-check is only a lock-free fast path.
 func (s *SqliteStore) applyMigrations(ctx context.Context) error {
-	if _, err := s.db.ExecContext(ctx, fmt.Sprintf(
+	// A DEDICATED handle for the whole migration pass. Pragmas are per CONNECTION and
+	// the regime DSN pins busy_timeout at 5000 (parity with the TS side), so "raise it
+	// to 30s just for the migration" cannot be done on the regime pool without either
+	// contaminating a pooled connection or changing the value globally. Instead: a
+	// second sql.Open on the SAME file, DSN identical except busy_timeout(30000),
+	// closed before any application query ever runs. A stuck writer therefore holds
+	// boot for 30s instead of failing at 5s — deliberate, and logged below.
+	migDB, err := sql.Open("sqlite", "file:"+s.path+migrationDSNSuffix)
+	if err != nil {
+		return fmt.Errorf("sqlite store: open migration handle %q: %w", s.path, err)
+	}
+	defer func() { _ = migDB.Close() }()
+
+	// VERBATIM the DDL the TS applier runs. See migrationsTable — the two strings
+	// being equal is what makes "one ledger" true; CREATE TABLE IF NOT EXISTS makes
+	// whoever loses the race a no-op instead of an error.
+	if _, err := migDB.ExecContext(ctx, fmt.Sprintf(
 		"CREATE TABLE IF NOT EXISTS %s (name TEXT PRIMARY KEY NOT NULL, applied_at INTEGER NOT NULL)",
 		migrationsTable,
 	)); err != nil {
 		return fmt.Errorf("sqlite store: create migrations ledger: %w", err)
 	}
 
+	// The set to apply is derived from readdir → filter .sql → sort, NOT from
+	// drizzle-kit's meta/_journal.json. The journal is drizzle-kit bookkeeping and
+	// stays out of the runtime — which is why the //go:embed dir legitimately has no
+	// meta/. The TS applier derives its set the same way, so the two agree by
+	// construction and the ledger key is the full filename, `.sql` included.
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
 		return fmt.Errorf("sqlite store: read embedded migrations: %w", err)
@@ -164,23 +210,31 @@ func (s *SqliteStore) applyMigrations(ctx context.Context) error {
 	sort.Strings(names)
 
 	for _, name := range names {
-		applied, err := s.migrationApplied(ctx, name)
+		// LOCK-FREE FAST PATH — cheap, and NOT authoritative. Do not "clean this up"
+		// into the only check: the authoritative one lives inside applyOne's write
+		// transaction, and this one exists purely so a warm boot does zero BEGINs.
+		applied, err := s.migrationApplied(ctx, migDB, name)
 		if err != nil {
 			return err
 		}
 		if applied {
 			continue
 		}
-		if err := s.applyOne(ctx, name); err != nil {
+		started := time.Now()
+		if err := s.applyOne(ctx, migDB, name); err != nil {
 			return err
+		}
+		if waited := time.Since(started); waited > migrationSlowWait {
+			slog.Warn("sqlite store: migration waited on another writer past the regime busy_timeout",
+				"migration", name, "elapsed", waited, "busyTimeout", migrationDSNSuffix)
 		}
 	}
 	return nil
 }
 
-func (s *SqliteStore) migrationApplied(ctx context.Context, name string) (bool, error) {
+func (s *SqliteStore) migrationApplied(ctx context.Context, db *sql.DB, name string) (bool, error) {
 	var one int
-	err := s.db.QueryRowContext(ctx,
+	err := db.QueryRowContext(ctx,
 		fmt.Sprintf("SELECT 1 FROM %s WHERE name = ?", migrationsTable), name,
 	).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -194,17 +248,41 @@ func (s *SqliteStore) migrationApplied(ctx context.Context, name string) (bool, 
 
 // applyOne runs a single migration file's statements plus the ledger insert in
 // one transaction — all-or-nothing.
-func (s *SqliteStore) applyOne(ctx context.Context, name string) error {
+//
+// The FIRST thing it does inside that transaction is re-ask the ledger. The DSN
+// carries _txlock=immediate, so BeginTx takes the write lock up front: from that
+// point the answer cannot change under us, and the other process is either already
+// recorded (we skip) or blocked behind us (it will skip). Without this re-check two
+// boots that both passed the lock-free pre-check would BOTH execute the file, and
+// the loser dies — migration 0000 is 25 CREATE TABLE with no IF NOT EXISTS and 0001
+// is ALTER TABLE ... ADD, so re-execution is a fatal error, not a no-op.
+func (s *SqliteStore) applyOne(ctx context.Context, db *sql.DB, name string) error {
 	raw, err := migrationsFS.ReadFile(filepath.Join("migrations", name))
 	if err != nil {
 		return fmt.Errorf("sqlite store: read migration %q: %w", name, err)
 	}
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("sqlite store: begin tx for %q: %w", name, err)
 	}
 	defer func() { _ = tx.Rollback() }()
+
+	// AUTHORITATIVE check — same query text as migrationApplied, run on the tx.
+	var one int
+	switch err := tx.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT 1 FROM %s WHERE name = ?", migrationsTable), name,
+	).Scan(&one); {
+	case err == nil:
+		// The other writer got there between our pre-check and this BEGIN. Commit the
+		// (empty) transaction to release the write lock promptly and report success.
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("sqlite store: commit skip of migration %q: %w", name, err)
+		}
+		return nil
+	case !errors.Is(err, sql.ErrNoRows):
+		return fmt.Errorf("sqlite store: re-check migration %q: %w", name, err)
+	}
 
 	for _, stmt := range strings.Split(string(raw), statementBreakpoint) {
 		stmt = strings.TrimSpace(stmt)
