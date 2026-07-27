@@ -1215,3 +1215,106 @@ git grep pglite -- packages                             1 hit    module.go:34 �
 **Fase 0 encerrada.** O daemon TS e o gateway Go compartilham um `codedm.db`, provado por duas
 travessias cross-process com controle negativo, e o critério é um script commitado que sai 0 — não
 uma leitura de comandos.
+
+---
+
+## 2026-07-27 — BLOCO 5 (T32–T34): a rodada 1 de verificação e o que ela achou
+
+**Contexto.** A verificação independente dos blocos 3/4 confirmou que o invariante da fase se
+sustenta (as duas travessias cross-process, com controles negativos, reproduzidas), mas deixou o
+gate **"pglite/pg estão MORTOS"** vermelho por dois achados. Nenhum contradiz uma decisão do §3;
+nenhum é stub/gate enfraquecido; nenhum afeta o smoke que fecha a fase.
+
+### O achado material: o ferramental de MIGRAÇÃO continuava em Postgres
+
+`packages/contracts/db/drizzle.config.ts` seguia `dialect: 'postgresql'` com a URL de fallback
+**hardcoded** `postgresql://template:template@localhost:5432/template`, e
+`drizzle:generate` / `drizzle:migrate` / `all` apontavam para ele. Ou seja: a fase tirou o Postgres
+do **runtime** e do **contrato de env** (T26 entregou isso — o compose não tem serviço `postgres`
+e `DATABASE_URL` sumiu do `.env.example` e do `template.config.ts`), mas deixou o caminho de
+**autoria de migração** apontado para lá.
+
+**RODADO, não inferido:** `bun migrate:dev` no HEAD do bloco 4 imprimiu `Using 'pg' driver` e
+`[✓] migrations applied successfully` — conectando no Postgres de um repo **vizinho** que escuta em
+`5432` e não fazendo **nada** pelo arquivo SQLite. Com `DATABASE_URL` ausente ele ainda tentaria,
+porque a URL está no código. É a confusão de substrato partido que esta fase existe para matar,
+sobrevivendo exatamente no comando que o `CLAUDE.md` manda o próximo engenheiro rodar.
+
+**Por que não estava no plano:** a Fase 0 do `GOAL-agent-abstraction.md` tem um **item 4** (o
+ferramental do `contracts` é re-cabeado JUNTO), cobrado pelas AC-0.2 e AC-0.11. Deste item o plano
+`.plans/2026-07-26-daemon-sqlite-migration.md` executou só a metade de runtime (os `exports` e
+`db/migrations.ts`). A metade de autoria nunca virou task. O plano foi **emendado** com o BLOCO 5
+antes de qualquer código (regra §8: plano errado se conserta explicitamente).
+
+### O achado cosmético: `@types/pg` em primeira pessoa
+
+Sobrevivia em dois lugares (`package.json` `overrides` e `packages/api/typescript/package.json`
+`devDependencies`) sem nenhum import no código. Removido; sai do `bun.lock` inteiro.
+`@electric-sql/pglite`, `pg` e `pg-pool` **continuam** no lockfile e isso está certo: são
+`optionalPeers` de terceiros (`drizzle-orm@0.45.2`, `db0@0.3.4`), nunca ficam hoisted em raiz de
+resolução de primeira pessoa, e só sairiam derrubando `drizzle-orm`.
+
+### O que foi feito
+
+| Task | O quê |
+|---|---|
+| T32 | Re-apontar os **4 rails** que liam `db/schema` (pg): `context-map.test.ts`, `enum-placement.test.ts`, o extractor do code-graph (+`DRIZZLE_SCHEMA_DIR`), e o componente `db-schema` da `.claude/registry.yaml`. O parser de namespace passa de `pgSchema('x')` para o **prefixo do literal de `sqliteTable`** |
+| T33 | `drizzle:generate` → config sqlite; **`drizzle:migrate` e `migrate:dev` MORREM**; deletados `db/drizzle.config.ts`, `db/schema/` e `db/migrations/`; `biome.jsonc` re-apontado (o include cobria um diretório prestes a sumir e **nenhum** arquivo do schema vivo); docs re-escritos (CLAUDE.md, README, HANDOFF, `docs/BACKEND.md`, `/install`, skill `migrate`, agente `database-architect`) |
+| T34 | `@types/pg` removido das duas declarações de primeira pessoa; lockfile reconvergido |
+
+### Ordem (obrigatória)
+
+T32 **antes** de T33: cada rail LÊ `db/schema/` — apagar antes deixaria `bun run test` vermelho por
+`ENOENT`, com a fase reprovando o próprio gate. Árvore verde entre as três tasks, um commit por task.
+
+### Gates rodados (bloco do topo ao fim, a partir da raiz)
+
+```
+T32  test:tooling                                    EXIT=0   298 pass / 0 fail
+T32  api tests/architecture/                         EXIT=0   113 pass / 0 fail (20 asserts em
+                                                              context-map+enum-placement, era 18:
+                                                              os 2 novos são anti-vacuidade)
+T32  graph build.integration                         EXIT=0   25 db-tables, 9 namespaces exatas
+T32  matchSkill(schema-sqlite/terminal.ts)           db-modelling/db-schema (antes: null)
+T32  controle negativo do parser no diretório pg     0 tabelas casadas
+T33  db/{drizzle.config.ts,schema,migrations}        GONE
+T33  grep postgresql|postgres://|DATABASE_URL        0 hits em packages/contracts + package.json
+T33  bun run contracts 2×                            EXIT=0 duas vezes, sem diff novo
+T33  bun migrate:create                              EXIT=0   "No schema changes, nothing to migrate"
+T33  db:check-go                                     EXIT=0   byte-identical
+T33  api test                                        EXIT=0   649 pass / 0 fail / 117 files
+T33  bun tsc / bun lint                              EXIT=0
+T33  contracts tsc                                   EXIT=0
+T33  go build+vet+test (api-go e core)               EXIT=0
+T34  grep '"(pg|@types/pg|@electric-sql/pglite)":'   0 hits em todo package.json de primeira pessoa
+T34  git grep pglite -- packages                     1 hit   module.go:34 — a MESMA prosa
+                                                             histórica deliberada do bloco 3
+T34  worktree limpo + bun install --frozen-lockfile  EXIT=0   3771 pacotes (era 3773: −@types/pg
+                                                             e −1 transitivo), lockfile intocado,
+                                                             sem "Workspace dependency not found"
+T34  LibsqlDriver.test.ts DENTRO do worktree limpo   EXIT=0   12 pass — prova FUNCIONAL de que o
+                                                             resolve limpo ainda tem libsql
+pós  smoke-shared-store (re-rodado após T32–T34)     EXIT=0   CROSSING_1/2=ok,
+                                                             CONNECTED_LITERAL_REACHED=yes,
+                                                             NO_POSTGRES_REACHABLE=ok, ledger=2
+                                                             (log em phase0-smoke/…after-T32-T34.log)
+```
+
+### Nota sobre o `biome.jsonc`
+
+O include listava `packages/contracts/db/schema/**` — o diretório pg — enquanto o schema **vivo**
+(`db/schema-sqlite/`) não era coberto por nada. Re-apontado, e os 9 arquivos formatados no mesmo
+commit: um include que aponta para um diretório inexistente é fóssil, e um que aponta para arquivos
+que ele reprova é config vermelha por construção. (`bun check:biome` continua vermelho repo-wide por
+~185 arquivos **pré-existentes**, fora de qualquer gate; `bun lint` — o gate real — está verde.)
+
+### PARKS herdados (não reabertos, não re-verificados aqui)
+
+`docker build -f docker/Dockerfile.api` e `bun e2e` (`04-inbound-issue`), ambos do bloco 3, com
+write-up em `.specs/codedm/OVERNIGHT-BLOCKED.md`. Fora do gate set desta rodada.
+
+### PRÓXIMO PASSO
+
+Fase 0 segue **encerrada**, agora sem o resíduo de autoria em Postgres. Um substrato, um dialeto,
+um diretório de schema, uma ledger — e nenhum comando documentado que fale com um banco que não
+existe mais.

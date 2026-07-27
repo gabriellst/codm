@@ -1,0 +1,517 @@
+── build ────────────────────────────────────────────────────────────────
+[32mBundled 2448 modules in 275ms[0m
+
+  [34mserver.js[33m  7.43 MB  [2m(entry point)[0m
+
+✅ node bundle built → dist/server.js (+ dist/schema-sqlite/migrations + dist/node_modules/{@libsql/client, @libsql/core, js-base64, @libsql/hrana-client, @libsql/isomorphic-ws, ws, libsql, @neon-rs/load, detect-libc, @libsql/darwin-arm64, promise-limit})
+
+── environment ──────────────────────────────────────────────────────────
+  ok   child env carries no database/broker URL — DATABASE_URL, REDIS_URL, WHATSMEOW_DATABASE_URL, POSTGRES_URL all absent
+NO_POSTGRES_REACHABLE=ok
+DATA_DIR=/var/folders/dq/jxsqcqgx2bx8sqx0vgqwl8h00000gn/T/codedm-shared-store-Ehfk4o
+DAEMON_LAUNCH=bundle
+  ok   data dir is COLD — /var/folders/dq/jxsqcqgx2bx8sqx0vgqwl8h00000gn/T/codedm-shared-store-Ehfk4o is empty before either process starts
+
+── boot both processes against the one data dir ─────────────────────────
+[Fx] PROVIDE	fx.Lifecycle <= go.uber.org/fx.New.func1()
+[Fx] PROVIDE	fx.Shutdowner <= go.uber.org/fx.(*App).shutdowner-fm()
+[Fx] PROVIDE	fx.DotGraph <= go.uber.org/fx.(*App).dotGraph-fm()
+[Fx] PROVIDE	*config.Config <= template/core-go/config.Load() from module "shared"
+[Fx] PROVIDE	*sqlite.SqliteStore <= template/core-go.provideSqliteStore() from module "shared"
+[Fx] PROVIDE	unitofwork.UnitOfWork <= fx.Annotate(template/core-go.provideSqliteUnitOfWork(), fx.As([[unitofwork.UnitOfWork]]) from module "shared"
+[Fx] PROVIDE	mediator.ExternalMediator <= fx.Annotate(template/core-go.provideSqlExternalMediator(), fx.As([[mediator.ExternalMediator]]) from module "shared"
+[Fx] PROVIDE	*mediator.SqliteWalPollingStrategy <= template/core-go.provideDomainOutboxNotify() from module "shared"
+[Fx] PROVIDE	*outbox.SqliteOutboxDispatcher <= template/core-go.provideSqliteOutboxDispatcher() from module "shared"
+[Fx] PROVIDE	mediator.InternalMediator <= fx.Annotate(template/core-go/services/mediator.NewChannelMediator(), fx.As([[mediator.InternalMediator]]) from module "shared"
+[Fx] PROVIDE	*repositories.SqliteDomainEventRepository <= template/core-go/repositories.NewSqliteDomainEventRepository() from module "shared"
+[Fx] PROVIDE	repositories.DomainEventRepository <= template/core-go.asDomainEventRepository() from module "shared"
+[Fx] PROVIDE	*httprouter.HttpRouter <= template/core-go/services/httprouter.NewHttpRouter() from module "shared"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/shared/controllers.NewListenEventsController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "shared"
+[Fx] PROVIDE	types.Middleware[group = "app_middlewares"] <= fx.Annotate(template/api-go/internal/shared.newAuthMiddleware(), fx.ResultTags(["group:\"app_middlewares\""]) from module "shared"
+[Fx] PROVIDE	*whatsapp.WhatsmeowStore <= template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore() from module "channel"
+[Fx] PROVIDE	gateway.ChannelFactory <= fx.Annotate(template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowChannelFactory(), fx.As([[gateway.ChannelFactory]]) from module "channel"
+[Fx] PROVIDE	channel.ChannelRepository <= fx.Annotate(template/api-go/internal/channel/repositories/channel.NewSqliteChannelRepository(), fx.As([[channel.ChannelRepository]]) from module "channel"
+[Fx] PROVIDE	remote.RemoteProjectionRepository <= fx.Annotate(template/api-go/internal/channel/repositories/remote.NewSqliteRemoteProjectionRepository(), fx.As([[remote.RemoteProjectionRepository]]) from module "channel"
+[Fx] PROVIDE	message.MessageProjectionRepository <= fx.Annotate(template/api-go/internal/channel/repositories/message.NewSqliteMessageProjectionRepository(), fx.As([[message.MessageProjectionRepository]]) from module "channel"
+[Fx] PROVIDE	remote.RemoteRepository <= fx.Annotate(template/api-go/internal/channel/repositories/remote.NewSqliteRemoteRepository(), fx.As([[remote.RemoteRepository]]) from module "channel"
+[Fx] PROVIDE	message.MessageRepository <= fx.Annotate(template/api-go/internal/channel/repositories/message.NewSqliteMessageRepository(), fx.As([[message.MessageRepository]]) from module "channel"
+[Fx] PROVIDE	registry.ChannelRegistry <= fx.Annotate(template/api-go/internal/channel/services/registry.NewChannelRegistry(), fx.As([[registry.ChannelRegistry]]) from module "channel"
+[Fx] PROVIDE	*usecases.CreateChannelHandler <= template/api-go/internal/channel/usecases.NewCreateChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.ConnectChannelHandler <= template/api-go/internal/channel/usecases.NewConnectChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.ListChannelsHandler <= template/api-go/internal/channel/usecases.NewListChannelsHandler() from module "channel"
+[Fx] PROVIDE	*usecases.GetChannelHandler <= template/api-go/internal/channel/usecases.NewGetChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.DeleteChannelHandler <= template/api-go/internal/channel/usecases.NewDeleteChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.RestartChannelHandler <= template/api-go/internal/channel/usecases.NewRestartChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.LogoutChannelHandler <= template/api-go/internal/channel/usecases.NewLogoutChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SetPresenceHandler <= template/api-go/internal/channel/usecases.NewSetPresenceHandler() from module "channel"
+[Fx] PROVIDE	*usecases.GetOrCreateChannelHandler <= template/api-go/internal/channel/usecases.NewGetOrCreateChannelHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendTextHandler <= template/api-go/internal/channel/usecases.NewSendTextHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendMediaHandler <= template/api-go/internal/channel/usecases.NewSendMediaHandler() from module "channel"
+[Fx] PROVIDE	*usecases.CheckIsOnPlatformHandler <= template/api-go/internal/channel/usecases.NewCheckIsOnPlatformHandler() from module "channel"
+[Fx] PROVIDE	*usecases.DeleteMessageHandler <= template/api-go/internal/channel/usecases.NewDeleteMessageHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendImageHandler <= template/api-go/internal/channel/usecases.NewSendImageHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendVideoHandler <= template/api-go/internal/channel/usecases.NewSendVideoHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendFileHandler <= template/api-go/internal/channel/usecases.NewSendFileHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendAudioHandler <= template/api-go/internal/channel/usecases.NewSendAudioHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendStickerHandler <= template/api-go/internal/channel/usecases.NewSendStickerHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendLinkHandler <= template/api-go/internal/channel/usecases.NewSendLinkHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendLocationHandler <= template/api-go/internal/channel/usecases.NewSendLocationHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendContactHandler <= template/api-go/internal/channel/usecases.NewSendContactHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendReactionHandler <= template/api-go/internal/channel/usecases.NewSendReactionHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendPollHandler <= template/api-go/internal/channel/usecases.NewSendPollHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendListHandler <= template/api-go/internal/channel/usecases.NewSendListHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendButtonHandler <= template/api-go/internal/channel/usecases.NewSendButtonHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendStatusHandler <= template/api-go/internal/channel/usecases.NewSendStatusHandler() from module "channel"
+[Fx] PROVIDE	*usecases.EditMessageHandler <= template/api-go/internal/channel/usecases.NewEditMessageHandler() from module "channel"
+[Fx] PROVIDE	*usecases.ForwardMessageHandler <= template/api-go/internal/channel/usecases.NewForwardMessageHandler() from module "channel"
+[Fx] PROVIDE	*usecases.SendChatPresenceHandler <= template/api-go/internal/channel/usecases.NewSendChatPresenceHandler() from module "channel"
+[Fx] PROVIDE	*usecases.PinRemoteHandler <= template/api-go/internal/channel/usecases.NewPinRemoteHandler() from module "channel"
+[Fx] PROVIDE	*usecases.UnpinRemoteHandler <= template/api-go/internal/channel/usecases.NewUnpinRemoteHandler() from module "channel"
+[Fx] PROVIDE	*usecases.ArchiveRemoteHandler <= template/api-go/internal/channel/usecases.NewArchiveRemoteHandler() from module "channel"
+[Fx] PROVIDE	*usecases.UnarchiveRemoteHandler <= template/api-go/internal/channel/usecases.NewUnarchiveRemoteHandler() from module "channel"
+[Fx] PROVIDE	*usecases.MuteRemoteHandler <= template/api-go/internal/channel/usecases.NewMuteRemoteHandler() from module "channel"
+[Fx] PROVIDE	*usecases.UnmuteRemoteHandler <= template/api-go/internal/channel/usecases.NewUnmuteRemoteHandler() from module "channel"
+[Fx] PROVIDE	*usecases.MarkRemoteAsUnreadHandler <= template/api-go/internal/channel/usecases.NewMarkRemoteAsUnreadHandler() from module "channel"
+[Fx] PROVIDE	*usecases.MarkRemoteAsSeenHandler <= template/api-go/internal/channel/usecases.NewMarkRemoteAsSeenHandler() from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel.newTestIngressControllers(), fx.ResultTags(["group:\"controllers,flatten\""]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewCreateWhatsAppChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewListChannelsController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewGetChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewDeleteChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewConnectChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewRestartChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewLogoutChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSetPresenceController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewGetOrCreateChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendTextController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendMediaController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewCheckIsOnPlatformController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewDeleteMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendImageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendVideoController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendFileController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendAudioController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendStickerController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendLinkController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendLocationController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendContactController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendReactionController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendPollController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendListController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendButtonController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendStatusController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewEditMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewForwardMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewSendChatPresenceController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewPinRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewUnpinRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewArchiveRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewUnarchiveRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewMuteRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewUnmuteRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewMarkRemoteAsUnreadController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] PROVIDE	types.Controller[group = "controllers"] <= fx.Annotate(template/api-go/internal/channel/controllers.NewMarkRemoteAsSeenController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] INVOKE		fx.Annotate(template/core-go.registerMiddlewares(), fx.ParamTags(["" "group:\"app_middlewares\""]) from module "shared"
+[Fx] BEFORE RUN	provide: template/core-go/config.Load() from module "shared"
+[Fx] RUN	provide: template/core-go/config.Load() in 307.625µs from module "shared"
+[Fx] BEFORE RUN	provide: template/core-go/services/httprouter.NewHttpRouter() from module "shared"
+[Fx] RUN	provide: template/core-go/services/httprouter.NewHttpRouter() in 3.625µs from module "shared"
+[Fx] BEFORE RUN	provide: go.uber.org/fx.New.func1()
+[Fx] RUN	provide: go.uber.org/fx.New.func1() in 1.75µs
+[Fx] BEFORE RUN	provide: template/core-go.provideSqliteStore() from module "shared"
+[Fx] RUN	provide: template/core-go.provideSqliteStore() in 7.898167ms from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/shared.newAuthMiddleware(), fx.ResultTags(["group:\"app_middlewares\""]) from module "shared"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/shared.newAuthMiddleware(), fx.ResultTags(["group:\"app_middlewares\""]) in 46.5µs from module "shared"
+[Fx] INVOKE		fx.Annotate(template/core-go.registerControllers(), fx.ParamTags(["" "group:\"controllers\""]) from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/core-go/services/mediator.NewChannelMediator(), fx.As([[mediator.InternalMediator]]) from module "shared"
+[Fx] RUN	provide: fx.Annotate(template/core-go/services/mediator.NewChannelMediator(), fx.As([[mediator.InternalMediator]]) in 6.917µs from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/core-go.provideSqlExternalMediator(), fx.As([[mediator.ExternalMediator]]) from module "shared"
+[Fx] RUN	provide: fx.Annotate(template/core-go.provideSqlExternalMediator(), fx.As([[mediator.ExternalMediator]]) in 5.917µs from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/shared/controllers.NewListenEventsController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "shared"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/shared/controllers.NewListenEventsController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 7.25µs from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel.newTestIngressControllers(), fx.ResultTags(["group:\"controllers,flatten\""]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel.newTestIngressControllers(), fx.ResultTags(["group:\"controllers,flatten\""]) in 4.583µs from module "channel"
+[Fx] BEFORE RUN	provide: template/core-go/repositories.NewSqliteDomainEventRepository() from module "shared"
+[Fx] RUN	provide: template/core-go/repositories.NewSqliteDomainEventRepository() in 14.625µs from module "shared"
+[Fx] BEFORE RUN	provide: template/core-go.asDomainEventRepository() from module "shared"
+[Fx] RUN	provide: template/core-go.asDomainEventRepository() in 1.959µs from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/repositories/channel.NewSqliteChannelRepository(), fx.As([[channel.ChannelRepository]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/repositories/channel.NewSqliteChannelRepository(), fx.As([[channel.ChannelRepository]]) in 5.792µs from module "channel"
+[Fx] BEFORE RUN	provide: template/core-go.provideDomainOutboxNotify() from module "shared"
+[Fx] RUN	provide: template/core-go.provideDomainOutboxNotify() in 3.291µs from module "shared"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/core-go.provideSqliteUnitOfWork(), fx.As([[unitofwork.UnitOfWork]]) from module "shared"
+[Fx] RUN	provide: fx.Annotate(template/core-go.provideSqliteUnitOfWork(), fx.As([[unitofwork.UnitOfWork]]) in 4.584µs from module "shared"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewCreateChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewCreateChannelHandler() in 17.041µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewCreateWhatsAppChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewCreateWhatsAppChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 6.208µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewListChannelsHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewListChannelsHandler() in 2.333µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewListChannelsController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewListChannelsController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 39.416µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewGetChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewGetChannelHandler() in 1.542µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewGetChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewGetChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.833µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore() from module "channel"
+[2m10:15AM[0m [92mINF[0m whatsmeow sqlstore initialized (shared sqlite) [2mpath=[0m/var/folders/dq/jxsqcqgx2bx8sqx0vgqwl8h00000gn/T/codedm-shared-store-Ehfk4o/codedm.db
+[Fx] RUN	provide: template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore() in 2.548583ms from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/repositories/remote.NewSqliteRemoteProjectionRepository(), fx.As([[remote.RemoteProjectionRepository]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/repositories/remote.NewSqliteRemoteProjectionRepository(), fx.As([[remote.RemoteProjectionRepository]]) in 7.959µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/repositories/message.NewSqliteMessageProjectionRepository(), fx.As([[message.MessageProjectionRepository]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/repositories/message.NewSqliteMessageProjectionRepository(), fx.As([[message.MessageProjectionRepository]]) in 15.917µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowChannelFactory(), fx.As([[gateway.ChannelFactory]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowChannelFactory(), fx.As([[gateway.ChannelFactory]]) in 5.791µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/services/registry.NewChannelRegistry(), fx.As([[registry.ChannelRegistry]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/services/registry.NewChannelRegistry(), fx.As([[registry.ChannelRegistry]]) in 4.459µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewDeleteChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewDeleteChannelHandler() in 16.625µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewDeleteChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewDeleteChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 7.125µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewConnectChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewConnectChannelHandler() in 1.541µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewConnectChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewConnectChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 4.916µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewRestartChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewRestartChannelHandler() in 13.25µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewRestartChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewRestartChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 5.792µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewLogoutChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewLogoutChannelHandler() in 1.667µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewLogoutChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewLogoutChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.875µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSetPresenceHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSetPresenceHandler() in 13.791µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSetPresenceController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSetPresenceController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 16.375µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewGetOrCreateChannelHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewGetOrCreateChannelHandler() in 1.708µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewGetOrCreateChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewGetOrCreateChannelController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 6.208µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendTextHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendTextHandler() in 3.75µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendTextController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendTextController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.75µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendMediaHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendMediaHandler() in 1.333µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendMediaController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendMediaController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 5µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewCheckIsOnPlatformHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewCheckIsOnPlatformHandler() in 1.917µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewCheckIsOnPlatformController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewCheckIsOnPlatformController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.25µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewDeleteMessageHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewDeleteMessageHandler() in 2.583µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewDeleteMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewDeleteMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.291µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendImageHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendImageHandler() in 1.375µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendImageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendImageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 4.125µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendVideoHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendVideoHandler() in 1.167µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendVideoController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendVideoController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 6.75µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendFileHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendFileHandler() in 1.333µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendFileController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendFileController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.542µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendAudioHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendAudioHandler() in 1.208µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendAudioController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendAudioController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 5.958µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendStickerHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendStickerHandler() in 2.792µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendStickerController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendStickerController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 4.333µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendLinkHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendLinkHandler() in 1.209µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendLinkController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendLinkController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.25µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendLocationHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendLocationHandler() in 1.292µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendLocationController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendLocationController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.375µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendContactHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendContactHandler() in 1.25µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendContactController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendContactController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.458µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendReactionHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendReactionHandler() in 1.125µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendReactionController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendReactionController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.292µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendPollHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendPollHandler() in 1.083µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendPollController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendPollController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 5.791µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendListHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendListHandler() in 1.25µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendListController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendListController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 2.958µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendButtonHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendButtonHandler() in 1.25µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendButtonController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendButtonController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.041µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendStatusHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendStatusHandler() in 1.25µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendStatusController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendStatusController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.166µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewEditMessageHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewEditMessageHandler() in 3.083µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewEditMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewEditMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.625µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewForwardMessageHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewForwardMessageHandler() in 3µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewForwardMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewForwardMessageController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.208µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewSendChatPresenceHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewSendChatPresenceHandler() in 355.75µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendChatPresenceController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewSendChatPresenceController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 27.458µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewPinRemoteHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewPinRemoteHandler() in 38.5µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewPinRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewPinRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 63.458µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewUnpinRemoteHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewUnpinRemoteHandler() in 9.792µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewUnpinRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewUnpinRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 11.083µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewArchiveRemoteHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewArchiveRemoteHandler() in 4.458µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewArchiveRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewArchiveRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 7.292µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewUnarchiveRemoteHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewUnarchiveRemoteHandler() in 89.041µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewUnarchiveRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewUnarchiveRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 11.292µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewMuteRemoteHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewMuteRemoteHandler() in 2.5µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewMuteRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewMuteRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 5.125µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewUnmuteRemoteHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewUnmuteRemoteHandler() in 2µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewUnmuteRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewUnmuteRemoteController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.5µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewMarkRemoteAsUnreadHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewMarkRemoteAsUnreadHandler() in 1.958µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewMarkRemoteAsUnreadController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewMarkRemoteAsUnreadController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 4.25µs from module "channel"
+[Fx] BEFORE RUN	provide: template/api-go/internal/channel/usecases.NewMarkRemoteAsSeenHandler() from module "channel"
+[Fx] RUN	provide: template/api-go/internal/channel/usecases.NewMarkRemoteAsSeenHandler() in 1.709µs from module "channel"
+[Fx] BEFORE RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewMarkRemoteAsSeenController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) from module "channel"
+[Fx] RUN	provide: fx.Annotate(template/api-go/internal/channel/controllers.NewMarkRemoteAsSeenController(), fx.ResultTags(["group:\"controllers\""]), fx.As([[types.Controller]]) in 3.916µs from module "channel"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/location [2mdescription=[0m"Send a location message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mDELETE [2mpath=[0m/api/channel/channels/{id}/logout [2mdescription=[0m"Logout channel"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/image [2mdescription=[0m"Send an image message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/channels/whatsapp [2mdescription=[0m"Create a new WhatsApp channel"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/pin [2mdescription=[0m"Pin a remote chat on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mGET [2mpath=[0m/api/channel/channels [2mdescription=[0m"List channels"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/presence [2mdescription=[0m"Send chat presence indicator"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/channels/_test/gateway [2mdescription=[0m"TEST-ONLY: raise channel.gateway_connected through the gateway's own production chain"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/channels/{id}/connect [2mdescription=[0m"Connect channel (returns QR code)"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/media [2mdescription=[0m"Send a media message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/text [2mdescription=[0m"Send a text message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPUT [2mpath=[0m/api/channel/channels/{id}/presence [2mdescription=[0m"Set channel presence"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/sticker [2mdescription=[0m"Send a sticker message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/list [2mdescription=[0m"Send a list message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/reaction [2mdescription=[0m"Send a reaction to a message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/archive [2mdescription=[0m"Archive a remote chat on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/contact [2mdescription=[0m"Send a contact card message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mGET [2mpath=[0m/api/channel/channels/{id} [2mdescription=[0m"Get channel by ID"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/file [2mdescription=[0m"Send a file/document message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/video [2mdescription=[0m"Send a video message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/unmute [2mdescription=[0m"Unmute a remote chat on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/status [2mdescription=[0m"Send a status/story update"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/mark-as-seen [2mdescription=[0m"Mark a remote chat as seen on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/unpin [2mdescription=[0m"Unpin a remote chat on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/mark-as-unread [2mdescription=[0m"Mark a remote chat as unread on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mDELETE [2mpath=[0m/api/channel/channels/{id} [2mdescription=[0m"Delete a channel"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/link [2mdescription=[0m"Send a link with preview"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/forward [2mdescription=[0m"Forward a message to another chat"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPUT [2mpath=[0m/api/messaging/messages/edit [2mdescription=[0m"Edit an existing message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/button [2mdescription=[0m"Send a button message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/poll [2mdescription=[0m"Send a poll message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mGET [2mpath=[0m/api/events [2mdescription=[0m"Listen to events via SSE"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/unarchive [2mdescription=[0m"Unarchive a remote chat on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/audio [2mdescription=[0m"Send an audio message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/messaging/messages/check-number [2mdescription=[0m"Check if identifiers are on the platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mGET [2mpath=[0m/api/channel/channels/resolve [2mdescription=[0m"Get or create channel for current tenant and platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mDELETE [2mpath=[0m/api/messaging/messages/delete [2mdescription=[0m"Delete a message"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/remotes/mute [2mdescription=[0m"Mute a remote chat on the connected platform"
+[2m10:15AM[0m [92mINF[0m registered route [2mmethod=[0mPOST [2mpath=[0m/api/channel/channels/{id}/restart [2mdescription=[0m"Restart channel connection"
+[Fx] INVOKE		template/core-go.startMediators() from module "shared"
+[Fx] INVOKE		template/core-go.startSqliteOutboxDispatcher() from module "shared"
+[Fx] BEFORE RUN	provide: template/core-go.provideSqliteOutboxDispatcher() from module "shared"
+[Fx] RUN	provide: template/core-go.provideSqliteOutboxDispatcher() in 2.542µs from module "shared"
+[Fx] INVOKE		template/api-go/internal/shared.registerDocsRoutes() from module "shared"
+[2m10:15AM[0m [92mINF[0m registered docs routes [2mopenapi=[0m/api/openapi.json [2mscalar=[0m/api/docs
+[Fx] INVOKE		template/api-go/internal/channel.registerLifecycleHooks() from module "channel"
+[Fx] INVOKE		template/api-go/internal/channel.registerDomainEventHandlers() from module "channel"
+[Fx] INVOKE		template/core-go.StartHTTPServer()
+[Fx] HOOK OnStart		template/core-go.startMediators.func1() executing (caller: template/core-go.startMediators)
+[2m10:15AM[0m [92mINF[0m internal mediator started
+[2m10:15AM[0m [92mINF[0m sql external mediator: started [2msource=[0mintegration
+[2m10:15AM[0m [92mINF[0m external mediator started
+[Fx] HOOK OnStart		template/core-go.startMediators.func1() called by template/core-go.startMediators ran successfully in 43.708µs
+[Fx] HOOK OnStart		template/core-go.startSqliteOutboxDispatcher.func1() executing (caller: template/core-go.startSqliteOutboxDispatcher)
+[2m10:15AM[0m [92mINF[0m sqlite outbox dispatcher: started [2msource=[0mgateway
+[2m10:15AM[0m [92mINF[0m sqlite outbox dispatcher started
+[Fx] HOOK OnStart		template/core-go.startSqliteOutboxDispatcher.func1() called by template/core-go.startSqliteOutboxDispatcher ran successfully in 24.541µs
+[Fx] HOOK OnStart		template/api-go/internal/channel.registerLifecycleHooks.func1() executing (caller: template/api-go/internal/channel.registerLifecycleHooks)
+[2m10:15AM[0m [92mINF[0m startup: reconnecting channels [2mcount=[0m0
+[Fx] HOOK OnStart		template/api-go/internal/channel.registerLifecycleHooks.func1() called by template/api-go/internal/channel.registerLifecycleHooks ran successfully in 1.500083ms
+[Fx] HOOK OnStart		template/core-go.StartHTTPServer.func1() executing (caller: template/core-go.StartHTTPServer)
+[Fx] HOOK OnStart		template/core-go.StartHTTPServer.func1() called by template/core-go.StartHTTPServer ran successfully in 3.792µs
+[Fx] RUNNING
+[2m10:15AM[0m [92mINF[0m http server started [2maddr=[0m:3032
+  ok   gateway ready — http://127.0.0.1:3032/api/openapi.json → 200 after ~1.0s
+✅ Registered 0 Handlers
+✅ Registered 0 Handlers
+✅ Registered 0 Handlers
+✅ Registered 0 Handlers
+✅ Registered 0 Handlers
+[boot] OTEL_COLLECTOR_LOG_URL is not configured — OtlpLoggingService will not be bound; logs fall back to console only (MockLoggingService).
+
+🚀 Starting external Module Router
+
+✅ Registered 1 Controllers
+✅ Registered 1 Handlers
+✅ Registered 1 Handlers
+✅ Registered 1 Handlers
+✅ Registered 1 Handlers
+✅ Registered 1 Handlers
+
+🚀 Starting auth Module Router
+
+✅ Registered 2 Controllers
+
+🚀 Starting owner Module Router
+
+✅ Registered 5 Controllers
+┌─ claude-cli · binary-probe ────────────────────────────────────────
+Failed to resolve Handler RunTerminalSessionOnClassification: Error: Cannot inject the dependency "runTerminalSession" at position #4 of "RunTerminalSessionOnClassification" constructor. Reason:
+    Cannot inject the dependency "runner" at position #0 of "RunTerminalSession" constructor. Reason:
+        Bun is not defined
+    at file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16607:15
+    at Array.map (<anonymous>)
+    at file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16585:32
+    at InternalDependencyContainer.construct (file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16587:7)
+    at InternalDependencyContainer.resolve (file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16364:27)
+    at container.resolve (file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:127815:37)
+    at file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16786:45
+    at tryCatch (file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16761:18)
+    at Mediator.register (file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:16785:24)
+    at BoundedContext.registerHandlers (file:///Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/dist/server.js:128959:22)
+✅ Registered 0 Handlers
+✅ Registered 0 Handlers
+✅ Registered 0 Handlers
+✅ Registered 1 Handlers
+
+🚀 Starting terminal Module Router
+
+✅ Registered 2 Controllers
+
+🚀 Starting workspace Module Router
+
+✅ Registered 3 Controllers
+✅ Registered 1 Handlers
+✅ Registered 1 Handlers
+
+🚀 Starting artifact Module Router
+
+✅ Registered 2 Controllers
+
+🚀 Starting ui Module Router
+
+✅ Registered 7 Controllers
+
+🚀 Starting thread Module Router
+
+✅ Registered 10 Controllers
+
+🚀 Starting issue Module Router
+
+✅ Registered 9 Controllers
+[INFO] { content: { message: 'Migrations applied (shared SQLite)' } }
+✅ OutboxDispatcher started (adaptive poll: 100-30000ms, batch: 50, ownerConcurrency: 10)
+
+🚀 Starting shared Module Router
+
+⏭️  OTEL_COLLECTOR_TRACE_URL not set — telemetry disabled (noop spans)
+✅ api-ts listening on port 3030
+  ok   daemon ready — http://127.0.0.1:3030/v1/session → 200 after ~0.5s
+
+── crossing 1: the gateway INSERTS, the daemon reads ────────────────────
+  ok   control 1 — the daemon sees NO channel yet — channels=[]
+[2m10:15AM[0m [92mINF[0m request [2mmethod=[0mPOST [2mpath=[0m/api/channel/channels/whatsapp [2mstatus=[0m201 [2mduration=[0m3.294666ms
+  ..   gateway created a8ff7638-3c57-407d-b463-096080371839 (HTTP 201)
+[2m10:15AM[0m [92mINF[0m instance created [2mevent=[0mchannel.channel_created [2minstanceId=[0ma8ff7638-3c57-407d-b463-096080371839 [2mname=[0macceptance-1785158120110 [2mplatform=[0mWHATSAPP
+  ok   CROSSING 1 — the daemon read the gateway’s row — daemon reports status=CREATED for a row it never wrote
+  ok   crossing 1 corroborated in the file — /var/folders/dq/jxsqcqgx2bx8sqx0vgqwl8h00000gn/T/codedm-shared-store-Ehfk4o/codedm.db → id=a8ff7638-3c57-407d-b463-096080371839 status=CREATED version=1
+
+── crossing 2: the gateway UPDATES the SAME row, the daemon re-reads ────
+  ok   control 2 — the daemon does NOT yet report CONNECTED — daemon still reports status=CREATED
+[2m10:15AM[0m [93mWRN[0m channel_connected: channel not in registry, falling back to persisted ownerRemoteID [2mchannelId=[0ma8ff7638-3c57-407d-b463-096080371839
+[2m10:15AM[0m [92mINF[0m request [2mmethod=[0mPOST [2mpath=[0m/api/channel/channels/_test/gateway [2mstatus=[0m204 [2mduration=[0m1.884333ms
+  ..   gateway seam responded HTTP 204 (informational — the ROW is the verdict)
+  ok   CROSSING 2 — the daemon read the gateway’s UPDATE — daemon reports status=CONNECTED
+  ok   crossing 2 corroborated in the file, on the SAME row — id=a8ff7638-3c57-407d-b463-096080371839 status=CONNECTED version=1→2 (an increment proves repo.Save’s ON CONFLICT update, not a second row)
+  ok   exactly ONE channel row exists — count=1 — the two crossings hit the same row
+
+── the file itself ──────────────────────────────────────────────────────
+  ok   one WAL database, and no per-directory database layout beside it — codedm.db codedm.db-shm codedm.db-wal codedm.db.lock daemon.lock
+  ok   journal_mode — wal
+  ok   ONE ledger, one row per migration file — _sqlite_migrations count=2
+  ok   no second ledger — __drizzle_migrations count=0
+  ok   the 25 drizzle tables — count=25
+  ok   whatsmeow is CO-TENANT in the same file — whatsmeow_* table count=16
+  ok   no outbox row is stuck in a claim — stuck=0
+
+── markers ──────────────────────────────────────────────────────────────
+CROSSING_1=ok
+CROSSING_2=ok
+STATUS_1=CREATED
+STATUS_2=CONNECTED
+CONNECTED_LITERAL_REACHED=yes
+DATA_DIR=/var/folders/dq/jxsqcqgx2bx8sqx0vgqwl8h00000gn/T/codedm-shared-store-Ehfk4o
+DAEMON_LAUNCH=bundle
+NO_POSTGRES_REACHABLE=ok
+
+🛑 Received SIGTERM — shutting down gracefully…
+✅ HTTP server stopped
+✅ OutboxDispatcher stopped
+✅ Removed all event listeners
+✅ Database connections closed
+✅ Graceful shutdown completed
+  ..   daemon stopped
+[Fx] TERMINATED
+[Fx] HOOK OnStop		template/core-go.StartHTTPServer.func2() executing (caller: template/core-go.StartHTTPServer)
+[2m10:15AM[0m [92mINF[0m http server shutting down
+[Fx] HOOK OnStop		template/core-go.StartHTTPServer.func2() called by template/core-go.StartHTTPServer ran successfully in 114.667µs
+[Fx] HOOK OnStop		template/api-go/internal/channel.registerLifecycleHooks.func2() executing (caller: template/api-go/internal/channel.registerLifecycleHooks)
+[2m10:15AM[0m [92mINF[0m disconnecting all instances...
+[Fx] HOOK OnStop		template/api-go/internal/channel.registerLifecycleHooks.func2() called by template/api-go/internal/channel.registerLifecycleHooks ran successfully in 5.75µs
+[Fx] HOOK OnStop		template/core-go.startSqliteOutboxDispatcher.func2() executing (caller: template/core-go.startSqliteOutboxDispatcher)
+[2m10:15AM[0m [92mINF[0m sqlite outbox dispatcher: stopped [2msource=[0mgateway
+[2m10:15AM[0m [92mINF[0m sqlite outbox dispatcher stopped
+[Fx] HOOK OnStop		template/core-go.startSqliteOutboxDispatcher.func2() called by template/core-go.startSqliteOutboxDispatcher ran successfully in 29.25µs
+[Fx] HOOK OnStop		template/core-go.startMediators.func2() executing (caller: template/core-go.startMediators)
+[2m10:15AM[0m [92mINF[0m sql external mediator: stopped [2msource=[0mintegration
+[2m10:15AM[0m [92mINF[0m mediators stopped
+[Fx] HOOK OnStop		template/core-go.startMediators.func2() called by template/core-go.startMediators ran successfully in 17.083µs
+[Fx] HOOK OnStop		template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore.func1() executing (caller: template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore)
+[2m10:15AM[0m [92mINF[0m whatsmeow store closing
+[Fx] HOOK OnStop		template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore.func1() called by template/api-go/internal/channel/services/gateway/whatsapp.NewWhatsmeowStore ran successfully in 149.042µs
+[Fx] HOOK OnStop		template/core-go.provideSqliteStore.func1() executing (caller: template/core-go.provideSqliteStore)
+[2m10:15AM[0m [92mINF[0m sqlite store closing
+[Fx] HOOK OnStop		template/core-go.provideSqliteStore.func1() called by template/core-go.provideSqliteStore ran successfully in 5.235459ms
+  ..   gateway stopped
+
+── context ──────────────────────────────────────────────────────────────
+  outbox gateway channel.channel_created done=1
+  outbox gateway channel.channel_connected done=1
+  outbox integration integration.channel.connected done=0
+  outbox gateway channel.sync_started done=1
+  outbox integration integration.channel.sync_started done=0
+
+RESULT=ok
