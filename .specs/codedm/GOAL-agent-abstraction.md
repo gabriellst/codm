@@ -1626,6 +1626,10 @@ dialeto + driver**, não modelagem. Trabalho concreto:
 &nbsp;&nbsp;3. `POST /api/channel/_test/connect` **no gateway** (item 7 acima) → `SetConnected` pelo caminho real da entidade;
 &nbsp;&nbsp;4. daemon consulta **de novo** e lê **`CONNECTED`** (segunda travessia, agora sobre um UPDATE).
 &nbsp;&nbsp;O script **falha** se qualquer um dos dois reads devolver o status errado, se o daemon devolver `DISCONNECTED` (o sintoma histórico do split-DB), ou se algum processo tocar Postgres.
+&nbsp;&nbsp;**Comparação EXATA, nunca substring.** No script: `if (channel.status !== 'CONNECTED') fail()`. Em
+shell: `jq -e '.channels[0].status == "CONNECTED"'`. **Nunca** `grep -q CONNECTED` — verificado:
+`printf '{"status":"DISCONNECTED"}' | grep -q CONNECTED` sai **0**, ou seja, a asserção passaria
+exatamente no sintoma que esta fase existe para matar. Vale para toda asserção de status em todas as fases.
 **AC-0.6** **O daemon renderiza exatamente o status que o gateway escreveu, com pelo menos UMA transição observada cross-process** (`CREATED → CONNECTED` da AC-0.5). É isto que mata o split-DB, e a prova é o **smoke da AC-0.5**, não o e2e. **O e2e NÃO serve de prova aqui** e o executor não deve tentar usá-lo: `packages/e2e/utils/given/gateway.ts` sobe **só o daemon** e semeia a linha por um ingress **TS** — verde lá diria zero sobre o store compartilhado. O e2e continua rodando como gate de não-regressão (AC-0.9), com o seu seed TS intacto; se a tela de channels quiser cobertura de UI, isso é trabalho da Fase 7, **não** desta AC.
 **AC-0.7** `git grep -n "CODEDM_DATA_DIR" -- packages/api/typescript/src packages/api/typescript/core/src` só aparece em `core/src/utils/Config.ts`, no construtor do driver e em `src/boot.ts` — **zero** em repositórios, use cases ou contextos.
 **AC-0.8** `go build ./... && go vet ./... && go test ./...` verdes nos **dois** módulos (`packages/api/go` e `packages/api/go/core`) — confirmando que a metade Go segue intacta.
