@@ -64,6 +64,10 @@ type SqlExternalMediator struct {
 	source string
 	notify NotifyStrategy
 
+	// egressOnly declares this mediator a PUBLISHER of its lane and nothing else.
+	// See NewSqlExternalMediatorWithoutIngress for why the gateway is built that way.
+	egressOnly bool
+
 	mu        sync.RWMutex
 	handlers  map[string][]IntegrationEventHandler
 	callbacks []func(ctx context.Context, event types.IntegrationEventI)
@@ -91,14 +95,46 @@ func NewSqlExternalMediator(db *sql.DB, source string, notify NotifyStrategy) *S
 	}
 }
 
+// NewSqlExternalMediatorWithoutIngress builds the mediator EGRESS-ONLY: it publishes
+// into its lane and never claims from it. drainOnce returns 0 without touching the
+// database, and Register fails loud instead of registering a handler that the loop
+// would then have to claim for.
+//
+// WHY THIS GUARD EXISTS — do not remove it, and do not "fix" it by sharing the lane.
+// After this phase two processes write into ONE shared_outbox table. The lanes are the
+// only thing keeping their consumers apart: the TS daemon owns `integration` ingress,
+// the Go gateway owns `gateway`. If this mediator also claimed `integration`, the two
+// consumers would race for the same rows and each event would be delivered to whichever
+// process happened to win — silently, and only under load.
+//
+// If the gateway ever DOES need ingress, the answer is a lane of its OWN —
+// `integration:gateway` — with the TS side publishing there. It is NOT to drop this
+// guard, and it is NOT to let both processes claim `integration`.
+func NewSqlExternalMediatorWithoutIngress(db *sql.DB, source string, notify NotifyStrategy) *SqlExternalMediator {
+	m := NewSqlExternalMediator(db, source, notify)
+	m.egressOnly = true
+	return m
+}
+
 // Register records an ingress handler. Unlike the retired RedisExternalMediator
 // (which failed loud because it had no consumer), the SQL mediator's whole point
 // is a working consumer — so this is a live registration the claim loop honors.
-func (m *SqlExternalMediator) Register(h IntegrationEventHandler) {
+//
+// On an egress-only mediator it returns an error instead. That is deliberate: this is
+// called from module wiring, so the error surfaces as a BOOT failure. A silent no-op
+// would leave a handler that is registered, never called, and impossible to notice.
+func (m *SqlExternalMediator) Register(h IntegrationEventHandler) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.egressOnly {
+		return fmt.Errorf(
+			"sql external mediator: refusing to register ingress handler for %q: this mediator is egress-only on lane %q; "+
+				"give the consumer its own lane instead of sharing this one",
+			h.EventName(), m.source)
+	}
 	m.handlers[h.EventName()] = append(m.handlers[h.EventName()], h)
 	slog.Info("sql external mediator: registered handler", "event", h.EventName())
+	return nil
 }
 
 // RegisterCallback records an in-process fan-out callback (e.g. the SSE broadcaster).
@@ -210,6 +246,13 @@ func (m *SqlExternalMediator) consumeLoop(ctx context.Context) {
 
 // drainOnce claims a batch and dispatches it. Returns the number of rows claimed.
 func (m *SqlExternalMediator) drainOnce(ctx context.Context) (int, error) {
+	if m.egressOnly {
+		// Declared egress-only: claim nothing, and do not even ask the database. Register
+		// refuses handlers on such a mediator, so handlerNames() would be empty anyway —
+		// this returns early so the property is stated, not inferred from an empty map.
+		return 0, nil
+	}
+
 	names := m.handlerNames()
 	if len(names) == 0 {
 		return 0, nil // egress-only: no ingress handlers → claim nothing, drop nothing

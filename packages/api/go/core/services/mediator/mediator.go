@@ -38,8 +38,12 @@ type InternalMediator interface {
 }
 
 // ExternalMediator publishes/consumes integration events across service boundaries.
+//
+// Register returns an error because a mediator may be constructed EGRESS-ONLY (see
+// NewSqlExternalMediatorWithoutIngress): registering an ingress handler on one is a wiring
+// mistake that has to fail at boot, not silently no-op into a handler that never fires.
 type ExternalMediator interface {
-	Register(h IntegrationEventHandler)
+	Register(h IntegrationEventHandler) error
 	RegisterCallback(fn func(ctx context.Context, event types.IntegrationEventI))
 	Publish(ctx context.Context, event types.IntegrationEventI) error
 	Start(ctx context.Context) error

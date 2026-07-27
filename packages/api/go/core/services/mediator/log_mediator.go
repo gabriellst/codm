@@ -16,7 +16,7 @@ func NewLogExternalMediator() ExternalMediator {
 	return &LogExternalMediator{}
 }
 
-func (m *LogExternalMediator) Register(_ IntegrationEventHandler) {}
+func (m *LogExternalMediator) Register(_ IntegrationEventHandler) error { return nil }
 
 func (m *LogExternalMediator) RegisterCallback(_ func(ctx context.Context, event types.IntegrationEventI)) {
 }

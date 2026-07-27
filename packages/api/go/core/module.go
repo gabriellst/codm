@@ -189,9 +189,16 @@ func provideSqliteStore(lc fx.Lifecycle, cfg *config.Config) (*sqlite.SqliteStor
 // db. The SqliteWalPollingStrategy gives the single-binary target an in-process
 // nudge (near-zero latency) and the interim multi-process desktop an adaptive WAL
 // poll — one mechanism for both (go-domain-design.md §3(b)).
+//
+// EGRESS-ONLY, declared rather than incidental. The gateway publishes into the
+// `integration` lane and never claims from it — the TS daemon owns ingress on that
+// lane. Before this phase that was merely TRUE (no handler was registered, so the
+// claim's name filter was empty); now it is ENFORCED, because both processes share
+// one shared_outbox table and two claimants on one lane would race for rows. If the
+// gateway ever needs ingress it gets its own lane — see the constructor's docblock.
 func provideSqlExternalMediator(store *sqlite.SqliteStore) *mediator.SqlExternalMediator {
 	notify := mediator.NewSqliteWalPollingStrategy(0, 0) // package defaults (50ms → 2s)
-	return mediator.NewSqlExternalMediator(store.DB(), integrationOutboxSource, notify)
+	return mediator.NewSqlExternalMediatorWithoutIngress(store.DB(), integrationOutboxSource, notify)
 }
 
 // provideDomainOutboxNotify builds the SQLite domain-event wake-up strategy shared

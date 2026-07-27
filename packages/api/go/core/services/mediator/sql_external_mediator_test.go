@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -344,5 +345,79 @@ func TestSqliteWalPollingStrategy_WaitRespectsContext(t *testing.T) {
 	cancel()
 	if err := s.Wait(ctx, testSource); err == nil {
 		t.Fatal("expected Wait to return the cancelled context error")
+	}
+}
+
+// newEgressOnlyTestMediator mirrors newTestMediator but builds the mediator the way the
+// gateway's composition root does — declared egress-only.
+func newEgressOnlyTestMediator(t *testing.T) (*SqlExternalMediator, *sqlite.SqliteStore) {
+	t.Helper()
+	store, err := sqlite.NewSqliteStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewSqliteStore: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	clock := time.Now().UnixMilli()
+	m := NewSqlExternalMediatorWithoutIngress(store.DB(), testSource, NewSqliteWalPollingStrategy(0, 0))
+	m.now = func() time.Time { return time.UnixMilli(clock) }
+	return m, store
+}
+
+// An egress-only mediator REFUSES an ingress handler, loudly. This is called from module
+// wiring, so the error is a boot failure — the point is that a mis-wired ingress handler
+// cannot end up silently registered on a mediator whose loop will never claim for it.
+func TestEgressOnlyMediator_RegisterIngressHandlerFailsLoud(t *testing.T) {
+	m, _ := newEgressOnlyTestMediator(t)
+
+	err := m.Register(&recordingHandler{name: testEventName})
+	if err == nil {
+		t.Fatal("Register on an egress-only mediator must return an error, got nil")
+	}
+	if !strings.Contains(err.Error(), "egress-only") {
+		t.Fatalf("error should name the reason, got: %v", err)
+	}
+	// And it must NOT have registered anything — a half-applied refusal would be worse
+	// than either outcome.
+	if names := m.handlerNames(); len(names) != 0 {
+		t.Fatalf("refused registration still recorded handlers: %v", names)
+	}
+
+	// The non-egress-only construction still registers, so the guard is about the FLAG
+	// and not about Register being broken.
+	ok, _, _ := newTestMediator(t)
+	if err := ok.Register(&recordingHandler{name: testEventName}); err != nil {
+		t.Fatalf("Register on an ingress-capable mediator must succeed, got: %v", err)
+	}
+}
+
+// An egress-only mediator still PUBLISHES (its lane keeps receiving rows) but claims
+// nothing — drainOnce returns 0 and leaves the row unprocessed for the other process.
+func TestEgressOnlyMediator_PublishesButClaimsNoIngress(t *testing.T) {
+	ctx := context.Background()
+	m, store := newEgressOnlyTestMediator(t)
+
+	event := types.NewIntegrationEvent(testEventName, "owner-1", samplePayload{ChannelID: "c-1"})
+	if err := m.Publish(ctx, event); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	if got := countRows(t, store.DB(), "source = ? AND processed_at IS NULL", testSource); got != 1 {
+		t.Fatalf("egress must still write its outbox row, got %d unprocessed rows", got)
+	}
+
+	n, err := m.drainOnce(ctx)
+	if err != nil {
+		t.Fatalf("drainOnce: %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("egress-only drainOnce must claim 0 rows, got %d", n)
+	}
+
+	// The row is untouched — not claimed, not processed. It belongs to the other process.
+	if got := countRows(t, store.DB(), "claimed_by IS NOT NULL"); got != 0 {
+		t.Fatalf("egress-only mediator claimed %d row(s); it must claim none", got)
+	}
+	if got := countRows(t, store.DB(), "processed_at IS NULL"); got != 1 {
+		t.Fatalf("the published row must stay unprocessed for the ingress owner, got %d", got)
 	}
 }

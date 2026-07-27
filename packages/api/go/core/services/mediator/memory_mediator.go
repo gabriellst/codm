@@ -34,11 +34,12 @@ func NewMemoryExternalMediator() ExternalMediator {
 	}
 }
 
-func (m *MemoryExternalMediator) Register(h IntegrationEventHandler) {
+func (m *MemoryExternalMediator) Register(h IntegrationEventHandler) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.handlers[h.EventName()] = append(m.handlers[h.EventName()], h)
 	slog.Info("memory mediator: registered handler", "event", h.EventName())
+	return nil
 }
 
 func (m *MemoryExternalMediator) RegisterCallback(fn func(ctx context.Context, event types.IntegrationEventI)) {
