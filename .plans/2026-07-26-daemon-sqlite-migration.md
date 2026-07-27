@@ -5082,6 +5082,108 @@ Se **qualquer** linha do bloco falhar, a fase não está pronta — reportar a l
 
 ---
 
+### BLOCO 5 — Correções da rodada 1 de verificação (T32–T34)
+
+> **EMENDA (2026-07-27). O plano estava ERRADO por OMISSÃO, e a prova é uma execução.**
+>
+> A verificação independente dos blocos 3 e 4 achou o gate **"pglite/pg estão MORTOS"** vermelho por
+> duas razões, nenhuma delas dentro das listas de arquivo de T24–T31. A regra §8 ("se o plano estiver
+> errado, prove e conserte o plano explicitamente") manda registrar aqui, não consertar em silêncio.
+>
+> **O que o plano deixou de fora.** A Fase 0 do `.specs/codedm/GOAL-agent-abstraction.md` tem um
+> **item 4** — *"Repositórios/queries TS passam a importar o schema SQLite — e o TOOLING do
+> `contracts` é re-cabeado JUNTO"* — cobrado pelas **AC-0.2** e **AC-0.11**. Deste item, este plano
+> só executou a metade que o daemon lia em runtime (`exports` do `packages/contracts/package.json`
+> e `db/migrations.ts` re-apontados). A metade de **ferramental de autoria** nunca virou task:
+> `db/drizzle.config.ts`, os scripts `drizzle:generate` / `drizzle:migrate` / `all`, os scripts de
+> raiz `migrate:dev` / `migrate:create`, os **4 rails** que leem `db/schema/`, e a deleção das duas
+> árvores pg (`db/schema/`, `db/migrations/`).
+>
+> **RODADO no HEAD do bloco 4** (não inferido): `bun migrate:dev` imprimiu `Using 'pg' driver` e
+> `[✓] migrations applied successfully` — conectando no Postgres de um repo **VIZINHO** escutando em
+> `5432` (`packages/contracts/db/drizzle.config.ts` tem `dialect: 'postgresql'` e a URL de fallback
+> `postgresql://template:template@localhost:5432/template` **hardcoded**, então nem `DATABASE_URL`
+> ausente evita a conexão) e **sem fazer nada** pelo arquivo SQLite que esta fase inteira existe para
+> criar. É exatamente a confusão de substrato partido que a fase mata — sobrevivendo no comando que
+> o `CLAUDE.md:102-103` manda o próximo engenheiro rodar.
+>
+> Segundo achado, menor: `@types/pg` continua **declarado em primeira pessoa** em dois lugares
+> (`package.json:112`, pin de `overrides`, e `packages/api/typescript/package.json:34`,
+> `devDependency`) mesmo depois de `0de0daf7` ter tirado `pg` e `@electric-sql/pglite` do runtime.
+> Nenhum arquivo-fonte importa `pg` nem tipo de `pg`. As entradas que restam no `bun.lock`
+> (`@electric-sql/pglite@0.3.16`, `pg@8.22.0`, `@types/pg@8.20.0`) foram rastreadas até
+> `optionalPeers` de terceiros (`drizzle-orm@0.45.2`, `db0@0.3.4`) — **não** são primeira-pessoa e
+> **não** saem sem derrubar `drizzle-orm`; ficam registradas aqui e não contam contra o gate.
+>
+> **Ordem obrigatória: T32 antes de T33.** Cada um dos 4 rails LÊ `db/schema/` hoje; apagar o
+> diretório antes de re-apontá-los deixa `bun run test` vermelho por `ENOENT` — a fase reprovando o
+> próprio gate. Árvore verde entre as três tasks, um commit por task, stage por pathspec.
+
+#### T32 — Re-apontar os 4 rails que leem `packages/contracts/db/schema` (árvore verde, diretório pg ainda de pé)
+
+**Arquivos:** `packages/api/typescript/tests/architecture/context-map.test.ts` ·
+`packages/api/typescript/tests/architecture/enum-placement.test.ts` ·
+`scripts/graph/core/config.ts` · `scripts/graph/adapters/ts/extractors/drizzle.ts` ·
+`scripts/graph/tests/build.integration.test.ts` · `.claude/registry.yaml` ·
+`.claude/hooks/classify-edit.test.ts`.
+
+O parser da namespace muda de `pgSchema('x')` para **o prefixo do literal de `sqliteTable`** — o
+dialeto SQLite é um espaço plano e a namespace é o prefixo do nome da tabela. `\s*` depois do
+parêntese é obrigatório: **19 das 25** tabelas quebram a linha depois de `sqliteTable(`.
+
+**AC-T32** (bloco único, da raiz do repo):
+- `bun test:tooling` verde (**298 testes**) — cobre `classify-edit` e os detectores.
+- `( cd packages/api/typescript && bun test tests/architecture/ )` verde e **não-vacuoso**:
+  CMPL-01 varre **≥ 9** arquivos de `db/schema-sqlite/` (assert próprio) e `tableOwners()` resolve
+  **> 0** tabelas (assert próprio) — cegueira vira ERRO, não silêncio.
+- `bun test scripts/graph/tests/build.integration.test.ts` verde com **25** `db-table` e as **9**
+  namespaces exatas (`artifact, authentication, gateway, issue, owner, shared, terminal, thread,
+  workspace`) — o nome de ARQUIVO daria `auth`/`channel`/`infrastructure`, então a asserção do
+  conjunto prova que o prefixo do literal está sendo lido.
+- `matchSkill('packages/contracts/db/schema-sqlite/terminal.ts')` ⇒
+  `{"skill":"db-modelling","artifact":"db-schema"}`; `index.ts`, `_enum.ts` e `drizzle.config.ts` ⇒
+  `null` (controle negativo: **antes** desta task os quatro davam `null`).
+- Controle negativo do parser: o regex novo aplicado ao diretório **pg** casa **0** tabelas.
+
+#### T33 — Re-cabear o ferramental de migração para SQLite e apagar a árvore pg (fecha o achado material)
+
+**Arquivos:** `packages/contracts/package.json` (scripts) ·
+`packages/contracts/db/schema-sqlite/drizzle.config.ts` (cabeçalho) ·
+**deletar** `packages/contracts/db/drizzle.config.ts`, `packages/contracts/db/schema/**`,
+`packages/contracts/db/migrations/**` · `package.json` (raiz: `migrate:dev` **morre**,
+`migrate:create` segue apontando para o `drizzle:generate` agora sqlite) · `CLAUDE.md` ·
+`.claude/skills/migrate/SKILL.md` · `.claude/commands/install.md`.
+
+`drizzle:migrate` **morre**: quem aplica migração são o `SqliteDriver` (TS) e o `SqliteStore` (Go),
+os dois idempotentes sobre a **mesma** ledger `_sqlite_migrations`, no boot. Um terceiro aplicador
+com ledger própria (`__drizzle_migrations`) é justamente o split-substrate que a fase mata.
+
+**AC-T33** (bloco único, da raiz do repo):
+- `git grep -n "postgresql\|postgres://\|DATABASE_URL" -- packages/contracts package.json` → **0**
+  hits (guard de âncora antes: `test -d packages/contracts` + um controle positivo que casa).
+- `packages/contracts/db/{drizzle.config.ts,schema,migrations}` **não existem**.
+- `bun run contracts` roda **2×** verde e o segundo `git status --porcelain packages/contracts`
+  volta **vazio** (idempotência — é a AC-0.2 do GOAL).
+- `bun migrate:dev` **não existe mais** como script de raiz (o boot migra); `bun migrate:create`
+  gera SQLite (`drizzle-kit generate` com o config sqlite, saída em `db/schema-sqlite/migrations`).
+- `bun run test` (de `packages/api/typescript`), `bun test:tooling`, `bun tsc` e `bun lint` verdes.
+- `bun scripts/db/sync-sqlite-migrations.ts --check` verde (a cópia `//go:embed` do Go segue
+  byte-a-byte igual — a deleção do pg não pode ter tocado a ledger viva).
+
+#### T34 — Tirar a declaração primeira-pessoa de `@types/pg` (fecha o achado cosmético)
+
+**Arquivos:** `package.json` (raiz, bloco `overrides`) · `packages/api/typescript/package.json`
+(`devDependencies`) · `bun.lock`.
+
+**AC-T34** (bloco único, da raiz do repo):
+- `git grep -nE '"(pg|@types/pg|@electric-sql/pglite)":' -- package.json '*/package.json' '*/*/package.json' '*/*/*/package.json'` → **0** hits.
+- `bun install` reconverge e o `bun.lock` commitado; **resolve limpo** provado num `git worktree`
+  novo no HEAD desta task com `bun install --frozen-lockfile` (exit 0, sem
+  `Workspace dependency … not found`), com `@libsql/client` presente.
+- `bun tsc` e `bun run test` (de `packages/api/typescript`) verdes depois da reconvergência.
+
+---
+
 ## 6. Resumo mecânico de deleções e reescritas
 
 **Deletados:** `PGliteDriver.ts`, `NodePgDriver.ts` (já morto), `core/src/db/types/jsonb.ts`
