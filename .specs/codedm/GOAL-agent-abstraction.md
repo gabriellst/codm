@@ -298,8 +298,10 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
 `stdio: ['pipe','pipe','pipe']`, `shell: false`, `detached: true` (não-Windows). O prompt entra como
 **uma linha JSONL no stdin** e **o stdin não fecha** enquanto o turno vive. A resposta é
 reconstruída **exclusivamente do stdout JSONL parseado** — nunca de stdout cru, nunca de
-`~/.claude/projects`. Fim de turno é **estrutural** (`stop_reason`, com as duas guardas:
-`parent_tool_use_id == null` e `stopReason !== 'tool_use'`), nunca marcador de TUI. O
+`~/.claude/projects`. Fim de turno é **estrutural** (frame `result` com `stopReason !== 'tool_use'`;
+a guarda `parent_tool_use_id == null` **foi removida em 27-jul** — o frame `result` não tem essa
+chave, e o invariante sobrevive mais forte: sub-agent não emite `result`. Ver §4.3 regra 5),
+nunca marcador de TUI. O
 `--permission-mode bypassPermissions` substitui o auto-accept do trust prompt — **é uma troca de
 autoridade, aceita conscientemente aqui** (`:53-56`): o produto roda agents nos repositórios reais
 do usuário e já rodava com trust auto-aceito via injeção de teclas na PTY; a mudança é de mecanismo,
@@ -500,7 +502,7 @@ diferentes**, e confundi-las é a origem de todo o parser frágil que este goal 
 
 | Categoria | O que é | Origem | Vai ao outbox? |
 |---|---|---|---|
-| **Frame** | formato de wire do CLI (`tool_use`, `text_delta`, `usage`, `result`) | stdout JSONL | **Nunca.** É SSE/UI. |
+| **Frame** | formato de wire do CLI (`tool_use`, `text_delta`, `result`) | stdout JSONL | **Nunca.** É SSE/UI. |
 | **Fato observado** (`AgentTurnFact`) | transcript consolidado, ciclo de vida de tool, contagem de token | accumulator puro sobre frames | Sim — evento de domínio do contexto `agent` |
 | **Fato declarado** | *"a issue terminou"*, *"preciso de aprovação"*, *"gerei este artefato"* | **chamada de tool MCP nossa** (§4.4) | Sim — via use case do contexto `agent`, e daí para o integration event **congelado** |
 
@@ -516,14 +518,21 @@ export type AgentRuntimeEvent =
 
 export type AgentFrame =
 	| { kind: 'system_init'; sessionId: string; model: string }
-	| { kind: 'assistant_text'; messageId: string; text: string }
+	| { kind: 'assistant_text'; messageId: string; text: string; parentToolUseId: string | null }
 	| { kind: 'text_delta'; messageId: string; delta: string }
 	| { kind: 'thinking_delta'; delta: string }
 	| { kind: 'tool_use'; toolUseId: string; tool: string; input: unknown; parentToolUseId: string | null }
-	| { kind: 'tool_result'; toolUseId: string; ok: boolean; summary: string }
-	| { kind: 'usage'; inputTokens: number; outputTokens: number }
-	| { kind: 'result'; stopReason: AgentStopReason; parentToolUseId: string | null }
+	| { kind: 'tool_result'; toolUseId: string; ok: boolean; summary: string; parentToolUseId: string | null }
+	| { kind: 'result'; stopReason: AgentStopReason; usage: AgentTurnUsage }
 	| { kind: 'error'; detail: string }
+
+// O agregado de tokens do turno, carregado PELO frame terminal — não é um frame.
+export interface AgentTurnUsage {
+	inputTokens: number
+	outputTokens: number
+	cacheCreationInputTokens: number
+	cacheReadInputTokens: number
+}
 
 export interface AgentRunResult {
 	outcome: AgentRunOutcome            // COMPLETED | STOPPED
@@ -535,6 +544,29 @@ export interface AgentRunResult {
 	stop?: { kind: TransportStopKind; detail: string }   // SÓ stops de TRANSPORTE — ver abaixo
 }
 ```
+
+> **EMENDA 27-jul — a taxonomia acima é a MEDIDA; a anterior era derivada do estudo de produto e
+> estava errada em três pontos.** Correções apuradas pelo decision gate da Fase 2 (`bf217a2a`,
+> artefato em `.specs/codedm/phase2-smoke/`, divergências D1/D3/D4), dobradas **no documento** —
+> antes viviam só no corpo da mensagem de commit, o que fazia o próximo executor ler a versão errada.
+> Reproduzíveis a partir dos bytes crus em `phase2-smoke/raw/*.jsonl`, os quatro arquivos.
+>
+> - **Não existe frame `usage`. Removido da união.** Usage é um **campo**: aparece por-assistant em
+>   `message.usage` e uma vez, **já agregado sobre o turno inteiro**, no frame terminal `result`
+>   (ao lado de `modelUsage` e `total_cost_usd`). Consequência dura para o accumulator: o
+>   `AgentUsageEvent` é cunhado **UMA vez, do agregado terminal** — dobrar as cópias por-assistant
+>   conta o mesmo token duas vezes. E o agregado tem **quatro** baldes, não dois (regra 8 abaixo).
+> - **`tool_use` / `tool_result` / `text` / `thinking` NÃO são frames** — são **content blocks**,
+>   entradas de `message.content[]` de um frame `assistant` (text, thinking, tool_use) ou `user`
+>   (tool_result), e **um frame pode carregar vários**. O codec precisa de um passo real de
+>   **fan-out sobre `content[]`** para sintetizar a união acima: não é renomear campo, e o orçamento
+>   de ~150 LOC do codec tem de **absorver esse fan-out**. Dois detalhes medidos que o codec erra se
+>   ignorar: `tool_result.is_error` é **ausente** no sucesso (não `false`), logo `ok` deriva de
+>   `is_error !== true`; e `tool_result.content` veio **string** num caso e **array** noutro — os
+>   dois shapes ocorrem no corpus e ambos têm de ser aceitos.
+> - **`parentToolUseId` saiu do frame `result` e entrou em `assistant_text`/`tool_result`.** É onde
+>   ele de fato existe no wire (frames `assistant`/`user`, chave `parent_tool_use_id`); no `result`
+>   **a chave não existe**. Ver a regra 5, reescrita por causa disto.
 
 **Stops de TRANSPORTE ≠ stops de DOMÍNIO — e só os primeiros vivem no `AgentRunResult`.** O
 `StopKind` do wire (`stop-kind.tsp`) tem cinco valores e eles se partem em dois grupos com **origens
@@ -566,7 +598,7 @@ São **subclasses de `BaseDomainEvent`**, porque é isto que vai ao outbox; POJO
 export type AgentTurnFact =
 	| AgentMessageEvent    // { messageId, text, role }         — transcript consolidado
 	| AgentToolCallEvent   // { toolUseId, tool, input, output, status, startedAt, finishedAt, errorMessage }
-	| AgentUsageEvent      // { inputTokens, outputTokens }     — base p/ quota por custo
+	| AgentUsageEvent      // { inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens }
 ```
 
 O `AgentToolCallEvent` carrega **ciclo de vida completo**, no shape do `ChatToolCallEvent` do
@@ -593,10 +625,41 @@ medscall (`events/ChatEvent.ts:19-36`) — é ele que o `flush()` materializa co
    `failed: true`. É a regra que o medscall documenta no próprio contrato do agent: *"validation
    failures surface as a terminal event with `payload.failed === true` (never as a thrown error, so
    consumers can still drain the stream cleanly)"* (`medscall .../agent/types/Agent.ts:117-125`).
-5. **Turn-end é estrutural.** `kind: 'result'` com `parentToolUseId == null` e
-   `stopReason !== TOOL_USE` fecha o turno e só então `stdin.end()`. Backstop: watchdog de
-   inatividade. Isso substitui os três detectores concorrentes de hoje e mata os enums
-   `TuiMarker`/`TuiActionType`/`TurnEndSignal`.
+5. **Turn-end é estrutural.** `kind: 'result'` com `stopReason !== TOOL_USE` fecha o turno e só então
+   `stdin.end()`. Backstop **obrigatório**: watchdog de inatividade. Isso substitui os três
+   detectores concorrentes de hoje e mata os enums `TuiMarker`/`TuiActionType`/`TurnEndSignal`.
+
+   **EMENDA 27-jul — a guarda `parentToolUseId == null` FOI REMOVIDA DESTA REGRA, e removê-la é
+   correção de bug, não afrouxamento.** A formulação anterior era
+   `kind: 'result' && parentToolUseId == null && stopReason !== TOOL_USE`. Medido nos quatro
+   arquivos de `phase2-smoke/raw/`: **o frame `result` não tem a chave `parent_tool_use_id`** —
+   `'parent_tool_use_id' in result` é `False` nas quatro capturas, **incluindo a do sub-agent**.
+   Logo `undefined == null` até seria `true` em `==` frouxo, mas a intenção declarada era comparação
+   estrita sobre um campo do record (`parentToolUseId: string | null`, agora removido do `result`),
+   e qualquer implementação que leia esse campo estará lendo algo que não existe. Escrita
+   literalmente sobre um campo inexistente, a guarda **é um hang**: o turno nunca fecha e o run cai
+   no watchdog.
+
+   **O invariante que a guarda queria proteger sobrevive numa forma MAIS FORTE, e é por isso que a
+   remoção é segura:** o sub-agent **não emite frame `result` nenhum**. Verificado em
+   `s3-subagent.jsonl` — o sub-agent fez um `tool_use` (`Read`) completo, recebeu `tool_result` e
+   terminou, e o arquivo contém **exatamente UM** frame `result`. `type === 'result'` é portanto
+   **um-por-run por construção**, e o fim de turno não precisa de desempate por parentesco.
+
+   **`parent_tool_use_id` continua load-bearing — só que noutro lugar:** ele vive nos frames
+   `assistant`/`user` e é a **chave de escopo do accumulator** (medido: `toolu_01WpAVhnCvdR8Ywmh4rK4jed`
+   em três frames consecutivos do sub-agent). É o que separa o transcript do sub-agent do transcript
+   do agent principal. Por isso ele entrou em `assistant_text`/`tool_result` na taxonomia acima.
+
+   **A metade `stopReason !== TOOL_USE` fica, mas está NÃO-FALSIFICADA, não verificada.** `stop_reason`
+   é `null` em **todos** os frames `assistant` do corpus, e nenhum `result` com `stop_reason:
+   'tool_use'` foi observado nem pôde ser provocado. Mantê-la é barato (`AgentStopReason` já está
+   congelado) e defensivo. **Quem reportar a Fase 2 não pode apresentá-la como medida.**
+
+   **O watchdog não é opcional, e o contrafactual mostra por quê.** `raw/stdin-hold-control.json`:
+   segurando o stdin aberto depois do frame terminal, o filho seguia **vivo 17358 ms depois**, com
+   zero frames adicionais. `stdin.end()` **é** o ato que encerra o turno — logo um codec que erra o
+   turn-end **vaza um processo `claude` vivo**, não apenas demora.
 6. **Degradação sem tools é VISÍVEL, não silenciosa — e o `source` tem um PORTADOR declarado.**
    Quando o agent roda sem escopo de tool, a conclusão continua sendo cunhada do `outcome` terminal
    — mas o evento carrega `source: FactSource.INFERRED` em vez de `DECLARED`. Nesse modo
@@ -659,6 +722,49 @@ medscall (`events/ChatEvent.ts:19-36`) — é ele que o `flush()` materializa co
    - Caso degenerado, e a AC-6.4 mede este: run de um agent **com escopo de tool** que declara
      `complete_issue` **e** também termina normalmente → **exatamente um**
      `integration.issue.completed` no outbox.
+8. **O fato de uso é cunhado UMA VEZ, do agregado terminal, e carrega os QUATRO baldes.**
+   *(Regra acrescentada em 27-jul pela divergência D4 do smoke da Fase 2 — o `AgentUsageEvent`
+   congelado na Fase 1 tinha só `{inputTokens, outputTokens}`, o que é uma falha de correção, não de
+   estilo.)*
+
+   **Uma vez, do `result`:** não existe frame `usage` (ver a emenda da taxonomia acima). Usage
+   aparece por-assistant em `message.usage` **e** agregado no frame terminal. O accumulator emite
+   `AgentUsageEvent` **só** no frame terminal; somar as cópias por-assistant conta o mesmo token
+   duas vezes.
+
+   **Quatro baldes, porque o wire parte o input em três contadores e o simples é o MENOR.** Medido
+   em `phase2-smoke/raw/s1-text.jsonl`, um turno real: `input_tokens: 2`,
+   `cache_creation_input_tokens: 9188`, `cache_read_input_tokens: 15273` — `total_cost_usd`
+   0,0997765. Persistir só `inputTokens` gravaria **2** para **~24,5k** de input efetivamente
+   consumido: a quota por custo, que a §4.3 declara ser o propósito deste evento, erraria por ~3
+   ordens de grandeza. Total de input do turno =
+   `inputTokens + cacheCreationInputTokens + cacheReadInputTokens`.
+
+   **Os quatro campos são OBRIGATÓRIOS, não opcionais.** Um provider que não cacheia contribui `0`
+   nos dois baldes de cache — o que é **aritmeticamente correto**, não "desconhecido": sem cache,
+   todo o input cai em `inputTokens` e a soma continua valendo. Campo opcional reintroduziria em
+   silêncio exatamente a perda que esta regra corrige, toda vez que fosse omitido.
+
+   **Continua SEM `costUsd` e sem moeda — e D4 REFORÇA essa escolha em vez de contradizê-la.** Os
+   quatro baldes precificam de forma diferente (um cache read é ~1 ordem de grandeza mais barato que
+   um input token fresco). Guardar os baldes é o que permite ao leitor aplicar uma tabela de preço
+   revisável; guardar um `costUsd` congelaria a tabela de hoje dentro do registro durável. O FATO é
+   a contagem de token; o preço é política de quem lê.
+
+   **Custo de contrato: ZERO — é aditivo sobre evento de domínio context-private** (`agent.turn.*`,
+   nunca `integration.*`), permitido explicitamente pela regra 5 da §8. Não passa por TypeSpec, não
+   aparece na OpenAPI, não tem contraparte de wire.
+9. **Frame BEM-FORMADO porém DESCONHECIDO é descartado em silêncio e NUNCA aborta o drain.**
+   *(Regra acrescentada em 27-jul pela divergência D6 — mais forte, e mais load-bearing, do que
+   "linha não-JSON é ignorada".)* O corpus tem **dez** tipos de frame que a taxonomia não nomeia:
+   `system/{hook_started,hook_response,status,thinking_tokens,task_started,task_progress,task_updated,task_notification}`,
+   `rate_limit_event` e `stream_event`. Não são hipotéticos: `system/hook_started` +
+   `system/hook_response` e `rate_limit_event` aparecem nas **quatro** capturas, disparados pelos
+   `SessionStart` hooks do próprio usuário, inlinando ~4KB de stdout de hook. É **ruído ambiental
+   que o CodeDM não controla** — muda com a máquina, com o `~/.claude` do usuário e com a versão do
+   CLI. Um codec que trate frame desconhecido como erro morre em runs reais na primeira máquina com
+   hook configurado. Nota de escopo: `--bare` pularia os hooks ao custo de CLAUDE.md/plugins — é
+   decisão de `ProviderDef`, **não** do codec, e não substitui esta regra.
 
 ### 4.4 O servidor MCP do CodeDM — como o agent declara
 
@@ -1729,6 +1835,16 @@ Codec JSONL line-buffered (~150 LOC) + `StreamJsonAgentRunner.run()` + o
 `StreamJsonToTurnFactAccumulator` (fold puro, §4.3). `TerminalLLMRunner.generate`/`stream` viram
 **adaptadores finos** sobre `run()` — os dois consumidores atuais não mudam ainda.
 
+> **EMENDA 27-jul — o gate JÁ RODOU (`bf217a2a`) e o resultado é vinculante.** O smoke real está
+> commitado em `.specs/codedm/phase2-smoke/`; **não re-rodá-lo** e **não reabrir a taxonomia**. As
+> divergências medidas foram dobradas no corpo do documento: §4.3 (taxonomia `AgentFrame`, regras 5,
+> 8 e 9), AC-2.1 e AC-2.2. Ler §4.3 **depois** das emendas, não antes.
+>
+> **O orçamento de ~150 LOC continua valendo, mas cobre um passo a mais do que parecia:** o fan-out
+> sobre `message.content[]` (D3). `tool_use`/`tool_result`/`text`/`thinking` são content blocks, não
+> frames — se ao implementar o codec o fan-out estourar o orçamento, **o orçamento cede, a taxonomia
+> não**. "~150 LOC" é estimativa, as regras da §4.3 são contrato.
+
 **Decision gate obrigatório antes de codificar** (o padrão medscall de "validar o adapter upstream
 antes de construir sobre ele"): script de smoke em **`.specs/codedm/phase2-smoke/`** que roda o
 `claude` **instalado de verdade**, **num processo filho independente** (`child_process.spawn`, sem
@@ -1745,25 +1861,62 @@ ajustar a taxonomia — o spec é estudo de produto de terceiro, não observaç�
 estiver no PATH, estiver deslogado, ou a invocação for barrada por aninhamento: registrar
 **`ATTEMPT-FAILED`** no BUILD-LOG com o comando e o erro literais, seguir com os frames **enlatados
 derivados do spec** (`2026-07-26-agent-driving-stream-json.md:14-25`), marcar **só a AC-2.1** como
-`PARKED-com-findings`, e **continuar a fase**. AC-2.2 a AC-2.6 **não degradam** — elas rodam sobre
+`PARKED-com-findings`, e **continuar a fase**. AC-2.2 a AC-2.7 **não degradam** — elas rodam sobre
 frames enlatados por construção e continuam sendo gate duro.
 
-**AC-2.1** Artefato de smoke commitado com frames **reais**, cobrindo no mínimo: `system_init`,
-`assistant_text`, `tool_use`, `tool_result`, `result`, **`usage`** e um caso com
-**`parent_tool_use_id` não-nulo** (sub-agent `Task`). **Única AC degradável desta fase** — se o
-`claude` real não for alcançável, ver a regra de saída acima: os frames enlatados passam a ser
-derivados do spec e **carimbados no cabeçalho do arquivo** como `SOURCE: spec-derived (ATTEMPT-FAILED)`,
-nunca apresentados como observação nossa.
-**AC-2.2** Testes do codec sobre frames enlatados: turno normal; sub-agent `Task` cujo `end_turn`
-**não** fecha o run (guarda `parent_tool_use_id`); `stopReason === TOOL_USE` não fecha; `tool_use`
-órfão vira `AgentToolCallEvent` FAILED no `flush()`; JSON truncado a meio de linha; linha não-JSON
-ignorada sem derrubar o drain.
+**AC-2.1** ✅ **CUMPRIDA em `bf217a2a`** (não credita a tentativa seguinte de codec; ver a nota de
+reconciliação da §8 regra 1). Artefato de smoke commitado com frames **reais**, cobrindo no mínimo:
+`system_init`, `assistant_text`, `tool_use`, `tool_result`, o `result` terminal com `stop_reason`,
+**o agregado de `usage`** e um caso com **`parent_tool_use_id` não-nulo** vindo de um sub-agent real.
+**Única AC degradável desta fase** — se o `claude` real não for alcançável, ver a regra de saída
+acima: os frames enlatados passam a ser derivados do spec e **carimbados no cabeçalho do arquivo**
+como `SOURCE: spec-derived (ATTEMPT-FAILED)`, nunca apresentados como observação nossa.
+
+> **EMENDA 27-jul (D4/D5).** O texto original pedia um **frame `usage`** e chamava o sub-agent de
+> `Task`. Os dois eram insatisfazíveis como escritos e foram corrigidos acima:
+> **(a)** não existe frame `usage` — o que se exige é o **agregado** (`usage` no frame terminal
+> `result`), e é isso que a captura tem;
+> **(b)** o sub-agent é despachado por uma tool **emitida** com o nome `Agent`, enquanto
+> `system/init.tools` anuncia `Task` (medido: `'Task' in tools` → `True`, `'Agent' in tools` →
+> `False`, e o bloco `tool_use` emitido tem `name: "Agent"`). Nome anunciado e nome emitido
+> **discordam** neste build. **Nada pode chavear em nenhum dos dois literais** — a relação de
+> sub-agent é carregada por `parent_tool_use_id`, que é independente de nome.
+
+**AC-2.2** Testes do codec sobre frames enlatados: turno normal; **fan-out de `content[]`** (um
+frame `assistant` com vários blocos vira vários `AgentFrame`; `tool_result` sem `is_error` é
+`ok: true`; `tool_result.content` aceita string **e** array); um sub-agent cujo trabalho **não**
+fecha o run; `stopReason === TOOL_USE` não fecha; `tool_use` órfão vira `AgentToolCallEvent` FAILED
+no `flush()`; JSON truncado a meio de linha; linha não-JSON ignorada sem derrubar o drain; **e frame
+bem-formado de tipo DESCONHECIDO descartado em silêncio sem abortar o drain** (§4.3 regra 9 — usar
+`system/hook_response` e `rate_limit_event`, que aparecem nas quatro capturas reais).
+
+> **EMENDA 27-jul (D1/D5/D6) — três correções, e a primeira muda o que o teste prova.**
+> **(a)** A parte "sub-agent cujo `end_turn` **não** fecha o run (guarda `parent_tool_use_id`)"
+> descrevia um modo de falha que **não existe** neste build: o sub-agent **não emite frame `result`
+> nenhum**, e `stop_reason` é `null` em **todos** os frames `assistant` do corpus. O risco real é o
+> **oposto** — o run **nunca** fechar (§4.3 regra 5). O teste deve provar que o **escopo** do
+> sub-agent não contamina o transcript do agent principal (chaveado por `parent_tool_use_id`) **e**
+> que o único frame `result` fecha o turno. Manter também um caso sintético com
+> `stopReason === TOOL_USE`, ciente de que ele é **não-falsificado** e não medido.
+> **(b)** As fixtures **não podem** codificar `Task` como nome de tool (ver AC-2.1 emenda (b)).
+> Nenhuma asserção pode chavear no nome — só em `parent_tool_use_id`.
+> **(c)** O caso de frame desconhecido foi promovido de implícito a **exigido**: é a regra que
+> mantém runs reais vivos em máquinas com hooks configurados.
 **AC-2.3** Structured output validado no evento terminal; falha → `failed: true`, **nunca** throw —
 teste que **drena até o fim** depois da falha e conta os eventos.
 **AC-2.4** Guarda anti-double-publish testada: frames `tool_use`/`tool_result` com prefixo
 `codedm__` produzem **frame e nenhum fato** (§4.3, regra 3).
 **AC-2.5** O accumulator é **puro**: `git grep -n "child_process\|spawn(\|fs\." -- packages/api/typescript/src/terminal/services/StreamJsonCodec` → **0 hits**.
 **AC-2.6** `bun tsc` + `bun run test` + `bun e2e` verdes — comportamento visível inalterado.
+**AC-2.7** *(acrescentada em 27-jul pela divergência D4; §4.3 regra 8)* **O fato de uso é cunhado uma
+única vez e não é lossy.** Sobre uma sequência enlatada com **múltiplos** frames `assistant`, cada um
+carregando seu próprio `message.usage`, mais o frame terminal com o agregado: o accumulator emite
+**exatamente UM** `AgentUsageEvent`, e seus quatro campos são os do **agregado terminal** — nenhuma
+soma das cópias por-assistant. O teste usa os números reais medidos
+(`input_tokens: 2`, `cache_creation_input_tokens: 9188`, `cache_read_input_tokens: 15273`) e asserta
+que **`cacheCreationInputTokens` e `cacheReadInputTokens` chegaram ao evento** — é a asserção que
+falharia contra o contrato congelado na Fase 1 e que prova que a correção de D4 foi aplicada de
+ponta a ponta, e não só no schema.
 
 ### Fase 3 — Virar os dois consumidores e matar o split
 
@@ -2131,6 +2284,28 @@ Herdadas de `OVERNIGHT-GOAL-2026-07-24-go-domain-port.md:68-91`, atualizadas ao 
    que fecha a Fase 0: `git checkout -b agent-abstraction sqlite-shared-store`. Nome fixado aqui de
    propósito — não é escolha do executor. Zero push; as duas branches ficam locais.
 
+   **RECONCILIAÇÃO 27-jul — a regra foi violada duas vezes e a direção do conserto fica escrita
+   AQUI.** Dois commits que pertencem às Fases 1–2 pousaram em `sqlite-shared-store` em vez de
+   `agent-abstraction`: **`5db67af7`** (reparo do contrato da Fase 1) e **`bf217a2a`** (smoke do
+   decision gate da Fase 2). O efeito foi grave, não cosmético: **o contract lock e o reparo A esse
+   contract lock ficaram em branches opostas**, e a Fase 2 acabou despachada contra a branch que
+   **não** tinha `terminal/types/`, `terminal/providers/`, `terminal/mcp/`, nem os enums e eventos de
+   agent — isto é, contra uma árvore onde a fase era literalmente impossível. O executor daquela
+   tentativa **parou em vez de recriar na branch errada os arquivos congelados**, e isso é o
+   comportamento certo: recriá-los teria produzido uma segunda cópia divergente de um value-set
+   deliberadamente congelado (o que a regra 5 proíbe) e um merge conflitado depois.
+
+   **Direção fixada, sem ambiguidade: `agent-abstraction` é o tronco das Fases 1–7**, exatamente como
+   esta regra já dizia — a regra não muda, o que muda é que a violação está registrada.
+   `sqlite-shared-store` está **fechada na Fase 0** e não recebe mais commit. A reconciliação foi
+   feita por **merge** (de `agent-abstraction`, `git merge sqlite-shared-store`; merge-base
+   `7fda274f`, sem conflito), preservando a autoria dos dois commits desgarrados em vez de recriá-los.
+
+   **Regra de despacho derivada, para que não se repita:** todo brief de fase nomeia a branch **e** o
+   executor verifica o **ESTADO da árvore**, não só o nome — concretamente, que as entregas
+   congeladas da fase anterior existem no `HEAD`. Nome certo com árvore vazia **é drift**, e drift
+   descoberto **para a fase** (regra 10); nunca se contorna drift recriando artefato congelado.
+
    **Estado da árvore no início — não é violação, é o passo zero.** Este goal assume `git status`
    limpo **a partir do primeiro commit**, e esse primeiro commit é justamente o dos documentos de
    partida: **este arquivo** (`.specs/codedm/GOAL-agent-abstraction.md`, hoje modificado) e o plano
@@ -2160,6 +2335,22 @@ Herdadas de `OVERNIGHT-GOAL-2026-07-24-go-domain-port.md:68-91`, atualizadas ao 
 7. **`--no-verify` só com gates à mão e justificados no commit.** **Pathspec staging**, nunca
    `git add -A`. **BUILD-LOG por fase.** Commits convencionais. `git mv` preserva história.
    **Tudo local: zero push/fetch.**
+
+   **EMENDA 27-jul — o BUILD-LOG estava sendo perdido por um conflito ESTRUTURAL, não por
+   desleixo.** Constatado: a última entrada era `2026-07-27 — BLOCO 5 (T32–T34)`, da Fase 0; nem o
+   smoke da Fase 2 nem a tentativa abortada tinham entrada. A causa é que o harness dos agentes de
+   fase **proíbe autorar arquivos `.md` de report/summary/findings**, então cada agente de fase
+   redescobre o conflito e resolve pulando o BUILD-LOG — que é justamente o que o critério de
+   conclusão 15 trata como falha de goal. Fica resolvido em três linhas:
+   - **`.specs/codedm/BUILD-LOG.md` NÃO é um "report file". É um LEDGER RASTREADO e uma entrega
+     contratual da fase**, no mesmo naipe do código. A proibição de report files não se aplica a ele,
+     e o brief de despacho de cada fase **deve dizer isso literalmente** para desarmar a heurística.
+   - **Fallback obrigatório se o executor ainda assim não puder escrevê-lo:** ele devolve a entrada
+     **pronta, em texto, no relatório final**, e o **orquestrador** a escreve e commita. Fase sem
+     entrada de BUILD-LOG **não fecha** — nem por esse caminho nem por nenhum outro.
+   - Entrada de fase **PARKED/abortada também é entrada**: registra o que foi medido, por que parou e
+     o que o próximo executor precisa saber. Foi a ausência dessa entrada que fez a mesma violação de
+     branch (regra 1) passar despercebida por dois commits.
 8. **Nenhum teste spawna um CLI de verdade.** O seam de DI por env já garante isso
    (`registry.ts:22-27`) e continua garantindo. O único contato com o binário real são os scripts de
    smoke das Fases 2, 3 e 6, commitados como artefato.
@@ -2178,7 +2369,7 @@ Herdadas de `OVERNIGHT-GOAL-2026-07-24-go-domain-port.md:68-91`, atualizadas ao 
    4. **Isto não é decisão de founder** e não vai para `OVERNIGHT-BLOCKED.md`.
 
    **ACs que degradam por esta regra — nominalmente, e só estas:** **AC-2.1** (substituto: frames
-   enlatados derivados do spec; AC-2.2…AC-2.6 seguem duras), **a metade de smoke da AC-3.6**
+   enlatados derivados do spec; AC-2.2…AC-2.7 seguem duras), **a metade de smoke da AC-3.6**
    (substituto: o mesmo fluxo pelo `E2eStubAgentRunner`; a metade de gates segue dura) e **AC-6.1**
    (substituto: AC-6.2, que é determinística por construção; AC-6.2…AC-6.10 seguem duras). **A
    AC-0.5 NÃO degrada** — ela não usa `claude`, só os dois sidecars nossos, e é o gate da Fase 0.

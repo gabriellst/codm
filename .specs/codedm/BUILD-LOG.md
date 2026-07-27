@@ -1543,3 +1543,166 @@ tinha exatamente essa carve-out; para o par de path, não). `bun test` voltou a 
 
 Fase 2 — `StreamJsonCodec` + `run()` por baixo do token antigo. Ela é quem fecha o CD-4 (o
 accumulator constrói os três `AgentTurnFact`) e quem passa a consumir `AgentStopReason`.
+
+---
+
+# FASE 2 — DECISION GATE (smoke real) — 27 jul 2026
+
+**Commit:** `bf217a2a` · **Branch de origem:** `sqlite-shared-store` (**violação da §8 regra 1** —
+reconciliado depois; ver a entrada seguinte) · **AC coberta:** AC-2.1 ✅ **não degradada**
+
+Entrada devida e não escrita na época. O smoke rodou o `claude` **instalado** (2.1.220,
+`/Applications/cmux.app/Contents/Resources/bin/claude`) em modo headless stream-json bidirecional,
+num filho independente (`spawn`, `shell:false`, `detached:true`, ambiente limpo de todo
+`CLAUDE*`/`ANTHROPIC*`/`CMUX*`, `mkdtemp` por cenário). 4 cenários, **exit 0**, zero stderr, zero
+linha não-JSON. **SOURCE: REAL CAPTURE** — a rota de degradação da regra 8-bis **não** foi usada.
+
+Artefato: `.specs/codedm/phase2-smoke/{capture.ts,stdin-hold-control.ts,representative-frames.md,raw/}`.
+46 linhas de JSONL cru em 4 arquivos, todas válidas.
+
+## As 8 divergências entre o spec e a realidade medida
+
+O spec (`2026-07-26-agent-driving-stream-json.md`) é **estudo de produto de terceiro**, não
+observação nossa. Divergiu em 8 pontos; 3 deles quebrariam o codec:
+
+| # | Sev | O que o spec dizia | O que a medição mostrou |
+|---|---|---|---|
+| D1 | CRÍTICA | turn-end guardado por `result && parentToolUseId == null` | **`result` não tem a chave `parent_tool_use_id`** (`False` nas 4 capturas, inclusive a de sub-agent). Guarda literal = **hang**. Invariante sobrevive mais forte: sub-agent **não emite `result`** → 1 `result` por run |
+| D2 | CRÍTICA | `stop_reason` por mensagem | `stop_reason` é **`null` em todo frame `assistant`**. A metade `!== TOOL_USE` da guarda fica **NÃO-FALSIFICADA**, não verificada |
+| D3 | CRÍTICA | `tool_use`/`tool_result`/`text`/`thinking` são frames | São **content blocks** em `message.content[]`; um frame carrega vários → o codec precisa de **fan-out** real. `is_error` **ausente** no sucesso; `content` ora string, ora array |
+| D4 | ALTA | existe frame `usage` com `{input,output}` | **Não existe frame `usage`.** É campo (`message.usage` + agregado no `result`), com **4 baldes**: `input_tokens: 2` vs `cache_creation: 9188` + `cache_read: 15273` |
+| D5 | ALTA | sub-agent é a tool `Task` | Emitida como **`Agent`**; `init.tools` anuncia **`Task`**. Nomes anunciado e emitido **discordam** — nada pode chavear em literal |
+| D6 | MÉDIA | linha malformada é ignorada | Existem **10 tipos de frame não nomeados**; `hook_started`/`hook_response`/`rate_limit_event` nas **4** capturas (hooks do próprio usuário, ~4KB). Regra necessária: frame **bem-formado desconhecido** é descartado em silêncio |
+| D7 | MÉDIA | deltas no topo | Aninhados em `stream_event.event`; `message_delta.delta.stop_reason` é o **único** stop_reason por mensagem que existe. Frame consolidado chega **antes** do `content_block_stop` → de-dupe por id |
+| D8 | BAIXA | — | `init.model` = `claude-opus-5[1m]`, `message.model` = `claude-opus-5`. Ambos strings opacas; `AgentModelId` é vocabulário de **request**. **Nenhuma mudança de enum.** |
+
+## Contrafactual do turn-end (o achado que torna o watchdog obrigatório)
+
+`raw/stdin-hold-control.json` — segurando o stdin **aberto** depois do frame terminal, o filho
+seguia **vivo 17358 ms depois**, com `framesAfterTerminal: 0`. **`stdin.end()` É o ato que encerra o
+turno.** Logo um codec que erra o turn-end **vaza um processo `claude` vivo**, não apenas demora. No
+caminho normal o exit veio em 379–580 ms; o kill por process-group não deixou processo órfão.
+
+---
+
+# FASE 2 — TENTATIVA ABORTADA (drift de branch) + RODADA 1 DE FIX — 27 jul 2026
+
+**Branch:** `agent-abstraction` (tronco correto das Fases 1–7, §8 regra 1) · **Status da fase:**
+ainda **NÃO INICIADA** — nenhum codec existe. Esta entrada registra por que ela não começou e o que
+foi consertado para que possa começar.
+
+## O que aconteceu (CD-5) — a fase foi despachada contra uma árvore onde era impossível
+
+A Fase 2 foi despachada contra `sqlite-shared-store`. Todo o contract lock da Fase 1 vive em
+`agent-abstraction`. Verificado no HEAD de `sqlite-shared-store`: `src/terminal/` **sem** `types/`,
+`providers/`, `mcp/`; `enums/` só com os 6 enums pré-existentes de Terminal; `events/` só com os 7
+`Terminal*`. O executor **parou em vez de recriar os arquivos congelados na branch errada** — e isso
+é o comportamento certo: recriar teria produzido uma **segunda cópia divergente de um value-set
+congelado** (§8 regra 5) e um merge conflitado. Nenhuma linha de código foi escrita, o que é o
+motivo de as checagens de "o codec faz X" terem sido não-verificáveis por ausência.
+
+**Causa raiz, e ela é anterior:** `5db67af7` (reparo do contrato da Fase 1) e `bf217a2a` (o smoke
+acima) pousaram em `sqlite-shared-store` violando a §8 regra 1 — **o contract lock e o reparo A esse
+contract lock ficaram em branches opostas**. Sem entrada de BUILD-LOG para nenhum dos dois, a
+violação passou despercebida por dois commits.
+
+## Consertos desta rodada
+
+**1. CD-5 — branches reconciliadas.** `git merge sqlite-shared-store` a partir de
+`agent-abstraction` (merge-base `7fda274f`, **sem conflito**, `merge-tree --write-tree` exit 0),
+preservando a autoria dos dois commits desgarrados. Direção **escrita na §8 regra 1**:
+`agent-abstraction` é o tronco das Fases 1–7; `sqlite-shared-store` está fechada na Fase 0. Regra de
+despacho derivada: verificar o **ESTADO** da árvore, não só o nome da branch.
+
+**2. CD-8 — §4.3 regra 5 reescrita (a guarda era um hang).** A correção de D1 existia só no corpo da
+mensagem de `bf217a2a`; quem lesse o **documento** ainda lia a guarda que trava. Agora está no
+documento: turn-end é `kind:'result' && stopReason !== TOOL_USE`, **sem** a metade
+`parentToolUseId == null`, com o invariante mais forte (sub-agent não emite `result`) escrito junto.
+`parentToolUseId` foi para `assistant_text`/`tool_result`, que é onde ele existe. Registrado
+explicitamente que a metade `!== TOOL_USE` é **não-falsificada** — quem reportar a Fase 2 **não pode
+apresentá-la como medida**. §3 (linha ~301), que repetia a guarda antiga, também foi corrigida.
+
+**3. CD-7 — taxonomia `AgentFrame` corrigida.** Frame `usage` **removido** da união (não existe);
+`AgentTurnUsage` nasce como o agregado carregado pelo `result`. Registrado o fan-out sobre
+`content[]` (D3) com os dois detalhes que quebram o codec se ignorados (`is_error` ausente no
+sucesso; `content` string **ou** array). AC-2.1 emendada (pedia um frame que nunca chega) e marcada
+✅ cumprida por `bf217a2a`. Nota explícita: **o orçamento de ~150 LOC cede, a taxonomia não.**
+
+**4. CD-6 — `AgentUsageEvent` deixou de ser lossy.** Era
+`{inputTokens, outputTokens}` e a própria docstring o designava base durável para quota por custo.
+Contra os bytes: um turno real reporta `input_tokens: 2` ao lado de `cache_creation: 9188` e
+`cache_read: 15273` — **2 gravados para ~24,5k consumidos**, erro de ~3 ordens de grandeza.
+Acrescentados `cacheCreationInputTokens` + `cacheReadInputTokens`, **obrigatórios** (opcional
+reintroduz a perda em silêncio; provider sem cache manda `0`, o que é **aritmeticamente correto**).
+Docstring corrigida: cunhado **uma vez, do agregado terminal** — não dos frames `usage` que não
+existem. **Não virou decisão de founder:** a docstring original já punha preço no leitor, e D4
+**reforça** essa escolha (os 4 baldes precificam diferente), então a correção é completar o FATO,
+não escolher política de preço. **Custo de contrato ZERO** — evento de domínio context-private;
+`bun run contracts` + `bun sdk` 2× não moveram um byte gerado, o que prova a afirmação em vez de
+afirmá-la. Nasce a **AC-2.7** (um único evento, com os 4 campos vindos do agregado terminal).
+
+**5. D5/D6 — AC-2.2 endurecida.** Proibido fixture chavear no literal `Task` (a tool é emitida como
+`Agent`); o caso de sub-agent passa a provar **escopo por `parent_tool_use_id`**, não um `end_turn`
+que não existe; e **frame bem-formado desconhecido descartado sem abortar o drain** virou caso
+**exigido** (§4.3 regra 9), usando `hook_response`/`rate_limit_event`, que aparecem nas 4 capturas.
+
+**6. CD-9 — o BUILD-LOG tinha causa ESTRUTURAL, não desleixo.** O harness dos agentes de fase proíbe
+autorar `.md` de report/findings, então cada agente redescobre o conflito e pula o BUILD-LOG — que o
+critério 15 trata como falha de goal. §8 regra 7 emendada: o BUILD-LOG **não é report file, é ledger
+rastreado e entrega contratual**; o brief de cada fase deve dizer isso literalmente; e há fallback
+(executor devolve a entrada pronta, orquestrador commita). **Fase PARKED também deve entrada** — foi
+a ausência dela que deixou o drift de branch invisível.
+
+## ACHADO NOVO, não pedido: um teste VERMELHO no HEAD da Fase 1
+
+Rodando os gates neste tronco, `tests/architecture/console-discipline.test.ts` estava **falhando** —
+`SystemProviderDetector.ts:166` usava `console.warn` cru. Introduzido por `b8a98980`, **o último
+commit da Fase 1**, que é o commit de fix pós-juízes e aparentemente **não foi re-gateado**. A Fase 1
+foi reportada verde (685/0); no HEAD real ela estava 689/1.
+
+**Consertado na raiz, não por exceção.** A classe é `@injectable()` e resolvida do container no env
+`real` → recebe `LoggingService` no construtor, igual a `SessionPrewarmService`. **Não** é código de
+bootstrap/DI-less, que é a única coisa que aquele guard isenta — adicionar uma EXEMPTIONS entry teria
+sido exatamente o afrouxamento que a §8 regra 2 proíbe. `ProviderDetector.test.ts` passa
+`MockLoggingService`. Motivo real, além da regra: um `console.*` aqui **nunca chega ao Loki** e não
+carrega correlação de trace, e uma degradação de provider é diagnosticada de log, depois do fato,
+numa máquina que ninguém está olhando.
+
+## DÉBITO REGISTRADO (não absorvido em silêncio)
+
+`entity#bp-03` é **largo demais**: o regex é `\{\s*message:\s*['"]` mas o nome da própria regra diz
+"`in .refine()`". Ele já produz um **falso positivo pré-existente** dentro da baseline aceita —
+`SessionPrewarmService.ts:55`, que é uma chamada de `LoggingService`, não um refinement. O log novo
+foi escrito com o discriminador (`probe`) antes do `message` — o que é boa prática de log
+estruturado por si só — e a baseline ficou intacta. **Não mexi na regra**: é tooling compartilhado
+(`review` + hooks) e mudá-la numa rodada de fix é blast radius indevido. **Follow-up:** estreitar o
+`detect` de `bp-03` para exigir contexto `.refine(`/`.superRefine(`, o que deve derrubar a baseline
+de 24 → 23 erros.
+
+## GATES (rodados de verdade, nesta árvore)
+
+```
+bun tsc                                       EXIT=0
+bun run test (raiz, 4 projetos)               EXIT=0   690 pass / 0 fail / 121 arquivos
+bun lint                                      EXIT=0
+bun test:tooling                              EXIT=0   298 pass / 0 fail / 19 arquivos
+bun run contracts + bun sdk (2×)              EXIT=0   idempotente — ZERO arquivo gerado alterado
+nx run app-react:tsc                          EXIT=0
+nx run e2e:tsc                                EXIT=0
+go build/vet/test  (packages/api/go)          EXIT=0
+go build/vet/test  (packages/api/go/core)     EXIT=0
+RUNTIME e2e (bun scripts/run-e2e.ts)          EXIT=0   5 passed / 2 skipped  ← inalterado
+bun run detect                                40 finding(s) / 24 error       ← BASELINE, não cresceu
+```
+
+**Baseline de `detect` medida, não presumida.** Revertendo os 4 arquivos `.ts` para o HEAD e
+re-rodando: **40/24** — idêntico. Numa versão intermediária deste trabalho ela subiu para 41/25 (o
+falso positivo `bp-03` acima) e isso foi **corrigido, não aceito**. Nota: os 40/24 do brief foram
+medidos em `sqlite-shared-store`; por coincidência o número bate nas duas branches.
+
+## PRÓXIMO PASSO
+
+Fase 2 pode ser despachada — **pinada em `agent-abstraction`** — contra a §4.3 **já emendada**
+(taxonomia + regras 5, 8 e 9) e as AC-2.1…AC-2.7. **Não re-rodar o smoke** e **não reabrir a
+taxonomia**: `bf217a2a` é o gate, já cumprido.
+
