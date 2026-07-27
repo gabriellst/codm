@@ -5,9 +5,8 @@
 // "done", and a prune written against age alone would silently drop undelivered events.
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { asc } from 'drizzle-orm'
 import { TestBed } from '@test/support'
-import { DrizzleClient, DrizzleDatabaseDriver } from '@codedm/core-typescript'
+import { DrizzleDatabaseDriver } from '@codedm/core-typescript'
 import { outbox } from '@codedm/contracts/db'
 import { PruneOutbox } from './PruneOutbox'
 
@@ -16,14 +15,12 @@ const DAY_MS = 24 * 60 * 60 * 1000
 describe('PruneOutbox (integration)', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
 	let driver: DrizzleDatabaseDriver
 	let prune: PruneOutbox
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: 'prune-owner' })
-		db = testBed.resolve(DrizzleClient)
 		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 
@@ -50,7 +47,10 @@ describe('PruneOutbox (integration)', () => {
 		)
 	}
 
-	const remainingIds = async () => (await db.select({ id: outbox.id }).from(outbox).orderBy(asc(outbox.id))).map(r => r.id)
+	// Reads go through the probe — the ONE seam authorized to resolve DrizzleClient
+	// (tests/architecture/probe-discipline). Writes above use the driver's write seam, which is the
+	// sanctioned raw-DB use for a seed.
+	const remainingIds = async () => (await testBed.probe().outboxRows()).map(row => row.id).sort((a, b) => a.localeCompare(b))
 
 	it('deletes tombstones older than the window, keeps newer ones, and NEVER touches an unprocessed row', async () => {
 		const now = Date.now()
