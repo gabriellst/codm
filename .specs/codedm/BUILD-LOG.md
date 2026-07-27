@@ -1318,3 +1318,228 @@ write-up em `.specs/codedm/OVERNIGHT-BLOCKED.md`. Fora do gate set desta rodada.
 Fase 0 segue **encerrada**, agora sem o resíduo de autoria em Postgres. Um substrato, um dialeto,
 um diretório de schema, uma ledger — e nenhum comando documentado que fale com um banco que não
 existe mais.
+
+---
+
+# FASE 1 — CONTRACT LOCK (GOAL-agent-abstraction §7) — 27 jul 2026
+
+**Branch:** `agent-abstraction`, criada a partir do HEAD de `sqlite-shared-store` (`7fda274f`),
+exatamente como manda §8 regra 1 ("nome fixado aqui de propósito — não é escolha do executor").
+Zero push, zero fetch, `main` intocada.
+
+**Natureza da fase:** ADITIVA. Nenhum call-site migrado, `buildCommand`/`oneshot.ts` vivos e
+intocados, `TerminalLLMRunner/` com **0 inserções e 0 deleções**. O que nasce aqui é vocabulário
+congelado, não comportamento.
+
+## O que nasceu
+
+| Área | Artefato |
+|---|---|
+| Wire | `wire/enums/agent-model-id.tsp` (`DEFAULT\|SONNET\|OPUS\|HAIKU`), `wire/enums/agent-stop-reason.tsp` (`END_TURN\|MAX_TOKENS\|STOP_SEQUENCE\|TOOL_USE\|PAUSE_TURN\|REFUSAL\|UNKNOWN`) + import em `main.tsp`; bindings ts/go regenerados |
+| Core | `BaseAgentInputSchema` + o verbo `z.agentInput()` em `core/src/utils/schema/ExtraTypes.ts`, ao lado de `z.domainEvent`/`z.integrationEvent`; re-export no barrel `utils/schema/index.ts` |
+| `types/` | `AgentInput.ts` (`AgentInputEnvelope`, `AgentInputSchemaConstraint`), `AgentMcpInvocation.ts`, barrel |
+| `mcp/` | `RunTokenService.ts` (**assinatura apenas** — `mint`/`verify`/`revoke` + `RunTokenClaims`), `tools/schemas.ts` (os 4 schemas Zod + `AGENT_TOOL_INPUT_SCHEMAS`), barrel |
+| `enums/` | `AgentName`, `AgentToolName` (+`CODEDM_TOOL_PREFIX`), `FactSource`, `TransportStopKind` (type + `as const` sobre `StopKind`), **`AgentMessageRole`**, **`AgentToolCallStatus`** |
+| `events/` | `AgentMessageEvent`, `AgentToolCallEvent`, `AgentUsageEvent` + a união `AgentTurnFact` |
+| `providers/` | `ProviderDef.ts` (+`ProviderCapabilities`, `ProviderBuildArgsOptions`), `registry.ts` (`PROVIDER_DEFS: Record<ProviderKind, ProviderDef>`), `defs/{claude,codex,opencode}.ts` |
+| `ProviderDetector` | estendido: `ProviderDetection.caps` + `probeCapabilities()` (probe `helpArgs` × `capabilityFlags`) |
+| Testes | `providers/registry.test.ts` (AC-1.1/1.2/1.3), `mcp/tools/schemas.test.ts` (AC-1.6), `events/AgentTurnFact.test.ts` (AC-1.7), `tests/architecture/agent-input.type-test.ts` (AC-1.4, compile-time) |
+
+## Decisões tomadas dentro da margem que o goal deixou aberta
+
+**(a) A forma final do `AgentInputSchemaConstraint` — o "escape hatch" da §4.6, resolvido e
+registrado como o goal manda.** O literal do goal **type-checa como escrito** contra o zod
+instalado (4.4.3). Verificado na fonte: `ZodObject<out Shape extends $ZodShape = $ZodLooseShape,
+out Config extends $ZodObjectConfig = $strip>` — `Config` **tem default** (`$strip`, que é
+exatamente o que `z.object()`/`.extend()` produzem), então a forma de **um** parâmetro basta;
+`Shape` é covariante (`out`), o que é o que torna `ZodObject<envelope & T>` atribuível a
+`ZodObject<envelope & ZodRawShape>`. **Nenhuma aridade extra, nenhum `interface … extends`,
+nenhum constraint estrutural alternativo foi necessário.** Forma final, verbatim:
+
+```ts
+export type AgentInputSchemaConstraint = ZodObject<(typeof BaseAgentInputSchema)['shape'] & ZodRawShape>
+```
+
+**(b) `BaseAgentInputSchema` mora em `core`, não em `agent/types/`.** O goal escreve o schema em
+`agent/types/AgentInput.ts` e o verbo `z.agentInput()` em `core/.../ExtraTypes.ts` — mas o verbo
+**precisa** estender o schema, e `core` não pode importar de `src/`. Duas saídas: duplicar o shape
+(duas verdades sobre o mesmo envelope) ou mover a definição para `core`. Escolhida a segunda, com
+`agent/types/AgentInput.ts` re-exportando — o vocabulário continua legível de onde o goal manda
+lê-lo, sem segunda verdade. Bônus: `core/src/utils/schema/index.ts` já é reexportado por
+`core/src/index.ts`, então `@codedm/core-typescript` expõe o símbolo sem tocar em nenhum arquivo
+fora da allowlist da AC-1.10.
+
+**(c) Dois enums context-private a mais do que a lista da Fase 1 nomeia: `AgentMessageRole` e
+`AgentToolCallStatus`.** Não é escopo extra — é a §8 regra 4 aplicada ao shape que o próprio §4.3
+especifica. `AgentMessageEvent` carrega `role` e `AgentToolCallEvent` carrega `status`; ambos são
+conjuntos **fechados**, e escrevê-los como `z.string()` seria exatamente o `stopReason: string` que
+a AC-1.5 proíbe. Ficaram context-private (não wire) porque nenhum dos dois cruza fronteira de
+serviço: o transcript da thread cruza como `TranscriptKind`, que é **outro** conceito (quem falou na
+conversa humana, não quem falou dentro de um turno de agent) — aliasar os dois criaria a segunda
+verdade que o canon proíbe.
+
+**(d) Os 4 schemas de tool moram em `agent/mcp/tools/`, inclusive o do `record_artifact`.** O
+**handler** do `record_artifact` continua destinado a `artifact/mcp/` (§4.4 item (ii), Fase 6) — a
+tool é controller fino do contexto DONO da escrita. Mas o **nome** e o **schema** são single-source
+aqui porque `--allowedTools` é uma lista plana e `AgentToolName` é um enum só. Registrado para que
+a Fase 6 não leia isso como permissão para mover o handler.
+
+**(e) `AgentStopReason` está congelado mas ainda não é consumido em `src/`.** Correto para uma fase
+de contract lock: quem vai carregá-lo é `AgentRunResult.stop` / o frame `result`, que nascem na
+Fase 2. A AC-1.5 pede 0 hits da forma stringly e que os dois tipos venham do binding do wire — as
+duas coisas valem.
+
+## AC-1.8 — RISCO REGISTRADO (é uma AC de registro, e este é o registro)
+
+**Não foi verificado** que `codex` e `opencode` tenham modo JSONL de streaming ou flag de config MCP
+equivalentes aos do `claude`. A resolução está no contrato, não numa promessa: os defs dos dois
+declaram a capacidade **conservadora** —
+
+```
+codex / opencode:  promptViaStdin: false · promptInputFormat: 'text' · streamFormat: 'plain'
+                   mcpConfigFlag: AUSENTE · allowedToolsFlag: AUSENTE · resumesSessionViaCli: AUSENTE
+```
+
+Consequências, todas já expressas como dado e cobertas por teste
+(`registry.test.ts › the degraded providers are subcommand prefixes, not a second code path`):
+o runner escreve o prompt e fecha o stdin, emitindo `assistant_text` por linha; a tool config
+simplesmente não é passada; um agent que **exige** tools falha nomeado (`AGENT_TOOLS_UNSUPPORTED`,
+que nasce na Fase 6 com o ripple completo de 4 paradas — **não** nesta fase, §5.1). Quando alguém
+verificar que existe um modo mais rico, a correção é **editar o def** (e talvez acrescentar um
+`eventParser`); **nunca** um branch no runner. Os dois defs mantêm `capabilityFlags` com
+`--mcp-config`/`--resume` para que a capacidade acenda sozinha se uma versão futura ganhar as flags.
+
+## AC-1.9 — pin do medscall
+
+`c58ed45677c473b0415c03cfc741fea3a00946f4` (branch `dev`,
+`/Users/work/Desktop/Projetos/medscall/software/monorepo`), gravado na nova seção
+`## Sources — pinned refs` de `.specs/codedm/source-map-and-decisions.md` com o que foi lido e por
+quê. Os arquivos nascidos dessa leitura carregam `// CONTEXT-ORIGIN:` apontando arquivo + pin
+(`core/.../ExtraTypes.ts`, `types/AgentInput.ts`, `events/AgentToolCallEvent.ts`,
+`enums/AgentToolCallStatus.ts`).
+
+## DEFEITOS DE CONTRATO ENCONTRADOS (evidência, não opinião)
+
+### CD-1 — a allowlist da AC-1.10 omite `packages/client/dist/**`, que a AC-1.5 **obriga** a mexer
+
+A AC-1.5 exige `bun sdk` idempotente 2×. `bun sdk` regenera o SDK a partir do openapi do gateway Go,
+que agora conhece os dois enums novos — logo **necessariamente** reescreve arquivos rastreados sob
+`packages/client/dist/`. A allowlist da AC-1.10 lista `packages/contracts/wire/**` e
+`packages/contracts/generated/**`, mas **não** `packages/client/dist/**`, e fecha com *"qualquer
+arquivo existente fora desta lista aparecendo no diff é violação da AC"*. As duas ACs, lidas ao pé
+da letra, são mutuamente insatisfazíveis.
+
+Evidência (saída literal, arquivos existentes tocados pelo `bun sdk`):
+
+```
+M  packages/client/dist/go/pkg/go/client.gen.go
+M  packages/client/dist/typescript/src/go/index.ts
+A  packages/client/dist/typescript/src/go/types/AgentModelId.ts
+A  packages/client/dist/typescript/src/go/types/AgentStopReason.ts
+A  packages/client/dist/typescript/src/go/zod/agentModelIdSchema.ts
+A  packages/client/dist/typescript/src/go/zod/agentStopReasonSchema.ts
+```
+
+**Resolução aplicada:** os 2 arquivos `M` ficam no diff, justificados aqui, porque a AC-1.5 é
+explícita e o conteúdo é **100% saída de gerador** (provado idempotente 2×, hashes idênticos). A
+allowlist da AC-1.10 deveria ler `packages/{contracts/wire,contracts/generated,client/dist}/**`.
+Nada foi revertido e nada foi escondido.
+
+### CD-2 — `.specs/**` também está fora da allowlist da AC-1.10, e a AC-1.9 + a §8 regra 7 obrigam
+
+A AC-1.9 manda gravar o pin em `.specs/codedm/source-map-and-decisions.md` (arquivo **existente**) e
+a §8 regra 7 manda uma entrada de BUILD-LOG por fase (`.specs/codedm/BUILD-LOG.md`, existente). Nem
+um nem outro está na allowlist. Mesma resolução: aparecem no diff, justificados por AC nominal.
+
+### CD-3 — a §4.3 manda `type` + `as const` para `TransportStopKind`; o detector `enum#bp-08` reprova exatamente isso
+
+O goal é explícito: *"`TransportStopKind` é um **subtipo em TS do wire enum**, não um enum novo —
+nenhum value-set é redeclarado (regra 5 da §8)"*, com o snippet `export type … ` + `export const
+TRANSPORT_STOP_KINDS = [...] as const`. O detector do repo discorda:
+
+```
+$ bun run detect
+packages/api/typescript/src/terminal/enums/TransportStopKind.ts:26 [error] enum#bp-08
+  — Using as const arrays instead of TypeScript enum
+```
+
+**O goal vence** (§8 regra 5 é mais forte: um `enum TransportStopKind` seria uma redeclaração de
+metade do value-set de `StopKind`, exatamente o que a regra proíbe). A regra `enum#bp-08` precisa
+ganhar a exceção "subconjunto tipado de um enum do wire". **Não foi silenciada, não foi baselinada,
+não foi contornada** — está aqui com a saída literal. `bun run detect` já saía **1** no HEAD da Fase
+0 (24 erros pré-existentes); passou a 25.
+
+### CD-4 — a Fase 1 manda declarar os 3 `AgentTurnFact` ANTES do codec; o rail SCW-01a chama isso de evento morto
+
+A lista da Fase 1 diz, com todas as letras, *"`events/` — … **antes** do codec"*. O produtor desses
+eventos é o `StreamJsonToTurnFactAccumulator`, que é entrega da **Fase 2**. Enquanto isso o
+slice-closure os classifica como erro:
+
+```
+$ bun scripts/detectors/slice-closure.ts
+packages/api/typescript/src/terminal/events/AgentMessageEvent.ts:23  [error] SCW-01a — 'agent.turn.message'  … never constructed outside tests
+packages/api/typescript/src/terminal/events/AgentToolCallEvent.ts:43 [error] SCW-01a — 'agent.turn.tool_call' … never constructed outside tests
+packages/api/typescript/src/terminal/events/AgentUsageEvent.ts:19    [error] SCW-01a — 'agent.turn.usage'     … never constructed outside tests
+40 finding(s) — SCW-01a/error: 5 (era 3 no HEAD da Fase 0: TerminalSessionIdleEvictedEvent + ThreadDetachedEvent = 2)
+```
+
+O SCW-01a **não consulta a allowlist** (`isAllowed` só é chamado para SCW-01c/01d, `slice-closure.ts:620`),
+então não existe mecanismo de supressão documentado — e inventar um seria mexer num rail para fazer
+um gate passar. **Transitório por construção: fecha na Fase 2**, quando o accumulator construir os
+três. Registrado, não escondido, não baselinado.
+
+## AC-a-AC — comandos e saídas reais
+
+| AC | Comando | Resultado |
+|---|---|---|
+| **AC-1.1** | `bun test src/terminal/providers/registry.test.ts` | **13 pass / 0 fail**, 54 expects. Cobre: argv baseline verbatim do spec; `--include-partial-messages` só com `caps.partialMessages`; `--model` omitido em `DEFAULT` e sem model, aliasado em SONNET/OPUS/HAIKU e **nunca** vazando o literal `DEFAULT`; `--resume` ⊻ `--session-id` (inclusive o caso patológico "os dois passados" → resume vence, `sess-new` ausente do argv); `--add-dir` 1× por dir; `--mcp-config`+`--allowedTools` só com `mcp` presente **E** flags declaradas; o argv "full house" comparado com `toEqual` contra a linha inteira |
+| **AC-1.2** | `git grep -n "let \|Map(" -- packages/api/typescript/src/*/providers` | **exit 1 — 0 hits.** Mais 3 testes: caps diferentes → argvs diferentes sem nenhuma mutação entre as chamadas; `buildArgs` idempotente e não muta o objeto de opções (snapshot JSON antes/depois); chamadas interleavadas não se contaminam |
+| **AC-1.3** | teste de exaustividade | `Object.keys(PROVIDER_DEFS).sort()` === `Object.values(ProviderKind).sort()`; cada `def.id` === sua própria chave; 3 kinds pinados. **Reforço além da AC:** a chave é o **membro do enum**, não `def.id` — com chave computada o `tsc` aceitava um Record incompleto (erro real visto durante a implementação: `TS2739: … missing CLAUDE_CODE, CODEX, OPENCODE`), e a exaustividade em tipo evaporava |
+| **AC-1.4** | `bun x tsc -p tsconfig.build.json --noEmit` | **EXIT 0.** `tests/architecture/agent-input.type-test.ts` lê `input.cwd.length`, `input.ownerId`, `input.issueId` sem cast, em posição **concreta** e em posição **genérica**. Prova de que o buraco é real (arquivo temporário, removido): a MESMA função sem `& AgentInputEnvelope` dá `TS18046: 'input.cwd' is of type 'unknown'` |
+| **AC-1.4(b)** | `git grep -n "as any\|@ts-expect-error" -- packages/api/typescript/src/terminal` | **exit 1 — 0 hits**, contra **0 hits** no HEAD da Fase 0 (`git grep … 7fda274f -- …` → exit 1). Sem crescimento |
+| **AC-1.5** | `git grep -n "model?: string\|stopReason: string" -- packages/api/typescript/src` | **exit 1 — 0 hits** |
+| **AC-1.5** | `bun run contracts` + `bun sdk`, 2× | 2ª passada: `diff` dos shasums de **917 arquivos** gerados (`client/dist`, `contracts/generated`, `public/docs`) → **IDENTICAL**; `git status --porcelain` byte-idêntico ao da 1ª passada |
+| **AC-1.6** | `bun test src/terminal/mcp/tools/schemas.test.ts` | **11 pass / 0 fail.** Itera `AGENT_TOOL_INPUT_SCHEMAS` (não uma lista à mão) e asserta ausência de `ownerId`/`issueId`/`threadId` nas 4 tools; mais a prova de **runtime**: `parse({summary, ownerId})` devolve `{summary}` — o modo strip do zod dropa o campo, então nem um payload malicioso entrega identidade ao handler |
+| **AC-1.7** | `bun test src/terminal/events/AgentTurnFact.test.ts` | **10 pass / 0 fail.** `instanceof BaseDomainEvent` por variante + `instanceof` da própria classe + nomes no namespace context-private (nenhum começa com `integration.`) |
+| **AC-1.8** | (registro) | Seção "AC-1.8 — RISCO REGISTRADO" acima |
+| **AC-1.9** | (registro) | `c58ed45677c473b0415c03cfc741fea3a00946f4` em `source-map-and-decisions.md` |
+| **AC-1.10** | ver bloco de gates | tsc/lint/test/e2e verdes; `git diff 7fda274f -- …/TerminalLLMRunner` → **saída vazia: 0 inserções, 0 deleções**; as 11 deleções do diff da fase inteira são todas docstring/assinatura dentro de `ProviderDetector/**` (allowlistado) mais 1 linha de markdown re-emitida. Arquivos existentes fora da allowlist: apenas os de CD-1/CD-2 |
+| **AC-1.11** | `git grep -nE "ownerId\|issueId\|threadId" -- packages/api/typescript/src/terminal/providers` | **exit 1 — 0 hits.** `AgentMcpInvocation` definido; `RunTokenService` com as 3 assinaturas `abstract` e **zero** implementação (`git grep "extends RunTokenService"` → exit 1). O seam continua sem identidade |
+
+## GATES (rodados de verdade, sem cache onde importa)
+
+```
+bun x nx reset && bun tsc                     EXIT=0   7 projetos
+bun lint                                      EXIT=0   3 projetos
+biome check (arquivos tocados, 58)            EXIT=0   "No fixes applied"
+eslint --quiet (arquivos tocados)             EXIT=0   sem saída
+bun test  (de packages/api/typescript)        EXIT=0   685 pass / 0 fail / 120 arquivos
+bun run test (raiz, 4 projetos)               EXIT=0   685 pass / 0 fail
+bun test:tooling                              EXIT=0   298 pass / 0 fail / 19 arquivos
+bun run contracts + bun sdk (2×)              EXIT=0   idempotente, 917 hashes idênticos
+nx run app-react:tsc                          EXIT=0
+nx run e2e:tsc                                EXIT=0
+go build/vet/test  (packages/api/go)          EXIT=0
+go build/vet/test  (packages/api/go/core)     EXIT=0
+RUNTIME e2e (bun scripts/run-e2e.ts)          EXIT=0   5 passed / 2 skipped  ← igual ao HEAD da Fase 0
+bun run detect                                EXIT=1   25 erros (era 24) — o +1 é CD-3, registrado
+slice-closure                                 EXIT=1   5 SCW-01a (era 2) — CD-4, transitório p/ Fase 2
+```
+
+**Comportamento inalterado, provado e não afirmado:** `git diff` de `TerminalLLMRunner/` vazio;
+o e2e de RUNTIME devolve exatamente o mesmo 5/2 do HEAD da Fase 0; nenhum consumidor foi apontado
+para os artefatos novos (nem `registry.ts` do contexto, nem `index.ts`, nem `RunTerminalSession`).
+
+## Um red real encontrado e corrigido no caminho (não um gate afrouxado)
+
+`tests/architecture/pty-isolation.test.ts` ficou **vermelho** porque a docstring do
+`providers/defs/claude.ts` escrevia o literal do caminho de transcript do CLI ao explicar que
+`--output-format stream-json` mata a leitura desse arquivo. O rail confina esse literal ao subtree
+do engine legado, e uma menção em prosa conta. **O rail não foi tocado** — a prosa foi reescrita
+para descrever o mecanismo sem soletrar o caminho (o teto do rail para o par `Bun.Terminal` já
+tinha exatamente essa carve-out; para o par de path, não). `bun test` voltou a 685/0.
+
+## PRÓXIMO PASSO
+
+Fase 2 — `StreamJsonCodec` + `run()` por baixo do token antigo. Ela é quem fecha o CD-4 (o
+accumulator constrói os três `AgentTurnFact`) e quem passa a consumir `AgentStopReason`.

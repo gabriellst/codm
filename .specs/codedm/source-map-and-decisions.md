@@ -229,3 +229,18 @@ Open reading to confirm: react kept as the web console alongside the expo native
 - Auto-archive 24h issue lifecycle + ArchiveReason (MANUAL/AUTO_24H/THREAD_DETACHED) — Job pattern is template, the rule is new.
 - Demo-data seed mode ('Explore with demo data' / 'Demo data loaded' toast) and first-run onboarding/checklist content (T01/T02).
 - Monochrome desktop design system (black/white/light-gray, black as sole action color, fully-rounded pills, bold-uppercase display headings, monospace paths/keys/terminals, fixed left sidebar + live agents-running pill) — Linear/iA/macOS register; new SYSTEM.md.
+
+## Sources — pinned refs
+
+Reference repos read for JUDGEMENT, never for bytes (`GOAL-agent-abstraction.md` §6.1: the medscall is
+a read reference in the shadcn sense, not a dependency — `medscall/sync.yaml` carries zero lines of
+runtime code and neither repo runs `bun sync:check` in CI). Every file in the agent context that was
+born from reading one of these carries a `// CONTEXT-ORIGIN:` comment naming the file and this pin.
+
+| Repo | Path on disk | Pin (40 hex) | Branch @ read | Read for |
+|---|---|---|---|---|
+| medscall | `/Users/work/Desktop/Projetos/medscall/software/monorepo` | `c58ed45677c473b0415c03cfc741fea3a00946f4` | `dev` | `agent/` context: `AgentInputSchemaConstraint` + `BaseAgentInput` + `z.agentInput()` (the constraint-erasure technique), `ChatToolCallEvent` (one event per tool invocation carrying the whole lifecycle), `ChatEventStatus` (terminal-only statuses), the one-directory-per-agent layout, and the `AgUiFrameEvent` judgement (ONE opaque wrapper per transport frame, never a class per frame type). |
+
+Recorded for **AC-1.9** (GOAL-agent-abstraction Fase 1). What was adopted and what was deliberately
+NOT adopted is enumerated in §6.2 / §6.3 of that goal — in one line: the LEXICON converges, the
+RUNTIME SEAM does not, because the two repos answer "who runs the tool loop" in opposite ways.
