@@ -1,85 +1,33 @@
-import { IconBell, IconChevronLeft, IconChevronRight, IconLayoutSidebar, IconPlus } from '@tabler/icons-react'
-import { useRouter } from '@tanstack/react-router'
-import type { ComponentProps } from 'react'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
 import { isTauri } from '@/services/utils/tauri/isTauri'
 
 /**
  * AppChrome — the integrated window title bar (VS Code style). The tauri Overlay titleBarStyle
- * (see packages/app/tauri/config/window.ts) makes the webview own the full window height with the native
- * macOS traffic lights overlaid top-left; this bar draws the app's own header in that band —
- * three zones (nav · command center · actions) woven with `data-tauri-drag-region` so the empty
- * space drags the window while the controls stay clickable.
+ * (see packages/app/tauri/config/window.ts) makes the webview own the full window height with the
+ * native macOS traffic lights overlaid top-left; this bar draws the app's own header in that band.
  *
- * Scaffold: the command center + toggles are placeholders to fill in. Window min/max/close are
- * macOS-native (traffic lights); the Win/Linux custom controls are a TODO — they need a
- * WindowService in the services DI so getCurrentWindow() stays inside the code-split tauri layer.
+ * Deliberately minimal: traffic lights and the wordmark, nothing else. `data-tauri-drag-region` is
+ * on the header AND on both spacers so the whole bar drags the window — the attribute is not
+ * inherited, so any element added here needs it too, or that patch of the bar stops dragging.
+ *
+ * Window min/max/close are macOS-native (the traffic lights). The Win/Linux custom controls remain a
+ * TODO: they need a WindowService in the services DI so getCurrentWindow() stays inside the
+ * code-split tauri layer.
  */
 export function AppChrome() {
-	const router = useRouter()
-	const { t } = useTranslation()
-	// In Overlay mode the traffic lights sit top-left — reserve room for them (only inside the shell).
-	const trafficLightPad = isTauri() ? 'pl-[78px]' : 'pl-3'
+	// In Overlay mode the traffic lights sit top-left, overlaid on the webview — reserve the band so
+	// the wordmark clears them, and mirror it on the right so the centre stays a true centre.
+	const trafficLightBand = isTauri() ? 'w-[78px]' : 'w-3'
 	return (
 		<header
 			data-tauri-drag-region
-			className="grid h-11 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-border/60 bg-route-background/70 backdrop-blur"
+			className="grid h-11 shrink-0 grid-cols-[auto_1fr_auto] items-center border-b border-border/60 bg-route-background/70 backdrop-blur"
 		>
-			{/* LEFT — nav. Padding clears the overlaid traffic lights. */}
-			<div data-tauri-drag-region className={cn('flex items-center gap-1', trafficLightPad)}>
-				<ChromeButton aria-label={t('console.back')} onClick={() => router.history.back()}>
-					<IconChevronLeft className="size-4" />
-				</ChromeButton>
-				<ChromeButton aria-label={t('console.forward')} onClick={() => router.history.forward()}>
-					<IconChevronRight className="size-4" />
-				</ChromeButton>
+			<div data-tauri-drag-region className={trafficLightBand} />
+			<div data-tauri-drag-region className="flex justify-center">
+				{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- brand wordmark, never localized (see Logo.tsx) */}
+				<span className="select-none text-sm text-muted-foreground">codedm</span>
 			</div>
-
-			{/* CENTER — command center (the "codedm" bar). Placeholder to fill in. */}
-			<div className="flex justify-center">
-				<CommandCenter />
-			</div>
-
-			{/* RIGHT — actions + (Win/Linux) window controls. */}
-			<div data-tauri-drag-region className="flex items-center justify-end gap-1 pr-3">
-				<ChromeButton aria-label={t('notifications.aria')}>
-					<IconBell className="size-4" />
-				</ChromeButton>
-				<ChromeButton aria-label={t('console.new')}>
-					<IconPlus className="size-4" />
-				</ChromeButton>
-				<ChromeButton aria-label={t('console.toggleSidebar')}>
-					<IconLayoutSidebar className="size-4" />
-				</ChromeButton>
-				{/* TODO(win/linux): <WindowControls /> (min/max/close) via a WindowService. */}
-			</div>
+			<div data-tauri-drag-region className={trafficLightBand} />
 		</header>
-	)
-}
-
-function ChromeButton({ className, ...props }: ComponentProps<'button'>) {
-	return (
-		<button
-			type="button"
-			className={cn(
-				'grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
-				className,
-			)}
-			{...props}
-		/>
-	)
-}
-
-/** Placeholder for the centered command bar (the "codedm" pill in the VS Code title bar). */
-function CommandCenter() {
-	return (
-		<button
-			type="button"
-			className="flex h-7 w-[420px] max-w-[40vw] items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60"
-		>
-			{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- brand wordmark, never localized (see Logo.tsx) */}
-			<span className="truncate">codedm</span>
-		</button>
 	)
 }

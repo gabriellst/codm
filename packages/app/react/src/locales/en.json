@@ -177,12 +177,9 @@
 		"back": "Back",
 		"footerLocal": "Open source · runs locally",
 		"footerNoAccount": "No account needed",
-		"forward": "Forward",
-		"new": "New",
 		"noThreadsYet": "No threads yet",
 		"send": "Send",
-		"threads": "Threads",
-		"toggleSidebar": "Toggle sidebar"
+		"threads": "Threads"
 	},
 	"dashboard": {
 		"activeSessions": "Active sessions",

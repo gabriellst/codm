@@ -177,12 +177,9 @@
 		"back": "Voltar",
 		"footerLocal": "Código aberto · roda localmente",
 		"footerNoAccount": "Sem conta necessária",
-		"forward": "Avançar",
-		"new": "Novo",
 		"noThreadsYet": "Nenhuma conversa ainda",
 		"send": "Enviar",
-		"threads": "Conversas",
-		"toggleSidebar": "Alternar barra lateral"
+		"threads": "Conversas"
 	},
 	"dashboard": {
 		"activeSessions": "Sessões ativas",
