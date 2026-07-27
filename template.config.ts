@@ -189,9 +189,30 @@ const DESKTOP = {
 			workspace: 'apiTs',
 			role: 'daemon',
 			portEnvKey: 'API_PORT',
-			/** Readiness probe — proves PGlite migrations ran and controllers registered. */
+			/** Readiness probe — proves the SQLite migrations ran and controllers registered. */
 			healthPath: '/v1/session',
 			build: { kind: 'bun-compile', entry: './src/index.ts' },
+			/** `libsql` (the SQLite engine under `@libsql/client`) loads a Neon/N-API prebuild through
+			 *  `@neon-rs/load`, with a `require` of the HOST TRIPLE package (`@libsql/darwin-arm64`, …)
+			 *  that no bundler can see. Bun compiles the rest of the closure INTO the binary; that one
+			 *  dynamic require is resolved at runtime from the process CWD, so the prebuild has to
+			 *  exist on disk next to the binary — hence this staging plus the `cwd` below. The triple
+			 *  is never named here: it arrives as an installed `optionalDependency` of `libsql`, which
+			 *  is exactly what makes this declaration portable.
+			 *  Declared as the ENTRY package (`@libsql/client`), not as `libsql` or the triple: the
+			 *  builder stages its transitive closure, and only that entry is resolvable from a
+			 *  workspace — `libsql` itself lives one level down in the store and does not resolve
+			 *  from here (measured). `resolveFrom` is REQUIRED too, not cosmetic: the dep is declared
+			 *  by the nested `core` package, so it resolves from `<workspace>/core` and NOWHERE above. */
+			stageNodeModules: {
+				subpath: 'daemon-runtime',
+				resolveFrom: 'core',
+				packages: ['@libsql/client'],
+			},
+			/** A `bun build --compile` binary resolves runtime `require`s from the process CWD, never
+			 *  from the executable's directory — so the shell MUST spawn it inside the staged dir.
+			 *  Without this the daemon dies with `Cannot find module '@libsql/<triple>'`. */
+			cwd: { from: 'resourceDir', subpath: 'daemon-runtime' },
 			bootEnv: {
 				API_PORT: { from: 'example' },
 				CODEDM_DATA_DIR: { from: 'dataDir' },
@@ -253,6 +274,21 @@ export interface SidecarDecl {
 	portEnvKey: string
 	healthPath: string
 	build: { kind: 'bun-compile' | 'go-build'; entry: string }
+	/** Runtime closure staged next to the binary, for what a compiled binary resolves from disk
+	 *  instead of from its own bundle: native prebuilds reached through a dynamic `require` no
+	 *  bundler can follow. Copied to `binaries/<subpath>/node_modules/<pkg>` (transitively, deps
+	 *  included) and shipped as a bundle resource. `resolveFrom` is the workspace-relative dir the
+	 *  packages resolve from (a nested package that declares them); omit for workspace-root deps.
+	 *
+	 *  ⚠️ There is deliberately NO `external` slot here, and adding one for this purpose is a trap:
+	 *  MEASURED on bun 1.3.14 — a `bun build --compile --external X` binary resolves X itself from
+	 *  the CWD, but then CANNOT resolve X's own nested `require`s (`libsql/index.js` requiring
+	 *  `@neon-rs/load` fails even with a correctly nested node_modules beside it). Letting bun
+	 *  bundle the whole JS closure and staging only the native prebuild is what actually boots. */
+	stageNodeModules?: { subpath: string; packages: readonly string[]; resolveFrom?: string }
+	/** Working directory the shell spawns this sidecar in. A compiled bun binary resolves external
+	 *  modules from the CWD, so a sidecar with `stageNodeModules` needs its cwd pointed there. */
+	cwd?: { from: 'resourceDir'; subpath: string }
 	bootEnv: Readonly<Record<string, BootEnvSource>>
 }
 export type BootEnvSource =
@@ -376,7 +412,7 @@ export const REPO = {
 			consumers: ['apiTs', 'apiGo'],
 			schema: 'kernel',
 			example: '~/.codedm/data',
-			doc: 'shared data dir for the real daemon; ~ expands to $HOME. api-go opens the SQLite store here (codedm.db + whatsmeow session tables, migrations apply on boot); api-ts still uses it for its embedded PGlite until its own move lands.',
+			doc: 'shared data dir for the real daemon; ~ expands to $HOME. BOTH sidecars open the SAME codedm.db here (api-go via modernc, api-ts via libsql; whatsmeow session tables live in the same file), and both run the same idempotent migration applier on boot in whatever order they start.',
 		},
 		REDIS_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'redis://localhost:6379' },
 		// ── Verbatim medscall channel service config (port b4530e2b) — CHANNEL_* primary keys with

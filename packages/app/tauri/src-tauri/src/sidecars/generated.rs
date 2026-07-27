@@ -7,14 +7,15 @@ pub const IDENTIFIER: &str = "app.codedm.desktop";
 
 /// Supervised sidecars — one entry per REPO.desktop.sidecars[]. Ports/env resolve from
 /// REPO.env examples at generation time; `data_dir` (app-data subdir) and `resource_dir`
-/// (bundle resource dir, for staged assets like the migrations) are the runtime paths the
-/// shell computes — the only boot-env values that cannot be generation-time literals.
+/// (bundle resource dir, for staged assets: the migrations and the external module closure)
+/// are the runtime paths the shell computes — the only values that cannot be literals.
 pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> {
     vec![
         Sidecar {
             name: "codedm-daemon",
             port: 3030,
             health_path: "/v1/session",
+            cwd: Some(resource_dir.join("daemon-runtime")),
             env: vec![
                 ("API_PORT".into(), "3030".into()),
                 ("CODEDM_DATA_DIR".into(), data_dir.into()),
@@ -27,6 +28,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
             name: "codedm-gateway",
             port: 3032,
             health_path: "/api/openapi.json",
+            cwd: None,
             env: vec![
                 ("CHANNEL_PORT".into(), "3032".into()),
                 ("CODEDM_DATA_DIR".into(), data_dir.into()),

@@ -7,11 +7,17 @@
  * Tauri resolves external binaries by `<name>-<target-triple>` next to src-tauri,
  * so outputs land in src-tauri/binaries/ with the host triple suffix.
  *
- * PGlite inside a bun single-binary was proven by the D2 spike —
- * .specs/codedm/2026-07-23-fork-d2-spike.md
+ * Shipping a SQLite engine inside a bun single-binary uses the same walk-up mechanism the D2 spike
+ * proved (.specs/codedm/2026-07-23-fork-d2-spike.md), with a different package: `@libsql/client`
+ * bottoms out in `libsql`, which loads a Neon/N-API prebuild through `@neon-rs/load` — a dynamic
+ * `require` of the HOST TRIPLE package that no bundler can follow. Bun compiles the JS closure into
+ * the binary; that one require is resolved at RUNTIME from the process CWD, never from the
+ * executable's directory. So the prebuild is STAGED beside the binary (`stageNodeModules`) and the
+ * shell spawns the sidecar inside that dir (the contract's `cwd` slot → `.current_dir()`). A build
+ * alone never surfaces this: the binary compiles clean and dies on first connect.
  */
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { REPO, type SidecarDecl } from '../../../../template.config'
 
 // Genuine toolchain knowledge — platform data, not repo identity (correctly local).
@@ -33,7 +39,17 @@ async function run(label: string, cmd: string[], cwd: string): Promise<void> {
 	}
 }
 
-/** Build command per declared kind — the contract names the kind, this maps it to a toolchain. */
+/**
+ * Build command per declared kind — the contract names the kind, this maps it to a toolchain.
+ *
+ * ⚠️ `bun-compile` takes NO `--external`, and that is a measured decision, not an omission. Marking
+ * the libsql packages external makes bun leave their JS on disk; the compiled binary then resolves
+ * the top-level specifier from the CWD but FAILS on that module's own nested `require`s — measured
+ * on bun 1.3.14: `Cannot find module '@neon-rs/load' from '<staged>/node_modules/libsql/index.js'`,
+ * even with `@neon-rs/load` nested correctly beside it. Bundling the whole JS closure works; only
+ * the native prebuild (a dynamic require of the host triple) still has to sit on disk, which is
+ * what `stageNodeModules` + `cwd` cover.
+ */
 function buildCmd(sidecar: SidecarDecl, outfile: string): string[] {
 	switch (sidecar.build.kind) {
 		case 'bun-compile':
@@ -41,6 +57,46 @@ function buildCmd(sidecar: SidecarDecl, outfile: string): string[] {
 		case 'go-build':
 			return ['go', 'build', '-o', outfile, sidecar.build.entry]
 	}
+}
+
+/**
+ * Runtime closure of a declared package, resolved from the sidecar's own workspace (where the dep is
+ * symlinked). Walking `optionalDependencies` is the POINT, not a nicety: the host-triple prebuild
+ * (`@libsql/darwin-arm64`, …) is an optional dep of `libsql`, and walking it is what keeps the
+ * contract from naming a triple. Absent optionals are the OTHER platforms' prebuilds — skipped, not
+ * an error. `dependencies` are walked too so a staged package is never half-copied. `@types/*` are
+ * type-only and skipped.
+ *
+ * ⚠️ CROSS-TRIPLE GAP (open question 7): `HOST_TRIPLES` only ever builds for the host and
+ * `bun install` only fetches the host's optional prebuild, so a CI cross-build produces a binary
+ * that COMPILES and then dies at runtime with a missing `@libsql/<other-triple>`. Fixing that needs
+ * per-target prebuild fetching, not a change here.
+ */
+function resolveStagedRoots(packages: readonly string[], fromDir: string): Map<string, string> {
+	const roots = new Map<string, string>()
+
+	function walk(name: string, resolveFrom: string): void {
+		if (roots.has(name) || name.startsWith('@types/')) return
+		const pkgJsonPath = Bun.resolveSync(`${name}/package.json`, resolveFrom)
+		const pkgDir = dirname(pkgJsonPath)
+		roots.set(name, pkgDir)
+		const manifest = require(pkgJsonPath) as {
+			dependencies?: Record<string, string>
+			optionalDependencies?: Record<string, string>
+		}
+		for (const dep of Object.keys(manifest.dependencies ?? {})) walk(dep, pkgDir)
+		for (const dep of Object.keys(manifest.optionalDependencies ?? {})) {
+			try {
+				Bun.resolveSync(`${dep}/package.json`, pkgDir)
+			} catch {
+				continue
+			}
+			walk(dep, pkgDir)
+		}
+	}
+
+	for (const name of packages) walk(name, fromDir)
+	return roots
 }
 
 export async function buildSidecars(): Promise<void> {
@@ -73,14 +129,21 @@ export async function buildSidecars(): Promise<void> {
 		}
 	}
 
-	// Stage assets a compiled sidecar can't inline. Today that's the Drizzle migrations: a
-	// `bun build --compile` binary has no node_modules and the drizzle migrator reads the folder via
+	// Stage assets a compiled sidecar can't inline. First: the Drizzle migrations. A
+	// `bun build --compile` binary has no node_modules and the migration applier reads the folder via
 	// node fs (which can't walk the `/$bunfs` virtual FS), so the migrations must travel as a bundle
 	// resource. Every `resourceDir` boot-env `subpath` is materialized under `binaries/<subpath>`;
 	// tauri.conf `bundle.resources` (generated) copies it to the app resource dir, and the daemon's
 	// CODEDM_MIGRATIONS_DIR resolves `resource_dir/<subpath>` at runtime. The standalone daemon boot is
-	// pointed straight at this staged dir. Source is the canonical contracts migrations output.
-	const contractsMigrations = join(repoRoot, REPO.workspaces.contracts.pkgRoot, 'db', 'migrations')
+	// pointed straight at this staged dir. Source is the canonical contracts migrations output — the
+	// SQLite one, which is the source of truth for BOTH the TS daemon and the Go gateway.
+	const contractsMigrations = join(
+		repoRoot,
+		REPO.workspaces.contracts.pkgRoot,
+		'db',
+		'schema-sqlite',
+		'migrations',
+	)
 	const stagedSubpaths = new Set<string>()
 	for (const sidecar of REPO.desktop.sidecars) {
 		for (const source of Object.values(sidecar.bootEnv)) {
@@ -96,6 +159,33 @@ export async function buildSidecars(): Promise<void> {
 			process.exit(1)
 		}
 		console.log(`[sidecars] staged migrations → src-tauri/binaries/${subpath}/`)
+	}
+
+	// Second: the `external` module closures. Declared per sidecar (`stageNodeModules`), resolved from
+	// that sidecar's own workspace, copied FLAT into `binaries/<subpath>/node_modules/<pkg>` so the
+	// binary's CWD walk-up finds the entry point AND every sibling it requires. `dereference` turns
+	// the .bun-store symlinks into real files that survive bundling.
+	for (const sidecar of REPO.desktop.sidecars) {
+		const staged = sidecar.stageNodeModules
+		if (staged === undefined) continue
+		const resolveFrom = join(
+			repoRoot,
+			REPO.workspaces[sidecar.workspace].pkgRoot,
+			staged.resolveFrom ?? '.',
+		)
+		const dest = join(outDir, staged.subpath, 'node_modules')
+		rmSync(dest, { recursive: true, force: true })
+		const roots = resolveStagedRoots(staged.packages, resolveFrom)
+		for (const [name, root] of roots) {
+			cpSync(root, join(dest, name), { recursive: true, dereference: true })
+			if (!existsSync(join(dest, name))) {
+				console.error(`[sidecars] failed to stage node module '${name}' into ${staged.subpath}`)
+				process.exit(1)
+			}
+		}
+		console.log(
+			`[sidecars] staged ${roots.size} node modules → src-tauri/binaries/${staged.subpath}/node_modules/`,
+		)
 	}
 
 	console.log(`[sidecars] done → src-tauri/binaries/ (${triple})`)

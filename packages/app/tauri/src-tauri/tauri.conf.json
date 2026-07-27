@@ -45,7 +45,8 @@
 			"icons/128x128.png"
 		],
 		"resources": {
-			"binaries/migrations": "migrations"
+			"binaries/migrations": "migrations",
+			"binaries/daemon-runtime": "daemon-runtime"
 		}
 	}
 }

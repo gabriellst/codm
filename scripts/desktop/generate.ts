@@ -27,6 +27,14 @@ const ROOT = resolve(import.meta.dirname, '..', '..')
 const shell = REPO.workspaces.appTauri
 const srcTauriDir = posix.join(shell.pkgRoot, 'src-tauri')
 
+/**
+ * The declared sidecars, widened to the CONTRACT type. `REPO.desktop.sidecars` is an `as const`
+ * literal, so its element type is the union of the two concrete entries — and an OPTIONAL slot
+ * (`cwd`, `stageNodeModules`) that only one entry uses does not exist on the union. Reading it
+ * through `SidecarDecl` is what makes optional slots addressable at all.
+ */
+const SIDECARS: readonly SidecarDecl[] = REPO.desktop.sidecars
+
 // ── contract resolution helpers (fail-loud: an unknown key is a contract bug) ──
 
 function envExample(key: string): string {
@@ -65,15 +73,23 @@ function resolveBootEnv(key: string, source: BootEnvSource): { literal: string }
 	}
 }
 
-/** subpaths of every `resourceDir` boot-env value across all sidecars (drives resources + the rust param). */
+/**
+ * Every subpath that must land in the bundle's resource dir, from ALL THREE declaration sites:
+ * `resourceDir` boot-env values, `stageNodeModules` (what a compiled binary resolves from disk
+ * instead of its bundle), and `cwd` (the dir the shell spawns the sidecar in). Drives `resources` AND
+ * whether the generated Rust fn takes a live `resource_dir`. Deduped — the daemon points `cwd` at
+ * the same subpath it stages its node_modules into, and staging it twice would be a bundle bloat bug.
+ */
 function resourceDirSubpaths(): string[] {
-	const subpaths: string[] = []
-	for (const sidecar of REPO.desktop.sidecars) {
+	const subpaths = new Set<string>()
+	for (const sidecar of SIDECARS) {
 		for (const source of Object.values(sidecar.bootEnv)) {
-			if ('from' in source && source.from === 'resourceDir') subpaths.push(source.subpath)
+			if ('from' in source && source.from === 'resourceDir') subpaths.add(source.subpath)
 		}
+		if (sidecar.stageNodeModules !== undefined) subpaths.add(sidecar.stageNodeModules.subpath)
+		if (sidecar.cwd !== undefined) subpaths.add(sidecar.cwd.subpath)
 	}
-	return subpaths
+	return [...subpaths]
 }
 
 // ── renderers ────────────────────────────────────────────────────────────────
@@ -130,9 +146,10 @@ export function renderTauriConf(): string {
 			targets: 'all',
 			externalBin: REPO.desktop.sidecars.map(s => `binaries/${binName(s)}`),
 			icon: ['icons/icon.icns', 'icons/icon.ico', 'icons/32x32.png', 'icons/128x128.png'],
-			// Assets a compiled sidecar can't inline (the Drizzle migrations) are staged by
-			// build-sidecars under `binaries/<subpath>` and copied into the app resource dir at
-			// `<subpath>`; the sidecar's `resourceDir` boot-env resolves `resource_dir/<subpath>`.
+			// Assets a compiled sidecar reads from disk rather than from its own bundle — the Drizzle
+			// migrations and the daemon's staged native-prebuild dir — are staged by build-sidecars
+			// under `binaries/<subpath>` and copied into the app resource dir at `<subpath>`; the
+			// sidecar's `resourceDir` boot-env (and its `cwd`) resolve `resource_dir/<subpath>`.
 			resources: Object.fromEntries(resourceDirSubpaths().map(sub => [`binaries/${sub}`, sub])),
 		},
 	}
@@ -177,17 +194,22 @@ export function renderGeneratedRs(): string {
 		'',
 		'/// Supervised sidecars — one entry per REPO.desktop.sidecars[]. Ports/env resolve from',
 		'/// REPO.env examples at generation time; `data_dir` (app-data subdir) and `resource_dir`',
-		'/// (bundle resource dir, for staged assets like the migrations) are the runtime paths the',
-		'/// shell computes — the only boot-env values that cannot be generation-time literals.',
+		'/// (bundle resource dir, for staged assets: the migrations and the external module closure)',
+		'/// are the runtime paths the shell computes — the only values that cannot be literals.',
 		`pub fn sidecars(data_dir: &str, ${resourceDirSubpaths().length > 0 ? 'resource_dir' : '_resource_dir'}: &std::path::Path) -> Vec<Sidecar> {`,
 		'    vec![',
 	]
-	for (const sidecar of REPO.desktop.sidecars) {
+	for (const sidecar of SIDECARS) {
 		lines.push(
 			'        Sidecar {',
 			`            name: "${binName(sidecar)}",`,
 			`            port: ${sidecarPort(sidecar)},`,
 			`            health_path: "${sidecar.healthPath}",`,
+			// A compiled bun binary resolves `--external` modules from its CWD, so a sidecar that
+			// stages a runtime dir MUST be spawned inside it (contract slot `cwd`).
+			sidecar.cwd === undefined
+				? '            cwd: None,'
+				: `            cwd: Some(resource_dir.join(${JSON.stringify(sidecar.cwd.subpath)})),`,
 			'            env: vec![',
 		)
 		for (const [key, source] of Object.entries(sidecar.bootEnv)) {

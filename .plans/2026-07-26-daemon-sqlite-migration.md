@@ -3961,17 +3961,48 @@ resolve `X` a partir do **CWD do processo**, não do diretório do executável: 
 `/tmp/elsewhere` com `cwd=/tmp/bunext` (onde estão os `node_modules`) funciona; o mesmo binário
 com outro cwd falha com `Cannot find package … from '/$bunfs/root/out'`. Daí (1) e (2).
 
+> ### ⚠️ CORRIGIDO NA EXECUÇÃO DE T25 — a premissa acima é verdadeira e MESMO ASSIM o item (1)
+> ### estava errado. `--external` NÃO PODE ser usado aqui.
+>
+> A premissa foi re-medida e **confirma**: com um pacote de brinquedo, binário em
+> `/tmp/t25-elsewhere` + `cwd` no dir que tem `node_modules` ⇒ `RESULT=FOO_OK`; outro cwd ⇒
+> `Cannot find package 'foo' from '/$bunfs/root/app'`. **Mas ela não generaliza para o libsql**,
+> e o motivo é o passo seguinte da resolução, que a sonda de brinquedo (dependency-free) nunca
+> exercita. MEDIDO em bun 1.3.14, contra o closure real staged:
+>
+> | build | resultado ao subir com `cwd` = dir staged |
+> |---|---|
+> | `--compile --external @libsql/client --external libsql` | `Cannot find module '@libsql/client' from '/$bunfs/root/…'` |
+> | `--compile --external libsql` (só o nativo) | resolve `libsql`, e então **`Cannot find module '@neon-rs/load' from '<staged>/node_modules/libsql/index.js'`** — inclusive com `@neon-rs/load` aninhado em `libsql/node_modules/` |
+> | `--compile` **sem nenhum external** | **BOOT OK** — `/v1/session` ⇒ 200, `codedm.db` + `-wal` criados |
+>
+> Ou seja: o binário compilado resolve o **especificador de topo** a partir do CWD, mas **não**
+> resolve os `require` internos do módulo externo. Externalizar é o que quebra.
+>
+> O que de fato funciona (e é o que a task passa a mandar): **bun empacota todo o closure JS**
+> e sobra **um** `require` dinâmico que nenhum bundler enxerga — o do prebuild do triple, feito
+> por `@neon-rs/load` dentro de `libsql`. Controle negativo, com cwd num dir vazio:
+> `Cannot find module '@libsql/darwin-arm64' from '/$bunfs/root/codedm-daemon-…'`; com cwd no dir
+> staged: `200`. Logo os itens (2) e (3) — `stageNodeModules` + `cwd` + `.current_dir()` —
+> continuam **exatamente** como o plano pedia e são o que salva o sidecar; só o (1) morre.
+>
+> **Isto NÃO reabre a decisão (a).** A decisão diz "o addon nativo do libsql é **staged, não
+> embutido**" + "o supervisor Rust precisa chamar `.current_dir()`": as duas medidas acima
+> confirmam as duas afirmações. O que muda é o mecanismo de bundling ao lado delas.
+
 **O que muda.**
 
-1. **`SidecarDecl.build` ganha slot para externals.** Hoje é
-   `build: { kind: 'bun-compile' | 'go-build'; entry: string }` (`template.config.ts:255`) e
-   `buildCmd` emite `['bun','build','--compile',entry,'--outfile',outfile]` **sem nenhum
-   `--external`** (`sidecars/build.ts:37-45`). Sem `--external @libsql/client --external libsql`
-   o bun tenta embutir o `require` nativo e o **sidecar morre em runtime**. Mudanças:
-   - `template.config.ts`: `build: { kind; entry; external?: readonly string[] }`, e o sidecar
-     `daemon` declara `external: ['@libsql/client', 'libsql']`.
-   - `sidecars/build.ts::buildCmd`: no caso `bun-compile`, expandir
-     `...(sidecar.build.external ?? []).flatMap(m => ['--external', m])`.
+1. ~~**`SidecarDecl.build` ganha slot para externals.**~~ **RETIRADO NA EXECUÇÃO — ver o box
+   acima.** `bun-compile` continua emitindo `['bun','build','--compile',entry,'--outfile',outfile]`
+   sem nenhum `--external`, e o `SidecarDecl` **não** ganha slot `external`. O docblock de
+   `buildCmd` e o do `SidecarDecl` passam a registrar a medição, para que ninguém "conserte" isso
+   de volta: um slot de external aqui é uma armadilha, não uma capacidade faltando.
+   `stageNodeModules.packages` declara o pacote **de entrada** (`@libsql/client`) e o builder
+   estagia o closure transitivo — declarar `libsql` direto **não resolve** de workspace nenhum
+   (ele mora um nível abaixo no store; medido), e nomear o triple no contrato o tornaria
+   não-portável. O slot ganha também `resolveFrom` (workspace-relativo, `'core'` para o daemon):
+   a dep é declarada pelo pacote aninhado `core` e **não** resolve de `packages/api/typescript`
+   nem de `src/` (medido).
 2. **`SidecarDecl` ganha slot para node_modules staged + CWD.** O loop de staging materializa
    **apenas** subpaths derivados de entradas de `bootEnv` com `{ from: 'resourceDir' }`
    (`sidecars/build.ts:78-98`) — não existe declaração para "estagie estes pacotes" nem para "o
@@ -4013,10 +4044,12 @@ com outro cwd falha com `Cannot find package … from '/$bunfs/root/out'`. Daí 
 ```bash
 cd "$(git rev-parse --show-toplevel)"   # ÂNCORA (iteração 5)
 T=template.config.ts
-# (1) o slot de externals existe no contrato E é usado pelo builder
-grep -q "external?: readonly string\[\]" $T
+# (1) INVERTIDO NA EXECUÇÃO — o slot de externals NÃO pode existir (ver o box da premissa).
+#     A forma antiga exigia `external?: readonly string[]` + `--external` no builder; medido em
+#     bun 1.3.14, é exatamente isso que impede o sidecar de subir. O gate passa a proibir os dois.
 grep -q "'@libsql/client'" $T
-grep -q -- "--external" packages/app/tauri/sidecars/build.ts
+! grep -q "external?: readonly string\[\]" $T
+! grep -q -- "'--external'" packages/app/tauri/sidecars/build.ts
 # (2) slots de staging e cwd existem no contrato E o builder os consome
 grep -q "stageNodeModules" $T && grep -q "stageNodeModules" packages/app/tauri/sidecars/build.ts
 # ⚠️ VACUAMENTE POSITIVO ATÉ A ITERAÇÃO 6. A forma anterior era `grep -q "cwd" $T`, e a palavra
@@ -4058,10 +4091,28 @@ bun test:tooling
 # (`git status --porcelain … | grep -q . && echo … && false`) FALHAVA SEMPRE — numa árvore limpa
 # o `grep -q .` sai 1 e o bloco inteiro sai não-zero, justamente no caso que deveria passar.
 test -z "$(git status --porcelain -- packages/app/tauri/src-tauri)"
+# (8) ACRESCENTADO NA EXECUÇÃO: mudar o `SidecarDecl` mexe em DOIS geradores e num compilador
+#     que os greps acima não tocam.
+#  8a) `REPO.desktop.sidecars` é literal `as const`: um slot OPCIONAL usado por UM sidecar NÃO
+#      existe no tipo da união, então `sidecar.cwd` não compila até o loop ler por `SidecarDecl`.
+#      Isso NÃO aparece em `bun tsc` (scripts/ não é projeto Nx) — só em `bun test:tooling`.
+#  8b) `.env.example` é re-derivado do contrato: mexer no `doc` de QUALQUER chave (aqui
+#      CODEDM_DATA_DIR) quebra `create-template/plan.test.ts` até `bun env:generate` rodar.
+bun env:generate
+test -z "$(git status --porcelain -- .env.example)"
+#  8c) o supervisor Rust ganhou um campo: `generated.rs` emite `cwd:` para TODO sidecar, então
+#      mod.rs tem que compilar de verdade.
+( cd packages/app/tauri/src-tauri && cargo check )
 ```
 **Prova de runtime, não só de build:** subir o binário compilado a partir de um cwd **diferente**
 de `daemon-runtime` e confirmar que ele falha, e a partir de `daemon-runtime` e confirmar que ele
 responde `200` em `/v1/session`. É o assert que distingue "compilou" de "resolve o addon nativo".
+RODADO na execução (o binário exige `NODE_ENV=production` + `JWT_SECRET`/`BETTER_AUTH_SECRET`
+não-placeholder, senão morre na validação de Config antes de tocar no banco):
+```
+cwd = <tmp vazio>        ⇒ Cannot find module '@libsql/darwin-arm64' from '/$bunfs/root/…'  (HTTP 000)
+cwd = daemon-runtime     ⇒ HTTP 200 em ~2s, e o data dir ganha codedm.db + -wal + -shm
+```
 
 ---
 

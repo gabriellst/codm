@@ -16,11 +16,18 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 /// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`),
-/// readiness URL parts, and the env the process boots with.
+/// readiness URL parts, the working directory it must be spawned in, and the env
+/// the process boots with.
 pub struct Sidecar {
     name: &'static str,
     port: u16,
     health_path: &'static str,
+    /// Working directory for the child process. Load-bearing, not cosmetic: a
+    /// `bun build --compile` binary resolves its `--external` modules (the libsql
+    /// native addon) from the process CWD, never from the executable's directory,
+    /// so the daemon must start inside its staged runtime dir or it dies with
+    /// `Cannot find package … from '/$bunfs/root/out'`. `None` = inherit.
+    cwd: Option<std::path::PathBuf>,
     env: Vec<(String, String)>,
 }
 
@@ -53,7 +60,14 @@ fn probe(port: u16, path: &str) -> bool {
 /// boot progress honestly instead of spinning forever.
 pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
     let command = match app.shell().sidecar(sidecar.name) {
-        Ok(cmd) => cmd.envs(sidecar.env.clone()),
+        Ok(cmd) => {
+            let cmd = cmd.envs(sidecar.env.clone());
+            // See `Sidecar::cwd` — the compiled daemon resolves its native addon from the CWD.
+            match sidecar.cwd.as_ref() {
+                Some(dir) => cmd.current_dir(dir.clone()),
+                None => cmd,
+            }
+        }
         Err(e) => {
             let _ = app.emit("sidecar:error", format!("{}: spawn setup failed: {e}", sidecar.name));
             return;
