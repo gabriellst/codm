@@ -38,7 +38,7 @@ describe('AC-1.1 — claude buildArgs produces EXACTLY the spec argv', () => {
 			'stream-json',
 			'--verbose',
 			'--permission-mode',
-			'bypassPermissions',
+			'auto',
 		])
 	})
 
@@ -148,7 +148,7 @@ describe('AC-1.1 — claude buildArgs produces EXACTLY the spec argv', () => {
 			'--allowedTools',
 			'codedm__complete_issue',
 			'--permission-mode',
-			'bypassPermissions',
+			'auto',
 		])
 	})
 

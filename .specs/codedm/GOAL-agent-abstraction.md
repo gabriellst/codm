@@ -292,7 +292,7 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
        [--include-partial-messages] [--model X] [--add-dir …] \
        [--session-id <uuid> | --resume <id>] \
        [--mcp-config <cfg> --allowedTools <list>] \
-       --permission-mode bypassPermissions
+       --permission-mode auto
 ```
 
 `stdio: ['pipe','pipe','pipe']`, `shell: false`, `detached: true` (não-Windows). O prompt entra como
@@ -302,10 +302,16 @@ reconstruída **exclusivamente do stdout JSONL parseado** — nunca de stdout cr
 a guarda `parent_tool_use_id == null` **foi removida em 27-jul** — o frame `result` não tem essa
 chave, e o invariante sobrevive mais forte: sub-agent não emite `result`. Ver §4.3 regra 5),
 nunca marcador de TUI. O
-`--permission-mode bypassPermissions` substitui o auto-accept do trust prompt — **é uma troca de
-autoridade, aceita conscientemente aqui** (`:53-56`): o produto roda agents nos repositórios reais
-do usuário e já rodava com trust auto-aceito via injeção de teclas na PTY; a mudança é de mecanismo,
-não de postura.
+`--permission-mode auto` substitui o auto-accept do trust prompt. **`auto`, NÃO `bypassPermissions`**
+(emenda do founder, 27-jul): o prompt que dirige esses runs vem de **terceiro**, por um canal de
+mensagem, então um waiver em bloco entregaria a esse input a superfície de tools inteira. `auto` é o
+modo graduado do próprio CLI e é a postura certa aqui.
+**MEDIDO antes de trocar** — porque a justificativa original do bypass era *"headless nunca mostra
+prompt, então qualquer outro modo arrisca pendurar"*, e pendurar é caro (a Fase 2 provou que um turno
+que não fecha deixa um `claude` vivo). Num run headless em 2.1.220: exit 0 em 10s, frame terminal
+normal (`stop_reason: end_turn`, `permission_denials: []`), Write e Read executados. Ou seja `auto`
+**não pendura e não desliga tools**. O que `auto` bloqueia e o bypass não **não foi caracterizado** —
+exigiria sondar operações destrutivas; fica deliberadamente não-medido em vez de afirmado.
 
 **(D3) UMA interface de agent, para classificação E para execução.** Hoje o seam é
 `TerminalLLMRunner` com **cinco** membros abstratos (`TerminalLLMRunner.ts:66-86`): `generate`,
@@ -1431,7 +1437,7 @@ pergunta observada quatro vezes — quem roda o loop de tools**. Ela determina a
 se `tools` é campo do request, onde mora a autorização e quem é dono do histórico. No medscall o
 runner medeia o loop e `ToolContext { chatId, ownerId }` é a **fronteira de autorização por
 chamada**; no CodeDM a autoridade é delegada por atacado uma vez no spawn
-(`--permission-mode bypassPermissions`) e o loop de tools acontece **fora** do runner, entre o CLI e
+(`--permission-mode auto`) e o loop de tools acontece **fora** do runner, entre o CLI e
 o nosso servidor MCP (D8). Uma interface cuja assinatura é inteiramente determinada por uma pergunta
 que os dois consumidores respondem de forma oposta não é uma interface compartilhada — **são duas
 interfaces com o mesmo nome.**

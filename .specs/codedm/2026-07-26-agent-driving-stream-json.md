@@ -14,7 +14,7 @@
 claude -p --input-format stream-json --output-format stream-json --verbose \
        [--include-partial-messages] [--model X] [--add-dir …] \
        [--session-id <uuid> | --resume <id>] \
-       --permission-mode bypassPermissions
+       --permission-mode auto
 ```
 
 ```ts
@@ -44,7 +44,7 @@ spawn(invocation.command, invocation.args, {
 |---|---|
 | Per-session JSONL absent in claude 2.x cmux → reply extraction fails | Reply comes from stdout JSONL frames; no filesystem side-channel at all |
 | TUI marker parsing for turn-end (brittle across builds) | Structural `stop_reason`, guarded by `parent_tool_use_id == null` (a `Task` sub-agent's `end_turn` must not end the run) and `stopReason !== 'tool_use'`; then `stdin.end()`. Backstop: inactivity watchdog |
-| Auto-accepting the trust prompt by writing into the PTY | `--permission-mode bypassPermissions`; headless `-p` with no TTY never shows a prompt. Zero keystroke-injection code in their repo |
+| Auto-accepting the trust prompt by writing into the PTY | `--permission-mode auto`; headless `-p` with no TTY never shows a prompt. Zero keystroke-injection code in their repo |
 
 **Net gain, not just parity:** the stream carries `tool_use` (with `input`), `tool_input_delta`,
 `tool_result`, `thinking_delta`, `usage` as *structured* frames — strictly richer than scraping a TUI.
@@ -59,7 +59,7 @@ without it you still get complete per-message text, just chunkier.
 
 1. Move the prompt from argv → stdin as `{"type":"user","message":{"role":"user","content":[{"type":"text","text":…}]}}\n`.
 2. Add `--input-format stream-json --output-format stream-json --verbose`.
-3. Add `--permission-mode bypassPermissions` → **delete** the trust-prompt auto-accept.
+3. Add `--permission-mode auto` → **delete** the trust-prompt auto-accept.
 4. Write a line-buffered JSONL parser (~150 LOC) → **delete** the TUI marker parser.
 5. Emit turn-end from `stop_reason` with the two guards → **delete** turn-end scraping.
 6. Persist `{sessionId, model, cwd, lastMessageId}` per conversation; pass `--session-id`/`--resume` →

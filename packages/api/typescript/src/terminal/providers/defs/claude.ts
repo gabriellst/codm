@@ -12,7 +12,7 @@ import type { ProviderDef, ProviderBuildArgsOptions } from '../ProviderDef'
  *   claude -p --input-format stream-json --output-format stream-json --verbose \
  *          [--include-partial-messages] [--model X] [--add-dir …] \
  *          [--session-id <uuid> | --resume <id>] \
- *          --permission-mode bypassPermissions
+ *          --permission-mode auto
  *
  * Three of those flags each delete a whole class of code that used to exist here:
  *  - `--output-format stream-json` deletes the TUI marker parser AND the per-session transcript-file
@@ -21,8 +21,17 @@ import type { ProviderDef, ProviderBuildArgsOptions } from '../ProviderDef'
  *    engine subtree, and a mere mention here would be a violation of that rail). The reply is
  *    reconstructed exclusively from parsed stdout frames; mining raw stdout instead yields empty
  *    extractions, which is the bug that parked the old engine.
- *  - `--permission-mode bypassPermissions` deletes the trust-prompt keystroke injection. Headless
- *    `-p` with no TTY never shows a prompt, so there is nothing to auto-accept.
+ *  - `--permission-mode auto` deletes the trust-prompt keystroke injection: headless `-p` with no TTY
+ *    never shows a prompt, so there is nothing to auto-accept. `auto` — NOT `bypassPermissions`, which
+ *    is a blanket waiver. The input driving these runs is an inbound message from a third party, so the
+ *    CLI's own graduated mode is the right posture; a blanket bypass would hand that input the full
+ *    tool surface unconditionally. MEASURED on this build (2.1.220) before the change, because the
+ *    original justification for the bypass was "headless never prompts, so anything else risks a hang":
+ *    a headless `auto` run completed in 10s, exit 0, with a normal terminal frame
+ *    (`stop_reason: end_turn`, `permission_denials: []`), and Write + Read both executed. So `auto`
+ *    neither hangs nor disables tools. What `auto` blocks that `bypassPermissions` does not was NOT
+ *    characterized — that would require probing destructive operations, and is deliberately unmeasured
+ *    rather than asserted.
  *  - `--session-id` / `--resume` delete transcript re-sending. Multi-turn context is the CLI's own
  *    session; re-rendering the transcript into the prompt is only the fallback for providers without it.
  */
@@ -110,8 +119,11 @@ export const claudeProviderDef: ProviderDef = {
 		}
 
 		// Last, and unconditional: headless `-p` has no TTY to render a permission prompt on, so the
-		// authority is delegated wholesale once, here, at spawn. That is a deliberate authority trade.
-		args.push('--permission-mode', 'bypassPermissions')
+		// mode is settled here at spawn. `auto` and NOT `bypassPermissions` — the prompt driving these
+		// runs comes from a third party over a channel, so a blanket waiver would hand that input the
+		// full tool surface. Measured headless on 2.1.220: `auto` completes normally and still runs
+		// tools, so this costs nothing on the hang axis (see the file docblock).
+		args.push('--permission-mode', 'auto')
 		return args
 	},
 }
