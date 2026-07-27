@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { BaseError, Handler, z, DrizzleDatabaseDriver } from '@codedm/core-typescript'
 import { eq } from 'drizzle-orm'
 import { sessions } from '@codedm/contracts/db'
 import { OwnerRepository } from '../repositories/OwnerRepository'
@@ -23,7 +23,7 @@ export class SetActiveOwner extends Handler<typeof SetActiveOwnerInputSchema, ty
 
 	constructor(
 		private readonly owners: OwnerRepository,
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 	) {
 		super()
 	}
@@ -38,11 +38,14 @@ export class SetActiveOwner extends Handler<typeof SetActiveOwnerInputSchema, ty
 			throw new BaseError<ApplicationErrors>('OWNER_NOT_FOUND')
 		}
 
-		// Targeted single-column update on authentication.sessions — no entity/UoW
-		// needed for this session mutation (same targeted-update pattern as the
-		// better-auth sign-in hook). No domain event is raised (no aggregate changes
-		// state).
-		await this.db.update(sessions).set({ activeOwnerId: ownerId, updatedAt: new Date() }).where(eq(sessions.id, sessionId))
+		// Targeted single-column update on the sessions table — no entity/aggregate is
+		// involved (same targeted-update pattern as the better-auth sign-in hook) and no
+		// domain event is raised. It is still a WRITE, so it goes through the driver's
+		// write seam: the injected drizzle client is the READ connection and does not hold
+		// the write lock.
+		await this.driver.transaction(tx =>
+			tx.update(sessions).set({ activeOwnerId: ownerId, updatedAt: new Date() }).where(eq(sessions.id, sessionId)),
+		)
 
 		return { ownerId }
 	}

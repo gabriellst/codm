@@ -33,7 +33,7 @@ import {
 	Router,
 } from '@codedm/core-typescript'
 
-// The embedded-PGlite migration step — a plain function, NOT a side-effect import: it must run
+// The embedded-database migration step — a plain function, NOT a side-effect import: it must run
 // BEFORE the composition root, and awaiting a top-level-await side-effect module does NOT serialize
 // against a statically-imported `./routers` (ESM evaluates both async branches concurrently, so the
 // contexts create — and a `registerJobs` enqueue races the migration — before the await resolves).
@@ -49,7 +49,7 @@ async function start(): Promise<void> {
 	// Trace all framework classes for OpenTelemetry span injection.
 	traceClass([Controller, HttpRouter, Middleware, Router, MainRouter])
 
-	// EARLY, SERIALIZED migration: apply the embedded-PGlite schema on the ONE real driver singleton
+	// EARLY, SERIALIZED migration: apply the shared-SQLite schema on the ONE real driver singleton
 	// before any BoundedContext.create runs. The dynamic `import('./routers')` below is what pulls in
 	// every context's side-effect module (starting with @shared/index) — deferring it until AFTER this
 	// await guarantees the schema exists before any context (or its jobs) touches the DB.

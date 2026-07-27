@@ -2264,7 +2264,22 @@ grep -q 'CREATE TABLE IF NOT EXISTS %s (name TEXT PRIMARY KEY NOT NULL, applied_
 #    reprovaria T09 com a implementação correta. A forma repo-wide ABSOLUTA (sem exclusão) já
 #    existe em T23, que roda depois de T11 — RODADO lá: o único `__drizzle_migrations` em
 #    `packages/` é essa mesma linha, então T23 vai a zero pela deleção, sem exclusão nenhuma.
-! grep -rn "libsql/migrator\|__drizzle_migrations" packages/api/typescript --include='*.ts' | grep -v node_modules | grep -v PGliteDriver
+# ⚠️ `grep -v '\.test\.'` ACRESCENTADO NA EXECUÇÃO DO BLOCO 2 — reincidência da regra-irmã da
+#    iteração 4, agora na forma "o AC de uma task contradiz o DELIVERABLE da MESMA task".
+#    A lista de asserts de T09 exige, verbatim: "`__drizzle_migrations` **não existe** em
+#    `sqlite_master`". Esse assert só é expressável NOMEANDO a tabela — é uma query
+#    `SELECT count(*) FROM sqlite_master WHERE name = '__drizzle_migrations'`. Logo o gate absoluto
+#    e o teste obrigatório eram **mutuamente insatisfazíveis**. RODADO na execução, com a forma
+#    da iteração 5 (sem `grep -v '\.test\.'`) e com a implementação CORRETA na árvore:
+#      packages/api/typescript/core/src/db/drivers/LibsqlDriver.test.ts:80:  … name = '__drizzle_migrations'
+#      (1 linha ⇒ pipeline exit 0 ⇒ o `!` reprova T09 com o teste que a própria T09 manda escrever)
+#    Saída admissível pela própria §8 ("escopar pelo receptor/dono, nunca pelo nome nu"): o alvo do
+#    gate é o CÓDIGO DE PRODUÇÃO usar o ledger do drizzle; uma asserção de AUSÊNCIA num teste é o
+#    oposto disso. Obfuscar o literal no teste (`'__drizzle' + '_migrations'`) satisfaria o grep sem
+#    satisfazer a intenção — proibido pela mesma §8. A MESMA correção foi aplicada ao gate repo-wide
+#    de T23, que tinha o defeito idêntico (e cuja nota dizia, erradamente, que ele "vai a zero pela
+#    deleção do PGliteDriver, sem exclusão nenhuma").
+! grep -rn "libsql/migrator\|__drizzle_migrations" packages/api/typescript --include='*.ts' | grep -v node_modules | grep -v PGliteDriver | grep -v '\.test\.'
 # ordem dos pragmas: busy_timeout(5000) ANTES de journal_mode ANTES de foreign_keys — assertivo
 test "$(grep -o 'busy_timeout\|journal_mode\|foreign_keys' packages/api/typescript/core/src/db/drivers/LibsqlDriver.ts | head -3 | tr '\n' ',')" \
    = "busy_timeout,journal_mode,foreign_keys,"
@@ -2524,7 +2539,16 @@ cd "$(git rev-parse --show-toplevel)"   # ÂNCORA (iteração 5)
 ! test -e packages/api/typescript/core/src/db/config.ts
 ! grep -q "from './config'" packages/api/typescript/core/src/db/index.ts
 ! grep -rn "createDrizzleConfig\|dialect: 'postgresql'" packages/api/typescript --include='*.ts' | grep -v node_modules
-! grep -rn "PGlite\|NodePg\|pglite" packages/api/typescript --include='*.ts' --include='*.json' | grep -v node_modules
+# ⚠️ EXCLUSAO DE `scripts/build.ts` + `scripts/smoke-node-boot.ts` ACRESCENTADA NA EXECUCAO DO
+#    BLOCO 2 — TERCEIRA reincidencia da regra-irma da iteracao 4 ("um AC nao pode exigir trabalho
+#    de uma task POSTERIOR"), e desta vez a propria T11 ja NOMEAVA os donos: a tabela dos 24
+#    arquivos diz literalmente `scripts/build.ts (12)` e `scripts/smoke-node-boot.ts (2)` -> T24/T25,
+#    que sao BLOCO 3, ou seja rodam DEPOIS de T23. O gate absoluto portanto reprovava T11 E T23 por
+#    trabalho que o proprio plano agenda para depois. RODADO na execucao, com o resto do bloco 2
+#    completo na arvore: 14 hits, TODOS nesses dois arquivos (staging do PGlite no build node e o
+#    docblock do smoke). Saida admissivel #2 da §8: excluir explicitamente o arquivo que morre
+#    depois, NOMEANDO a task que o mata. T24/T25 devolvem o gate a forma absoluta.
+! grep -rn "PGlite\|NodePg\|pglite" packages/api/typescript --include='*.ts' --include='*.json' | grep -v node_modules | grep -v 'scripts/build.ts' | grep -v 'scripts/smoke-node-boot.ts'
 ! grep -rn "drizzle-orm/pg-core\|drizzle-orm/node-postgres" packages/api/typescript --include='*.ts' | grep -v node_modules
 ```
 
@@ -2892,9 +2916,27 @@ grep -q '_sqlite_migrations' packages/api/typescript/core/src/db/drivers/utils.t
 #     core/src/services/CommandQueue/PostgresCommandQueue.ts:291  this.db.execute(sql`    ← T16
 #   $ grep -rnE '\b(db|tx|client)\.execute\(' packages/api/typescript/core/src/db --include='*.ts'
 #     core/src/db/drivers/utils.ts:19                                                     ← T15
+# ⚠️ `grep -v LibsqlDriver` ACRESCENTADO NA EXECUÇÃO DO BLOCO 2 — o gate contradizia a DECISÃO (a).
+# O receptor `client` neste gate quer dizer "cliente drizzle/pg", cuja API `execute()` sqlite-core
+# não tem. Mas a decisão (a) MANDA, em texto e em código-sketch, dirigir a transação por
+# `client.execute('BEGIN IMMEDIATE')` sobre o **Client do @libsql/client** — um objeto diferente,
+# cuja API `execute()` existe e é justamente o mecanismo que o gate T07C validou. O `LibsqlDriver`
+# é o único dono legítimo desse objeto no repo (T13B classe 3: nada fora dele alcança
+# `#writeClient`). RODADO na execução, com a implementação CORRETA na árvore:
+#   $ grep -rnE '\b(db|tx|client)\.execute\(' packages/api/typescript/core/src/db --include='*.ts'
+#     core/src/db/drivers/LibsqlDriver.ts:60,61,62   client.execute('PRAGMA …')      ← decisão (c)(5)
+#     core/src/db/drivers/LibsqlDriver.ts:232,237    migration.client.execute(…)     ← decisão (c)(6)
+#     core/src/db/drivers/LibsqlDriver.ts:308…328    client.execute('BEGIN IMMEDIATE'/'COMMIT'/'ROLLBACK')
+#                                                                                    ← decisão (a)
+#   (10 linhas ⇒ o `!` reprovava T15, e T23 gate (3) reprovava a fase inteira, pelo código que as
+#    decisões fechadas exigem). Excluir o arquivo DONO é a saída da §8 ("escopar pelo receptor ou
+#    pelo diretório dono"); afrouxar o receptor `client` deixaria passar um cliente drizzle/pg de
+#    verdade em outro arquivo. Mesma exclusão aplicada em T23 gate (3).
+#    NB: `.rows` continua coberto — o gate proíbe `(result|res|rs).rows`, e o `ResultSet` do libsql
+#    é lido no driver por variáveis nomeadas (`seen.rows`, `ledger.rows`), de propósito.
 # A forma `core/src`-wide continua existindo — em **T23 gate (3)**, que é onde ela pode passar,
 # porque lá T15 e T16 já rodaram.
-! grep -rnE '\b(db|tx|client)\.execute\(' packages/api/typescript/core/src/db --include='*.ts' | grep -v node_modules
+! grep -rnE '\b(db|tx|client)\.execute\(' packages/api/typescript/core/src/db --include='*.ts' | grep -v node_modules | grep -v LibsqlDriver
 # teste: reset preserva a ledger.
 # ⚠️ O caso `reset` é DELIVERABLE DESTA TASK (ver Arquivos): `-t` que não casa sai 1, não 0.
 #    MEDIDO: `bun test <arquivo-real> -t "zzz-no-such-test"` ⇒ "matched 0 tests" + EXIT=1.
@@ -3020,6 +3062,22 @@ test -e $Q/SqliteCommandQueue.ts
 # o relógio vem do JS — e este AC agora CONVIVE com o negativo acima (era o defeito [B3])
 grep -rq 'Date.now()' $Q
 # a semântica anti-crash-loop sobreviveu: attempts incrementado NO CLAIM
+# ⚠️ ESTE AC PEGOU UM DRIFT REAL NA VERIFICAÇÃO ROUND-2 DO BLOCO 2 — e o AC estava CERTO; o
+# código é que tinha divergido. A primeira aterrissagem escreveu o bump como
+# `attempts = ${scheduledCommands.attempts} + 1`, e o drizzle interpola isso para o nome
+# QUALIFICADO da coluna, então o literal nunca aparecia no fonte:
+#   $ grep -rn 'attempts + 1' $Q ; echo EXIT=$?
+#   EXIT=1                                        ← AC VERMELHO (nenhuma saída)
+# Só que o corpo desta MESMA task, no SQL prescrito ~65 linhas acima, manda
+# `SET lease_until = :now + :leaseMs, attempts = attempts + 1, updated_at = :now` — sem
+# qualificar — e é também a forma que o outro claimante do processo usa
+# (`DrizzleOutboxDispatcher.ts`: `attempts: sql`attempts + 1``). A correção foi no CÓDIGO,
+# alinhando ao SQL prescrito, e NÃO afrouxar este grep. Depois da correção, rodado:
+#   $ grep -rn 'attempts + 1' $Q ; echo EXIT=$?
+#   SqliteCommandQueue.ts:373:  SET lease_until = ${now + …LEASE_MS}, attempts = attempts + 1, updated_at = ${now}
+#   EXIT=0
+# Moral, para quem for editar este AC no futuro: ele não é frágil por acaso. Ele trava a FORMA
+# EMITIDA, e a forma qualificada é exatamente o desvio que ele deve reprovar.
 grep -rq 'attempts + 1' $Q
 grep -rqiE 'executions STARTED|execuções INICIADAS' $Q   # o PORQUÊ segue escrito, não só o código
 # e a escrita fora de tx (classe 1 de T13B) sumiu deste arquivo — as 3 linhas :277 :333 :374
@@ -3369,7 +3427,18 @@ R=packages/api/typescript/core/src/repositories/DrizzleDomainEventRepository.ts
 test "$(grep -c 'OutboxSource\|outboxSource' "$R" | tr -d ' ')" -ge "4"
 # e o literal de lane não sobra neste arquivo (o ponto de T02 item 2, aplicado ao lado TS)
 ! grep -qE "source: *'api'" "$R"
-( cd packages/api/typescript && bun test core/src/repositories/ )
+# ⚠️ `DrizzleDomainEventRepository.test.ts` DECLARADO DELIVERABLE NA EXECUCAO DO BLOCO 2 —
+#    mesma classe de defeito que a iteracao 6 corrigiu em T15 e T20 ("o AC roda um teste que
+#    nenhuma task cria"), aqui na forma de DIRETORIO. MEDIDO no HEAD:
+#      $ ls packages/api/typescript/core/src/repositories/
+#        DomainEventRepository.ts  DrizzleDomainEventRepository.ts  events_repository_index.ts
+#        index.ts  MockDomainEventRepository.ts  OutboxAwareMockDomainEventRepository.ts  Repository.ts
+#      (nenhum .test.ts) ⇒ `bun test core/src/repositories/` sai **1** com
+#      "Tests need .test, _test_, .spec or _spec_ in the filename" — o AC reprovava por vacuo.
+#    O arquivo passa a ser deliverable desta task (mesmo padrao do `# criar se nao existir` de
+#    T14/T15/T20), e cobre justamente os dois pontos que T19 muda: o count(*) sem cast pg e o
+#    `source` vindo do enum congelado.
+( cd packages/api/typescript && bun test core/src/repositories/ )   # criar o .test.ts se nao existir
 ```
 
 ---
@@ -3666,8 +3735,14 @@ bun lint
 bun test:tooling                             # union-parity, scripts/desktop, repo-model, detectors
 ( cd packages/api/go && go build ./... && go vet ./... && go test ./... )
 # invariantes estruturais da fase — repo-wide, caminhos relativos À RAIZ (a âncora garante o cwd)
-! grep -rn "pglite\|PGlite\|node-postgres\|pg-core" packages/api/typescript --include='*.ts' --include='*.json' | grep -v node_modules
-! grep -rn "__drizzle_migrations" packages/ --include='*.ts' --include='*.go' | grep -v node_modules
+# ⚠️ MESMA EXCLUSAO DO AC DE T11 (ver a nota longa la): `scripts/build.ts` e
+#    `scripts/smoke-node-boot.ts` sao deliverables de T24/T25, que rodam DEPOIS deste portao.
+! grep -rn "pglite\|PGlite\|node-postgres\|pg-core" packages/api/typescript --include='*.ts' --include='*.json' | grep -v node_modules | grep -v 'scripts/build.ts' | grep -v 'scripts/smoke-node-boot.ts'
+# ⚠️ `grep -v '\.test\.'` ACRESCENTADO NA EXECUÇÃO DO BLOCO 2 — ver a nota longa no AC de T09. O
+#    único hit que sobra com a forma absoluta é a asserção de AUSÊNCIA que T09 EXIGE
+#    (`LibsqlDriver.test.ts`, `SELECT count(*) FROM sqlite_master WHERE name = '__drizzle_migrations'`),
+#    ou seja o gate reprovava justamente a prova de que o ledger do drizzle não existe.
+! grep -rn "__drizzle_migrations" packages/ --include='*.ts' --include='*.go' | grep -v node_modules | grep -v '\.test\.'
 ```
 
 > **Guard contra o gate vazio (obrigatório, roda ANTES dos negados).** Um `! grep -rn` sobre um
@@ -3738,7 +3813,14 @@ test -d packages/api/typescript/src && test -d packages/api/typescript/core/src 
 #       core/src/db/drivers/utils.ts:19                       await db.execute(sql`      (T15)
 #       core/src/services/CommandQueue/PostgresCommandQueue.ts:291  this.db.execute(sql`  (T16)
 #       core/src/services/CommandQueue/PostgresCommandQueue.ts:325  return result.rows    (T16)
-! grep -rnE '\b(db|tx|client)\.execute\(|\b(result|res|rs)\.rows\b' packages/api/typescript/src packages/api/typescript/core/src --include='*.ts' | grep -v node_modules
+# ⚠️ `grep -v LibsqlDriver` ACRESCENTADO NA EXECUÇÃO DO BLOCO 2 — ver a nota longa no AC de T15:
+#     o receptor `client` aqui quer dizer "cliente drizzle/pg", e a decisao (a) MANDA dirigir
+#     `BEGIN IMMEDIATE`/`COMMIT`/`ROLLBACK` por `client.execute()` sobre o **Client do
+#     @libsql/client**, dentro do `LibsqlDriver` — o unico dono legitimo desse objeto no repo
+#     (T13B classe 3). Sem a exclusao este gate reprova a fase pelo codigo que as decisoes
+#     fechadas exigem. `.rows` continua coberto: o gate proibe `(result|res|rs).rows`, e o
+#     `ResultSet` do libsql e lido no driver por variaveis nomeadas (`seen.rows`, `ledger.rows`).
+! grep -rnE '\b(db|tx|client)\.execute\(|\b(result|res|rs)\.rows\b' packages/api/typescript/src packages/api/typescript/core/src --include='*.ts' | grep -v node_modules | grep -v LibsqlDriver
 
 # (4) o caminho de transação BANIDO pela decisão (a) não voltou por nenhuma porta.
 #     Vaza uma conexão nativa por chamada e derruba os pragmas — nenhum tipo e nenhum teste

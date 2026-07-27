@@ -3,6 +3,9 @@ import { BaseDomainEvent } from '../types/BaseDomainEvent'
 import type { AnyIntegrationEvent } from '../types/BaseIntegrationEvent'
 import { DrizzleClient } from '../db'
 import { events, outbox } from '@codedm/contracts/db'
+// The lane literal comes from the FROZEN cross-boundary enum, not a retyped string —
+// the Go side discriminates on these exact values.
+import { OutboxSource } from '@codedm/contracts-typescript/wire/enums'
 import { and, asc, desc, eq, gte, like, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe-neo'
 import { tryCatchAsync } from '../utils/TryCatch'
@@ -85,7 +88,7 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		const filters = and(eq(events.ownerId, ownerId), like(events.name, nameLike))
 
 		const result = await tryCatchAsync(async () => {
-			const [countRow] = await dbClient.select({ n: sql<number>`count(*)::int` }).from(events).where(filters)
+			const [countRow] = await dbClient.select({ n: sql<number>`count(*)` }).from(events).where(filters)
 
 			const rows = await dbClient
 				.select()
@@ -191,7 +194,7 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 			entityId: event.entityId,
 			ownerId: event.ownerId,
 			payload: JSON.parse(JSON.stringify(event.payload)) as Record<string, unknown>,
-			source: 'api',
+			source: OutboxSource.api,
 			occurredAt: new Date(event.time),
 		}
 	}
@@ -203,7 +206,7 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 			entityId: event.entityId,
 			ownerId: event.ownerId,
 			payload: event.toJSON() as unknown as Record<string, unknown>,
-			source: 'api',
+			source: OutboxSource.api,
 		}
 	}
 
@@ -216,7 +219,7 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 			entityId: undefined,
 			ownerId: event.ownerId,
 			payload: JSON.parse(JSON.stringify(event.payload)) as Record<string, unknown>,
-			source: 'api',
+			source: OutboxSource.api,
 			occurredAt: new Date(event.time),
 		}
 	}
@@ -228,7 +231,7 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 			entityId: undefined,
 			ownerId: event.ownerId,
 			payload: event.toJSON() as unknown as Record<string, unknown>,
-			source: 'api',
+			source: OutboxSource.api,
 		}
 	}
 }

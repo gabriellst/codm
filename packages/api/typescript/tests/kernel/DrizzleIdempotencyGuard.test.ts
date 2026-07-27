@@ -1,5 +1,5 @@
 // DrizzleIdempotencyGuard — the exactly-once claim latch on shared.idempotency_keys, against a real
-// Postgres (PGlite). Ported from medscall@f04e8a0f
+// SQLite file. Ported from medscall@f04e8a0f
 // (packages/api/src/shared/services/IdempotencyGuard/DrizzleIdempotencyGuard.test.ts); scopes swapped
 // for the template's generic IdempotencyScope placeholders, plus a release round-trip added since
 // release ("always on the pool") is a load-bearing part of the claim-commit-effect contract.

@@ -3,10 +3,14 @@ import os from 'node:os'
 import path from 'node:path'
 
 /**
- * Thrown when a second daemon tries to open a data dir that a LIVE process already holds. Named so
- * boot can fail loudly (and callers can `instanceof`-match) instead of the old silent-divergence
- * failure mode: `new PGlite(dataDir)` takes NO OS advisory lock, so two api-ts starts on one
- * CODEDM_DATA_DIR would each open a live instance and split/corrupt state with no error surfaced.
+ * Thrown when a SECOND DAEMON tries to start on a data dir a live daemon already holds.
+ *
+ * The meaning narrowed with the SQLite flip. It used to mean "this database file has an exclusive
+ * owner"; it now means "another process IN THIS ROLE is already running here". Exclusivity of the
+ * FILE is gone on purpose — the Go gateway opens the very same `codedm.db`, and WAL is what makes
+ * that safe. What survives is the thing the lock was actually worth: catching an operator who
+ * starts two copies of the SAME process on one data dir (duplicate outbox dispatchers, duplicate
+ * schedulers).
  */
 export class DataDirLockedError extends Error {
 	readonly code = 'DATA_DIR_LOCKED'
@@ -15,28 +19,37 @@ export class DataDirLockedError extends Error {
 		readonly heldByPid: number,
 	) {
 		super(
-			`CODEDM_DATA_DIR "${dataDir}" is already held by a running daemon (pid ${heldByPid}). ` +
-				`Only one api-ts process may own an embedded PGlite data dir at a time — stop the other daemon ` +
-				`or point this one at a different CODEDM_DATA_DIR.`,
+			`Another CodeDM daemon is already running on this data dir "${dataDir}" (pid ${heldByPid}). ` +
+				`Stop the other daemon or point this one at a different CODEDM_DATA_DIR. ` +
+				`The Go gateway sharing this dir is expected and fine — it takes a different lock.`,
 		)
 		this.name = 'DataDirLockedError'
 	}
 }
 
 /**
- * Lock path for a given data dir. Deliberately a SIBLING of the data dir (`<dataDir>.lock`), never a
- * file INSIDE it: PGlite runs `initdb` on a fresh data dir and initdb aborts ("directory exists but is
- * not empty") if it finds any stray file — a lockfile placed inside would crash the WASM on first boot.
+ * Lock path for a given data dir — `<dataDir>/daemon.lock`, INSIDE the dir and scoped BY ROLE.
+ *
+ * It used to be a sibling (`<dataDir>.lock`) and the reason was specific to the old embedded
+ * engine, whose `initdb` aborted on a non-empty data dir. That engine is gone, and so is the
+ * reason; keeping the sibling path would mean depending on a coincidence whose cause was removed.
+ *
+ * Role scoping is the whole point: only the daemon takes `daemon.lock`, and the Go gateway takes a
+ * lockfile of its own under a different name (see `core/db/sqlite/store.go`), so the two roles
+ * never contend for the same path while "one instance per role" still holds.
+ *
+ * EXPORTED because the lock-cleanup call sites (the e2e runner, the node smoke script) must import
+ * this rule instead of re-typing the path in three places.
  */
-function lockPathFor(dataDir: string): string {
-	return `${dataDir}.lock`
+export function lockPathFor(dataDir: string): string {
+	return path.join(dataDir, 'daemon.lock')
 }
 
 /**
- * Resolve a configured data dir to an absolute path (expanding a leading `~` to $HOME) and ensure it
- * exists on disk before PGlite opens it. Lives here (next to the lock) so BOTH the composition-root
- * driver binding and the early boot-time lock step (src/index.ts) resolve the SAME concrete path —
- * the lock's sibling `<dataDir>.lock` and the driver's `new PGlite(dataDir)` must agree exactly.
+ * Resolve a configured data dir to an absolute path (expanding a leading `~` to $HOME) and ensure
+ * it exists on disk before the database file is opened inside it. Lives here (next to the lock) so
+ * BOTH the composition-root driver binding and the early boot-time lock step resolve the SAME
+ * concrete path — the lockfile and `<dataDir>/codedm.db` must agree exactly.
  */
 export function resolveDataDir(raw: string): string {
 	const expanded = raw.startsWith('~') ? path.join(os.homedir(), raw.slice(1)) : path.resolve(raw)
@@ -57,12 +70,15 @@ function isProcessAlive(pid: number): boolean {
 }
 
 /**
- * Single-instance guard for the real, FILE-BACKED PGlite path. Acquires an exclusive PID lockfile at
- * the SIBLING path `<dataDir>.lock` (never inside dataDir — PGlite initdb aborts on a non-empty data
- * dir; created O_EXCL so the acquire is atomic against a racing daemon). If the lockfile already
- * exists and its PID is a LIVE process, throws {@link DataDirLockedError}; if the PID is dead (stale
- * lock from a crashed daemon), the lock is reclaimed. Registers a process-exit cleanup that removes the
- * lockfile iff this process owns it. In-memory (test) drivers pass no dataDir and never call this.
+ * Single-instance-per-ROLE guard for the real daemon. Acquires an exclusive PID lockfile at
+ * `<dataDir>/daemon.lock` (created O_EXCL, so the acquire is atomic against a racing daemon). If
+ * the lockfile already exists and its PID is a LIVE process, throws {@link DataDirLockedError}; if
+ * the PID is dead (stale lock from a crashed daemon), the lock is reclaimed. Registers a
+ * process-exit cleanup that removes the lockfile iff this process owns it.
+ *
+ * This is a BOOT concern and boot is its only call site (`src/boot.ts`) — the database driver does
+ * NOT acquire it in its constructor. The Go gateway's own lock lives at a different path, so the
+ * two roles coexist on one data dir by construction.
  */
 export function acquireDataDirLock(dataDir: string): void {
 	const lockPath = lockPathFor(dataDir)
@@ -75,9 +91,8 @@ export function acquireDataDirLock(dataDir: string): void {
 		if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
 
 		const holder = Number.parseInt(fs.readFileSync(lockPath, 'utf-8').trim(), 10)
-		// Idempotent for THIS process: the lock is acquired once at an early boot step (src/index.ts)
-		// and again when the memoized PGliteDriver constructs — same pid means we already own it, so
-		// this is a no-op (no re-throw, no duplicate exit handler). Only a DIFFERENT live pid is a
+		// Idempotent for THIS process: a re-entrant acquire from the same pid means we already own it,
+		// so this is a no-op (no re-throw, no duplicate exit handler). Only a DIFFERENT live pid is a
 		// genuine second daemon and must fail loud.
 		if (holder === process.pid) return
 		if (isProcessAlive(holder)) throw new DataDirLockedError(dataDir, holder)

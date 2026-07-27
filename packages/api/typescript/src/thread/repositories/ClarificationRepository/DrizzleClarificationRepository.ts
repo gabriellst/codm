@@ -15,6 +15,12 @@ export class DrizzleClarificationRepository extends ClarificationRepository {
 		const rows = await dbc
 			.insert(threadClarifications)
 			.values({
+				// The id is minted HERE, in the repository. The sqlite schema has no db-side default
+				// (the Go side owns the DDL and mints ids in code too), and `$defaultFn(randomUUID)`
+				// on an id column is banned: an aggregate's identity must never be invented by the
+				// persistence layer behind the caller's back. This table has no aggregate, so the
+				// repository is the right place.
+				id: crypto.randomUUID(),
 				ownerId: input.ownerId,
 				threadId: input.threadId,
 				entryId: input.entryId,

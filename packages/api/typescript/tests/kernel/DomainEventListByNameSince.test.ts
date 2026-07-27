@@ -1,5 +1,5 @@
 // DomainEventRepository.listByNameSince — the sweep read of the append-only event log, against a
-// real Postgres (PGlite). Fixtures are backdated directly on the persisted `occurred_at` column
+// real SQLite file. Fixtures are backdated directly on the persisted `occurred_at` column
 // (BaseEvent stamps `time` internally with no constructor override) for deterministic,
 // sub-millisecond-safe placement relative to `since`.
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'

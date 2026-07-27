@@ -40,29 +40,30 @@ const ctx = await BoundedContext.create({
 	registry: ALL_REGISTRIES,
 	setup: async container => {
 		// Spec emission (bun sdk / emit-openapi) imports the composition root ONLY to collect routers —
-		// booting infra there would spin up the embedded PGlite (WASM + data dir) and poll an empty DB.
+		// booting infra there would open the real data dir and poll an empty DB.
 		// Same guard as BoundedContext.registerJobs.
 		if (process.env.EMIT_OPENAPI === 'true') return
 
 		// Migrations apply ON BOOT, before any context serves a request or the outbox polls: the real
-		// driver is embedded file-backed PGlite (see shared/registry.ts) whose runMigrations() is
-		// idempotent + ordered. This is the daemon's only migration step — there is no external Postgres
-		// to `bun migrate` against.
+		// driver is the shared, file-backed SQLite database (see shared/registry.ts) whose
+		// runMigrations() is idempotent + ordered, and symmetric with the Go gateway's applier over the
+		// same ledger. This is the daemon's only migration step — there is no external Postgres to
+		// `bun migrate` against.
 		const databaseDriver = container.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
 		// CRITICAL — memoize the ONE process-wide driver instance. The real binding is a per-resolve
-		// `useFactory` (shared/registry.ts filePgliteDriver), and tsyringe-neo invokes factories on
+		// `useFactory` (shared/registry.ts fileLibsqlDriver), and tsyringe-neo invokes factories on
 		// EVERY resolve with no caching — so without this, each repo / the outbox dispatcher / this boot
-		// path would each mint a SEPARATE `new PGlite(dataDir)`. Live PGlite instances over one data dir
-		// DIVERGE (they load from disk at open but do not share state), leaving the outbox dispatcher
-		// polling an instance that never sees request-path writes — the entire event-driven write-side
-		// dead. Pinning the resolved driver + its db here (before migrations, outbox, or any context
+		// path would each mint a SEPARATE driver, i.e. another pair of connections AND another FIFO
+		// write gate over the same file: the gates would not know about each other, so two "serialized"
+		// writers would contend for the single SQLite write lock and take SQLITE_BUSY. Pinning the
+		// resolved driver + its db here (before migrations, outbox, or any context
 		// serves) makes DrizzleClient / UnitOfWorkFactory factories resolve this same instance forever.
 		// Mirrors TestBed.ts:92-93.
 		container.registerInstance(DrizzleDatabaseDriver as any, databaseDriver)
 		container.registerInstance(DrizzleClient as any, databaseDriver.db)
 		await databaseDriver.runMigrations()
 		const loggingService = container.resolve(LoggingService as any) as LoggingService
-		loggingService.info({ content: { message: 'Migrations applied (embedded PGlite)' } })
+		loggingService.info({ content: { message: 'Migrations applied (shared SQLite)' } })
 
 		const externalMediator = container.resolve(ExternalMediator as any) as ExternalMediator
 		const outboxDispatcher = container.resolve(OutboxDispatcher as any) as OutboxDispatcher

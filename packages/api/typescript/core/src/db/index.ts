@@ -2,11 +2,9 @@ import { container } from 'tsyringe-neo'
 import { DrizzleDatabaseDriver } from './drivers/DrizzleDatabaseDriver'
 
 export * from './client'
-export * from './config'
 export * from './utils'
 export * from './saveWithOptimisticLock'
 export * from './drivers'
-export * from './types/jsonb'
 
 export async function closeDatabase(): Promise<void> {
 	try {

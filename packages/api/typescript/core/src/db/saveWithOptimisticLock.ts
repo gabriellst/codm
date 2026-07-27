@@ -1,23 +1,27 @@
 import { eq } from 'drizzle-orm'
-import type { PgInsertValue, PgTable, PgUpdateSetSource } from 'drizzle-orm/pg-core'
-import type { DrizzleClient } from './client'
+import type { SQLiteInsertValue, SQLiteTable, SQLiteUpdateSetSource } from 'drizzle-orm/sqlite-core'
+import type { DrizzleTransaction } from '../services/UnitOfWork/DrizzleUnitOfWork'
 import type { BaseInfrastructureErrors } from '../errors/codes'
 import { BaseError } from '../types/BaseError'
 
 /** Union of THE GIVEN table's column objects — rejects a column from another table at compile time. */
-type ColumnsOf<T extends PgTable> = T['_']['columns'][keyof T['_']['columns']]
+type ColumnsOf<T extends SQLiteTable> = T['_']['columns'][keyof T['_']['columns']]
 
-interface SaveWithOptimisticLockOptions<T extends PgTable> {
-	db: DrizzleClient
+interface SaveWithOptimisticLockOptions<T extends SQLiteTable> {
+	/**
+	 * The WRITE handle — i.e. the `tx` a `uow.transaction(...)` callback receives. Never the
+	 * injected `DrizzleClient`, which is the read connection.
+	 */
+	db: DrizzleTransaction
 	table: T
 	/** Full row to insert — checked against the table's own insert shape. */
-	data: PgInsertValue<T>
+	data: SQLiteInsertValue<T>
 	conflictTarget: ColumnsOf<T> | ColumnsOf<T>[]
 	/**
 	 * Columns to overwrite on conflict (`excluded.*` refs) — keyed and value-checked against the
 	 * table's own columns, so a typo'd key or a column of another table is a type error.
 	 */
-	set: PgUpdateSetSource<T>
+	set: SQLiteUpdateSetSource<T>
 	versionColumn: ColumnsOf<T>
 	previousVersion: number
 }
@@ -29,7 +33,7 @@ interface SaveWithOptimisticLockOptions<T extends PgTable> {
  * lost-update. Callers bump the entity's version BEFORE building `data` (see the repository
  * `save()` idiom) so the stored row moves to `previousVersion + 1` on success.
  */
-export async function saveWithOptimisticLock<T extends PgTable>({
+export async function saveWithOptimisticLock<T extends SQLiteTable>({
 	db,
 	table,
 	data,
@@ -38,7 +42,7 @@ export async function saveWithOptimisticLock<T extends PgTable>({
 	versionColumn,
 	previousVersion,
 }: SaveWithOptimisticLockOptions<T>): Promise<void> {
-	const result = await db
+	const saved = await db
 		.insert(table)
 		.values(data)
 		.onConflictDoUpdate({
@@ -48,7 +52,7 @@ export async function saveWithOptimisticLock<T extends PgTable>({
 		})
 		.returning({ version: versionColumn })
 
-	if (result.length === 0) {
+	if (saved.length === 0) {
 		throw new BaseError<BaseInfrastructureErrors>(
 			'OPTIMISTIC_LOCK_CONFLICT',
 			`Optimistic lock conflict: entity was modified by another transaction (expected version ${previousVersion})`,

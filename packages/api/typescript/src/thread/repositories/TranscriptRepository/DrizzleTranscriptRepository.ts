@@ -17,6 +17,9 @@ export class DrizzleTranscriptRepository extends TranscriptRepository {
 		const rows = await dbc
 			.insert(transcriptEntries)
 			.values({
+				// Minted here — infra table, no aggregate, no db-side default. See the note in
+				// DrizzleClarificationRepository on why ids never come from `$defaultFn`.
+				id: crypto.randomUUID(),
 				ownerId: input.ownerId,
 				threadId: input.threadId,
 				kind: input.kind,

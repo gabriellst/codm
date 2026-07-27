@@ -165,7 +165,7 @@ export class TestBed {
 	 */
 	probe(): PersistenceProbe {
 		if (this.mode !== 'integration') {
-			throw new Error('testBed.probe() requires integration mode (PGlite) — mock mode has no real DrizzleClient to read from.')
+			throw new Error('testBed.probe() requires integration mode — mock mode has no real DrizzleClient to read from.')
 		}
 		return new PersistenceProbe(this.resolve(DrizzleClient))
 	}

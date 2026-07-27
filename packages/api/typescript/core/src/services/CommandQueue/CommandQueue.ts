@@ -12,7 +12,7 @@ export abstract class CommandQueue {
 	protected readonly workers = new Map<string, Worker>()
 
 	/**
-	 * Whether enqueue/cancel JOIN the caller's DB transaction (PostgresCommandQueue: true — the write
+	 * Whether enqueue/cancel JOIN the caller's DB transaction (SqliteCommandQueue: true — the write
 	 * commits or rolls back with the domain write). Broker-backed drivers (BullMQ) are false: the `tx`
 	 * param is ignored AND every call is network I/O — money-path callers MUST check this flag and
 	 * tolerate failure (never let broker I/O fail a money transaction).
@@ -21,7 +21,7 @@ export abstract class CommandQueue {
 
 	/**
 	 * Enqueue a command, optionally delayed (`opts.delay`), deduplicated (`opts.jobId`) or repeatable
-	 * (`opts.repeat`). `tx` is honored ONLY by transactional implementations (PostgresCommandQueue): the
+	 * (`opts.repeat`). `tx` is honored ONLY by transactional implementations (SqliteCommandQueue): the
 	 * enqueue commits or rolls back WITH the caller's domain write — no dual-write. Broker-backed
 	 * implementations (BullMQ) ignore it (they cannot join a DB transaction).
 	 */

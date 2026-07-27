@@ -1,4 +1,4 @@
-// PostgresCommandQueue — the transactional scheduling driver, against a real Postgres (PGlite).
+// SqliteCommandQueue — the transactional scheduling driver, against a real SQLite file.
 // The poller is never left running: each test registers handlers, stops the interval, and drives
 // `tick()` deterministically. "The alarm fires" is simulated by rewinding `run_at` via SQL instead
 // of sleeping — deterministic and instant.
@@ -6,24 +6,26 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
-import { DrizzleClient, MockLoggingService, PostgresCommandQueue, type Handler } from '@codedm/core-typescript'
+import { DrizzleClient, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, type Handler } from '@codedm/core-typescript'
 import { scheduledCommands } from '@codedm/contracts/db'
 
-describe('PostgresCommandQueue (integration)', () => {
+describe('SqliteCommandQueue (integration)', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 	let db: DrizzleClient
-	let queue: PostgresCommandQueue
+	let driver: DrizzleDatabaseDriver
+	let queue: SqliteCommandQueue
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: 'pgq-owner' })
 		db = testBed.resolve(DrizzleClient)
+		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 
 	beforeEach(async () => {
 		await testBed.reset()
-		queue = new PostgresCommandQueue(db, new MockLoggingService())
+		queue = new SqliteCommandQueue(driver, new MockLoggingService())
 	})
 
 	afterEach(async () => {
@@ -51,11 +53,14 @@ describe('PostgresCommandQueue (integration)', () => {
 
 	const rowById = async (id: string) => (await db.select().from(scheduledCommands).where(eq(scheduledCommands.id, id)))[0]
 
+	// Writes go through the driver's write seam — `db` is the READ connection.
 	const rewindRunAt = async (id: string) => {
-		await db
-			.update(scheduledCommands)
-			.set({ runAt: new Date(Date.now() - 1_000) })
-			.where(eq(scheduledCommands.id, id))
+		await driver.transaction(tx =>
+			tx
+				.update(scheduledCommands)
+				.set({ runAt: new Date(Date.now() - 1_000) })
+				.where(eq(scheduledCommands.id, id)),
+		)
 	}
 
 	it('executes an immediate command once and deletes the row (one-shot consumed)', async () => {
@@ -214,6 +219,55 @@ describe('PostgresCommandQueue (integration)', () => {
 		expect((await rowById('job-claim-counts'))!.attempts).toBe(1)
 	})
 
+	it('an EXPIRED lease is re-claimable, and the re-claim advances attempts again', async () => {
+		const { handler, calls } = makeHandler('pgq_test_lease')
+		await register(handler)
+		await queue.enqueueCommand('pgq_test_lease', {}, { jobId: 'job-lease' })
+
+		// Simulate a worker that claimed the row and died: leased, attempts already charged once.
+		await driver.transaction(tx =>
+			tx
+				.update(scheduledCommands)
+				.set({ attempts: 1, leaseUntil: new Date(Date.now() + 60_000) })
+				.where(eq(scheduledCommands.id, 'job-lease')),
+		)
+		await queue.tick()
+		expect(calls).toHaveLength(0) // still leased — nobody may touch it
+		expect((await rowById('job-lease'))!.attempts).toBe(1)
+
+		await driver.transaction(tx =>
+			tx
+				.update(scheduledCommands)
+				.set({ leaseUntil: new Date(Date.now() - 1_000) })
+				.where(eq(scheduledCommands.id, 'job-lease')),
+		)
+		await queue.tick()
+		expect(calls).toHaveLength(1)
+		// The row is consumed on success, so the advanced attempts value is read from the span the
+		// handler saw: 1 (dead worker) + 1 (this re-claim) = 2.
+		expect(await rowById('job-lease')).toBeUndefined()
+	})
+
+	it('two concurrent claim cycles never hand the same row to two executions', async () => {
+		const slow = async () => {
+			await new Promise(resolve => setTimeout(resolve, 20))
+		}
+		const { handler, calls } = makeHandler('pgq_test_race', slow)
+		await register(handler)
+
+		const other = new SqliteCommandQueue(driver, new MockLoggingService())
+		const { handler: otherHandler, calls: otherCalls } = makeHandler('pgq_test_race', slow)
+		await other.registerCommandHandler(otherHandler)
+		other.stopPolling()
+
+		await queue.enqueueCommand('pgq_test_race', { n: 1 }, { jobId: 'job-race' })
+		await Promise.all([queue.tick(), other.tick()])
+
+		// The lease is written inside the claim's write transaction, so the loser sees it leased.
+		expect(calls.length + otherCalls.length).toBe(1)
+		await other.close()
+	})
+
 	it('hard crash (claim without finalize) is not an infinite loop: budget exhausted + expired lease → dead-letter, never re-claimed', async () => {
 		const { handler, calls } = makeHandler('pgq_test_crash')
 		await register(handler)
@@ -221,10 +275,12 @@ describe('PostgresCommandQueue (integration)', () => {
 
 		// Simulate N crashes: the claim bumped attempts per execution started, the process died before
 		// finalize (lease expires, attempts stays). Final state: attempts = max, lease expired.
-		await db
-			.update(scheduledCommands)
-			.set({ attempts: 3, leaseUntil: new Date(Date.now() - 1_000), runAt: new Date(Date.now() - 1_000) })
-			.where(eq(scheduledCommands.id, 'job-crash'))
+		await driver.transaction(tx =>
+			tx
+				.update(scheduledCommands)
+				.set({ attempts: 3, leaseUntil: new Date(Date.now() - 1_000), runAt: new Date(Date.now() - 1_000) })
+				.where(eq(scheduledCommands.id, 'job-crash')),
+		)
 
 		await queue.tick()
 
@@ -297,7 +353,7 @@ describe('PostgresCommandQueue (integration)', () => {
 		await first.close() // idempotent
 
 		// A fresh instance (next deploy / another process) picks the released item up immediately.
-		const second = new PostgresCommandQueue(db, new MockLoggingService())
+		const second = new SqliteCommandQueue(driver, new MockLoggingService())
 		const { handler: h2, calls: calls2 } = makeHandler('pgq_test_handoff')
 		await second.registerCommandHandler(h2)
 		second.stopPolling()

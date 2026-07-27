@@ -2,7 +2,7 @@ import { testId } from '@test/support'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenUser, givenOwner, givenActiveSession } from '@test/support'
-import { DrizzleClient } from '@codedm/core-typescript'
+import { DrizzleClient, DrizzleDatabaseDriver } from '@codedm/core-typescript'
 import { eq } from 'drizzle-orm'
 import { sessions } from '@codedm/contracts/db'
 import { SetActiveOwner } from './SetActiveOwner'
@@ -16,18 +16,21 @@ describe('SetActiveOwner use case (SPEC-07)', () => {
 	let setActiveOwner: SetActiveOwner
 	let ownerRepo: DrizzleOwnerRepository
 	let db: DrizzleClient
+	let driver: DrizzleDatabaseDriver
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
 
 		db = testContainer.resolve(DrizzleClient as any) as DrizzleClient
+		driver = testContainer.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
 
 		// Manually construct repos and use case to bypass tsyringe emitDecoratorMetadata
 		// issue in Bun test isolation (all integration-mode use-case tests share this pattern).
 		ownerRepo = new DrizzleOwnerRepository(db)
 
-		setActiveOwner = new SetActiveOwner(ownerRepo, db)
+		// The use case WRITES, so it takes the driver's write seam, not the read client.
+		setActiveOwner = new SetActiveOwner(ownerRepo, driver)
 		setActiveOwner.bindContainer(testContainer)
 	})
 	beforeEach(async () => {

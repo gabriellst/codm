@@ -4,8 +4,8 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./db/schema/index.ts",
-		"./db": "./db/schema/index.ts",
+		".": "./db/schema-sqlite/index.ts",
+		"./db": "./db/schema-sqlite/index.ts",
 		"./db/migrations": "./db/migrations.ts"
 	},
 	"scripts": {

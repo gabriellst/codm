@@ -627,3 +627,344 @@ timeout) em `.specs/codedm/OVERNIGHT-BLOCKED.md`. **Decisão de founder necessá
 
 T08 está **liberado** pelo gate. Bloco 2 (T08→T23) é **um único commit** e a árvore fica
 vermelha do começo ao fim — run separada, como o plano manda.
+
+---
+
+## BLOCO 2 — O FLIP (T08 → T23), um único commit
+
+A janela vermelha do plano, fechada. 16 tasks, um commit, porque a árvore não é bissectável no
+meio dela: no instante em que `core/src/db/client.ts` deixa de estender `NodePgDatabase`, tudo que
+é tipado contra `PgTable` quebra ao mesmo tempo.
+
+### O que mudou, em uma frase por task
+
+- **T08** — `@codedm/contracts` passa a exportar `db/schema-sqlite`; `migrations.ts` resolve
+  `schema-sqlite/migrations`; `DrizzleClient` estende `LibSQLDatabase`.
+- **T09** — nasce o `LibsqlDriver`: **dois** clients de regime (escrita + leitura),
+  `BEGIN IMMEDIATE`/`COMMIT`/`ROLLBACK` emitidos à mão atrás de um `TxGate` FIFO, applier de
+  migrations próprio sobre a ledger `_sqlite_migrations` (DDL byte-idêntica à do Go), handle curto
+  e dedicado a 30000ms só para a migration, e `close()` deliberadamente **não** destrutivo.
+- **T10** — o lock deixa de ser "dono do arquivo" e vira "instância única por PAPEL":
+  `<dataDir>/daemon.lock`, `lockPathFor` exportada.
+- **T11** — deletados `PGliteDriver`, `NodePgDriver`, `types/jsonb.ts`, `db/config.ts` e os dois
+  `bun-file-assets.d.ts`; mais os 11 arquivos de resíduo textual.
+- **T12** — bindings memoizados nos **três** caminhos (mock/integration, real, EMIT_OPENAPI); o
+  `real` abre `<CODEDM_DATA_DIR>/codedm.db`, exatamente o arquivo do gateway Go.
+- **T13/T13B** — o UoW passa a chamar `driver.transaction(fn)`; auditoria da troca de transação
+  falsa por real em `.plans/artifacts/2026-07-26-tx-audit.md` (classe 1: 4 sites achados, 4
+  fechados; classes 2/3/3B: zero), e o `tx-discipline` guard passou a enxergar `core/src` e a
+  proibir `this.db.*` dentro de span de tx.
+- **T14/T15** — `saveWithOptimisticLock` em genéricos sqlite-core; `truncateAllTables` vira
+  `resetAllTables` (varredura de `sqlite_master`, preservando a ledger).
+- **T16** — `PostgresCommandQueue` → `SqliteCommandQueue`: **reescrita de SQL**, não de transporte
+  (saíram `now()`×5, `interval '1 millisecond'`, `FOR UPDATE SKIP LOCKED` e `UPDATE … FROM`; o
+  relógio passou a vir de `Date.now()`, e a semântica de `attempts` = "execuções INICIADAS" foi
+  preservada literalmente).
+- **T17** — dispatcher com lane (`source = 'api'`), lease + token de claim, `attempts` cobrado no
+  claim, sweep de poison, tombstone em vez de delete, e a invariante de ordenação **qualificada
+  como intra-lote** no docblock.
+- **T18** — nasce o `SqlExternalMediator` (ingress da lane `integration`, reviver de datas, poll
+  capado em 2s); a carve-out `CODEDM_E2E` morre e o `TestIngressController` passa a **escrever a
+  linha da lane** em vez de publicar in-process.
+- **T19/T20** — pg-ismos de SQL cru fora (`count(*)::int`, `::timestamptz`, `::uuid`, e o `ilike`
+  que **compilava**); o cursor keyset do wizard passou a epoch-ms e rejeita cursor antigo com
+  `VALIDATION_ERROR`.
+- **T21** — auditoria dos 32 sites de insert em `.plans/artifacts/2026-07-26-insert-audit.md` +
+  `insert-site-audit.test.ts`. O flip converteu a classe inteira de `NOT NULL` de runtime em erro
+  de compilação: o `tsc` apontou **exatamente** os 3 sites sem `id` explícito.
+- **T22** — `PersistenceProbe` sobre `SQLiteTable`; as chaves deixam de ser namespaced
+  (`'shared.events'` → `'events'`), porque este dialeto não tem namespaces.
+
+### O portão (T23)
+
+```
+G1_api_tsc        EXIT=0   (tsconfig.build.json --noEmit)
+G2_api_test       EXIT=0   635 pass / 0 fail / 114 files
+G3_workspace_tsc  EXIT=0   nx run-many -t tsc, 7 projects
+G4_lint           EXIT=1   ⚠ VERMELHO NO HEAD — ver abaixo
+G5_tooling        EXIT=0   298 pass / 0 fail / 19 files
+G6_go             EXIT=0   go build ./... && go vet ./... && go test ./...
+ANCHOR/POSITIVE   EXIT=0   guardas contra gate vazio
+STRUCT_pg_names   EXIT=0   GATE1..GATE4 (pg-ismos, UPDATE…FROM, db.execute/.rows, tx banida) EXIT=0
+```
+
+**`bun lint` está vermelho no HEAD, por código que este bloco não toca.** Provado, não presumido:
+`packages/app/react/src/components/console/AppChrome.tsx` é **byte-idêntico ao HEAD**
+(`git diff HEAD -- <file>` vazio), **zero** arquivos sob `packages/app/react` foram alterados por
+este bloco, e `bun lint` é `nx run-many -t lint` sobre **três projetos de frontend**
+(app-styles, app-astro, app-react) — ele nunca olha para `packages/api/typescript`. Os 6 erros são
+`local/no-hardcoded-jsx-text` no scaffold da title bar (commit `15b1b283`, feature de desktop).
+Corrigi-los exigiria mexer em catálogo i18n de outra feature em voo (há worktree
+`desktop-deparametrize` viva) — escopo alheio, então fica **parked** com evidência em vez de
+silenciosamente "consertado". Nenhum gate foi afrouxado para acomodar isso.
+
+### A dívida de instalação suja, fechada
+
+O risco carregado do bloco 1b era real: `@electric-sql/pglite` já não estava em nenhum
+`package.json`, mas continuava **em disco** e o `PGliteDriver` continuava importando dele — a
+árvore só era verde por causa disso. O driver foi deletado cedo no bloco, e a verificação foi
+física: o symlink em `core/node_modules/@electric-sql` e a entrada
+`node_modules/.bun/@electric-sql+pglite@0.3.16` foram **removidos**, `Bun.resolveSync` passou a
+devolver `Cannot find module '@electric-sql/pglite'`, e o portão inteiro acima rodou **nesse**
+estado. A entrada órfã no `bun.lock` sobrevive (T07 não a podou) e é inofensiva.
+
+### Defeitos do plano corrigidos NO plano (com evidência colada lá)
+
+Quatro, todos da mesma família que a "regra-irmã da iteração 4" já cataloga:
+
+1. **T09 AC + T23 gate `__drizzle_migrations`** — proibiam repo-wide o literal que o teste
+   OBRIGATÓRIO da própria T09 precisa nomear (`SELECT … WHERE name = '__drizzle_migrations'`).
+   Mutuamente insatisfazíveis. Escopados com `grep -v '\.test\.'`.
+2. **T15 AC + T23 gate (3)** — proibiam `client.execute(` no diretório que a **decisão (a)** manda
+   dirigir por `client.execute('BEGIN IMMEDIATE')`. Escopados com `grep -v LibsqlDriver`, o único
+   dono legítimo do `Client` do `@libsql/client` no repo.
+3. **T11 AC + T23 gate PGlite** — a própria T11 atribui `scripts/build.ts` e
+   `scripts/smoke-node-boot.ts` a **T24/T25** (bloco 3, depois do portão) e mesmo assim exigia zero
+   repo-wide. Excluídos por nome, nomeando as tasks donas.
+4. **T19 AC** — `bun test core/src/repositories/` sai **1** ("Tests need .test…") porque o
+   diretório não tem nenhum `.test.ts`. O arquivo virou deliverable declarado da task.
+
+### PRÓXIMO PASSO
+
+Bloco 3 (T24 → T27) está liberado: T23 fechou. T24/T25 devolvem os dois gates de PGlite à forma
+absoluta ao arrancar o staging do build node e o docblock do smoke.
+
+---
+
+## Bloco 2 — correção round-1 da verificação (27-jul-2026)
+
+A verificação independente do bloco 2 confirmou a engenharia (os quatro fechamentos do §3
+honrados, nada stubbado, nenhum AC afrouxado, nada de T24+ iniciado) e achou **dois** vermelhos
+além do único que o relatório do bloco tinha revelado. Um era meu; o outro era agendado mas
+não-declarado.
+
+### Achado 1 (meu) — os linters do hook nunca foram rodados
+
+O bloco commitou com `--no-verify` (permitido: o hook falha nesta máquina), sob a obrigação de
+rodar **os gates equivalentes** à mão. Rodei `tsc`, `test`, `test:tooling` e o lado Go — mas
+`bun lint` **não é** o linter do hook. A cadeia real é
+`.githooks/pre-commit` → `bunx lint-staged` → `lint-staged.config.mjs` →
+`bun x biome check --diagnostic-level=error --write --unsafe <files>` **e**
+`bun x eslint --quiet --fix <files>`.
+
+E isto é **estruturalmente invisível** ao gate que declarei: `bun lint` é
+`nx run-many -t lint`, e `nx show projects --with-target lint` ⇒ `app-styles`, `app-astro`,
+`app-react`. Nenhum deles lê `packages/api/typescript`. O portão T23, como escrito, **não podia**
+ver o código deste bloco passar por um linter.
+
+Rodado sobre os 51 `.ts` alterados pelo commit `1537a028`:
+
+```
+$ … | xargs -0 bun x biome check --diagnostic-level=error --no-errors-on-unmatched ; echo EXIT=$?
+Checked 50 files in 23ms. Found 12 errors.
+EXIT=1
+$ … | xargs -0 bun x eslint --quiet ; echo EXIT=$?
+EXIT=0
+```
+
+Os 12, todos em arquivos que este bloco escreveu ou editou:
+
+- **4 × `lint/suspicious/noMisplacedAssertion`** em `tests/kernel/insert-site-audit.test.ts`
+  (74/77/78/79) — `expect()` dentro do helper `assertLanded`, não direto no corpo do `it()`.
+  Este **não é auto-fixável**: o `--write --unsafe` do lint-staged continuaria saindo 1, ou seja
+  o hook teria **bloqueado** o commit.
+- **8 diffs de formatter** em `LibsqlDriver.ts`, `LibsqlDriver.test.ts`, `SqlExternalMediator.ts`,
+  `SqlExternalMediator.test.ts`, `RedisExternalMediator.ts`, `GetAttachThreadWizard.test.ts`,
+  `insert-site-audit.test.ts`, `PersistenceProbe.test.ts` — estes o hook auto-corrigiria.
+
+**Correção, sem enfraquecer nada.** O helper deixou de usar matchers e passou a **lançar**:
+
+```ts
+if (rows.length === 0) throw new Error(`insert-site audit: "${tableName}" is empty — …`)
+…
+if (value === null || value === undefined) throw new Error(`insert-site audit: ${tableName}.${column} is …`)
+```
+
+A força é idêntica (um matcher que reprova também lança) e a mensagem passou a carregar tabela,
+coluna e a linha ofensora — que o diff do matcher não dava. A regra saiu **na raiz**, não por
+supressão. A assertiva descartada na conversão foi
+`expect({ table, column, value }).toMatchObject({ table, column })`, que comparava um literal com
+um subconjunto de si mesmo — sempre verdadeira; existia só para injetar contexto na saída, papel
+que a mensagem do `throw` agora cumpre de fato. **O controle positivo que prova que o helper
+ainda reprova continua no arquivo e verde**: `await expect(assertLanded('shared_events',
+['id'])).rejects.toThrow()` — confirmado por nome no junit
+(`name="a leftover row from another suite cannot mask an empty table"`, 16 pass / 0 fail).
+
+Os 8 restantes saíram pelo comando do próprio hook (`biome check --write --unsafe`). Diff
+revisado linha a linha: puro formatter, exceto `PersistenceProbe.test.ts`, onde a regra
+`useLiteralKeys` trocou `snap['users']` por `snap.users`. Esse arquivo tem uma **prova de
+compilação** (`// @ts-expect-error — 'users' was never requested`), então a equivalência foi
+medida em `tsc` isolado, não assumida:
+
+```
+sem a diretiva:  probe.ts(2,26): error TS2339: Property 'users' does not exist on type
+                 '{ events: number; outbox: number; }'          EXIT=2
+com a diretiva:  (sem erro, e sem "unused '@ts-expect-error'")  → a diretiva SEGUE consumida
+```
+
+Depois da correção: `biome check --diagnostic-level=error` ⇒ **EXIT=0**, `eslint --quiet` ⇒
+**EXIT=0**, sobre a mesma lista de 51 arquivos.
+
+### Achado 2 (agendado, mas não declarado) — `bun run build` vermelho no HEAD
+
+`packages/api/typescript/scripts/build.ts:41` ainda faz
+`Bun.resolveSync('@electric-sql/pglite/package.json', coreDir)` — **código vivo**. Com o install
+de PGlite removido do disco (foi o bloco 2 que o removeu), `bun run build` sai **1** e o daemon
+TS **não builda no HEAD**. É agendamento do plano, não defeito do flip: `scripts/build.ts` é
+deliverable declarado de **T24** (bloco 3), e por isso o AC de T23 o exclui por nome e não inclui
+`bun run build`. Registrado explícito em `OVERNIGHT-BLOCKED.md` como handoff: *o HEAD não builda;
+T24 destrava*. Não foi corrigido aqui porque T24 está fora do escopo deste bloco.
+
+### Confirmado NÃO-blocker
+
+`bun lint` segue vermelho pelos mesmos 6 `local/no-hardcoded-jsx-text` em `AppChrome.tsx` —
+re-verificado após `nx reset` com `--skip-nx-cache` (não é artefato de cache morno), com
+`git diff 917edfb0 HEAD -- packages/app/react/` **vazio** e zero arquivos `packages/app/*` nos
+dois commits do bloco. O park com prova estava certo.
+
+### Re-portão completo, DEPOIS da correção
+
+```
+biome (51 arquivos do commit)   EXIT=0   Checked 50 files. No fixes applied.
+eslint --quiet (mesma lista)    EXIT=0
+G1_api_tsc                      EXIT=0   tsconfig.build.json --noEmit
+G2_api_test                     EXIT=0   635 pass / 0 fail / 114 files
+G3_workspace_tsc                EXIT=0   nx run-many -t tsc, 7 projects
+G4_lint                         EXIT=1   ⚠ pré-existente (AppChrome), parked com prova
+G5_tooling                      EXIT=0   298 pass / 0 fail / 19 files
+G6_go                           EXIT=0   go build ./... && go vet ./... && go test ./...
+ANCHOR/POSITIVE                 EXIT=0   guardas contra gate vazio
+STRUCT_pglite/pg                EXIT=0   0 hits (exclusões de T24/T25 mantidas)
+STRUCT___drizzle_migrations     EXIT=0   0 hits
+bun run build                   EXIT=1   ⚠ agendado para T24 — HEAD NÃO BUILDA (ver acima)
+```
+
+Resolve limpo re-confirmado no estado corrigido: `Bun.resolveSync('@electric-sql/pglite/…')` ⇒
+`Cannot find module`, e os 635 testes de api rodaram nesse estado.
+
+### Como landou
+
+`git commit --amend` sobre `1537a028` (o commit único de T08–T23), com pathspec explícito.
+Amendar é seguro aqui: sem remotes no repo, nada foi publicado. `cefb28ca` (docs-only) segue
+por cima, agora carregando também o park do `bun run build`.
+
+### PRÓXIMO PASSO (inalterado)
+
+Bloco 3 (T24 → T27). **T24 primeiro** — é ele que devolve `bun run build` ao verde e os dois
+gates de PGlite à forma absoluta.
+
+---
+
+## Bloco 2 — correção round-2 da verificação (27-jul-2026)
+
+A verificação round-2 rodou os **183** ACs locais de T08–T23 transcritos verbatim do §5 e achou
+**182/183**. O único vermelho é meu, e é o mesmo pecado de processo que o round-1 já tinha
+punido: um AC que falha e não é declarado.
+
+### O achado — T16, `grep -rq 'attempts + 1' $Q`, VERMELHO no HEAD e reportado como verde
+
+```
+$ Q=packages/api/typescript/core/src/services/CommandQueue
+$ grep -rn 'attempts + 1' $Q ; echo EXIT=$?
+EXIT=1                                            ← nenhuma saída
+$ grep -rn attempts $Q/SqliteCommandQueue.ts | grep -E '\+'
+SqliteCommandQueue.ts:370:  SET lease_until = ${now + SqliteCommandQueue.LEASE_MS}, attempts = ${scheduledCommands.attempts} + 1, updated_at = ${now}
+```
+
+**Este é o quinto defeito da faixa, e diferente dos outros quatro ele NÃO é defeito do plano.**
+O verificador o classificou como defeito de forma do AC (o drizzle interpola
+`${scheduledCommands.attempts}` para o nome qualificado da coluna, então o literal não aparece
+no fonte) e ofereceu duas remediações: (i) afrouxar o grep, ou (ii) alinhar o código. Fui ler o
+corpo da própria T16 antes de escolher, e o corpo decide a questão — o SQL **prescrito** pela
+task, `plano:2998`, é:
+
+```sql
+UPDATE shared_scheduled_commands
+   SET lease_until = :now + :leaseMs, attempts = attempts + 1, updated_at = :now
+ WHERE id IN (:ids);
+```
+
+Sem qualificar. Ou seja: **o AC estava certo e o código é que tinha derivado do plano.** A forma
+qualificada era, além de divergente, incoerente dentro do próprio statement (o `lease_until` e o
+`updated_at` do mesmo `SET` já eram literais) e assimétrica com o outro claimante do processo,
+`DrizzleOutboxDispatcher.ts:199`, que escreve `attempts: sql\`attempts + 1\`` — a assimetria que
+o verificador observou entre os dois ACs era o sintoma, não a causa.
+
+Remediação **(ii)**, portanto: alinhar o código ao SQL prescrito. Nada afrouxado.
+
+```
+- SET lease_until = ${now + SqliteCommandQueue.LEASE_MS}, attempts = ${scheduledCommands.attempts} + 1, updated_at = ${now}
++ SET lease_until = ${now + SqliteCommandQueue.LEASE_MS}, attempts = attempts + 1, updated_at = ${now}
+```
+
+mais três linhas de comentário dizendo *por que* é sem qualificar (UPDATE de tabela única; mesmo
+fragmento do dispatcher), espelhando o comentário que o dispatcher já carrega. Depois:
+
+```
+$ grep -rn 'attempts + 1' $Q ; echo EXIT=$?
+SqliteCommandQueue.ts:368:  // `attempts + 1` is unqualified on purpose: single-table UPDATE, …
+SqliteCommandQueue.ts:373:  SET lease_until = ${now + SqliteCommandQueue.LEASE_MS}, attempts = attempts + 1, updated_at = ${now}
+EXIT=0
+```
+
+O hit é **SQL de verdade** na `:373`, não só o comentário novo — checado de propósito, porque um
+AC de grep satisfeito por um comentário seria exatamente o tipo de verde vazio que este plano
+combate.
+
+E `plano:3065` ganhou a nota do episódio colada ao lado (com as duas saídas, antes e depois),
+dizendo que o AC **não deve** ser afrouxado por quem esbarrar nele: ele trava a forma emitida, e
+a forma qualificada é o desvio que ele existe para reprovar. Sem isso, o próximo executor
+herdaria o AC sem herdar a razão dele.
+
+### Re-portão de T16, completo (13 greps + o teste)
+
+```
+! test -e $Q/PostgresCommandQueue.ts                        EXIT=0
+test -e $Q/SqliteCommandQueue.ts                            EXIT=0
+! (db|tx|client).execute( | (result|res|rs).rows            EXIT=0
+! (^|[^.A-Za-z_])now\(\)                                    EXIT=0
+! interval '  /  ! FOR UPDATE  /  ! SKIP LOCKED             EXIT=0 0 0
+! UPDATE…FROM  /  ! unixepoch|CURRENT_TIMESTAMP             EXIT=0 0
+grep -rq 'Date.now()'                                       EXIT=0
+grep -rq 'attempts + 1'                                     EXIT=0   ← era 1
+grep -rqiE 'executions STARTED|execuções INICIADAS'         EXIT=0
+! this.db.(insert|update|delete)(                           EXIT=0
+bun test tests/kernel/SqliteCommandQueue.test.ts            EXIT=0   15 pass / 0 fail / 50 expects
+```
+
+### Re-portão global (T23) DEPOIS da correção
+
+```
+biome (arquivo alterado, cadeia do hook)   EXIT=0   Checked 1 file. No fixes applied.
+eslint --quiet (idem)                      EXIT=0
+G1_api_tsc                                 EXIT=0   tsconfig.build.json --noEmit
+G2_api_test                                EXIT=0   635 pass / 0 fail / 114 files
+G3_workspace_tsc                           EXIT=0   nx run-many -t tsc, 7 projects
+G4_lint                                    EXIT=1   ⚠ pré-existente (AppChrome), parked com prova
+G5_tooling                                 EXIT=0   298 pass / 0 fail / 19 files
+G6_go                                      EXIT=0   go build && go vet && go test ./...
+ANCHOR/POSITIVE                            EXIT=0   guardas contra gate vazio
+STRUCT_pglite/pg                           EXIT=0   0 hits
+STRUCT___drizzle_migrations                EXIT=0   0 hits
+GATE_NOVO (1) pg-ismos de SQL              EXIT=0   0 hits
+GATE_NOVO (2) UPDATE…FROM                  EXIT=0   0 hits
+GATE_NOVO (3) db/tx/client.execute|.rows   EXIT=0   0 hits
+GATE_NOVO (4) .transaction( BANIDO         EXIT=0   0 hits — decisão (a) intacta
+```
+
+`G4_lint` e `bun run build` seguem exatamente como parkados no round-1: os mesmos 6
+`local/no-hardcoded-jsx-text` em `AppChrome.tsx` (com `git diff 917edfb0 HEAD -- packages/app/`
+= **0 linhas**), e o `bun run build` que é deliverable declarado de T24. Re-confirmados, não
+re-parkados por conveniência. Resolve limpo re-checado no estado corrigido:
+`Bun.resolveSync('@electric-sql/pglite')` ⇒ `Cannot find module`, e os 635 testes rodaram assim.
+
+### Como landou
+
+`git commit --amend` sobre `c614ea73` (o commit único de T08–T23), com pathspec explícito —
+sem remotes no repo, nada foi publicado, então amendar continua seguro. Commitado com
+`--no-verify` (o hook falha nesta máquina) e com a cadeia real do hook rodada à mão sobre o
+arquivo alterado, acima.
+
+### PRÓXIMO PASSO (inalterado)
+
+Bloco 3 (T24 → T27), **T24 primeiro**. Nada de T24+ foi iniciado.

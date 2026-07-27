@@ -6,8 +6,9 @@ import { join, relative } from 'node:path'
  * Tx-discipline guard (cc-bp-24 in .claude/registry.yaml) — the mechanical half of the invariant
  * that holds the event-driven architecture together:
  *
- *   INSIDE a `withTransaction(tx, async (t) => { ... })` callback, every awaited `this.*` call
- *   must reference the callback's transaction parameter.
+ *   INSIDE a transaction callback — `withTransaction(...)` OR a bare `.transaction(async tx => …)`
+ *   on a unit of work / the database driver — every awaited `this.*` call must reference the
+ *   callback's transaction parameter, and NOTHING may touch `this.db`.
  *
  * The four things that must commit-or-rollback TOGETHER are: aggregate state, the idempotency
  * claim that dedups the effect, the domain/integration event that announces it, and the scheduled
@@ -27,13 +28,28 @@ import { join, relative } from 'node:path'
  *
  * False positives go in EXEMPTIONS below with a `why`, not in weakened matching.
  *
+ * THE SECOND RULE — `this.db` inside a tx span — was added with the SQLite flip and is not a style
+ * preference. `this.db` is the driver's dedicated READ connection; the write handle only ever
+ * arrives as the callback's parameter. A WRITE through `this.db` runs outside the write lock (an
+ * implicit transaction outside the serializing gate). A READ through it is worse, because it is
+ * completely silent: it observes PRE-transaction state, with no error and no wrong type. The claim
+ * loops (`SqliteCommandQueue.claimDueBatch`, `DrizzleOutboxDispatcher.claimBatch`,
+ * `SqlExternalMediator.claimBatch`) are `SELECT ids → UPDATE lease → SELECT rows` in one
+ * transaction; a single SELECT on the wrong handle returns the rows WITHOUT the lease that same
+ * transaction just wrote, and the row is handed to two cycles. Inside a transaction callback the
+ * ONLY legitimate handle is the `tx` parameter.
+ *
  * Lives in `tests/architecture/` — the shared home for all repo-wide/context-wide mechanical
- * detectors (see `tests/architecture/README.md`). Scope: `packages/api/typescript/src` (the nested
- * `core/` sub-package is a separate workspace and out of scope by construction). Repo-wide, zero
- * context-name coupling — a pure syntax scan.
+ * detectors (see `tests/architecture/README.md`). Scope: `packages/api/typescript/src` AND the
+ * nested `core/src` sub-package. `core/` used to be excluded as "a separate workspace, out of scope
+ * by construction" — that stopped being defensible when `core/` became the home of the outbox
+ * dispatcher, the command queue and the ingress mediator, i.e. the three hottest writers in the
+ * process. Repo-wide, zero context-name coupling — a pure syntax scan.
  */
 
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
+const CORE_SRC = join(import.meta.dir, '..', '..', 'core', 'src')
+const SCAN_ROOTS = [API_SRC, CORE_SRC]
 
 /** Legit awaited calls inside a tx span that genuinely must not (or cannot) take the tx. */
 const EXEMPTIONS: { file: string; call: RegExp; why: string }[] = [
@@ -104,46 +120,90 @@ function awaitedThisCalls(content: string, start: number, end: number): { text: 
 	return calls
 }
 
+/** Every transaction-callback span in `content`: `withTransaction(` and `.transaction(`. */
+function transactionSpans(content: string): { start: number; end: number }[] {
+	const spans: { start: number; end: number }[] = []
+	// `.withTransaction(` — the UoW helper. `.transaction(` — the bare UoW/driver seam, which is what
+	// `uow.transaction(...)` and `driver.transaction(...)` are. Both take the callback as the arg.
+	const re = /\.(withTransaction|transaction)\s*\(/g
+	let match = re.exec(content)
+	while (match) {
+		const start = match.index + match[0].length - 1 // at the '('
+		spans.push({ start, end: balancedEnd(content, start) })
+		re.lastIndex = start + 1 // also catch a nested transaction inside this span
+		match = re.exec(content)
+	}
+	return spans
+}
+
 describe('tx-discipline (cc-bp-24)', () => {
-	test('every awaited this.* call inside a withTransaction callback threads the tx param', () => {
+	test('every awaited this.* call inside a transaction callback threads the tx param', () => {
 		const violations: Violation[] = []
 
-		for (const file of listSourceFiles(API_SRC)) {
-			const content = readFileSync(file, 'utf8')
-			const rel = relative(API_SRC, file)
+		for (const root of SCAN_ROOTS) {
+			for (const file of listSourceFiles(root)) {
+				const content = readFileSync(file, 'utf8')
+				const rel = relative(join(root, '..'), file)
 
-			const txRe = /\.withTransaction\s*\(/g
-			let txMatch = txRe.exec(content)
-			while (txMatch) {
-				const spanStart = txMatch.index + txMatch[0].length - 1 // at the '('
-				const spanEnd = balancedEnd(content, spanStart)
-
-				// The callback's transaction parameter: `async (t: Transaction) =>` / `async tx =>`.
-				const paramMatch = /async\s*\(?\s*(\w+)/.exec(content.slice(spanStart, spanEnd))
-				if (paramMatch) {
+				for (const span of transactionSpans(content)) {
+					// The callback's transaction parameter: `async (t: Transaction) =>` / `async tx =>`.
+					const paramMatch = /async\s*\(?\s*(\w+)/.exec(content.slice(span.start, span.end))
+					if (!paramMatch) continue
 					const param = paramMatch[1] as string
 					const paramToken = new RegExp(`\\b${param}\\b`)
 
-					for (const call of awaitedThisCalls(content, spanStart, spanEnd)) {
+					for (const call of awaitedThisCalls(content, span.start, span.end)) {
 						if (call.text.includes('this.withTransaction')) continue // the nested unit re-threads itself
+						if (call.text.includes('this.transaction')) continue // ditto for the bare seam
 						if (paramToken.test(call.text)) continue // tx threaded somewhere in the expression
 						const exempt = EXEMPTIONS.some(e => rel.includes(e.file) && e.call.test(call.text))
 						if (exempt) continue
 						violations.push({ file: rel, line: lineOf(content, call.index), call: call.text.split('\n')[0] as string })
 					}
 				}
-
-				txRe.lastIndex = spanStart + 1 // also catch a nested withTransaction inside this span
-				txMatch = txRe.exec(content)
 			}
 		}
 
 		const report = violations.map(v => `  ${v.file}:${v.line}  →  ${v.call}`).join('\n')
 		expect(
 			violations.length,
-			`Awaited call(s) inside a withTransaction callback without the tx param — the write runs on its ` +
+			`Awaited call(s) inside a transaction callback without the tx param — the write runs on its ` +
 				`own connection and commits even if the unit rolls back (cc-bp-24). Thread the callback's tx, ` +
 				`move external I/O out of the tx, or add a justified EXEMPTIONS entry:\n${report}`,
+		).toBe(0)
+	})
+
+	test('nothing touches `this.db` inside a transaction callback — only the tx param is a legal handle', () => {
+		// Class 3B. The `tx`-threading test above cannot see this: `await this.db.select(...)` mentions
+		// no tx param but is also not a repository call, and a plain (non-awaited) `this.db.` usage is
+		// invisible to it entirely. Reading through `this.db` inside an open transaction returns
+		// PRE-transaction state, silently — which is exactly how a lease-based claim hands one row to
+		// two cycles.
+		const violations: Violation[] = []
+		const readHandle = /this\.db\.\w+/g
+
+		for (const root of SCAN_ROOTS) {
+			for (const file of listSourceFiles(root)) {
+				const content = readFileSync(file, 'utf8')
+				const rel = relative(join(root, '..'), file)
+
+				for (const span of transactionSpans(content)) {
+					readHandle.lastIndex = span.start
+					let hit = readHandle.exec(content)
+					while (hit && hit.index < span.end) {
+						violations.push({ file: rel, line: lineOf(content, hit.index), call: hit[0] })
+						hit = readHandle.exec(content)
+					}
+				}
+			}
+		}
+
+		const report = violations.map(v => `  ${v.file}:${v.line}  →  ${v.call}`).join('\n')
+		expect(
+			violations.length,
+			`\`this.db.*\` used inside a transaction callback. \`this.db\` is the READ connection: a write ` +
+				`through it opens an implicit transaction outside the serializing gate, and a READ through it ` +
+				`observes pre-transaction state with no error at all. Use the callback's tx parameter:\n${report}`,
 		).toBe(0)
 	})
 })

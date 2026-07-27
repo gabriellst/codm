@@ -1,5 +1,5 @@
 import { and, getTableColumns, is, sql, type SQL } from 'drizzle-orm'
-import { getTableConfig, PgTable } from 'drizzle-orm/pg-core'
+import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { DrizzleClient } from '@codedm/core-typescript'
 import * as schema from '@codedm/contracts/db'
 
@@ -20,19 +20,15 @@ export interface OutboxRowFilter {
 type SchemaBarrel = typeof schema
 
 /**
- * The Postgres schema a Drizzle table lives in, read straight off its type. Drizzle encodes the
- * `pgSchema(...)` name in the table's phantom `_.schema` (a string literal); a bare `pgTable(...)`
- * has none, so it collapses to `'public'`. This is the type-level twin of the runtime
- * `getTableConfig(table).schema ?? 'public'` used to build `PROBE_TABLES` — the two MUST agree, and
- * a `@ts-expect-error` test proves the union they produce is exact.
- */
-type SchemaOf<T> = T extends { _: { schema: infer S } } ? ([S] extends [string] ? S : 'public') : 'public'
-
-/**
- * Central table registry — TEST-INFRA ONLY. Every `PgTable` exported by the `@codedm/contracts/db`
- * barrel is a valid probe key, namespaced `<pgSchema>.<export>` (`'shared.events'`,
- * `'billing.subscription'`, `'sales.orders'`...) so tables in different Postgres schemas can
- * never collide on export name. This is a LITERAL union (not `string`) derived from the barrel's own
+ * Central table registry — TEST-INFRA ONLY. Every `SQLiteTable` exported by the
+ * `@codedm/contracts/db` barrel is a valid probe key, and the key is simply the EXPORT NAME
+ * (`'events'`, `'outbox'`, `'users'`...).
+ *
+ * The keys used to be namespaced `<pgSchema>.<export>`, because the pg schema put every table in a
+ * named namespace and two contexts could legitimately export the same name. This dialect has no
+ * namespaces at all: the nine former namespaces are now table-name PREFIXES (`shared_events`,
+ * `owner_owners`, ...), so the export name is already unique and the namespace half of the key
+ * described nothing. The union stays a LITERAL union (not `string`) derived from the barrel's own
  * type — a typo'd key is a compile error, not a silently-`undefined` runtime lookup. A new bounded
  * context that adds tables to a schema module (re-exported through the barrel) grows `ProbeTable` —
  * and therefore `count()`/`snapshot()` — for free; no change to this file.
@@ -43,34 +39,30 @@ type SchemaOf<T> = T extends { _: { schema: infer S } } ? ([S] extends [string] 
  * source files into this composite project and trips `TS6307` (file not in the project's `include`),
  * and the package only publishes the flat `./db` barrel in its `exports` map — so per-module imports
  * aren't reachable by specifier either. The barrel is the one seam that resolves as an external
- * dependency; the module namespace medscall got from the folder layout, we recover from each table's
- * own `pgSchema` name (which is the more precise boundary anyway — `shared.events` here matches the
- * origin's key exactly, even though the file was renamed `infrastructure.ts`).
+ * dependency.
  */
 export type ProbeTable = {
-	[K in keyof SchemaBarrel]: SchemaBarrel[K] extends PgTable ? `${SchemaOf<SchemaBarrel[K]>}.${K & string}` : never
+	[K in keyof SchemaBarrel]: SchemaBarrel[K] extends SQLiteTable ? K & string : never
 }[keyof SchemaBarrel]
 
 /**
- * Runtime counterpart of `ProbeTable` — flattens the barrel into `{ 'shared.events': events,
- * 'billing.subscription': subscription, ... }`, filtering out every non-table export
- * (pgSchema handles, pgEnum handles, `relations()` results) via `is(x, PgTable)` and reading each
- * table's schema with `getTableConfig(...).schema`. The cast on the final assignment is the SINGLE,
- * DOCUMENTED, unavoidable boundary cast in this file: `Object.entries`/`flatMap` widen the key back
- * to `string` at the runtime level even though the `is()` filter guarantees every value is a
- * `PgTable` and the key is provably one of the `ProbeTable` literals computed above — TypeScript has
- * no way to carry a per-entry literal key through a dynamic `flatMap` without this. No `as any`
- * anywhere in this file.
+ * Runtime counterpart of `ProbeTable` — flattens the barrel into `{ events, outbox, ... }`,
+ * filtering out every non-table export (enum handles, `relations()` results) via
+ * `is(x, SQLiteTable)`. The cast on the final assignment is the SINGLE, DOCUMENTED, unavoidable
+ * boundary cast in this file: `Object.entries`/`map` widen the key back to `string` at the runtime
+ * level even though the `is()` filter guarantees every value is a `SQLiteTable` and the key is
+ * provably one of the `ProbeTable` literals computed above — TypeScript has no way to carry a
+ * per-entry literal key through a dynamic `map` without this. No `as any` anywhere in this file.
  */
 const PROBE_TABLES = Object.fromEntries(
-	// Widen to `[string, unknown][]` up front: the barrel's value union includes pgSchema handles,
-	// pgEnums and `relations()` results, none assignable to `PgTable`, which would make the
-	// `entry is [string, PgTable]` guard's asserted type non-assignable to the parameter. `unknown`
-	// is the honest input type for a runtime `is()` narrowing.
+	// Widen to `[string, unknown][]` up front: the barrel's value union includes enum handles and
+	// `relations()` results, none assignable to `SQLiteTable`, which would make the
+	// `entry is [string, SQLiteTable]` guard's asserted type non-assignable to the parameter.
+	// `unknown` is the honest input type for a runtime `is()` narrowing.
 	(Object.entries(schema) as [string, unknown][])
-		.filter((entry): entry is [string, PgTable] => is(entry[1], PgTable))
-		.map(([exportName, table]) => [`${getTableConfig(table).schema ?? 'public'}.${exportName}`, table] as const),
-) as Record<ProbeTable, PgTable>
+		.filter((entry): entry is [string, SQLiteTable] => is(entry[1], SQLiteTable))
+		.map(([exportName, table]) => [exportName, table] as const),
+) as Record<ProbeTable, SQLiteTable>
 
 /**
  * The ONLY test-support seam authorized to resolve `DrizzleClient` for READS. Assertions on
@@ -81,13 +73,13 @@ const PROBE_TABLES = Object.fromEntries(
  * the 4-category taxonomy it belongs to, and the named exceptions (schema-drift tests,
  * `Drizzle*Repository.test.ts`, DB-transactional service tests).
  *
- * Integration-mode only (PGlite). Get one via `testBed.probe()` — the factory throws a clear error
- * in mock mode instead of handing back a probe that would blow up on first query.
+ * Integration-mode only. Get one via `testBed.probe()` — the factory throws a clear error in mock
+ * mode instead of handing back a probe that would blow up on first query.
  *
  * This class is deliberately generic across EVERY bounded context's schema (not billing-specific) —
  * see `PROBE_TABLES` above. There is no curated, hand-picked table list — callers that want a fixed
  * multi-table tuple declare it inline at the call site:
- * `probe.snapshot(['shared.events', 'shared.outbox'] as const)`.
+ * `probe.snapshot(['events', 'outbox'] as const)`.
  */
 export class PersistenceProbe {
 	constructor(private readonly db: DrizzleClient) {}
@@ -105,7 +97,7 @@ export class PersistenceProbe {
 	}
 
 	/**
-	 * Row count for ANY registered `ProbeTable` (namespaced `<pgSchema>.<export>` key). Filtering is
+	 * Row count for ANY registered `ProbeTable` (the barrel export name). Filtering is
 	 * generic — not every table has a `name`/`ownerId` column, so both filter keys are applied only
 	 * when the target table actually declares that column (checked dynamically via
 	 * `getTableColumns()`; a filter key with no matching column on the table is silently a no-op,
@@ -137,14 +129,14 @@ export class PersistenceProbe {
 	/**
 	 * TYPED cross-table snapshot — the general form of the "prove the job never wrote table X"
 	 * pattern. The return type is derived from the literal tuple passed in:
-	 * `snapshot(['shared.events', 'shared.outbox'] as const)` resolves to
-	 * `{ 'shared.events': number; 'shared.outbox': number }` — a typo'd key is a compile error, not a
+	 * `snapshot(['events', 'outbox'] as const)` resolves to
+	 * `{ events: number; outbox: number }` — a typo'd key is a compile error, not a
 	 * silently-`undefined` runtime lookup. Always unfiltered (full-table count); pass a `filter` to
 	 * `count()` directly when a scoped comparison is needed.
 	 *
 	 * Comparable before/after a job run with `toEqual`. A job that must prove it never touched another
 	 * table just adds it to the inline tuple:
-	 * `probe.snapshot(['shared.events', 'shared.outbox', 'billing.subscription'] as const)`.
+	 * `probe.snapshot(['events', 'outbox', 'users'] as const)`.
 	 */
 	async snapshot<T extends readonly ProbeTable[]>(tables: T): Promise<Record<T[number], number>> {
 		const entries = await Promise.all(tables.map(async table => [table, await this.count(table)] as const))

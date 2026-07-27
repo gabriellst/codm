@@ -18,6 +18,9 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 		const inserted = await dbc
 			.insert(consumedMessages)
 			.values({
+				// Minted here — infra table, no aggregate, no db-side default. See the note in
+				// DrizzleClarificationRepository on why ids never come from `$defaultFn`.
+				id: crypto.randomUUID(),
 				ownerId: input.ownerId,
 				channelId: input.channelId,
 				platformMessageId: input.platformMessageId,

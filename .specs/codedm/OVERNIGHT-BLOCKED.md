@@ -152,3 +152,99 @@ gate que reprova por causa de container de outro projeto.
    ao verde — precisa de alguém que saiba qual kind o harness quer.
 2. Endurecer o skip-gate do redis-bridge para casar o compose **deste** repo (a regra do §8:
    `com.docker.compose.project.config_files`), em vez de "qualquer coisa na 6379".
+
+---
+
+## `bun lint` vermelho no HEAD — `AppChrome.tsx` (parked pelo bloco 2 do plano SQLite)
+
+**Quando:** ao rodar o portão T23 do bloco 2 (`.plans/2026-07-26-daemon-sqlite-migration.md`).
+
+**Sintoma:** `bun lint` (= `nx run-many -t lint`) sai **1**. `app-styles` e `app-astro` passam;
+`app-react:lint` falha com 6 erros `local/no-hardcoded-jsx-text`, todos no MESMO arquivo:
+
+```
+packages/app/react/src/components/console/AppChrome.tsx
+  29:30  error  Hardcoded aria-label text — use t('<key>')
+  32:30  error  Hardcoded aria-label text — use t('<key>')
+  44:30  error  Hardcoded aria-label text — use t('<key>')
+  47:30  error  Hardcoded aria-label text — use t('<key>')
+  50:30  error  Hardcoded aria-label text — use t('<key>')
+  79:31  error  Hardcoded UI text — wrap it in i18n: t('<key>')
+✖ 6 problems (6 errors, 0 warnings)
+```
+
+**Por que NÃO é do bloco 2 — provado, não presumido:**
+
+- `git diff HEAD -- packages/app/react/src/components/console/AppChrome.tsx` ⇒ **vazio**: o arquivo
+  é byte-idêntico ao HEAD de onde o bloco partiu.
+- `git status --porcelain | grep packages/app/react` ⇒ **nenhuma linha**: o bloco 2 não tocou um
+  único arquivo sob `packages/app/react`.
+- `bun lint` é `nx run-many -t lint` sobre **três** projetos — `app-styles`, `app-astro`,
+  `app-react`. Ele **nunca** varre `packages/api/typescript`, que é onde o bloco 2 inteiro vive.
+- `git log -1 -- <arquivo>` ⇒ `15b1b283 feat(desktop): integrated title bar — WINDOW default +
+  AppChrome (scaffold)`. É scaffold de outra feature.
+
+**Por que ficou parked em vez de corrigido:** a correção exige adicionar chaves ao catálogo i18n
+tipado e trocar 6 literais por `t('<key>')` num arquivo de uma feature **em voo** (há worktree
+`desktop-deparametrize` viva sobre a mesma área). Mexer nele daqui é escopo alheio e conflito
+provável. Nenhum gate do bloco 2 foi afrouxado por causa disso.
+
+**Dono necessário:** quem estiver na feature de desktop/title bar. Fechar isto devolve `bun lint`
+ao verde e re-habilita o portão completo para os blocos seguintes.
+
+**Nota irmã:** a afirmação "14/14 gates verdes no HEAD" registrada ao fim do bloco 1b não cobre
+`bun lint` — o alvo `app-react:lint` rodou **fresco** (não cacheado) nesta passada e reprovou sobre
+conteúdo idêntico ao HEAD, então ou o gate não estava na lista, ou vinha de cache Nx morno.
+
+---
+
+## `bun run build` VERMELHO no HEAD — `scripts/build.ts` ainda resolve PGlite (destravado por T24)
+
+**Quando:** verificação round-1 do bloco 2 (`.plans/2026-07-26-daemon-sqlite-migration.md`).
+Não é blocker do bloco 2 — é uma consequência **agendada pelo plano** que o relatório do bloco
+deixou implícita. Fica aqui explícita para o handoff do bloco 3.
+
+**Sintoma, medido:**
+
+```
+$ bun run build ; echo "BUILD_EXIT=$?"
+❌ build failed: error: Cannot find module '@electric-sql/pglite/package.json'
+   from '/Users/work/Desktop/Projetos/pessoal/codedm/packages/api/typescript/core'
+NX  Running target build for 4 projects and 2 tasks they depend on failed
+Failed tasks:  - api-typescript:build
+BUILD_EXIT=1
+```
+
+**Origem exata — código VIVO, não docblock:** `packages/api/typescript/scripts/build.ts:41`
+
+```ts
+function resolvePgliteRoot(): string {
+	const coreDir = resolve(pkgRoot, 'core')
+	const pkgJson = Bun.resolveSync('@electric-sql/pglite/package.json', coreDir)   // ← :41
+	return dirname(pkgJson)
+}
+```
+
+Confirmado isoladamente: `Bun.resolveSync('@electric-sql/pglite/package.json',
+'packages/api/typescript/core')` ⇒ `UNRESOLVABLE: Cannot find module …`. Dos hits de PGlite nesse
+arquivo, a maioria é comentário; **este** executa.
+
+**Por que é esperado e não um defeito do flip.** A cadeia é declarada no plano:
+- T07 (bloco 1) removeu `@electric-sql/pglite` de todo `package.json`, mas o install em disco
+  mascarou a consequência.
+- O bloco 2 deletou o `PGliteDriver` **e** removeu o install do disco — desmascarando-a.
+- O plano atribui `scripts/build.ts` explicitamente a **T24** (bloco 3): `--external
+  @electric-sql/pglite` → `--external @libsql/client --external libsql`, `resolvePgliteRoot()` →
+  `resolveLibsqlRoots()`, e `contractsMigrations` → `schema-sqlite/migrations`.
+- Por isso o AC de T23 **exclui** `scripts/build.ts` por nome dos seus greps estruturais, e
+  `bun run build` **não** está na lista de gates de T23.
+
+**Consequência operacional a carregar para o bloco 3, sem eufemismo:**
+1. **O daemon TS não builda no HEAD.** `nx run api-typescript:build` reprova até T24 landar.
+2. **O `.githooks/pre-commit` não pode passar inteiro no HEAD** — seu último passo é `bun run
+   build`. Isto é *independente* do park do `e2e:tsc` acima: são dois passos distintos do mesmo
+   hook, ambos vermelhos por motivos distintos e ambos pré-existentes a este bloco.
+3. **T24 é o que destrava**, e é a primeira task do bloco 3 — nenhuma decisão de founder é
+   necessária, só a execução na ordem que o plano já fixa.
+
+**Dono:** executor do bloco 3 (T24). Nada a decidir; registrar aqui é o ponto.

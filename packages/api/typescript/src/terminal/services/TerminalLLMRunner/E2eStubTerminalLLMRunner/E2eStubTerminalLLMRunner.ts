@@ -7,7 +7,7 @@ import type { AgentGenerateRequest, TerminalRuntimeEvent } from '../types'
  * Deterministic `TerminalLLMRunner` bound ONLY in the `real` DI env under `CODEDM_E2E`
  * (terminal/registry.ts).
  *
- * The Playwright harness boots the REAL daemon (embedded PGlite) but must never spawn a provider
+ * The Playwright harness boots the REAL daemon (embedded SQLite) but must never spawn a provider
  * CLI — the house rule is "stub runner for agent replies, no real CLI". This stub stands in for
  * `ClaudeCliTerminalLLMRunner` during e2e so the whole inbound → classify → session → reply chain
  * runs hermetically and deterministically.

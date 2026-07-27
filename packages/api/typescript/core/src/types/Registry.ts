@@ -29,7 +29,7 @@ export function registerAll(container: DependencyContainer, entries: RegistryEnt
 // forgotten in real" is invisible — the orphan-binding twin of the orphan-handler class. A
 // BindingDecl declares the token ONCE with its per-env values: divergence is a visible column,
 // absence is a DECLARED `null`, and `integration` omitted mirrors `real` (integration is
-// production-against-PGlite by convention — same impl, sandboxed infra).
+// production-against-the-real-database by convention — same impl, sandboxed infra).
 
 /** A binding value: a class (registered as singleton), a plain instance, or a lazy `{ useFactory }`. */
 export type BindingValue = { useFactory: (container: DependencyContainer) => any } | any

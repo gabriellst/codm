@@ -26,12 +26,16 @@ const API_ROOT = join(import.meta.dir, '..', '..')
 /** Files legitimately allowed to resolve DrizzleClient — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
-		path: 'tests/kernel/PostgresCommandQueue.test.ts',
-		why: "tests PostgresCommandQueue's own DB-backed scheduling behavior directly (row-by-id, repeat scheduling, db.transaction) — the DB is the subject, same exception class as Drizzle*Repository.test.ts",
+		path: 'tests/kernel/SqliteCommandQueue.test.ts',
+		why: "tests SqliteCommandQueue's own DB-backed scheduling behavior directly (row-by-id, repeat scheduling, lease/claim) — the DB is the subject, same exception class as Drizzle*Repository.test.ts",
 	},
 	{
 		path: 'tests/kernel/DomainEventListByNameSince.test.ts',
 		why: 'raw db.update(events) write-only seed — backdates `occurred_at` timestamps to age event rows into/out of the sweep window while exercising DomainEventRepository.listByNameSince; no persisted-data read assertion goes through the raw client',
+	},
+	{
+		path: 'tests/kernel/insert-site-audit.test.ts',
+		why: 'the DB SCHEMA is the subject: it asserts, per table, that the real write path lands a row with a non-null id and timestamp, which requires reading RAW columns (`SELECT * FROM "<table>"`) that the probe deliberately does not expose — same exception class as Drizzle*Repository.test.ts',
 	},
 	{
 		path: 'tests/architecture/probe-discipline.test.ts',

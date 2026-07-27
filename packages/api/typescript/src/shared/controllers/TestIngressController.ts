@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z, ExternalMediator, DrizzleClient } from '@codedm/core-typescript'
-import { channels } from '@codedm/contracts/db'
+import { Controller, HttpStatusCode, z, DrizzleDatabaseDriver } from '@codedm/core-typescript'
+import { channels, outbox } from '@codedm/contracts/db'
 import { ChannelKind, ContactKind, ChannelStatus, MessageType } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
@@ -10,20 +10,22 @@ import { OperatorMiddleware } from '@auth/middlewares'
  * outright under NODE_ENV=production (src/boot/assert-e2e-safe.ts). Never emitted to the SDK/OpenAPI
  * (route collection runs under EMIT_OPENAPI, where CODEDM_E2E is unset, so the controller is not mounted).
  *
- * Founder decision 3 runs two processes — the Go Channel Gateway and this TS daemon — bridged over
- * Redis Streams. The Playwright harness boots ONLY the TS daemon; the gateway is simulated at the
+ * Founder decision 3 runs two processes — the Go Channel Gateway and this TS daemon — sharing ONE
+ * SQLite file. The Playwright harness boots ONLY the TS daemon; the gateway is simulated at the
  * integration-event seam. This endpoint is that simulator. It reproduces the two gateway side effects
  * a spec needs:
  *
  *   - `channel-connected` — the gateway's status projector writes a CONNECTED row into the (Go-owned)
- *     `gateway.channels` read table on pairing. No TS code path writes it, so a hermetic spec seeds it
- *     here (a direct upsert) to make a channel `CONNECTED` for AttachThread + inbound routing.
+ *     `gateway_channels` read table on pairing. That is a PROJECTION write, not an event, so a
+ *     hermetic spec seeds it here with a direct upsert to make a channel `CONNECTED` for AttachThread
+ *     + inbound routing.
  *   - `inbound-message`   — a normalized inbound message arriving on a connected channel. In production
- *     the gateway XADDs the frozen `integration.channel_message.received` wire event onto Redis and the
- *     RedisExternalMediator consumes it; here we publish the SAME event straight into the in-process
- *     ExternalMediator (bound to EventEmitter2Mediator under CODEDM_E2E), so `ConsumeInboundMessage`
- *     drives the identical dedup → ingest → classify chain. `publish` matches the fire-and-forget
- *     delivery semantics of the Redis transport; the spec polls for the downstream issue.
+ *     the gateway INSERTs the frozen `integration.channel_message.received` wire event as a
+ *     `source = 'integration'` row in `shared_outbox`, and SqlExternalMediator claims it. So that is
+ *     exactly what this writes — the ROW, not an in-process publish. The e2e run therefore exercises
+ *     the real path end to end: lane filter → lease → raw-TEXT payload → date reviver →
+ *     `handler.execute`. Publishing in-process instead would leave the three riskiest pieces of the
+ *     ingress untested while the suite went green.
  */
 const ChannelConnectedBody = z.object({
 	kind: z.literal('channel-connected'),
@@ -75,10 +77,7 @@ export class TestIngressController extends Controller<typeof TestIngressInputSch
 
 	override middlewares = [OperatorMiddleware]
 
-	constructor(
-		private readonly externalMediator: ExternalMediator,
-		private readonly db: DrizzleClient,
-	) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
@@ -88,50 +87,61 @@ export class TestIngressController extends Controller<typeof TestIngressInputSch
 
 		if (body.kind === 'channel-connected') {
 			const channelId = body.channelId ?? crypto.randomUUID()
-			await this.db
-				.insert(channels)
-				.values({
-					id: channelId,
-					ownerId,
-					platform: body.platform,
-					name: body.platform,
-					status: ChannelStatus.CONNECTED,
-					ownerRemoteId: body.accountDetail,
-					credentials: {},
-				})
-				.onConflictDoUpdate({
-					target: channels.id,
-					set: { status: ChannelStatus.CONNECTED, ownerRemoteId: body.accountDetail, updatedAt: new Date() },
-				})
+			await this.driver.transaction(tx =>
+				tx
+					.insert(channels)
+					.values({
+						id: channelId,
+						ownerId,
+						platform: body.platform,
+						name: body.platform,
+						status: ChannelStatus.CONNECTED,
+						ownerRemoteId: body.accountDetail,
+						credentials: {},
+					})
+					.onConflictDoUpdate({
+						target: channels.id,
+						set: { status: ChannelStatus.CONNECTED, ownerRemoteId: body.accountDetail, updatedAt: new Date() },
+					}),
+			)
 			return { status: HttpStatusCode.OK, data: { ok: true, channelId } }
 		}
 
-		// Publish the VERBATIM gateway payload (union-slots pilot): the spec-facing body stays
-		// normalized (contact*/text) for the Playwright givens, and this simulator maps it onto
-		// the frozen wire shape exactly like the Go gateway's whatsmeow mapper does — remoteId =
-		// the counterparty chat id, `content` = the WHATSAPP/TEXT variant shape (owner: apiGo).
+		// Write the VERBATIM gateway payload as an `integration` LANE ROW — literally what the Go
+		// gateway does. The spec-facing body stays normalized (contact*/text) for the Playwright
+		// givens, and this simulator maps it onto the frozen wire shape exactly like the gateway's
+		// whatsmeow mapper does — remoteId = the counterparty chat id, `content` = the
+		// WHATSAPP/TEXT variant shape (owner: apiGo).
 		const messageId = body.messageId ?? `wamid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 		const now = new Date()
-		await this.externalMediator.publish(
-			new ChannelMessageReceivedEvent({
+		const event = new ChannelMessageReceivedEvent({
+			ownerId,
+			payload: {
+				channelId: body.channelId,
+				messageId,
+				internalMessageId: crypto.randomUUID(),
+				remoteId: body.contactExternalId,
+				senderId: body.senderExternalId ?? body.contactExternalId,
+				fromMe: false,
+				isGroup: body.isGroup,
+				timestamp: Math.floor(now.getTime() / 1000),
+				occurredAt: now,
+				observedAt: now,
+				messageType: MessageType.TEXT,
+				content: { text: body.text },
+				platform: body.platform,
+				platformData: undefined,
 				ownerId,
-				payload: {
-					channelId: body.channelId,
-					messageId,
-					internalMessageId: crypto.randomUUID(),
-					remoteId: body.contactExternalId,
-					senderId: body.senderExternalId ?? body.contactExternalId,
-					fromMe: false,
-					isGroup: body.isGroup,
-					timestamp: Math.floor(now.getTime() / 1000),
-					occurredAt: now,
-					observedAt: now,
-					messageType: MessageType.TEXT,
-					content: { text: body.text },
-					platform: body.platform,
-					platformData: undefined,
-					ownerId,
-				},
+			},
+		})
+		await this.driver.transaction(tx =>
+			tx.insert(outbox).values({
+				id: crypto.randomUUID(),
+				name: event.name,
+				entityId: body.channelId,
+				ownerId,
+				payload: event.toJSON() as unknown as Record<string, unknown>,
+				source: 'integration',
 			}),
 		)
 		return { status: HttpStatusCode.OK, data: { ok: true, messageId } }

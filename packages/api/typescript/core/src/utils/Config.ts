@@ -24,10 +24,11 @@ const RawEnvSchema = z.object({
 	API_URL: z.string().optional(),
 	APP_URL: z.string().optional(),
 	DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/postgres'),
-	// Embedded, file-backed PGlite data directory for the REAL daemon (founder decision 3: 2 processes,
-	// embedded DB — no external Postgres). The `real` DrizzleDatabaseDriver is a file-backed PGlite rooted
-	// here; migrations apply on boot (idempotent). A leading `~` expands to $HOME in the driver factory.
-	// Tests keep in-memory PGlite (no dataDir) and never read this key.
+	// Data directory for the REAL daemon (founder decision 3: 2 processes, one embedded DB — no
+	// external Postgres). It holds `codedm.db`, the SINGLE shared SQLite file that the Go gateway
+	// opens too, plus its `-wal`/`-shm` companions and this daemon's `daemon.lock`; migrations apply
+	// on boot from either process, idempotently. A leading `~` expands to $HOME in the driver factory.
+	// Tests pass no dbPath (a process-scoped temp file) and never read this key.
 	CODEDM_DATA_DIR: z.string().default('~/.codedm/data'),
 	OTEL_COLLECTOR_TRACE_URL: z.string().default(''),
 	OTEL_SERVICE_NAME: z.string().default('service'),

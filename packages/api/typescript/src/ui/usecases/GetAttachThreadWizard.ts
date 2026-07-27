@@ -1,6 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq, ilike, inArray, isNull, sql } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { and, eq, like, inArray, isNull, sql } from 'drizzle-orm'
+import { Handler, z, DrizzleClient, BaseError } from '@codedm/core-typescript'
+import type { BaseInterfaceErrors } from '@codedm/core-typescript'
 import type { z as zt } from 'zod'
 import { channels, workspaces, threads, remotes, remoteMemberships } from '@codedm/contracts/db'
 import {
@@ -66,8 +67,13 @@ export const GetAttachThreadWizardOutputSchema = z.object({
 
 // Keyset cursor — the (sortKey, channelId, remoteId) triple of the last row on a page. `sortKey`
 // coalesces a null lastMessageAt to the epoch so nulls sort last uniformly (no NULLS-LAST keyset math).
+//
+// `sk` is EPOCH MILLISECONDS (a number), not an ISO string: the column is
+// `integer{ mode: 'timestamp_ms' }`, so the comparison is numeric. The cursor is opaque in the API
+// but it IS handed to the client, so a cursor minted by an older build no longer decodes — see
+// `decodeCursor`, which rejects it as a VALIDATION_ERROR instead of silently paging from the top.
 interface ContactCursor {
-	sk: string
+	sk: number
 	channelId: string
 	remoteId: string
 }
@@ -76,14 +82,21 @@ function encodeCursor(c: ContactCursor): string {
 	return Buffer.from(JSON.stringify(c), 'utf8').toString('base64url')
 }
 
-function decodeCursor(raw: string): ContactCursor | undefined {
+function decodeCursor(raw: string): ContactCursor {
+	const invalid = () =>
+		new BaseError<BaseInterfaceErrors>('VALIDATION_ERROR', 'Malformed contacts cursor — it was not minted by this build.')
+	let parsed: ContactCursor
 	try {
-		const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as ContactCursor
-		if (typeof parsed.sk === 'string' && typeof parsed.channelId === 'string' && typeof parsed.remoteId === 'string') return parsed
-		return undefined
+		parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as ContactCursor
 	} catch {
-		return undefined
+		throw invalid()
 	}
+	// `sk` used to be an ISO string; a cursor from the pre-SQLite build still decodes as JSON and
+	// would otherwise compare a string against an integer column and quietly return nothing.
+	if (typeof parsed?.sk !== 'number' || typeof parsed?.channelId !== 'string' || typeof parsed?.remoteId !== 'string') {
+		throw invalid()
+	}
+	return parsed
 }
 
 /**
@@ -156,19 +169,30 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		if (ownerChannelIds.length === 0) return { contacts: [], contactsNextCursor: null }
 
 		// COALESCE nulls to the epoch so "most recent first" and the keyset stay uniform (null = oldest).
-		const sortKey = sql<string>`COALESCE(${remotes.lastMessageAt}, 'epoch'::timestamptz)`
+		// In this dialect the column is epoch-MILLISECONDS, so the epoch sentinel is literally `0`.
+		const sortKey = sql<number>`COALESCE(${remotes.lastMessageAt}, 0)`
 
 		const filters = [inArray(remotes.channelId, ownerChannelIds), isNull(remotes.deletedAt)]
-		if (input.search?.trim()) filters.push(ilike(remotes.name, `%${input.search.trim()}%`))
+		// Case-insensitive search. The Postgres case-insensitive LIKE operator does not exist in this
+		// dialect — and, worse, drizzle's helper for it is declared dialect-NEUTRAL, so it compiles
+		// clean against sqlite-core and only fails when the database rejects the operator at runtime.
+		// SQLite's LIKE is already case-insensitive for ASCII, but the stored names are user data and
+		// routinely non-ASCII, so both sides are lowered explicitly rather than relying on that.
+		if (input.search?.trim()) {
+			const term = `%${input.search.trim().toLowerCase()}%`
+			filters.push(like(sql`lower(${remotes.name})`, term))
+		}
 
 		const cursor = input.cursor ? decodeCursor(input.cursor) : undefined
 		if (cursor) {
 			// Rows strictly after the cursor in (sortKey DESC, channelId ASC, remoteId ASC) order.
+			// No casts: the comparison is numeric on sortKey and textual on the two ids, which is what
+			// this dialect does natively. The tie-break tuple is unchanged.
 			filters.push(
 				sql`(
-					${sortKey} < ${cursor.sk}::timestamptz
-					OR (${sortKey} = ${cursor.sk}::timestamptz AND ${remotes.channelId} > ${cursor.channelId}::uuid)
-					OR (${sortKey} = ${cursor.sk}::timestamptz AND ${remotes.channelId} = ${cursor.channelId}::uuid AND ${remotes.remoteId} > ${cursor.remoteId})
+					${sortKey} < ${cursor.sk}
+					OR (${sortKey} = ${cursor.sk} AND ${remotes.channelId} > ${cursor.channelId})
+					OR (${sortKey} = ${cursor.sk} AND ${remotes.channelId} = ${cursor.channelId} AND ${remotes.remoteId} > ${cursor.remoteId})
 				)`,
 			)
 		}
@@ -203,7 +227,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		const memberCounts = new Map<string, number>()
 		if (groupRemoteIds.length > 0) {
 			const counts = await this.db
-				.select({ channelId: remoteMemberships.channelId, groupId: remoteMemberships.groupId, count: sql<number>`count(*)::int` })
+				.select({ channelId: remoteMemberships.channelId, groupId: remoteMemberships.groupId, count: sql<number>`count(*)` })
 				.from(remoteMemberships)
 				.where(and(inArray(remoteMemberships.channelId, ownerChannelIds), inArray(remoteMemberships.groupId, groupRemoteIds)))
 				.groupBy(remoteMemberships.channelId, remoteMemberships.groupId)
@@ -223,7 +247,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 
 		const last = page.at(-1)
 		const contactsNextCursor =
-			hasMore && last ? encodeCursor({ sk: new Date(last.sortKey).toISOString(), channelId: last.channelId, remoteId: last.remoteId }) : null
+			hasMore && last ? encodeCursor({ sk: Number(last.sortKey), channelId: last.channelId, remoteId: last.remoteId }) : null
 
 		return { contacts, contactsNextCursor }
 	}

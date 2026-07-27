@@ -69,7 +69,7 @@ export class BullMQ extends CommandQueue {
 		return queue
 	}
 
-	// `_tx` belongs to the port for TRANSACTIONAL implementations (PostgresCommandQueue). A Redis broker
+	// `_tx` belongs to the port for TRANSACTIONAL implementations (SqliteCommandQueue). A Redis broker
 	// cannot join a DB transaction, so it is accepted for signature parity and ignored.
 	async enqueueCommand<T extends Handler>(commandName: T['name'], input: T['input'], opts?: JobsOptions, _tx?: Transaction): Promise<void> {
 		const tracer = trace.getTracer(Config.name)

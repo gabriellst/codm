@@ -79,44 +79,44 @@ describe('PersistenceProbe', () => {
 		await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'e2'), itemId: 'item-e2' }))
 
 		const probe = testBed.probe()
-		expect(await probe.count('shared.events', { name: ProbeTestEvent.name })).toBe(2)
-		expect(await probe.count('shared.outbox', { name: ProbeTestEvent.name })).toBe(2)
+		expect(await probe.count('events', { name: ProbeTestEvent.name })).toBe(2)
+		expect(await probe.count('outbox', { name: ProbeTestEvent.name })).toBe(2)
 	})
 
 	describe('snapshot() — typed cross-table count', () => {
 		it('returns a count per requested table, keyed exactly by the tuple passed in (runtime)', async () => {
 			await domainEventRepository.save(makeEvent())
 
-			const before = await testBed.probe().snapshot(['shared.events', 'shared.outbox', 'authentication.users'] as const)
+			const before = await testBed.probe().snapshot(['events', 'outbox', 'users'] as const)
 			await domainEventRepository.save(makeEvent())
-			const after = await testBed.probe().snapshot(['shared.events', 'shared.outbox', 'authentication.users'] as const)
+			const after = await testBed.probe().snapshot(['events', 'outbox', 'users'] as const)
 
-			expect(after['shared.events']).toBe(before['shared.events'] + 1)
-			expect(after['shared.outbox']).toBe(before['shared.outbox'] + 1)
+			expect(after.events).toBe(before.events + 1)
+			expect(after.outbox).toBe(before.outbox + 1)
 			// Proof of a negative — nothing in this test writes authentication users.
-			expect(after['authentication.users']).toBe(before['authentication.users'])
+			expect(after.users).toBe(before.users)
 		})
 
 		it('spans MORE THAN ONE schema module — proof the registry is no longer a curated single-module list', async () => {
-			const snap = await testBed.probe().snapshot(['shared.events', 'authentication.users'] as const)
+			const snap = await testBed.probe().snapshot(['events', 'users'] as const)
 
 			// Compile-time proof: this assignment only type-checks if `snap` is exactly
-			// `{ 'shared.events': number; 'authentication.users': number }` — a wider
+			// `{ 'events': number; 'users': number }` — a wider
 			// `Record<string, number>` or a `Record` missing/adding a key would fail `tsc` here.
-			const typed: { 'shared.events': number; 'authentication.users': number } = snap
-			expect(typed['shared.events']).toBeGreaterThanOrEqual(0)
-			expect(typed['authentication.users']).toBeGreaterThanOrEqual(0)
+			const typed: { events: number; users: number } = snap
+			expect(typed.events).toBeGreaterThanOrEqual(0)
+			expect(typed.users).toBeGreaterThanOrEqual(0)
 		})
 
 		it('is TYPED — the return shape is derived from the literal tuple, not a loose Record (compile-time)', async () => {
-			const snap = await testBed.probe().snapshot(['shared.events', 'shared.outbox'] as const)
+			const snap = await testBed.probe().snapshot(['events', 'outbox'] as const)
 
-			const typed: { 'shared.events': number; 'shared.outbox': number } = snap
-			expect(typed['shared.events']).toBeGreaterThanOrEqual(0)
-			expect(typed['shared.outbox']).toBeGreaterThanOrEqual(0)
+			const typed: { events: number; outbox: number } = snap
+			expect(typed.events).toBeGreaterThanOrEqual(0)
+			expect(typed.outbox).toBeGreaterThanOrEqual(0)
 
-			// @ts-expect-error — 'authentication.users' was never requested, so it must not exist on the type.
-			const _missingKey = snap['authentication.users']
+			// @ts-expect-error — 'users' was never requested, so it must not exist on the type.
+			const _missingKey = snap.users
 		})
 	})
 })
