@@ -35,7 +35,7 @@ export async function givenAttachedThread(
 				channelId,
 				externalId: contactExternalId,
 				displayName: overrides.displayName ?? 'Ada',
-				kind: 'CONTACT',
+				kind: 'USER',
 			},
 			workspaceId: workspace.workspaceId,
 			providers: (overrides.providers ?? ['CLAUDE_CODE']) as ('CLAUDE_CODE' | 'CODEX' | 'OPENCODE')[],
