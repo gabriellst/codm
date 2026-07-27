@@ -1091,3 +1091,127 @@ bun e2e                                      RED      pré-existente, A/B provad
 ### PRÓXIMO PASSO
 
 Bloco 4: **T28 → T31**. Nada de T28+ foi iniciado.
+
+---
+
+## 2026-07-27 — BLOCO 4 (T28 → T31): verificação e aceite. **FASE 0 FECHADA.**
+
+Plano: `.plans/2026-07-26-daemon-sqlite-migration.md`. Branch `sqlite-shared-store`, `main`
+intocada, zero push/fetch. **Um commit por task**, cada um staged e commitado por pathspec
+explícito com `--no-verify` (o `lint-staged` do hook morre com erro de index neste ambiente) e os
+gates equivalentes do hook rodados à mão.
+
+| commit | task |
+|---|---|
+| `01bb31b2` | T28 — corrida dos dois appliers de migração sobre uma ledger fria |
+| `9ea2931d` | T29 — partição das três lanes + ordem do owner dentro do lote de claim |
+| `91eff662` | T30 — poda diária de tombstones do outbox |
+| `0dc1a5a9` | T30B — seam de test-ingress do gateway (torna `CONNECTED` alcançável) |
+| `09860f07` | T31 — **ACEITE**: um arquivo, dois processos |
+| `65e1b698` | fix T30 — leitura via `probe()` (rail `probe-discipline`) |
+| `dd19a3d6` | fix T31 — gate absoluto de pglite de volta a 1 exceção |
+
+### O ACEITE (T31) — o que foi provado
+
+`packages/api/typescript/scripts/smoke-shared-store.ts`, exit **0**, log commitado em
+`.specs/codedm/phase0-smoke/smoke-shared-store.log`:
+
+```
+CROSSING_1=ok   STATUS_1=CREATED       gateway INSERT → daemon lê        (arquivo: version 1)
+CROSSING_2=ok   STATUS_2=CONNECTED     gateway UPDATE → daemon relê      (arquivo: version 2)
+CONNECTED_LITERAL_REACHED=yes          DAEMON_LAUNCH=bundle              NO_POSTGRES_REACHABLE=ok
+```
+
+**Variante FORTE.** `version 1→2` com `count(*) gateway_channels = 1` é o que prova o
+`ON CONFLICT ... version = version + 1` do `repo.Save`, e não uma segunda linha. Cada travessia
+tem controle negativo ANTES (o daemon não vê channel nenhum; o daemon ainda não reporta o literal
+alvo) — sem eles um data dir sujo satisfaz o critério sem nada ter atravessado.
+
+### CONTROLES NEGATIVOS — todo verde deste bloco foi provado por uma falha
+
+Nenhum teste de corrida/aceite foi aceito sem primeiro vê-lo reprovar pelo motivo certo:
+
+| o que foi quebrado (temporariamente, revertido) | resultado |
+|---|---|
+| re-check dentro da tx do applier **TS** removido | falha na 1ª rodada — `table 'authentication_accounts' already exists` |
+| re-check dentro da tx do applier **Go** removido | falha em 4 de 5 rodadas — mesmo erro |
+| predicado `source = 'api'` do claim removido | T29 caso 1 (não-roubo) reprova |
+| lease liberado no skip do sucessor | T29 caso 8 (ordem do owner) reprova |
+| os dois processos em **data dirs diferentes** | smoke reprova na travessia 1, `EXIT=1` — o bug de split-DB que esta fase mata |
+| `CODEDM_E2E` desligado | seam responde **404**, e a rota real responde **201** no mesmo processo |
+| `CODEDM_E2E=true` sob `PRODUCTION` | processo **recusa subir**, `EXIT=1` |
+
+### RSS — o ganho de largar o heap WASM do PGlite
+
+Método **idêntico ao de T01** (é o que torna o delta comparável): `bun run src/index.ts`, espera
+`/v1/session`, 30s de regime, três `ps -o rss=` com 10s de intervalo, mediana.
+
+```
+RSS_MEDIAN_KB_BEFORE=337712   (T01, PGlite)
+RSS_MEDIAN_KB_AFTER=183888
+RSS_DELTA_KB=-153824          −45,5%   (esperado: −50 a −100 MB; veio bem acima)
+```
+
+Suplementar, no runtime que o smoke de fato sobe (`node dist/server.js`): `159232` KB — fora do
+delta de propósito, é outro runtime. Informativo, não gating.
+
+### DEFEITOS DE PLANO — encontrados RODANDO, todos corrigidos no texto do plano
+
+1. **T28, linha Go do AC INEXECUTÁVEL.** `packages/api/go` é o módulo `template/api-go` e **não**
+   contém `core/` (que é `template/core-go`, módulo próprio, sem `go.work`):
+   `go test ./core/db/sqlite/...` ⇒ `main module does not contain package`. Ancorado no módulo dono.
+2. **T28, "dois handles em goroutine/worker" é válido em Go e INVÁLIDO em TS.** `busy_timeout` do
+   client libsql local é espera nativa **bloqueante**: MEDIDO `WAITED_MS=3262` com
+   `TIMER_TICKS_DURING_WAIT=0` (`setInterval` de 50ms). Um segundo driver in-process congela o loop
+   de que o DETENTOR precisa para chegar ao `COMMIT` ⇒ deadlock, não contenção (4 drivers:
+   96.418ms e `SQLITE_BUSY ×3`). **Não contradiz a §3** — é o corolário duro da regra de UM driver
+   memoizado por processo que `shared/index.ts` e `TestBed` já aplicam. O teste TS usa processos.
+3. **T31, o AC exigia o log TRACKED e `.gitignore:62` é um `*.log` repo-wide** ⇒ insatisfazível. E
+   o precedente citado não existe: `git ls-files .specs/codedm/phase10-smoke/` lista só os dois
+   `.ts`, enquanto `real-smoke-run.log` está em disco e nunca foi commitado. Negação **estreita**
+   (`!.specs/codedm/phase0-smoke/*.log`) — alargar arrastaria evidência de outra fase (com
+   `VERDICT: FAIL`) para este commit. **Regra derivada: rodar `git check-ignore -v` sobre todo
+   caminho que um AC quer tracked, antes de virar AC.**
+4. **T31, os dois `! grep` de forma casam PROSA.** O de substring casou a frase que EXPLICA a
+   armadilha R1 citando o one-liner; o de SQL é case-insensitive, então o inglês "a direct SQL
+   INSERT **from** a test" lê como `INSERT`+`FROM`. Reescrita a frase — apagar a explicação seria o
+   "AC satisfeito deletando prosa" que a §8 proíbe, e alargar os gates os enfraqueceria.
+5. **T31, `! cmd` é isento de `set -e`** (POSIX) ⇒ num bloco de AC de um shell só, um gate negado
+   reprovado passa **em silêncio**. O que denuncia é a linha `ok:` ausente. O bloco passa a ser
+   conferido **contando** os `ok:` — 14/14.
+6. **T30, o AC `bun test src/shared` é estreito demais** para rodar um rail repo-wide. A violação
+   de `probe-discipline` (teste resolvendo `DrizzleClient` direto) só apareceu na varredura da
+   suíte inteira no fim do bloco. Comando de teste escopado verifica a TASK, não o repo.
+
+### Gate final do bloco 4
+
+```
+T28 concurrent-boot (TS, 3 processos × 20 dirs frios)  EXIT=0   80 asserts, 7,2s
+T28 TestConcurrentBoot (Go, cross-linguagem, -count=20) EXIT=0   ok template/core-go/db/sqlite 6,5s
+T29 shared-outbox-lanes                                 EXIT=0   10 casos (AC pede ≥9)
+T30 PruneOutbox + job registrado em boot                EXIT=0   repeat:prune_outbox / 86400000ms
+T30B emissão (contra-prova)                             EXIT=0   37 paths, 0 `_test`, SDK limpa
+T30B runtime (create→seam→linha)                        EXIT=0   CREATED/v1 → CONNECTED/v2
+T31 smoke-shared-store                                  EXIT=0   14/14 linhas de AC
+sonda probe-sqlite-interop                              EXIT=0   WAL_INTEROP=ok, cross-process=yes
+api tsc (tsconfig.build.json)                           EXIT=0
+api test                                                EXIT=0   649 pass / 0 fail / 117 files
+go build+vet+test (api-go e core)                       EXIT=0
+workspace tsc                                           EXIT=0   7 projects
+lint                                                    EXIT=0   3 projects
+test:tooling                                            EXIT=0   298 pass / 0 fail / 19 files
+env-model (rails ENV)                                   EXIT=0   6 pass
+git grep pglite -- packages                             1 hit    module.go:34 — a MESMA prosa
+                                                                 histórica deliberada do bloco 3
+```
+
+### PARKS herdados (bloco 3, não reabertos aqui)
+
+`docker build` (host não puxa imagem nenhuma) e `bun e2e` vermelho em `04-inbound-issue`
+(pré-existente, A/B provado). Detalhes em `.specs/codedm/OVERNIGHT-BLOCKED.md`.
+
+### PRÓXIMO PASSO
+
+**Fase 0 encerrada.** O daemon TS e o gateway Go compartilham um `codedm.db`, provado por duas
+travessias cross-process com controle negativo, e o critério é um script commitado que sai 0 — não
+uma leitura de comandos.
