@@ -282,4 +282,4 @@ axes:
       - "internal /v1 TS endpoints hit the real server; Go/channel + SSE endpoints are mockRoute/mockSSE'd with SDK-typed payloads BEFORE the first goto"
       - "selectors are getByRole/getByLabel/field()-scoped — no data-testid or getByPlaceholder primaries; a missing label is fixed in the app component, not hacked in the spec"
       - "every post-action wait races network.waitForFailure(); no page.waitForTimeout; identities come from utils/generators (parallel-safe under workers:2)"
-      - "runs go through bun e2e (ephemeral DB + migrations + DROP in finally) — never npx playwright test against the dev DB; stale e2e_* DBs swept with bun test:e2e:cleanup"
+      - "runs go through bun e2e — never npx playwright test against the dev DB; the harness mkdtemps a scratch CODEDM_DATA_DIR per run and removes it on exit, so there is nothing to sweep afterwards (the Postgres-era e2e_* database cleaner, and its bun test:e2e:cleanup entry point, died with Postgres)"

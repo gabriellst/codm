@@ -40,7 +40,6 @@
 		"test": "nx run-many -t test --exclude=e2e",
 		"lint": "nx run-many -t lint",
 		"e2e": "nx run e2e:test",
-		"test:e2e": "nx run e2e:test",
 		"test:e2e:headed": "bun --cwd packages/e2e test:headed",
 		"sdk": "nx run client:generate",
 		"sdk:typescript": "nx run client:generate",
