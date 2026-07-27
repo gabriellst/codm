@@ -107,9 +107,6 @@
 		"@biomejs/biome",
 		"git-commit-msg-linter"
 	],
-	"overrides": {
-		"@types/pg": "8.20.0"
-	},
 	"engines": {
 		"bun": ">=1.0.0"
 	}
