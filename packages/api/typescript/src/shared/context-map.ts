@@ -20,13 +20,13 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 	},
 	thread: {
 		workspace: { note: 'AttachThread validates the workspace exists via WorkspaceRepository (repositories surface).' },
-		terminal: {
-			note: 'Classification/routing consumes the ProviderDetector + IssueClassifier services (the Router engine lives in the terminal/agent-runtime context).',
+		agent: {
+			note: 'Classification/routing consumes the ProviderDetector + IssueRouter services of the agent context (IssueRouter drives ClassifyIssueAgent and applies the reply-quote / threshold / slug / clarify policy).',
 		},
 	},
-	terminal: {
+	agent: {
 		thread: {
-			note: 'The severed-saga closer (RunTerminalSessionOnClassification) resolves the run context — thread providers/workspaceId + the prompt from the transcript — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader).',
+			note: 'The severed-saga closer (RunIssueTurnOnClassification) resolves the run context — thread providers/workspaceId + the prompt from the transcript — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader), and IssueRouter takes its OpenIssueRef shape from the same reader (the ref is a THREAD concept and lives there).',
 		},
 		workspace: { note: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).' },
 	},
@@ -38,7 +38,7 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 	},
 	ui: {
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
-		terminal: { note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).' },
+		agent: { note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).' },
 		issue: { note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface).' },
 	},
 }
@@ -127,8 +127,8 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
  */
 export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = [
 	{
-		between: ['terminal', 'thread'],
-		why: 'Partnership across the demux→execute seam: BC4 Thread & Routing consumes the terminal engine’s classification services (IssueClassifier/ProviderDetector) to make the routing decision, while the terminal engine’s saga-closer consumes BC4’s thread/transcript read seams to spawn the session that decision triggers. Two halves of one classify→run boundary; integration events (message.classified / issue.opened) carry the runtime hand-off, the read seams only resolve context.',
+		between: ['agent', 'thread'],
+		why: 'Partnership across the demux→execute seam, renamed with the context in Fase 5 (GOAL-agent-abstraction §5.1) — the EDGE is unchanged, only the name on one side of it. BC4 Thread & Routing consumes the agent context’s routing services (IssueRouter, which drives ClassifyIssueAgent, plus ProviderDetector) to make the routing decision, while the agent context’s saga-closer consumes BC4’s thread/transcript read seams to run the turn that decision triggers. Two halves of one classify→run boundary; integration events (message.classified / issue.opened) carry the runtime hand-off, the read seams only resolve context.',
 	},
 ]
 

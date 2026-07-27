@@ -43,7 +43,7 @@ import { migrateEmbeddedDatabase } from '@shared/registry'
 // The agent seam, imported for its SHUTDOWN token only (see the 'agent runs' step below). Statically:
 // it is a pure type + abstract class module with no DB reach, so it does not need the deferral that
 // `./routers` does, and a dynamic import here is what forced the duck-typed `any` this phase removes.
-import { AgentRunner } from '@terminal/services/AgentRunner/AgentRunner'
+import { AgentRunner } from '@agent/services/AgentRunner/AgentRunner'
 import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.

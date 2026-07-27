@@ -9,11 +9,11 @@ import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIntegrationEvents'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { PublishTerminalIntegrationEvents } from '@terminal/handlers/PublishTerminalIntegrationEvents'
-import { RunTerminalSessionOnClassification } from '@terminal/handlers/RunTerminalSessionOnClassification'
-import { AgentRunner } from '@terminal/services/AgentRunner'
-import { TerminalRunOutcome } from '@terminal/enums'
-import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
+import { PublishAgentIntegrationEvents } from '@agent/handlers/PublishAgentIntegrationEvents'
+import { RunIssueTurnOnClassification } from '@agent/handlers/RunIssueTurnOnClassification'
+import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunOutcome } from '@agent/enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
 import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
@@ -25,7 +25,7 @@ import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
  * CAPTURED on the external mediator (no DB), the point of mock mode. The reachable saga is driven
  * IN-PROCESS with a stub runner (no provider CLI, no LLM): the gateway fact → `ConsumeInboundMessage`
  * → `ClassifyMessage` emits `integration.message.classified`; the phase-6b closer
- * `RunTerminalSessionOnClassification` consumes it → `RunIssueTurn` → the terminal facts bridge
+ * `RunIssueTurnOnClassification` consumes it → `RunIssueTurn` → the terminal facts bridge
  * to `integration.issue.opened` / completed; `MaterializeIssueFromExecution` materializes the Issue
  * row and the `BrowserFrameEnricher` synthesizes the `browser.*` SSE frame.
  *
@@ -46,7 +46,7 @@ class NewIssueStubRunner extends AgentRunner {
 			const output = { decision: 'NEW_ISSUE', title: 'Ship the coupon fix' }
 			yield {
 				type: 'finished',
-				result: { outcome: TerminalRunOutcome.COMPLETED, replyText: JSON.stringify(output), sessionId: null, output, failed: false },
+				result: { outcome: AgentRunOutcome.COMPLETED, replyText: JSON.stringify(output), sessionId: null, output, failed: false },
 			}
 			return
 		}
@@ -56,7 +56,7 @@ class NewIssueStubRunner extends AgentRunner {
 		}
 		yield {
 			type: 'finished',
-			result: { outcome: TerminalRunOutcome.COMPLETED, replyText: lines.join('\n'), sessionId: 'stub-session', failed: false },
+			result: { outcome: AgentRunOutcome.COMPLETED, replyText: lines.join('\n'), sessionId: 'stub-session', failed: false },
 		}
 	}
 	async shutdown(): Promise<void> {}
@@ -105,7 +105,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	/** Register the internal bridges so a flushed domain fact publishes its integration event (captured). */
 	async function wireBridges(): Promise<MockOutboxDispatcher> {
 		await testBed.spy.register(testBed.resolve(PublishThreadIntegrationEvents))
-		await testBed.spy.register(testBed.resolve(PublishTerminalIntegrationEvents))
+		await testBed.spy.register(testBed.resolve(PublishAgentIntegrationEvents))
 		return testBed.resolve(MockOutboxDispatcher)
 	}
 
@@ -154,7 +154,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		expect(classified).toBeDefined()
 
 		// 2. The phase-6b closer consumes it and runs the (stub) terminal session in-process.
-		await testBed.resolve(RunTerminalSessionOnClassification).handle(classified as never)
+		await testBed.resolve(RunIssueTurnOnClassification).handle(classified as never)
 		await outbox.flush()
 
 		// 3. integration.issue.opened + issue.completed FIRE live off the terminal facts.

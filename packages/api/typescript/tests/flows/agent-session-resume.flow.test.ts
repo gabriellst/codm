@@ -7,12 +7,12 @@ import { AgentModelId, ClassificationMethod, ProviderKind, TranscriptKind } from
 import { OPERATOR_ID } from '@auth/operator'
 import { MessageClassifiedEvent } from '@thread/events/MessageClassifiedEvent'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { RunTerminalSessionOnClassification } from '@terminal/handlers/RunTerminalSessionOnClassification'
-import { AgentSessionRepository } from '@terminal/repositories'
-import { AgentRunner } from '@terminal/services/AgentRunner'
-import { ClaudeAgentRunner } from '@terminal/services/AgentRunner'
-import { ResumeInvalidationReason, TerminalRunOutcome } from '@terminal/enums'
-import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
+import { RunIssueTurnOnClassification } from '@agent/handlers/RunIssueTurnOnClassification'
+import { AgentSessionRepository } from '@agent/repositories'
+import { AgentRunner } from '@agent/services/AgentRunner'
+import { ClaudeAgentRunner } from '@agent/services/AgentRunner'
+import { ResumeInvalidationReason, AgentRunOutcome } from '@agent/enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
 
 /**
  * MULTI-TURN e2e (AC-4.3 / AC-4.4) — two inbound messages on the SAME issue, driven through the real
@@ -46,7 +46,7 @@ class CapturingRunner extends AgentRunner {
 		yield {
 			type: 'finished',
 			result: {
-				outcome: TerminalRunOutcome.COMPLETED,
+				outcome: AgentRunOutcome.COMPLETED,
 				replyText: 'ok',
 				sessionId: CapturingRunner.CLI_SESSION_ID,
 				failed: false,
@@ -117,7 +117,7 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 	it('turn 1 opens with --session-id, turn 2 resumes it with --resume, and the row follows', async () => {
 		const runner = new CapturingRunner()
 		testBed.override(AgentRunner, runner)
-		const handler = testBed.resolve(RunTerminalSessionOnClassification)
+		const handler = testBed.resolve(RunIssueTurnOnClassification)
 		const sessions = testBed.resolve(AgentSessionRepository)
 		const { thread, issue, workspace } = await givenIssueOnThread()
 
@@ -169,7 +169,7 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 		const runner = new CapturingRunner()
 		testBed.override(AgentRunner, runner)
 		const logging = testBed.resolve(LoggingService) as MockLoggingService
-		const handler = testBed.resolve(RunTerminalSessionOnClassification)
+		const handler = testBed.resolve(RunIssueTurnOnClassification)
 		const { thread, issue } = await givenIssueOnThread()
 
 		const entry1 = await givenInboundOnIssue(thread.id.value, issue.id.value, 'first message')

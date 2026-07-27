@@ -57,7 +57,7 @@ describe('full graph integration (polyglot)', () => {
 		// The namespace must come from the sqliteTable() literal PREFIX, not the file name: file names
 		// would read auth / channel / infrastructure instead of authentication / gateway / shared.
 		const namespaces = [...new Set(tables.map(t => t.context))].sort()
-		expect(namespaces).toEqual(['artifact', 'authentication', 'gateway', 'issue', 'owner', 'shared', 'terminal', 'thread', 'workspace'])
+		expect(namespaces).toEqual(['agent', 'artifact', 'authentication', 'gateway', 'issue', 'owner', 'shared', 'thread', 'workspace'])
 	})
 
 	it('locale extractor emits locale-key nodes for at least one frontend', () => {

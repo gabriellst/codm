@@ -1,4 +1,4 @@
-import type { OpenIssueRef } from '@terminal/services/IssueClassifier'
+import type { OpenIssueRef } from '@agent/services/IssueClassifier'
 
 /**
  * Reads the open (non-completed, non-archived) issues of a thread — the classifier's context-match

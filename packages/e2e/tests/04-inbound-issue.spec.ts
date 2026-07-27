@@ -7,7 +7,7 @@ import { givenAttachedThread, injectInboundMessage } from '../utils/given'
  *
  * Drives the REAL stack end to end: the gateway ingress seam publishes a normalized inbound message,
  * `ConsumeInboundMessage` dedups + ingests + classifies it, the classifier stub routes it to a
- * NEW_ISSUE, and `RunTerminalSessionOnClassification` opens the issue and runs the (stubbed) agent
+ * NEW_ISSUE, and `RunIssueTurnOnClassification` opens the issue and runs the (stubbed) agent
  * session. Assertions are scoped to THIS spec's own thread (the daemon is single-operator with a
  * shared DB, so global counts are not spec-isolated — a thread id is).
  *
@@ -17,7 +17,7 @@ import { givenAttachedThread, injectInboundMessage } from '../utils/given'
  * the inbound message and the classification ACTION.
  *
  * COMPLETED, not the intermediate WORKING, is the assertion target on purpose: WORKING is a
- * transient hop (open → stream → complete all happen inside one `RunTerminalSession.handle()` call,
+ * transient hop (open → stream → complete all happen inside one `RunIssueTurn.handle()` call,
  * each fact flushed through the outbox in its own commit) that the lease-based `DrizzleOutboxDispatcher`
  * can blow past between one read and the next — a single non-retried read of WORKING raced the
  * dispatcher and lost. COMPLETED is strictly downstream of WORKING (`CompleteIssue` only ever fires

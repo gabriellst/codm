@@ -25,7 +25,7 @@ import type { ContextModule } from '@shared/contexts'
 import SharedRouter from '@shared/index'
 import AuthRouter from '@auth/index'
 import OwnerRouter from '@owner/index'
-import TerminalRouter from '@terminal/index'
+import AgentRouter from '@agent/index'
 import WorkspaceRouter from '@workspace/index'
 import ThreadRouter from '@thread/index'
 import IssueRouter from '@issue/index'
@@ -37,7 +37,7 @@ const ROUTERS = {
 	shared: SharedRouter,
 	auth: AuthRouter,
 	owner: OwnerRouter,
-	terminal: TerminalRouter,
+	agent: AgentRouter,
 	workspace: WorkspaceRouter,
 	thread: ThreadRouter,
 	issue: IssueRouter,

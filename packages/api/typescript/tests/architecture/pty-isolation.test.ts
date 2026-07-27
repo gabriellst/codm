@@ -46,11 +46,11 @@ const SRC = join(import.meta.dir, '..', '..', 'src')
 
 // ── The path constants, all together: Fase 5 swaps `terminal/` for `agent/` in THIS BLOCK and nowhere
 // else (AC-5.9). They read `terminal/` here because the `git mv terminal → agent` is Fase 5, not 3.
-const ALLOWED_PREFIX = join(SRC, 'terminal/services/AgentRunner')
+const ALLOWED_PREFIX = join(SRC, 'agent/services/AgentRunner')
 // Spawn is a wider capability than PTY: TWO modules legitimately create a process.
 const ALLOWED_SPAWN_PREFIXES = [
-	join(SRC, 'terminal/services/AgentRunner'), // Fase 5 (AC-5.9): 'agent/services/AgentRunner'
-	join(SRC, 'terminal/services/ProviderDetector'), // Fase 5 (AC-5.9): 'agent/services/ProviderDetector'
+	join(SRC, 'agent/services/AgentRunner'), // Fase 5 (AC-5.9): 'agent/services/AgentRunner'
+	join(SRC, 'agent/services/ProviderDetector'), // Fase 5 (AC-5.9): 'agent/services/ProviderDetector'
 ]
 
 function walk(dir: string, out: string[] = []): string[] {

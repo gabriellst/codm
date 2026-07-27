@@ -26,7 +26,7 @@
  */
 import type Z from 'zod'
 import { z } from '@codedm/core-typescript'
-import type { AgentInputEnvelope, AgentInputSchemaConstraint } from '@terminal/types'
+import type { AgentInputEnvelope, AgentInputSchemaConstraint } from '@agent/types'
 
 // ── CONCRETE: an agent declares its input with the verb, and gets the envelope for free ──────────
 

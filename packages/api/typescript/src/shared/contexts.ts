@@ -21,19 +21,16 @@ export const CONTEXTS = {
 	auth: { pgSchema: 'authentication' },
 	owner: { pgSchema: 'owner' },
 	shared: { pgSchema: 'shared' },
-	// terminal (agent-runtime) — the agent runtime: the one-method `AgentRunner` seam, provider
-	// detection and classification. Its outbound facts are the frozen `integration.issue.*` events on
-	// the shared outbox.
+	// agent — the agent runtime: the one-method `AgentRunner` seam, the two internal agents
+	// (`ClassifyIssueAgent` / `IssueWorkAgent`), the routing policy (`IssueRouter`) and provider
+	// detection. Its outbound facts are the frozen `integration.issue.*` events on the shared outbox.
 	//
-	// The KEY is still `terminal` while the pgSchema is already `agent`, and that split is deliberate
-	// rather than drift. GOAL-agent-abstraction §5.1 assigns the TABLE rename
-	// (`terminal_terminal_llm_sessions` → `agent_agent_sessions`) to Fase 4, in the same single
-	// migration as the new resume columns, and the CODE rename (`git mv terminal → agent`, this key,
-	// the annotated cycle) to Fase 5. Two rails cross-check the pair — pgSchema parity against the
-	// contracts schema files, and the cross-schema TABLE_READ leg — so the pgSchema value has to move
-	// in the phase the TABLE moves, or both go red on a rename that is only half done. Fase 5 renames
-	// the key and this note goes away with it.
-	terminal: { pgSchema: 'agent' },
+	// Fase 5 of GOAL-agent-abstraction closed the split this entry used to carry: the pgSchema moved to
+	// `agent` with the TABLE rename in Fase 4, and the MODULE KEY moves here with the
+	// `git mv terminal → agent`. Key and schema now agree — which is exactly what the two rails that
+	// cross-check them (pgSchema parity against the contracts schema files, and the cross-schema
+	// TABLE_READ leg) were measuring all along.
+	agent: { pgSchema: 'agent' },
 	// BC2 Workspace Registry (TS-owned) — the `workspace` schema, promoted out of PENDING_PGSCHEMAS.
 	workspace: { pgSchema: 'workspace' },
 	// BC4 Thread & Routing (Core, TS-owned) — the `thread` schema, promoted out of PENDING_PGSCHEMAS.
@@ -81,3 +78,23 @@ export type ContextModule = keyof typeof CONTEXTS
 /** Context name — passed to `BoundedContext.create({ name })` as pure identity (OpenAPI tag +
  *  log label; never a mount prefix). Identical to the module id. */
 export type ContextName = ContextModule
+
+/**
+ * The RUNTIME half of `ContextName`, DERIVED from `CONTEXTS` — so a composition root can obey this
+ * file's own rule ("every consumer imports the value from here, never the literal `'ui'`") instead of
+ * re-typing its own name.
+ *
+ * Why it exists at all: the type `ContextName` has always been checkable, but there was no VALUE to
+ * import, so all ten `<context>/index.ts` files passed a string literal to `BoundedContext.create`.
+ * That is the exact drift this module was written to collapse — and Fase 5 of GOAL-agent-abstraction
+ * (§5.1) proved it live: the module rename that produced the `agent` key above left the OLD name
+ * compiling happily inside the renamed folder, because a bare literal is checked against `string`,
+ * not against the keys of `CONTEXTS`. `CONTEXT_NAMES.agent` fails `tsc` at the call site the day the
+ * key moves again.
+ *
+ * The single `as` is a DERIVATION cast, not an escape hatch: `Object.fromEntries` is typed
+ * `[string, T][] → { [k: string]: T }` in lib.es2019, which erases the literal keys the mapped type
+ * restores. There is no cast-free spelling that keeps ONE declaration — the alternative is a
+ * hand-written second list of every context name, i.e. the duplication this file deletes.
+ */
+export const CONTEXT_NAMES = Object.fromEntries(Object.keys(CONTEXTS).map(key => [key, key])) as { readonly [K in ContextModule]: K }

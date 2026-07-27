@@ -17,6 +17,7 @@ import {
 	openapi,
 } from '@codedm/core-typescript'
 import { ALL_REGISTRIES } from './registry'
+import { CONTEXT_NAMES } from './contexts'
 // Context-local (non-wire) enums: spread each context's enum barrel so any
 // controller-facing enum is auto-registered. Adding an enum to a context's
 // `enums/index.ts` is enough — no need to remember to list it here.
@@ -35,7 +36,7 @@ import { PruneOutbox } from './usecases/PruneOutbox'
 const testControllers: Record<string, typeof TestIngressController> = process.env.CODEDM_E2E === 'true' ? { TestIngressController } : {}
 
 const ctx = await BoundedContext.create({
-	name: 'shared',
+	name: CONTEXT_NAMES.shared,
 	root: true,
 	controllers: testControllers,
 	registry: ALL_REGISTRIES,

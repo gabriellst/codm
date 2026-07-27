@@ -12,7 +12,7 @@ import {
 	ProviderStatus,
 	WorkspaceBadge,
 } from '@codedm/contracts-typescript/wire/enums'
-import { ProviderDetector } from '@terminal/services/ProviderDetector'
+import { ProviderDetector } from '@agent/services/ProviderDetector'
 
 // One page of the contact directory. The picker paginates the gateway's remote read model by
 // `lastMessageAt` (most-recently-active first), so the operator sees live conversations up top.

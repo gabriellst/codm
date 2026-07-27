@@ -59,7 +59,7 @@ export const BaseAgentInputSchema = z.object({
  * altogether — `util.Extend` drops the envelope's field and keeps `T`'s (matching `.extend()`'s real
  * override semantics), where a naive `Shape & T` would intersect two possibly-incompatible Zod
  * schemas into a type nothing can construct. Still assignable to `AgentInputSchemaConstraint`
- * (`ZodObject<envelope & ZodRawShape>`, `src/terminal/types/AgentInput.ts`) because `Shape` is
+ * (`ZodObject<envelope & ZodRawShape>`, `src/agent/types/AgentInput.ts`) because `Shape` is
  * covariant (`out`) — `Extend<Shape, T>` carries every one of the envelope's fields.
  */
 type AgentInputObjectSchema<T extends ZodRawShape> = ZodObject<util.Extend<(typeof BaseAgentInputSchema)['shape'], util.Writeable<T>>>

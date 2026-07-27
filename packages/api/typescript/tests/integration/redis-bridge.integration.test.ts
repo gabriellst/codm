@@ -8,9 +8,9 @@ import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { AgentRunner } from '@terminal/services/AgentRunner'
-import { TerminalRunOutcome } from '@terminal/enums'
-import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
+import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunOutcome } from '@agent/enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
 
 /**
  * PROVES the Go→TS bridge end to end over a REAL Redis (phase 9-1). The Go channel gateway publishes
@@ -81,7 +81,7 @@ class NewIssueStubRunner extends AgentRunner {
 		yield {
 			type: 'finished',
 			result: {
-				outcome: TerminalRunOutcome.COMPLETED,
+				outcome: AgentRunOutcome.COMPLETED,
 				replyText: JSON.stringify(output ?? 'done'),
 				sessionId: null,
 				output,

@@ -13,7 +13,7 @@
  *
  * WHY NOT THE WHOLE DAEMON: the HTTP test-ingress that seeds an inbound message is guarded by
  * `CODEDM_E2E=true`, and that same flag is what swaps `StreamJsonAgentRunner` out for the e2e stub
- * (`terminal/registry.ts`). Booting the daemon to reach the ingress would therefore guarantee the CLI
+ * (`agent/registry.ts`). Booting the daemon to reach the ingress would therefore guarantee the CLI
  * is NEVER spawned — the opposite of what this smoke exists to prove. So the smoke drives the two
  * consumers directly, which is precisely the surface Fase 3 changed; the rest of the chain
  * (outbox → bridge → integration events → issue row) is covered deterministically by the runtime e2e.
@@ -34,10 +34,10 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { LoggingService } from '@codedm/core-typescript'
 import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
-import { StreamJsonAgentRunner } from '../src/terminal/services/AgentRunner/StreamJsonAgentRunner/StreamJsonAgentRunner'
-import { IssueClassifier } from '../src/terminal/services/IssueClassifier/IssueClassifier'
-import { TerminalOutputAccumulator } from '../src/terminal/services/TerminalOutputAccumulator/TerminalOutputAccumulator'
-import { AgentMessageRole, AgentName } from '../src/terminal/enums'
+import { StreamJsonAgentRunner } from '../src/agent/services/AgentRunner/StreamJsonAgentRunner/StreamJsonAgentRunner'
+import { IssueClassifier } from '../src/agent/services/IssueClassifier/IssueClassifier'
+import { TerminalOutputAccumulator } from '../src/agent/services/TerminalOutputAccumulator/TerminalOutputAccumulator'
+import { AgentMessageRole, AgentName } from '../src/agent/enums'
 
 const BIN = process.env.CODEDM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
 // The RECORD lives with the other phase artifacts in `.specs/`; the SCRIPT lives here because it

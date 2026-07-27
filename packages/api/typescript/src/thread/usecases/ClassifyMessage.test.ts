@@ -3,8 +3,8 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenIssue } from '@test/support'
 import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
 import { ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner } from '@terminal/services/AgentRunner'
-import { TerminalRunOutcome } from '@terminal/enums'
+import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunOutcome } from '@agent/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ClassifyMessage } from './ClassifyMessage'
 import { TranscriptRepository } from '../repositories/TranscriptRepository'
@@ -42,7 +42,7 @@ describe('ClassifyMessage — classification routes + clarification invariant', 
 					yield {
 						type: 'finished',
 						result: {
-							outcome: TerminalRunOutcome.COMPLETED,
+							outcome: AgentRunOutcome.COMPLETED,
 							replyText: JSON.stringify(nextDecision),
 							sessionId: null,
 							output: nextDecision,

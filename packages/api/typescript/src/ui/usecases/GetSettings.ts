@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { Handler, z, DrizzleClient, Config } from '@codedm/core-typescript'
 import { owners } from '@codedm/contracts/db'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
-import { ProviderDetector } from '@terminal/services/ProviderDetector'
+import { ProviderDetector } from '@agent/services/ProviderDetector'
 import { StopPolicyConfigRepository } from '@issue/repositories/StopPolicyConfigRepository'
 
 import pkg from '../../../package.json' with { type: 'json' }

@@ -114,7 +114,7 @@ export class SqlExternalMediator extends ExternalMediator {
 	 * only holds if each `publish()` delivers before the next line runs (e.g. terminal's
 	 * `issue.opened` must reach `OpenIssue` before `issue.completed` reaches `CompleteIssue`, since
 	 * `CompleteIssue` treats "issue not found yet" as an idempotent no-op with no retry — see
-	 * RunTerminalSessionOnClassification / PublishTerminalIntegrationEvents). A fire-and-forget
+	 * RunIssueTurnOnClassification / PublishAgentIntegrationEvents). A fire-and-forget
 	 * `void tryCatchAsync(...)` here breaks that ordering: the outer `DrizzleOutboxDispatcher` owner
 	 * loop moves on to dispatch the NEXT row (completed) while THIS row's fan-out (opened) is still an
 	 * unawaited floating promise, so the two can race and land out of order — silently and

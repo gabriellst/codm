@@ -1,4 +1,5 @@
 import { BoundedContext } from '@codedm/core-typescript'
+import { CONTEXT_NAMES } from '@shared/contexts'
 import * as controllers from './controllers'
 import { INSTANCE_REGISTRY } from './registry'
 
@@ -10,7 +11,7 @@ import { INSTANCE_REGISTRY } from './registry'
 const runtimeControllers: typeof controllers | Record<string, never> = process.env.EMIT_OPENAPI === 'true' ? {} : controllers
 
 const ctx = await BoundedContext.create({
-	name: 'external',
+	name: CONTEXT_NAMES.external,
 	controllers: runtimeControllers,
 	registry: INSTANCE_REGISTRY,
 })

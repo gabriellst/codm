@@ -39,7 +39,7 @@ import { migrationsDir } from '@codedm/contracts/db/migrations'
 
 import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
-import { INSTANCE_REGISTRY as terminalRegistry } from '@terminal/registry'
+import { INSTANCE_REGISTRY as agentRegistry } from '@agent/registry'
 import { INSTANCE_REGISTRY as workspaceRegistry } from '@workspace/registry'
 import { INSTANCE_REGISTRY as threadRegistry } from '@thread/registry'
 import { INSTANCE_REGISTRY as issueRegistry } from '@issue/registry'
@@ -198,7 +198,7 @@ const CONTEXT_REGISTRIES = {
 	shared: CORE_REGISTRY,
 	auth: authRegistry,
 	owner: ownerRegistry,
-	terminal: terminalRegistry,
+	agent: agentRegistry,
 	workspace: workspaceRegistry,
 	thread: threadRegistry,
 	issue: issueRegistry,

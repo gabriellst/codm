@@ -1,4 +1,5 @@
 import { BoundedContext } from '@codedm/core-typescript'
+import { CONTEXT_NAMES } from '@shared/contexts'
 import * as controllers from './controllers'
 import { INSTANCE_REGISTRY } from './registry'
 import * as internalHandlers from './handlers/internal'
@@ -6,7 +7,7 @@ import * as externalHandlers from './handlers/external'
 import { AutoArchiveCompletedIssues } from './usecases/AutoArchiveCompletedIssues'
 
 const ctx = await BoundedContext.create({
-	name: 'issue',
+	name: CONTEXT_NAMES.issue,
 	controllers,
 	internalHandlers,
 	externalHandlers,
