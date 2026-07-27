@@ -85,10 +85,21 @@ describe('PersistenceProbe', () => {
 
 	describe('snapshot() — typed cross-table count', () => {
 		it('returns a count per requested table, keyed exactly by the tuple passed in (runtime)', async () => {
-			await domainEventRepository.save(makeEvent())
+			// DISTINCT events, following the convention the `count()` test above already uses — and not an
+			// incidental style choice. `BaseEvent.id` is CONTENT-ADDRESSED (`Id.fromSeed(this.serialize())`,
+			// `core/src/types/BaseEvent.ts:22`), and the only varying input across two bare `makeEvent()`
+			// calls is `time`, at millisecond resolution. Two byte-identical events saved within the same
+			// millisecond therefore hash to the SAME id and the second insert dies on
+			// `UNIQUE constraint failed: shared_events.id` — a race this suite lost intermittently
+			// (reproduced roughly 1 run in 3, in isolation as well as inside the full suite).
+			//
+			// The assertions below are UNCHANGED: this fixes the FIXTURE, not the expectation. Saving one
+			// event twice and demanding two rows contradicts content-addressed ids, which exist precisely
+			// so that a redelivered event is idempotent instead of duplicated.
+			await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'snap-1'), itemId: 'item-snap-1' }))
 
 			const before = await testBed.probe().snapshot(['events', 'outbox', 'users'] as const)
-			await domainEventRepository.save(makeEvent())
+			await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'snap-2'), itemId: 'item-snap-2' }))
 			const after = await testBed.probe().snapshot(['events', 'outbox', 'users'] as const)
 
 			expect(after.events).toBe(before.events + 1)
