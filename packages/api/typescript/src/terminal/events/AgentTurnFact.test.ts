@@ -33,7 +33,7 @@ const facts = (): AgentTurnFact[] => [
 	}),
 	new AgentUsageEvent({
 		ownerId: '00000000-0000-4000-8000-000000000001',
-		payload: { inputTokens: 1200, outputTokens: 340 },
+		payload: { inputTokens: 1200, outputTokens: 340, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
 	}),
 ]
 
@@ -102,13 +102,59 @@ describe('the tool-call fact carries a WHOLE lifecycle', () => {
 })
 
 describe('the usage fact is token counts, not money', () => {
+	const zeroed = { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 }
+
 	it('rejects negative or fractional token counts', () => {
-		expect(AgentUsageEvent.schema.shape.payload.safeParse({ inputTokens: -1, outputTokens: 0 }).success).toBe(false)
-		expect(AgentUsageEvent.schema.shape.payload.safeParse({ inputTokens: 1.5, outputTokens: 0 }).success).toBe(false)
-		expect(AgentUsageEvent.schema.shape.payload.safeParse({ inputTokens: 0, outputTokens: 0 }).success).toBe(true)
+		expect(AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, inputTokens: -1 }).success).toBe(false)
+		expect(AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, inputTokens: 1.5 }).success).toBe(false)
+		expect(AgentUsageEvent.schema.shape.payload.safeParse(zeroed).success).toBe(true)
+	})
+
+	it('rejects negative or fractional CACHE token counts too — same rule, all four buckets', () => {
+		expect(
+			AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, cacheCreationInputTokens: -1 }).success,
+		).toBe(false)
+		expect(AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, cacheReadInputTokens: 1.5 }).success).toBe(
+			false,
+		)
 	})
 
 	it('has no cost/currency field — pricing is policy applied by the reader, not a fact of the run', () => {
-		expect(Object.keys(AgentUsageEvent.schema.shape.payload.shape)).toEqual(['inputTokens', 'outputTokens'])
+		const keys = Object.keys(AgentUsageEvent.schema.shape.payload.shape)
+		expect(keys).toEqual(['inputTokens', 'outputTokens', 'cacheCreationInputTokens', 'cacheReadInputTokens'])
+		// Stated as intent as well as as a key list, so a future additive field cannot smuggle money in
+		// by merely updating the list above.
+		expect(keys.some(k => /cost|price|usd|currency|money/i.test(k))).toBe(false)
+	})
+
+	/**
+	 * REGRESSION, anchored on measured bytes — GOAL §4.3 / Fase-2 smoke divergence D4.
+	 *
+	 * These four numbers are read off `phase2-smoke/raw/s1-text.jsonl`, a real turn. The point of the
+	 * test is the ratio, not the values: the plain `inputTokens` bucket carries 2 of the ~24.5k input
+	 * tokens actually consumed. The frozen two-field version of this event would have recorded 2 and
+	 * under-billed the turn by ~1000x, which is why the cache buckets are REQUIRED rather than
+	 * optional — an optional bucket silently reintroduces exactly this loss whenever it is omitted.
+	 */
+	it('records the whole input, not just the uncached sliver (real numbers from the smoke)', () => {
+		const measured = {
+			inputTokens: 2,
+			outputTokens: 10,
+			cacheCreationInputTokens: 9188,
+			cacheReadInputTokens: 15273,
+		}
+		const parsed = AgentUsageEvent.schema.shape.payload.safeParse(measured)
+		expect(parsed.success).toBe(true)
+
+		const totalInput = measured.inputTokens + measured.cacheCreationInputTokens + measured.cacheReadInputTokens
+		expect(totalInput).toBe(24463)
+		// The whole reason the two-field contract was a correctness bug, asserted rather than narrated.
+		expect(measured.inputTokens / totalInput).toBeLessThan(0.001)
+	})
+
+	it('requires the cache buckets — a payload missing them does not parse', () => {
+		// A non-caching provider must pass explicit 0s (arithmetically correct: with no cache, all
+		// input lands in `inputTokens`). Silence is not an accepted way to say zero.
+		expect(AgentUsageEvent.schema.shape.payload.safeParse({ inputTokens: 5, outputTokens: 5 }).success).toBe(false)
 	})
 })
