@@ -1804,11 +1804,29 @@ bun run detect                                40 finding(s) / 24 error       ←
 `bun sdk`/`bun run contracts` **zero drift**: nada do que esta fase acrescentou toca wire — o codec, o
 seam e os fatos são todos context-private.
 
+## DETECTOR CONSERTADO (o gate pegou, e a correção foi na REGRA)
+
+`bun run detect` subiu 40 → **41** com o codec dentro. O achado novo era
+`entity#bp-10` em `StreamJsonAgentRunner.buildResult`. bp-10 é *"Manual safeParse + BaseError in
+**behavior methods**"* — regra de ENTIDADE, cujo `right:` é um método de entidade — mas **sem
+`scope: self`**, então ela viajava por `context_reads: [entity]` até os registries de service/usecase/
+handler, onde um `\.safeParse\(` pelado não é evidência de nada: **fora** de uma entidade,
+`safeParse` é a escolha CERTA justamente por não lançar.
+
+E aqui a §4.3 regra 4 **exige** validação que não lança — usar `parse` é que seria a violação. Ou
+seja: o detector apontava para o conserto e chamava de defeito. **Reescrever o runner para fugir do
+regex teria quebrado o contrato**, então quem tinha de mudar era a regra: ganhou `scope: self`.
+
+**Não é disable, e foi verificado como tal:** `registry-scan --rules` continua listando `entity#bp-10`,
+e um `.safeParse(` acrescentado a uma entidade real (`artifact/entities/Artifact.ts`) faz a regra
+disparar de novo (41) e volta a 40 ao reverter. `detect` de volta em **40 / 24**, a baseline exata.
+
 ## DÍVIDA REGISTRADA (não deixar envelhecer)
 
 - `entity#bp-03` casa `/\{\s*message:\s*['"]/` mas o nome dele escopa a `.refine()` — falso positivo
   já dentro da baseline aceita (`SessionPrewarmService.ts:55`). Estreitar derruba `detect` de 24 → 23.
-  **Continua aberto**: mexer nele nesta fase mudaria a baseline que é o próprio gate.
+  **Continua aberto**: é a mesma espécie do bp-10 acima (regra cujo nome escopa mais do que o regex),
+  mas mexer nele muda a contagem de ERROS que é o próprio gate desta fase — vai separado.
 - `stream()` continua com as duas metades (PTY + pipes one-shot). Virá inteiro na Fase 3, junto com
   os consumidores e a deleção do subtree — que é onde a mudança é coerente.
 
