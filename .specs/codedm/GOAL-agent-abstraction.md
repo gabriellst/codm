@@ -2103,6 +2103,59 @@ disso se aplica e o ripple inteiro vive na Fase 6 com os outros dois códigos.
 em `db/schema-sqlite/`; e `git diff --stat <base-da-fase>..HEAD -- packages/contracts/db/schema-sqlite/migrations`
 mostra **exatamente um** arquivo SQL novo. A Fase 5 não pode acrescentar migration alguma.
 
+### Fase 4.5 — Um runner por CLI; `ProviderDef` morre (emenda do founder, 27-jul)
+
+> **Por que existe.** O founder revisou a estrutura entregue nas Fases 1-3 e apontou erros. Dois são
+> estruturais e têm de ser corrigidos **antes** da Fase 5, porque ela faz `git mv terminal → agent` e
+> mover a estrutura errada para depois reestruturar é trabalho duplicado.
+
+**(1) `providers/` e `mcp/` são pastas ilegais num bounded context.** A lista de cidadãos do repo
+(`CLAUDE.md`) tem `services/`, não `providers/` nem `mcp/`. Ambas viram `services/`.
+
+**(2) `ProviderDef` é a abstração errada e é REDUNDANTE com o `AgentRunner`.** O goal declarava duas
+regras que **não coexistem**: *"diferença de capacidade vive em DADO, nunca como branch no runner"* e,
+ao mesmo tempo, defs de `codex`/`opencode` com `streamFormat: 'plain'`. Formato de stream **não é
+argv — é outro caminho de parsing**; um runner só não honra isso sem branchear, que a própria regra
+proíbe. A contradição se resolve matando a abstração, não a regra.
+
+O padrão "literal de dados" veio do open-design, onde paga por dirigir **26 CLIs homogêneos**. Aqui são
+**3**, e dois precisam de parse diferente — a pré-condição do padrão não existe.
+
+**A unidade de variação é o CLI, não o formato.** Nada de `StreamJsonAgentProvider` /
+`PlainTextAgentProvider`: agrupar por transporte presume que dois CLIs cuspindo JSONL cospem o MESMO
+JSONL, o que é falso (o claude tem `--session-id`/`--resume`, `--mcp-config` e as anomalias que a Fase 2
+mediu; o codex terá as suas). Esse agrupamento reintroduziria `if (provider === …)` dentro da classe.
+
+```
+services/AgentRunner/
+	AgentRunner.ts          # abstrata: run() + shutdown(), e nada mais
+	ClaudeAgentRunner/      # argv, frames, sessão, mcp, caps — TUDO que é do claude
+	CodexAgentRunner/       # quando aterrissar, com as particularidades DELE
+	StubAgentRunner/  E2eStubAgentRunner/
+```
+
+`ProviderDef`, `PROVIDER_DEFS` e `defs/*` **somem**; o conteúdo (bin, fallbackBins, versionArgs, probe
+de capacidade, `buildArgs`) vira campo/método da concreta. `ProviderKind` (wire) **fica** — é o
+vocabulário do domínio para "qual agent"; a DI resolve kind → runner. Detecção de binário e probe de
+`caps` também são por-CLI e acompanham (só o `ClaudeAgentRunner` sabe o que
+`--include-partial-messages` significa).
+
+**O comum vira UTILITÁRIO, nunca classe base.** Ler JSONL com buffer de linha é helper que as concretas
+usam; herança contrabandearia de volta a generalização que estamos removendo.
+
+**O que se perde, conscientemente:** um 4º CLI passa a exigir uma classe em vez de um literal. É
+trabalho honesto para um produto genuinamente diferente — e o literal ia precisar de um branch de
+qualquer jeito.
+
+**AC-4.5.1** `git grep -n "ProviderDef\|PROVIDER_DEFS" -- packages/api/typescript/src` → **0 hits**.
+**AC-4.5.2** `packages/api/typescript/src/terminal/{providers,mcp}` **não existem**; tudo sob `services/`.
+**AC-4.5.3** Nenhum branch por identidade de provider dentro de um runner:
+`git grep -nE "provider ?===|ProviderKind\.(CLAUDE|CODEX|OPENCODE)" -- packages/api/typescript/src/terminal/services/AgentRunner` → **0 hits** (a resolução acontece na DI).
+**AC-4.5.4** O seam segue com **exatamente** `run` + `shutdown` (o teste de reflexão da Fase 3 continua verde).
+**AC-4.5.5** As asserções de argv exato da AC-1.1 sobrevivem, agora sobre `ClaudeAgentRunner`.
+**AC-4.5.6** Gates completos + e2e RUNTIME + os seis detectores não crescem. Refactor puro: **zero
+mudança de comportamento observável** — provar pelo diff.
+
 ### Fase 5 — O bounded context `agent`
 
 `git mv terminal → agent`; `CONTEXTS` + `context-map` + `BoundedContext.create({ name: CONTEXTS.agent })`;
