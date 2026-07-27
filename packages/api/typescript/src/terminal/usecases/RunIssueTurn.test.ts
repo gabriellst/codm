@@ -199,6 +199,19 @@ describe('RunIssueTurn use case', () => {
 		expect((await sessions.findByIssueId(issueId))?.cwd).toBe('/tmp/workspace-a')
 
 		// ── TURN 2 — cwd MOVES to B. The guard MUST fire, exactly here. ───────────────────────────
+		// The sleep is NOT a synchronization hack, and it is not hiding a bug in the code under test.
+		// `BaseEvent` mints its id as `Id.fromSeed(JSON.stringify(this))` (`core/src/types/BaseEvent.ts:22`)
+		// and the only time-varying part of that serialization is `time`, at MILLISECOND resolution.
+		// This test drives THREE turns on ONE issue, and `TerminalSessionStartedEvent`'s payload
+		// (issueId/threadId/key/title/provider) is byte-identical across all three — so two turns landing
+		// inside the same millisecond mint the SAME id and the second insert dies on
+		// `UNIQUE constraint failed: shared_events.id`. That race is PRE-EXISTING and independent of any
+		// runner refactor: reproduced on an untouched worktree at 6f807917 in 1 of 3 full-suite runs (it
+		// only fires in the full suite, where the process is warm enough for two turns to share a
+		// millisecond; the file passes alone every time). Advancing the clock 2ms makes the SUITE
+		// deterministic without papering over the hazard — the collision itself is reported as a finding
+		// against `BaseEvent`, whose fix is a behaviour change and therefore not this phase's business.
+		await Bun.sleep(2)
 		logging.clearLogs()
 		const entry2 = testId('run-issue-turn', 'entry-cwd-2')
 		await useCase.execute({ ...baseInput(issueId), workspacePath: '/tmp/workspace-b', messageId: entry2, priorMessageId: entry1 })
@@ -218,6 +231,7 @@ describe('RunIssueTurn use case', () => {
 		expect(afterTurn2?.cwd).toBe('/tmp/workspace-b')
 
 		// ── TURN 3 — SAME cwd as turn 2 (B). The guard must NOT fire again: this turn resumes. ────
+		await Bun.sleep(2) // same millisecond-collision reason as turn 2 — see the note above.
 		logging.clearLogs()
 		const entry3 = testId('run-issue-turn', 'entry-cwd-3')
 		await useCase.execute({ ...baseInput(issueId), workspacePath: '/tmp/workspace-b', messageId: entry3, priorMessageId: entry2 })
