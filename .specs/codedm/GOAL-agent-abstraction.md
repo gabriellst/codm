@@ -2164,6 +2164,51 @@ uma chave nova é dívida nova, não ratchet.
 
 ### Fase 6 — O servidor MCP: o agent passa a DECLARAR (a inversão)
 
+> ## ⚠️ EMENDA DE DESENHO (founder, 27-jul) — as tools são GERADAS, e são DOIS conjuntos
+>
+> O desenho original (quatro tools escritas à mão em `agent/mcp/tools/`) está **superseded**. O MCP
+> passa a ser **mais um consumidor do mesmo contrato OpenAPI que já gera a SDK**, via
+> **`@kubb/plugin-mcp`** — verificado no registry npm: existe, latest `4.39.2`, mesma linha do Kubb
+> `4.37.9` que já usamos; descrição *"generating MCP-compatible tools and schemas from OpenAPI
+> specifications"*. Consequência: o agent deixa de ser caso especial e vira **cliente de primeira
+> classe da API**, na mesma pipeline contract-first do resto do repo, com **zero schema de tool
+> mantido à mão**.
+>
+> **DOIS CONJUNTOS, declarados no contrato.** Não é superfície plana. Os conjuntos cortam
+> **atravessado** as tags existentes (que são por bounded context, não por audiência), então precisam
+> de um segundo eixo: a extensão de vendor **`x-mcp-scope`** na operação — o repo já usa `x-`
+> (`x-error-codes`, `x-zod-refinements` em `core/src/utils/OpenAPI.ts:497,585`) — e o Kubb filtra por ela.
+>
+> | escopo | quem usa | conteúdo |
+> |---|---|---|
+> | `issue-handling` | o agent **enquanto executa uma issue** | criar issue · transicionar status · pedir approval · responder mensagem (`SendDirectMessage`, existe) · registrar artifact (`RecordArtifact`, existe) |
+> | `system` | navegação e operação do sistema | `ui/*` (7 reads) · `workspace/*` · config de thread · leituras de issue · `owner/*` |
+>
+> **O default é NÃO EXPOSTO** — e é isso que justifica a extensão em vez de uma lista à parte: um
+> controller novo **não** vira tool por acidente; alguém tem de declarar o escopo no próprio
+> controller. Sem esse default, todo endpoint que nascer entra em silêncio no alcance de um modelo que
+> lê mensagem de WhatsApp. O `--allowedTools` passa a ser **derivado** do escopo que o agent declara.
+>
+> **TRÊS OPERAÇÕES NÃO EXISTEM E NASCEM AQUI**, como controllers normais (schema Zod, entram na SDK e
+> no spec como qualquer outro): **criar issue** (hoje issues só materializam da execução),
+> **transicionar status** (só há `Archive`/`Restore`) e **pedir approval**. O que era
+> `DeclareStop`/`DeclareIssueComplete` vira endpoint de verdade, não caminho paralelo.
+>
+> **A IDENTIDADE FICA MAIS FRACA — REGRESSÃO CONSCIENTE, COM MITIGANTE OBRIGATÓRIO.** A Fase 1
+> congelou os schemas de tool **sem nenhum campo de identidade** (AC-1.6, verificada pelo juiz), o que
+> tornava declarar na issue errada *inexprimível*. Tool gerada de controller carrega os params dele —
+> **inclusive `issueId`** — então a garantia degrada de "impossível" para "o servidor valida". Portanto:
+> o run token continua sendo a fonte da identidade; o router **rejeita** `issueId`/`threadId`/`ownerId`
+> que não batam com o token; e existe **teste de tentativa cross-issue** (agent rodando na issue A
+> tentando declarar na B → 403). **Sem esse teste a fase não fecha** — é por esse caminho que um prompt
+> injection vindo de uma mensagem chegaria ao domínio.
+>
+> **Spec de origem:** o do `api-ts` (o daemon), nunca o do gateway.
+>
+> **AS AC-6.x ABAIXO PRECISAM DE RECONCILIAÇÃO** com esta emenda antes da Fase 6 começar — foram
+> escritas para tools à mão. É **tarefa declarada**, não improviso de última hora; a Fase 6 está a
+> quatro fases de distância e a reconciliação acontece antes dela.
+
 É aqui que a fatia PARKED de materialização de issue destrava. Nasce `agent/mcp/`
 (`router.ts`, `tools/*.ts`, `RunTokenService.ts`), as quatro tools (§4.4), **três** use cases de
 declaração no `agent` (`DeclareIssueComplete`, `DeclareStop`, `AskOperator`) e o wiring de escopo por
