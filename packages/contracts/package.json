@@ -14,6 +14,8 @@
 		"codegen:wire:typescript": "bun codegen/emit-wire-ts.ts",
 		"codegen:wire:go": "bun codegen/emit-wire-go.ts",
 		"codegen:wire": "bun run codegen:wire:typescript && bun run codegen:wire:go",
+		"db:sync-go": "bun ../../scripts/db/sync-sqlite-migrations.ts",
+		"db:check-go": "bun ../../scripts/db/sync-sqlite-migrations.ts --check",
 		"drizzle:generate": "drizzle-kit generate --config=db/drizzle.config.ts",
 		"drizzle:migrate": "drizzle-kit migrate --config=db/drizzle.config.ts",
 		"all": "bun run tsp:compile && bun run codegen:wire && bun run drizzle:generate",
