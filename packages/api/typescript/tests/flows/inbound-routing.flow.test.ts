@@ -50,7 +50,7 @@ class NewIssueStubRunner extends AgentRunner {
 			}
 			return
 		}
-		const lines = [`$ ${request.provider} (stub) in ${request.cwd}`, ...request.messages.map(m => m.content), 'done']
+		const lines = [`$ ${request.agentName} (stub) in ${request.cwd}`, ...request.messages.map(m => m.content), 'done']
 		for (const [index, text] of lines.entries()) {
 			yield { type: 'frame', frame: { kind: 'assistant_text', messageId: `stub-${index}`, text, parentToolUseId: null } }
 		}

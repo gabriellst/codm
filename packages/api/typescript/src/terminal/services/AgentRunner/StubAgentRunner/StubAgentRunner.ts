@@ -37,7 +37,9 @@ export class StubAgentRunner extends AgentRunner {
 			return
 		}
 
-		const lines = [`$ ${request.provider} (stub) in ${request.cwd}`, ...request.messages.map(message => message.content), 'done']
+		// `agentName`, not a provider: since Fase 4.5 the request carries no provider identity — WHICH
+		// CLI a run belongs to is settled by the DI binding that produced this very object.
+		const lines = [`$ ${request.agentName} (stub) in ${request.cwd}`, ...request.messages.map(message => message.content), 'done']
 		for (const [index, text] of lines.entries()) {
 			const frame: AgentFrame = { kind: 'assistant_text', messageId: `stub-${index}`, text, parentToolUseId: null }
 			yield { type: 'frame', frame }

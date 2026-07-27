@@ -1,5 +1,6 @@
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
-import type { ProviderCapabilities } from '../../providers'
+import type { ProviderBinarySpec, ProviderCapabilities } from '../../types'
+import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
 
 /**
  * The detection record for one provider CLI — the shape T08 (Settings) and T15 (Attach wizard) read
@@ -7,11 +8,11 @@ import type { ProviderCapabilities } from '../../providers'
  * `NOT_INSTALLED` carries neither.
  *
  * `caps` (GOAL-agent-abstraction §4.7, Fase 1) is the probe result: `helpArgs` output grepped for
- * each key of the def's `capabilityFlags`. It is RETURNED, never stashed in a module-level map, and
- * the caller threads it into `ProviderDef.buildArgs({ …, caps })`. That is the whole difference from
- * the open-design implementation this pattern is adapted from — there `buildArgs` reads an ambient
- * map that detection mutates, so its output silently depends on whether detection has run. Here
- * `buildArgs` is a pure function of its arguments, and AC-1.2 proves it mechanically.
+ * each key of the spec's `capabilityFlags`. It is RETURNED, never stashed in a module-level map, and
+ * the caller threads it into `ClaudeAgentRunner.buildArgs({ …, caps })`. That is the whole difference
+ * from the open-design implementation this pattern is adapted from — there argv construction reads an
+ * ambient map that detection mutates, so its output silently depends on whether detection has run.
+ * Here `buildArgs` is a pure function of its arguments, and AC-1.2 proves it mechanically.
  *
  * Empty (`{}`) on a `NOT_INSTALLED` provider, and empty is the SAFE default: every capability is
  * opt-in, so an unprobed binary is driven with the conservative argv rather than one it might reject.
@@ -41,5 +42,38 @@ export abstract class ProviderDetector {
 	abstract resolve(name: ProviderKind): Promise<ProviderDetection | undefined>
 }
 
-/** Every provider CLI the engine knows how to detect + drive, in display order. */
+/** Every provider CLI the engine knows how to detect, in display order. */
 export const KNOWN_PROVIDERS: readonly ProviderKind[] = [ProviderKind.CLAUDE_CODE, ProviderKind.CODEX, ProviderKind.OPENCODE]
+
+/**
+ * How each known CLI is FOUND and probed. Detection input only — no argv, no parsing, no driving
+ * (Fase 4.5; see `ProviderBinarySpec` for why this is not the dead def registry under a new name).
+ *
+ * `Record<ProviderKind, …>` and not an array: adding a member to `provider-kind.tsp` and regenerating
+ * turns this into a `tsc` error at author time rather than a boot-time surprise.
+ *
+ * **claude-code is the only kind with a runner**, and it therefore does not repeat itself here — its
+ * spec IS the static on `ClaudeAgentRunner`, so "how to find it" and "how to drive it" cannot drift.
+ * The other two are DETECT-ONLY: we can report them in the provider catalog (which is all
+ * `DetectProviders` ever did with them), and the day one is genuinely driven it arrives as its own
+ * runner class with a MEASURED spec, which then replaces the literal below. Declaring their driving
+ * shape ahead of that measurement is exactly the fiction Fase 4.5 removed — `streamFormat: 'plain'`
+ * was never verified for either binary (the risk AC-1.8 registered), and a guess that costs a branch
+ * in a shared runner is worse than an honest gap.
+ */
+export const PROVIDER_BINARIES: Record<ProviderKind, ProviderBinarySpec> = {
+	[ProviderKind.CLAUDE_CODE]: ClaudeAgentRunner.binary,
+	[ProviderKind.CODEX]: {
+		bin: 'codex',
+		versionArgs: ['--version'],
+		helpArgs: ['--help'],
+		// Probed anyway: if a future build grows the flags, the capability lights up with no code change.
+		capabilityFlags: { '--mcp-config': 'mcpConfig', '--resume': 'sessionResume' },
+	},
+	[ProviderKind.OPENCODE]: {
+		bin: 'opencode',
+		versionArgs: ['--version'],
+		helpArgs: ['--help'],
+		capabilityFlags: { '--mcp-config': 'mcpConfig', '--resume': 'sessionResume' },
+	},
+}

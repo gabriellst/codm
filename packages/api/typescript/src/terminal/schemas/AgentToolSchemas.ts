@@ -1,6 +1,6 @@
 import { z } from '@codedm/core-typescript'
 import { ArtifactKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
-import { AgentToolName } from '../../enums'
+import { AgentToolName } from '../enums'
 
 /**
  * The INPUT CONTRACT of the four `codedm__*` MCP tools (GOAL-agent-abstraction §4.4).
@@ -69,8 +69,8 @@ export const AskOperatorToolInputSchema = z.object({
 
 /**
  * The tool registry: every `AgentToolName` mapped to its input schema. `Record<AgentToolName, …>` and
- * not an array, for the same reason `PROVIDER_DEFS` is a Record — exhaustiveness becomes a `tsc`
- * error rather than a boot-time check, and AC-1.6 iterates it without a hand list.
+ * not an array — exhaustiveness becomes a `tsc` error at author time rather than a boot-time check,
+ * and AC-1.6 iterates it without a hand list.
  */
 export const AGENT_TOOL_INPUT_SCHEMAS = {
 	[AgentToolName.COMPLETE_ISSUE]: CompleteIssueToolInputSchema,

@@ -4,3 +4,7 @@ export * from './AgentRunner'
 export * from './StreamJsonCodec'
 export * from './ProviderDetector'
 export * from './IssueClassifier'
+// Contract-only until Fase 6 (mint/verify/revoke has no implementation yet). It moved here from the
+// illegal `mcp/` folder in Fase 4.5: a bounded context's citizens are the ones `CLAUDE.md` lists, and
+// an abstract collaborator with three verbs is a service like any other.
+export * from './RunTokenService'

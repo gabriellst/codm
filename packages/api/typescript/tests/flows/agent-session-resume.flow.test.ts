@@ -10,7 +10,7 @@ import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { RunTerminalSessionOnClassification } from '@terminal/handlers/RunTerminalSessionOnClassification'
 import { AgentSessionRepository } from '@terminal/repositories'
 import { AgentRunner } from '@terminal/services/AgentRunner'
-import { claudeProviderDef } from '@terminal/providers/defs/claude'
+import { ClaudeAgentRunner } from '@terminal/services/AgentRunner'
 import { ResumeInvalidationReason, TerminalRunOutcome } from '@terminal/enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
 
@@ -24,13 +24,13 @@ import type { AgentRunRequest, AgentRuntimeEvent } from '@terminal/types'
  * over HTTP, and exposing either an argv or a session row through the wire just to be able to assert
  * on it would mint a test-only API surface this goal does not sanction. So the "end to end" here is
  * the daemon's own end to end: the integration DI env with the real repository, the real transcript,
- * the real handler and the real `ProviderDef`, with only the CLI itself stubbed (§8 rule 8 — no test
+ * the real handler and the real argv builder, with only the CLI itself stubbed (§8 rule 8 — no test
  * spawns a provider binary). The Playwright suite keeps proving the browser-visible half.
  *
- * ### Why the argv is built from the REAL def rather than asserted on `request.session`
+ * ### Why the argv is built from the REAL builder rather than asserted on `request.session`
  * `session: { resumeId }` is our vocabulary; `--resume <id>` is the CLI's. Asserting only the former
  * would pass even if `buildArgs` dropped the flag. So the spec feeds the captured request through
- * `claudeProviderDef.buildArgs` — the very function `StreamJsonAgentRunner` calls — and asserts the
+ * `ClaudeAgentRunner.buildArgs` — the very function `ClaudeAgentRunner.run()` calls — and asserts the
  * flags that actually reach the process.
  */
 
@@ -57,10 +57,10 @@ class CapturingRunner extends AgentRunner {
 	async shutdown(): Promise<void> {}
 }
 
-/** The argv the given request would actually spawn with, through the real provider def. */
+/** The argv the given request would actually spawn with, through the real runner. */
 function argvFor(request: AgentRunRequest<ZodType | undefined> | undefined): string[] {
 	if (!request) throw new Error('no run request was captured')
-	return claudeProviderDef.buildArgs({
+	return ClaudeAgentRunner.buildArgs({
 		model: request.model,
 		cwd: request.cwd,
 		extraDirs: request.extraDirs,

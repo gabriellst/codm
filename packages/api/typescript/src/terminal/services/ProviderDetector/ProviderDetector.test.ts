@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'bun:test'
 import { MockLoggingService } from '@codedm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
-import { PROVIDER_DEFS, type ProviderCapabilities } from '../../providers'
+import type { ProviderCapabilities } from '../../types'
+import { PROVIDER_BINARIES } from './ProviderDetector'
 import { SystemProviderDetector } from './SystemProviderDetector'
 import { MockProviderDetector } from './MockProviderDetector'
+import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
 
 /**
  * Faked `SystemProviderDetector` — overrides the OS-touching probes so the caching + status mapping
@@ -33,13 +35,14 @@ class FakeSystemProviderDetector extends SystemProviderDetector {
 	}
 	/**
 	 * Overrides only the SPAWN, not the grep: the flag→capability mapping under test is the REAL one,
-	 * read from the real `ProviderDef`. Faking the mapping too would make the assertion tautological.
+	 * read from the real `PROVIDER_BINARIES` (which for claude IS `ClaudeAgentRunner.binary`). Faking
+	 * the mapping too would make the assertion tautological.
 	 */
 	protected override async probeCapabilities(provider: ProviderKind, binaryPath: string): Promise<ProviderCapabilities> {
 		const help = this.helpText[binaryPath]
 		if (help === undefined) return {}
 		const caps: ProviderCapabilities = {}
-		for (const [flag, capability] of Object.entries(PROVIDER_DEFS[provider].capabilityFlags ?? {})) {
+		for (const [flag, capability] of Object.entries(PROVIDER_BINARIES[provider].capabilityFlags ?? {})) {
 			if (help.includes(flag)) caps[capability] = true
 		}
 		return caps
@@ -81,6 +84,22 @@ describe('SystemProviderDetector — detection logic (faked probes)', () => {
 		const detector = new FakeSystemProviderDetector({ claude: { path: '/opt/homebrew/bin/claude' } }, {})
 		const claude = await detector.resolve(ProviderKind.CLAUDE_CODE)
 		expect(claude?.caps).toEqual({})
+	})
+
+	/**
+	 * The exhaustiveness half of the dead AC-1.3, at its new address. The def registry it used to run
+	 * over was a `Record<ProviderKind, …>` so that ADDING a member to `provider-kind.tsp` became a `tsc` error
+	 * rather than a silent gap; `PROVIDER_BINARIES` inherits that job for the only fact still keyed by
+	 * provider identity — how to FIND each CLI. The runtime assertion pins the value-set so the
+	 * contract growing a fourth kind fails loudly here too.
+	 */
+	it('has exactly one binary spec per wire enum member, and covers the three kinds frozen today', () => {
+		const kinds = Object.values(ProviderKind)
+		expect(Object.keys(PROVIDER_BINARIES).sort()).toEqual([...kinds].sort())
+		expect(kinds).toEqual([ProviderKind.CLAUDE_CODE, ProviderKind.CODEX, ProviderKind.OPENCODE])
+		// claude's spec is not a copy: it IS the static the runner spawns with, so "how to find it" and
+		// "how to drive it" cannot drift.
+		expect(PROVIDER_BINARIES[ProviderKind.CLAUDE_CODE]).toBe(ClaudeAgentRunner.binary)
 	})
 
 	it('returns a row for every known provider', async () => {

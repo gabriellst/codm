@@ -22,8 +22,13 @@ import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
  * The runner does NOT mediate a tool loop. The CLI talks to our MCP server over a SEPARATE transport,
  * so the runner keeps doing one thing — spawn and drain. MCP configuration arrives inside the request
  * as `mcp`, invocation DATA of the same kind as `binaryPath` and `cwd`, never an inventory of callable
- * functions. A provider that one day requires us to execute tools inline earns a new `ProviderDef` /
- * `eventParser`, never a second method here.
+ * functions. A provider that one day requires us to execute tools inline earns its OWN RUNNER CLASS,
+ * never a second method here.
+ *
+ * ### Why the seam is handed no provider identity either (Fase 4.5)
+ * One class per CLI: WHICH CLI is settled by the DI container before `run()` is ever reached. The seam
+ * therefore takes no `provider`, and neither does the request — so a provider-identity comparison
+ * inside a runner is not forbidden by convention, it is unrepresentable.
  */
 export abstract class AgentRunner {
 	abstract run<OutputSchema extends ZodType | undefined = undefined>(

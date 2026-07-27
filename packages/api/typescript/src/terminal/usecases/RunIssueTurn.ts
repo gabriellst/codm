@@ -88,7 +88,7 @@ interface SessionPlan {
  *
  * The `session` field is ALWAYS populated — `resumeId` or a freshly minted `newId`, never neither.
  * Letting the CLI mint its own id would leave the row's identity dependent on the stream reporting
- * one (`ProviderDef.capturesSessionIdFromStream`), i.e. on a provider capability, for a value the
+ * one (the CLI reporting its session id in the stream), i.e. on a provider capability, for a value the
  * next turn's resume depends on. We mint; a CLI that reports a different id back still wins, because
  * `--resume` must be given whatever the CLI actually stored.
  * - **No outcome inference.** The conclusion arrives as ONE `finished` event; the accumulator
@@ -166,8 +166,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * Resolve the binary AND its probed capabilities in one call.
 	 *
 	 * `caps` is threaded to `run()` beside `binaryPath` rather than read from an ambient map, which is
-	 * the whole point of §4.7: `ProviderDef.buildArgs` stays a pure function of its arguments, so the
-	 * argv can never depend on whether detection happened to have run yet.
+	 * the whole point of §4.7: `ClaudeAgentRunner.buildArgs` stays a pure function of its arguments, so
+	 * the argv can never depend on whether detection happened to have run yet.
 	 */
 	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
 		const detection = await this.providerDetector.resolve(provider)
@@ -182,7 +182,6 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 
 		for await (const event of this.runner.run({
 			agentName: AgentName.ISSUE_WORK,
-			provider: input.provider,
 			cwd: input.workspacePath,
 			messages: [{ role: AgentMessageRole.USER, content: input.prompt }],
 			model: input.model ?? AgentModelId.DEFAULT,
@@ -246,11 +245,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// Gate on the PROVIDER's own capability BEFORE ever asking the row to resume — a CLI that
 		// cannot natively resume a session (`caps.sessionResume` unset) must never be handed
 		// `--resume`, no matter what the row says. Read from `ProviderDetection.caps` — the
-		// RUNTIME-PROBED shape (§4.7) — rather than a static per-provider flag on `ProviderDef`,
-		// because `caps` is the half of this that Fase 4.5 keeps: `ProviderDef`/`PROVIDER_DEFS` die
-		// and their static fields move onto the concrete runner, but `ProviderDetector` stays and
-		// keeps returning `caps: ProviderCapabilities` unchanged (AC-5.9) — so this check survives
-		// that refactor without this file needing to change again.
+		// RUNTIME-PROBED shape (§4.7) — rather than a static per-provider flag, which is exactly why
+		// this line survived Fase 4.5 untouched: the per-CLI data literal and its registry died, their static
+		// fields moved onto the concrete runner, while `ProviderDetector` stayed and kept returning
+		// `caps: ProviderCapabilities` unchanged (AC-5.9).
 		if (!detection.caps?.sessionResume) {
 			this.logging.warn({
 				content: {

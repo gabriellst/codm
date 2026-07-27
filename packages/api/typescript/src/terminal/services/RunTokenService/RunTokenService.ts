@@ -1,4 +1,4 @@
-import type { AgentName } from '../enums'
+import type { AgentName } from '../../enums'
 
 /**
  * The claims a run token carries (GOAL-agent-abstraction §4.4). This is the ONLY place a tool handler

@@ -57,7 +57,7 @@ export class DetectProvidersController extends Controller<typeof DetectProviders
 		const refresh = request.query?.refresh ?? false
 		const detections = await this.providerDetector.detect({ refresh })
 		// Map to the declared shape explicitly — same convention as GetSettings / GetAttachThreadWizard.
-		// `ProviderDetection.caps` is an internal probe result (consumed by `ProviderDef.buildArgs`,
+		// `ProviderDetection.caps` is an internal probe result (consumed by the runner's argv builder,
 		// GOAL-agent-abstraction §4.7); core's `serializeBody` is a bare `JSON.stringify` with no
 		// schema-based stripping, so returning `detections` verbatim would leak it onto the wire the
 		// moment a real probe populates it, even though it was never declared in `OutputSchema`.

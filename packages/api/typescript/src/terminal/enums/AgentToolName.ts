@@ -15,12 +15,12 @@
  * Ownership is NOT uniform, and that is deliberate (§4.4 item (ii)): a tool is a thin controller of
  * the bounded context that OWNS the write it causes. `complete_issue` / `raise_stop` / `ask_operator`
  * are execution facts → this context. `record_artifact` is a write to the artifact catalogue → its
- * handler lives in `artifact/mcp/`, dispatching the `RecordArtifact` use case that already exists.
+ * handler lives in the artifact context, dispatching the `RecordArtifact` use case that already exists.
  * The NAME is single-sourced here regardless, because `--allowedTools` is one flat list.
  *
  * Context-private: the MCP router is deliberately mounted OUTSIDE the emitted OpenAPI (§4.4), so the
- * wire-identity of these tools is guaranteed by this enum plus the Zod input schemas in `mcp/tools/`
- * — that pair IS the contract, and AC-1.6 is what checks it.
+ * wire-identity of these tools is guaranteed by this enum plus the Zod input schemas in
+ * `schemas/AgentToolSchemas.ts` — that pair IS the contract, and AC-1.6 is what checks it.
  */
 export enum AgentToolName {
 	COMPLETE_ISSUE = 'codedm__complete_issue',

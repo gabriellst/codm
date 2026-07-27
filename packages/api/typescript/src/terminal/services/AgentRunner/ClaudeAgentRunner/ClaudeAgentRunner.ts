@@ -1,18 +1,25 @@
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
-import { AgentStopReason, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, AgentStopReason, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { LoggingService } from '@codedm/core-typescript'
 import { TerminalRunOutcome, type TransportStopKind } from '../../../enums'
-import { providerDef } from '../../../providers'
-import type { AgentFrame, AgentRunRequest, AgentRunResult, AgentRuntimeEvent } from '../../../types'
-import { LineBuffer, StreamJsonCodec, StreamJsonToTurnFactAccumulator, type TerminalResultRecord } from '../../StreamJsonCodec'
+import type {
+	AgentFrame,
+	AgentMcpInvocation,
+	AgentRunRequest,
+	AgentRunResult,
+	AgentRuntimeEvent,
+	ProviderBinarySpec,
+	ProviderCapabilities,
+} from '../../../types'
+import { StreamJsonCodec, StreamJsonToTurnFactAccumulator, type TerminalResultRecord } from '../../StreamJsonCodec'
 import { AgentRunner } from '../AgentRunner'
 import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } from './AgentProcess'
 
 /** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
 const DEFAULT_INACTIVITY_MS = 180_000
 
-export interface StreamJsonAgentRunnerOptions {
+export interface ClaudeAgentRunnerOptions {
 	spawner?: AgentProcessSpawner
 	inactivityMs?: number
 }
@@ -21,14 +28,71 @@ export interface StreamJsonAgentRunnerOptions {
 const AUTH_HINT = /\/login\b|not logged in|please log ?in|authentication (?:required|failed)|unauthorized/i
 
 /**
- * The `AgentRunner` over BIDIRECTIONAL STREAM-JSON on plain pipes — no PTY, no SDK, no HTTP of ours.
+ * `AgentModelId` → the CLI's own model alias. A MAP, not a `switch`, and it lives HERE because "what
+ * this binary calls its models" is a fact about claude and about nothing else. `DEFAULT` is absent on
+ * purpose: it is the instruction to omit `--model` altogether, which is why it is a member of the enum
+ * rather than `undefined`.
+ */
+const CLAUDE_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
+	[AgentModelId.SONNET]: 'sonnet',
+	[AgentModelId.OPUS]: 'opus',
+	[AgentModelId.HAIKU]: 'haiku',
+}
+
+/** The server key our tools are namespaced under inside the CLI's MCP config. */
+const MCP_SERVER_KEY = 'codedm'
+
+/** Everything `buildArgs` needs to produce a full argv. One record, no ambient state. */
+export interface ClaudeBuildArgsOptions {
+	/** `AgentModelId.DEFAULT` means OMIT the model flag entirely — not "pass the string DEFAULT". */
+	model?: AgentModelId
+	cwd: string
+	/** Extra roots the agent may touch beyond `cwd` (`--add-dir`). */
+	extraDirs?: readonly string[]
+	/** Mutually exclusive with `newSessionId` — resuming an existing provider session. */
+	resumeSessionId?: string
+	/** Mutually exclusive with `resumeSessionId` — pinning the id of a session being created. */
+	newSessionId?: string
+	/** Present ⟺ the agent declared a non-empty tool scope (§4.2). */
+	mcp?: AgentMcpInvocation
+	/** Probed capabilities of THIS binary. By parameter, on purpose — see `ProviderCapabilities`. */
+	caps: ProviderCapabilities
+}
+
+/**
+ * THE `claude` RUNNER — one class per CLI, and everything claude-shaped lives in it.
  *
- * It does exactly two things: own a child process, and turn its stdout into `AgentRuntimeEvent`s. All
- * the judgement lives elsewhere on purpose — the wire grammar in `StreamJsonCodec`, the domain fold in
- * `StreamJsonToTurnFactAccumulator`, and every per-CLI difference in `ProviderDef`. There is no
- * `if (provider === …)` in this file and there must never be one: a provider difference that shows up
- * as control flow here means it should have been a `ProviderDef` FIELD (§8 rule 4). A CLI with no
- * stream-json at all is not a special case, it is `streamFormat: 'plain'`.
+ * It drives the binary in BIDIRECTIONAL HEADLESS STREAM-JSON over plain pipes. No PTY, no Agent SDK,
+ * no HTTP to Anthropic from our side. The canonical invocation it encodes verbatim
+ * (`.specs/codedm/2026-07-26-agent-driving-stream-json.md`):
+ *
+ *   claude -p --input-format stream-json --output-format stream-json --verbose \
+ *          [--include-partial-messages] [--model X] [--add-dir …] \
+ *          [--session-id <uuid> | --resume <id>] \
+ *          [--mcp-config <json> --allowedTools a,b] \
+ *          --permission-mode auto
+ *
+ * ### Why a class per CLI, and not one runner driven by a data literal (Fase 4.5)
+ * The predecessor was ONE runner that took a per-CLI DATA LITERAL and drove any of three CLIs from it.
+ * That design held two rules that cannot coexist: "a capability difference lives in DATA, never as a
+ * branch in the runner", and, at the same time, defs declaring `streamFormat: 'plain'`. A stream
+ * format is not an argv — it is a DIFFERENT PARSING PATH, and one runner cannot honour it without
+ * exactly the branch the first rule forbids. The `if (def.streamFormat === 'plain')` that used to sit
+ * in the middle of this drain loop was that contradiction, made of code.
+ *
+ * The data-literal pattern was imported from a codebase driving 26 HOMOGENEOUS CLIs, where the literal
+ * pays for itself. Here there are three, two of which need a different parse — the precondition is
+ * absent. So the abstraction died and the rule survived: the unit of variation is THE CLI. Grouping by
+ * transport instead (a `StreamJson…` / `PlainText…` split) would have been the same mistake one level
+ * up, because it assumes two CLIs emitting JSONL emit the SAME JSONL — false already: this one carries
+ * `--session-id`/`--resume`, `--mcp-config`, and the measured anomalies of §4.3 (a terminal `result`
+ * frame with NO `parent_tool_use_id`; `tool_use`/`tool_result` as CONTENT BLOCKS inside
+ * `message.content[]`; the sub-agent tool arriving as `Agent` while init advertises `Task`; usage only
+ * on the terminal frame). That grouping would have put a provider-identity branch back INSIDE the class.
+ *
+ * What is genuinely shared is a UTILITY, never a base class: `StreamJsonCodec` (line buffering + frame
+ * decoding) and `StreamJsonToTurnFactAccumulator` (the domain fold). Inheritance would smuggle the
+ * generalization straight back in.
  *
  * ### TURN-END IS STRUCTURAL, and getting it wrong LEAKS A PROCESS
  * The terminal `result` frame with `stopReason !== TOOL_USE` closes the turn, and only then does stdin
@@ -59,34 +123,116 @@ const AUTH_HINT = /\/login\b|not logged in|please log ?in|authentication (?:requ
  * `finished` event (§4.3 rule 4). A consumer half-way through draining can always finish draining.
  */
 @injectable()
-export class StreamJsonAgentRunner extends AgentRunner {
+export class ClaudeAgentRunner extends AgentRunner {
+	/**
+	 * How this CLI is FOUND and probed — read by `ProviderDetector`, and static because detection
+	 * happens before (and independently of) any run.
+	 *
+	 * It lives on the runner rather than in a registry of literals because "how to find claude" and
+	 * "how to drive claude" are the same knowledge: the day the binary is renamed or grows a flag, one
+	 * file changes. `capabilityFlags` is greped against `--help` output, so a capability is DISCOVERED
+	 * rather than assumed from a version string — an older build that lacks `--include-partial-messages`
+	 * would abort on the unknown argument, so guessing is not a safe default.
+	 */
+	static readonly binary: ProviderBinarySpec = {
+		bin: 'claude',
+		versionArgs: ['--version'],
+		helpArgs: ['--help'],
+		capabilityFlags: {
+			'--include-partial-messages': 'partialMessages',
+			'--mcp-config': 'mcpConfig',
+			'--resume': 'sessionResume',
+		},
+	}
+
 	private readonly spawner: AgentProcessSpawner
 	private readonly inactivityMs: number
 	private readonly live = new Set<AgentProcess>()
 
 	constructor(
 		private readonly logging: LoggingService,
-		options: StreamJsonAgentRunnerOptions = {},
+		options: ClaudeAgentRunnerOptions = {},
 	) {
 		super()
 		this.spawner = options.spawner ?? nodeAgentProcessSpawner
 		this.inactivityMs = options.inactivityMs ?? Number(process.env.CODEDM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
 	}
 
+	/**
+	 * The full argv for one invocation — PURE: same options in, same argv out. No module state, no
+	 * ambient `caps` lookup, no clock.
+	 *
+	 * `static`, so it is callable without owning a process (the resume flow spec asserts the argv a
+	 * captured request WOULD spawn with) while staying off the prototype — the seam is still exactly
+	 * `run` + `shutdown` (AC-4.5.4).
+	 *
+	 * Three of these flags each delete a whole class of code that used to exist here:
+	 *  - `--output-format stream-json` deletes the TUI marker parser AND the per-session transcript-file
+	 *    reader (the CLI's own on-disk project transcripts — the path literal is deliberately NOT written
+	 *    anywhere in this file; `tests/architecture/pty-isolation.test.ts` confines it to the legacy
+	 *    engine subtree, and a mere mention here would be a violation of that rail). The reply is
+	 *    reconstructed exclusively from parsed stdout frames; mining raw stdout instead yields empty
+	 *    extractions, which is the bug that parked the old engine.
+	 *  - `--permission-mode auto` deletes the trust-prompt keystroke injection: headless `-p` with no TTY
+	 *    never shows a prompt, so there is nothing to auto-accept. `auto` — NOT `bypassPermissions`, which
+	 *    is a blanket waiver. The input driving these runs is an inbound message from a third party, so the
+	 *    CLI's own graduated mode is the right posture; a blanket bypass would hand that input the full
+	 *    tool surface unconditionally. MEASURED on this build (2.1.220) before the change, because the
+	 *    original justification for the bypass was "headless never prompts, so anything else risks a hang":
+	 *    a headless `auto` run completed in 10s, exit 0, with a normal terminal frame
+	 *    (`stop_reason: end_turn`, `permission_denials: []`), and Write + Read both executed. So `auto`
+	 *    neither hangs nor disables tools. What `auto` blocks that `bypassPermissions` does not was NOT
+	 *    characterized — that would require probing destructive operations, and is deliberately unmeasured
+	 *    rather than asserted.
+	 *  - `--session-id` / `--resume` delete transcript re-sending. Multi-turn context is the CLI's own
+	 *    session; re-rendering the transcript into the prompt is only the fallback for a CLI without it.
+	 */
+	static buildArgs({ model, extraDirs, resumeSessionId, newSessionId, mcp, caps }: ClaudeBuildArgsOptions): string[] {
+		const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose']
+
+		// Capability-gated, NOT version-gated: an older build without the flag would abort on an
+		// unknown argument, and a newer one gets token-level deltas the moment the probe sees it.
+		if (caps.partialMessages) args.push('--include-partial-messages')
+
+		// DEFAULT ⇒ omit the flag entirely so the CLI chooses. An unmapped member (a value added
+		// to the wire enum without a CLI alias) also omits rather than passing a bogus string.
+		const modelAlias = model && model !== AgentModelId.DEFAULT ? CLAUDE_MODEL_ALIASES[model] : undefined
+		if (modelAlias) args.push('--model', modelAlias)
+
+		for (const dir of extraDirs ?? []) args.push('--add-dir', dir)
+
+		// MUTUALLY EXCLUSIVE by construction, not by caller discipline: resuming an existing session
+		// and pinning the id of a new one are contradictory instructions, and passing both makes the
+		// CLI's behaviour version-dependent. Resume wins — it is the strictly more informed intent.
+		if (resumeSessionId) args.push('--resume', resumeSessionId)
+		else if (newSessionId) args.push('--session-id', newSessionId)
+
+		// `mcp` present says the AGENT asked for tools; this CLI can always receive them, which is why
+		// the second half of what used to be an AND (`the def declares the flags`) is gone: it existed
+		// only to express "some other CLI cannot", and that other CLI now has its own class or none.
+		if (mcp) {
+			args.push('--mcp-config', renderMcpConfig(mcp))
+			args.push('--allowedTools', mcp.allowedTools.join(','))
+		}
+
+		// Last, and unconditional: headless `-p` has no TTY to render a permission prompt on, so the
+		// mode is settled here at spawn. `auto` and NOT `bypassPermissions` — see the method docblock.
+		args.push('--permission-mode', 'auto')
+		return args
+	}
+
 	async *run<OutputSchema extends ZodType | undefined = undefined>(
 		request: AgentRunRequest<OutputSchema>,
 	): AsyncIterable<AgentRuntimeEvent> {
-		const def = providerDef(request.provider)
 		const warn = (message: string): void =>
-			this.logging.warn({ content: { message, agentName: request.agentName, provider: request.provider } })
+			this.logging.warn({ content: { message, agentName: request.agentName, bin: ClaudeAgentRunner.binary.bin } })
 
 		const codec = new StreamJsonCodec({ onWarn: warn })
 		// UNSTAMPED on purpose — the runner has no `ownerId`/`issueId` to stamp with, by design
 		// (AC-1.11: identity rides inside the opaque MCP token). The layer holding the envelope adds it.
 		const accumulator = new StreamJsonToTurnFactAccumulator({})
 
-		const prompt = renderPrompt(request)
-		const args = def.buildArgs({
+		const args = ClaudeAgentRunner.buildArgs({
 			model: request.model,
 			cwd: request.cwd,
 			extraDirs: request.extraDirs,
@@ -95,13 +241,11 @@ export class StreamJsonAgentRunner extends AgentRunner {
 			mcp: request.mcp,
 			caps: request.caps ?? {},
 		})
-		const cmd = [request.binaryPath ?? def.bin, ...args]
-		// `promptViaStdin: false` ⇒ the CLI wants the prompt as its final argument. DATA, not a branch.
-		if (!def.promptViaStdin) cmd.push(prompt)
+		const cmd = [request.binaryPath ?? ClaudeAgentRunner.binary.bin, ...args]
 
 		let proc: AgentProcess
 		try {
-			proc = this.spawner({ cmd, cwd: request.cwd, stdin: def.promptViaStdin })
+			proc = this.spawner({ cmd, cwd: request.cwd, stdin: true })
 		} catch (cause) {
 			// Even a spawn that fails synchronously must arrive as the terminal event, not as a throw —
 			// the consumer's drain loop is the only place it can be handled uniformly.
@@ -122,20 +266,6 @@ export class StreamJsonAgentRunner extends AgentRunner {
 		let sessionId: string | null = null
 		let stdinClosed = false
 		let watchdogFired = false
-		const plainLines: string[] = []
-		// The same reassembly primitive the codec uses, for the same reason: a chunk is not a line, and
-		// a final line with no trailing newline is a real line rather than debris.
-		const plainBuffer = new LineBuffer()
-
-		/** One stdout line of a `plain` provider → the frame and the fact it stands for. */
-		const emitPlain = function* (text: string): Generator<AgentRuntimeEvent> {
-			if (text.trim().length === 0) return
-			plainLines.push(text)
-			const frame: AgentFrame = { kind: 'assistant_text', messageId: `${request.agentName}-plain`, text, parentToolUseId: null }
-			yield { type: 'frame', frame }
-			const fact = accumulator.apply(frame)
-			if (fact) yield { type: 'fact', fact }
-		}
 
 		const closeStdin = (): void => {
 			if (stdinClosed) return
@@ -149,11 +279,7 @@ export class StreamJsonAgentRunner extends AgentRunner {
 		request.signal?.addEventListener('abort', onAbort, { once: true })
 
 		try {
-			if (def.promptViaStdin) {
-				proc.write(def.promptInputFormat === 'stream-json' ? renderStreamJsonStdin(request) : prompt)
-				// A CLI without stream-json input has no notion of a turn staying open: write, close, read.
-				if (def.promptInputFormat !== 'stream-json') closeStdin()
-			}
+			proc.write(renderStreamJsonStdin(request))
 
 			const iterator = proc.stdout[Symbol.asyncIterator]()
 			let pending: Promise<IteratorResult<Uint8Array | string>> | null = null
@@ -179,16 +305,6 @@ export class StreamJsonAgentRunner extends AgentRunner {
 				pending = null
 				if (settled.done) break
 
-				// `plain` providers have NO frame grammar — running the JSONL codec over their stdout would
-				// only manufacture a parse warning per line. One assistant_text frame per line instead:
-				// same runner, same seam, same union, strictly less information (§4.7).
-				if (def.streamFormat === 'plain') {
-					for (const text of plainBuffer.push(settled.value)) {
-						yield* emitPlain(text)
-					}
-					continue
-				}
-
 				for (const decoded of codec.push(settled.value)) {
 					for (const frame of decoded.frames) {
 						if (frame.kind === 'system_init') sessionId = frame.sessionId
@@ -205,17 +321,13 @@ export class StreamJsonAgentRunner extends AgentRunner {
 				}
 			}
 
-			if (def.streamFormat === 'plain') {
-				for (const text of plainBuffer.flush()) yield* emitPlain(text)
-			} else {
-				for (const decoded of codec.flush()) {
-					for (const frame of decoded.frames) {
-						yield { type: 'frame', frame }
-						const fact = accumulator.apply(frame)
-						if (fact) yield { type: 'fact', fact }
-					}
-					if (decoded.terminal) terminal = decoded.terminal
+			for (const decoded of codec.flush()) {
+				for (const frame of decoded.frames) {
+					yield { type: 'frame', frame }
+					const fact = accumulator.apply(frame)
+					if (fact) yield { type: 'fact', fact }
 				}
+				if (decoded.terminal) terminal = decoded.terminal
 			}
 
 			closeStdin()
@@ -233,7 +345,6 @@ export class StreamJsonAgentRunner extends AgentRunner {
 					exitCode,
 					watchdogFired,
 					stderr: stderrChunks.join(''),
-					plainText: plainLines.join('\n'),
 				}),
 			}
 		} finally {
@@ -258,10 +369,9 @@ export class StreamJsonAgentRunner extends AgentRunner {
 			exitCode: number
 			watchdogFired: boolean
 			stderr: string
-			plainText: string
 		},
 	): AgentRunResult {
-		const replyText = observed.terminal?.text ?? observed.plainText
+		const replyText = observed.terminal?.text ?? ''
 		const stop = this.classifyStop(observed)
 
 		if (stop) {
@@ -346,6 +456,19 @@ function failure(outcome: TerminalRunOutcome, detail: string, kind: TransportSto
 }
 
 /**
+ * Serialize an `AgentMcpInvocation` into the `--mcp-config` payload. The run token rides in the
+ * `Authorization` header (http) or in the child `env` (stdio) — never in a tool argument, never in
+ * the prompt. Both shapes are what this CLI's `mcpServers` map expects.
+ */
+function renderMcpConfig(mcp: AgentMcpInvocation): string {
+	const server =
+		mcp.transport === 'http'
+			? { type: 'http', url: mcp.endpoint, headers: { Authorization: `Bearer ${mcp.token}` } }
+			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { CODEDM_RUN_TOKEN: mcp.token } }
+	return JSON.stringify({ mcpServers: { [MCP_SERVER_KEY]: server } })
+}
+
+/**
  * MAKE `outputSchema` MEAN SOMETHING TO THE MODEL — the instruction that turns a run structured.
  *
  * MEASURED, and it is why this function exists (Fase-3 vertical smoke,
@@ -375,27 +498,15 @@ function structuredOutputDirective(schema: ZodType): string {
 }
 
 /**
- * The turn as ONE plain-text prompt — the shape every CLI understands.
- *
- * The system prompt is PREPENDED rather than passed as a flag, and that is a deliberate limit of this
- * phase rather than an oversight: no `ProviderDef` declares a system-prompt flag, and the defs are
- * frozen Fase-1 artifacts that a transport phase may not edit. Prepending is the behaviour every
- * provider supports, including the `plain` ones. When a def grows a `systemPromptFlag`, this function
- * is where it lands — as a field read, never as a `provider === …` branch.
- */
-function renderPrompt(request: AgentRunRequest<ZodType | undefined>): string {
-	const parts = [request.systemPrompt, request.messages.map(m => m.content).join('\n\n')]
-	if (request.outputSchema) parts.push(structuredOutputDirective(request.outputSchema))
-	return parts.filter(part => part && part.length > 0).join('\n\n')
-}
-
-/**
  * The stream-json stdin form: ONE JSONL user line per message.
  *
  * Several messages are the SAME live turn, not several turns — which is exactly why stdin is a stream
- * and not an argument, and why closing it is a decision rather than a formality. The system prompt
- * rides on the FIRST line for the reason above; sending it as its own line would make it a separate
- * user turn, which is not what it is.
+ * and not an argument, and why closing it is a decision rather than a formality.
+ *
+ * The system prompt is PREPENDED to the first line rather than passed as a flag, and that is a
+ * deliberate limit rather than an oversight: sending it as its own line would make it a separate user
+ * turn, which is not what it is. When a system-prompt flag is adopted, it lands in `buildArgs` — as
+ * argv, not as a second stdin line.
  */
 function renderStreamJsonStdin(request: AgentRunRequest<ZodType | undefined>): string {
 	const contents = request.messages.map(m => m.content)

@@ -3,7 +3,7 @@ import type { ZodType } from 'zod'
 import { AgentRunner } from './AgentRunner'
 import { StubAgentRunner } from './StubAgentRunner'
 import { E2eStubAgentRunner } from './E2eStubAgentRunner'
-import { StreamJsonAgentRunner } from './StreamJsonAgentRunner/StreamJsonAgentRunner'
+import { ClaudeAgentRunner } from './ClaudeAgentRunner/ClaudeAgentRunner'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 
 /**
@@ -43,12 +43,13 @@ describe('AgentRunner — the ONE-METHOD seam (§4.1)', () => {
 	})
 
 	it('every shipped implementation answers the seam and adds no second execution method', () => {
-		for (const impl of [StubAgentRunner, E2eStubAgentRunner, StreamJsonAgentRunner]) {
+		for (const impl of [StubAgentRunner, E2eStubAgentRunner, ClaudeAgentRunner]) {
 			const members = ownMethodNames(impl.prototype)
 			// Private helpers are allowed (they are implementation, not seam); a second PUBLIC execution
-			// entry point is not. `buildResult` / `classifyStop` on the stream-json runner are `private`
-			// in TS but present at runtime, so the check is scoped to the seam names being present and
-			// to no other member looking like an execution verb.
+			// entry point is not. `buildResult` / `classifyStop` on `ClaudeAgentRunner` are `private` in
+			// TS but present at runtime, so the check is scoped to the seam names being present and to no
+			// other member looking like an execution verb. Per-CLI facts that Fase 4.5 moved onto the
+			// concrete (`binary`, `buildArgs`) are STATIC, so they are not on the prototype at all.
 			expect(members).toContain('run')
 			expect(members).toContain('shutdown')
 			expect(members.filter(name => ['generate', 'stream', 'getSession', 'killSession', 'prewarm'].includes(name))).toEqual([])

@@ -1,5 +1,5 @@
 /**
- * `StreamJsonAgentRunner.run()` over a FAKE process (§8 rule 8 — no test ever spawns a real CLI).
+ * `ClaudeAgentRunner.run()` over a FAKE process (§8 rule 8 — no test ever spawns a real CLI).
  *
  * Covers AC-2.3 (structured-output failure surfaces as `failed: true` and the stream still drains to
  * the end), the structural turn-end of §4.3 rule 5 including the `stdin.end()` that actually ends the
@@ -8,14 +8,13 @@
  */
 import { describe, it, expect } from 'bun:test'
 import { z } from 'zod'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { MockLoggingService } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../../enums'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent } from '../../../events'
 import { TerminalRunOutcome } from '../../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../../types'
 import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
-import { StreamJsonAgentRunner } from './StreamJsonAgentRunner'
+import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 
 // ── A fake process: canned stdout, observable stdin ───────────────────────────────────────────────
 
@@ -71,13 +70,12 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 	return { spawner, process: () => created as FakeProcess }
 }
 
-function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivityMs = 60_000): StreamJsonAgentRunner {
-	return new StreamJsonAgentRunner(new MockLoggingService(), { spawner, inactivityMs })
+function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivityMs = 60_000): ClaudeAgentRunner {
+	return new ClaudeAgentRunner(new MockLoggingService(), { spawner, inactivityMs })
 }
 
 const request = (overrides: Partial<AgentRunRequest<z.ZodType | undefined>> = {}): AgentRunRequest<z.ZodType | undefined> => ({
 	agentName: AgentName.ISSUE_WORK,
-	provider: ProviderKind.CLAUDE_CODE,
 	cwd: '/tmp/workspace',
 	messages: [{ role: AgentMessageRole.USER, content: 'do the thing' }],
 	...overrides,
@@ -111,7 +109,7 @@ const RESULT = line({
 	usage,
 })
 
-describe('StreamJsonAgentRunner — the happy turn', () => {
+describe('ClaudeAgentRunner — the happy turn', () => {
 	it('yields frames, facts and exactly ONE finished event, with finished LAST', async () => {
 		const { spawner } = fakeSpawner([INIT, HOOK, TEXT, RESULT])
 
@@ -192,7 +190,7 @@ describe('StreamJsonAgentRunner — the happy turn', () => {
 		expect(fake.process().writes.join('')).not.toContain('exactly ONE JSON object')
 	})
 
-	it('builds argv from the ProviderDef, never from a provider branch in the runner', async () => {
+	it('builds its own argv — there is no provider to branch on, and no def to look up', async () => {
 		const fake = fakeSpawner([INIT, TEXT, RESULT])
 
 		await drain(makeRunner(fake.spawner).run(request({ binaryPath: '/opt/bin/claude', session: { resumeId: 'sess-prev' } })))
@@ -204,6 +202,19 @@ describe('StreamJsonAgentRunner — the happy turn', () => {
 		expect(cmd.slice(cmd.indexOf('--resume'))[1]).toBe('sess-prev')
 		// Capability-gated: `caps` was not threaded, so the optional flag must NOT be passed.
 		expect(cmd).not.toContain('--include-partial-messages')
+		// Bidirectional: stdin is OPEN at spawn, because the turn IS a stream and closing it is the act
+		// that ends the turn. This used to read `def.promptViaStdin`; it is now simply what this CLI is.
+		expect(fake.process().spec.stdin).toBe(true)
+	})
+
+	it('falls back to its OWN binary name when detection resolved no path', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+
+		await drain(makeRunner(fake.spawner).run(request()))
+
+		// `ClaudeAgentRunner.binary.bin` — the same static `ProviderDetector` probes with, so the name
+		// this class spawns and the name the detector looks for cannot drift apart.
+		expect(fake.process().spec.cmd[0]).toBe(ClaudeAgentRunner.binary.bin)
 	})
 
 	it('passes a capability-gated flag only once the probe reported it', async () => {
@@ -215,7 +226,7 @@ describe('StreamJsonAgentRunner — the happy turn', () => {
 	})
 })
 
-describe('StreamJsonAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () => {
+describe('ClaudeAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () => {
 	it('closes stdin exactly at the terminal result frame — the act that ends the turn', async () => {
 		const fake = fakeSpawner([INIT, HOOK, TEXT, RESULT])
 
@@ -302,7 +313,7 @@ describe('StreamJsonAgentRunner — turn-end is STRUCTURAL (§4.3 rule 5)', () =
 	})
 })
 
-describe('StreamJsonAgentRunner — structured output NEVER throws mid-drain (AC-2.3)', () => {
+describe('ClaudeAgentRunner — structured output NEVER throws mid-drain (AC-2.3)', () => {
 	const DecisionSchema = z.object({ decision: z.enum(['MATCH_ISSUE', 'NEW_ISSUE']), confidence: z.number() })
 
 	const jsonResult = (text: string): string =>
@@ -351,7 +362,7 @@ describe('StreamJsonAgentRunner — structured output NEVER throws mid-drain (AC
 	})
 })
 
-describe('StreamJsonAgentRunner — transport stops and the watchdog backstop', () => {
+describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () => {
 	it('kills the run and reports SERVER_ERROR when the child goes silent', async () => {
 		const fake = fakeSpawner([INIT, TEXT], { hold: true })
 
@@ -420,7 +431,7 @@ describe('StreamJsonAgentRunner — transport stops and the watchdog backstop', 
 	})
 
 	it('surfaces a spawn failure as the terminal event instead of throwing out of run()', async () => {
-		const runner = new StreamJsonAgentRunner(new MockLoggingService(), {
+		const runner = new ClaudeAgentRunner(new MockLoggingService(), {
 			spawner: () => {
 				throw new Error('ENOENT')
 			},
@@ -440,24 +451,5 @@ describe('StreamJsonAgentRunner — transport stops and the watchdog backstop', 
 		await runner.shutdown()
 
 		expect(fake.process().killed).toBe(true)
-	})
-})
-
-describe('StreamJsonAgentRunner — a provider with NO stream-json is a DEF, not a branch (§4.7)', () => {
-	it('drives a plain-format provider through the same run(), one assistant_text frame per line', async () => {
-		const fake = fakeSpawner(['first line\nsecond line\n'])
-
-		const events = await drain(makeRunner(fake.spawner).run(request({ provider: ProviderKind.CODEX })))
-
-		const frames = events.filter(e => e.type === 'frame').map(e => (e as { frame: { kind: string; text?: string } }).frame)
-		expect(frames.map(f => f.text)).toEqual(['first line', 'second line'])
-		// Same seam, same union, less information — and the prompt rode on argv because the def says
-		// `promptViaStdin: false`, not because the runner asked which provider this is.
-		expect(fake.process().spec.cmd).toEqual(['codex', 'exec', 'do the thing'])
-		expect(fake.process().spec.stdin).toBe(false)
-		expect(events.at(-1)).toMatchObject({
-			type: 'finished',
-			result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'first line\nsecond line' },
-		})
 	})
 })

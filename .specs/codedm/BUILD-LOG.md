@@ -2244,3 +2244,143 @@ no `--help`) para as suítes de resume multi-turno continuarem verdes sob o novo
 (`SessionPlan` nunca nasce sem id). Removido; o parâmetro virou `string` (não `string | null`), que é
 a forma honesta do que sempre foi verdade no call site.
 cria produtor para evento que ninguém escuta.
+
+---
+
+# 2026-07-27 — FASE 4.5: um runner por CLI; o literal de dado por-CLI morre
+
+`agent-abstraction`. Dois commits (o segundo é um flake pré-existente, separado de propósito). Refactor
+PURO: nenhuma mudança de comportamento observável no caminho que existe de verdade — a prova está em
+"O QUE **NÃO** MUDOU" e nos gates.
+
+## POR QUE A FASE EXISTE (a contradição que o founder achou)
+
+O goal segurava duas regras que não coexistem: *"diferença de capacidade vive em DADO, nunca como
+branch no runner"* e, ao mesmo tempo, defs de `codex`/`opencode` com `streamFormat: 'plain'`. Formato
+de stream **não é argv — é outro caminho de parsing**. A prova de que a contradição era código, não
+teoria: `if (def.streamFormat === 'plain')` estava, literalmente, no meio do laço de drain do runner —
+duas vezes (no loop e no flush), mais `if (!def.promptViaStdin)` no spawn e
+`if (def.promptInputFormat !== 'stream-json')` no fechamento do stdin. Quatro branches por identidade
+de provider, num arquivo cujo próprio docblock dizia "não há `if (provider === …)` aqui".
+
+## O QUE VIROU
+
+**`StreamJsonAgentRunner` → `ClaudeAgentRunner`** (`git mv`, história preservada), e o conteúdo dos
+três `defs/*` desceu para dentro dele: `bin`/`versionArgs`/`helpArgs`/`capabilityFlags` viraram
+`static readonly binary`, e `buildArgs` virou `static buildArgs` — **`static` de propósito**, para
+(a) o flow test de resume conseguir montar o argv de uma request capturada sem possuir um processo e
+(b) o protótipo continuar sendo exatamente `run` + `shutdown`, que é o que a AC-4.5.4 mede por
+reflexão. Os quatro branches morreram junto com o caminho `plain`: este runner É stream-json.
+
+**`AgentRunRequest.provider` FOI EMBORA.** Ele existia por um motivo só — o runner genérico usava para
+buscar o def. Com um runner por CLI a escolha é resolvida na DI **antes** de `run()` existir, então o
+campo seria uma chave de resolução que não resolve nada e a única coisa a fazer com ela seria
+branchear. Sem o campo, `if (request.provider === …)` fica **irrepresentável**, que é a forma mais
+forte disponível da AC-4.5.3 (a alternativa — manter o campo e confiar na disciplina — é exatamente o
+que falhou antes). Efeito colateral honesto: `ClassifyInput.provider` era repassado só para lá, virou
+campo morto e foi removido junto com seu único call site (`ClassifyMessage.ts:64`).
+
+**`providers/` e `mcp/` sumiram** (pastas ilegais — a lista de cidadãos do `CLAUDE.md` não as tem):
+- `providers/*` → dissolvido no `ClaudeAgentRunner` + `types/{ProviderCapabilities,ProviderBinarySpec}.ts`.
+- `mcp/RunTokenService.ts` → `services/RunTokenService/` (é um serviço abstrato de três verbos).
+- `mcp/tools/schemas.ts` → **`schemas/AgentToolSchemas.ts`** (`git mv`). **Desvio declarado da letra da
+  AC-4.5.2** ("tudo sob `services/`"): um módulo de schemas Zod não é um serviço, e `schemas/` É um
+  cidadão legal deste repo (`issue/schemas/`, `thread/schemas/`). Segui o PRINCÍPIO que a própria AC
+  invoca (a lista de cidadãos) em vez da letra; a metade dura da AC — as duas pastas ilegais não
+  existem mais — está cumprida literalmente.
+
+**`ProviderDetector` ficou, e continua devolvendo `caps`** — a Fase 4 tinha gateado o resume na
+capacidade PROBADA justamente para sobreviver a este refactor, e sobreviveu: `RunIssueTurn` não mudou
+uma linha de lógica. O catálogo de detecção virou `PROVIDER_BINARIES: Record<ProviderKind,
+ProviderBinarySpec>` em `ProviderDetector.ts`, onde a entrada do claude **não é uma cópia**: é
+`ClaudeAgentRunner.binary`, o mesmo objeto com que ele spawna. "Como achar" e "como dirigir" não podem
+divergir.
+
+## A ÚNICA MUDANÇA DE COMPORTAMENTO — declarada, não absorvida
+
+**`codex` e `opencode` deixam de ser DIRIGÍVEIS; continuam DETECTÁVEIS.** `DetectProviders` responde
+exatamente o mesmo (as três linhas, mesmo status/binaryPath/version), porque detecção é a única coisa
+que o produto de fato fazia com eles. O que morreu foi o `buildArgs` de cada um (`['exec']`,
+`['run']`) e o caminho `plain` que os consumiria — código **especulativo e nunca verificado**: o
+próprio def do codex carregava, escrito, *"NÃO foi verificado que este CLI tem modo JSONL ou flag de
+MCP"* (risco AC-1.8), `MockProviderDetector` os reporta `NOT_INSTALLED`, e nenhum teste, e2e ou fluxo
+os exercita. Preservar essa metade teria exigido escrever DUAS classes cujas "particularidades" seriam
+inventadas — que é o oposto do que a fase pede (`CodexAgentRunner/ # quando aterrissar, com as
+particularidades DELE`). Quando aterrissar, o `PROVIDER_BINARIES[CODEX]` literal é substituído pelo
+`static binary` da classe nova, como o do claude.
+
+## O QUE **NÃO** MUDOU (a prova de refactor puro, lida do diff)
+
+- O argv do claude: byte a byte o mesmo — as asserções exatas da AC-1.1 rodam intactas sobre o novo
+  dono (11 casos, `buildArgs.test.ts`), incluindo a "full-house" que compara o array inteiro em ordem.
+- O drain, o turn-end estrutural (`stdin.end()` no frame terminal), o watchdog de inatividade, a
+  classificação de stop (AUTH_REQUIRED por sinal de TRANSPORTE, estruturalmente-fechado ganhando do
+  watchdog), o `safeParse` que nunca lança no meio do drain: linhas idênticas, só sem os branches de
+  `def`.
+- `replyText` era `terminal?.text ?? plainText`; virou `terminal?.text ?? ''`. Equivalente para este
+  CLI: `plainText` só era populado dentro do caminho `plain`, que ele nunca tomava.
+- Os stubs (`StubAgentRunner`, `E2eStubAgentRunner`) trocaram `${request.provider}` por
+  `${request.agentName}` na linha de eco (o campo sumiu). Nenhum teste nem spec e2e assere essa linha;
+  o runtime e2e segue 5/2.
+- Nenhum contrato, migration, evento, código de erro ou rota tocado — `bun run contracts` + `bun sdk`
+  2× produzem **zero** drift (`git status` limpo em `packages/contracts` e `packages/client`).
+
+## GATES (todos rodados de verdade, nesta árvore)
+
+- `bun tsc` — 7/7 projetos verdes (`0 errors`); `react tsc` + `e2e tsc` verdes explicitamente.
+- `bun run test` (de `packages/api/typescript`) — **690 pass / 0 fail**. Eram 691: −3 casos que
+  asseriam os defs degradados/exaustividade do registry, +2 novos (fallback ao próprio binário,
+  `buildArgs` sem instância), +1 na exaustividade de `PROVIDER_BINARIES`, −1 do caminho `plain`.
+- `bun lint` 3/3; `bun test:tooling` **298 pass / 0 fail**.
+- `bun run contracts` + `bun sdk` **2× idempotentes**, zero drift gerado.
+- Go `build` + `vet` + `test` verdes nos **dois** módulos (`api` e `core`).
+- Runtime e2e (`bun e2e`) — **5 passed / 2 skipped**, a baseline exata.
+- `bun run detect` — **39 / 0 / 37 / 33 / 3 / 2** antes e depois. **Não cresceu.**
+
+## ACs
+
+- **AC-4.5.1** ✅ `git grep -n "ProviderDef\|PROVIDER_DEFS" -- packages/api/typescript/src` → **0 hits**
+  (com os arquivos novos já em índice, senão o grep não os enxergaria). As 11 menções remanescentes em
+  docblock foram **reescritas, não apagadas**: o *porquê* de o tipo ter morrido continua escrito, só
+  sem o identificador morto ("o literal de dado por-CLI").
+- **AC-4.5.2** ✅ `packages/api/typescript/src/terminal/{providers,mcp}` não existem (nem no disco nem
+  em `git ls-files`). Desvio declarado sobre "tudo sob `services/`" — ver acima.
+- **AC-4.5.3** ✅ `git grep -nE "provider ?===|ProviderKind\.(CLAUDE|CODEX|OPENCODE)" --
+  packages/api/typescript/src/terminal/services/AgentRunner` → **0 hits**, incluindo os testes (só
+  possível porque o campo `provider` saiu da request; com ele, as fixtures dos specs já dariam hit —
+  a AC estava, sem dizer, exigindo a remoção do campo). A resolução mora em `registry.ts:18,34`.
+- **AC-4.5.4** ✅ `AgentRunner.test.ts` 3 pass — o seam segue `['run','shutdown']` exatos. `binary` e
+  `buildArgs` são `static`, logo fora do protótipo.
+- **AC-4.5.5** ✅ `buildArgs.test.ts` 11 pass sobre `ClaudeAgentRunner.buildArgs`.
+- **AC-4.5.6** ✅ ver GATES + "O QUE NÃO MUDOU".
+
+## FLAKE PRÉ-EXISTENTE ISOLADO (segundo commit, separado de propósito)
+
+`RunIssueTurn > CWD_CHANGED converges` falhava com `UNIQUE constraint failed: shared_events.id`, **só**
+na suíte completa (o arquivo sozinho sempre passa). Causa raiz: `BaseEvent` cunha o id como
+`Id.fromSeed(JSON.stringify(this))` (`core/src/types/BaseEvent.ts:22`) e a única parte variável dessa
+serialização é `time`, em resolução de **milissegundo** — o teste roda três turnos na MESMA issue com
+payload de `TerminalSessionStartedEvent` byte-idêntico, então dois turnos dentro do mesmo milissegundo
+cunham o MESMO id. **Provado pré-existente**: reproduzido numa worktree intocada no HEAD `6f807917`,
+1 de 3 execuções da suíte completa. Conserto é só no teste (2ms de avanço de relógio entre turnos,
+com a razão escrita inline) — o defeito de fundo em `BaseEvent` é mudança de comportamento e portanto
+**não é assunto desta fase**: fica registrado como dívida abaixo.
+
+## DÍVIDA REGISTRADA (não deixar envelhecer)
+
+1. **`BaseEvent.id` colide por conteúdo+milissegundo.** Dois eventos de domínio com o mesmo nome,
+   entidade, owner e payload dentro de um milissegundo produzem o mesmo UUIDv5 e o segundo insert
+   morre no PK de `shared_events`. Improvável em produção hoje (cada turno spawna um CLI), mas é uma
+   bomba-relógio para qualquer emissão em lote. Decidir explicitamente: id content-addressed (e então
+   `ON CONFLICT DO NOTHING`, tratando como dedupe) **ou** id único de verdade.
+2. **`codex`/`opencode` são detect-only.** Se alguém anexar uma thread a um deles com o binário
+   instalado, o turno será dirigido com o argv do claude. Fechar com o `CodexAgentRunner` medido (o
+   ponto natural) ou com uma guarda nomeada no `RunIssueTurn` — que precisa de código de erro novo, e
+   códigos novos são Fase 6 por alocação do §5.1.
+
+## PRÓXIMO PASSO
+
+Fase 5: `git mv terminal → agent`, `CONTEXTS.agent`, `ANNOTATED_CYCLES` → `['agent','thread']`,
+`BoundedContext.create({ name: CONTEXTS.agent })` (o literal `'terminal'` em `index.ts:12` é dívida
+conhecida), `agents/` + skill + verbo `bun cli agent`. A estrutura que a Fase 5 move agora é a certa —
+que era o motivo de esta fase preceder aquela.

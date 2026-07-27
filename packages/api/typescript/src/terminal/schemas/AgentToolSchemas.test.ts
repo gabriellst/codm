@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { ArtifactKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
-import { AgentToolName } from '../../enums'
-import { AGENT_TOOL_INPUT_SCHEMAS } from './schemas'
+import { AgentToolName } from '../enums'
+import { AGENT_TOOL_INPUT_SCHEMAS } from './AgentToolSchemas'
 
 /**
  * AC-1.6 — the SECURITY invariant of the MCP surface, asserted mechanically.

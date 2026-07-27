@@ -51,7 +51,7 @@ export type ResumeDecision = { resume: true; id: string } | { resume: false; rea
  * It carries the CLI's own session id forward between turns, which is the entire multi-turn context
  * mechanism after the PTY engine died: `--session-id` on the first turn, `--resume` on the next. The
  * alternative — re-rendering the transcript into every prompt — is the FALLBACK for providers whose
- * CLI cannot resume (`ProviderDef.resumesSessionViaCli` absent), never the default path.
+ * CLI cannot resume (`caps.sessionResume` unset on the probe), never the default path.
  *
  * The invariant lives in `resumeDecision`. Resuming is only safe while the premises the row was
  * written under still hold; when one stops holding, the turn runs FRESH and says why. See

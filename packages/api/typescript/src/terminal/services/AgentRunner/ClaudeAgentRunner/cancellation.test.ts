@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'bun:test'
 import { LoggingService } from '@codedm/core-typescript'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentName } from '../../../enums'
 import { nodeAgentProcessSpawner, type AgentProcess } from './AgentProcess'
-import { StreamJsonAgentRunner } from './StreamJsonAgentRunner'
+import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 
 /**
  * AC-3.3 — CANCELLATION KILLS THE WHOLE PROCESS GROUP, not just the direct child.
  *
  * The first case starts a real process, and doing so does NOT contradict §8 rule 8: that rule forbids
  * a test from spawning a PROVIDER CLI (which is why the DI env — not test discipline — is what keeps
- * `StreamJsonAgentRunner` out of `mock`/`integration`). What is spawned here is `/bin/sh`, and
+ * `ClaudeAgentRunner` out of `mock`/`integration`). What is spawned here is `/bin/sh`, and
  * spawning it is the only way to observe the property under test: a fake process cannot demonstrate
  * that a GRANDCHILD died, because the grandchild is precisely the thing our code holds no handle to.
  * §4.11 is explicit that this is not hypothetical — the CLI's own MCP/tool subprocesses outlive the
@@ -112,14 +111,13 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 
 	it('an aborted run kills the process, and the drain still ends on ONE terminal event', async () => {
 		const { proc, state } = fakeBlockingProcess()
-		const runner = new StreamJsonAgentRunner(new LoggingService(), { spawner: () => proc, inactivityMs: 30_000 })
+		const runner = new ClaudeAgentRunner(new LoggingService(), { spawner: () => proc, inactivityMs: 30_000 })
 		const controller = new AbortController()
 
 		const types: string[] = []
 		const iteration = (async () => {
 			for await (const event of runner.run({
 				agentName: AgentName.ISSUE_WORK,
-				provider: ProviderKind.CLAUDE_CODE,
 				cwd: process.cwd(),
 				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],
 				signal: controller.signal,
@@ -140,13 +138,12 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 
 	it('shutdown() kills every process the runner still owns', async () => {
 		const { proc, state } = fakeBlockingProcess()
-		const runner = new StreamJsonAgentRunner(new LoggingService(), { spawner: () => proc, inactivityMs: 30_000 })
+		const runner = new ClaudeAgentRunner(new LoggingService(), { spawner: () => proc, inactivityMs: 30_000 })
 
 		const types: string[] = []
 		const iteration = (async () => {
 			for await (const event of runner.run({
 				agentName: AgentName.ISSUE_WORK,
-				provider: ProviderKind.CLAUDE_CODE,
 				cwd: process.cwd(),
 				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],
 			})) {
@@ -163,7 +160,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 	})
 
 	it('shutdown() is idempotent — a second call has nothing left to own', async () => {
-		const runner = new StreamJsonAgentRunner(new LoggingService(), { inactivityMs: 30_000 })
+		const runner = new ClaudeAgentRunner(new LoggingService(), { inactivityMs: 30_000 })
 		await runner.shutdown()
 		await runner.shutdown()
 	})

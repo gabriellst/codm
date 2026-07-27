@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import type { z as Zod } from 'zod'
 import { z, BaseError } from '@codedm/core-typescript'
-import { ClassificationMethod, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../AgentRunner'
 import type { TerminalApplicationErrors } from '../../errors'
 import { uniqueSlugKey } from './slug'
@@ -28,8 +28,6 @@ export interface ClassifyInput {
 	contextBuffer?: string[]
 	/** Confidence floor for a context match (0..1). Overrides the configured default when present. */
 	threshold?: number
-	/** Provider CLI to run the structured-generate against. Defaults to claude-code. */
-	provider?: ProviderKind
 }
 
 /**
@@ -142,7 +140,6 @@ export class IssueClassifier {
 	private async generateDecision(input: ClassifyInput): Promise<Zod.output<typeof LlmDecisionSchema>> {
 		for await (const event of this.runner.run({
 			agentName: AgentName.CLASSIFY_ISSUE,
-			provider: input.provider ?? ProviderKind.CLAUDE_CODE,
 			cwd: process.cwd(),
 			systemPrompt: SYSTEM_PROMPT,
 			messages: [{ role: AgentMessageRole.USER, content: buildClassificationPrompt(input) }],

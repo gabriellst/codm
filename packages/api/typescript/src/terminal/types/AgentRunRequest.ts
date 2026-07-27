@@ -1,7 +1,7 @@
 import type { ZodType } from 'zod'
-import type { AgentModelId, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
 import type { AgentMessageRole, AgentName } from '../enums'
-import type { ProviderCapabilities } from '../providers/ProviderDef'
+import type { ProviderCapabilities } from './ProviderCapabilities'
 import type { AgentMcpInvocation } from './AgentMcpInvocation'
 
 /** One message of the turn being driven. Several messages = the SAME live turn, not several turns. */
@@ -23,11 +23,18 @@ export interface AgentMessage {
  *
  * `model` is `AgentModelId`, never `string` — same rule that makes `stopReason` an enum. Widening the
  * set is a contract edit, not a new literal at a call site.
+ *
+ * ### There is no `provider` field, and its absence is the point (Fase 4.5)
+ * There was one, and it existed for exactly one reason: the single generic runner used it to look up a
+ * per-CLI data literal. With one runner per CLI, WHICH CLI is settled before `run()` is called — the DI
+ * container resolves kind → runner — so a `provider` on the request would be a resolution key that no
+ * longer resolves anything, and the only thing left to do with it would be to branch on it. Deleting
+ * the field makes `if (request.provider === …)` UNREPRESENTABLE rather than merely forbidden, which is
+ * the strongest available form of AC-4.5.3. Identity for telemetry rides `agentName`, as it always did.
  */
 export interface AgentRunRequest<OutputSchema extends ZodType | undefined = undefined> {
 	/** Identity for telemetry, logs and run-token claims. NEVER a resolution key. */
 	agentName: AgentName
-	provider: ProviderKind
 	/** The thread's ABSOLUTE workspace path. Never optional — an implicit `process.cwd()` is the worst default. */
 	cwd: string
 	systemPrompt?: string
@@ -35,13 +42,13 @@ export interface AgentRunRequest<OutputSchema extends ZodType | undefined = unde
 	outputSchema?: OutputSchema
 	model?: AgentModelId
 	session?: { resumeId?: string; newId?: string }
-	/** Resolved by `ProviderDetector`; the runner falls back to the def's bare binary name. */
+	/** Resolved by `ProviderDetector`; the runner falls back to the bare binary name of its own CLI. */
 	binaryPath?: string
 	/**
 	 * What the probe found THIS binary can do, threaded from `ProviderDetector` beside `binaryPath`.
 	 *
 	 * By parameter, never from a module-level map, and §4.7 is explicit about why: a map that detection
-	 * mutates makes `buildArgs` impure in practice — the argv would depend on whether detection had run
+	 * mutates makes argv construction impure in practice — the argv would depend on whether detection had run
 	 * yet, and two runs in one process could disagree for reasons invisible at the call site. Absent
 	 * means the CONSERVATIVE set: no optional flag is passed, which is the only safe default because an
 	 * older build aborts on an argument it does not recognize.

@@ -35,7 +35,9 @@ export class E2eStubAgentRunner extends AgentRunner {
 			return
 		}
 
-		const lines = [`$ ${request.provider} (e2e-stub) in ${request.cwd}`, E2eStubAgentRunner.REPLY_LINE]
+		// `agentName`, not a provider: since Fase 4.5 the request carries no provider identity — WHICH
+		// CLI a run belongs to is settled by the DI binding that produced this very object.
+		const lines = [`$ ${request.agentName} (e2e-stub) in ${request.cwd}`, E2eStubAgentRunner.REPLY_LINE]
 		for (const [index, text] of lines.entries()) {
 			const frame: AgentFrame = { kind: 'assistant_text', messageId: `e2e-stub-${index}`, text, parentToolUseId: null }
 			yield { type: 'frame', frame }

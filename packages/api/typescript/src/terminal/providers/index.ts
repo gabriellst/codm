@@ -1,5 +1,0 @@
-export * from './ProviderDef'
-export * from './registry'
-export { claudeProviderDef } from './defs/claude'
-export { codexProviderDef } from './defs/codex'
-export { opencodeProviderDef } from './defs/opencode'

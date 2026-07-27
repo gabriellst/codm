@@ -61,7 +61,6 @@ export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, 
 			quotedIssueId,
 			openIssues,
 			contextBuffer: buffer,
-			provider: thread.providers[0],
 		})
 
 		return this.withTransaction(tx, async tx => {

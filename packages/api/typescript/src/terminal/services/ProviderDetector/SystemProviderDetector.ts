@@ -5,8 +5,8 @@ import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { LoggingService } from '@codedm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
-import { PROVIDER_DEFS, type ProviderCapabilities } from '../../providers'
-import { KNOWN_PROVIDERS, ProviderDetector, type ProviderDetection } from './ProviderDetector'
+import type { ProviderCapabilities } from '../../types'
+import { KNOWN_PROVIDERS, PROVIDER_BINARIES, ProviderDetector, type ProviderDetection } from './ProviderDetector'
 
 /**
  * Bounds every liveness/capability probe (`--version`, `--help`) against a stalled or hostile CLI
@@ -59,15 +59,15 @@ export class SystemProviderDetector extends ProviderDetector {
 	}
 
 	private async probeProvider(provider: ProviderKind): Promise<ProviderDetection> {
-		const def = PROVIDER_DEFS[provider]
-		// `def.bin` + `def.fallbackBins` ARE the binary names to try, in order — there was a second,
-		// hand-maintained `PROVIDER_BINARIES` map duplicating this same fact until it was collapsed
-		// onto the def, which is the whole point of the def being the one source of truth (§4.7).
-		const binaries = [def.bin, ...(def.fallbackBins ?? [])]
+		const spec = PROVIDER_BINARIES[provider]
+		// `spec.bin` + `spec.fallbackBins` ARE the binary names to try, in order. There is exactly ONE
+		// declaration of them per CLI — for claude that declaration is the static on its own runner, so
+		// "how to find it" cannot drift from "how to drive it".
+		const binaries = [spec.bin, ...(spec.fallbackBins ?? [])]
 		for (const binary of binaries) {
 			const binaryPath = this.probeWhich(binary)
 			if (binaryPath) {
-				const version = await this.probeVersion(binaryPath, def.versionArgs)
+				const version = await this.probeVersion(binaryPath, spec.versionArgs)
 				const caps = await this.probeCapabilities(provider, binaryPath)
 				return { name: provider, status: ProviderStatus.DETECTED, binaryPath, version, caps }
 			}
@@ -76,14 +76,14 @@ export class SystemProviderDetector extends ProviderDetector {
 	}
 
 	/**
-	 * Discover what THIS binary can do, by running the def's `helpArgs` and grepping the output for
+	 * Discover what THIS binary can do, by running the spec's `helpArgs` and grepping the output for
 	 * each key of its `capabilityFlags` map (GOAL-agent-abstraction §4.7, Fase 1).
 	 *
 	 * Grep-the-help rather than parse-the-version, deliberately: a version string tells you what the
 	 * CLI calls itself, not what flags it accepts, and a wrong guess makes the CLI abort on an unknown
 	 * argument. Help text is the CLI's own statement of its surface.
 	 *
-	 * The flag→capability MAP lives in the def, not here — this method contains zero provider
+	 * The flag→capability MAP lives in the spec, not here — this method contains zero provider
 	 * knowledge, which is what stops it from becoming the next `switch (provider)`.
 	 *
 	 * Any failure (binary gone, non-zero exit, help on stderr only, throw, TIMEOUT) yields `{}` —
@@ -93,10 +93,10 @@ export class SystemProviderDetector extends ProviderDetector {
 	 * fails is undebuggable the day a CLI update makes `--help` hang.
 	 */
 	protected async probeCapabilities(provider: ProviderKind, binaryPath: string): Promise<ProviderCapabilities> {
-		const def = PROVIDER_DEFS[provider]
-		if (!def.helpArgs || !def.capabilityFlags) return {}
+		const spec = PROVIDER_BINARIES[provider]
+		if (!spec.helpArgs || !spec.capabilityFlags) return {}
 		try {
-			const res = spawnSync(binaryPath, [...def.helpArgs], {
+			const res = spawnSync(binaryPath, [...spec.helpArgs], {
 				stdio: ['ignore', 'pipe', 'pipe'],
 				encoding: 'utf8',
 				timeout: PROBE_TIMEOUT_MS,
@@ -112,7 +112,7 @@ export class SystemProviderDetector extends ProviderDetector {
 			const help = `${res.stdout ?? ''}\n${res.stderr ?? ''}`
 			if (!help.trim()) return {}
 			const caps: ProviderCapabilities = {}
-			for (const [flag, capability] of Object.entries(def.capabilityFlags)) {
+			for (const [flag, capability] of Object.entries(spec.capabilityFlags)) {
 				if (help.includes(flag)) caps[capability] = true
 			}
 			return caps
@@ -138,8 +138,8 @@ export class SystemProviderDetector extends ProviderDetector {
 	 * failure (non-zero exit, no stdout, throw, or TIMEOUT — see `probeCapabilities` for why the
 	 * `res.error` check matters and `logProbeFailure` for why it is never silent).
 	 *
-	 * `versionArgs` comes from the def (`ProviderDef.versionArgs`), not a hardcoded `['--version']`
-	 * — this used to be the second hardcoded copy of a fact the def already declares.
+	 * `versionArgs` comes from the spec (`ProviderBinarySpec.versionArgs`), not a hardcoded
+	 * `['--version']` — this used to be a second hardcoded copy of a fact the spec already declares.
 	 */
 	protected async probeVersion(binaryPath: string, versionArgs: readonly string[]): Promise<string | undefined> {
 		try {
