@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { accessSync, constants, existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
+import { LoggingService } from '@codedm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { PROVIDER_DEFS, type ProviderCapabilities } from '../../providers'
 import { KNOWN_PROVIDERS, ProviderDetector, type ProviderDetection } from './ProviderDetector'
@@ -27,6 +28,10 @@ const PROBE_TIMEOUT_MS = 3_000
  */
 @injectable()
 export class SystemProviderDetector extends ProviderDetector {
+	constructor(private readonly logging: LoggingService) {
+		super()
+	}
+
 	/** Install locations checked in addition to `PATH` — where the provider CLIs commonly land. */
 	protected readonly knownDirs: readonly string[] = [
 		join(homedir(), '.claude', 'local'),
@@ -83,9 +88,9 @@ export class SystemProviderDetector extends ProviderDetector {
 	 *
 	 * Any failure (binary gone, non-zero exit, help on stderr only, throw, TIMEOUT) yields `{}` —
 	 * every capability is opt-in, so the unprobed binary is driven with the conservative argv. A
-	 * timeout or spawn error is never silent, though: it is a structured `console.warn` (see
-	 * `logProbeFailure`), because a probe that silently degrades AND silently fails is undebuggable
-	 * the day a CLI update makes `--help` hang.
+	 * timeout or spawn error is never silent, though: it is a structured warning on the injected
+	 * `LoggingService` (see `logProbeFailure`), because a probe that silently degrades AND silently
+	 * fails is undebuggable the day a CLI update makes `--help` hang.
 	 */
 	protected async probeCapabilities(provider: ProviderKind, binaryPath: string): Promise<ProviderCapabilities> {
 		const def = PROVIDER_DEFS[provider]
@@ -156,14 +161,32 @@ export class SystemProviderDetector extends ProviderDetector {
 	}
 
 	/**
-	 * The one place a probe failure becomes visible. `console.warn` matches the house style for
-	 * non-fatal infra warnings (`src/index.ts`'s graceful-shutdown step failures) — there is no
-	 * lighter-weight structured logger at this layer; `RunnerLogger` is scoped to a running terminal
-	 * session, which does not exist yet during detection.
+	 * The one place a probe failure becomes visible — through the INJECTED `LoggingService`, like
+	 * every other production log in this package.
+	 *
+	 * It was a raw `console.warn` when the capability probe landed, on the reasoning that "there is
+	 * no lighter-weight structured logger at this layer". That reasoning was wrong twice over, and
+	 * `tests/architecture/console-discipline.test.ts` caught it: this class is `@injectable()` and
+	 * is resolved from the container in the `real` env, so it can take `LoggingService` in the
+	 * constructor exactly like `SessionPrewarmService` does — it is not bootstrap/DI-less code, which
+	 * is the only thing that guard exempts. And a raw `console.*` here never reaches Loki and carries
+	 * no trace correlation, which is precisely the failure that matters for a probe: a degraded
+	 * provider is diagnosed from logs, after the fact, on a machine nobody is watching.
+	 *
+	 * `RunnerLogger` is still the wrong tool for a different reason (it is scoped to a running
+	 * terminal session, which does not exist during detection) — that half of the old note was right
+	 * and is kept.
 	 */
 	private logProbeFailure(kind: 'version' | 'capability', binaryPath: string, error: unknown): void {
 		const reason = error instanceof Error ? error.message : String(error)
-		console.warn(`⚠️ provider ${kind} probe failed for "${binaryPath}" — degrading to conservative default: ${reason}`)
+		this.logging.warn({
+			content: {
+				probe: kind,
+				binaryPath,
+				message: 'provider probe failed — degrading to conservative default',
+				error: reason,
+			},
+		})
 	}
 }
 

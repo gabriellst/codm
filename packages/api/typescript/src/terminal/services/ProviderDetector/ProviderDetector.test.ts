@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { MockLoggingService } from '@codedm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { PROVIDER_DEFS, type ProviderCapabilities } from '../../providers'
 import { SystemProviderDetector } from './SystemProviderDetector'
@@ -17,7 +18,10 @@ class FakeSystemProviderDetector extends SystemProviderDetector {
 		/** Faked `--help` output keyed by binary path — drives the capability probe without a real CLI. */
 		private readonly helpText: Partial<Record<string, string>> = {},
 	) {
-		super()
+		// The probe-failure path logs through the INJECTED LoggingService, never a raw `console.*`
+		// (tests/architecture/console-discipline.test.ts). `MockLoggingService` is the sanctioned
+		// no-network bottom for tests.
+		super(new MockLoggingService())
 	}
 	protected override probeWhich(command: string): string | null {
 		this.whichCalls++
