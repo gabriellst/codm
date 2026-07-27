@@ -279,6 +279,21 @@ describe('StreamJsonAgentRunner — transport stops and the watchdog backstop', 
 		expect(fake.process().killed).toBe(true)
 	})
 
+	it('a terminal frame that already closed the turn WINS over a watchdog that fires later (race)', async () => {
+		// The terminal RESULT frame arrives and closes the turn structurally (stdin.end() fires), but
+		// the child then lingers with zero further output — exactly the measured counterfactual from
+		// `stdin-hold-control.json` (17.4s alive, no further frames). The watchdog still fires (it has
+		// to, to bound the process), but a structurally-closed turn must win the classification: the
+		// watchdog is a backstop for a turn that NEVER closes, not license to reclassify one that did.
+		const fake = fakeSpawner([INIT, TEXT, RESULT], { hold: true })
+
+		const finished = (await drain(makeRunner(fake.spawner, 25).run(request()))).at(-1)
+
+		expect(finished).toMatchObject({ type: 'finished', result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'SMOKE-OK' } })
+		// The watchdog still had to fire and kill the lingering child — it just must not win the verdict.
+		expect(fake.process().killed).toBe(true)
+	})
+
 	it('reports AUTH_REQUIRED — a TRANSPORT stop a run with no tools can still produce', async () => {
 		const { spawner } = fakeSpawner([INIT], { exitCode: 1, stderr: 'Not logged in. Run /login to continue.' })
 
@@ -287,6 +302,30 @@ describe('StreamJsonAgentRunner — transport stops and the watchdog backstop', 
 		// The DOMAIN stops (APPROVAL_NEEDED, HUMAN_REQUESTED, BLOCKED_BY_CLASSIFICATION) are
 		// unrepresentable here by TYPE — they can only ever come from a codedm__raise_stop call.
 		expect(finished).toMatchObject({ type: 'finished', result: { outcome: TerminalRunOutcome.STOPPED, stop: { kind: 'AUTH_REQUIRED' } } })
+	})
+
+	it('does NOT classify AUTH_REQUIRED from auth-sounding ASSISTANT REPLY TEXT — transport signals decide', async () => {
+		// The exact injection surface the judge flagged: the model's own words (or an inbound message
+		// that asks it to say this) must never manufacture a transport stop. Transport signals here are
+		// clean — is_error: false, no stderr, exit 0 — so a run that merely TALKS about logging in must
+		// still be reported COMPLETED, not STOPPED.
+		const AUTH_SOUNDING_RESULT = line({
+			type: 'result',
+			subtype: 'success',
+			is_error: false,
+			stop_reason: 'end_turn',
+			result: 'Not logged in. Run /login to continue.',
+			session_id: 'sess-1',
+			usage,
+		})
+		const { spawner } = fakeSpawner([INIT, AUTH_SOUNDING_RESULT])
+
+		const finished = (await drain(makeRunner(spawner).run(request()))).at(-1)
+
+		expect(finished).toMatchObject({
+			type: 'finished',
+			result: { outcome: TerminalRunOutcome.COMPLETED, replyText: 'Not logged in. Run /login to continue.', failed: false },
+		})
 	})
 
 	it('reports SERVER_ERROR when the process dies without ever producing a terminal frame', async () => {

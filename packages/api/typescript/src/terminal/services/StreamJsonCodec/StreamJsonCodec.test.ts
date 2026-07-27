@@ -203,7 +203,28 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 			text: 'SMOKE-OK',
 			isError: false,
 			sessionId: '2e564f1b-2b2a-4929-83c1-e2e84a9290f4',
+			// `null` on every clean turn measured — RESULT_SUCCESS carries no `api_error_status`.
+			apiErrorStatus: null,
 		})
+	})
+
+	it('threads a non-null `api_error_status` through as TRANSPORT evidence, not text', () => {
+		const codec = new StreamJsonCodec()
+		const withApiError = JSON.stringify({
+			type: 'result',
+			subtype: 'error_during_execution',
+			is_error: true,
+			stop_reason: 'end_turn',
+			result: 'the model was mid-sentence when this happened',
+			session_id: '2e564f1b-2b2a-4929-83c1-e2e84a9290f4',
+			usage: {},
+			api_error_status: 'authentication_error',
+		})
+
+		const decoded = [...codec.push(`${withApiError}\n`), ...codec.flush()]
+		const terminal = decoded.find(d => d.terminal)?.terminal
+
+		expect(terminal?.apiErrorStatus).toBe('authentication_error')
 	})
 
 	it('degrades an unnamed stop_reason to UNKNOWN with a warn instead of crashing (§4.2)', () => {

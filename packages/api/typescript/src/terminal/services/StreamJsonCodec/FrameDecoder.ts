@@ -15,6 +15,13 @@ export interface TerminalResultRecord {
 	text: string
 	isError: boolean
 	sessionId: string | null
+	/**
+	 * The CLI's own diagnosis of what broke at the API layer (`api_error_status` on the wire) —
+	 * TRANSPORT evidence, never the assistant's own words. `null` on every clean turn in all four
+	 * real captures (`phase2-smoke/raw/*.jsonl`); the shape it takes on an actual auth failure is
+	 * UNFALSIFIED, not measured — same caveat as `stopReason === TOOL_USE` above.
+	 */
+	apiErrorStatus: string | number | null
 }
 
 export interface DecodedLine {
@@ -41,6 +48,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function str(value: unknown): string | undefined {
 	return typeof value === 'string' ? value : undefined
+}
+
+/** `api_error_status` is either a code (string/number) or absent/`null` — never coerced from other shapes. */
+function apiErrorStatus(value: unknown): string | number | null {
+	return typeof value === 'string' || typeof value === 'number' ? value : null
 }
 
 /** Non-negative integer or 0 — a missing bucket is arithmetically zero, never "unknown" (§4.3 rule 8). */
@@ -182,6 +194,16 @@ export class FrameDecoder {
 		// The error frame comes FIRST so an observer sees the diagnosis before the turn closes.
 		if (isError) frames.push({ kind: 'error', detail: str(raw.result) ?? str(raw.subtype) ?? 'provider reported an error result' })
 		frames.push({ kind: 'result', stopReason, usage })
-		return { frames, terminal: { stopReason, usage, text: str(raw.result) ?? '', isError, sessionId: str(raw.session_id) ?? null } }
+		return {
+			frames,
+			terminal: {
+				stopReason,
+				usage,
+				text: str(raw.result) ?? '',
+				isError,
+				sessionId: str(raw.session_id) ?? null,
+				apiErrorStatus: apiErrorStatus(raw.api_error_status),
+			},
+		}
 	}
 }

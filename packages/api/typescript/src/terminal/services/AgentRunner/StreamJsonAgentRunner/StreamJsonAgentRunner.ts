@@ -49,6 +49,10 @@ const AUTH_HINT = /\/login\b|not logged in|please log ?in|authentication (?:requ
  * ### The watchdog is NOT optional
  * It is the backstop for the case above going wrong on some future CLI build, and for a child that
  * simply stops talking. It fires on INACTIVITY, not on total duration — a long tool call is not a hang.
+ * It is also ONLY a backstop: a turn the terminal `result` frame already closed structurally wins over
+ * a watchdog that fires afterward (e.g. while the child lingers post-close, measured 17.4s alive with
+ * zero further frames in `phase2-smoke/raw/stdin-hold-control.json`). The watchdog exists to bound a
+ * run that never closes, not to reclassify one that did — see `classifyStop` below.
  *
  * ### Nothing thrown mid-drain
  * A structured-output failure, a dead process, a watchdog kill: all three become the terminal
@@ -265,17 +269,30 @@ export class StreamJsonAgentRunner extends AgentRunner {
 	}
 
 	private classifyStop(observed: { terminal?: TerminalResultRecord; exitCode: number; watchdogFired: boolean; stderr: string }): AgentRunResult['stop'] {
-		const authText = `${observed.stderr}\n${observed.terminal?.text ?? ''}`
-		if (AUTH_HINT.test(authText)) {
+		// TRANSPORT evidence ONLY: process stderr and the CLI's own API-layer diagnosis
+		// (`apiErrorStatus`, sourced from `api_error_status` on the terminal `result` frame). The
+		// assistant's reply text is deliberately EXCLUDED — it is the model's own words, and matching
+		// it here would let a run that merely TALKS ABOUT authentication (or is prompted to, by an
+		// inbound message) get misclassified as a transport failure it never had.
+		const authSignal = `${observed.stderr}\n${observed.terminal?.apiErrorStatus ?? ''}`
+		if (AUTH_HINT.test(authSignal)) {
 			return { kind: StopKind.AUTH_REQUIRED as TransportStopKind, detail: 'provider CLI is asking for interactive login' }
 		}
+
+		// STRUCTURALLY-CLOSED WINS OVER THE WATCHDOG. The terminal `result` frame arriving is the
+		// authoritative signal that the turn closed on its own merits; the watchdog is a backstop for
+		// a turn that never closes, and must never be allowed to reclassify one that did — even if it
+		// fires later, while the child lingers after `stdin.end()` (measured, see class doc above).
+		if (observed.terminal) {
+			return observed.terminal.isError
+				? { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: observed.terminal.text || 'provider reported an error result' }
+				: undefined
+		}
+
 		if (observed.watchdogFired) {
 			return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: `no output for ${this.inactivityMs}ms — killed by the inactivity watchdog` }
 		}
-		if (observed.terminal?.isError) {
-			return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: observed.terminal.text || 'provider reported an error result' }
-		}
-		if (!observed.terminal && observed.exitCode !== 0) {
+		if (observed.exitCode !== 0) {
 			return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: `provider exited with code ${observed.exitCode}${observed.stderr ? `: ${observed.stderr.trim()}` : ''}` }
 		}
 		return undefined
