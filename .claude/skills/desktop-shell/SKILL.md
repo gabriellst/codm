@@ -7,44 +7,42 @@ description: Work on the CodeDM desktop shell — the Tauri v2 host (packages/ap
 
 Flat skill — no per-lang variants. Two artifacts, one contract, two direction rules.
 
-## Config is GENERATED from the desktop contract (global convention)
+## Config is GENERATED, and it lives INSIDE the shell package
 
-The shell's identity/wiring lives in **`template.config.ts` `REPO.desktop`** — displayName,
-identifier (= keychain service), window params, console wiring (dev port key, devPath,
-distSubpath, buildTarget, connectsTo), sidecars (workspace + role + portEnvKey + healthPath +
-build + bootEnv), and the native **`capabilities`** list — ABSTRACT capability keys only
-(`['filePicker','notification','badge','secrets','autostart','hostInfo']`), never a Tauri
-permission string. Ports and boot-env values resolve through `REPO.env` — a literal
-port/name/path in a shell file that exists in the contract is a bug, same rule as the env
-registry.
+The shell's identity/wiring lives in **`packages/app/tauri/config/`** — a flat, INTERNAL config
+folder: `app.ts` (displayName, identifier = keychain service, console wiring — dev port key,
+devPath, distSubpath, buildTarget, connectsTo), `window.ts` (`WINDOW` presentation + `WINDOW_FRAME`
+size/label), `capabilities.ts` (the abstract **`CAPABILITIES`** keys —
+`['filePicker','notification','badge','secrets','autostart','hostInfo']`, never a Tauri permission
+string — plus the `CAPABILITY_PERMISSIONS` map), and `sidecars.ts` (the lean manifest). The ONLY
+things read from the abstract contract (`template.config.ts`) are `REPO.brand` (identity),
+`REPO.workspaces` (roots), and `REPO.env` (ports/paths) — a literal port/name/path in a config file
+that exists in `REPO.env` is a bug, same rule as the env registry.
 
-The `capability → Tauri permissions[]` map is NOT in the abstract contract — it lives in the
-shell package at **`@codedm/app-tauri/capabilities`** (`CAPABILITY_PERMISSIONS`). The contract
-knows only *what* capabilities exist; the shell package knows *how* each maps to Tauri's
-permission grammar. `scripts/desktop/generate.ts` imports that map and renders
-`default.json` by mapping `REPO.desktop.capabilities` through it — **fail-loud** on a
+Both the abstract keys AND the `capability → Tauri permissions[]` map live together in
+**`config/capabilities.ts`** (`CAPABILITIES` + `CAPABILITY_PERMISSIONS`) — the config knows *what*
+capabilities exist and *how* each maps to Tauri's permission grammar. `config/generate.ts` renders
+`default.json` by mapping `CAPABILITIES` through `CAPABILITY_PERMISSIONS` — **fail-loud** on a
 capability key with no mapping.
 
-`bun desktop:generate` (scripts/desktop/generate.ts) renders three **committed** outputs:
+`bun desktop:generate` (packages/app/tauri/config/generate.ts) renders two **committed** outputs:
 
 | Output | Content |
 |---|---|
-| `src-tauri/tauri.conf.json` | identity, window, devUrl, frontendDist, externalBin, CSP |
-| `src-tauri/capabilities/default.json` | permissions from `REPO.desktop.capabilities` mapped through `CAPABILITY_PERMISSIONS` (`@codedm/app-tauri/capabilities`) |
-| `src-tauri/src/generated.rs` | `IDENTIFIER` const + `sidecars(data_dir)` (include!-ed by lib.rs) |
+| `src-tauri/tauri.conf.json` | identity, window, devUrl, frontendDist, externalBin, CSP, bundle.resources |
+| `src-tauri/capabilities/default.json` | permissions from `config/capabilities.ts` `CAPABILITIES` mapped through `CAPABILITY_PERMISSIONS` |
 
 Drift is a red build: `bun desktop:generate --check` runs inside `test:tooling`
-(scripts/desktop/generate.test.ts, DSK-01..04 rails — includes a Cargo.toml brand-name check).
-`build-sidecars.ts` also reads the contract (binary names, cwds, entries, build kinds); only
-host-triple knowledge stays local. Genuine shell decisions (window size defaults, health-check
-timing, `sidecar:ready/error` vocabulary, icons, the `data` subdir under `app_data_dir()`)
-stay as parameters in the shell — they have no repo-fact source.
+(packages/app/tauri/config/generate.test.ts, DSK-01..06 rails — includes a Cargo.toml brand-name
+check). `config/build-sidecars.ts` reads the SAME `config/sidecars.ts` manifest (binary names, cwds,
+entries, build kinds); only host-triple knowledge stays local. Genuine shell decisions (window size
+defaults, health-check timing, `sidecar:ready/error` vocabulary, icons, the `data` subdir under
+`app_data_dir()`) stay as parameters in the shell — they have no repo-fact source.
 
-**Adding a sidecar** = add an entry to `REPO.desktop.sidecars` + `bun desktop:generate` —
-never edit tauri.conf.json/lib.rs literals. **Adding a native capability** = add the abstract
-key to `REPO.desktop.capabilities` AND its permission list to `CAPABILITY_PERMISSIONS` in
-`@codedm/app-tauri/capabilities`, then regenerate. The two must agree — a key in the contract
-with no entry in the map fails the render loudly.
+**Adding a sidecar** = add an entry to `config/sidecars.ts` (`SIDECARS`) + `bun desktop:generate` —
+never edit tauri.conf.json/mod.rs literals. **Adding a native capability** = add the abstract key to
+`CAPABILITIES` AND its permission list to `CAPABILITY_PERMISSIONS` — both in `config/capabilities.ts`
+— then regenerate. The two must agree — a key with no entry in the map fails the render loudly.
 
 ## Mental model
 
@@ -139,9 +137,9 @@ services/
   resolves + injects it recursively — no factory closures, no `new` in the registry. Tauri
   services call the host through **typed** channels — `@codedm/app-tauri/commands` (specta
   bindings) for custom commands, `@tauri-apps/plugin-*`/`@tauri-apps/api/*` for plugin/core (see
-  "Typed commands" above); the capability each needs is listed in `REPO.desktop.capabilities`
-  and mapped to permissions in `@codedm/app-tauri/capabilities` (capabilities JSON is generated
-  — never hand-edit it).
+  "Typed commands" above); the capability each needs is listed in `CAPABILITIES` and mapped to
+  permissions in `CAPABILITY_PERMISSIONS` — both in `packages/app/tauri/config/capabilities.ts`
+  (capabilities JSON is generated — never hand-edit it).
 - **DI**: `ServicesProvider` mounts at the composition root (`routes/__root.tsx`), calls
   `detectEnvironment()` once, DYNAMIC-imports that env's DECLARATIVE bindings record (the browser
   entry never fetches the tauri chunk — that async boundary is the code-split), builds a
@@ -183,9 +181,9 @@ are the two readiness URLs + platform service bindings; the console does not mov
    `@tauri-apps/plugin-*` / `@tauri-apps/api/*` API directly, or (for a NEW custom command)
    add `#[tauri::command] #[specta::specta]` in `src-tauri/src/lib.rs`, register it in the
    `tauri_specta::Builder` (regen `bindings.ts` via `cargo test`), and import
-   `{ commands } from '@codedm/app-tauri/commands'`. Add the abstract key to
-   `REPO.desktop.capabilities` AND its permission list to `CAPABILITY_PERMISSIONS` in
-   `@codedm/app-tauri/capabilities`, then `bun desktop:generate` (+ plugin in
+   `{ commands } from '@codedm/app-tauri/commands'`. Add the abstract key to `CAPABILITIES` AND
+   its permission list to `CAPABILITY_PERMISSIONS` — both in
+   `packages/app/tauri/config/capabilities.ts` — then `bun desktop:generate` (+ plugin in
    `Cargo.toml`/`lib.rs` if new).
 3. Implement `Browser<Cap>Service` colocated in `services/<Cap>Service/` — never fake success.
 4. Add the `[<Cap>Token, <Plat><Cap>Service]` pair to the DECLARATIVE record in

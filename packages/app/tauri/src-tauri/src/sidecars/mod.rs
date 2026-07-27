@@ -1,11 +1,13 @@
 //! Sidecar supervision — spawns the two bundled sidecars (TS daemon + Go gateway,
 //! `bundle.externalBin`) and polls a bootstrap HTTP health-check per service.
 //!
-//! The `Sidecar` descriptor's INSTANCES are never hand-typed — `generated.rs`
-//! (rendered from template.config.ts REPO.desktop by `bun desktop:generate`) is
-//! the single source of every name / port / health path / boot-env literal, plus
-//! the `IDENTIFIER` const (bundle id = keychain service). It is `include!`-ed
-//! below, AFTER the `Sidecar` struct it references.
+//! The sidecar SET and each process's boot ENV are hand-written in `sidecars()`
+//! below — env values are runtime paths (`data_dir`, `resource_dir/migrations`) and
+//! shell-decision literals the supervisor owns, not a cross-boundary contract. The
+//! LEAN cross-boundary list the JS side needs (binary role → port env key → health
+//! path → build recipe) lives in `packages/app/tauri/config/sidecars.ts`, which
+//! `config/build-sidecars.ts` and `config/generate.ts` read; keep the two in step
+//! (same two roles, same ports, same health paths).
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -23,17 +25,75 @@ pub struct Sidecar {
     port: u16,
     health_path: &'static str,
     /// Working directory for the child process. Load-bearing, not cosmetic: a
-    /// `bun build --compile` binary resolves its `--external` modules (the libsql
-    /// native addon) from the process CWD, never from the executable's directory,
-    /// so the daemon must start inside its staged runtime dir or it dies with
+    /// `bun build --compile` binary resolves the one `require` bun could not bundle
+    /// (the libsql native addon, reached dynamically through `@neon-rs/load`) from
+    /// the process CWD, never from the executable's directory — so the daemon must
+    /// start inside its staged runtime dir or it dies with
     /// `Cannot find package … from '/$bunfs/root/out'`. `None` = inherit.
     cwd: Option<std::path::PathBuf>,
     env: Vec<(String, String)>,
 }
 
-// IDENTIFIER (bundle id = keychain service) + sidecars(data_dir) — generated
-// from the desktop contract; drift-gated by `bun desktop:generate --check`.
-include!("generated.rs");
+/// The port a sidecar listens on: read from its env var (matching `config/sidecars.ts`'s
+/// `portEnvKey`), falling back to the dev/bundle default when unset.
+fn port_from_env(key: &str, default: u16) -> u16 {
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
+/// The two supervised sidecars + the exact env each boots with. Hand-written, on
+/// purpose: the descriptors mirror `config/sidecars.ts` and the boot env is inlined
+/// here because it is a runtime concern, not a cross-boundary contract.
+///
+/// `data_dir`     — app-data subdir (`app_data_dir()/data`), the sidecars' data root.
+/// `resource_dir` — bundle resource dir, holding the two dirs a compiled sidecar reads
+///                  from disk (`config/build-sidecars.ts` stages them under `binaries/`,
+///                  `bundle.resources` copies them here):
+///                  `migrations`     — the Drizzle migrations the daemon applies on boot;
+///                  `daemon-runtime` — the libsql native-prebuild closure, which is the
+///                                     daemon's spawn CWD (see `Sidecar::cwd`).
+pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> {
+    let api_port = port_from_env("API_PORT", 3030);
+    let channel_port = port_from_env("CHANNEL_PORT", 3032);
+    let migrations_dir = resource_dir
+        .join("migrations")
+        .to_string_lossy()
+        .into_owned();
+    vec![
+        Sidecar {
+            name: "codedm-daemon",
+            port: api_port,
+            health_path: "/v1/session",
+            // Not optional: the compiled daemon resolves the libsql native addon from
+            // its CWD. Without this it cannot start. See `Sidecar::cwd`.
+            cwd: Some(resource_dir.join("daemon-runtime")),
+            env: vec![
+                ("API_PORT".into(), api_port.to_string()),
+                ("CODEDM_DATA_DIR".into(), data_dir.into()),
+                ("CODEDM_MIGRATIONS_DIR".into(), migrations_dir),
+                ("API_GO_URL".into(), "http://localhost:3032".into()),
+                ("NODE_ENV".into(), "production".into()),
+            ],
+        },
+        Sidecar {
+            name: "codedm-gateway",
+            port: channel_port,
+            health_path: "/api/openapi.json",
+            // A static Go binary — nothing to resolve from disk, so it inherits the shell's CWD.
+            cwd: None,
+            env: vec![
+                ("CHANNEL_PORT".into(), channel_port.to_string()),
+                ("CODEDM_DATA_DIR".into(), data_dir.into()),
+                (
+                    "CHANNEL_ALLOWED_ORIGINS".into(),
+                    "tauri://localhost,http://localhost:5173".into(),
+                ),
+            ],
+        },
+    ]
+}
 
 /// Minimal HTTP/1.1 readiness probe over std TcpStream (no HTTP client dependency):
 /// true iff the service answers the GET with a 200 within the per-attempt timeout.

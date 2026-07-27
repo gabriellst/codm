@@ -14,7 +14,7 @@ registry:
     - id: DSK-02
       name: "Capability = port + platform services + declared permissions"
       when: "the console needs a new OS integration"
-      rule: "Declare the port in services/<Capability>Service/<Capability>Service.ts (pure types, promise-based), add a token in services/tokens.ts, implement Tauri<Cap>Service AND Browser<Cap>Service colocated, add the [Token, Class] pair to the declarative record in registry/{tauri,browser}.ts (+ a Fake pair in registry/test.ts), declare tauri permissions in REPO.desktop.services (+ bun desktop:generate), expose a typed hook, consume via the hook."
+      rule: "Declare the port in services/<Capability>Service/<Capability>Service.ts (pure types, promise-based), add a token in services/tokens.ts, implement Tauri<Cap>Service AND Browser<Cap>Service colocated, add the [Token, Class] pair to the declarative record in registry/{tauri,browser}.ts (+ a Fake pair in registry/test.ts), declare the capability in packages/app/tauri/config/capabilities.ts (CAPABILITIES + CAPABILITY_PERMISSIONS) (+ bun desktop:generate), expose a typed hook, consume via the hook."
       wrong: "ad-hoc invoke() call sites sprinkled through components, a hand-written `new *Service()` anywhere (the Container is the only construction site), or hand-editing capabilities/default.json"
     - id: DSK-03
       name: "Honest browser degradation"
@@ -29,12 +29,12 @@ registry:
     - id: DSK-05
       name: "Sidecar = externalBin + health-check"
       when: "adding or changing a sidecar"
-      rule: "Declare in REPO.desktop.sidecars (bun desktop:generate renders externalBin + generated.rs), build via scripts/build-sidecars.ts (name-<target-triple>); every sidecar has a healthPath readiness URL."
+      rule: "Declare in packages/app/tauri/config/sidecars.ts (SIDECARS; bun desktop:generate renders externalBin), build via config/build-sidecars.ts (name-<target-triple>); every sidecar has a healthPath readiness URL."
       wrong: "spawning raw processes without a readiness signal, or bundling unmanaged binaries"
     - id: DSK-06
       name: "Custom Rust command shape"
       when: "a capability has no tauri plugin"
-      rule: "#[tauri::command] in src-tauri/src/lib.rs + invoke_handler registration + permission declared in REPO.desktop.services (capabilities JSON is generated)"
+      rule: "#[tauri::command] in src-tauri/src/lib.rs + invoke_handler registration + permission declared in packages/app/tauri/config/capabilities.ts (CAPABILITIES + CAPABILITY_PERMISSIONS; capabilities JSON is generated)"
     - id: DSK-07
       name: "Ports stay platform-pure (future expo home)"
       when: always

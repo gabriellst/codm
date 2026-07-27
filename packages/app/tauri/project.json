@@ -3,10 +3,15 @@
 	"name": "app-tauri",
 	"projectType": "application",
 	"targets": {
+		"generate": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": { "command": "bun config/generate.ts", "cwd": "packages/app/tauri" }
+		},
 		"sidecars": {
 			"executor": "nx:run-commands",
 			"cache": false,
-			"options": { "command": "bun sidecars/build.ts", "cwd": "packages/app/tauri" }
+			"options": { "command": "bun config/build-sidecars.ts", "cwd": "packages/app/tauri" }
 		},
 		"dev": {
 			"executor": "nx:run-commands",

@@ -2,7 +2,8 @@ import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart'
 import type { AutostartService } from './AutostartService'
 
 /** Launch-on-login via the typed tauri plugin-autostart API. The `autostart:allow-*`
- *  permissions derive from REPO.desktop.capabilities.autostart → CAPABILITY_PERMISSIONS. */
+ *  permissions derive from the shell's `autostart` capability
+ *  (packages/app/tauri/config/capabilities.ts CAPABILITIES → CAPABILITY_PERMISSIONS). */
 export class TauriAutostartService implements AutostartService {
 	isEnabled(): Promise<boolean> {
 		return isEnabled()

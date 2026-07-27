@@ -20,11 +20,6 @@ use tauri::Manager;
 mod commands;
 mod sidecars;
 
-// IDENTIFIER (bundle id = keychain service name) is generated into
-// `sidecars/generated.rs` and lives in the `sidecars` module; re-export it at the
-// crate root so `commands::secrets` can resolve `crate::IDENTIFIER`.
-pub use sidecars::IDENTIFIER;
-
 pub fn run() {
     let builder = commands::specta_builder();
 

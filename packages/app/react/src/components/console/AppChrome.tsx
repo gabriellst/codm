@@ -7,7 +7,7 @@ import { isTauri } from '@/services/utils/tauri/isTauri'
 
 /**
  * AppChrome — the integrated window title bar (VS Code style). The tauri Overlay titleBarStyle
- * (see @codedm/app-tauri/window) makes the webview own the full window height with the native
+ * (see packages/app/tauri/config/window.ts) makes the webview own the full window height with the native
  * macOS traffic lights overlaid top-left; this bar draws the app's own header in that band —
  * three zones (nav · command center · actions) woven with `data-tauri-drag-region` so the empty
  * space drags the window while the controls stay clickable.

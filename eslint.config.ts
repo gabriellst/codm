@@ -23,6 +23,11 @@ export default tseslint.config([
 			'**/generated/**',
 			'packages/contracts/**',
 			'**/node_modules/**',
+			// Desktop shell config + build tooling (generator, drift test, sidecar build, config
+			// consts) — the same class of build machinery as scripts/**, type-checked by tsc:scripts,
+			// not app runtime source. The package has no tsconfig, so the typed project service can't
+			// parse it (same as the pre-existing commands/ dir). Was eslint-ignored under scripts/desktop/.
+			'packages/app/tauri/config/**',
 			'**/playwright-report/**',
 			'**/public/**',
 			'**/recordings/**',
