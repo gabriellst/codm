@@ -1835,6 +1835,45 @@ Codec JSONL line-buffered (~150 LOC) + `StreamJsonAgentRunner.run()` + o
 `StreamJsonToTurnFactAccumulator` (fold puro, §4.3). `TerminalLLMRunner.generate`/`stream` viram
 **adaptadores finos** sobre `run()` — os dois consumidores atuais não mudam ainda.
 
+> **EMENDA 27-jul (quarta correção de contrato) — "`generate`/`stream` viram adaptadores finos" é
+> satisfazível para `generate`, e AUTOCONTRADITÓRIO para o `stream` interativo.** Descoberto ao
+> implementar; registrado aqui porque a regra 2 da §8 proíbe reinterpretar AC em silêncio.
+>
+> **O que a frase pede, e onde ela colide consigo mesma.** `stream()` tem duas metades hoje:
+> `streamOneShot` (pipes, providers não-claude) e `streamClaudeSession` (o motor PTY + tail de
+> transcript). Rotear a metade PTY por `run()` **nesta fase** viola, ao mesmo tempo, as outras duas
+> cláusulas desta mesma fase:
+> - *"os dois consumidores atuais não mudam ainda"* — `RunTerminalSession` consome o union
+>   `TerminalRuntimeEvent` (`session`, `killed`, `action`, `turn_completed`, `output`, `exit`). O
+>   stream-json **não produz** `action` (não existe linha de TUI para parsear — o `--output-format
+>   stream-json` é justamente o que deleta o parser de TUI) e o `TuiActionType` que o tipa só morre na
+>   Fase 3. Trocar o transporte muda o conjunto de variantes que o consumidor observa, que **é** o seu
+>   comportamento visível.
+> - **AC-2.6, *"comportamento visível inalterado"*** — e mais concretamente: as 6 suítes do motor PTY
+>   (`ClaudeCliTerminalLLMRunner.{,concurrent,crash,eviction,prewarm,trust-prompt}.test.ts`) exercitam
+>   `stream()` com um spawner falso. Rotear a metade PTY as tornaria vermelhas em massa — e apagá-las
+>   é, literalmente, entrega da **Fase 3** (*"Deletar … o subtree PTY inteiro"*).
+>
+> **Resolução, fixada — a fase entrega o adaptador ONDE ele é o transporte inteiro:**
+> - **`generate()` vira adaptador COMPLETO sobre `run()`** — corpo inteiro substituído: monta o
+>   request com `outputSchema`, draina `run()`, devolve `result.output`. É o caso que a §4.2 já
+>   descreve verbatim (*"Classificação = `run({…, outputSchema, messages:[oneUserMessage]})`, sem
+>   `mcp`"*). `IssueClassifier` **não muda** e continua recebendo objeto validado ou erro nomeado.
+>   `extractJson` sai do caminho de execução (a deleção do símbolo continua sendo Fase 3).
+> - **`stream()` NÃO é roteado nesta fase.** A metade PTY continua intacta até a Fase 3, que é a fase
+>   contratualmente encarregada de virar `RunTerminalSession` para `AgentRuntimeEvent` **e** apagar o
+>   subtree. Fazer as duas coisas juntas lá é uma mudança coerente; fazer meia aqui é uma quebra.
+>
+> **Por que isto NÃO é afrouxamento, e o teste que prova:** o risco real que a frase queria eliminar é
+> "a fase constrói o codec e não pluga nada por baixo do token antigo", que foi exatamente a falha da
+> primeira tentativa. Esse risco é fechado por `generate()`, e fechado com sujeito verificável —
+> `ClaudeCliTerminalLLMRunner.generate.test.ts` asserta que a chamada agora sobe argv **stream-json**
+> (`--input-format` / `--output-format stream-json` / `--verbose`), que o prompt vai por **stdin** como
+> linha JSONL, e que os dois erros nomeados (`CLASSIFICATION_FAILED` / `TERMINAL_SPAWN_FAILED`)
+> continuam sendo os mesmos que o consumidor já tratava. A frase da Fase 3 (*"`IssueClassifier` →
+> `run({ outputSchema })`"*) continua valendo: lá o consumidor passa a chamar `run()` **direto** e o
+> adaptador morre junto com `generate`.
+
 > **EMENDA 27-jul — o gate JÁ RODOU (`bf217a2a`) e o resultado é vinculante.** O smoke real está
 > commitado em `.specs/codedm/phase2-smoke/`; **não re-rodá-lo** e **não reabrir a taxonomia**. As
 > divergências medidas foram dobradas no corpo do documento: §4.3 (taxonomia `AgentFrame`, regras 5,
@@ -1906,7 +1945,20 @@ bem-formado de tipo DESCONHECIDO descartado em silêncio sem abortar o drain** (
 teste que **drena até o fim** depois da falha e conta os eventos.
 **AC-2.4** Guarda anti-double-publish testada: frames `tool_use`/`tool_result` com prefixo
 `codedm__` produzem **frame e nenhum fato** (§4.3, regra 3).
-**AC-2.5** O accumulator é **puro**: `git grep -n "child_process\|spawn(\|fs\." -- packages/api/typescript/src/terminal/services/StreamJsonCodec` → **0 hits**.
+**AC-2.5** O accumulator é **puro**. Dois passos, e o **primeiro não é opcional**:
+   **(a) PRECONDIÇÃO DE EXISTÊNCIA** — `packages/api/typescript/src/terminal/services/StreamJsonCodec/`
+   existe e contém, no mínimo, o codec (`LineBuffer` + `FrameDecoder` + `StreamJsonCodec`) e o
+   `StreamJsonToTurnFactAccumulator`; **e** o `AgentRunner` com `run()` existe fora dessa pasta.
+   **(b)** só então: `git grep -n "child_process\|spawn(\|fs\." -- packages/api/typescript/src/terminal/services/StreamJsonCodec` → **0 hits**.
+
+> **EMENDA 27-jul — a AC-2.5 passava VACUAMENTE e por isso ganhou o passo (a).** Como escrita
+> originalmente ela era só o `git grep` do passo (b), e um `git grep` sobre um diretório **inexistente**
+> retorna 0 hits e **exit code 1**: uma fase que não construiu nada pontuava verde nela. Foi exatamente
+> o que aconteceu na primeira tentativa da Fase 2, em que a pasta não existia. Pureza de um artefato
+> ausente não é pureza — é ausência, e as duas **têm de** ser distinguíveis pelo checador. Regra geral
+> que fica registrada para as demais fases: **toda AC cujo instrumento é um grep NEGATIVO precisa de
+> uma precondição POSITIVA de existência do sujeito**; caso contrário ela mede o vazio.
+
 **AC-2.6** `bun tsc` + `bun run test` + `bun e2e` verdes — comportamento visível inalterado.
 **AC-2.7** *(acrescentada em 27-jul pela divergência D4; §4.3 regra 8)* **O fato de uso é cunhado uma
 única vez e não é lossy.** Sobre uma sequência enlatada com **múltiplos** frames `assistant`, cada um
