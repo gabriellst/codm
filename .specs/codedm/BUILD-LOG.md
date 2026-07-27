@@ -1706,3 +1706,115 @@ Fase 2 pode ser despachada — **pinada em `agent-abstraction`** — contra a §
 (taxonomia + regras 5, 8 e 9) e as AC-2.1…AC-2.7. **Não re-rodar o smoke** e **não reabrir a
 taxonomia**: `bf217a2a` é o gate, já cumprido.
 
+
+---
+
+# 2026-07-27 — FASE 2 (rodada 2): `StreamJsonCodec` + `AgentRunner.run()` + `generate()` adaptador
+
+Branch **`agent-abstraction`** (base c79251d2). Checagem de ESTADO da árvore antes de tocar em nada,
+conforme a regra de despacho derivada da §8 regra 1: `terminal/types/`, `terminal/providers/defs/`,
+`terminal/mcp/tools/`, os enums de agent e os três eventos de `AgentTurnFact` **presentes no HEAD**.
+O brief chegou pinado em `sqlite-shared-store` (nome obsoleto — essa branch provadamente não tem as
+entregas congeladas da Fase 1); prevaleceu o ESTADO, e é o que a regra manda.
+
+**Herdado da rodada 1, não recriado:** a árvore tinha 3 arquivos de tipo e 3 do codec **untracked**.
+Foram lidos, conferidos byte a byte contra o corpus de `phase2-smoke/raw/` e mantidos — recriá-los
+teria produzido uma segunda versão divergente de trabalho correto.
+
+## O QUE FOI CONSTRUÍDO
+
+- `services/StreamJsonCodec/` — **PURO** (sem spawn, `fs`, clock ou timer): `LineBuffer` (fronteiras
+  de chunk + UTF-8 multi-byte partido), `FrameDecoder` (gramática de wire + **fan-out de
+  `message.content[]`**), `StreamJsonCodec` (fachada: linha → `JSON.parse` guardado → frames) e
+  `StreamJsonToTurnFactAccumulator` (o fold `(frame) => AgentTurnFact | null` + `flush()`).
+- `services/AgentRunner/` — o seam de UM método (`run()` + `shutdown()`), o
+  `StreamJsonAgentRunner` e o **porto de processo** `AgentProcess`/`nodeAgentProcessSpawner`
+  (`detached: true` → kill de process GROUP). O porto é o que permite testar `run()` inteiro **sem
+  jamais spawnar CLI** (§8 regra 8) — o único arquivo do transporte que conhece `child_process`.
+- `ClaudeCliTerminalLLMRunner.generate()` — **adaptador fino completo** sobre `run()`. O one-shot
+  `-p --output-format json` + o scanner `extractJson` saíram do caminho de execução.
+- `registry.ts` — `AgentRunner` ligado a `StreamJsonAgentRunner` **só em `real`**;
+  `mock`/`integration` **declarados ausentes** (`null`), que é como a §8 regra 8 vira propriedade do
+  seam de DI e não de disciplina de teste.
+
+## ACs — TODAS EXECUTADAS ANTES DE ESCRITAS
+
+- **AC-2.1** — já cumprida em `bf217a2a`. **Não re-rodada**, taxonomia **não reaberta**, conforme o brief.
+- **AC-2.2** ✅ `StreamJsonCodec.test.ts` (19 testes): fan-out de `content[]` (1 frame `assistant` com
+  4 blocos → 4 `AgentFrame`); `tool_result` **sem** `is_error` → `ok: true`; `content` **string E
+  array**; `parent_tool_use_id` propagado; JSON truncado a meio de linha; linha não-JSON; **frame
+  bem-formado DESCONHECIDO descartado em SILÊNCIO** (`system/hook_response` + `rate_limit_event`, os
+  que aparecem nas 4 capturas) — e em todos os casos o drain **sobrevive**. Escopo de sub-agent e
+  `tool_use` órfão → FAILED no `flush()` em `StreamJsonToTurnFactAccumulator.test.ts` (16 testes).
+- **AC-2.3** ✅ Falha de structured output → `failed: true`, **nunca** throw, e o teste **conta os
+  eventos** depois da falha para provar o drain completo (3 frames + facts + exatamente 1 `finished`).
+- **AC-2.4** ✅ `tool_use`/`tool_result` com prefixo `codedm__` → **frame e nenhum fato**; e a guarda
+  é na INGESTÃO, então o `flush()` também não pode ressuscitá-los como órfãos.
+- **AC-2.5** ✅ **nos dois passos**, e o passo (a) é novo (ver CONTRATO abaixo): a pasta existe com
+  codec + accumulator, `run()` existe FORA dela, e só então o grep de pureza → **0 hits**.
+- **AC-2.6** ✅ gates abaixo; e o "comportamento visível inalterado" agora tem **sujeito**:
+  `ClaudeCliTerminalLLMRunner.generate.test.ts` prova que a mesma assinatura sobe argv **stream-json**
+  com prompt por **stdin**, devolvendo o objeto validado e os **mesmos** erros nomeados.
+- **AC-2.7** ✅ **UM** `AgentUsageEvent` por run, do agregado terminal, sobre sequência com **múltiplos**
+  frames `assistant`; os quatro baldes medidos chegam ao evento (`2 / 10 / 9188 / 15273`) e o teste
+  ancora a soma de input em **24463** — a asserção que falharia contra o contrato congelado na Fase 1.
+
+## CONTRATO — 2 REPAROS EXPLÍCITOS (o documento, não só o commit)
+
+1. **AC-2.5 passava VACUAMENTE.** Era só um `git grep` negativo, e `git grep` sobre diretório
+   inexistente retorna 0 hits — uma fase que não construísse nada pontuava verde. Ganhou uma
+   **precondição POSITIVA de existência**. Regra geral registrada: *toda AC cujo instrumento é um grep
+   negativo precisa de uma precondição de existência do sujeito, senão mede o vazio.*
+2. **"`generate`/`stream` viram adaptadores finos" é AUTOCONTRADITÓRIO na metade `stream` interativa.**
+   Rotear o motor PTY por `run()` nesta fase viola, ao mesmo tempo, *"os dois consumidores atuais não
+   mudam ainda"* (o stream-json não produz `action`; `RunTerminalSession` observa esse union) e a
+   própria AC-2.6 (as 6 suítes de PTY ficariam vermelhas — e apagá-las é entrega **da Fase 3**).
+   Resolução fixada no documento: `generate()` vira adaptador **completo**; `stream()` **não** é
+   roteado aqui. O risco que a frase queria matar — "constrói o codec e não pluga nada por baixo do
+   token antigo" — é fechado por `generate()`, com teste.
+
+## DEFEITO PRÉ-EXISTENTE ENCONTRADO E CONSERTADO (commit separado)
+
+`tests/support/PersistenceProbe.test.ts` era **flaky ~1 em 3**, inclusive **isolado**:
+`UNIQUE constraint failed: shared_events.id`. Causa raiz: `BaseEvent.id` é **content-addressed**
+(`Id.fromSeed(this.serialize())`, `core/src/types/BaseEvent.ts:22`) e o único input que varia entre
+dois `makeEvent()` pelados é `time`, em **milissegundos** — dois eventos byte-idênticos no mesmo ms
+hasheiam para o MESMO id. O teste vizinho `count()` já usava eventos distintos; o flaky era o único
+que não. **Fixture corrigida, asserções INTACTAS** — salvar o mesmo evento duas vezes e exigir duas
+linhas contradiz ids content-addressed, que existem para tornar redelivery idempotente. 6/6 verdes
+depois. Não é da Fase 2: vai em commit próprio, por pathspec.
+
+## GATES (todos rodados de verdade, nesta árvore)
+
+```
+bun tsc                                       EXIT=0
+bun run test (raiz, 4 projetos)               EXIT=0
+bun test  (de packages/api/typescript)        EXIT=0   751 pass / 0 fail / 125 arquivos  (era 690/121)
+bun lint                                      EXIT=0
+bun test:tooling                              EXIT=0   298 pass / 0 fail / 19 arquivos
+bun run contracts + bun sdk (2×)              EXIT=0   idempotente — porcelain IDÊNTICO após a 2ª volta
+nx run app-react:tsc --skip-nx-cache          EXIT=0
+nx run e2e:tsc --skip-nx-cache                EXIT=0
+go build/vet/test  (packages/api/go)          EXIT=0
+go build/vet/test  (packages/api/go/core)     EXIT=0
+RUNTIME e2e (bun scripts/run-e2e.ts)          EXIT=0   5 passed / 2 skipped  ← inalterado
+bun run detect                                40 finding(s) / 24 error       ← BASELINE, não cresceu
+```
+
+`bun sdk`/`bun run contracts` **zero drift**: nada do que esta fase acrescentou toca wire — o codec, o
+seam e os fatos são todos context-private.
+
+## DÍVIDA REGISTRADA (não deixar envelhecer)
+
+- `entity#bp-03` casa `/\{\s*message:\s*['"]/` mas o nome dele escopa a `.refine()` — falso positivo
+  já dentro da baseline aceita (`SessionPrewarmService.ts:55`). Estreitar derruba `detect` de 24 → 23.
+  **Continua aberto**: mexer nele nesta fase mudaria a baseline que é o próprio gate.
+- `stream()` continua com as duas metades (PTY + pipes one-shot). Virá inteiro na Fase 3, junto com
+  os consumidores e a deleção do subtree — que é onde a mudança é coerente.
+
+## PRÓXIMO PASSO
+
+Fase 3: virar `IssueClassifier` para `run({ outputSchema })` (o adaptador `generate` morre junto),
+virar `RunTerminalSession` para `AgentRuntimeEvent`, e só então deletar o subtree PTY, `extractJson`,
+`mergeLineStreams`, `SessionPrewarm` e os enums de TUI — tudo na mesma fase, porque é a combinação
+que mantém o comportamento coerente.
