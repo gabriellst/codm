@@ -3,6 +3,7 @@ import './errors' // Side-effect: registers this context's error codes with the 
 
 import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { TerminalLLMRunner, StubTerminalLLMRunner, E2eStubTerminalLLMRunner, ClaudeCliTerminalLLMRunner } from './services/TerminalLLMRunner'
+import { AgentRunner, StreamJsonAgentRunner } from './services/AgentRunner'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { TerminalLLMSessionRepository, DrizzleTerminalLLMSessionRepository, MockTerminalLLMSessionRepository } from './repositories'
@@ -23,6 +24,12 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The runtime abstraction (WIDE seam, Fork A1): the full session engine in `real`, a
 	// canned-frame stub in `mock`/`integration` so no test ever spawns a provider CLI.
 	{ token: TerminalLLMRunner, mock: StubTerminalLLMRunner, integration: StubTerminalLLMRunner, real: realRunner },
+	// The ONE-METHOD seam (§4.1) that `TerminalLLMRunner.generate` now adapts onto. `mock`/`integration`
+	// are DECLARED ABSENT rather than bound: this is the only implementation that can start an external
+	// CLI, and §8 rule 8 makes "no test spawns a provider CLI" a property of the DI env rather than of
+	// test discipline. Nothing in those envs resolves it — `StubTerminalLLMRunner` answers `generate`
+	// there with canned data, exactly as it did before this phase.
+	{ token: AgentRunner, mock: null, integration: null, real: StreamJsonAgentRunner },
 	// CLI detection: canned catalog in tests, PATH/install-dir probing in `real`.
 	{ token: ProviderDetector, mock: MockProviderDetector, integration: MockProviderDetector, real: realProviderDetector },
 	// The adopted whatscode AgentStreamRegistry (Fork C): SSE observer channel + the absorbed

@@ -1,6 +1,7 @@
 export * from './TerminalLLMRunner'
 export * from './AgentStreamRegistry'
 export * from './TerminalOutputAccumulator'
+export * from './AgentRunner'
 export * from './ProviderDetector'
 export * from './IssueClassifier'
 export * from './SessionPrewarm'

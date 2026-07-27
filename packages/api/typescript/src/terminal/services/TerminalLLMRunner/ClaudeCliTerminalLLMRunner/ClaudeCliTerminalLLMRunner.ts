@@ -6,7 +6,7 @@ import { injectable } from 'tsyringe-neo'
 import type { z, ZodType } from 'zod'
 import { BaseError } from '@codedm/core-typescript'
 import { ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
-import { TuiMarker, TurnEndSignal } from '../../../enums'
+import { AgentMessageRole, AgentName, TuiMarker, TurnEndSignal } from '../../../enums'
 import {
 	TerminalLLMRunner,
 	type TerminalLLMRunnerStreamRequest,
@@ -14,7 +14,8 @@ import {
 	type ChatMessage,
 } from '../TerminalLLMRunner'
 import type { AgentGenerateRequest, SessionKillReason, TerminalRuntimeEvent } from '../types'
-import { buildCommand, collectStream, extractJson, mergeLineStreams, spawnOneShot, waitExit } from '../oneshot'
+import { buildCommand, mergeLineStreams, spawnOneShot, waitExit } from '../oneshot'
+import { AgentRunner } from '../../AgentRunner'
 import type { TerminalApplicationErrors } from '../../../errors'
 import { SessionMap, type LiveSession, type SessionEmitter, type TranscriptTail } from './SessionMap'
 import { spawnClaude } from './spawner'
@@ -190,7 +191,13 @@ export class ClaudeCliTerminalLLMRunner extends TerminalLLMRunner {
 		await this.evictIdle()
 	}
 
-	constructor() {
+	/**
+	 * `agentRunner` is OPTIONAL only so the PTY-engine suites can keep constructing this class bare —
+	 * they exercise `stream()`, which is untouched in this phase. Production resolves it through DI
+	 * (`registry.ts`, `real` env only), and `generate()` fails NAMED rather than silently degrading
+	 * back to a private spawn when it is absent.
+	 */
+	constructor(private readonly agentRunner?: AgentRunner) {
 		super()
 		this.idleTimeoutMs = Number(process.env.CODEDM_IDLE_TIMEOUT_MS ?? DEFAULT_IDLE_TIMEOUT_MS)
 		this.logger = new RunnerLogger({ envTier: process.env.CODEDM_LOG })
@@ -201,20 +208,58 @@ export class ClaudeCliTerminalLLMRunner extends TerminalLLMRunner {
 		this.evictTimer.unref?.()
 	}
 
-	// ── generate(): one-shot structured print-mode call (any provider) ──────────────────────────
+	// ── generate(): a THIN ADAPTER over AgentRunner.run() ───────────────────────────────────────
 
+	/**
+	 * The old token, the new transport (Fase 2).
+	 *
+	 * This method used to be its own little runtime: `claude -p … --output-format json`, collect all of
+	 * stdout, then excavate a JSON object out of it with a shrinking-window scanner (`extractJson`)
+	 * because providers interleave log lines with the payload. All of that is gone. Structured output
+	 * is not a second transport — it is `run()` with an `outputSchema`, which is the ONE switch that
+	 * makes a call a classification (§4.2). The final assistant text now arrives already delimited by
+	 * the terminal frame, so there is nothing left to excavate it from.
+	 *
+	 * `IssueClassifier` is deliberately NOT changed in this phase: it still calls `generate()` and
+	 * still gets a validated object or a named error. Turning the consumer is Fase 3. Keeping the
+	 * signature while replacing everything beneath it is what makes "behaviour visible to the app is
+	 * unchanged" a claim with a subject rather than a vacuous truth.
+	 *
+	 * The two failure modes stay NAMED and stay thrown, because that is this seam's contract even
+	 * though `run()`'s own contract is never to throw: a `failed` terminal event (bad or absent JSON)
+	 * becomes `CLASSIFICATION_FAILED`, and a transport stop becomes `TERMINAL_SPAWN_FAILED`.
+	 */
 	async generate<OutputSchema extends ZodType>(request: AgentGenerateRequest<OutputSchema>): Promise<z.output<OutputSchema>> {
-		const { cmd } = buildCommand(request.provider, request.binaryPath, 'generate', request.prompt, request.systemPrompt)
-		const proc = spawnOneShot(cmd, request.cwd)
-		const [stdout, code] = await Promise.all([collectStream(proc.stdout), waitExit(proc, cmd)])
-		if (code !== 0) {
-			throw new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `${request.provider} generate exited with code ${code}`)
+		if (!this.agentRunner) {
+			throw new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', 'generate() requires an AgentRunner; none was injected')
 		}
-		const json = extractJson(stdout)
-		if (json === undefined) {
-			throw new BaseError<TerminalApplicationErrors>('CLASSIFICATION_FAILED', `${request.provider} produced no parseable JSON output`)
+
+		for await (const event of this.agentRunner.run({
+			agentName: AgentName.CLASSIFY_ISSUE,
+			provider: request.provider,
+			// `run()` treats cwd as required — an implicit `process.cwd()` is the worst possible default
+			// for a call that may touch the filesystem, so the old optional field resolves explicitly.
+			cwd: request.cwd ?? process.cwd(),
+			systemPrompt: request.systemPrompt,
+			messages: [{ role: AgentMessageRole.USER, content: request.prompt }],
+			outputSchema: request.outputSchema,
+			binaryPath: request.binaryPath,
+		})) {
+			if (event.type !== 'finished') continue
+			const { result } = event
+			if (result.stop) {
+				throw new BaseError<TerminalApplicationErrors>('TERMINAL_SPAWN_FAILED', `${request.provider} generate stopped: ${result.stop.kind} — ${result.stop.detail}`)
+			}
+			if (result.failed || result.output === undefined) {
+				throw new BaseError<TerminalApplicationErrors>('CLASSIFICATION_FAILED', result.failure ?? `${request.provider} produced no parseable JSON output`)
+			}
+			return result.output as z.output<OutputSchema>
 		}
-		return request.outputSchema.parse(json) as z.output<OutputSchema>
+
+		// `run()` yields exactly one `finished` event, always last — so this is unreachable unless that
+		// invariant breaks. Named rather than silent, because a silent `undefined` here would surface
+		// as a confusing schema error three layers up.
+		throw new BaseError<TerminalApplicationErrors>('CLASSIFICATION_FAILED', `${request.provider} run produced no terminal event`)
 	}
 
 	// ── stream(): interactive claude engine (or pipes fallback for other providers) ─────────────
