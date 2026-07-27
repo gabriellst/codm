@@ -2399,6 +2399,9 @@ de pre-commit reprova neste repo).
 | `56cc43a9` | 5b — `types/Agent.ts`, os dois agents, `IssueRouter`, `OpenIssueRef` → `thread/`, DI |
 | `cd015bbc` | 5c — skill `agent` + verbo `bun cli agent` + taxonomia + gate gap fechado |
 | `80064ad2` | regen do SDK (a TAG OpenAPI segue o contexto) |
+| `db8b4526` | os oito defeitos de contrato corrigidos NO GOAL + este ledger |
+| `b193f11e` | surface do commit de terceiro (`a6888d73`) que pousou na branch durante a fase |
+| `de3d56ff` | ciclo de fix da AC-5.5 — porta/impl/mock do `IssueRouter` |
 
 ## O MOVE, e o que renomeou
 
@@ -2567,9 +2570,27 @@ de dívida nº 1 abaixo, que ele torna obsoleta.
    founder que estava pendente foi, na prática, tomada por esse commit; confirmar ou reverter.
 2. `codex`/`opencode` detect-only — inalterado (o `NOT_IMPLEMENTED` da Fase 4.5 segue sendo a guarda).
 3. `phase3-smoke.ts` não compila (acima).
-4. AC-5.5 (`bun review --pr` sem `critical`) — **não rodada**: é a única AC não determinística do
-   documento, custa uma passada de LLM sobre o diff inteiro e a própria AC declara que **não bloqueia
-   a fase**. Registrada aqui como pendência explícita, não como verde.
+4. AC-5.5 — **RODADA, um ciclo de fix, FECHADA.** `bun scripts/review.ts --pr --base b42151bc~1`
+   (55 arquivos). Resultado: os **seis arquivos novos de agent** voltaram com **ZERO `critical`** — é
+   o checklist `agent` criado no 5c que os revisou. Os `critical` concentraram-se todos em
+   `IssueRouter.ts`, **onze**, com uma única causa raiz: classe concreta nua onde a skill `service`
+   manda porta abstrata (SVC-01, SVCI-01, SVC-P01/P02/P11/P12, SVC-C03, SVC-P03/P06, bp-04, SVCI-02).
+   Corrigido em `de3d56ff`: `IssueRouter` (porta) + `DefaultIssueRouter` + `MockIssueRouter`.
+   - **Três dos onze eram FALSO POSITIVO** de escopo (SVCI-02 / SVC-P03 / SVC-P12, "nenhum binding de
+     registry evidenciado"): o binding existia em `agent/registry.ts` desde o 5b — o revisor vê um
+     arquivo por vez. Corrigidos assim mesmo, porque a porta é o que o binding deve nomear.
+   - **Uma recomendação foi conscientemente NÃO seguida:** SVC-C03 manda bindar o Mock no env `mock`.
+     Medido: fazer isso deixou **dois testes de `inbound-routing.flow` vermelhos**, porque a única I/O
+     deste serviço é o agent, cuja única I/O é o `AgentRunner` — já stub fora do `real`. O canned
+     router substituiria política REAL por resposta fixa justamente nas suítes que existem para
+     exercitar a coreografia inbound→classify→run. `DefaultIssueRouter` fica nos três envs e o
+     `MockIssueRouter` é alcançado por `testBed.override` por suíte. Registrado no comentário do
+     registry, não só aqui.
+   - Findings `high`/`medium`/`low` são advisory pela própria AC: registrados, não corrigidos. Dois
+     merecem menção por serem **pré-existentes e não introduzidos por esta fase**:
+     `ClassifyMessage` UC-06 (leituras fora da transação — sempre foi assim) e UC-C02 ("NEW_ISSUE não
+     cria a Issue"), este último factualmente errado sobre o desenho: a Issue é materializada pela saga
+     (`MaterializeIssueFromExecution`, a partir de `issue.opened`), não pelo use case de classificação.
 
 ## PRÓXIMO PASSO
 
