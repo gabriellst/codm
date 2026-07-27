@@ -3873,14 +3873,42 @@ que é o custo real desta classe de bug.
 
 **O que muda.**
 - `--external @electric-sql/pglite` → `--external @libsql/client --external libsql`.
-- `resolvePgliteRoot()` → `resolveLibsqlRoots()`, devolvendo os pacotes a copiar:
-  `libsql`, `@libsql/client`, e o prebuild do triple do host (`@libsql/darwin-arm64` etc.).
-  Copiar todos para `dist/node_modules/<nome>` com `dereference: true` (mesma manobra que já
-  era feita para o PGlite — o walk-up do Node a partir de `dist/server.js` os encontra).
-- Remover o loop que apagava `pglite-*.wasm/.data` (não há mais asset embutido).
+- `resolvePgliteRoot()` → `resolveExternalRoots()`, devolvendo os pacotes a copiar para
+  `dist/node_modules/<nome>` com `dereference: true` (mesma manobra que já era feita para o
+  PGlite — o walk-up do Node a partir de `dist/server.js` os encontra).
+
+  > **DEFEITO DO PLANO, corrigido NA EXECUÇÃO de T24.** O plano listava três pacotes
+  > (`libsql`, `@libsql/client`, prebuild do triple do host). **É insuficiente e o node-boot
+  > morre no primeiro require aninhado.** MEDIDO (walk de `dependencies` +
+  > `optionalDependencies` instaladas, a partir de `packages/api/typescript/core`): o fecho
+  > são **11** pacotes — `@libsql/client`, `@libsql/core`, `js-base64`,
+  > `@libsql/hrana-client`, `@libsql/isomorphic-ws`, `ws`, `libsql`, `@neon-rs/load`,
+  > `detect-libc`, `@libsql/darwin-arm64`, `promise-limit`. Logo `resolveExternalRoots()` faz
+  > o **fecho transitivo**, não uma lista fixa; os `optionalDependencies` ausentes são os
+  > prebuilds das OUTRAS plataformas (`continue`, não erro) — é exatamente assim que só o
+  > triple do host entra. `@types/*` são pulados (type-only, nunca requeridos em runtime).
+- Remover o loop que apagava `pglite-*.wasm/.data` (não há mais asset embutido) **e trocar
+  `--outdir` + `--entry-naming` por `--outfile`**: a contorção existia só por causa dos
+  imports `with { type: 'file' }` do driver deletado. VERIFICADO: `grep -rn "type: 'file'"
+  packages/api/typescript --include='*.ts'` ⇒ 0 hits.
 - `contractsMigrations` passa de `../../contracts/db/migrations` para
   `../../contracts/db/schema-sqlite/migrations`.
+
+  > **SEGUNDO DEFEITO DO PLANO, corrigido NA EXECUÇÃO de T24 — o DESTINO também muda.** O
+  > plano trocava só a ORIGEM e mantinha o destino `dist/migrations`. O bloco 2 reescreveu
+  > `packages/contracts/db/migrations.ts`, cujo fallback hoje é
+  > `join(dirname(fileURLToPath(import.meta.url)), 'schema-sqlite', 'migrations')`. MEDIDO no
+  > bundle emitido (`dist/server.js:164460`): o bundler reescreve `import.meta.url` para o
+  > arquivo de saída, então o fallback resolve para **`dist/schema-sqlite/migrations`** — com
+  > o destino antigo o daemon sob node não acha migration nenhuma. O staging passa a ser
+  > `dist/schema-sqlite/migrations`, **espelhando** o sufixo do contracts, e o AC abaixo foi
+  > corrigido junto. Provado por `bun run smoke:node` (200 em `/v1/session`).
 - Reescrever o docblock inteiro do topo (as duas justificativas citam PGlite nominalmente).
+- **Restaurar a forma ABSOLUTA do gate de pglite** (T11/T23 excluíam `scripts/build.ts` e
+  `scripts/smoke-node-boot.ts` **pelo nome**, porque eram deliverable desta task). Junto com
+  o docblock de `build.ts`, T24 corrige as 2 linhas de prosa de `scripts/smoke-node-boot.ts`
+  (`:5`, `:7`) que ainda citavam PGlite. Depois de T24 o gate roda **sem exclusão** sobre
+  `packages/api/typescript`.
 
 **AC.**
 ```bash
@@ -3893,13 +3921,26 @@ cd "$(git rev-parse --show-toplevel)"   # ÂNCORA (iteração 5)
   cd packages/api/typescript
   bun run build
   test -f dist/server.js
-  test -d dist/migrations && test "$(ls dist/migrations/*.sql 2>/dev/null | wc -l | tr -d ' ')" = "2"
+  # ⚠️ `dist/schema-sqlite/migrations`, NÃO `dist/migrations` — o destino ESPELHA o sufixo do
+  #    fallback de packages/contracts/db/migrations.ts (ver o defeito medido no corpo da task).
+  test -d dist/schema-sqlite/migrations
+  test "$(ls dist/schema-sqlite/migrations/*.sql 2>/dev/null | wc -l | tr -d ' ')" = "2"
   test -d dist/node_modules/libsql
   ls dist/node_modules/@libsql | grep -qE 'darwin|linux|win32'
   ! ls dist | grep -q pglite
   # o binário node sobe de verdade
   bun run smoke:node
 )
+# GATE ABSOLUTO restaurado — as exclusões por nome de T11/T23 morrem aqui.
+# Guard de âncora primeiro (um `! grep` sobre caminho inexistente sai 0):
+test -d packages/api/typescript
+grep -rq "drizzle" packages/api/typescript/src --include='*.ts'
+! grep -rn "pglite\|PGlite\|node-postgres\|pg-core" \
+    packages/api/typescript/src packages/api/typescript/core/src \
+    packages/api/typescript/scripts packages/api/typescript/tests --include='*.ts' --include='*.json'
+( cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit )
+bun tsc
+bun lint
 ```
 
 ---

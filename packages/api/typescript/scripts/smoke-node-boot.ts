@@ -2,10 +2,10 @@
 /**
  * Node-boot smoke — the gate that actually exercises the RUN-UNDER-NODE path (the e2e suite boots
  * from Bun source, so it proves nothing here). Builds the node bundle, boots `node dist/server.js`
- * against a scratch data dir, asserts `/v1/session` answers 200 (only true once the embedded PGlite
- * migrated and the HTTP server is listening), then tears down. This is what would have caught the two
- * boot failures the grounded plan hit: the `import.meta.url` migrations path and the orphaned PGlite
- * WASM assets.
+ * against a scratch data dir, asserts `/v1/session` answers 200 (only true once the shared SQLite
+ * store migrated and the HTTP server is listening), then tears down. This is what would have caught
+ * the two boot failures the grounded plan hit: the `import.meta.url` migrations path and the native
+ * libsql addon left unresolvable outside `dist/node_modules`.
  *
  * Node is nvm-only on the build host (not on the bare non-interactive PATH), so resolve it explicitly:
  * honor `CODEDM_NODE_BIN`, else the newest node under `~/.nvm/versions/node`, else PATH `node`.
