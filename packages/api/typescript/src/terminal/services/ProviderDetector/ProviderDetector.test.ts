@@ -1,17 +1,22 @@
 import { describe, expect, it } from 'bun:test'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { PROVIDER_DEFS, type ProviderCapabilities } from '../../providers'
 import { SystemProviderDetector } from './SystemProviderDetector'
 import { MockProviderDetector } from './MockProviderDetector'
 
 /**
- * Faked `SystemProviderDetector` — overrides the two OS-touching probes so the caching + status
- * mapping logic is exercised against an in-memory machine (no real `claude`/`codex`/`opencode`
- * binary required, and no `--version` shell-out). `whichCalls` records probe activity so the cache
- * behavior is observable.
+ * Faked `SystemProviderDetector` — overrides the OS-touching probes so the caching + status mapping
+ * logic is exercised against an in-memory machine (no real `claude`/`codex`/`opencode` binary
+ * required, and no `--version` / `--help` shell-out). `whichCalls` records probe activity so the
+ * cache behavior is observable.
  */
 class FakeSystemProviderDetector extends SystemProviderDetector {
 	whichCalls = 0
-	constructor(private readonly installed: Partial<Record<string, { path: string; version?: string }>>) {
+	constructor(
+		private readonly installed: Partial<Record<string, { path: string; version?: string }>>,
+		/** Faked `--help` output keyed by binary path — drives the capability probe without a real CLI. */
+		private readonly helpText: Partial<Record<string, string>> = {},
+	) {
 		super()
 	}
 	protected override probeWhich(command: string): string | null {
@@ -22,6 +27,19 @@ class FakeSystemProviderDetector extends SystemProviderDetector {
 		const match = Object.values(this.installed).find(entry => entry?.path === binaryPath)
 		return match?.version
 	}
+	/**
+	 * Overrides only the SPAWN, not the grep: the flag→capability mapping under test is the REAL one,
+	 * read from the real `ProviderDef`. Faking the mapping too would make the assertion tautological.
+	 */
+	protected override async probeCapabilities(provider: ProviderKind, binaryPath: string): Promise<ProviderCapabilities> {
+		const help = this.helpText[binaryPath]
+		if (help === undefined) return {}
+		const caps: ProviderCapabilities = {}
+		for (const [flag, capability] of Object.entries(PROVIDER_DEFS[provider].capabilityFlags ?? {})) {
+			if (help.includes(flag)) caps[capability] = true
+		}
+		return caps
+	}
 }
 
 describe('SystemProviderDetector — detection logic (faked probes)', () => {
@@ -30,10 +48,35 @@ describe('SystemProviderDetector — detection logic (faked probes)', () => {
 		const detections = await detector.detect()
 
 		const claude = detections.find(d => d.name === ProviderKind.CLAUDE_CODE)
-		expect(claude).toEqual({ name: ProviderKind.CLAUDE_CODE, status: ProviderStatus.DETECTED, binaryPath: '/opt/homebrew/bin/claude', version: '1.2.3' })
+		expect(claude).toEqual({
+			name: ProviderKind.CLAUDE_CODE,
+			status: ProviderStatus.DETECTED,
+			binaryPath: '/opt/homebrew/bin/claude',
+			version: '1.2.3',
+			// No faked help text for this path → the probe found nothing, and NOTHING is the safe
+			// default: every capability is opt-in, so an unprobed binary is driven conservatively.
+			caps: {},
+		})
 
 		const codex = detections.find(d => d.name === ProviderKind.CODEX)
 		expect(codex).toEqual({ name: ProviderKind.CODEX, status: ProviderStatus.NOT_INSTALLED })
+	})
+
+	it('probes CAPABILITIES from help text via the def’s capabilityFlags map, per binary', async () => {
+		const detector = new FakeSystemProviderDetector(
+			{ claude: { path: '/opt/homebrew/bin/claude', version: '2.0.0' } },
+			{ '/opt/homebrew/bin/claude': '--include-partial-messages  stream token deltas\n--mcp-config <json>\n' },
+		)
+		const claude = await detector.resolve(ProviderKind.CLAUDE_CODE)
+		// Two flags present in the help → two capabilities. `--resume` is NOT in the faked help, so
+		// `sessionResume` stays absent: a capability is DISCOVERED, never assumed from the def.
+		expect(claude?.caps).toEqual({ partialMessages: true, mcpConfig: true })
+	})
+
+	it('yields NO capabilities when help text is unavailable — degradation is conservative, not optimistic', async () => {
+		const detector = new FakeSystemProviderDetector({ claude: { path: '/opt/homebrew/bin/claude' } }, {})
+		const claude = await detector.resolve(ProviderKind.CLAUDE_CODE)
+		expect(claude?.caps).toEqual({})
 	})
 
 	it('returns a row for every known provider', async () => {

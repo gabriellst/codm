@@ -1,15 +1,27 @@
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import type { ProviderCapabilities } from '../../providers'
 
 /**
  * The detection record for one provider CLI — the shape T08 (Settings) and T15 (Attach wizard) read
  * to render provider availability. `DETECTED` carries the resolved `binaryPath` + `version`;
  * `NOT_INSTALLED` carries neither.
+ *
+ * `caps` (GOAL-agent-abstraction §4.7, Fase 1) is the probe result: `helpArgs` output grepped for
+ * each key of the def's `capabilityFlags`. It is RETURNED, never stashed in a module-level map, and
+ * the caller threads it into `ProviderDef.buildArgs({ …, caps })`. That is the whole difference from
+ * the open-design implementation this pattern is adapted from — there `buildArgs` reads an ambient
+ * map that detection mutates, so its output silently depends on whether detection has run. Here
+ * `buildArgs` is a pure function of its arguments, and AC-1.2 proves it mechanically.
+ *
+ * Empty (`{}`) on a `NOT_INSTALLED` provider, and empty is the SAFE default: every capability is
+ * opt-in, so an unprobed binary is driven with the conservative argv rather than one it might reject.
  */
 export interface ProviderDetection {
 	name: ProviderKind
 	status: ProviderStatus
 	binaryPath?: string
 	version?: string
+	caps?: ProviderCapabilities
 }
 
 /**

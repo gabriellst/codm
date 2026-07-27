@@ -6,3 +6,30 @@ export { TerminalStopRaisedEvent, TerminalStopRaisedEventSchema } from './Termin
 export { TerminalSessionResumedEvent, TerminalSessionResumedEventSchema } from './TerminalSessionResumedEvent'
 export { TerminalSessionKilledEvent, TerminalSessionKilledEventSchema } from './TerminalSessionKilledEvent'
 export { TerminalSessionIdleEvictedEvent, TerminalSessionIdleEvictedEventSchema } from './TerminalSessionIdleEvictedEvent'
+
+// ── Agent turn facts (GOAL-agent-abstraction §4.3, Fase 1 contract lock) ────────────────────────
+// The SECOND of the three signal categories. Frozen HERE, BEFORE the codec that will produce them
+// (Fase 2), because the accumulator's whole job is stated by this union: a pure fold from transport
+// frames to these three facts, and nothing else. Writing the codec first would have let the wire
+// format dictate the domain vocabulary — which is precisely the failure this rewrite is undoing.
+export { AgentMessageEvent, AgentMessageEventSchema } from './AgentMessageEvent'
+export { AgentToolCallEvent, AgentToolCallEventSchema } from './AgentToolCallEvent'
+export { AgentUsageEvent, AgentUsageEventSchema } from './AgentUsageEvent'
+
+import type { AgentMessageEvent } from './AgentMessageEvent'
+import type { AgentToolCallEvent } from './AgentToolCallEvent'
+import type { AgentUsageEvent } from './AgentUsageEvent'
+
+/**
+ * Everything the accumulator can consolidate out of one turn's transport frames.
+ *
+ * Every member is a `BaseDomainEvent` subclass — NOT a POJO — because these go to the outbox, and a
+ * plain object would arrive at the mediator without a class to be rehydrated into. AC-1.7 proves the
+ * union with `instanceof` per variant.
+ *
+ * What is deliberately NOT in this union: anything the agent DECLARES (issue completed, stop raised,
+ * artifact recorded). Those are the THIRD category — they arrive as MCP tool calls, are persisted by
+ * the use case that serves the call, and reuse the event classes that already exist. Adding them
+ * here would be the double-publish §4.3 rule 3 exists to prevent.
+ */
+export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent | AgentUsageEvent
