@@ -98,9 +98,15 @@ export const claudeProviderDef: ProviderDef = {
 		// The two conditions are ANDed on purpose: `mcp` present says the AGENT asked for tools, the
 		// flags being declared says this BINARY can receive them. Neither alone is sufficient, and
 		// neither is a `provider === …` test.
-		if (mcp && claudeProviderDef.mcpConfigFlag && claudeProviderDef.allowedToolsFlag) {
-			args.push(claudeProviderDef.mcpConfigFlag, renderMcpConfig(mcp))
-			args.push(claudeProviderDef.allowedToolsFlag, mcp.allowedTools.join(','))
+		//
+		// `this.mcpConfigFlag` / `this.allowedToolsFlag` — NOT the module-level `claudeProviderDef`
+		// const. AC-1.2 requires `buildArgs` to read only its own arguments plus the def it is attached
+		// to; closing over the module binding instead of the receiver would silently diverge the day
+		// this object is spread/reconstructed, since `claudeProviderDef` names one specific singleton
+		// rather than "whichever def this method was called on".
+		if (mcp && this.mcpConfigFlag && this.allowedToolsFlag) {
+			args.push(this.mcpConfigFlag, renderMcpConfig(mcp))
+			args.push(this.allowedToolsFlag, mcp.allowedTools.join(','))
 		}
 
 		// Last, and unconditional: headless `-p` has no TTY to render a permission prompt on, so the

@@ -5,7 +5,16 @@ import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { PROVIDER_DEFS, type ProviderCapabilities } from '../../providers'
-import { KNOWN_PROVIDERS, PROVIDER_BINARIES, ProviderDetector, type ProviderDetection } from './ProviderDetector'
+import { KNOWN_PROVIDERS, ProviderDetector, type ProviderDetection } from './ProviderDetector'
+
+/**
+ * Bounds every liveness/capability probe (`--version`, `--help`) against a stalled or hostile CLI
+ * binary. Both probes sit on `resolve()`'s call path, which a session start `await`s directly — an
+ * unbounded `spawnSync` here blocks the whole daemon on one bad binary. Local `--version` / `--help`
+ * invocations return in single-digit milliseconds for every CLI this engine drives; 3s is generous
+ * headroom without letting one hung binary become a hung daemon.
+ */
+const PROBE_TIMEOUT_MS = 3_000
 
 /**
  * Real `ProviderDetector` — probes `PATH` + known install directories for each provider binary and
@@ -45,10 +54,15 @@ export class SystemProviderDetector extends ProviderDetector {
 	}
 
 	private async probeProvider(provider: ProviderKind): Promise<ProviderDetection> {
-		for (const binary of PROVIDER_BINARIES[provider]) {
+		const def = PROVIDER_DEFS[provider]
+		// `def.bin` + `def.fallbackBins` ARE the binary names to try, in order — there was a second,
+		// hand-maintained `PROVIDER_BINARIES` map duplicating this same fact until it was collapsed
+		// onto the def, which is the whole point of the def being the one source of truth (§4.7).
+		const binaries = [def.bin, ...(def.fallbackBins ?? [])]
+		for (const binary of binaries) {
 			const binaryPath = this.probeWhich(binary)
 			if (binaryPath) {
-				const version = await this.probeVersion(binaryPath)
+				const version = await this.probeVersion(binaryPath, def.versionArgs)
 				const caps = await this.probeCapabilities(provider, binaryPath)
 				return { name: provider, status: ProviderStatus.DETECTED, binaryPath, version, caps }
 			}
@@ -67,14 +81,28 @@ export class SystemProviderDetector extends ProviderDetector {
 	 * The flag→capability MAP lives in the def, not here — this method contains zero provider
 	 * knowledge, which is what stops it from becoming the next `switch (provider)`.
 	 *
-	 * Any failure (binary gone, non-zero exit, help on stderr only, throw) yields `{}` — every
-	 * capability is opt-in, so the unprobed binary is driven with the conservative argv.
+	 * Any failure (binary gone, non-zero exit, help on stderr only, throw, TIMEOUT) yields `{}` —
+	 * every capability is opt-in, so the unprobed binary is driven with the conservative argv. A
+	 * timeout or spawn error is never silent, though: it is a structured `console.warn` (see
+	 * `logProbeFailure`), because a probe that silently degrades AND silently fails is undebuggable
+	 * the day a CLI update makes `--help` hang.
 	 */
 	protected async probeCapabilities(provider: ProviderKind, binaryPath: string): Promise<ProviderCapabilities> {
 		const def = PROVIDER_DEFS[provider]
 		if (!def.helpArgs || !def.capabilityFlags) return {}
 		try {
-			const res = spawnSync(binaryPath, [...def.helpArgs], { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' })
+			const res = spawnSync(binaryPath, [...def.helpArgs], {
+				stdio: ['ignore', 'pipe', 'pipe'],
+				encoding: 'utf8',
+				timeout: PROBE_TIMEOUT_MS,
+			})
+			// `spawnSync` does not throw on timeout — it kills the child and sets `res.error`
+			// (`ETIMEDOUT`) instead. Catching only the `throw` path (ENOENT-before-spawn, etc.) would
+			// miss exactly the hang this bound exists to guard against.
+			if (res.error) {
+				this.logProbeFailure('capability', binaryPath, res.error)
+				return {}
+			}
 			// Some CLIs print help to stderr and exit non-zero; both streams count, the exit code does not.
 			const help = `${res.stdout ?? ''}\n${res.stderr ?? ''}`
 			if (!help.trim()) return {}
@@ -83,7 +111,8 @@ export class SystemProviderDetector extends ProviderDetector {
 				if (help.includes(flag)) caps[capability] = true
 			}
 			return caps
-		} catch {
+		} catch (error) {
+			this.logProbeFailure('capability', binaryPath, error)
 			return {}
 		}
 	}
@@ -99,15 +128,42 @@ export class SystemProviderDetector extends ProviderDetector {
 		return null
 	}
 
-	/** Read `<binaryPath> --version`, returning the trimmed first line, or undefined on any failure. */
-	protected async probeVersion(binaryPath: string): Promise<string | undefined> {
+	/**
+	 * Read `<binaryPath> <versionArgs>`, returning the trimmed first line, or undefined on any
+	 * failure (non-zero exit, no stdout, throw, or TIMEOUT — see `probeCapabilities` for why the
+	 * `res.error` check matters and `logProbeFailure` for why it is never silent).
+	 *
+	 * `versionArgs` comes from the def (`ProviderDef.versionArgs`), not a hardcoded `['--version']`
+	 * — this used to be the second hardcoded copy of a fact the def already declares.
+	 */
+	protected async probeVersion(binaryPath: string, versionArgs: readonly string[]): Promise<string | undefined> {
 		try {
-			const res = spawnSync(binaryPath, ['--version'], { stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8' })
+			const res = spawnSync(binaryPath, [...versionArgs], {
+				stdio: ['ignore', 'pipe', 'ignore'],
+				encoding: 'utf8',
+				timeout: PROBE_TIMEOUT_MS,
+			})
+			if (res.error) {
+				this.logProbeFailure('version', binaryPath, res.error)
+				return undefined
+			}
 			if (res.status !== 0 || !res.stdout) return undefined
 			return res.stdout.trim().split('\n')[0]?.trim() || undefined
-		} catch {
+		} catch (error) {
+			this.logProbeFailure('version', binaryPath, error)
 			return undefined
 		}
+	}
+
+	/**
+	 * The one place a probe failure becomes visible. `console.warn` matches the house style for
+	 * non-fatal infra warnings (`src/index.ts`'s graceful-shutdown step failures) — there is no
+	 * lighter-weight structured logger at this layer; `RunnerLogger` is scoped to a running terminal
+	 * session, which does not exist yet during detection.
+	 */
+	private logProbeFailure(kind: 'version' | 'capability', binaryPath: string, error: unknown): void {
+		const reason = error instanceof Error ? error.message : String(error)
+		console.warn(`⚠️ provider ${kind} probe failed for "${binaryPath}" — degrading to conservative default: ${reason}`)
 	}
 }
 

@@ -1,4 +1,4 @@
-import { z, type ZodObject, type ZodRawShape, type ZodTypeAny, type ZodLiteral, ZodDiscriminatedUnion } from 'zod'
+import { z, type ZodObject, type ZodRawShape, type ZodTypeAny, type ZodLiteral, ZodDiscriminatedUnion, type util } from 'zod'
 import { instanceInputSchemaMap } from './InstanceRegistry'
 import { stringToInteger } from './Transforms'
 
@@ -50,13 +50,19 @@ export const BaseAgentInputSchema = z.object({
 })
 
 /**
- * Return type of `z.agentInput(props)`: the envelope shape INTERSECTED with the
- * per-agent shape. Declaring the intersection (rather than letting `.extend()`'s
- * `util.Extend<…>` flatten leak out) is what keeps the result assignable to
- * `AgentInputSchemaConstraint` — i.e. what makes the constraint hold BY
- * CONSTRUCTION instead of by discipline.
+ * Return type of `z.agentInput(props)`: the envelope shape extended with the per-agent shape,
+ * spelled with zod's OWN `util.Extend<…>` — the exact type its real `ZodObject.extend()` produces
+ * (`zod/v4/classic/schemas.d.ts`: `extend<U>(shape: U): ZodObject<util.Extend<Shape,
+ * util.Writeable<U>>, Config>`). A plain intersection (`Shape & T`) used to stand in here instead;
+ * it reads the same for the common case (no key overlap between the envelope and `T`), but it is
+ * not what the implementation actually returns, and for an OVERLAPPING key it is a different type
+ * altogether — `util.Extend` drops the envelope's field and keeps `T`'s (matching `.extend()`'s real
+ * override semantics), where a naive `Shape & T` would intersect two possibly-incompatible Zod
+ * schemas into a type nothing can construct. Still assignable to `AgentInputSchemaConstraint`
+ * (`ZodObject<envelope & ZodRawShape>`, `src/terminal/types/AgentInput.ts`) because `Shape` is
+ * covariant (`out`) — `Extend<Shape, T>` carries every one of the envelope's fields.
  */
-type AgentInputObjectSchema<T extends ZodRawShape> = ZodObject<(typeof BaseAgentInputSchema)['shape'] & T>
+type AgentInputObjectSchema<T extends ZodRawShape> = ZodObject<util.Extend<(typeof BaseAgentInputSchema)['shape'], util.Writeable<T>>>
 
 // Meta options with examples
 interface SchemaOptions {

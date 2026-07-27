@@ -43,10 +43,3 @@ export abstract class ProviderDetector {
 
 /** Every provider CLI the engine knows how to detect + drive, in display order. */
 export const KNOWN_PROVIDERS: readonly ProviderKind[] = [ProviderKind.CLAUDE_CODE, ProviderKind.CODEX, ProviderKind.OPENCODE]
-
-/** The binary name(s) each provider ships, tried in order during a probe. */
-export const PROVIDER_BINARIES: Record<ProviderKind, readonly string[]> = {
-	[ProviderKind.CLAUDE_CODE]: ['claude'],
-	[ProviderKind.CODEX]: ['codex'],
-	[ProviderKind.OPENCODE]: ['opencode'],
-}
