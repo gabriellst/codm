@@ -2249,6 +2249,33 @@ mudança de comportamento observável** — provar pelo diff.
 `agents/IssueWorkAgent/`; `services/IssueRouter/`; `OpenIssueRef` migra para `thread/`; tokens DI.
 **Na mesma fase**: skill `agent` + verbo `bun cli agent` (§5.4).
 
+> **EMENDA (founder, 27-jul) — o contexto `terminal` some INTEIRO, símbolos inclusive.** O `git mv`
+> move o diretório, mas 10 símbolos ainda se chamam `Terminal*` e ficariam como resíduo de um contexto
+> que deixou de existir. Eles se dividem em duas categorias e **só uma delas renomeia**:
+>
+> **(a) Fatos do RUN — renomeiam para `Agent*`** (são domain events INTERNOS, verificado: nenhum é
+> nome congelado de wire): `TerminalSessionStartedEvent`, `TerminalSessionCompletedEvent`,
+> `TerminalStopRaisedEvent`, `TerminalReplyDraftedEvent`, `TerminalRunOutcome`,
+> `PublishTerminalIntegrationEvents`, e `RunTerminalSessionOnClassification` — este último já é
+> mentira hoje, porque o use case que ele invoca virou `RunIssueTurn` na Fase 3.
+>
+> **(b) A SUPERFÍCIE DE SAÍDA — não renomeia por ora**: `StreamTerminalSession` (o endpoint SSE),
+> `TerminalOutputAccumulator` e `TuiActionType` descrevem o *painel de terminal* que o operador olha,
+> não o agent. Continuam sob `agent/` (o contexto é dono do stream dos próprios runs), e o
+> vocabulário deles é assunto da **Fase 7**, que reescreve esse frame — renomear aqui e reescrever lá
+> é trabalho duplicado.
+>
+> **Trave dura antes de renomear qualquer coisa que cruze a wire:** os nomes de integration event são
+> **congelados** (§4.3). Verificar cada um contra `packages/contracts/wire/events/` e **não tocar** —
+> renomear um domain event interno é livre; renomear um nome de wire é quebra de contrato. Se algum
+> nome congelado contiver "terminal", ele **fica**, e o BUILD-LOG registra por quê.
+>
+> **AC-5.10** `test ! -d packages/api/typescript/src/terminal` — o diretório **não existe**.
+> **AC-5.11** `git grep -nE "\bTerminal(Session|Run|Reply|Stop)[A-Za-z]*" -- packages/api/typescript/src` → **0 hits**
+> (a categoria (a) foi inteira). A categoria (b) sobrevive e é nomeada explicitamente na exclusão.
+> **AC-5.12** `git log --follow` num arquivo movido mostra história anterior ao `git mv` — o move
+> preserva história, não recria arquivo.
+
 **AC-5.1** `bun detect` (registry-scan, import-direction, slice-closure) verde; ciclo anotado
 reescrito para `['agent','thread']`.
 **AC-5.2** `git grep -n "'terminal'\|@terminal/" -- packages/api/typescript/src packages/app` → **0
