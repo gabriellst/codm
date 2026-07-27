@@ -376,9 +376,9 @@ export const REPO = {
 			consumers: ['apiTs', 'apiGo'],
 			schema: 'kernel',
 			example: '~/.codedm/data',
-			doc: 'embedded file-backed PGlite data dir for the real daemon (migrations apply on boot); ~ expands to $HOME. api-go reads it as the gateway data-dir root.',
+			doc: 'shared data dir for the real daemon; ~ expands to $HOME. api-go opens the SQLite store here (codedm.db + whatsmeow session tables, migrations apply on boot); api-ts still uses it for its embedded PGlite until its own move lands.',
 		},
-		REDIS_URL: { consumers: ['apiTs', 'apiGo'], schema: 'kernel', example: 'redis://localhost:6379' },
+		REDIS_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'redis://localhost:6379' },
 		// ── Verbatim medscall channel service config (port b4530e2b) — CHANNEL_* primary keys with
 		// generic fallbacks read by internal/shared/config/config.go. Retarget/rename happens in the
 		// classification step; declared here so ENV-03 parity holds over the verbatim code.
@@ -392,9 +392,7 @@ export const REPO = {
 		ALLOWED_ORIGINS: { consumers: ['apiGo'], example: 'http://localhost:5173', doc: 'generic CORS fallback' },
 		CHANNEL_ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'gateway environment (fallback: ENVIRONMENT)' },
 		ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'generic environment fallback' },
-		CHANNEL_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'codedm-gateway', doc: 'Redis consumer group for the gateway' },
-		CHANNEL_SERVICE_NAME: { consumers: ['apiGo'], example: 'gateway', doc: 'service name for logs/traces (fallback: SERVICE_NAME)' },
-		SERVICE_NAME: { consumers: ['apiGo'], example: 'gateway', doc: 'generic service-name fallback' },
+		CHANNEL_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'codedm-gateway', doc: 'outbox source tag for the gateway' },
 		CHANNEL_GLOBAL_API_KEY: {
 			consumers: ['apiGo'],
 			secret: true,
@@ -402,11 +400,6 @@ export const REPO = {
 			doc: 'gateway HTTP apikey guard (TS proxy sends it server-side; fallback: GLOBAL_API_KEY)',
 		},
 		GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'generic apikey fallback' },
-		WHATSMEOW_DATABASE_URL: {
-			consumers: ['apiGo'],
-			example: 'postgres://postgres:postgres@localhost:5432/codedm?sslmode=disable',
-			doc: 'whatsmeow session store (empty falls back to DATABASE_URL)',
-		},
 		WHATSMEOW_LOG_LEVEL: { consumers: ['apiGo'], example: 'WARN', doc: 'whatsmeow client log level' },
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
@@ -487,8 +480,10 @@ export const REPO = {
 		// (CODEDM_GATEWAY_API_KEY removed: its only consumers were the deleted per-endpoint ui
 		// proxies. The gateway's own guard is CHANNEL_GLOBAL_API_KEY — empty/allow-all in proxied
 		// deployments, since auth lives on the api-ts external/ChannelProxy hop.)
-		// (CODEDM_GATEWAY_WHATSMEOW_URL removed: dead key — config.go reads
-		// WHATSMEOW_DATABASE_URL; nothing ever consumed the CODEDM_* spelling.)
+		// (WHATSMEOW_DATABASE_URL removed: whatsmeow's session tables now live in the
+		// shared SQLite store, opened from CODEDM_DATA_DIR — there is no separate
+		// database to point at. CHANNEL_SERVICE_NAME/SERVICE_NAME went with it: they
+		// only ever drove the Postgres search_path.)
 		// ── misc ──
 		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
 		// ── frontend (only VITE_* reach the browser) ──
