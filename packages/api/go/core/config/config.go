@@ -26,6 +26,17 @@ type Config struct {
 	// so the data-dir dance never leaks through the layers.
 	DataDir string
 
+	// TestIngress mounts the gateway's test-only ingress seam
+	// (internal/channel/testseam) — the only unattended path to the CONNECTED
+	// literal, since the production producer of channel.gateway_connected needs a
+	// QR scanned on a phone. FAIL-CLOSED under PRODUCTION (see Load), mirroring
+	// src/boot.ts on the TS side.
+	//
+	// Read HERE and nowhere else, deliberately: the ENV-03 rail
+	// (tests/architecture/env-model.test.ts) only scans this file for
+	// getEnvOrDefault|os.Getenv, so a flag read anywhere else passes UNDER the rail.
+	TestIngress bool
+
 	// Channel
 	GlobalAPIKey      string
 	WhatsmeowLogLevel enums.LogLevel `validate:"omitempty,oneof=DEBUG INFO WARN ERROR"`
@@ -49,6 +60,13 @@ func Load() (*Config, error) {
 		WhatsmeowLogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),
 		AllowedOrigins:    parseOrigins(getEnvOrDefault("CHANNEL_ALLOWED_ORIGINS", os.Getenv("ALLOWED_ORIGINS"))),
 		DataDir:           getEnvOrDefault("CODEDM_DATA_DIR", ""),
+		TestIngress:       getEnvOrDefault("CODEDM_E2E", "") == "true",
+	}
+
+	// FAIL-CLOSED. A test seam that raises domain events on demand must not be a
+	// runtime toggle in a shipped build: refuse to boot rather than serve it.
+	if cfg.TestIngress && cfg.Environment == enums.EnvironmentProduction {
+		return nil, errors.NewBaseError(errors.CodeMissingEnvVar, "CODEDM_E2E is a test-only ingress seam and is refused under PRODUCTION")
 	}
 
 	validate := validator.New()

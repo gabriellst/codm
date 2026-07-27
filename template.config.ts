@@ -385,7 +385,11 @@ export const REPO = {
 	// ── STAMP-MANAGED: env — create-template keeps a key iff at least one KEPT consumer remains (set algebra over `consumers`); the stamped .env.example is re-rendered from the pruned registry so `bun env:generate --check` stays green inside a stamp ──
 	env: {
 		// ── compose / identity ──
-		PROJECT: { consumers: ['compose'], example: 'codedm', doc: 'docker-compose prefix + Config.name (container naming only — there is no external database)' },
+		PROJECT: {
+			consumers: ['compose'],
+			example: 'codedm',
+			doc: 'docker-compose prefix + Config.name (container naming only — there is no external database)',
+		},
 		SERVICE: { consumers: ['compose'], example: 'backend', doc: 'docker-compose container prefix (${PROJECT}-${SERVICE})' },
 		NODE_ENV: { consumers: ['apiTs'], schema: 'kernel', example: 'development' },
 		PRODUCT_NAME: {
@@ -432,6 +436,15 @@ export const REPO = {
 		},
 		GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'generic apikey fallback' },
 		WHATSMEOW_LOG_LEVEL: { consumers: ['apiGo'], example: 'WARN', doc: 'whatsmeow client log level' },
+		// NO `schema:` on purpose — ENV-05 requires one EXACTLY when apiTs is a consumer, and the TS
+		// side reads this flag as raw process.env (src/shared/index.ts, src/boot.ts), outside
+		// RawEnvSchema. Declared with apiGo as the consumer because config.go is where it is now read,
+		// which is what puts it under the ENV-03 rail.
+		CODEDM_E2E: {
+			consumers: ['apiGo'],
+			example: '',
+			doc: 'test-only gateway ingress seam (internal/channel/testseam); refused under PRODUCTION',
+		},
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
 			schema: 'kernel',

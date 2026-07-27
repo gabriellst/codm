@@ -12,7 +12,9 @@ import (
 	gateway "template/api-go/internal/channel/services/gateway"
 	whatsapp "template/api-go/internal/channel/services/gateway/whatsapp"
 	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/testseam"
 	"template/api-go/internal/channel/usecases"
+	"template/core-go/config"
 	"template/core-go/repositories"
 	"template/core-go/services/mediator"
 	"template/core-go/services/unitofwork"
@@ -116,6 +118,16 @@ var Module = fx.Module("channel",
 	fx.Provide(usecases.NewUnmuteRemoteHandler),
 	fx.Provide(usecases.NewMarkRemoteAsUnreadHandler),
 	fx.Provide(usecases.NewMarkRemoteAsSeenHandler),
+
+	// TEST-ONLY ingress seam — see internal/channel/testseam. `flatten` is what makes the slot
+	// genuinely OPTIONAL: a provider that returned a bare types.Controller would have to hand back
+	// a nil interface when the flag is off, and registerControllers calls Metadata() on every
+	// element. An empty slice contributes nothing to the group, so the route is not merely
+	// unreachable — it is never registered.
+	fx.Provide(fx.Annotate(
+		newTestIngressControllers,
+		fx.ResultTags(`group:"controllers,flatten"`),
+	)),
 
 	// Controllers — channel management
 	fx.Provide(fx.Annotate(controllers.NewCreateWhatsAppChannelController,
@@ -396,3 +408,13 @@ func registerDomainEventHandlers(
 // channel.message_* domain events in shared.events, and the ListMessages
 // query aggregates them at read time. Delivery status is similarly
 // computed from channel.message_delivered / channel.message_seen events.
+
+// newTestIngressControllers mounts the test-only gateway ingress seam ONLY under CODEDM_E2E.
+// cfg.TestIngress is already refused under PRODUCTION by config.Load, so this stays a plain
+// read of a decided flag rather than a second place that reasons about environments.
+func newTestIngressControllers(cfg *config.Config, m mediator.InternalMediator) []types.Controller {
+	if !cfg.TestIngress {
+		return nil
+	}
+	return []types.Controller{testseam.NewTestIngressController(m)}
+}
