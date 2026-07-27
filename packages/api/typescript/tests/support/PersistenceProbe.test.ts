@@ -85,17 +85,20 @@ describe('PersistenceProbe', () => {
 
 	describe('snapshot() — typed cross-table count', () => {
 		it('returns a count per requested table, keyed exactly by the tuple passed in (runtime)', async () => {
-			// DISTINCT events, following the convention the `count()` test above already uses — and not an
-			// incidental style choice. `BaseEvent.id` is CONTENT-ADDRESSED (`Id.fromSeed(this.serialize())`,
-			// `core/src/types/BaseEvent.ts:22`), and the only varying input across two bare `makeEvent()`
-			// calls is `time`, at millisecond resolution. Two byte-identical events saved within the same
-			// millisecond therefore hash to the SAME id and the second insert dies on
-			// `UNIQUE constraint failed: shared_events.id` — a race this suite lost intermittently
-			// (reproduced roughly 1 run in 3, in isolation as well as inside the full suite).
+			// DISTINCT events, following the convention the `count()` test above already uses.
 			//
-			// The assertions below are UNCHANGED: this fixes the FIXTURE, not the expectation. Saving one
-			// event twice and demanding two rows contradicts content-addressed ids, which exist precisely
-			// so that a redelivered event is idempotent instead of duplicated.
+			// HISTORICAL NOTE, kept because the reasoning that stood here was WRONG and someone will
+			// wonder: `BaseEvent.id` used to be content-addressed (`Id.fromSeed(this.serialize())`), so two
+			// byte-identical events saved inside one millisecond hashed to the SAME id and the second
+			// insert died on `UNIQUE constraint failed: shared_events.id` — lost ~1 run in 3. The old
+			// comment concluded that "saving one event twice and demanding two rows contradicts
+			// content-addressed ids, which exist precisely so a redelivered event is idempotent". That
+			// conclusion was false. Nothing here relied on RECONSTRUCTING an event and getting the same id
+			// (the one path that does — Go's `derivedEventID` — derives from the SOURCE event id and never
+			// used this hash), and the events that collided are distinct facts rather than redeliveries:
+			// `AgentRunStartedEvent` fires once per turn on one issue with an identical payload by design.
+			// `BaseEvent.id` is UUIDv7 now, so distinct events never collide, while re-persisting the SAME
+			// instance still dedupes — the id travels on the instance.
 			await domainEventRepository.save(makeEvent({ entityId: testId('probe', 'snap-1'), itemId: 'item-snap-1' }))
 
 			const before = await testBed.probe().snapshot(['events', 'outbox', 'users'] as const)
