@@ -1821,6 +1821,29 @@ regex teria quebrado o contrato**, então quem tinha de mudar era a regra: ganho
 e um `.safeParse(` acrescentado a uma entidade real (`artifact/entities/Artifact.ts`) faz a regra
 disparar de novo (41) e volta a 40 ao reverter. `detect` de volta em **40 / 24**, a baseline exata.
 
+## FLAKE INVESTIGADO E **DESCARTADO** COMO DEFEITO (registrado para não ser reinvestigado do zero)
+
+Durante o gate, `tests/integration/redis-bridge.integration.test.ts` falhou ~1 em 4 com **timeout de
+5001ms**. Investigado até o fim em vez de aceito ou ignorado:
+
+- O arquivo **não é tocado** por esta fase, e ele registra o **próprio** `NewIssueStubRunner` via
+  `testBed.override(TerminalLLMRunner, …)` — a classe que esta fase alterou (`ClaudeCliTerminalLLMRunner`)
+  **nunca é construída** ali.
+- Em `c79251d2` (HEAD pré-fase), no checkout principal: **6/6 verde**. No HEAD desta fase, medido
+  depois, com a máquina ociosa: **10/10 verde**, e a suíte inteira **3× seguidas 751 pass / 0 fail**.
+- Conclusão: era **contenção de máquina**, não regressão. As medições ruins foram tiradas enquanto eu
+  rodava 8 suítes completas em laço **e** havia um processo concorrente na mesma árvore (que commitou
+  `759d917b` no meio do trabalho) — tudo disputando o **mesmo Redis**. O teste espera um round-trip
+  Go→TS real contra Redis vivo com o timeout **default de 5s** do bun.
+- **Não "consertado" por chute:** mexer no timeout seria escolher um número sem base de medição. Fica
+  registrado como sensível a carga; se voltar com a máquina ociosa, aí sim é defeito.
+
+**Nota de método:** duas tentativas de reproduzir em `git worktree` foram **inválidas** e estão
+descartadas — o preload `reflect-metadata` não resolve de dentro de um worktree
+(`Cannot find package 'reflect-metadata' from …/tests/setup.ts`), então o 6/6 falho ali media o
+harness, não o código. A medição válida foi `git checkout c79251d2 --detach` no checkout principal,
+com a árvore limpa e **sem `git stash`** (§8 regra 9).
+
 ## DÍVIDA REGISTRADA (não deixar envelhecer)
 
 - `entity#bp-03` casa `/\{\s*message:\s*['"]/` mas o nome dele escopa a `.refine()` — falso positivo
