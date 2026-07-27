@@ -1,6 +1,7 @@
 import { IconBell, IconChevronLeft, IconChevronRight, IconLayoutSidebar, IconPlus } from '@tabler/icons-react'
 import { useRouter } from '@tanstack/react-router'
 import type { ComponentProps } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { isTauri } from '@/services/utils/tauri/isTauri'
 
@@ -17,6 +18,7 @@ import { isTauri } from '@/services/utils/tauri/isTauri'
  */
 export function AppChrome() {
 	const router = useRouter()
+	const { t } = useTranslation()
 	// In Overlay mode the traffic lights sit top-left — reserve room for them (only inside the shell).
 	const trafficLightPad = isTauri() ? 'pl-[78px]' : 'pl-3'
 	return (
@@ -26,10 +28,10 @@ export function AppChrome() {
 		>
 			{/* LEFT — nav. Padding clears the overlaid traffic lights. */}
 			<div data-tauri-drag-region className={cn('flex items-center gap-1', trafficLightPad)}>
-				<ChromeButton aria-label="Back" onClick={() => router.history.back()}>
+				<ChromeButton aria-label={t('console.back')} onClick={() => router.history.back()}>
 					<IconChevronLeft className="size-4" />
 				</ChromeButton>
-				<ChromeButton aria-label="Forward" onClick={() => router.history.forward()}>
+				<ChromeButton aria-label={t('console.forward')} onClick={() => router.history.forward()}>
 					<IconChevronRight className="size-4" />
 				</ChromeButton>
 			</div>
@@ -41,13 +43,13 @@ export function AppChrome() {
 
 			{/* RIGHT — actions + (Win/Linux) window controls. */}
 			<div data-tauri-drag-region className="flex items-center justify-end gap-1 pr-3">
-				<ChromeButton aria-label="Notifications">
+				<ChromeButton aria-label={t('notifications.aria')}>
 					<IconBell className="size-4" />
 				</ChromeButton>
-				<ChromeButton aria-label="New">
+				<ChromeButton aria-label={t('console.new')}>
 					<IconPlus className="size-4" />
 				</ChromeButton>
-				<ChromeButton aria-label="Toggle sidebar">
+				<ChromeButton aria-label={t('console.toggleSidebar')}>
 					<IconLayoutSidebar className="size-4" />
 				</ChromeButton>
 				{/* TODO(win/linux): <WindowControls /> (min/max/close) via a WindowService. */}
@@ -76,6 +78,7 @@ function CommandCenter() {
 			type="button"
 			className="flex h-7 w-[420px] max-w-[40vw] items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60"
 		>
+			{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- brand wordmark, never localized (see Logo.tsx) */}
 			<span className="truncate">codedm</span>
 		</button>
 	)
