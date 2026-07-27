@@ -598,6 +598,16 @@ registry:
       name: "Manual safeParse + BaseError in behavior methods"
       severity: moderate
       mechanical: true
+      # entity-only: the rule is about an ENTITY BEHAVIOR METHOD hand-rolling validation instead of
+      # calling `this.validate()` — see the `right:` block below, which is an entity method. Without
+      # `scope: self` it travels through `context_reads: [entity]` into the service/usecase/handler
+      # registries, where a bare `.safeParse(` is not evidence of anything: OUTSIDE an entity,
+      # `safeParse` is the correct choice precisely because it does NOT throw. It fired on
+      # `StreamJsonAgentRunner.buildResult`, where GOAL-agent-abstraction §4.3 rule 4 REQUIRES
+      # non-throwing validation ("a validation failure becomes the terminal event with failed: true,
+      # never a thrown error, so consumers can still drain the stream cleanly") — there, `parse`
+      # would be the actual violation. Same species as the bp-03 false positive already on the books.
+      scope: self
       detect:
         - '\.safeParse\('
       wrong: |
