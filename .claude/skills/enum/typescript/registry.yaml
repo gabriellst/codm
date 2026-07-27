@@ -368,7 +368,9 @@ registry:
       severity: critical
       mechanical: true
       detect:
-        - '=\s*\[[^\]]*\]\s*as\s+const'
+        # Only literal members. `[Enum.A, Enum.B] as const` is a typed SUBSET of an existing
+        # enum, not a redeclaration — see the exception below.
+        - '=\s*\[[^\].]*\]\s*as\s+const'
         - '\(typeof\s+\w+\)\[number\]'
       wrong: |
         export const OrderStatus = ['PENDING', 'CONFIRMED', 'CANCELLED'] as const
@@ -379,6 +381,18 @@ registry:
           CONFIRMED = 'CONFIRMED',
           CANCELLED = 'CANCELLED',
         }
+      exception: |
+        A typed SUBSET of an enum that is already frozen elsewhere (typically a wire enum from
+        contracts) is NOT a violation — it declares no value-set of its own. Signal: every element
+        is a member reference, never a string literal.
+
+            export type TransportStopKind = typeof StopKind.AUTH_REQUIRED | typeof StopKind.SERVER_ERROR
+            export const TRANSPORT_STOP_KINDS = [StopKind.AUTH_REQUIRED, StopKind.SERVER_ERROR] as const
+
+        Turning that into `enum TransportStopKind` would RE-DECLARE half of StopKind's values, which
+        is the anti-mirror rule this registry enforces elsewhere — so obeying bp-08 literally would
+        violate a stronger rule. Surfaced by the agent contract lock (Fase 1), where the goal
+        mandated the subset form and this rail flagged it as critical.
 
     - id: bp-09
       name: "Rendering raw enum value in <SelectValue> instead of t()"

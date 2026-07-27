@@ -1704,9 +1704,16 @@ mostra `0 deletions`). O `git diff --stat` da fase só pode conter arquivos **no
 | `core/src/utils/schema/ExtraTypes.ts` (+ `core/src/utils/schema/index.ts` se houver barrel) | ganha `agentInput()` (§4.6) |
 | `src/terminal/enums/index.ts` · `src/terminal/events/index.ts` · `src/terminal/types/index.ts` | barrels dos artefatos novos |
 | `packages/contracts/wire/**` + `packages/contracts/generated/**` | enums novos + regen |
+| `packages/client/dist/**` | **a AC-1.5 EXIGE `bun sdk`**, que regenera a SDK a partir da openapi — reescrever arquivos rastreados aqui é consequência mecânica, não escolha. Conteúdo 100% de gerador; a prova é a idempotência 2×. |
+| `.specs/codedm/**` | a AC-1.9 manda escrever o pin do medscall em `source-map-and-decisions.md` e a regra 7 da §8 manda uma entrada por fase no `BUILD-LOG.md` — **ambos arquivos existentes**. Sem isto a fase é impossível de cumprir. |
 | `packages/api/typescript/package.json` | só se um dep novo entrar (não esperado) |
 Qualquer arquivo existente **fora** desta lista aparecendo no diff é violação da AC — reverter ou
 justificar no BUILD-LOG com o motivo estrutural.
+
+> **Duas linhas desta allowlist (`client/dist/**` e `.specs/codedm/**`) foram acrescentadas DEPOIS da
+> execução da Fase 1**, que provou a lista original auto-contraditória: as ACs 1.5 e 1.9 mandam tocar
+> exatamente os caminhos que a AC-1.10 proibia. Registro em vez de correção silenciosa, porque a lição
+> é a que vale: **uma allowlist de diff tem de ser derivada das outras ACs, não escrita por intuição.**
 **AC-1.11** **O seam continua sem identidade** (§4.2) — **só a metade que EXISTE ao fim da Fase 1**:
 `types/AgentMcpInvocation.ts` está definido; a assinatura de `RunTokenService` (`mint`/`verify`/`revoke`)
 existe **sem implementação**; `AgentRunRequest` não declara `ownerId`/`issueId`/`threadId`; e
