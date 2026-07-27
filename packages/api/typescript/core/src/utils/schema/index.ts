@@ -34,6 +34,11 @@ export type { ZodType, ZodTypeAny, ZodRawShape, ZodObject } from 'zod'
 // Re-export ZodInstance so TypeScript can name the inferred return type of z.instance() in declaration files
 export type { ZodInstance } from './ExtraTypes'
 
+// The agent-input envelope backing `z.agentInput()` (GOAL-agent-abstraction §4.6). Exported as a
+// VALUE because the agent context's `AgentInputSchemaConstraint` is written against its `['shape']`,
+// and because a consumer may legitimately `.pick()` / `.extend()` it directly.
+export { BaseAgentInputSchema } from './ExtraTypes'
+
 // Re-export type-safe example helpers
 export { withExamples, type InferSchemaType, type SchemaWithExample } from './Examples'
 

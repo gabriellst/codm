@@ -18,6 +18,46 @@ import { BaseEventSchema } from '../../types/BaseEvent'
 import { BaseDomainEventSchema } from '../../types/BaseDomainEvent'
 import { BaseIntegrationEventSchema } from '../../types/BaseIntegrationEvent'
 
+/**
+ * The envelope EVERY agent input carries — the identity of one agent run
+ * (GOAL-agent-abstraction §4.6). It lives HERE, next to `domainEvent` /
+ * `integrationEvent`, because `z.agentInput()` has to extend it and this module
+ * is the one the `z` facade is assembled from; the agent context re-exports it
+ * as `AgentInputEnvelope` so the domain vocabulary still reads from `types/`.
+ *
+ * CONTEXT-ORIGIN: medscall `packages/api/src/shared/types/BaseAgentInput.ts`
+ * @ c58ed45677c473b0415c03cfc741fea3a00946f4 — the TECHNIQUE is copied, the
+ * FIELDS are not (medscall's envelope is `{chatId, sessionId, ownerId}`; the
+ * CodeDM run is identified by `{ownerId, issueId, threadId}` plus the absolute
+ * workspace it executes in).
+ *
+ * Contract notes that were paid for and must not be re-litigated:
+ * - `cwd` is NEVER optional. An agent with no absolute workspace has nothing to
+ *   execute against, and `cwd?` silently degrades to `process.cwd()` — the worst
+ *   possible default in a product that runs inside the user's real repositories.
+ * - `ownerId` is `z.uuid()`, not `z.string()` — aligned with entity, use case and
+ *   controller `ctx` across this repo. `z.string()` here would mint a second truth
+ *   about the same id.
+ * - `context` is the open slot, and it is where multi-tenant agent config lands
+ *   when it exists (D10) — never on `AgentRunRequest`.
+ */
+export const BaseAgentInputSchema = z.object({
+	ownerId: z.uuid(),
+	issueId: z.uuid(),
+	threadId: z.uuid(),
+	cwd: z.string(),
+	context: z.record(z.string(), z.unknown()).optional(),
+})
+
+/**
+ * Return type of `z.agentInput(props)`: the envelope shape INTERSECTED with the
+ * per-agent shape. Declaring the intersection (rather than letting `.extend()`'s
+ * `util.Extend<…>` flatten leak out) is what keeps the result assignable to
+ * `AgentInputSchemaConstraint` — i.e. what makes the constraint hold BY
+ * CONSTRUCTION instead of by discipline.
+ */
+type AgentInputObjectSchema<T extends ZodRawShape> = ZodObject<(typeof BaseAgentInputSchema)['shape'] & T>
+
 // Meta options with examples
 interface SchemaOptions {
 	examples?: unknown[]
@@ -163,6 +203,35 @@ export function baseEvent<T extends ZodRawShape>(properties?: T, options?: Schem
 			payload: payloadSchema,
 		})
 		.meta({ examples: mergedExamples })
+}
+
+/**
+ * Builds an agent-input schema on top of `BaseAgentInputSchema` — the third
+ * schema VERB of this module, next to `domainEvent` / `integrationEvent`
+ * (GOAL-agent-abstraction §4.6, Fase 1).
+ *
+ * Why it exists at all: `AgentInputSchemaConstraint` is what stops
+ * `z.output<InputSchema>` from collapsing to `Record<string, unknown>` under
+ * generic constraint erasure — which is what forces `as any` into every runner
+ * that wants to read `input.cwd`. A verb makes that constraint hold BY
+ * CONSTRUCTION: an agent that declares its input with `z.agentInput({...})`
+ * cannot forget the envelope.
+ *
+ * ```ts
+ * export const ClassifyIssueInputSchema = z.agentInput({
+ *   messageText: z.string(),
+ *   openIssues: z.array(OpenIssueRefSchema),
+ * })
+ * ```
+ *
+ * CONTEXT-ORIGIN: medscall `packages/api/src/shared/utils/schema/ExtraTypes.ts`
+ * (`agentInput`) @ c58ed45677c473b0415c03cfc741fea3a00946f4.
+ */
+export function agentInput(): typeof BaseAgentInputSchema
+export function agentInput<T extends ZodRawShape>(properties: T): AgentInputObjectSchema<T>
+export function agentInput<T extends ZodRawShape>(properties?: T) {
+	if (!properties) return BaseAgentInputSchema
+	return BaseAgentInputSchema.extend(properties)
 }
 
 /**
@@ -347,6 +416,7 @@ export const ExtraSchemaTypes = {
 	baseEvent,
 	domainEvent,
 	integrationEvent,
+	agentInput,
 	instance,
 	historical,
 	enumRecord,
