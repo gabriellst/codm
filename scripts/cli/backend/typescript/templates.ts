@@ -59,6 +59,9 @@ export const backendTemplates = {
 
 	query: (name: string) => renderArtifact('query', 'typescript', backendBindings.query(name)),
 
+	agent: (contextName: string, name: string, variant?: 'prompt' | 'types' | 'test') =>
+		renderArtifact('agent', 'typescript', backendBindings.agent(contextName, name, variant)),
+
 	test: (ctx: string, name: string, kind: string) => renderArtifact('test', 'typescript', backendBindings.test(ctx, name, kind)),
 
 	given: (ctx: string, name: string) => renderArtifact('test', 'typescript', backendBindings.givenHelper(ctx, name)),

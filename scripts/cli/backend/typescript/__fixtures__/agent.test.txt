@@ -1,0 +1,37 @@
+import { describe, expect, it } from 'bun:test'
+import type { ZodType } from 'zod'
+import { AgentRunner } from '../../services/AgentRunner'
+import { AgentName, AgentRunOutcome } from '../../enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
+import { ClassifyIssuePromptBuilder } from './prompt'
+import { ClassifyIssueAgent } from './ClassifyIssueAgent'
+
+/** Stubbed seam — never a subprocess, never a real model (a property of the DI env, not of discipline). */
+class CapturingRunner extends AgentRunner {
+	readonly requests: AgentRunRequest<ZodType | undefined>[] = []
+
+	run<OutputSchema extends ZodType | undefined = undefined>(request: AgentRunRequest<OutputSchema>): AsyncIterable<AgentRuntimeEvent> {
+		this.requests.push(request)
+		return (async function* () {
+			yield {
+				type: 'finished',
+				result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'done', sessionId: null, failed: false },
+			} satisfies AgentRuntimeEvent
+		})()
+	}
+
+	async shutdown(): Promise<void> {}
+}
+
+describe('ClassifyIssueAgent', () => {
+	it('the BASE stamps identity — buildRequest never sets agentName', async () => {
+		const runner = new CapturingRunner()
+		const agent = new ClassifyIssueAgent(runner, new ClassifyIssuePromptBuilder())
+
+		for await (const _ of agent.run({} as Parameters<ClassifyIssueAgent['run']>[0])) {
+			// drain
+		}
+
+		expect(runner.requests[0]?.agentName).toBe(AgentName.CLASSIFY_ISSUE)
+	})
+})

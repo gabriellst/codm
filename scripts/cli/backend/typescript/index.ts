@@ -2,7 +2,7 @@
 // `scripts/cli/backend/index.ts` picks this module when --lang=typescript.
 
 import type { Generator } from '../../types'
-import { requireArg, toPascalCase, validateHttpMethod, validatePath } from '../helpers'
+import { requireArg, toPascalCase, toScreamingSnakeCase, validateHttpMethod, validatePath } from '../helpers'
 import { backendTemplates } from './templates'
 
 export { generateFullContext } from './context'
@@ -304,6 +304,46 @@ export const backendGenerators: Record<string, Generator> = {
 			filePath = `packages/api/typescript/src/${ctx}/usecases/${pascal}.test.ts`
 		}
 		return [{ filePath, content: backendTemplates.test(ctx, name, kind) }]
+	},
+
+	/**
+	 * `bun cli agent <context> <Name>` — one DIRECTORY per agent (§4.8), four files plus the colocated
+	 * test, with the `agents/index.ts` barrel wired.
+	 *
+	 * The name is given WITHOUT the `Agent` suffix (`bun cli agent agent ClassifyIssue`) and the
+	 * scaffolder appends it, because the suffix is part of the citizen's shape rather than of what the
+	 * agent is called — the same reason `repository` takes an entity name, not `OrderRepository`.
+	 */
+	agent: pos => {
+		const [ctx, name] = pos
+		requireArg(ctx, 'agent <context> <Name>')
+		requireArg(name, 'agent <context> <Name>')
+		const pascal = toPascalCase(name)
+		const dir = `packages/api/typescript/src/${ctx}/agents/${pascal}Agent`
+		console.log(
+			`  NOTE: add ${toScreamingSnakeCase(name)} to src/${ctx}/enums/AgentName.ts, and register the agent + its ` +
+				`prompt builder in src/${ctx}/registry.ts as CLASS tokens with { useClass: ... } in all three envs.`,
+		)
+		return [
+			{
+				filePath: `${dir}/${pascal}Agent.ts`,
+				content: backendTemplates.agent(ctx, name),
+				exportLine: `export * from './${pascal}Agent'`,
+				exportTarget: `packages/api/typescript/src/${ctx}/agents/index.ts`,
+			},
+			{ filePath: `${dir}/prompt.ts`, content: backendTemplates.agent(ctx, name, 'prompt') },
+			{ filePath: `${dir}/types.ts`, content: backendTemplates.agent(ctx, name, 'types') },
+			{
+				filePath: `${dir}/index.ts`,
+				content: [
+					`export { ${pascal}Agent } from './${pascal}Agent'`,
+					`export { ${pascal}PromptBuilder } from './prompt'`,
+					`export { ${pascal}InputSchema } from './types'`,
+					'',
+				].join('\n'),
+			},
+			{ filePath: `${dir}/${pascal}Agent.test.ts`, content: backendTemplates.agent(ctx, name, 'test') },
+		]
 	},
 
 	given: pos => {

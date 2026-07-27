@@ -128,6 +128,48 @@ describe('backend generator golden equivalence', () => {
 		const [file] = await backendGenerators.query(['ListDashboardOrders'], {})
 		expect(file.content).toBe(golden('query.txt'))
 	})
+
+	// `agent` scaffolds a DIRECTORY (§4.8): class, prompt builder, schemas, barrel, colocated test.
+	// The barrel is asserted inline rather than as a fixture — it is three literal export lines.
+	for (const [index, fixture] of [
+		[0, 'agent.class.txt'],
+		[1, 'agent.prompt.txt'],
+		[2, 'agent.types.txt'],
+		[4, 'agent.test.txt'],
+	] as const) {
+		it(`agent file ${fixture} is unchanged`, async () => {
+			const files = await backendGenerators.agent(['agent', 'ClassifyIssue'], {})
+			expect(files[index]?.content).toBe(golden(fixture))
+		})
+	}
+
+	it('agent scaffolds the four-file directory + test, and wires the agents barrel', async () => {
+		const files = await backendGenerators.agent(['agent', 'ClassifyIssue'], {})
+
+		expect(files.map(f => f.filePath)).toEqual([
+			'packages/api/typescript/src/agent/agents/ClassifyIssueAgent/ClassifyIssueAgent.ts',
+			'packages/api/typescript/src/agent/agents/ClassifyIssueAgent/prompt.ts',
+			'packages/api/typescript/src/agent/agents/ClassifyIssueAgent/types.ts',
+			'packages/api/typescript/src/agent/agents/ClassifyIssueAgent/index.ts',
+			'packages/api/typescript/src/agent/agents/ClassifyIssueAgent/ClassifyIssueAgent.test.ts',
+		])
+		// AUTO-WIRING (the SCW-03 slice-closure class): an agent nobody re-exports never resolves.
+		expect(files[0]?.exportTarget).toBe('packages/api/typescript/src/agent/agents/index.ts')
+		expect(files[0]?.exportLine).toBe("export * from './ClassifyIssueAgent'")
+		// Identity is the SCREAMING_SNAKE `AgentName` member, not a re-spelling.
+		expect(files[0]?.content).toContain('static override readonly NAME = AgentName.CLASSIFY_ISSUE')
+		// `run()` is the base's template method — the scaffold must never emit an override of it.
+		expect(files[0]?.content).not.toMatch(/\brun\s*\(/)
+		expect(files[0]?.content).toContain('protected buildRequest(')
+		// The envelope comes from the verb, never restated.
+		expect(files[2]?.content).toContain('z.agentInput({')
+		expect(files[2]?.content).not.toContain('ownerId:')
+	})
+
+	it('agent renders every file without leftover placeholders', async () => {
+		const files = await backendGenerators.agent(['agent', 'ClassifyIssue'], {})
+		for (const file of files) expect(file.content).not.toMatch(PLACEHOLDER_RE)
+	})
 })
 
 describe('test/given snippet rendering (no leftover placeholders)', () => {

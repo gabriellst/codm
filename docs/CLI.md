@@ -383,6 +383,7 @@ The backend scaffolder lives in `scripts/cli/backend/` and is selected automatic
 | `controller` | `bun cli controller <ctx> <name> [--internal] [-m M] [-p P] [--mock]` | HTTP controller |
 | `handler` | `bun cli handler <ctx> <name> [--external]` | Event handler + colocated `.test.ts` |
 | `service` | `bun cli service <ctx> <name>` | Domain service |
+| `agent` | `bun cli agent <ctx> <Name>` | Internal agent DIRECTORY: class + `prompt.ts` + `types.ts` + barrel + `.test.ts` (TS only) |
 | `event` | `bun cli event <ctx> <name> [--integration]` | Domain/integration event |
 | `middleware` | `bun cli middleware <ctx> <name>` | HTTP middleware |
 | `enum` | `bun cli enum <ctx> <name>` | Domain enum |
@@ -394,6 +395,19 @@ The backend scaffolder lives in `scripts/cli/backend/` and is selected automatic
 | `projector` | `bun cli projector <ctx> <Name>` | Projector (one per Projection) |
 | `test` | `bun cli test <kind> <ctx> <name>` | Standalone canonical test skeleton |
 | `given` | `bun cli given <ctx> <name>` | Given helper stub in `tests/support/given/` |
+
+### `agent` verb
+
+Scaffolds one agent DIRECTORY under `src/<ctx>/agents/<Name>Agent/` — the class, an `@injectable()`
+prompt builder, the `z.agentInput()` schema, the barrel, and a colocated test that already asserts the
+base stamped the identity. Pass the name WITHOUT the `Agent` suffix (`bun cli agent agent ClassifyIssue`);
+the suffix is part of the citizen's shape, like `repository` taking an entity name.
+
+Two things the scaffolder deliberately leaves to you, and prints as a NOTE rather than guessing:
+adding the `AgentName` member (it prints the SCREAMING_SNAKE spelling it expects), and the DI
+registration — agents bind as CLASS tokens with `{ useClass: … }` in all three envs, transient, because
+a singleton agent would capture whichever `AgentRunner` was bound first. See
+`.claude/skills/agent/typescript/SKILL.md`.
 
 ### `test` verb
 

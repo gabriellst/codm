@@ -122,6 +122,14 @@ components:
       - "!*/index.ts"
     layer: application
 
+  agent:
+    skill: agent
+    patterns:
+      - "packages/api/typescript/src/*/agents/**/*.ts"
+      - "!*/index.ts"
+    layer: application
+    note: "One DIRECTORY per agent ({<Name>Agent.ts, prompt.ts, types.ts, index.ts}). A typed wrapper over the one-method AgentRunner seam: input schema via z.agentInput(), a prompt builder, a declared tool scope, and buildRequest as the single point of variation. Routing/threshold POLICY is a sibling service, never agent code. TS-only — the agent runtime has no Go half."
+
   # ─── Backend: Infrastructure Layer ───────────────────────────────────
   repository:
     skill: repository

@@ -47,7 +47,7 @@ export class ClassifyIssueAgent extends Agent<typeof ClassifyIssueInputSchema, t
 		super(runner)
 	}
 
-	/** Entry point, public and typed. Delegates to `collect()`, which delegates to `run()`. Zero new transport. */
+	/** The typed entry point. Delegates straight through to the base's drain helper, which delegates to `run()`. Zero new transport. */
 	async classify(input: this['input']): Promise<this['output']> {
 		return this.collect(input)
 	}

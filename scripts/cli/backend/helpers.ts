@@ -89,6 +89,13 @@ export const API_SRC = PER_LANG_API_ROOT.typescript ?? ''
 // --- Naming ---
 
 export const toPascalCase = (str: string): string => str.charAt(0).toUpperCase() + str.slice(1)
+
+/** `ClassifyIssue` / `classify-issue` / `classify_issue` → `CLASSIFY_ISSUE` — the enum-member spelling. */
+export const toScreamingSnakeCase = (str: string): string =>
+	str
+		.replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+		.replace(/[-\s]+/g, '_')
+		.toUpperCase()
 export const toCamelCase = (str: string): string => str.charAt(0).toLowerCase() + str.slice(1)
 export const toKebabCase = (str: string): string => str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
 

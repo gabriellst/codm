@@ -1,7 +1,7 @@
 // Per-artifact binding computation: the *logic* half of the former templates.ts.
 // Each entry maps (contextName, name, opts) to the placeholder/variant map the
 // renderer interpolates into that artifact's registry snippet.
-import { inferHttpMethod, inferPath, toCamelCase, toPascalCase, toVerbEntityFormat } from '../helpers'
+import { inferHttpMethod, inferPath, toCamelCase, toPascalCase, toScreamingSnakeCase, toVerbEntityFormat } from '../helpers'
 import type { Bindings } from '../../snippet/types'
 
 export const backendBindings = {
@@ -139,6 +139,18 @@ export const backendBindings = {
 
 	projector: (_ctx: string, name: string): Bindings => ({
 		Name: toPascalCase(name),
+	}),
+
+	/**
+	 * The four files of one agent directory (§4.8: `{<Name>Agent.ts, prompt.ts, types.ts, index.ts}`),
+	 * selected by `_variant`. `NAME_CONST` is the `AgentName` member the class assigns to its static
+	 * `NAME` — SCREAMING_SNAKE of the agent name, because that enum is the identity vocabulary and a
+	 * scaffolded agent that invents a different spelling is a run nobody can find in the logs.
+	 */
+	agent: (_ctx: string, name: string, variant?: 'prompt' | 'types' | 'test'): Bindings => ({
+		...(variant ? { _variant: variant } : {}),
+		Name: toPascalCase(name),
+		NAME_CONST: toScreamingSnakeCase(name),
 	}),
 
 	query: (name: string): Bindings => ({

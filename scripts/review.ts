@@ -424,6 +424,10 @@ export const CLASSIFICATION_RULES: Array<{ match: RegExp; artifact: string; skil
 	{ match: new RegExp(`usecases/.*${BACKEND_EXT}$`), artifact: 'usecase', skill: 'usecase' },
 	{ match: new RegExp(`repositories/.*${BACKEND_EXT}$`), artifact: 'repository', skill: 'repository' },
 	{ match: new RegExp(`errors/.*${BACKEND_EXT}$`), artifact: 'errors', skill: 'errors' },
+	// BEFORE `services/`: an agent lives in `agents/`, but a policy service that drives one lives in
+	// `services/`, and only the path tells them apart. Reviewing an agent with the service checklist
+	// would miss every rule that makes it an agent (template-method `run()`, tool scope, envelope).
+	{ match: new RegExp(`agents/.*${BACKEND_EXT}$`), artifact: 'agent', skill: 'agent' },
 	{ match: new RegExp(`services/.*${BACKEND_EXT}$`), artifact: 'service', skill: 'service' },
 	{ match: new RegExp(`events/.*${BACKEND_EXT}$`), artifact: 'event', skill: 'event' },
 	{ match: new RegExp(`handlers/.*${BACKEND_EXT}$`), artifact: 'handler', skill: 'handler' },
@@ -465,6 +469,7 @@ const LAYER_ORDER: Record<string, number> = {
 	'db-schema': 3,
 	repository: 4,
 	service: 5,
+	agent: 5,
 	usecase: 5,
 	handler: 5,
 	job: 5,
