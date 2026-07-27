@@ -20,6 +20,63 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AgentModelId.
+const (
+	AgentModelIdDEFAULT AgentModelId = "DEFAULT"
+	AgentModelIdHAIKU   AgentModelId = "HAIKU"
+	AgentModelIdOPUS    AgentModelId = "OPUS"
+	AgentModelIdSONNET  AgentModelId = "SONNET"
+)
+
+// Valid indicates whether the value is a known member of the AgentModelId enum.
+func (e AgentModelId) Valid() bool {
+	switch e {
+	case AgentModelIdDEFAULT:
+		return true
+	case AgentModelIdHAIKU:
+		return true
+	case AgentModelIdOPUS:
+		return true
+	case AgentModelIdSONNET:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentStopReason.
+const (
+	AgentStopReasonENDTURN      AgentStopReason = "END_TURN"
+	AgentStopReasonMAXTOKENS    AgentStopReason = "MAX_TOKENS"
+	AgentStopReasonPAUSETURN    AgentStopReason = "PAUSE_TURN"
+	AgentStopReasonREFUSAL      AgentStopReason = "REFUSAL"
+	AgentStopReasonSTOPSEQUENCE AgentStopReason = "STOP_SEQUENCE"
+	AgentStopReasonTOOLUSE      AgentStopReason = "TOOL_USE"
+	AgentStopReasonUNKNOWN      AgentStopReason = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the AgentStopReason enum.
+func (e AgentStopReason) Valid() bool {
+	switch e {
+	case AgentStopReasonENDTURN:
+		return true
+	case AgentStopReasonMAXTOKENS:
+		return true
+	case AgentStopReasonPAUSETURN:
+		return true
+	case AgentStopReasonREFUSAL:
+		return true
+	case AgentStopReasonSTOPSEQUENCE:
+		return true
+	case AgentStopReasonTOOLUSE:
+		return true
+	case AgentStopReasonUNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ArtifactKind.
 const (
 	ArtifactKindFILE  ArtifactKind = "FILE"
@@ -2224,6 +2281,12 @@ func (e WorkspaceBadge) Valid() bool {
 		return false
 	}
 }
+
+// AgentModelId defines model for AgentModelId.
+type AgentModelId string
+
+// AgentStopReason defines model for AgentStopReason.
+type AgentStopReason string
 
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string

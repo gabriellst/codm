@@ -31,6 +31,11 @@ import "./enums/group-role.tsp";
 import "./enums/special-platform-event-type.tsp";
 import "./enums/provider-kind.tsp";
 import "./enums/provider-status.tsp";
+// Agent-runtime wire vocabulary (GOAL-agent-abstraction §4.2, Fase 1 contract lock). Cross-boundary
+// because the agent seam, the SSE frames and the persisted session row all carry them; typed here so
+// `model: string` / `stopReason: string` cannot exist at any call site.
+import "./enums/agent-model-id.tsp";
+import "./enums/agent-stop-reason.tsp";
 import "./enums/workspace-badge.tsp";
 import "./enums/thread-status.tsp";
 import "./enums/thread-mode.tsp";

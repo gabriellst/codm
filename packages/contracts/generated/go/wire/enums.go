@@ -4,6 +4,45 @@ package wire
 
 import "fmt"
 
+type AgentModelId string
+
+const (
+	AgentModelIdDEFAULT AgentModelId = "DEFAULT"
+	AgentModelIdSONNET AgentModelId = "SONNET"
+	AgentModelIdOPUS AgentModelId = "OPUS"
+	AgentModelIdHAIKU AgentModelId = "HAIKU"
+)
+
+func ParseAgentModelId(s string) (AgentModelId, error) {
+	switch AgentModelId(s) {
+	case AgentModelIdDEFAULT, AgentModelIdSONNET, AgentModelIdOPUS, AgentModelIdHAIKU:
+		return AgentModelId(s), nil
+	default:
+		return "", fmt.Errorf("invalid AgentModelId: %q", s)
+	}
+}
+
+type AgentStopReason string
+
+const (
+	AgentStopReasonEND_TURN AgentStopReason = "END_TURN"
+	AgentStopReasonMAX_TOKENS AgentStopReason = "MAX_TOKENS"
+	AgentStopReasonSTOP_SEQUENCE AgentStopReason = "STOP_SEQUENCE"
+	AgentStopReasonTOOL_USE AgentStopReason = "TOOL_USE"
+	AgentStopReasonPAUSE_TURN AgentStopReason = "PAUSE_TURN"
+	AgentStopReasonREFUSAL AgentStopReason = "REFUSAL"
+	AgentStopReasonUNKNOWN AgentStopReason = "UNKNOWN"
+)
+
+func ParseAgentStopReason(s string) (AgentStopReason, error) {
+	switch AgentStopReason(s) {
+	case AgentStopReasonEND_TURN, AgentStopReasonMAX_TOKENS, AgentStopReasonSTOP_SEQUENCE, AgentStopReasonTOOL_USE, AgentStopReasonPAUSE_TURN, AgentStopReasonREFUSAL, AgentStopReasonUNKNOWN:
+		return AgentStopReason(s), nil
+	default:
+		return "", fmt.Errorf("invalid AgentStopReason: %q", s)
+	}
+}
+
 type ArtifactKind string
 
 const (
