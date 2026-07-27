@@ -1,23 +1,40 @@
 ---
 name: migrate
-description: Generate and apply database migrations after schema design is complete. Use this skill AFTER `/db-modelling` to turn Drizzle schema changes into versioned SQL migrations.
+description: Generate SQLite migrations after schema design is complete. Use this skill AFTER `/db-modelling` to turn Drizzle schema changes into versioned SQL, mirror them into the Go embed, and verify they apply.
 ---
 
-> **BEFORE USING**: Schema design must be done first with `/db-modelling`. This skill only generates and applies the migration.
+> **BEFORE USING**: Schema design must be done first with `/db-modelling`. This skill only authors
+> the migration and gets it into both runtimes.
 
 # Database Migration
 
-Generates and applies Drizzle database migrations. This skill is purely operational — it turns schema file changes into versioned SQL and applies them to the database.
+Turns schema file changes into versioned SQL. The database is **one SQLite file** at
+`$CODEDM_DATA_DIR/codedm.db`, shared by the TS daemon and the Go gateway.
 
-## Why Migrations Exist
+## The one thing to internalise: nobody APPLIES migrations by hand
 
-Migrations create a versioned history of schema changes that can be applied consistently across environments (dev, staging, prod). Drizzle generates SQL migrations from schema definitions, ensuring the TypeScript schema and database stay in sync.
+There is **no `bun migrate:dev`**, and adding one back would be a bug.
+
+Two processes open the same file, so migrations are applied at **boot**, by **two idempotent
+migrators over the SAME ledger** (`_sqlite_migrations`, keyed by filename):
+
+| Process | Migrator | Source of the SQL |
+|---|---|---|
+| TS daemon | `LibsqlDriver` | `packages/contracts/db/schema-sqlite/migrations/*.sql` |
+| Go gateway | `SqliteStore` | `packages/api/go/core/db/sqlite/migrations/*.sql` (`//go:embed`) |
+
+Whoever boots first applies; the second finds the ledger rows and no-ops. Both split each file on
+`--> statement-breakpoint` and derive the set to apply from `readdir | filter .sql | sort` — never
+from `meta/_journal.json`.
+
+A **third** applier carrying a ledger of its own is the failure mode this design exists to
+prevent — which is why `drizzle-kit migrate` (it writes `__drizzle_migrations`) has no script here.
 
 ## When to Use This Skill
 
-- After `/db-modelling` has updated schema files and you need to generate the SQL migration
-- Applying pending migrations to the database
-- Reviewing generated migration SQL before applying
+- After `/db-modelling` updated `packages/contracts/db/schema-sqlite/*.ts` and you need the SQL
+- Reviewing generated migration SQL before it reaches a runtime
+- Getting a new migration into the Go `//go:embed` copy
 
 ## When NOT to Use This Skill
 
@@ -27,123 +44,83 @@ Migrations create a versioned history of schema changes that can be applied cons
 
 ## Prerequisites
 
-- Schema files already updated via `/db-modelling`
-- Schema exported from `packages/api/typescript/src/shared/db/drizzle/schema/index.ts`
-- Database connection available
+- Schema files updated via `/db-modelling` under `packages/contracts/db/schema-sqlite/`
+- New table exported from `packages/contracts/db/schema-sqlite/index.ts`
 
 ## Process
 
-### Step 1: Generate Migration
+### Step 1: Generate the migration
 
 ```bash
 bun migrate:create
 ```
 
-This reads the schema files and generates a SQL migration in `packages/api/typescript/src/shared/db/drizzle/migrations/`.
+`drizzle-kit generate` with `packages/contracts/db/schema-sqlite/drizzle.config.ts`, writing SQL +
+snapshot into `packages/contracts/db/schema-sqlite/migrations/`. With no schema change it prints
+`No schema changes, nothing to generate` and writes nothing — the command is idempotent.
 
-### Step 2: Review Generated SQL
+### Step 2: Review the generated SQL
 
-Check the generated migration file for:
-- Correct CREATE/ALTER statements
-- Data loss risks (column drops, type changes)
-- Enum creation order
-- Schema namespace creation (`CREATE SCHEMA IF NOT EXISTS`)
-- **Go-owned `shared` / `channel` DDL** — drizzle emits non-idempotent `CREATE SCHEMA "shared"` and `CREATE TABLE "shared"."events"` / `"shared"."outbox"` by default, which collides with the Go channel service. Patch those to `IF NOT EXISTS` before applying (see "Cross-Service Schemas" below).
+- CREATE/ALTER correctness, and data-loss risk (column drops, type changes).
+- **SQLite has no `ALTER COLUMN`.** Changing a column's type or constraints makes drizzle emit a
+  table REBUILD (`create new → copy → drop → rename`). Read those migrations line by line; they are
+  the ones that lose data quietly.
+- **Closed sets are CHECK constraints**, not native enums: `text().$type<Enum>()` + `enumCheck(...)`.
+  A rebuild has to carry the CHECK across, or the value-set stops being enforced in the database.
+- Namespacing is by **table-name prefix** (`terminal_*`, `shared_*`) — the flat dialect has no
+  `CREATE SCHEMA`, so there is nothing to make idempotent at the schema level.
 
-### Step 3: Apply Migration
+### Step 3: Mirror the SQL into the Go embed
 
 ```bash
-bun migrate:dev
+bun run --cwd packages/contracts db:sync-go
 ```
+
+The `//go:embed` directory is a **derived copy**, never hand-edited, and must stay byte-identical to
+the contracts source: the shared ledger is keyed by **filename**, so a copy that drifted in content
+while keeping its name is silently skipped by whichever process boots second — the two processes
+then disagree about the shape of the database, with nothing in the logs.
 
 ### Step 4: Verify
 
 ```bash
-bun tsc  # Ensure types compile
+bun run --cwd packages/contracts db:check-go   # byte-equality gate (also inside bun test:tooling)
+bun tsc
+( cd packages/api/typescript && bun test core/src/db/drivers/LibsqlDriver.test.ts )
+( cd packages/api/go && go test ./core/db/sqlite/... )
 ```
+
+The driver/store tests are what actually prove the SQL applies: they migrate a temp file from cold
+and assert the second pass applies zero migrations.
 
 ## Troubleshooting
 
-### "Column already exists"
+### The gateway and the daemon disagree about a table
 
-Schema might be out of sync with the database. Check if a previous migration already added the column.
+Almost always a drifted embed copy. Run `db:check-go`. If it reports `content`, re-run `db:sync-go`
+**and rebuild the Go binary** — an already-compiled gateway carries the OLD bytes.
 
-### "Table not found"
+### "table already exists" on boot
 
-Ensure schema is exported from `schema/index.ts`:
-```typescript
-export * from './myNewContext'
-```
+Two migrations with the same filename, or a file renamed after it was applied. The ledger keys on
+filename, so renaming applied SQL makes it look new. Never rename an applied migration.
 
-### Migration History
+### Migration history
 
-View applied migrations:
-```bash
-bun --cwd packages/api drizzle-kit status
+```sql
+-- against $CODEDM_DATA_DIR/codedm.db
+SELECT * FROM _sqlite_migrations ORDER BY name;
 ```
 
 ## Checklist
 
-- [ ] Schema files updated via `/db-modelling`
-- [ ] Schema exported from `schema/index.ts`
+- [ ] Schema files updated via `/db-modelling`, table exported from `schema-sqlite/index.ts`
 - [ ] Migration generated: `bun migrate:create`
-- [ ] Migration SQL reviewed for correctness and data safety
-- [ ] `shared.*` / `channel.*` DDL patched to `IF NOT EXISTS` if the new migration touches them (see "Cross-Service Schemas")
-- [ ] Migration applied: `bun migrate:dev`
+- [ ] SQL reviewed — rebuild statements checked for data loss, CHECK constraints carried across
+- [ ] Go embed mirrored: `bun run --cwd packages/contracts db:sync-go`
+- [ ] Byte-equality gate green: `bun run --cwd packages/contracts db:check-go`
+- [ ] Applies from cold and no-ops on a second pass (driver + store tests)
 - [ ] Types compile: `bun tsc`
-
-## Cross-Service Schemas (Go-owned `shared` and `channel`)
-
-The `shared` and `channel` schemas are **owned by the Go channel service** (`packages/channel/internal/shared/db/sql/migrations/`). Drizzle still has schema files for them (`schema/shared.ts`, `schema/channel.ts`) so TS code can query them with type safety — but in real dev/prod the DDL is created by Go migrations, not drizzle.
-
-`bun migrate:dev` runs the two migrators in order:
-
-```
-nx run channel:migrate && nx run api:migrate:dev
-```
-
-Go creates the canonical tables first; drizzle's migration then applies everything else. Because drizzle's generated SQL touches the same `shared` schema, the collision points need to be idempotent.
-
-### The collision and the fix
-
-Drizzle-kit generates non-idempotent DDL by default: `CREATE SCHEMA "shared"` and `CREATE TABLE "shared"."events"` without `IF NOT EXISTS`. When Go has already created them, drizzle fails.
-
-Drizzle-orm does **not** expose a schema-file-level way to mark tables or schemas as "external" / "already exists":
-- `.existing()` exists on `pgView`, `pgMaterializedView`, `pgRole` — **not on `pgTable` or `pgSchema`**
-- There is no `emit IF NOT EXISTS` config option
-
-The [official drizzle guidance](https://orm.drizzle.team/) for tables owned by another tool (e.g. Supabase's `auth` schema) is to **hand-edit the generated migration**:
-
-> "For tables that already exist, it's important to manually review the generated migration files from `npx drizzle-kit generate`. You should comment out or adjust any unsafe pure create statements (e.g., `CREATE SCHEMA "auth";`) while ensuring safe conditional creates (e.g., `CREATE TABLE IF NOT EXISTS "auth"."users"`) are properly handled."
-
-In this repo, after running `bun migrate:create`, patch any new or regenerated SQL that touches the `shared` schema (and any Go-owned `channel` tables) to use `IF NOT EXISTS`:
-
-```sql
--- ❌ drizzle-kit default (fails when Go already created it)
-CREATE SCHEMA "shared";
-CREATE TABLE "shared"."events" (...);
-CREATE TABLE "shared"."outbox" (...);
-
--- ✅ patched after generation
-CREATE SCHEMA IF NOT EXISTS "shared";
-CREATE TABLE IF NOT EXISTS "shared"."events" (...);
-CREATE TABLE IF NOT EXISTS "shared"."outbox" (...);
-```
-
-Indexes on those tables already use `CREATE INDEX IF NOT EXISTS` from drizzle; leave those alone. The `channel.*` tables drizzle emits are already `CREATE TABLE IF NOT EXISTS` (they come from the channel projections migration, which was written by hand).
-
-### Why this works in both environments
-
-| Environment | What runs first | How the patched statements behave |
-|---|---|---|
-| Real dev/prod | Go migrations create `shared.events` / `shared.outbox` | Drizzle's `IF NOT EXISTS` statements are no-ops |
-| PGlite (integration tests) | Only drizzle runs (Go service not present) | Drizzle creates `shared.events` / `shared.outbox` from scratch — the `IF NOT EXISTS` is harmless |
-
-### What NOT to do
-
-- Don't try to exclude `shared.ts`/`channel.ts` from drizzle-kit generation via a glob (`!(shared|channel)`) — the `schema/index.ts` re-export pulls them back in, and splitting the folder adds more moving parts than the 3-line SQL patch.
-- Don't wrap `bun migrate:dev` in a shell script that drops the `shared` schema before drizzle. That's what the patched `IF NOT EXISTS` avoids.
-- Don't edit drizzle-generated migrations that have already been applied to prod — patch only fresh, unapplied ones. Drizzle-kit tracks applied migrations by hash and won't re-run a patched one on an existing DB, but it will warn.
 
 ## Bad Practices
 
@@ -151,23 +128,42 @@ Indexes on those tables already use `CREATE INDEX IF NOT EXISTS` from drizzle; l
 
 **Severidade:** 🔴 Crítico
 
-Dropping columns or tables without a safety plan risks data loss.
+Dropping columns or tables without a safety plan risks data loss — and on SQLite the drop is often a
+full table rebuild, so "just the column" is not what actually happens.
 
 ```sql
--- ❌ WRONG — Dropping column directly
-ALTER TABLE users DROP COLUMN phone_number;
+-- ❌ WRONG — dropping directly
+ALTER TABLE owner_users DROP COLUMN phone_number;
 ```
 
 ```sql
--- ✅ CORRECT — Phased approach
--- Step 1: Remove code references to the column
--- Step 2: Deploy code without the column usage
--- Step 3: Drop column in a separate migration after verification
-ALTER TABLE users DROP COLUMN phone_number;
+-- ✅ CORRECT — phased
+-- Step 1: remove code references to the column
+-- Step 2: ship the code without the column usage
+-- Step 3: drop the column in a separate migration after verification
+ALTER TABLE owner_users DROP COLUMN phone_number;
 ```
+
+### bp-02: Hand-editing the Go embed copy
+
+**Severidade:** 🔴 Crítico
+
+`packages/api/go/core/db/sqlite/migrations/` is DERIVED. Editing it makes the two migrators apply
+different DDL under the same ledger key — a divergence that raises no error, only wrong reads. Edit
+the contracts source and re-run `db:sync-go`.
+
+### bp-03: Reintroducing a second applier
+
+**Severidade:** 🔴 Crítico
+
+`drizzle-kit migrate`, a resurrected `migrate:dev`, an ad-hoc `drizzle-kit push` — each brings its
+own ledger (`__drizzle_migrations`) and re-applies DDL the boot migrators already applied. Applying
+migrations belongs to boot, in both runtimes, over `_sqlite_migrations`.
 
 ## References
 
-- `.claude/skills/db-modelling/SKILL.md` - Schema design (tables, columns, indexes, VO persistence)
+- `.claude/skills/db-modelling/SKILL.md` — schema design (tables, columns, indexes, VO persistence)
+- `scripts/db/sync-sqlite-migrations.ts` — the source→derived copy gate, with the full rationale
+- `packages/contracts/db/schema-sqlite/drizzle.config.ts` — why there is no `drizzle:migrate`
 - Drizzle ORM Documentation: https://orm.drizzle.team/docs
-- `docs/BACKEND.md` - Architecture principles
+- `docs/BACKEND.md` — architecture principles

@@ -28,7 +28,8 @@ design (macOS desktop, monocromático) em `.specs/codedm/ui-findings/` + `~/Down
 - **Expo REMOVIDO** (tauri será o desktop). **Astro**: workflow da landing (HTML do founder
   `~/Downloads/CodeDM Landing.dc.html`, three.js island, i18n, blog, planos) — checar estado:
   `git log packages/app/astro` + run wf_da4f7f46-bce (estava na fase de juízes).
-- Dev: `bun stack:up` + `bun migrate:dev` ANTES do gateway; daemon seam p/ UI:
+- Dev: `bun stack:up` (sem passo de migração — os dois sidecars migram o arquivo SQLite
+  compartilhado no boot, sobre a mesma ledger `_sqlite_migrations`); daemon seam p/ UI:
   `CODEDM_E2E=true CODEDM_DATA_DIR=/tmp/x PORT=3030 bun x nx run api-typescript:dev` + ingress de
   teste POST /v1/_test/gateway (ver BUILD-LOG).
 

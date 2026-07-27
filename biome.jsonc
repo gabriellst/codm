@@ -37,7 +37,7 @@
 			"packages/client/generators/**",
 			"packages/client/lib/**",
 			"packages/contracts/codegen/**",
-			"packages/contracts/db/schema/**",
+			"packages/contracts/db/schema-sqlite/**",
 			"packages/contracts/wire/**",
 			"packages/e2e/extension/**",
 			"packages/e2e/lib/**",
@@ -72,7 +72,7 @@
 			"!!packages/api/typescript/public/docs",
 			"!!packages/api/go/public/openapi.json",
 			"!!packages/api/go/public/docs",
-			"!!packages/contracts/db/migrations/meta",
+			"!!packages/contracts/db/schema-sqlite/migrations/meta",
 			"!!api/public/app",
 			"!!channel/public/app"
 		]

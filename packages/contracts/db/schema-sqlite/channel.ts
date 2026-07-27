@@ -27,8 +27,12 @@ export const channels = sqliteTable(
 		// ChannelStatus (CREATED | CONNECTING | CONNECTED | DISCONNECTED | DELETED).
 		status: text('status').$type<ChannelStatus>().notNull(),
 
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 		// bigint → integer.
 		version: integer('version').notNull().default(0),
 	},
@@ -81,9 +85,7 @@ export const remotes = sqliteTable(
 		// sorts NULLs last — the explicit clause is redundant and hurts older-SQLite portability.)
 		lastMessageAtIdx: index('idx_remotes_last_message_at').on(t.channelId, sql`${t.lastMessageAt} DESC`),
 		typeIdx: index('idx_remotes_type').on(t.channelId, t.type),
-		pinnedIdx: index('idx_remotes_pinned')
-			.on(t.channelId, sql`${t.pinnedAt} DESC`)
-			.where(sql`${t.pinnedAt} IS NOT NULL`),
+		pinnedIdx: index('idx_remotes_pinned').on(t.channelId, sql`${t.pinnedAt} DESC`).where(sql`${t.pinnedAt} IS NOT NULL`),
 		avatarMissingIdx: index('idx_remotes_avatar_missing')
 			.on(t.channelId, t.remoteId)
 			.where(sql`${t.avatarUrl} IS NULL AND ${t.deletedAt} IS NULL`),

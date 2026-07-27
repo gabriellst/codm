@@ -25,8 +25,9 @@ Build is orchestrated by **Nx** for TS targets + **Go modules** for Go. Both bac
 ```bash
 cp .env.example .env             # fill JWT_SECRET, BETTER_AUTH_SECRET; keep BILLING_SANDBOX=true
 bun install
-bun docker:compose               # postgres + redis + LGTM observability
-bun migrate:dev                  # apply the Drizzle baseline migration
+bun docker:compose               # redis + LGTM observability (no Postgres — one SQLite file)
+                                 # no migrate step: both sidecars migrate the shared SQLite
+                                 # file at boot, over the same _sqlite_migrations ledger
 bun sdk                          # generate the typed client from OpenAPI
 bun dev                          # api-ts:3030 + api-go:3032 + app-react:5173 + app-astro:4321
 ```

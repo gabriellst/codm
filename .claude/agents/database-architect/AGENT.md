@@ -53,7 +53,8 @@ Both must stay in sync. BetterAuth does NOT auto-generate the Drizzle schema.
 
 - [ ] Schema compiles: `bun tsc`
 - [ ] Migration generates: `bun migrate:create`
-- [ ] Migration applies: `bun migrate:dev`
+- [ ] Go embed mirrored + byte-equal: `bun run --cwd packages/contracts db:sync-go` then `db:check-go`
+      (there is no apply step — both sidecars migrate the shared SQLite file at boot)
 - [ ] All enums use TypeScript enums + `enumValues()` utility
 - [ ] Value objects flattened into columns (not separate tables)
 - [ ] Foreign keys indexed

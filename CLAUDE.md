@@ -55,11 +55,15 @@ cp .env.example .env
 # 2. Pacotes (workspaces Bun)
 bun install
 
-# 3. Infra local em Docker (postgres + redis + lgtm para traces/logs/metrics)
+# 3. Infra local em Docker (redis + lgtm para traces/logs/metrics — NÃO há Postgres:
+#    a persistência é um único arquivo SQLite em $CODEDM_DATA_DIR, compartilhado
+#    pelo daemon TS e pelo gateway Go)
 bun docker:compose
 
-# 4. Migrações: baseline Drizzle (packages/contracts)
-bun migrate:dev
+# 4. Migrações: NÃO há passo manual. O daemon TS (LibsqlDriver) e o gateway Go
+#    (SqliteStore) aplicam packages/contracts/db/schema-sqlite/migrations no BOOT,
+#    idempotentes sobre a MESMA ledger `_sqlite_migrations` — quem sobe primeiro aplica,
+#    o segundo é no-op. Para AUTORAR uma migração nova: `bun migrate:create`.
 
 # 5. SDK — precisa rodar uma vez antes do app compilar
 bun sdk
@@ -98,9 +102,11 @@ bun sdk              # regenera SDK (client:generate + emit-openapi upstream)
 bun emit-openapi     # regenera só os openapi.json (api-ts + api-go)
 bun contracts        # regenera bindings de contracts (TypeSpec → ts/go)
 
-# Banco de dados
-bun migrate:dev              # aplica a migração baseline Drizzle (packages/contracts)
-bun migrate:create           # gera nova migração Drizzle
+# Banco de dados (um arquivo SQLite; NÃO existe `migrate:dev` — o boot migra)
+bun migrate:create           # AUTORA uma migração SQLite (drizzle-kit generate →
+                             # packages/contracts/db/schema-sqlite/migrations)
+bun run --cwd packages/contracts db:sync-go    # espelha o SQL novo na cópia //go:embed do gateway
+bun run --cwd packages/contracts db:check-go   # gate: as duas cópias são byte-a-byte iguais
 
 # E2E (Playwright sobe os dev servers via webServer)
 bun e2e

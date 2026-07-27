@@ -555,12 +555,12 @@ Tests **always resolve from a child container** (`container.createChildContainer
 
 - `DrizzleClient` — the query client.
 - `DrizzleDatabaseDriver` — the environment wrapper exposing `db`, `unitOfWorkFactory`, `reset()`, `runMigrations()`, `readMigrations()`, `close()`.
-- Production runtime uses `NodePgDriver`.
-- Integration + flow tests use `PGliteDriver` — Postgres in-process, running the **same** migrations as production (from `@codedm/contracts/db/migrations`), so what passes in a test passes on real Postgres.
+- Every environment uses `LibsqlDriver` (`@libsql/client` + `drizzle-orm/libsql`). Production opens the shared file at `$CODEDM_DATA_DIR/codedm.db`; integration + flow tests open `:memory:` and run the **same** migrations as production (from `@codedm/contracts/db/migrations`), so what passes in a test passes against the real store.
+- There is **no Postgres**. The TS daemon and the Go gateway open **one** SQLite file, and each applies the migrations at boot, idempotently, over the same `_sqlite_migrations` ledger — whoever boots first applies, the second no-ops.
 
-The schema itself is owned by `packages/contracts` (`db/schema` + a single squashed baseline
-migration). Both backends import it — TS via `@codedm/contracts/db`, Go via its generated
-bindings.
+The schema itself is owned by `packages/contracts` (`db/schema-sqlite/` + its migrations). Both
+backends consume it — TS via `@codedm/contracts/db`, Go via sqlc bindings over a byte-identical
+`//go:embed` copy of the same SQL.
 
 ---
 

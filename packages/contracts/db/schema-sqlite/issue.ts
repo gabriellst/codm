@@ -1,11 +1,5 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import {
-	IssueStatus,
-	ProviderKind,
-	StopKind,
-	StopResolution,
-	IssueArchiveReason,
-} from '../../generated/typescript/src/wire/enums'
+import { IssueStatus, ProviderKind, StopKind, StopResolution, IssueArchiveReason } from '../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
@@ -36,8 +30,12 @@ export const issues = sqliteTable(
 		archiveReason: text('archive_reason').$type<IssueArchiveReason>(),
 		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
 
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
 	t => ({
@@ -64,7 +62,9 @@ export const stops = sqliteTable(
 		kind: text('kind').$type<StopKind>().notNull(),
 		title: text('title').notNull(),
 		detail: text('detail').notNull(),
-		raisedAt: integer('raised_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		raisedAt: integer('raised_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 
 		// StopResolution (must match the kind) — null while open.
 		resolution: text('resolution').$type<StopResolution>(),
@@ -106,6 +106,8 @@ export const stopPolicyConfig = sqliteTable('issue_stop_policy_config', {
 	approvalNeeded: integer('approval_needed', { mode: 'boolean' }).notNull().default(true),
 	authRequired: integer('auth_required', { mode: 'boolean' }).notNull().default(true),
 
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+		.notNull()
+		.$defaultFn(() => new Date()),
 	version: integer('version').notNull().default(1),
 })

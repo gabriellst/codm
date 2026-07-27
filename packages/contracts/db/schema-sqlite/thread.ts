@@ -52,8 +52,12 @@ export const threads = sqliteTable(
 		// ThreadStatus (RUNNING | IDLE | NEEDS_ATTENTION | PAUSED).
 		status: text('status').$type<ThreadStatus>().notNull(),
 
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
 	t => ({
@@ -61,11 +65,7 @@ export const threads = sqliteTable(
 		bufferSizeCheck: enumCheck('thread_threads_buffer_size_check', t.bufferSize, Object.values(BufferSize)),
 		statusCheck: enumCheck('thread_threads_status_check', t.status, Object.values(ThreadStatus)),
 		ownerIdx: index('threads_owner_id_idx').on(t.ownerId),
-		ownerChannelContactUnq: uniqueIndex('threads_owner_channel_contact_unq').on(
-			t.ownerId,
-			t.channelId,
-			t.contactExternalId,
-		),
+		ownerChannelContactUnq: uniqueIndex('threads_owner_channel_contact_unq').on(t.ownerId, t.channelId, t.contactExternalId),
 		workspaceIdx: index('threads_workspace_id_idx').on(t.workspaceId),
 	}),
 )
@@ -91,16 +91,14 @@ export const transcriptEntries = sqliteTable(
 		classification: text('classification').$type<ClassificationMethod>(),
 
 		at: integer('at', { mode: 'timestamp_ms' }).notNull(),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	t => ({
 		kindCheck: enumCheck('thread_transcript_entries_kind_check', t.kind, Object.values(TranscriptKind)),
 		providerCheck: enumCheck('thread_transcript_entries_provider_check', t.provider, Object.values(ProviderKind)),
-		classificationCheck: enumCheck(
-			'thread_transcript_entries_classification_check',
-			t.classification,
-			Object.values(ClassificationMethod),
-		),
+		classificationCheck: enumCheck('thread_transcript_entries_classification_check', t.classification, Object.values(ClassificationMethod)),
 		threadAtIdx: index('transcript_entries_thread_at_idx').on(t.threadId, t.at),
 		issueIdx: index('transcript_entries_issue_id_idx').on(t.issueId),
 	}),
@@ -124,7 +122,9 @@ export const consumedMessages = sqliteTable(
 		threadId: text('thread_id'),
 		entryId: text('entry_id'),
 
-		consumedAt: integer('consumed_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		consumedAt: integer('consumed_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	t => ({
 		channelMessageUnq: uniqueIndex('consumed_messages_channel_message_unq').on(t.channelId, t.platformMessageId),
@@ -145,7 +145,9 @@ export const threadClarifications = sqliteTable(
 		// pg jsonb (string[]) → sqlite json.
 		candidateIssueIds: text('candidate_issue_ids', { mode: 'json' }).$type<string[]>().notNull(),
 
-		askedAt: integer('asked_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		askedAt: integer('asked_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
 		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
 	},
 	t => ({

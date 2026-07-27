@@ -1,17 +1,21 @@
 /**
- * SQLite-dialect drizzle-kit config — ADDITIVE, isolated from the pg config at
- * db/drizzle.config.ts. The pg schema (db/schema/) stays the canonical source for
- * the running TS daemon; this sqlite substrate is the go-domain port target
- * (go-domain-design.md decision (a), Option A: one flat dialect, pgSchema
- * namespaces → table-name prefixes).
+ * THE drizzle-kit config. One dialect, one schema directory, one migrations ledger — the pg
+ * config (db/drizzle.config.ts) and the pg trees (db/schema/, db/migrations/) were deleted once
+ * the TS daemon joined the Go gateway on the shared SQLite file. Flat dialect: the former
+ * pgSchema namespaces survive as table-name prefixes (`terminal` namespace → `terminal_*`).
  *
- * Run from packages/contracts/:
- *   bun x drizzle-kit generate --config=db/schema-sqlite/drizzle.config.ts
+ * AUTHORING is this config's only job — from packages/contracts/:
+ *   bun run drizzle:generate        # === `bun migrate:create` from the repo root
  *
- * `drizzle-kit migrate` for sqlite needs better-sqlite3/@libsql; this workspace
- * carries neither. The migration SQL is applied by the Go SqliteStore via
- * //go:embed (modernc.org/sqlite) — the .scratch db below is only a generate-time
- * convenience and is gitignored.
+ * APPLYING is deliberately NOT drizzle-kit's job, and there is no `drizzle:migrate`. Two
+ * processes share one file, so migrations are applied at BOOT by two idempotent migrators over
+ * the SAME `_sqlite_migrations` ledger: the TS `LibsqlDriver` and the Go `SqliteStore`
+ * (//go:embed over a byte-identical copy, gated by scripts/db/sync-sqlite-migrations.ts).
+ * Whoever boots first applies, the second is a no-op. A third applier carrying a ledger of its
+ * own (`drizzle-kit migrate` writes `__drizzle_migrations`) is exactly the split substrate this
+ * arrangement exists to prevent.
+ *
+ * The .scratch db below is a generate-time convenience only, and is gitignored.
  */
 import { defineConfig } from 'drizzle-kit'
 
