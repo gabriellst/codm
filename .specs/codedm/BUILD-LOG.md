@@ -2541,10 +2541,30 @@ A AC-5.4 exige que o verbo seja verificado por `bun test:tooling`, então `./scr
 **dois** módulos (`api/go`, `api/go/core`) · **e2e de runtime: 5 passed / 2 skipped** ·
 detectores **39/0/37/33/3/2**, sem crescer.
 
+## COMMIT DE TERCEIRO NA BRANCH DURANTE A FASE — SURFACED, NÃO ABSORVIDO
+
+**`a6888d73` `fix(core)!: mint BaseEvent.id as UUIDv7 instead of hashing the event's content`** pousou
+em `agent-abstraction` **entre** o commit 5a (`b42151bc`) e o 5b (`56cc43a9`), autorado por outro
+processo, não por esta fase. É registrado aqui em vez de silenciosamente incorporado, porque a §8
+regra 1 manda o executor verificar o ESTADO da árvore e SURFACAR (nunca absorver) quebra de isolamento.
+
+Três fatos verificados:
+- O brief desta fase dizia explicitamente para **não** consertar `BaseEvent.id` (parkeado, decisão do
+  founder pendente). Esta fase **não** o consertou; outro processo consertou.
+- O commit cita `AgentRunStartedEvent`, símbolo que só passou a existir em `b42151bc` — logo foi
+  autorado DEPOIS do commit 5a, sobre a árvore já renomeada.
+- **Todos** os gates finais deste relatório foram rodados no HEAD que já o contém
+  (`bun run test` 698 pass, e2e 5/2, detectores 39/0/37/33/3/2). Nada nesta fase depende dele e nada
+  nele conflita com esta fase.
+
+Ação recomendada ao founder: decidir se `a6888d73` fica nesta branch ou é isolado, e fechar a entrada
+de dívida nº 1 abaixo, que ele torna obsoleta.
+
 ## DÍVIDA (herdada, não envelhecer)
 
-1. `BaseEvent.id` content-addressed em resolução de milissegundo — inalterado, e a decisão do founder
-   segue pendente. **Não mordeu nesta fase.**
+1. `BaseEvent.id` content-addressed em resolução de milissegundo — **resolvido por `a6888d73`, commit
+   de outro processo durante esta fase** (ver a seção acima). Esta fase não o tocou. A decisão do
+   founder que estava pendente foi, na prática, tomada por esse commit; confirmar ou reverter.
 2. `codex`/`opencode` detect-only — inalterado (o `NOT_IMPLEMENTED` da Fase 4.5 segue sendo a guarda).
 3. `phase3-smoke.ts` não compila (acima).
 4. AC-5.5 (`bun review --pr` sem `critical`) — **não rodada**: é a única AC não determinística do
