@@ -106,7 +106,7 @@ justamente por afirmar sem ler. O que mudou:
   equivalente por construção e **é** o que o `RunIssueTurn` enxerga; AC-6.4 e AC-6.7 remontadas a
   partir dessa posição (§4.3 regra 7).
 - **`FactSource` não tinha portador.** As duas classes reusadas
-  (`TerminalSessionCompletedEvent`/`TerminalStopRaisedEvent`) não têm campo `source` — uma AC
+  (`AgentRunCompletedEvent`/`AgentRunStopRaisedEvent`) não têm campo `source` — uma AC
   assertando nele falharia por campo inexistente. O campo agora **entra** no schema das duas (evento
   de domínio context-private → **zero** custo de contrato, bridge intocado), §4.3 regra 6.
 - **A cunhagem do run token se contradizia.** §4.5 declarava `run()` abstrato enquanto §4.2/§4.4
@@ -677,15 +677,18 @@ medscall (`events/ChatEvent.ts:19-36`) — é ele que o `flush()` materializa co
    dependeram de tool alguma (tabela acima).
 
    **O portador — verificado que HOJE não existe, e por isso é entrega da Fase 6.** As duas classes
-   reusadas não têm o campo: `TerminalSessionCompletedEventSchema` é
-   `z.domainEvent({ issueId, threadId, key, completedAt })` e `TerminalStopRaisedEventSchema` é
+   reusadas não têm o campo: `AgentRunCompletedEventSchema` é
+   `z.domainEvent({ issueId, threadId, key, completedAt })` e `AgentRunStopRaisedEventSchema` é
    `z.domainEvent({ stopId, issueId, threadId, kind })`. Uma AC assertando em `event.payload.source`
    hoje falharia por campo inexistente. Portanto, **a Fase 6 acrescenta `source: z.enum(FactSource)`
    ao schema das DUAS classes** — nomeadamente
-   `packages/api/typescript/src/terminal/events/TerminalSessionCompletedEvent.ts` e
-   `.../TerminalStopRaisedEvent.ts` (→ `src/agent/events/…` depois do `git mv` da Fase 5). Todo
-   `new TerminalSessionCompletedEvent({...})` / `new TerminalStopRaisedEvent({...})` passa a
+   `packages/api/typescript/src/agent/events/AgentRunCompletedEvent.ts` e
+   `.../AgentRunStopRaisedEvent.ts`. Todo
+   `new AgentRunCompletedEvent({...})` / `new AgentRunStopRaisedEvent({...})` passa a
    preencher o campo: `RunIssueTurn` com `INFERRED`, os use cases de declaração com `DECLARED`.
+   (Nomes atualizados pela Fase 5, que renomeou as classes e os nomes de evento `terminal.*` →
+   `agent.run.*` — ver a emenda do founder na §7/Fase 5. Continuam context-private, custo de
+   contrato zero.)
 
    **Custo de contrato: ZERO.** Estes são eventos de domínio **context-private** (`terminal.*`), não
    wire — o cabeçalho das próprias classes diz *"Context-private fact"*. Eles não vivem em
@@ -699,7 +702,7 @@ medscall (`events/ChatEvent.ts:19-36`) — é ele que o `flush()` materializa co
    MESMAS.** A regra 3 guarda o **accumulator**; esta guarda o **ciclo de vida do run**, que é o
    outro caminho capaz de publicar o mesmo evento congelado — e sem ela a AC-6.4 não fecha.
    Verificado: `terminal/usecases/RunTerminalSession.ts` (`persistOutcome`, `:195-224`) levanta
-   `TerminalSessionCompletedEvent` / `TerminalStopRaisedEvent` a partir do `outcome`, e esses **já**
+   `AgentRunCompletedEvent` / `AgentRunStopRaisedEvent` a partir do `outcome`, e esses **já**
    fazem bridge para `integration.issue.completed` / `stop_raised`. Com tools ligadas, isso somado a
    uma `complete_issue` declarada dá **duas** publicações.
 
@@ -723,7 +726,7 @@ medscall (`events/ChatEvent.ts:19-36`) — é ele que o `flush()` materializa co
    - Um `if` sobre `agent.tools.length` **é legítimo** aqui — é política de origem de fato, não
      branch de provider (regra 4 da §8). O que a regra 4 proíbe é `if (provider === 'x')`.
    - **Os use cases de declaração REUSAM as classes de evento que já existem**
-     (`TerminalSessionCompletedEvent` / `TerminalStopRaisedEvent`, renomeadas **apenas** pelo `git mv`
+     (`AgentRunCompletedEvent` / `AgentRunStopRaisedEvent`, renomeadas **apenas** pelo `git mv`
      da Fase 5, que a §5.3 lista como "FICAM"). **Não nascem eventos de domínio paralelos**, e
      portanto o bridge **não ganha branch novo** — continua com o mesmo 1:1 de hoje. Um evento novo
      aqui significaria dois branches mapeando ao mesmo evento congelado: é exatamente o
@@ -782,10 +785,10 @@ Quatro tools, prefixo `codedm__`, todas mapeando para vocabulário **já congela
 
 | Tool | Payload | Aterrissa em |
 |---|---|---|
-| `codedm__complete_issue` | `{ summary: string }` | use case `DeclareIssueComplete` (ctx `agent`) → levanta a **classe de evento que já existe**, `TerminalSessionCompletedEvent` (→ `AgentSessionCompletedEvent` depois do `git mv` da Fase 5) → bridge existente → **`integration.issue.completed`** (congelado) |
-| `codedm__raise_stop` | `{ kind: StopKind; detail: string }` | `DeclareStop` (ctx `agent`) → **a mesma** `TerminalStopRaisedEvent` → bridge existente → **`integration.issue.stop_raised`** (agora com `detail`, ver (i) abaixo) |
+| `codedm__complete_issue` | `{ summary: string }` | use case `DeclareIssueComplete` (ctx `agent`) → levanta a **classe de evento que já existe**, `AgentRunCompletedEvent` (→ `AgentSessionCompletedEvent` depois do `git mv` da Fase 5) → bridge existente → **`integration.issue.completed`** (congelado) |
+| `codedm__raise_stop` | `{ kind: StopKind; detail: string }` | `DeclareStop` (ctx `agent`) → **a mesma** `AgentRunStopRaisedEvent` → bridge existente → **`integration.issue.stop_raised`** (agora com `detail`, ver (i) abaixo) |
 | `codedm__record_artifact` | `{ kind: ArtifactKind; name: string; ref: string; meta?: string }` | **contexto `artifact`**: `RecordArtifactTool` → use case **que já existe** `RecordArtifact` → `artifact.recorded` → bridge existente do `artifact` → **`integration.artifact.recorded`** (ver (ii) abaixo) |
-| `codedm__ask_operator` | `{ question: string }` | `AskOperator` (ctx `agent`) → **a mesma** `TerminalStopRaisedEvent`, com `kind` fixado em `StopKind.HUMAN_REQUESTED` e `detail: question` → **`integration.issue.stop_raised`** |
+| `codedm__ask_operator` | `{ question: string }` | `AskOperator` (ctx `agent`) → **a mesma** `AgentRunStopRaisedEvent`, com `kind` fixado em `StopKind.HUMAN_REQUESTED` e `detail: question` → **`integration.issue.stop_raised`** |
 
 **Nenhum evento de domínio novo nasce para servir as tools.** `agent.run.completed` /
 `agent.stop.raised` / `agent.artifact.declared` / `agent.operator.asked` são **nomes de fato na
@@ -874,7 +877,7 @@ texto fixa ao modelo (*"A pergunta foi entregue ao operador. Não espere respost
 puder prosseguir sem ela, chame `codedm__raise_stop`."*). **Razão:** numa noite não há ninguém para
 responder, e uma tool síncrona travaria o run até o watchdog — o pior modo de falha possível. O
 destino é nomeado e **não** é um bridge novo, nem um evento novo: o `AskOperator` levanta a **mesma
-classe** `TerminalStopRaisedEvent` que o `DeclareStop` levanta, e o **mesmo**
+classe** `AgentRunStopRaisedEvent` que o `DeclareStop` levanta, e o **mesmo**
 `handlers/PublishTerminalIntegrationEvents.ts` que já publica os outros três a mapeia para
 `integration.issue.stop_raised` com `StopKind.HUMAN_REQUESTED` e `detail: question` — ou seja, a
 pergunta vira um stop "Needs you" na thread, exatamente o vocabulário que o produto já renderiza, e
@@ -1119,6 +1122,23 @@ export function agentInput<T extends ZodRawShape>(properties: T) {
   exceção viva é `auth/schemas/SessionSchema.ts:28` (`z.string().nullable()`, porque a sessão
   pré-onboarding ainda não tem owner) — e ela **não** é o caso do agent: um agent só roda com owner
   resolvido. Congelar `z.string()` aqui criaria uma segunda verdade sobre o mesmo id.
+- **`issueId` é OPCIONAL** — corrigido na execução da Fase 5 (27-jul), e o motivo é ESTRUTURAL, não
+  temporário. O universo de agents do CodeDM tem exatamente dois membros e um deles roda **antes de a
+  issue existir**: `ClassifyIssueAgent` decide se uma mensagem CONTINUA uma issue aberta, ABRE uma
+  nova, ou é ambígua demais — o `issueId` é a SAÍDA dele, nunca a entrada. A Fase 1 congelou o campo
+  como obrigatório olhando só o lado do `IssueWorkAgent`; nada no repo consegue fornecer um id no
+  momento da classificação (`ClassifyMessage` tem `ownerId`, `threadId`, `entryId` e o workspace —
+  não tem issue). As duas alternativas eram piores e estão registradas para não voltarem: forjar um
+  uuid que não identifica nada (a "identidade vinda do nada" que a §4.4 existe para impedir), ou
+  cunhar um descartável por run. **Sobrescrever a chave por agent via `.extend()` também não é
+  opção**: `AgentInputSchemaConstraint` fixa o shape do envelope, e `ZodUUID` e
+  `ZodOptional<ZodUUID>` não são atribuíveis **em nenhuma das duas direções** — o override quebra o
+  constraint venha de onde vier. A garantia de identidade permanece intacta onde ela pesa: só um
+  agent com escopo de tool **não vazio** cunha run token, e esse é o `IssueWorkAgent`, que sempre roda
+  contra uma issue resolvida. **Obrigação da Fase 6:** estreitar `issueId` no ÚNICO ponto de cunhagem
+  (`agent/types/Agent.ts`), que é a única camada que enxerga envelope e request. A AC-1.4 continua
+  satisfeita — ela exige `input.issueId` LEGÍVEL sem cast, e ele é (`string | undefined`); o
+  type-test foi ajustado no mesmo commit.
 - `ownerId`/`issueId`/`threadId` no envelope são os **mesmos** que o run token carrega (§4.4). **A
   base `Agent` os copia do input para as claims do token** (ela é a única que enxerga os dois lados,
   §4.2); o handler de tool os lê do token. Uma origem, dois usos, e o `AgentRunRequest` continua sem
@@ -1221,6 +1241,22 @@ agent/agents/IssueWorkAgent/{IssueWorkAgent.ts, prompt.ts, types.ts, index.ts}
 
 Ambos injetam **o mesmo** `AgentRunner`. **Isso é a decisão (D3) satisfeita estruturalmente:**
 interface idêntica, transporte idêntico, request diferente.
+
+> **ATRIBUIÇÃO DE FASE, fechada na execução da Fase 5 (27-jul) — as quatro tools do `IssueWorkAgent`
+> e a metade MCP do `run()` são da FASE 6, não da 5.** A Fase 5 entrega a base `Agent` com `run()`
+> template method concreto, `buildRequest` como único ponto de variação, e `tools` declarado. O que
+> ela **não** entrega, porque não teria com o que falar: `buildMcpInvocation`, a dependência de
+> construtor `RunTokenService` e a chamada `mint`. Motivo verificável, não preferência:
+> `RunTokenService` é **contrato sem implementação** por decisão da própria Fase 1 e **não tem binding
+> em `agent/registry.ts`** — injetá-lo na base faria a resolução DI do `IssueWorkAgent` estourar no
+> boot; e montar um `AgentMcpInvocation` agora entregaria ao CLI um `--mcp-config` apontando para uma
+> rota que ainda não existe. Pelo mesmo motivo o prompt do `IssueWorkAgent` **não** instrui
+> `codedm__complete_issue`/`codedm__raise_stop` nesta fase: mandar o modelo chamar uma tool fora do
+> `--allowedTools` produz um turno que NARRA uma chamada que não pode fazer. Escopo, instrução, router
+> e implementação do token entram **juntos** na Fase 6. O invariante da §4.3 regra 7 vale nos dois
+> estados: `request.mcp` presente ⟺ `agent.tools.length > 0` — com escopo vazio, `mcp` simplesmente
+> não existe. A AC-6.12 (`.mint(` só em `agent/types/Agent.ts`) é AC **da Fase 6** e é lá que passa a
+> ter alvo.
 
 **Registro** em `agent/registry.ts` via `expandBindings`, token de classe, mesma instância nos três
 envs — sem mapa nome→agent, sem factory (`medscall .../agent/registry.ts:19-60`):
@@ -1376,8 +1412,21 @@ Tornar isso event-driven quebraria uma decisão de roteamento em duas transaçõ
 sem ganho algum. Então: `ClassifyMessage` continua injetando — só que agora
 `@agent/agents/ClassifyIssueAgent` em vez de `@terminal/services/IssueClassifier`
 (`ClassifyMessage.ts:5`), e a Partnership anotada continua sendo Partnership anotada.
-O `IssueWorkAgent`, esse sim, é dirigido **só por handler** (`RunTerminalSessionOnClassification` →
-`RunIssueTurn`).
+O `IssueWorkAgent`, esse sim, é dirigido **só por handler** (`RunIssueTurnOnClassification` →
+`RunIssueTurn`, que injeta o agent).
+
+> **CORREÇÃO DE CONTRATO (execução da Fase 5, 27-jul) — QUEM é injetado.** O parágrafo acima nomeia
+> `@agent/agents/ClassifyIssueAgent` como o token que `ClassifyMessage` injeta, e isso **não pode
+> valer** depois que a §4.8/§5.3 tiram do classificador as quatro decisões de POLÍTICA (atalho de
+> reply-quote, piso de confiança, cunhagem de slug, fallback de clarify) e as põem no `IssueRouter`.
+> Se o use case injetasse o agent, ele teria de executar essas quatro — isto é, política de roteamento
+> do contexto `agent` rodando dentro do contexto `thread`, exatamente o vazamento que o split existe
+> para impedir. **Fica assim: `ClassifyMessage` injeta `@agent/services/IssueRouter`, e o router injeta
+> `ClassifyIssueAgent`.** Tudo que a §5.2 realmente sustenta continua de pé — a divergência do medscall
+> (um use case invoca, porque a decisão é consumida DENTRO da própria transação), a Partnership
+> anotada, e as partes grepáveis da AC-5.8: o método do router chama-se `classify(...)`, então
+> `ClassifyMessage chama classify(...)` continua literalmente verdadeiro, e
+> `git grep "for await" -- src/thread` continua **0 hits**.
 
 O **router MCP** é a terceira porta, e ela é HTTP: uma tool call é um request como outro qualquer —
 controller fino → use case do contexto `agent` → evento de domínio → outbox. Ele **não** chama agent
@@ -2270,9 +2319,37 @@ mudança de comportamento observável** — provar pelo diff.
 > renomear um domain event interno é livre; renomear um nome de wire é quebra de contrato. Se algum
 > nome congelado contiver "terminal", ele **fica**, e o BUILD-LOG registra por quê.
 >
-> **AC-5.10** `test ! -d packages/api/typescript/src/terminal` — o diretório **não existe**.
-> **AC-5.11** `git grep -nE "\bTerminal(Session|Run|Reply|Stop)[A-Za-z]*" -- packages/api/typescript/src` → **0 hits**
-> (a categoria (a) foi inteira). A categoria (b) sobrevive e é nomeada explicitamente na exclusão.
+> **AC-5.10a** `test ! -d packages/api/typescript/src/terminal` — o diretório **não existe**.
+> **AC-5.11** `git grep -nP "\bTerminal(Session|Run|Reply|Stop)[A-Za-z]*" -- packages/api/typescript/src | grep -v StreamTerminalSession`
+> → **0 hits** (a categoria (a) foi inteira). A categoria (b) sobrevive e é nomeada explicitamente na
+> exclusão, para a AC ser falseável.
+>
+> **TRÊS CORREÇÕES DE CONTRATO neste bloco, feitas na execução da Fase 5 (27-jul), com evidência:**
+> 1. **`-nE` → `-nP`.** `\b` **não existe** no ERE do `git grep` no macOS (Apple git 2.50.1): a AC como
+>    estava escrita retornava `0 hits` VACUAMENTE. Medido no HEAD da Fase 4.5, ANTES de qualquer
+>    rename: `git grep -nE "\bTerminal(Session|Run|Reply|Stop)[A-Za-z]*" -- …/src | wc -l` → **0**,
+>    enquanto o **mesmo** padrão sem `\b` → **132**. Uma AC que passa numa árvore que a viola não é uma
+>    AC. Com `-nP` (PCRE) o `\b` funciona — e é ele que exclui a categoria (b) sozinho, porque em
+>    `StreamTerminalSession` não há fronteira de palavra antes de `Terminal`. O `grep -v` fica assim
+>    mesmo, redundante e explícito, para a AC continuar legível sem conhecer PCRE.
+> 2. **A regex NÃO cobre 2 dos 7 símbolos da categoria (a).** `PublishTerminalIntegrationEvents` e
+>    `RunTerminalSessionOnClassification` carregam `Terminal` no MEIO do identificador, logo
+>    `\bTerminal` nunca casa neles. O texto da emenda é normativo e os dois **foram renomeados**
+>    (`PublishAgentIntegrationEvents`, `RunIssueTurnOnClassification`); a AC acima mede só os outros
+>    cinco. Grep complementar, para a categoria (a) ficar inteiramente mecânica:
+>    `git grep -n "PublishTerminalIntegrationEvents\|RunTerminalSessionOnClassification" -- packages/api/typescript/src`
+>    → **0 hits**.
+> 3. **Colisão de numeração:** a emenda criou uma `AC-5.10` quando já existia outra (a re-baseline do
+>    `registry-scan`, mais abaixo). Renumerada aqui para **AC-5.10a**; a pré-existente segue **AC-5.10**.
+>
+> **NOMES ESCOLHIDOS na execução** (a emenda fixa o prefixo `Agent*`, não a grafia):
+> `AgentRunStartedEvent` / `AgentRunCompletedEvent` / `AgentRunReplyDraftedEvent` /
+> `AgentRunStopRaisedEvent` (`agent.run.*`), `AgentRunOutcome`, `PublishAgentIntegrationEvents`,
+> `RunIssueTurnOnClassification`. `AgentRun*` e não `AgentSession*` porque `AgentSession` já é a LINHA
+> DURÁVEL por issue (Fase 4) — um `AgentSessionCompletedEvent` leria como fato sobre a linha, não sobre
+> o turno — e porque `AgentReplyDraftedEvent` já é o evento de wire CONGELADO para o qual o bridge
+> republica. Os tipos `Terminal*Errors` viraram `Agent*Errors` (símbolos internos); os CÓDIGOS
+> `TERMINAL_*` ficam, pela §5.1.
 > **AC-5.12** `git log --follow` num arquivo movido mostra história anterior ao `git mv` — o move
 > preserva história, não recria arquivo.
 
@@ -2281,6 +2358,18 @@ reescrito para `['agent','thread']`.
 **AC-5.2** `git grep -n "'terminal'\|@terminal/" -- packages/api/typescript/src packages/app` → **0
 hits** como identidade de contexto (códigos de erro `TERMINAL_*` permanecem — são strings públicas,
 não identidade de contexto).
+&nbsp;&nbsp;**CORREÇÃO DE CONTRATO (execução, 27-jul):** o pathspec `packages/app` faz esta AC casar
+**uma chave de conteúdo i18n da landing** —
+`packages/app/astro/src/pages/[locale]/_components/TerminalMock.astro`, que lê
+`t['router']['terminal']`, o texto do MOCK de terminal da home. Não é identidade de contexto: é copy
+de marketing sobre um painel de terminal, do mesmo naipe da categoria (b) da emenda. A AC roda com a
+exclusão explícita:
+`git grep -n "'terminal'\|@terminal/" -- packages/api/typescript/src packages/app | grep -v TerminalMock.astro`.
+&nbsp;&nbsp;E as URLs `/v1/terminal/*` **permanecem**: pela convenção de roteamento declarada na §5.1
+o path é escrito por inteiro pelo controller e o router não prefixa nada — o nome do contexto é a TAG
+OpenAPI e o label de log, nunca a URL. A tag SEGUIU o rename (`terminal` → `agent`, é o único delta do
+`bun sdk` desta fase); renomear a URL seria quebra de wire para o cliente react, e as duas rotas são
+justamente a superfície de PAINEL que a emenda deixa para a Fase 7.
 **AC-5.3** Cada agent é token DI de classe nos três envs; **não existe** mapa nome→agent:
 `git grep -n "AgentRegistry\|getAgent(\|agentsByName" -- packages/api/typescript/src` → **0 hits**.
 **AC-5.4** `.claude/skills/agent/{SKILL.md,registry.yaml}` existem e `bun cli agent <ctx> <Name>`
@@ -2405,7 +2494,7 @@ enxerga o request, que é montado dentro do `Agent` (§4.2/§4.5), e as duas lei
 por construção (§4.3, regra 7). O **stop de TRANSPORTE** continua sendo cunhado sempre.
 
 **E, para que `FactSource` tenha portador (§4.3, regra 6): `source: z.enum(FactSource)` entra no
-schema de `TerminalSessionCompletedEvent` e `TerminalStopRaisedEvent`** (eventos de domínio
+schema de `AgentRunCompletedEvent` e `AgentRunStopRaisedEvent`** (eventos de domínio
 **context-private** — zero custo de contrato, zero mudança no bridge, o campo não sobe para o
 integration event). Sem esse campo, AC-6.4(c) e AC-6.7(a) assertam sobre algo que não existe.
 
@@ -2441,7 +2530,7 @@ caso por `request.mcp`: o request é interno ao `Agent` e o teste não o alcanç
 produz **exatamente um** — porque `RunIssueTurn` só cunha a conclusão de domínio quando
 `agent.tools.length === 0`;
 &nbsp;&nbsp;(c) o espelho: agent com `tools.length === 0` que termina normalmente produz
-**exatamente um**, e o `TerminalSessionCompletedEvent` correspondente carrega
+**exatamente um**, e o `AgentRunCompletedEvent` correspondente carrega
 **`payload.source === FactSource.INFERRED`** (o campo existe porque a Fase 6 o acrescentou, §4.3
 regra 6); no caso (b) o evento carrega `DECLARED`.
 &nbsp;&nbsp;Contagem sobre o **outbox**, não sobre log. Teste extra de guarda estrutural, para o
@@ -2457,13 +2546,13 @@ tools.
 payload que tente injetá-los é rejeitado pelo schema (AC-1.6 garante que a chave nem existe).
 **AC-6.7** Degradação visível, **com a separação transporte × domínio da §4.3**. O caso é montado
 pelo **escopo de tool** (agent com `tools = []`), não por `request.mcp` (§4.3, regra 7). Teste
-provando que esse run (a) fecha a issue e o `TerminalSessionCompletedEvent` persistido carrega
+provando que esse run (a) fecha a issue e o `AgentRunCompletedEvent` persistido carrega
 **`payload.source === FactSource.INFERRED`** — asserção sobre o **campo que a Fase 6 acrescenta ao
 schema do evento de domínio** (§4.3, regra 6), lido do outbox/`shared_events`, nunca de log;
 (b) **não** produz artefato nem stop de **domínio** (`APPROVAL_NEEDED`, `HUMAN_REQUESTED`,
 `BLOCKED_BY_CLASSIFICATION` — só `raise_stop` os origina); (c) **ainda produz** stop de
 **transporte** quando cabe — caso explícito: frames de re-auth do CLI →
-`stop: { kind: AUTH_REQUIRED }`, virando um `TerminalStopRaisedEvent` com
+`stop: { kind: AUTH_REQUIRED }`, virando um `AgentRunStopRaisedEvent` com
 `payload.source === FactSource.INFERRED`, sem tool alguma (e o mesmo vale para um agent **com**
 escopo de tool: o stop de transporte é cunhado do mesmo jeito). E que um agent que exige tools
 contra provider sem `mcpConfigFlag` falha com `AGENT_TOOLS_UNSUPPORTED`. Teste de tipo junto:

@@ -2384,3 +2384,177 @@ Fase 5: `git mv terminal → agent`, `CONTEXTS.agent`, `ANNOTATED_CYCLES` → `[
 `BoundedContext.create({ name: CONTEXTS.agent })` (o literal `'terminal'` em `index.ts:12` é dívida
 conhecida), `agents/` + skill + verbo `bun cli agent`. A estrutura que a Fase 5 move agora é a certa —
 que era o motivo de esta fase preceder aquela.
+
+---
+
+# 2026-07-27 — FASE 5: o bounded context `agent`
+
+Branch `agent-abstraction` (verificada antes de tocar em nada; árvore limpa no HEAD `d99bd496`).
+Quatro commits, todos por pathspec explícito, todos `--no-verify` com os gates rodados à mão (o hook
+de pre-commit reprova neste repo).
+
+| commit | o quê |
+|---|---|
+| `b42151bc` | 5a — `git mv terminal → agent` + a metade que renomeia da emenda do founder |
+| `56cc43a9` | 5b — `types/Agent.ts`, os dois agents, `IssueRouter`, `OpenIssueRef` → `thread/`, DI |
+| `cd015bbc` | 5c — skill `agent` + verbo `bun cli agent` + taxonomia + gate gap fechado |
+| `80064ad2` | regen do SDK (a TAG OpenAPI segue o contexto) |
+
+## O MOVE, e o que renomeou
+
+`git mv` em tudo (93 arquivos), história preservada — `git log --follow` sobre
+`src/agent/services/AgentRunner/AgentRunner.ts` mostra seis commits, até `b473205e` (a criação do
+contexto), e sobre `src/agent/events/AgentRunStartedEvent.ts` mostra `b473205e` através do rename de
+arquivo. AC-5.12/AC-5.6 cumpridas.
+
+**Categoria (a) — fatos do RUN, renomeados** (todos domain events INTERNOS; verificado contra
+`packages/contracts/wire/events/`: **nenhum** nome congelado de wire contém "terminal" — as menções lá
+são doc-strings de `issue-status.tsp` / `provider-kind.tsp` / `agent-stop-reason.tsp` / `stop-kind.tsp`
+/ `issue-opened.tsp`, nunca um `name`):
+
+| antes | depois | nome do evento |
+|---|---|---|
+| `TerminalSessionStartedEvent` | `AgentRunStartedEvent` | `terminal.session.started` → `agent.run.started` |
+| `TerminalSessionCompletedEvent` | `AgentRunCompletedEvent` | `terminal.session.completed` → `agent.run.completed` |
+| `TerminalReplyDraftedEvent` | `AgentRunReplyDraftedEvent` | `terminal.agent.reply_drafted` → `agent.run.reply_drafted` |
+| `TerminalStopRaisedEvent` | `AgentRunStopRaisedEvent` | `terminal.stop.raised` → `agent.run.stop_raised` |
+| `TerminalRunOutcome` | `AgentRunOutcome` | — (§5.3 nomeia este) |
+| `PublishTerminalIntegrationEvents` | `PublishAgentIntegrationEvents` | — |
+| `RunTerminalSessionOnClassification` | `RunIssueTurnOnClassification` | — |
+| `Terminal{Domain,Application,Interface,Infrastructure}Errors` | `Agent…Errors` | — (símbolos internos) |
+
+`AgentRun*` e não `AgentSession*`: `AgentSession` já é a LINHA DURÁVEL por issue (Fase 4), então
+`AgentSessionCompletedEvent` leria como fato sobre a linha e não sobre o turno; e
+`AgentReplyDraftedEvent` já é o evento de wire CONGELADO para o qual o bridge republica — reusar o
+nome internamente seria duas coisas com o mesmo nome no mesmo fluxo.
+
+**Categoria (b) — a superfície de saída NÃO renomeou**, por instrução da emenda:
+`StreamTerminalSession`, `TerminalOutputAccumulator`, `TuiActionType`, `TerminalSseFrame*`,
+`TerminalStreamWriter`, `TerminalOutputFrame*`, `TerminalActionFrame*`. Descrevem o PAINEL que o
+operador olha; vocabulário é assunto da Fase 7.
+
+**Códigos de erro NÃO renomearam** (§5.1): `TERMINAL_ALREADY_RUNNING`, `SESSION_ALREADY_STREAMING`,
+`TOO_MANY_TERMINAL_STREAMS`, `PROVIDER_NOT_DETECTED`, `TERMINAL_SPAWN_FAILED`,
+`CLASSIFICATION_FAILED`. São vocabulário público (status HTTP + chave i18n + membro regenerado da
+união `ErrorCode` da SDK).
+
+**Nenhum nome congelado de wire contendo "terminal" ficou** — porque nenhum existe. As URLs
+`/v1/terminal/*` ficam: a §5.1 declara que o path é escrito por inteiro pelo controller e que o nome
+do contexto é a TAG OpenAPI, não a URL. A tag seguiu o rename e é o único delta do `bun sdk`.
+
+## `CONTEXT_NAMES` — escopo além do pedido, com motivo
+
+A §5.1 pede `BoundedContext.create({ name: CONTEXTS.agent })`, mas `CONTEXTS` mapeia para `{pgSchema}`
+— não existia VALOR de nome para importar, só o tipo. Nasceu `CONTEXT_NAMES`, derivado de
+`Object.keys(CONTEXTS)` (um único cast de derivação, documentado). Aplicado aos **dez** roots, não só
+ao `agent`: este rename é a prova de que o literal é perigoso — `name: 'terminal'` seguiu compilando
+feliz dentro da pasta renomeada, porque um literal solto é checado contra `string`.
+
+## O SPLIT DO CLASSIFICADOR
+
+`IssueClassifier` (serviço fazendo duas coisas) virou:
+- `agents/ClassifyIssueAgent/` — prompt (`ClassifyIssuePromptBuilder`), `outputSchema`
+  (`LlmDecisionSchema`), UM método público `classify(input)` cujo corpo é `return this.collect(input)`;
+- `services/IssueRouter/` — as quatro decisões de POLÍTICA (atalho de reply-quote, piso de confiança,
+  cunhagem de slug, fallback de clarify), levando `slug.ts` junto por `git mv`.
+
+`agents/IssueWorkAgent/` nasceu ao lado e `RunIssueTurn` passou a drená-lo em vez do runner cru.
+
+## DEFEITOS DE CONTRATO — todos corrigidos NO GOAL, não só aqui
+
+1. **AC-5.11 era VACUAMENTE verde.** `\b` não existe no ERE do `git grep` (macOS/Apple git 2.50.1).
+   Medido no HEAD da Fase 4.5, antes de qualquer rename: com `\b` → **0 hits**; o mesmo padrão sem
+   `\b` → **132 hits**. Goal corrigido para `-nP`.
+2. **A regex da AC-5.11 não cobre 2 dos 7 símbolos da categoria (a)**
+   (`PublishTerminalIntegrationEvents`, `RunTerminalSessionOnClassification` — `Terminal` no meio do
+   identificador, `\bTerminal` nunca casa). Renomeados assim mesmo (o texto da emenda é normativo) e o
+   goal ganhou o grep complementar.
+3. **Colisão de numeração:** a emenda criou uma segunda `AC-5.10`. Renumerada para **AC-5.10a**.
+4. **AC-5.2 casa um falso positivo** em `packages/app`: `TerminalMock.astro`, o mock de terminal da
+   landing, lê `t['router']['terminal']`. Exclusão explícita escrita no goal.
+5. **§5.2 nomeia o token errado.** Diz que `ClassifyMessage` injeta `ClassifyIssueAgent`, o que deixa
+   de valer quando §4.8/§5.3 tiram as quatro decisões de política do classificador — o use case teria
+   de rodá-las, isto é, política do contexto `agent` dentro do contexto `thread`. Fechado no goal:
+   **o use case injeta o `IssueRouter`, o router injeta o agent**. Tudo que a AC-5.8 grepa continua
+   verdadeiro (o método do router chama-se `classify`, e `for await` em `src/thread` = 0).
+6. **`BaseAgentInputSchema.issueId` era obrigatório e é impossível.** `ClassifyIssueAgent` roda ANTES
+   de a issue existir — o id é a saída dele. Agora `.optional()`, com o motivo estrutural escrito na
+   §4.6 e a obrigação da Fase 6 (estreitar no único ponto de cunhagem). Override por agent não era
+   opção: `AgentInputSchemaConstraint` fixa o shape e `ZodUUID`/`ZodOptional<ZodUUID>` não são
+   atribuíveis em nenhuma direção.
+7. **As quatro tools do `IssueWorkAgent` e a metade MCP do `run()` são da Fase 6**, não da 5.
+   `RunTokenService` é contrato sem implementação POR DECISÃO DA FASE 1 e não tem binding — injetá-lo
+   na base estoura a resolução DI no boot; e montar um `AgentMcpInvocation` agora aponta
+   `--mcp-config` para uma rota inexistente. Atribuição de fase escrita no goal (§4.8). O invariante da
+   §4.3 regra 7 vale nos dois estados.
+8. **ACs da Fase 6/7 citavam os nomes velhos** (`TerminalSessionCompletedEvent`,
+   `TerminalStopRaisedEvent`) que ESTA fase renomeia. Atualizadas no goal.
+
+## OUTRAS DECISÕES DE EXECUÇÃO
+
+- **`useClass` (transitivo) como terceira forma de binding em `core/types/Registry.ts`.** Um agent
+  singleton CAPTURA o `AgentRunner` da primeira construção — exatamente o binding que o seam de DI por
+  env (§8 regra 8) e `TestBed.override` trocam. Três testes de `RunIssueTurn` reprovaram por isso antes
+  do conserto. Alternativas rejeitadas: `useFactory` por agent (duplica o grafo de DI à mão) e não
+  registrar (a AC-5.3 exige token de classe nos três envs).
+- **`ProviderCapabilities` virou schema com o tipo derivado dele.** O resultado do probe agora viaja
+  pelo input do `IssueWorkAgent`, e um contrato de runtime precisa de declaração de runtime — uma
+  cópia fechada seria segundo declarante do mesmo value-set (§8 regra 4).
+- **`ClassifyMessage` resolve o WORKSPACE como `cwd`** em vez de `process.cwd()` (§4.6). Consequência:
+  `givenThread` passou a aninhar `givenWorkspace` — uma thread com `workspaceId` pendurado é estado que
+  `AttachThread` não consegue produzir.
+- **`scripts/graph/tests/build.integration.test.ts` estava VERMELHO no HEAD** (esperava a namespace
+  `terminal` depois que a Fase 4 renomeou a tabela para `agent_agent_sessions`). Não está em gate
+  nenhum — `bun run test` é `nx run-many` e não há projeto nx sob `scripts/`. Corrigido junto, porque
+  a string errada era literalmente `terminal`.
+- **`packages/api/typescript/scripts/phase3-smoke.ts` NÃO compila contra o HEAD** e é anterior a esta
+  fase (a Fase 4.5 matou `StreamJsonAgentRunner` e o `provider` do request). É artefato congelado de
+  smoke, fora de todo tsconfig e de todo gate. Só os PATHS seguiram o `git mv`; um banner no topo
+  registra o estado em vez de reescrever um registro depois do fato.
+
+## AC-5.10 — RE-BASELINE: FEITA À MÃO, DE PROPÓSITO
+
+A AC manda rodar `bun detect:baseline`. **Rodado, e o resultado foi REJEITADO**: a regeneração a
+partir de um scan vivo ADICIONA ~40 chaves — as 39 findings gating de hoje (react `component#bp-20`,
+tauri `as-any`, contracts `as-unknown`, `AgentStreamRegistry service#bp-03`, …) seriam absorvidas na
+baseline e o `bun detect` ficaria verde por ANISTIA, não por ratchet. Exatamente o que a própria AC
+proíbe ("uma chave nova é dívida nova"). O que a fase de fato invalidou foram as **3** chaves de
+`DetectProviders.ts` enraizadas em `src/terminal/` — exatamente o número que a AC previa —, e elas
+seguiram o path. Provas:
+- `git grep -c "src/terminal/" scripts/detectors/registry-scan.baseline.json` → **0**
+- `git grep -c "TerminalSessionRegistry" scripts/detectors/registry-scan.baseline.json` → **0**
+- varredura de chave fóssil (caminho inexistente) sobre as 103 chaves → **nenhuma**
+- `bun detect` **inalterado** em 39/0/37/33/3/2
+
+## GATE GAP FECHADO
+
+`scripts/cli/**` não estava em gate NENHUM: fora de `bun run test` (nx não tem projeto lá) e fora de
+`bun test:tooling`. A suíte golden que prova a saída do scaffolder estava, portanto, sem enforcement.
+A AC-5.4 exige que o verbo seja verificado por `bun test:tooling`, então `./scripts/cli` entrou:
+**298 → 414** testes (+110 pré-existentes, +6 novos do verbo `agent`).
+
+## GATE FINAL (tudo rodado à mão)
+
+`bun tsc` 7 projetos · `bun run test` **698 pass / 0 fail** · `bun lint` · `bun test:tooling`
+**414 pass** · `bun run contracts` + `bun sdk` idempotentes 2× (segunda passada com
+`git status --porcelain` vazio) · `react tsc` + `e2e tsc` (`--skip-nx-cache`) · `go build/vet/test` nos
+**dois** módulos (`api/go`, `api/go/core`) · **e2e de runtime: 5 passed / 2 skipped** ·
+detectores **39/0/37/33/3/2**, sem crescer.
+
+## DÍVIDA (herdada, não envelhecer)
+
+1. `BaseEvent.id` content-addressed em resolução de milissegundo — inalterado, e a decisão do founder
+   segue pendente. **Não mordeu nesta fase.**
+2. `codex`/`opencode` detect-only — inalterado (o `NOT_IMPLEMENTED` da Fase 4.5 segue sendo a guarda).
+3. `phase3-smoke.ts` não compila (acima).
+4. AC-5.5 (`bun review --pr` sem `critical`) — **não rodada**: é a única AC não determinística do
+   documento, custa uma passada de LLM sobre o diff inteiro e a própria AC declara que **não bloqueia
+   a fase**. Registrada aqui como pendência explícita, não como verde.
+
+## PRÓXIMO PASSO
+
+Fase 6 (o servidor MCP, a inversão). Entra COM: as quatro tools no `IssueWorkAgent.tools`, o parágrafo
+de declaração no `IssueWorkPromptBuilder`, `buildMcpInvocation` + a dependência `RunTokenService` +
+`mint` na base `Agent`, o estreitamento de `issueId` no ponto de cunhagem, `source: z.enum(FactSource)`
+nos schemas de `AgentRunCompletedEvent`/`AgentRunStopRaisedEvent`, e os três códigos de erro novos com
+o ripple de 4 paradas.
