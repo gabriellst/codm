@@ -17,7 +17,7 @@ export const events = sqliteTable(
 		ownerId: text('owner_id'),
 		payload: text('payload', { mode: 'json' }).notNull(),
 		source: text('source').notNull(),
-		occurredAt: integer('occurred_at', { mode: 'timestamp_ms' }).notNull(),
+		occurredAt: integer('occurred_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 	},
 	t => ({
 		entityIdx: index('events_entity_idx').on(t.entityId, t.occurredAt),
@@ -49,7 +49,7 @@ export const outbox = sqliteTable(
 		// idempotent handler + dedup UNIQUE at destination = exactly-once.
 		claimedBy: text('claimed_by'),
 		leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 	},
 	t => ({
 		unprocessedIdx: index('outbox_unprocessed_idx').on(t.source, t.processedAt, t.createdAt),
@@ -66,7 +66,7 @@ export const idempotencyKeys = sqliteTable(
 		responseBody: text('response_body', { mode: 'json' }),
 		responseStatus: integer('response_status'),
 		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 	},
 	t => ({
 		pk: primaryKey({ columns: [t.key, t.scope] }),
@@ -91,8 +91,8 @@ export const scheduledCommands = sqliteTable(
 		leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
 		repeatEveryMs: integer('repeat_every_ms'),
 		deadAt: integer('dead_at', { mode: 'timestamp_ms' }),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 	},
 	t => ({
 		dueIdx: index('scheduled_commands_due_idx').on(t.runAt).where(sql`dead_at IS NULL`),

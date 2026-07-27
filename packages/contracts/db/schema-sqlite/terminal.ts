@@ -20,10 +20,10 @@ export const terminalLLMSessions = sqliteTable(
 		provider: text('provider').$type<ProviderKind>().notNull(),
 		cwd: text('cwd').notNull(),
 		claudeSessionId: text('claude_session_id').notNull(),
-		lastTurnAt: integer('last_turn_at', { mode: 'timestamp_ms' }).notNull(),
+		lastTurnAt: integer('last_turn_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
 	t => ({

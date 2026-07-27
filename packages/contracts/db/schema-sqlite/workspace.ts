@@ -19,9 +19,9 @@ export const workspaces = sqliteTable(
 		// Detected badges (GIT | CLAUDE_PROJECT). pg text[] → sqlite json text.
 		badges: text('badges', { mode: 'json' }).$type<WorkspaceBadge[]>().notNull(),
 
-		addedAt: integer('added_at', { mode: 'timestamp_ms' }).notNull(),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+		addedAt: integer('added_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
 	t => ({

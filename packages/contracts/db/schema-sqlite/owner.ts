@@ -25,8 +25,8 @@ export const owners = sqliteTable(
 		isDisabled: integer('is_disabled', { mode: 'boolean' }).notNull().default(false),
 		disabledReason: text('disabled_reason'),
 
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
 	t => ({

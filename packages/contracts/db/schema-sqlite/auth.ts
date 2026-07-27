@@ -15,8 +15,8 @@ export const users = sqliteTable('authentication_users', {
 	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
 	name: text('name'),
 	image: text('image'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 })
 
 export const accounts = sqliteTable('authentication_accounts', {
@@ -32,8 +32,8 @@ export const accounts = sqliteTable('authentication_accounts', {
 	idToken: text('id_token'),
 	accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp_ms' }),
 	scope: text('scope'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 })
 
 export const sessions = sqliteTable('authentication_sessions', {
@@ -47,8 +47,8 @@ export const sessions = sqliteTable('authentication_sessions', {
 	userAgent: text('user_agent'),
 	// uuid → text.
 	activeOwnerId: text('active_owner_id'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 })
 
 export const verificationTokens = sqliteTable('authentication_verification_tokens', {
@@ -56,8 +56,8 @@ export const verificationTokens = sqliteTable('authentication_verification_token
 	identifier: text('identifier').notNull(),
 	value: text('value').notNull(),
 	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 })
 
 /**
@@ -70,7 +70,7 @@ export const userProfiles = sqliteTable('authentication_user_profiles', {
 		.references(() => users.id, { onDelete: 'cascade' }),
 	timezone: text('timezone'),
 	language: text('language'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 	version: integer('version').notNull().default(1),
 })

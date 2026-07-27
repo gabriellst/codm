@@ -22,8 +22,8 @@ export const artifacts = sqliteTable(
 		ref: text('ref').notNull(),
 		meta: text('meta').notNull(),
 
-		recordedAt: integer('recorded_at', { mode: 'timestamp_ms' }).notNull(),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+		recordedAt: integer('recorded_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 	},
 	t => ({
 		kindCheck: enumCheck('artifact_artifacts_kind_check', t.kind, Object.values(ArtifactKind)),

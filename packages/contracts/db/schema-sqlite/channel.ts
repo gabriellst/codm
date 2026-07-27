@@ -27,8 +27,8 @@ export const channels = sqliteTable(
 		// ChannelStatus (CREATED | CONNECTING | CONNECTED | DISCONNECTED | DELETED).
 		status: text('status').$type<ChannelStatus>().notNull(),
 
-		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
 		// bigint → integer.
 		version: integer('version').notNull().default(0),
 	},
