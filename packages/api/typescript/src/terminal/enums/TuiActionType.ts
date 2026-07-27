@@ -12,9 +12,9 @@
  * soon as they appear so we add a registry entry instead of silently losing
  * the action.
  *
- * `TURN_END` is intentionally NOT here — it lives in `TuiMarker.TURN_END_MARKER`
- * on the reliability-signal channel since it carries no observability value as
- * a "thing claude did", only a state transition.
+ * `TURN_END` is intentionally NOT here — it is now structural (`type === 'result'`
+ * on the stream-json terminal frame), not a parsed action, since it carries no
+ * observability value as a "thing claude did", only a state transition.
  *
  * Context-private (not a contracts enum): actions ride the SSE side-channel only
  * (`browser.terminal_action_detected` frames — phase-10 amendment: SSE frame, NO wire event).

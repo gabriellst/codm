@@ -23,7 +23,7 @@ export const StreamTerminalSessionOutputSchema = TerminalSseFrameSchema
  * (double-open → 409, the observer half of the single-active invariant) and forwards every terminal
  * output frame the running session pushes (`AgentStreamRegistry.send`) straight to the browser.
  *
- * It is a pure OBSERVER: it does NOT spawn the session (the run is driven by `RunTerminalSession`,
+ * It is a pure OBSERVER: it does NOT spawn the session (the run is driven by `RunIssueTurn`,
  * invoked by the domain flow) and it carries no domain facts — those ride the outbox separately.
  * The stream stays open as a live tail until the client disconnects; `createSSEResponse` wires abort
  * → close → teardown, and the returned unregister frees the observer slot.
