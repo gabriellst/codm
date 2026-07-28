@@ -2688,3 +2688,13 @@ Fase 6 propriamente dita, agora contra ACs que descrevem o que será construído
 acoplamento: manifesto + emissor (`x-mcp-scope` + tag) → gerador (2× `pluginMcp`, `barrelType: false`,
 asserção de contagem, fixup de import) → os quatro controllers → router + `RunTokenService` + a
 rejeição de identidade nos três eixos (AC-6.6, sem a qual a fase não fecha) → matar `codedm__`.
+
+## TRABALHO DE TERCEIRO NA ÁRVORE DURANTE ESTA TAREFA — SURFACED, NÃO ABSORVIDO
+
+`git status` estava **limpo** ao começar (verificado, regra 1 do §8). Ao fechar o commit desta
+reconciliação, apareceu ` M packages/app/tauri/config/capabilities.ts` — capability `windowDrag`
+(`core:window:allow-start-dragging`) para o `data-tauri-drag-region` do title bar. **Nada a ver com
+a Fase 6.** O commit foi feito **por pathspec** (`-- .specs/codedm/GOAL-agent-abstraction.md
+.specs/codedm/BUILD-LOG.md`), então o arquivo **não** entrou: `2 files changed`. Fica na árvore, sem
+dono declarado, para quem o escreveu commitar. **Não tocar, não `git add -A`, não `git stash`** — é
+exatamente o modo como as deleções `pg_*` foram parar num commit de docs (`ed68c731`).
