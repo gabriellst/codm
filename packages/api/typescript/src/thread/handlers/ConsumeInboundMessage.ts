@@ -7,6 +7,7 @@ import { MessageType } from '@codedm/contracts-typescript/wire/enums'
 // of hand-parsing the slot — and what keeps `occurredAt` a `Date` for `IngestChannelMessage`.
 import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { IngestChannelMessage } from '../usecases/IngestChannelMessage'
 import { ClassifyMessage } from '../usecases/ClassifyMessage'
@@ -94,9 +95,16 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		const quoted = stanzaId ? await this.consumed.findEntry(channelId, stanzaId) : undefined
 
 		// 5. Ingest (always buffers + transcribes) then classify if the gates let it through.
+		//
+		// A message the owner typed is attributed to the OPERATOR roster id, not to their phone-number
+		// JID. The gateway's group snapshot enumerates every participant with no self filter, so the
+		// owner's own JID sits in the roster with `canInvoke: false` — and that check fires BEFORE the
+		// mention gate, which would silently mute the owner in their own group. `fromMe` is the fact
+		// that decides it; `author` will decide it once this product can send and `fromMe` alone stops
+		// separating the owner from the product.
 		const ingested = await this.ingest.execute({
 			threadId: thread.id.value,
-			senderExternalId: senderId,
+			senderExternalId: payload.fromMe ? OPERATOR_PARTICIPANT_ID : senderId,
 			text,
 			receivedAt: occurredAt,
 			quotedEntryId: quoted?.entryId,

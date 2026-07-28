@@ -71,14 +71,14 @@ func mapMessage(instanceID uuid.UUID, ownerID string, device *store.Device, v *e
 		// A RECEIVED message is, by definition, someone on the other side of the conversation typing.
 		// Set explicitly rather than left to the zero value: the contract declares the field required,
 		// and an empty string would make the wire type lie to every consumer.
-		Author:            msgenums.MessageAuthorHuman,
-		IsGroup:           v.Info.IsGroup,
-		Timestamp:         v.Info.Timestamp.Unix(),
-		OccurredAt:        time.Unix(v.Info.Timestamp.Unix(), 0).UTC(),
-		ObservedAt:        time.Now().UTC(),
-		MessageType:       msgenums.MessageType(msgType),
-		Content:           content,
-		Platform:          string(msgenums.PlatformWhatsApp),
+		Author:      msgenums.MessageAuthorHuman,
+		IsGroup:     v.Info.IsGroup,
+		Timestamp:   v.Info.Timestamp.Unix(),
+		OccurredAt:  time.Unix(v.Info.Timestamp.Unix(), 0).UTC(),
+		ObservedAt:  time.Now().UTC(),
+		MessageType: msgenums.MessageType(msgType),
+		Content:     content,
+		Platform:    string(msgenums.PlatformWhatsApp),
 		PlatformData: marshalPlatformData(ctxevents.WhatsAppChannelMessageReceivedPlatformData{
 			IsEphemeral: v.IsEphemeral,
 			IsViewOnce:  v.IsViewOnce || v.IsViewOnceV2,

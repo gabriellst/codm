@@ -29,7 +29,12 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 	})
 
 	// Verbatim gateway payload (union-slots pilot): text rides the WHATSAPP/TEXT content variant.
-	const buildEvent = (channelId: string, contactExternalId: string, messageId: string, opts: { text?: string; quotes?: string } = {}) =>
+	const buildEvent = (
+		channelId: string,
+		contactExternalId: string,
+		messageId: string,
+		opts: { text?: string; quotes?: string; fromMe?: boolean } = {},
+	) =>
 		new ChannelMessageReceivedInProcessEvent({
 			ownerId: OPERATOR_ID,
 			payload: {
@@ -38,7 +43,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 				internalMessageId: crypto.randomUUID(),
 				remoteId: contactExternalId,
 				senderId: contactExternalId,
-				fromMe: false,
+				fromMe: opts.fromMe ?? false,
 				isGroup: false,
 				timestamp: Math.floor(Date.now() / 1000),
 				occurredAt: new Date(),
@@ -140,5 +145,39 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
 		expect(entry).toBeDefined()
 		expect(entry!.quotedEntryId).toBeUndefined()
+	})
+
+	/**
+	 * THE OWNER'S OWN MESSAGE IS HEARD.
+	 *
+	 * A message the owner types is bridged by the Go gateway onto the same inbound event with
+	 * `fromMe: true`. The trap it has to survive is the participant roster: the gateway's group
+	 * snapshot enumerates every participant with NO self filter, so the owner's own JID is seeded with
+	 * `canInvoke: false` — and `Thread.canInvoke` consults the roster BEFORE the mention gate, so
+	 * attributing the message to that JID would mute the owner in their own group, silently.
+	 *
+	 * Attributed to the operator roster id instead, the message is invocable when it cites the thread
+	 * and not when it doesn't — the same rule as everyone else, which is the point.
+	 */
+	it('a fromMe message is attributed to the OPERATOR, not to the sender JID that the roster mutes', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const handler = testBed.resolve(ConsumeInboundMessage)
+
+		await handler.handle(
+			buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-own', {
+				text: `${GIVEN_MENTION_TAG} what runs the tests here?`,
+				fromMe: true,
+			}) as never,
+		)
+
+		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		expect(entry?.senderExternalId).toBe('operator')
+		// And the same message WITHOUT the citation is still only transcribed — the gate applies to the
+		// owner too, otherwise every sentence they say to real humans in the group summons the agent.
+		await handler.handle(
+			buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-own-2', { text: 'just chatting', fromMe: true }) as never,
+		)
+		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		expect(entries.some(e => e.text === 'just chatting')).toBe(true)
 	})
 })

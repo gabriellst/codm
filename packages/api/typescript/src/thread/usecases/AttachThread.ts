@@ -4,7 +4,7 @@ import type { Transaction } from '@codedm/core-typescript'
 import { ProviderKind, ContactKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
-import { Thread } from '../entities/Thread'
+import { OPERATOR_PARTICIPANT_ID, Thread } from '../entities/Thread'
 import { mintMentionTag } from '../schemas'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ChannelConnectivity } from '../services/ChannelConnectivity'
@@ -74,7 +74,7 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 		// for a GROUP the roster is hydrated from the gateway `remote_memberships` read model (each
 		// member observes), falling back to the group itself when the read model has no members yet.
 		const participants: Parameters<typeof Thread.create>[0]['participants'] = [
-			{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
+			{ participantId: OPERATOR_PARTICIPANT_ID, name: 'Operator', source: 'Operator on this machine', canInvoke: true },
 		]
 		if (input.contactRef.kind === ContactKind.GROUP) {
 			const members = await this.groupMembers.listMembers(input.contactRef.channelId, input.contactRef.externalId)

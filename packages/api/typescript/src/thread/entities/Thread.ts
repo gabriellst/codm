@@ -19,6 +19,18 @@ export const ParticipantSchema = z.object({
 	canInvoke: z.boolean(),
 })
 
+/**
+ * The roster id the OWNER always occupies — seeded by `AttachThread`, always `canInvoke: true`.
+ *
+ * The roster is about OTHER PEOPLE: it exists so the operator can mute specific participants, and
+ * muting yourself is meaningless. So a message the owner typed is attributed to THIS id whichever
+ * device it came from — the phone, another web client, or the console — rather than to their own
+ * phone-number JID, which the gateway snapshot also puts in the roster with `canInvoke: false`
+ * (it enumerates every group participant with no self filter). Without this, the owner's own message
+ * is denied by the participant check BEFORE the mention gate is ever consulted.
+ */
+export const OPERATOR_PARTICIPANT_ID = 'operator'
+
 export const ThreadSchema = z.object({
 	ownerId: z.uuid(),
 	channelId: z.uuid(),

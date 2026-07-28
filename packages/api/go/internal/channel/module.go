@@ -399,6 +399,13 @@ func registerDomainEventHandlers(
 	m.Register(projectors.NewMessageDeliveredProjector(msgProjRepo))
 	m.Register(projectors.NewMessageSeenProjector(msgProjRepo))
 
+	// Own-message ingress — REGISTERED AFTER THE PROJECTORS ON PURPOSE. `ChannelMediator.Dispatch`
+	// runs a name's handlers in registration order and RETURNS ON THE FIRST ERROR, so a bridge that
+	// fails ahead of the projectors would take the projection down with it. The other integration
+	// bridges sit with their siblings above because their events have no projector; this one shares
+	// `channel.message_sent` with two, and the projection is the more important of the two jobs.
+	m.Register(handlers.NewMessageSentHandler(ext, reg))
+
 	// Membership projectors — write to remote_memberships projection (T8/T13).
 	m.Register(projectors.NewMembershipAddedProjector(remoteProjRepo))
 	m.Register(projectors.NewMembershipRemovedProjector(remoteProjRepo))
