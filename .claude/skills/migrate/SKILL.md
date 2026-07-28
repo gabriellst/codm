@@ -11,9 +11,9 @@ description: Generate SQLite migrations after schema design is complete. Use thi
 Turns schema file changes into versioned SQL. The database is **one SQLite file** at
 `$CODEDM_DATA_DIR/codedm.db`, shared by the TS daemon and the Go gateway.
 
-## The one thing to internalise: nobody APPLIES migrations by hand
+## The one thing to internalise: ONE ledger
 
-There is **no `bun migrate:dev`**, and adding one back would be a bug.
+The invariant is **one ledger, one SQL source** — not "no script".
 
 Two processes open the same file, so migrations are applied at **boot**, by **two idempotent
 migrators over the SAME ledger** (`_sqlite_migrations`, keyed by filename):
@@ -29,6 +29,12 @@ from `meta/_journal.json`.
 
 A **third** applier carrying a ledger of its own is the failure mode this design exists to
 prevent — which is why `drizzle-kit migrate` (it writes `__drizzle_migrations`) has no script here.
+
+`bun migrate:dev` exists and is safe **because it is not a third applier**: it calls
+`migrateEmbeddedDatabase()` — the same function `src/boot/migrate-embedded.ts` calls — so it is the
+TS row of the table above, run without booting the server. Reach for it to prepare a cold data dir
+for a test or a script; `bun dev` still migrates on its own and needs no help. It creates the
+Drizzle tables only: `whatsmeow_*` belongs to the gateway and appears on first connect.
 
 ## When to Use This Skill
 
@@ -152,13 +158,18 @@ ALTER TABLE owner_users DROP COLUMN phone_number;
 different DDL under the same ledger key — a divergence that raises no error, only wrong reads. Edit
 the contracts source and re-run `db:sync-go`.
 
-### bp-03: Reintroducing a second applier
+### bp-03: Reintroducing a second LEDGER
 
 **Severidade:** 🔴 Crítico
 
-`drizzle-kit migrate`, a resurrected `migrate:dev`, an ad-hoc `drizzle-kit push` — each brings its
-own ledger (`__drizzle_migrations`) and re-applies DDL the boot migrators already applied. Applying
-migrations belongs to boot, in both runtimes, over `_sqlite_migrations`.
+`drizzle-kit migrate` and an ad-hoc `drizzle-kit push` each bring their own ledger
+(`__drizzle_migrations`) and re-apply DDL the boot migrators already applied — a divergence that
+raises no error, only wrong reads.
+
+The test is the ledger, not the entry point. `bun migrate:dev` is fine because it delegates to
+`migrateEmbeddedDatabase()` and therefore writes `_sqlite_migrations` like the boot path; a script
+that reaches for drizzle-kit to do the same job is not. If you add another way to apply migrations,
+it must end up in `_sqlite_migrations`, keyed by filename, reading the contracts migrations dir.
 
 ## References
 

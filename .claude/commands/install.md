@@ -149,12 +149,17 @@ live process leaves it writing to an unlinked inode.
 
 ### Step 6 — Migrations apply themselves at boot
 
-**There is no migrate step, and no `bun migrate:dev` script.** The TS
-daemon (`LibsqlDriver`) and the Go gateway (`SqliteStore`) each apply
+**Install has no migrate step.** The TS daemon (`LibsqlDriver`) and the
+Go gateway (`SqliteStore`) each apply
 `packages/contracts/db/schema-sqlite/migrations/*.sql` on boot,
 idempotently, over the **same** `_sqlite_migrations` ledger: whoever
 starts first applies, the second no-ops. A cold data dir is migrated by
-step 8 (`bun dev`).
+step 8 (`bun dev`) — you do not need to do anything here.
+
+`bun migrate:dev` exists for the cases where you want the schema
+*without* a running server (seeding a scratch dir, a CI fixture). It runs
+the daemon's own applier over the same ledger, so it never competes with
+boot.
 
 To AUTHOR a new migration (not part of `/install`), see
 `.claude/skills/migrate/SKILL.md` — `bun migrate:create`, then mirror

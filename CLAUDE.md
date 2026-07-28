@@ -102,9 +102,12 @@ bun sdk              # regenera SDK (client:generate + emit-openapi upstream)
 bun emit-openapi     # regenera só os openapi.json (api-ts + api-go)
 bun contracts        # regenera bindings de contracts (TypeSpec → ts/go)
 
-# Banco de dados (um arquivo SQLite; NÃO existe `migrate:dev` — o boot migra)
+# Banco de dados (um arquivo SQLite; o boot migra sozinho — `migrate:dev` é só conveniência)
 bun migrate:create           # AUTORA uma migração SQLite (drizzle-kit generate →
                              # packages/contracts/db/schema-sqlite/migrations)
+bun migrate:dev              # APLICA no $CODEDM_DATA_DIR sem subir servidor (mesmo aplicador do
+                             # boot, mesmo ledger `_sqlite_migrations`). Só tabelas Drizzle —
+                             # whatsmeow_* nasce quando o gateway conecta.
 bun run --cwd packages/contracts db:sync-go    # espelha o SQL novo na cópia //go:embed do gateway
 bun run --cwd packages/contracts db:check-go   # gate: as duas cópias são byte-a-byte iguais
 

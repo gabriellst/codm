@@ -48,6 +48,7 @@
 		"contracts": "cd packages/contracts && bun run all",
 		"emit-openapi": "nx run-many -t emit-openapi",
 		"migrate:create": "cd packages/contracts && bun run drizzle:generate",
+		"migrate:dev": "cd packages/api/typescript && bun scripts/migrate.ts",
 		"format": "bun format:biome && bun format:eslint",
 		"format:biome": "bun scripts/format-biome.ts",
 		"format:biome:all": "bun x biome format --write .",
