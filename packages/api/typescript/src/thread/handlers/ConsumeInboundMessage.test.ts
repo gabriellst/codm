@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenThread } from '@test/support'
+import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { ChannelKind, MessageType } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
@@ -29,7 +29,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 	})
 
 	// Verbatim gateway payload (union-slots pilot): text rides the WHATSAPP/TEXT content variant.
-	const buildEvent = (channelId: string, contactExternalId: string, messageId: string) =>
+	const buildEvent = (channelId: string, contactExternalId: string, messageId: string, opts: { text?: string; quotes?: string } = {}) =>
 		new ChannelMessageReceivedInProcessEvent({
 			ownerId: OPERATOR_ID,
 			payload: {
@@ -44,7 +44,10 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 				occurredAt: new Date(),
 				observedAt: new Date(),
 				messageType: MessageType.TEXT,
-				content: { text: 'ship the coupon fix' },
+				content: {
+					text: opts.text ?? `${GIVEN_MENTION_TAG} ship the coupon fix`,
+					...(opts.quotes ? { contextInfo: { stanzaId: opts.quotes } } : {}),
+				},
 				platform: ChannelKind.WHATSAPP,
 				ownerId: OPERATOR_ID,
 			},
@@ -86,5 +89,56 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 
 		const entries = await transcript.listByThread(thread.id.value)
 		expect(entries.filter(e => e.kind === 'CONTACT')).toHaveLength(2)
+	})
+
+	/**
+	 * THE REPLY-QUOTE SHORTCUT, ALIVE FOR THE FIRST TIME.
+	 *
+	 * `IssueRouter` documents its first branch as "authoritative, wins over context matching, NO model
+	 * call" — and it had never fired outside the test ingress controller, because nothing turned a
+	 * WhatsApp quote into a `quotedEntryId`. WhatsApp reports the quote as `contextInfo.stanzaId`, the
+	 * PLATFORM id; the router needs OUR entry id. The consumed ledger is exactly that map and its
+	 * `threadId`/`entryId` columns were never filled, because `claim` runs before ingestion.
+	 *
+	 * Two messages: the first becomes an entry and closes its ledger row; the second quotes the first
+	 * by platform id and must arrive at the transcript carrying the first entry's id.
+	 */
+	it('resolves a WhatsApp reply-quote (contextInfo.stanzaId) into quotedEntryId via the ledger', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const handler = testBed.resolve(ConsumeInboundMessage)
+		const transcript = testBed.resolve(TranscriptRepository)
+
+		await handler.handle(buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-original') as never)
+		const [original] = await transcript.recentByThread(thread.id.value, 10)
+		expect(original).toBeDefined()
+
+		// The ledger row is CLOSED by the first message — that is what makes it quotable at all.
+		const linked = await testBed.resolve(ConsumedMessageRepository).findEntry(thread.channelId, 'wamid-original')
+		expect(linked).toEqual({ threadId: thread.id.value, entryId: original!.entryId })
+
+		await handler.handle(
+			buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-reply', {
+				text: `${GIVEN_MENTION_TAG} and also this`,
+				quotes: 'wamid-original',
+			}) as never,
+		)
+
+		const entries = await transcript.recentByThread(thread.id.value, 10)
+		const reply = entries.find(e => e.text.includes('and also this'))
+		expect(reply?.quotedEntryId).toBe(original!.entryId)
+	})
+
+	it('a quote we cannot resolve degrades to no quote rather than failing', async () => {
+		// A quote pointing at a message from before the thread was attached, or at one we dropped.
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const handler = testBed.resolve(ConsumeInboundMessage)
+
+		await handler.handle(
+			buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-orphan', { quotes: 'wamid-never-seen' }) as never,
+		)
+
+		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		expect(entry).toBeDefined()
+		expect(entry!.quotedEntryId).toBeUndefined()
 	})
 })

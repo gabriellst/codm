@@ -32,6 +32,35 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 		return inserted.length > 0
 	}
 
+	async linkEntry(
+		input: { channelId: string; platformMessageId: string; threadId: string; entryId: string },
+		tx?: DrizzleClient,
+	): Promise<void> {
+		const dbc = tx ?? this.db
+		await dbc
+			.update(consumedMessages)
+			.set({ threadId: input.threadId, entryId: input.entryId })
+			.where(and(eq(consumedMessages.channelId, input.channelId), eq(consumedMessages.platformMessageId, input.platformMessageId)))
+	}
+
+	async findEntry(
+		channelId: string,
+		platformMessageId: string,
+		tx?: DrizzleClient,
+	): Promise<{ threadId: string; entryId: string } | undefined> {
+		const dbc = tx ?? this.db
+		const rows = await dbc
+			.select({ threadId: consumedMessages.threadId, entryId: consumedMessages.entryId })
+			.from(consumedMessages)
+			.where(and(eq(consumedMessages.channelId, channelId), eq(consumedMessages.platformMessageId, platformMessageId)))
+			.limit(1)
+		const row = rows[0]
+		// A row with null columns is a message that was CLAIMED but dropped before ingestion (unattached
+		// contact, non-text variant) — it produced no entry, so there is nothing to quote.
+		if (!row?.threadId || !row.entryId) return undefined
+		return { threadId: row.threadId, entryId: row.entryId }
+	}
+
 	async has(channelId: string, platformMessageId: string, tx?: DrizzleClient): Promise<boolean> {
 		const dbc = tx ?? this.db
 		const rows = await dbc

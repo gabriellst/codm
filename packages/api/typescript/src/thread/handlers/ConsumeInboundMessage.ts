@@ -25,7 +25,9 @@ import { ClassifyMessage } from '../usecases/ClassifyMessage'
  *   3. Narrow the union slot by its DISCRIMINATOR — the arms arrive pre-joined from the generated
  *      in-process surface, so this is a `messageType` check and a field read, never a parse. A
  *      non-text message is recorded (consumed) and dropped.
- *   4. Ingest (buffer + transcript + gates) → and, when the sender may invoke, classify into an issue.
+ *   4. Resolve a reply-quote (`contextInfo.stanzaId` → our `entryId`) through the consumed ledger.
+ *   5. Ingest (buffer + transcript + gates) → and, when the sender may invoke, classify into an issue.
+ *   6. Close the ledger row with the entry it produced, so THIS message becomes quotable in turn.
  *
  * Dedup is deliberately BEFORE ingestion so a duplicate never even reaches the transcript.
  */
@@ -75,13 +77,34 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 			return
 		}
 
-		// 4. Ingest (always buffers + transcribes) then classify if the gates let it through.
+		// 4. RESOLVE THE REPLY-QUOTE, if the sender made one.
+		//
+		// WhatsApp reports it as `contextInfo.stanzaId` — the PLATFORM id of the quoted message — and the
+		// router's shortcut needs our own `entryId`. The consumed ledger is exactly that map
+		// (`UNIQUE(channelId, platformMessageId)` → `entryId`); its columns have existed since the table
+		// was written and were never filled, which is why the shortcut documented as "authoritative,
+		// wins over context matching, NO model call" has never fired outside the test ingress.
+		//
+		// A quote we cannot resolve is not an error: it points at a message from before this thread was
+		// attached, or at one we dropped. It degrades to no quote, and classification proceeds normally.
+		// Narrowed on PLATFORM, and the compiler insists: `contextInfo` exists on the WhatsApp text
+		// variant and not on the INTERNAL one, because a quote is a WhatsApp concept. That is the
+		// in-process union earning its keep — the old opaque slot would have needed a cast here.
+		const stanzaId = payload.platform === 'WHATSAPP' ? payload.content?.contextInfo?.stanzaId : undefined
+		const quoted = stanzaId ? await this.consumed.findEntry(channelId, stanzaId) : undefined
+
+		// 5. Ingest (always buffers + transcribes) then classify if the gates let it through.
 		const ingested = await this.ingest.execute({
 			threadId: thread.id.value,
 			senderExternalId: senderId,
 			text,
 			receivedAt: occurredAt,
+			quotedEntryId: quoted?.entryId,
 		})
+
+		// 6. Close the ledger row now that the entry exists — this is what makes THIS message quotable in
+		// turn, both by a human replying to it and by the agent citing it on the way out.
+		await this.consumed.linkEntry({ channelId, platformMessageId: messageId, threadId: thread.id.value, entryId: ingested.entryId })
 
 		if (ingested.invocable) {
 			await this.classify.execute({ threadId: thread.id.value, entryId: ingested.entryId })
