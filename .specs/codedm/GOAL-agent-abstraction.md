@@ -3308,6 +3308,29 @@ essa troca que a AC existe para proibir.
 > verificável. Enquanto isso não acontecer, **teste colocado não tem type-check**, e essa frase é a
 > razão pela qual as asserções desta fase que dependem de tipo (a rejeição dos três kinds de domínio,
 > AC-6.7) vivem num `*.typecheck.ts` sob `tests/`, que o `tsconfig.build.json` **inclui**.
+>
+> **D6-16. A AC-6.7 E A AC-6.9 NÃO PODIAM SER SATISFEITAS AO MESMO TEMPO — e só se descobre ESCREVENDO
+> o teste de tipo.** A AC-6.7 manda um teste de tipo e diz, com todas as letras, que
+> `@ts-expect-error` **é permitido ali** porque *"é a asserção"* (a proibição da AC-3.4 vale para
+> código de produção). Mas `@ts-expect-error` é **regra universal `error`** do `registry-scan`
+> (`.claude/registry.yaml`, bloco `mechanical: true`), e a AC-6.9 proíbe qualquer crescimento dos seis
+> detectores. **Medido:** com o `transport-stop-kind.typecheck.ts` no lugar, `bun detect` foi de
+> **39 → 40** (e de 947 → 948 arquivos escaneados), reprovando a AC-6.9 por cumprir a AC-6.7.
+> **Por que o nome do arquivo é a causa:** `isInScope` já exclui `*.test.ts`, e um arquivo de asserção
+> de COMPILAÇÃO é um teste cujo runner é o `tsc` — mas ele **não pode** se chamar `*.test.ts`, porque o
+> `tsconfig.build.json` exclui esse sufixo e o type-check, **que É a asserção**, deixaria de acontecer.
+> O arquivo cai fora da exclusão por um motivo puramente léxico e as regras universais passam a lê-lo
+> como código de produto.
+> **CORREÇÃO:** uma linha em `isInScope` (`.claude/hooks/classify-edit-core.ts`) excluindo
+> `*.typecheck.ts` / `*.type-test.ts` **ancorados num diretório `tests/`** — no erro de categoria, e
+> **não** parkeando o achado no baseline como "known debt", porque não é dívida, é a asserção.
+> **A âncora `tests/` também foi medida, e o sufixo sozinho estava ERRADO:**
+> `packages/app/react/src/storybook/connected.typecheck.ts` tem o mesmo sufixo, mora em `src/`, e
+> **carrega um achado BASELINADO** (`component#bp-22`) — a regra por sufixo puro sairia com
+> **944 escaneados / 63 baselinados**, isto é, **órfã uma chave de baseline** e some com um pedaço da
+> dívida do ratchet em vez de pagá-lo. Ancorada: **945 / 64**, exatamente os três arquivos de
+> `tests/architecture` e nada mais. **Falsificador executado:** removida a linha ⇒ `bun detect` volta a
+> **40**; restaurada ⇒ **39**. `bun test:tooling` **414/0** dos dois lados.
 
 ### Fase 7 — Frame SSE estruturado + fechamento
 

@@ -346,10 +346,36 @@ export function runRules(rules: Rule[], text: string): { id: string; rule: strin
 
 // ─── CLI (shared detector contract) ──────────────────────────────────
 
-/** Same scope the hook enforces: TS/TSX/Astro source, no generated/tests/stories/vendored. */
+/**
+ * Same scope the hook enforces: TS/TSX/Astro source, no generated/tests/stories/vendored.
+ *
+ * ### `*.typecheck.ts` / `*.type-test.ts` are TESTS, and the suffix is the only thing that hides it
+ * A COMPILE-TIME assertion file is a test whose runner is `tsc` instead of `bun test`. It cannot be
+ * named `*.test.ts`, because `tsconfig.build.json` excludes that suffix and the type-check — which IS
+ * the assertion — would stop happening. So the file ends up outside the exclusion above for a purely
+ * lexical reason, and the universal mechanical rules then read it as product code.
+ *
+ * That misreading is not hypothetical: `@ts-expect-error` is a universal `error` rule AND the
+ * sanctioned assertion form in a type test (GOAL-agent-abstraction AC-6.7 says so in as many words,
+ * scoping AC-3.4's ban to production). Without this line, writing the assertion the goal REQUIRES
+ * grows the detector count, which AC-6.9 forbids — two ACs that cannot both be satisfied. Fixed here,
+ * at the category error, rather than by parking the finding in the baseline as "known debt": it is not
+ * debt, it is the assertion.
+ *
+ * ### The exclusion is anchored to a `tests/` directory, and that anchor is MEASURED
+ * The suffix alone is too wide: `packages/app/react/src/storybook/connected.typecheck.ts` carries the
+ * same suffix but lives in `src/`, ships with the app, and CARRIES A BASELINED FINDING
+ * (`component#bp-22`) — a suffix-only rule would silently orphan that baseline key and remove a piece
+ * of debt from the ratchet instead of paying it. Measured both ways against the same tree (948 files
+ * in scope before this line): suffix-only → **944 scanned, 63 baselined** — one baseline key ORPHANED;
+ * anchored to `tests/` → **945 scanned, 64 baselined**, i.e. exactly the three `tests/architecture`
+ * files (`agent-input.type-test.ts` and `union-narrowing.typecheck.ts`, which produce zero findings
+ * either way, plus `transport-stop-kind.typecheck.ts`) and nothing else.
+ */
 export function isInScope(file: string): boolean {
 	if (!/\.(?:tsx?|astro)$/.test(file)) return false
 	if (/\.(?:gen|test|spec|stories|d)\.(?:tsx?|astro)$/.test(file)) return false
+	if (/(?:^|\/)tests?\/(?:.*\/)?[^/]*[.-](?:typecheck|type-test)\.tsx?$/.test(file)) return false
 	if (/\/(?:node_modules|dist|sdk|generated|locales|\.claude)\//.test(file)) return false
 	return true
 }

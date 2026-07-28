@@ -3143,6 +3143,41 @@ fase: é a dependência que a fase acrescentou ao `package.json` do pacote gerad
 relação com a Fase 6. Que esse `node_modules` seja rastreado **é anterior a esta fase** e merece uma
 decisão própria — não a tomo aqui.
 
+## D6-16 — O TESTE DE TIPO DA AC-6.7 REPROVAVA A AC-6.9, E SÓ SE DESCOBRE ESCREVENDO-O
+
+Achado durante esta rodada, não reportado pelo juiz, e é o tipo de conflito que só aparece na
+execução: a **AC-6.7 manda** um teste de tipo e diz que `@ts-expect-error` **é permitido ali**
+(*"é a asserção"*); `@ts-expect-error` é **regra universal `error`** do `registry-scan`; e a **AC-6.9
+proíbe crescimento**. Medido com o arquivo no lugar:
+
+```
+bun detect  →  40 finding(s) (24 error), 948 file(s) scanned      ← 39/947 antes
+              packages/api/typescript/tests/architecture/transport-stop-kind.typecheck.ts:16
+              [error] universal#ts-expect-error
+```
+
+Cumprir a AC-6.7 reprovava a AC-6.9. **A causa é o NOME:** `isInScope` já exclui `*.test.ts`, e um
+arquivo de asserção de COMPILAÇÃO é um teste cujo runner é o `tsc` — só que ele **não pode** se chamar
+`*.test.ts`, porque aí o `tsconfig.build.json` o exclui e o type-check, **que é a asserção**, para de
+acontecer.
+
+**Consertado no erro de categoria, não no baseline.** Uma linha em `isInScope`
+(`.claude/hooks/classify-edit-core.ts`) exclui `*.typecheck.ts` / `*.type-test.ts` **ancorados num
+diretório `tests/`**. Parkear no baseline teria rotulado como *"known debt"* uma coisa que é a
+asserção.
+
+**A âncora foi medida, e o sufixo sozinho estava errado:**
+`packages/app/react/src/storybook/connected.typecheck.ts` tem o mesmo sufixo, mora em `src/` e
+**carrega um achado baselinado** (`component#bp-22`).
+
+| regra | escaneados | baselinados | veredito |
+|---|---|---|---|
+| sufixo puro | 944 | **63** | **órfã uma chave de baseline** — some com dívida em vez de pagá-la |
+| ancorada em `tests/` | 945 | 64 | exatamente os 3 arquivos de `tests/architecture`, nada mais |
+
+**Falsificador executado:** linha removida ⇒ `bun detect` volta a **40**; restaurada ⇒ **39**.
+`bun test:tooling` **414/0** dos dois lados.
+
 ## GATES (exit codes)
 
 ```
@@ -3150,14 +3185,15 @@ bun tsc                        0   (7/7 projetos, --skip-nx-cache)
 bun lint                       0   (3/3)
 bun test  (packages/api/ts)    740 pass / 3 skip / 0 fail  — 116 arquivos
                                (HEAD de entrada, medido por stash: 733 pass; +7 = os 7 testes novos)
-bun test:tooling               <ver linha abaixo>
+bun test:tooling               414 pass / 0 fail
 bun run contracts + bun sdk    idempotentes 2×
 bun x nx run app-react:tsc     0
 e2e tsc                        0
 go build/vet/test (api/go)     0
 go build/vet/test (api/go/core) 0
 bun e2e                        5 passed / 2 skipped
-detectores                     39 / 0 / 37 / 33 / 3 / 2   — baseline, zero crescimento
+detectores                     39 / 0 / 37 / 33 / 3 / 2   — baseline, zero crescimento (ver D6-16
+                                   acima: chegar a esse 39 exigiu consertar um conflito AC-6.7×AC-6.9)
 ```
 
 ## O QUE SEGUE PARKED (sem maquiagem, e a lista agora é COMPLETA)
