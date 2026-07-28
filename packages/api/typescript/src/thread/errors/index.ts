@@ -18,6 +18,9 @@ export type ThreadApplicationErrors =
 	| 'ENTRY_NOT_FOUND'
 	| 'ENTRY_NOT_INVOCABLE'
 	| 'CLARIFICATION_ALREADY_PENDING'
+	// The Go gateway did not answer a WRITE. Same code the browser-facing proxy already surfaces for
+	// the same cause, declared here too because this context now calls the gateway directly.
+	| 'GATEWAY_UNAVAILABLE'
 export type ApplicationErrors = BaseApplicationErrors | ThreadApplicationErrors
 
 export type ThreadInterfaceErrors = never
@@ -46,4 +49,6 @@ registerErrorCodes({
 	// (registerErrorCodes is Object.assign — an idempotent overwrite, not a conflict).
 	WORKSPACE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	PROVIDER_NOT_DETECTED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// Same status the external context registers — one code, one meaning, whichever door raised it.
+	GATEWAY_UNAVAILABLE: HttpStatusCode.BAD_GATEWAY,
 })

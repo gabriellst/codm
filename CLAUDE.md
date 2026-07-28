@@ -280,6 +280,7 @@ Controller (Zod schema)
 
 - Frontend **só** consome dados do backend pela SDK. Nunca `fetch` direto.
 - Dentro do **mesmo** serviço, nunca use o cliente HTTP da SDK para ler outro contexto — importe o `Repository` dele (chamada HTTP a si mesmo = ciclo). **Entre serviços** (api-ts ↔ gateway Go), S2S via SDK é permitido: `client.<service>.method(...)` quando dois serviços precisam se comunicar, e import de **schemas/types gerados** do subpath do serviço dono para compor contratos (ex.: `ListenEvents` compondo `z.discriminatedUnion` dos schemas zod do `/go`) — zero redeclaração de formas. (Ratificado pelo founder, 2026-07-22.)
+  - **Duas condições operacionais na chamada S2S** (a permissão é de direção, não de forma). (a) **Atrás de uma porta:** a chamada mora numa implementação de `Service` abstrato bound por ambiente, para `mock`/`integration` nunca abrirem socket — um teste não pode depender do outro serviço estar de pé. (b) **Identidade explícita:** o hop carrega o dono (`X-Owner-Id`), como `forwardToChannel` já faz; o serviço chamado nunca infere dono.
 - Sempre rode `bun sdk` depois de mexer em controller/schema.
 - Rode `cd packages/app/react && bun tsr generate` depois de criar/mover rota.
 
