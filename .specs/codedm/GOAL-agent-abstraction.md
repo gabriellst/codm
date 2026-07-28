@@ -783,6 +783,15 @@ medscall (`events/ChatEvent.ts:19-36`) — é ele que o `flush()` materializa co
 **Nasce um servidor MCP do CodeDM expondo as tools de domínio, com os schemas Zod que já existem.**
 Quatro tools, prefixo `codedm__`, todas mapeando para vocabulário **já congelado** no wire:
 
+> ⚠️ **LEIA A EMENDA DE DESENHO DA FASE 6 ANTES DE IMPLEMENTAR ESTA SEÇÃO (founder, 27-jul).** O
+> **comportamento** descrito aqui — onde cada declaração aterrissa, quem é dono da escrita, o
+> fire-and-forget do `ask_operator`, o `detail` do item (i), a identidade vinda do token — **vale
+> integralmente e é a especificação**. O que está **superseded** é a *forma*: as tools não são quatro
+> arquivos escritos à mão com prefixo `codedm__`, são **geradas** do mesmo OpenAPI que gera a SDK, em
+> **dois escopos**, e o nome de wire é o `operationId` (`complete_issue` → `TransitionIssueStatus`,
+> `raise_stop` → `RaiseStop`, `record_artifact` → `RecordArtifact`, `ask_operator` → `AskOperator`).
+> Ver a emenda + AC-6.14…AC-6.19.
+
 | Tool | Payload | Aterrissa em |
 |---|---|---|
 | `codedm__complete_issue` | `{ summary: string }` | use case `DeclareIssueComplete` (ctx `agent`) → levanta a **classe de evento que já existe**, `AgentRunCompletedEvent` (→ `AgentSessionCompletedEvent` depois do `git mv` da Fase 5) → bridge existente → **`integration.issue.completed`** (congelado) |
@@ -1454,8 +1463,8 @@ e **não** fala com o runner.
 | `events/TerminalSessionResumedEvent`, `TerminalSessionKilledEvent` | **MORREM** ou encolhem com D7 — decidir na Fase 4 com base no que o resume nativo ainda torna observável |
 | `events/{Started,ReplyDrafted,Completed,StopRaised}` + `handlers/PublishTerminalIntegrationEvents` + `handlers/RunTerminalSessionOnClassification` | **FICAM** (os integration events são congelados). O que muda é **quem os origina**: tool call em vez de inferência (§4.4). As classes de evento são **REUSADAS** pelos use cases de declaração — não nascem eventos de domínio paralelos, e o bridge não ganha branch (§4.3, regra 7). **Única edição de payload: `Completed` e `StopRaised` ganham `source: z.enum(FactSource)` no schema** (§4.3, regra 6) — evento de domínio context-private, o bridge **não** repassa o campo, contrato congelado intocado |
 | `controllers/{DetectProviders,StreamTerminalSession}.ts` | **FICAM** |
-| **NASCEM** | `providers/{ProviderDef.ts, registry.ts, defs/{claude,codex,opencode}.ts}`, `services/StreamJsonCodec/`, `services/AgentRunner/{StreamJsonAgentRunner,StubAgentRunner,E2eStubAgentRunner}/`, `types/{Agent.ts, AgentInput.ts, AgentMcpInvocation.ts}`, `enums/TransportStopKind.ts`, `agents/ClassifyIssueAgent/`, `agents/IssueWorkAgent/`, `enums/{AgentName.ts, AgentToolName.ts, FactSource.ts}`, `services/IssueRouter/`, **`mcp/{router.ts, tools/*.ts, RunTokenService.ts}`**, `usecases/{DeclareIssueComplete,DeclareStop,AskOperator}.ts` |
-| **NASCEM fora do contexto `agent`** | `artifact/mcp/RecordArtifactTool.ts` — a tool `codedm__record_artifact` é controller fino do contexto **DONO da escrita** e despacha o `RecordArtifact` que já existe (§4.4 item (ii)). **Não** existe `agent/usecases/DeclareArtifact.ts` |
+| **NASCEM** | `providers/{ProviderDef.ts, registry.ts, defs/{claude,codex,opencode}.ts}`, `services/StreamJsonCodec/`, `services/AgentRunner/{StreamJsonAgentRunner,StubAgentRunner,E2eStubAgentRunner}/`, `types/{Agent.ts, AgentInput.ts, AgentMcpInvocation.ts}`, `enums/TransportStopKind.ts`, `agents/ClassifyIssueAgent/`, `agents/IssueWorkAgent/`, `enums/{AgentName.ts, AgentToolName.ts, FactSource.ts}`, `services/IssueRouter/`, **`mcp/{manifest.ts, router.ts, RunTokenService.ts}`**, `usecases/{DeclareIssueComplete,DeclareStop,AskOperator}.ts` + os **quatro controllers novos** que são a porta HTTP deles (§ Fase 6) |
+| **NASCEM fora do contexto `agent`** | **NADA.** ⚠️ **REVOGADO pela emenda de desenho da Fase 6 (27-jul):** esta linha dizia `artifact/mcp/RecordArtifactTool.ts`. Com tools GERADAS do OpenAPI, `record_artifact` **é** `artifact/controllers/RecordArtifact.ts`, que já existe — nenhum arquivo novo fora do `agent`, e `agent/mcp/tools/` **não existe** (AC-6.11(a), AC-6.18(b)). Continua valendo que **não** existe `agent/usecases/DeclareArtifact.ts` |
 
 ### 5.4 Ferramental que precisa nascer junto (house rule)
 
@@ -1467,7 +1476,11 @@ primeiro agent nasce, entram **`.claude/skills/agent/{SKILL.md, registry.yaml}`*
 
 O `registry.yaml` da skill precisa codificar, como `bad_practices`, pelo menos: (1) segundo método no
 seam; (2) classe por tipo de frame; (3) `throw` no meio do drain para falha de validação; (4)
-`if (provider === …)` no runner; (5) `ownerId`/`issueId` em input schema de tool; (6) fato de
+`if (provider === …)` no runner; (5) **~~`ownerId`/`issueId` em input schema de tool~~ → REESCRITO
+pela emenda da Fase 6:** *"router MCP que aceita `issueId`/`threadId`/`ownerId` de argumento de tool
+sem compará-los com as claims do run token — em path, query **e** body"* (a proibição antiga é
+insatisfazível com tools geradas de controller, que herdam os params; o que continua proibido é a
+**identidade não verificada**, AC-6.6); (6) fato de
 domínio cunhado por heurística de texto; (7) **tool MCP síncrona que bloqueia esperando humano**
 (§4.4 — trava o run até o watchdog); (8) **runner cunhando run token** (§4.2 — quem cunha é a base
 `Agent`; o runner só revoga); (9) **método público num agent além do `run()`/do único delegador de
@@ -1865,6 +1878,16 @@ hits**; os dois tipos vêm de `@codedm/contracts-typescript/wire/enums`. `bun ru
 `bun sdk` idempotentes 2× (`git status --porcelain` vazio na segunda).
 **AC-1.6** Teste sobre o registry de tools: **nenhum** input schema contém `ownerId`, `issueId` ou
 `threadId` (itera os schemas e asserta as chaves) — a identidade vem do run token (§4.4).
+
+> **NOTA DE RECONCILIAÇÃO (27-jul, Fase 6) — esta AC foi cumprida e verificada pelo juiz, e o
+> INVARIANTE que ela protege SOBREVIVE, mas MUDA DE PORTADOR.** Com as tools geradas do OpenAPI
+> (emenda da Fase 6), a tool herda os params do controller — `issueId`/`threadId` **existem** no
+> `inputSchema`, e "declarar na issue errada" deixa de ser *inexprimível* e passa a ser *rejeitado*.
+> O registry que esta AC itera (`AGENT_TOOL_INPUT_SCHEMAS`) é substituído pelos schemas gerados
+> (AC-6.17(b)). **A garantia passa a ser a AC-6.6**: o run token continua sendo a fonte única de
+> identidade e o router rejeita divergência em path + query + **body** (403). Isto está registrado
+> aqui, e não só no BUILD-LOG, porque quem lê a AC-1.6 precisa saber que a proteção mudou de lugar —
+> não que ela sumiu.
 **AC-1.7** `AgentTurnFact` é união de **`BaseDomainEvent`**: teste com `instanceof` para cada
 variante (esta é justamente a garantia que o fix do `EventHandler.ts` sustenta, §6.4).
 **AC-1.8** Risco registrado no BUILD-LOG: se `codex`/`opencode` não têm modo JSONL, o def deles
@@ -2455,25 +2478,71 @@ uma chave nova é dívida nova, não ratchet.
 > classe da API**, na mesma pipeline contract-first do resto do repo, com **zero schema de tool
 > mantido à mão**.
 >
-> **DOIS CONJUNTOS, declarados no contrato.** Não é superfície plana. Os conjuntos cortam
-> **atravessado** as tags existentes (que são por bounded context, não por audiência), então precisam
-> de um segundo eixo: a extensão de vendor **`x-mcp-scope`** na operação — o repo já usa `x-`
-> (`x-error-codes`, `x-zod-refinements` em `core/src/utils/OpenAPI.ts:497,585`) — e o Kubb filtra por ela.
+> **DOIS CONJUNTOS, declarados num MANIFESTO TIPADO — não no controller, e não numa extensão que o
+> Kubb saiba ler.** Não é superfície plana: os conjuntos cortam **atravessado** as tags existentes
+> (que são por bounded context, não por audiência), então precisam de um segundo eixo. O eixo tem
+> **três camadas, e a divisão entre elas é MEDIDA, não estética** (probe de 27-jul; cobrada por
+> AC-6.14/AC-6.15):
+>
+> 1. **A declaração** vive em `packages/api/typescript/src/agent/mcp/manifest.ts` — `MCP_SCOPES`,
+>    um `Record<McpScope, ReadonlyArray<ControllerClass>>` que referencia **classes de controller**,
+>    nunca strings de `operationId`. Decisão do founder: o controller é uma porta HTTP e quem o
+>    consome não é assunto dele; e **tipado** porque assim um rename **segue** e uma deleção
+>    **quebra o build**. `packages/contracts` não pode importar de `api/src` (deps = drizzle-orm +
+>    yaml), logo o manifesto mora no pacote da api e a travessia até o Kubb (em `packages/client`)
+>    acontece **pelo spec emitido**.
+> 2. **A declaração de registro no spec** é a extensão de vendor **`x-mcp-scope`** na operação,
+>    escrita pelo mesmo emissor que já escreve `x-error-codes` (`core/src/utils/OpenAPI.ts:497`;
+>    ponto de entrada `buildOperation:821`). É ela que é humana, grepável e sobrevive no spec.
+> 3. **O transporte até o Kubb é uma TAG SINTÉTICA `mcp:<escopo>`**, acrescentada em `buildTags`
+>    (`OpenAPI.ts:832`, hoje `return [router.name]`). **CORREÇÃO DO PROBE — a frase original "e o
+>    Kubb filtra por ela" era FALSA.** Medido em `@kubb/plugin-oas`
+>    (`dist/createGenerator-BZA5dzMY.d.ts:188-213` e `dist/index.js:108-119`): `Include`/`Exclude`
+>    admitem **exatamente** `tag | operationId | path | method | contentType`, `pattern` é
+>    `string | RegExp`, e **não existe** ramo que leia extensão de vendor nem que invoque `pattern`
+>    como função — `type` desconhecido cai em `default: return false`, **em silêncio**. Um
+>    `include: [{ type: 'x-mcp-scope', … }]` emitiu **zero** tools com build `ok`. A tag sintética
+>    não é preferência: é o único eixo que o filtro enxerga.
 >
 > | escopo | quem usa | conteúdo |
 > |---|---|---|
-> | `issue-handling` | o agent **enquanto executa uma issue** | criar issue · transicionar status · pedir approval · responder mensagem (`SendDirectMessage`, existe) · registrar artifact (`RecordArtifact`, existe) |
-> | `system` | navegação e operação do sistema | `ui/*` (7 reads) · `workspace/*` · config de thread · leituras de issue · `owner/*` |
+> | `issue-handling` | o agent **enquanto executa uma issue** | criar issue · transicionar status · levantar stop (inclui *pedir approval*) · perguntar ao operador · responder mensagem (`SendDirectMessage`, existe) · registrar artifact (`RecordArtifact`, existe) |
+> | `system` | navegação e operação do sistema | `ui/*` reads **menos `ListenEvents`** · `workspace/*` · config de thread · leituras de issue · `owner/*` |
 >
-> **O default é NÃO EXPOSTO** — e é isso que justifica a extensão em vez de uma lista à parte: um
-> controller novo **não** vira tool por acidente; alguém tem de declarar o escopo no próprio
-> controller. Sem esse default, todo endpoint que nascer entra em silêncio no alcance de um modelo que
-> lê mensagem de WhatsApp. O `--allowedTools` passa a ser **derivado** do escopo que o agent declara.
+> **O default é NÃO EXPOSTO — e o probe mostrou que isso NÃO é de graça.** Sem `include`, o
+> `pluginMcp` emitiu **as 40 operações** como tool. A propriedade de segurança vem **inteira** do
+> allowlist explícito — `if (context.include && !this.#isIncluded(...)) return null`, fail-closed,
+> `plugin-oas/dist/index.js:206-207` — derivado do manifesto: um controller novo **não** vira tool
+> por acidente porque ninguém o pôs no manifesto. Sem isso, todo endpoint que nascer entra em
+> silêncio no alcance de um modelo que lê mensagem de WhatsApp. O `--allowedTools` passa a ser
+> **derivado** do escopo que o agent declara. Cobrado por **AC-6.14**.
 >
-> **TRÊS OPERAÇÕES NÃO EXISTEM E NASCEM AQUI**, como controllers normais (schema Zod, entram na SDK e
-> no spec como qualquer outro): **criar issue** (hoje issues só materializam da execução),
-> **transicionar status** (só há `Archive`/`Restore`) e **pedir approval**. O que era
-> `DeclareStop`/`DeclareIssueComplete` vira endpoint de verdade, não caminho paralelo.
+> **QUEM DECLARA QUAL ESCOPO, fechado aqui para não sobrar bifurcação:** `ClassifyIssueAgent` → `[]`
+> (sem `--mcp-config`, §4.8), `IssueWorkAgent` → **só `issue-handling`**. O escopo `system` é
+> **gerado e montado**, mas **nenhum agent interno o declara nesta fase** — seu consumidor é o
+> cliente MCP externo (o agent do próprio operador, navegando o sistema). Dar `system` ao
+> `IssueWorkAgent` poria `owner/*` e `workspace/*` ao alcance de um modelo dirigido por mensagem de
+> WhatsApp, que é exatamente a propriedade que o parágrafo acima existe para preservar. O campo
+> `readonly tools` do agent **continua sendo o predicado** da §4.3 regra 7 — ele passa a ser a
+> **expansão derivada** do escopo declarado (`TOOLS_IN_SCOPE['issue-handling']`), nunca uma lista
+> escrita à mão, e `.tools.length === 0` segue significando exatamente "sem `mcp` no request".
+>
+> **QUATRO OPERAÇÕES NÃO EXISTEM E NASCEM AQUI** (a emenda dizia "três" e **contava a menos** — ver a
+> correção de contagem logo abaixo), como controllers normais (schema Zod, entram na SDK e no spec
+> como qualquer outro): **criar issue** (hoje issues só materializam da execução), **transicionar
+> status** (só há `Archive`/`Restore`), **levantar stop** (com `kind` no corpo — *"pedir approval"* é
+> o caso `APPROVAL_NEEDED` dele) e **perguntar ao operador** (`{question}`, **sem** `kind`). O que era
+> `DeclareIssueComplete`/`DeclareStop`/`AskOperator` vira endpoint de verdade, não caminho paralelo.
+>
+> **CORREÇÃO DE CONTAGEM (27-jul, reconciliação das AC-6.x) — por que são QUATRO e não três.** A
+> emenda enumerava `criar issue · transicionar status · pedir approval` e dobrava `ask_operator`
+> dentro de "pedir approval". Não fecha, e a evidência é a própria **AC-6.10(c)**, escrita pelo
+> founder: o `kind` de `ask_operator` é **fixado pelo handler** em `HUMAN_REQUESTED` e *"um payload
+> que tente enviar `kind` é rejeitado"* — enquanto `raise_stop`/"pedir approval" **tem** `kind` no
+> corpo, que é justamente o que o modelo escolhe ali. Uma mesma operação não pode ao mesmo tempo
+> aceitar e proibir a mesma chave. São duas operações. **Não é escopo novo:** as quatro aterrissagens
+> já estavam declaradas na §4.4; o que muda é que cada uma vira **um controller** em vez de uma tool
+> escrita à mão.
 >
 > **A IDENTIDADE FICA MAIS FRACA — REGRESSÃO CONSCIENTE, COM MITIGANTE OBRIGATÓRIO.** A Fase 1
 > congelou os schemas de tool **sem nenhum campo de identidade** (AC-1.6, verificada pelo juiz), o que
@@ -2484,17 +2553,62 @@ uma chave nova é dívida nova, não ratchet.
 > tentando declarar na B → 403). **Sem esse teste a fase não fecha** — é por esse caminho que um prompt
 > injection vindo de uma mensagem chegaria ao domínio.
 >
+> > **CORREÇÃO DO PROBE (27-jul) — a regressão é MAIS LARGA do que este parágrafo diz, e a checagem
+> > do router precisa de DOIS eixos, não um.** O parágrafo antecipa "os params do controller". Medido
+> > dirigindo o servidor gerado por um `Client` real do `@modelcontextprotocol/sdk` sobre
+> > `InMemoryTransport`: `tools/list` devolveu `RecordArtifact` com
+> > `inputSchema keys ["threadId","data"]`, **ambos required**, e um `tools/call` com
+> > `threadId: 'ATTACKER-CHOSEN-THREAD-ID'` **e** `data.issueId: '1111…'` emitiu de fato
+> > `POST /v1/threads/ATTACKER-CHOSEN-THREAD-ID/artifacts` **carregando aquele `issueId` no CORPO**.
+> > Confirmado no código: `RecordArtifactInputSchema` tem `issueId: z.uuid().optional()`
+> > (`artifact/usecases/RecordArtifact.ts:15`) e o controller compõe o body com
+> > `.omit({ ownerId: true, threadId: true })` — logo `issueId` **fica no corpo**. Um router que só
+> > compare o path param passa no teste cross-issue enquanto o corpo continua mirando a issue B.
+> > **A rejeição percorre path + query + body**, e é isso que a AC-6.6 mede.
+> >
+> > **Consequência de contrato: nasce um QUARTO código de erro.** A §5.1 alocou
+> > `AGENT_RUN_TOKEN_INVALID` como `UNAUTHORIZED` (401) — token ausente/expirado/revogado. A rejeição
+> > por identidade divergente é **403**, um caso diferente (token válido, alvo errado), e um 401 ali
+> > mentiria para o cliente e para o log. Entra **`AGENT_RUN_SCOPE_MISMATCH`**,
+> > `<Ctx>InterfaceErrors` + `HttpStatusCode.FORBIDDEN`, na Fase 6, pelo **mesmo ripple de 4 paradas**
+> > da §5.1 e cobrado pela **AC-6.13** junto dos outros.
+>
 > **Spec de origem:** o do `api-ts` (o daemon), nunca o do gateway.
 >
-> **AS AC-6.x ABAIXO PRECISAM DE RECONCILIAÇÃO** com esta emenda antes da Fase 6 começar — foram
-> escritas para tools à mão. É **tarefa declarada**, não improviso de última hora; a Fase 6 está a
-> quatro fases de distância e a reconciliação acontece antes dela.
+> **RECONCILIAÇÃO DAS AC-6.x — FEITA em 27-jul, antes da fase começar.** As ACs abaixo foram
+> reescritas contra esta emenda **e** contra o probe de viabilidade do `@kubb/plugin-mcp` (o que
+> invalidou parte da própria emenda está corrigido *nela*, em blocos marcados `CORREÇÃO DO PROBE`).
+> A numeração **AC-6.1 … AC-6.13 foi preservada** — o documento a referencia cruzado em 20 lugares —
+> e o que a emenda acrescenta entrou como **AC-6.14 … AC-6.19**. Cada AC carrega o seu
+> **falsificador**: o estado que a faz ficar vermelha. AC vista só verde não é AC (§8).
 
-É aqui que a fatia PARKED de materialização de issue destrava. Nasce `agent/mcp/`
-(`router.ts`, `tools/*.ts`, `RunTokenService.ts`), as quatro tools (§4.4), **três** use cases de
-declaração no `agent` (`DeclareIssueComplete`, `DeclareStop`, `AskOperator`) e o wiring de escopo por
-agent. A quarta tool aterrissa no contexto dono da escrita: **`artifact/mcp/RecordArtifactTool.ts`**
-despachando o `RecordArtifact` que já existe (§4.4 item (ii)) — **não** nasce `DeclareArtifact`.
+É aqui que a fatia PARKED de materialização de issue destrava. **O que nasce, na forma que a emenda
+fixou** — e note que a lista abaixo **substitui** a redação anterior (`agent/mcp/tools/*.ts` + quatro
+tools à mão + `artifact/mcp/RecordArtifactTool.ts`), que a emenda tornou obsoleta:
+
+- **`agent/mcp/manifest.ts`** — `MCP_SCOPES`, o manifesto tipado por classes de controller, e a
+  expansão derivada `TOOLS_IN_SCOPE` que o agent declara como `tools`.
+- **`agent/mcp/router.ts`** — a montagem HTTP do servidor MCP no daemon (fora da OpenAPI emitida) e
+  **o lugar onde a mitigação obrigatória vive**: `AsyncLocalStorage` com as claims do run token,
+  verificação por chamada, rejeição por identidade divergente em path + query + **body**.
+- **`agent/mcp/RunTokenService.ts`** — a implementação dos três verbos que a Fase 1 congelou como
+  assinatura abstrata (`mint`/`verify`/`revoke`).
+- **Quatro controllers novos**, um por operação que não existia (§4.4 e a correção de contagem
+  acima), cada um despachando um use case: criar issue, transicionar status, levantar stop, perguntar
+  ao operador. **São controllers normais** — entram na SDK e no spec como qualquer outro. Os use
+  cases de declaração continuam sendo `DeclareIssueComplete` / `DeclareStop` / `AskOperator` no
+  contexto `agent`; o que muda é que a **porta** deles é HTTP, não um handler de tool à mão.
+- **Zero arquivo de tool.** `agent/mcp/tools/` **não existe** e `artifact/mcp/RecordArtifactTool.ts`
+  **não nasce**: `record_artifact` já **é** `artifact/controllers/RecordArtifact.ts`, que já despacha
+  o `RecordArtifact` tipado com `ref`/`meta`. A regra de propriedade da §4.4 item (ii) — *"uma tool é
+  um controller fino do contexto DONO da escrita"* — deixa de ser uma disciplina a manter e passa a
+  ser **verdadeira por construção**, porque a tool **é** o controller. O que sobra dela é o import do
+  manifesto (`agent/mcp/manifest.ts` → `@artifact/controllers`), e é a esse import que a escada de
+  degraus da §4.4 item (ii) se aplica agora (AC-6.11).
+- **A geração**, em `packages/client/generators/typescript.ts`: `@kubb/plugin-mcp`, **uma instância
+  por escopo**, cada uma com `include` de tag ancorada e `output.barrelType: false`, mais o
+  `_http.ts` por escopo (o único seam de auth que existe) e os dois fixups pós-geração (AC-6.16).
+
 **Nenhum integration event novo** — os congelados (`integration.issue.completed`,
 `integration.issue.stop_raised`, `integration.artifact.recorded`) ganham origem explícita e tipada
 pelos bridges que já existem, e **nenhum evento de domínio novo** é criado para servir tool
@@ -2521,33 +2635,96 @@ integration event). Sem esse campo, AC-6.4(c) e AC-6.7(a) assertam sobre algo qu
 Se o transporte HTTP não funcionar com o CLI instalado, **cair para o stub stdio** (§4.4), registrar
 no BUILD-LOG e seguir — **não é decisão de founder, não bloqueia a fase**.
 
-**AC-6.1** Smoke real commitado em `.specs/codedm/phase6-mcp-smoke/`: `claude` de verdade chamando
-`codedm__complete_issue`, com o log da tool call **e** a linha da issue em `COMPLETED` depois.
-Registrar qual transporte ficou (http | stdio). **AC degradável pela regra 8-bis (§8)**: se o
-`claude` real não for alcançável (ausência/auth/aninhamento), registrar `ATTEMPT-FAILED` com o erro
-literal, marcar **só esta AC** como `PARKED-com-findings`, anotar no BUILD-LOG que a escolha de
-transporte ficou **indecidida por evidência** e que o padrão **HTTP** (§4.4) permanece — e
-**continuar a fase**. Todas as demais ACs da Fase 6 rodam sobre o `E2eStubAgentRunner` (AC-6.2) e
+> **VOCABULÁRIO DAS AC-6.x — três derivações, uma fonte cada, para que nenhuma AC cite um literal
+> escrito à mão.** As ACs abaixo referenciam estes símbolos e **nunca** um nome de tool digitado:
+>
+> - **`OP(C)`** — o `operationId` da operação do controller `C`, pela regra que o emissor **já** usa:
+>   `C.name.replace('Controller', '')` (`core/src/utils/OpenAPI.ts:838`; com sufixo de método quando
+>   o controller declara mais de um). É **exatamente** o nome com que o `@kubb/plugin-mcp` registra a
+>   tool — `serverGenerator` faz `name: operation.getOperationId()` e **não** passa por
+>   `resolveName`/`transformers` (PROVADO: com `transformers.name` os ARQUIVOS viraram
+>   `XXrecordArtifact.ts` e o registro continuou `server.registerTool("RecordArtifact", …)`).
+> - **`WIRE(C)`** — a grafia que o CLIENTE MCP usa ao chamar, e a que entra em `--allowedTools`.
+>   Convenção do Claude Code: `mcp__<chave do servidor no .mcp.json>__<nome da tool>`, e a chave **é
+>   nossa** — `MCP_SERVER_KEY = 'codedm'` já existe em `ClaudeAgentRunner.ts:43`. Logo
+>   `WIRE(C) = mcp__codedm__${OP(C)}`. **NÃO PROBADO** — é o que a AC-6.1 mede, e a AC-6.17 exige que
+>   ele seja uma constante derivada num lugar só, para que a correção seja **uma** edição.
+> - **`SCOPE_OPS(s)`** — `MCP_SCOPES[s].map(OP)`, lido do manifesto (AC-6.15).
+>
+> **DUAS ARMADILHAS DE `git grep` MEDIDAS NESTA RECONCILIAÇÃO (27-jul, macOS) — quem escrever ou
+> rodar as ACs abaixo tem de saber, porque as duas produzem VERDE FALSO:**
+>
+> 1. **`-E` não suporta `\b` nem `\s`.** Medido plantando `export class FooTool {}`:
+>    `git grep -nE "class [A-Za-z]+Tool\b"` → **0 hits, exit 1**, com o alvo ali; a mesma busca com
+>    **`-P`** → 1 hit, exit 0. Idem `\s`. **Toda AC com `\b`/`\s` usa `-P`, nunca `-E`.** É a terceira
+>    ocorrência desta classe de defeito neste goal (as outras: `grep -q CONNECTED` passando em
+>    `DISCONNECTED`, e `| tee` engolindo exit code).
+> 2. **`git grep` ignora arquivo NÃO RASTREADO.** Medido: o mesmo `FooTool` plantado saiu **0 hits**
+>    até passar `--untracked`. Consequência direta: **todo falsificador que PLANTA um arquivo novo
+>    tem de usar `--untracked` (ou `git add -N`)** — senão o "falsificador" confirma verde e prova
+>    exatamente nada. Falsificador que só edita arquivo existente não precisa.
+>
+> **`codedm__complete_issue` e as outras três grafias da Fase 1 NÃO EXISTEM MAIS como nome de wire**
+> (AC-6.17). Onde o texto original das ACs as citava, leia a operação correspondente:
+> `complete_issue` → `TransitionIssueStatus`, `raise_stop` → `RaiseStop`,
+> `record_artifact` → `RecordArtifact`, `ask_operator` → `AskOperator`.
+
+**AC-6.1** Smoke real commitado em `.specs/codedm/phase6-mcp-smoke/`: `claude` de verdade chamando a
+tool de conclusão (`TransitionIssueStatus`) pelo nosso servidor MCP, com o log da tool call **e** a
+linha da issue em `COMPLETED` depois. Registrar qual transporte ficou (http | stdio). **E, porque é a
+única coisa nesta fase que só o `claude` real pode responder, o smoke tem uma SEGUNDA entrega
+obrigatória: a GRAFIA LITERAL medida** — (a) o `tool` do frame `tool_use` capturado no JSONL cru, e
+(b) a string aceita em `--allowedTools` que fez a chamada acontecer. Comparar com `WIRE(C)`; se
+divergir, **corrigir a constante derivada** (uma edição, AC-6.17) e registrar a divergência no
+BUILD-LOG com os bytes. **Não assumir a convenção**: o probe não a mediu e o goal não pode fingir que
+mediu. **AC degradável pela regra 8-bis (§8)**: se o `claude` real não for alcançável
+(ausência/auth/aninhamento), registrar `ATTEMPT-FAILED` com o comando literal, exit code e stderr,
+marcar **só esta AC** como `PARKED-com-findings`, anotar no BUILD-LOG que **tanto a escolha de
+transporte quanto a grafia de `--allowedTools` ficaram INDECIDIDAS POR EVIDÊNCIA** (padrões que
+permanecem: **HTTP**, §4.4, e `mcp__codedm__<OP>`), e **continuar a fase**. Todas as demais ACs da
+Fase 6 rodam sobre o `E2eStubAgentRunner` (AC-6.2) e o cliente MCP real em memória (AC-6.16), e
 **não degradam**: são gate duro mesmo sem `claude` no ar. Este é exatamente o motivo pelo qual a
-AC-6.2 existe.
+AC-6.2 e a AC-6.16 existem.
+&nbsp;&nbsp;**Falsificador:** um "smoke" derivado do spec sem `claude` no ar **não** conta — a regra
+8-bis(3) obriga o carimbo `SOURCE: spec-derived (ATTEMPT-FAILED)` no cabeçalho, e um artefato sem
+carimbo nem JSONL cru reprova a AC.
 **AC-6.2** **e2e determinístico**: o `E2eStubAgentRunner` chama o endpoint MCP local (sem `claude`
-no ar) e o e2e prova a cadeia inteira — inbound → issue aberta → `record_artifact` → artefato
-**listado pela query que a UI já usa** → `complete_issue` → issue `COMPLETED` — **sem nenhum parse de
-texto no caminho**. A perna do artefato só passa porque a tool despacha `RecordArtifact` no contexto
-`artifact` (§4.4 item (ii)); se o executor a tiver implementado como publicação de integration event
-sem consumidor, esta AC falha por construção — é o sintoma, e o conserto é a AC-6.11.
+no ar) e o e2e prova a cadeia inteira — inbound → issue aberta → `RecordArtifact` → artefato
+**listado pela query que a UI já usa** → `TransitionIssueStatus` → issue `COMPLETED` — **sem nenhum
+parse de texto no caminho**. A perna do artefato passa porque a tool **é** o controller do contexto
+`artifact` (§4.4 item (ii), agora verdadeiro por construção); se o executor tiver inventado um
+caminho paralelo publicando integration event sem consumidor, esta AC falha — é o sintoma, e o
+conserto é a AC-6.11.
+&nbsp;&nbsp;**E as duas chamadas devem voltar `isError: false`**, assertado explicitamente. Não é
+zelo: o SDK MCP **valida o `outputSchema` DEPOIS de a escrita HTTP já ter sido emitida** (PROVADO —
+o probe recebeu `isError: true, -32602 "Output validation error: … expected string, received
+undefined at data.artifactId"` **com o POST já disparado**). Qualquer deriva entre o schema de
+resposta emitido e o que o endpoint devolve transforma uma escrita concluída em erro de tool, e o
+modelo **retenta** — que é double-write silencioso vestido de falha.
+&nbsp;&nbsp;**Falsificador:** apontar o e2e para um build em que o `data` da resposta de
+`RecordArtifact` foi renomeado; a AC tem de ficar vermelha em `isError`, não passar por "a linha
+existe no banco".
 **AC-6.3** Zero heurística de texto para fato de domínio:
 `git grep -nE "includes\('done'\)|/(complete|finished|approval)/i" -- packages/api/typescript/src/agent` → **0 hits**.
+&nbsp;&nbsp;**Falsificador executado, e obrigatório porque este grep JÁ nasceu podendo ser
+vacuoso:** acrescentar temporariamente `if (text.includes('done')) {}` a um arquivo sob
+`src/agent/`, rodar o grep e confirmar **≥1 hit** e exit `0`; reverter. Confirmar também que o
+pathspec **existe** (um `fatal: ambiguous argument` sai com hit-count zero e parece verde).
 **AC-6.4** **Sem double-publish, nos DOIS caminhos** (§4.3, regras 3 e 7). **Os três casos são
 montados pelo ESCOPO DE TOOL do agent injetado no `RunIssueTurn`** — que é o que o use case
 enxerga (§4.3, regra 7) e portanto o que o teste controla: injeta-se um agent-duplo cujo
-`readonly tools` é `[]` ou as quatro, e drena-se o `E2eStubAgentRunner`. **Não** tentar montar o
-caso por `request.mcp`: o request é interno ao `Agent` e o teste não o alcança.
-&nbsp;&nbsp;(a) uma tool call `codedm__complete_issue` produz **exatamente um**
-`integration.issue.completed` no outbox — o accumulator ignora `codedm__*`;
-&nbsp;&nbsp;(b) o **caso degenerado**: agent com `tools.length === 4` que declara
-`codedm__complete_issue` **e também termina normalmente** (o `outcome` terminal chega `COMPLETED`)
-produz **exatamente um** — porque `RunIssueTurn` só cunha a conclusão de domínio quando
+`readonly tools` é `[]` ou `TOOLS_IN_SCOPE['issue-handling']`, e drena-se o `E2eStubAgentRunner`.
+**Não** tentar montar o caso por `request.mcp`: o request é interno ao `Agent` e o teste não o
+alcança.
+&nbsp;&nbsp;(a) uma tool call `TransitionIssueStatus` produz **exatamente um**
+`integration.issue.completed` no outbox — o accumulator ignora as tools **do nosso servidor**,
+reconhecidas pela grafia `WIRE(C)` e **não** pelo prefixo `codedm__` da Fase 1 (AC-6.17 é quem prova
+que a guarda casa a grafia real; sem ela esta alínea passa por acidente, porque um accumulator que
+não reconhece a tool também não cunha fato **se o frame nunca chegar** — por isso o teste alimenta o
+frame `tool_use` explicitamente);
+&nbsp;&nbsp;(b) o **caso degenerado**: agent com `tools.length === SCOPE_OPS('issue-handling').length`
+que declara `TransitionIssueStatus` **e também termina normalmente** (o `outcome` terminal chega
+`COMPLETED`) produz **exatamente um** — porque `RunIssueTurn` só cunha a conclusão de domínio quando
 `agent.tools.length === 0`;
 &nbsp;&nbsp;(c) o espelho: agent com `tools.length === 0` que termina normalmente produz
 **exatamente um**, e o `AgentRunCompletedEvent` correspondente carrega
@@ -2558,19 +2735,54 @@ predicado não regredir para o campo inalcançável:
 `git grep -n "request\.mcp" -- packages/api/typescript/src/agent/usecases` → **0 hits**, e
 `git grep -n "\.tools\.length" -- packages/api/typescript/src/agent/usecases/RunIssueTurn.ts` →
 **≥1 hit** (o predicado está onde a informação está).
-**AC-6.5** Escopo por agent: teste de argv provando que `ClassifyIssueAgent` roda **sem**
-`--mcp-config` e que `IssueWorkAgent` roda com `--allowedTools` contendo **exatamente** as quatro
-tools.
-**AC-6.6** Autorização: teste provando (a) tool call com token ausente/expirado/de run cancelado →
-**401** e **nenhuma** escrita; (b) `ownerId`/`issueId` usados pelo use case vêm **do token**, e um
-payload que tente injetá-los é rejeitado pelo schema (AC-1.6 garante que a chave nem existe).
+&nbsp;&nbsp;**Falsificador:** trocar o predicado por `true` (cunhar sempre) e confirmar que (b) fica
+vermelha com **dois** eventos no outbox — uma AC de double-publish que nunca viu o dois não mediu
+nada.
+**AC-6.5** Escopo por agent, **derivado do manifesto e não digitado**: teste de argv provando que
+(a) `ClassifyIssueAgent` roda **sem** `--mcp-config` e **sem** `--allowedTools`; (b) `IssueWorkAgent`
+roda com `--allowedTools` igual a **`SCOPE_OPS('issue-handling').map(WIRE)`** — as **seis** operações
+do escopo (`CreateIssue`, `TransitionIssueStatus`, `RaiseStop`, `AskOperator`, `SendDirectMessage`,
+`RecordArtifact`), na ordem do manifesto, e o teste compara contra a constante derivada, **nunca
+contra uma lista literal** (uma lista literal no teste é exatamente a segunda fonte de verdade que
+esta fase existe para matar); (c) `IssueWorkAgent` **não** declara `system` — nenhuma operação de
+`SCOPE_OPS('system')` aparece no argv.
+&nbsp;&nbsp;**Falsificador:** acrescentar uma sétima entrada ao `MCP_SCOPES['issue-handling']` e
+confirmar que o argv do teste muda **sem** que o runner ou o teste sejam editados. Se não mudar, a
+lista está escrita à mão em algum lugar e a AC não está cumprida.
+**AC-6.6** **AUTORIZAÇÃO — e é aqui que mora o MITIGANTE OBRIGATÓRIO da emenda. Sem esta AC verde a
+fase NÃO FECHA.** Teste provando:
+&nbsp;&nbsp;(a) tool call com token **ausente / expirado / de run cancelado** → **401**
+(`AGENT_RUN_TOKEN_INVALID`) e **nenhuma** escrita — verificado por contagem de linhas **e** de
+eventos no outbox antes/depois, não por ausência de exceção;
+&nbsp;&nbsp;(b) **TENTATIVA CROSS-ISSUE, os três eixos.** Agent rodando na issue A (token com
+`{ownerId: O1, issueId: A, threadId: T1}`) chamando uma tool que mira B → **403**
+(`AGENT_RUN_SCOPE_MISMATCH`) e **nenhuma** escrita, em **cada** um destes vetores, medidos, não
+supostos:
+&nbsp;&nbsp;&nbsp;&nbsp;· **path param** — `POST /v1/threads/{threadId}/artifacts` com `threadId` ≠
+claim (o probe emitiu literalmente `/v1/threads/ATTACKER-CHOSEN-THREAD-ID/artifacts`);
+&nbsp;&nbsp;&nbsp;&nbsp;· **corpo** — o **mesmo** `RecordArtifact` com `threadId` correto e
+`data.issueId` = B. `RecordArtifactInputSchema` tem `issueId: z.uuid().optional()`
+(`artifact/usecases/RecordArtifact.ts:15`) e o controller compõe o body com
+`.omit({ ownerId: true, threadId: true })` — logo `issueId` **está no corpo**, é escolhido pelo
+modelo, e um router que só olhe o path deixa passar;
+&nbsp;&nbsp;&nbsp;&nbsp;· **query**, para qualquer operação do escopo que tenha um identificador ali.
+&nbsp;&nbsp;(c) o `ownerId` do contexto de operador **vem do token**, não de sessão: as operações do
+escopo levam `OperatorMiddleware` (`ctx.ownerId`), e o router preenche esse `ctx` a partir das
+**claims**. Teste: um token de `O1` não consegue escrever em recurso de `O2` nem quando o daemon tem
+uma sessão de `O2` aberta;
+&nbsp;&nbsp;(d) o caminho **feliz** com identidade concordante continua passando — sem esta alínea a
+AC pode ser satisfeita por um router que rejeita tudo.
+&nbsp;&nbsp;**Falsificador, obrigatório e executado:** remover **só** a caminhada pelo corpo e
+confirmar que o vetor "corpo" fica **verde indevidamente** (a escrita acontece na issue B) enquanto
+o vetor "path" continua vermelho. É essa assimetria que prova que a AC mede os dois eixos e não um.
+Registrar a saída literal no BUILD-LOG.
 **AC-6.7** Degradação visível, **com a separação transporte × domínio da §4.3**. O caso é montado
 pelo **escopo de tool** (agent com `tools = []`), não por `request.mcp` (§4.3, regra 7). Teste
 provando que esse run (a) fecha a issue e o `AgentRunCompletedEvent` persistido carrega
 **`payload.source === FactSource.INFERRED`** — asserção sobre o **campo que a Fase 6 acrescenta ao
 schema do evento de domínio** (§4.3, regra 6), lido do outbox/`shared_events`, nunca de log;
 (b) **não** produz artefato nem stop de **domínio** (`APPROVAL_NEEDED`, `HUMAN_REQUESTED`,
-`BLOCKED_BY_CLASSIFICATION` — só `raise_stop` os origina); (c) **ainda produz** stop de
+`BLOCKED_BY_CLASSIFICATION` — só `RaiseStop`/`AskOperator` os originam); (c) **ainda produz** stop de
 **transporte** quando cabe — caso explícito: frames de re-auth do CLI →
 `stop: { kind: AUTH_REQUIRED }`, virando um `AgentRunStopRaisedEvent` com
 `payload.source === FactSource.INFERRED`, sem tool alguma (e o mesmo vale para um agent **com**
@@ -2578,46 +2790,112 @@ escopo de tool: o stop de transporte é cunhado do mesmo jeito). E que um agent 
 contra provider sem `mcpConfigFlag` falha com `AGENT_TOOLS_UNSUPPORTED`. Teste de tipo junto:
 `TransportStopKind` **não** admite os três kinds de domínio (`@ts-expect-error` no type-test **é
 permitido**, é a asserção; a proibição da AC-3.4 vale para código de produção).
-**AC-6.8** `bun run contracts` + `bun sdk` idempotentes 2×; **`react tsc` e `e2e tsc` verdes** (não é
-"se mudou": o `detail` do item (i) muda o wire, então mudou). **Mais o fechamento da emissão**: o
-router MCP **não** entra na OpenAPI —
-`git grep -n "/mcp\|codedm__" -- packages/api/typescript/public/docs/openapi.json packages/client/dist`
-→ **0 hits** (mesmo naipe do `TestIngressController`, §4.4), e a rota **responde** com o daemon no ar
-(prova de que "não emitida" ≠ "não montada").
-**AC-6.9** `bun tsc` + `bun lint` + `bun run test` + `bun detect` + `bun e2e` verdes.
-**AC-6.10** **`codedm__ask_operator` exercitada** (§4.4), determinística, via `E2eStubAgentRunner`:
+**AC-6.8** **Contrato, regeneração e fechamento da emissão.**
+&nbsp;&nbsp;(a) `bun run contracts` + `bun sdk` **idempotentes 2×** — a prova é `git status
+--porcelain -- packages/contracts/generated packages/client/dist` **vazio** depois da segunda
+rodada, nunca "rodei duas vezes e pareceu igual". Atenção medida: `bun sdk` (kubb) é **incremental**;
+se a segunda rodada sujar a árvore, forçar regen limpa e registrar.
+&nbsp;&nbsp;(b) **`react tsc` e `e2e tsc` verdes** (não é "se mudou": o `detail` do item (i) muda o
+wire, e os quatro controllers novos entram na SDK — então mudou, duas vezes).
+&nbsp;&nbsp;(c) **A SDK do frontend NÃO É PERTURBADA pela geração de tools.** Diff de
+`packages/client/dist/typescript/src/typescript/{types,zod,hooks,client}` contra o commit anterior à
+introdução do `pluginMcp` → **idêntico** (o probe mediu `types: IDENTICAL / zod: IDENTICAL /
+client: IDENTICAL`). E o **barril raiz não vaza tool**:
+`git grep -n "mcp-issue-handling\|mcp-system" -- packages/client/dist/typescript/src/typescript/index.ts`
+→ **0 hits**. Isto **exige** `output.barrelType: false` em cada instância de `pluginMcp`; sem ele o
+barril raiz reexporta `getServer/server/startServer` **duas vezes** (TS2308) e injeta 41 exports de
+handler de tool no barril que o app importa. **Falsificador:** remover `barrelType: false` de uma das
+instâncias e confirmar o TS2308 — se não colidir, a segunda instância não está sendo gerada.
+&nbsp;&nbsp;(d) **O ROUTER MCP não entra na OpenAPI, mas RESPONDE.**
+`git grep -n '"/mcp' -- packages/api/typescript/public/docs/openapi.json` → **0 hits** (mesmo naipe
+do `TestIngressController`, §4.4), **e** a rota responde a um `initialize` JSON-RPC com o daemon no
+ar (prova de que "não emitida" ≠ "não montada"). **Falsificador obrigatório, porque este grep é
+VACUAMENTE VERDE hoje** (medido em 27-jul: 0 hits, e a rota nem existe): registrar o router MCP no
+conjunto emitido, rodar `bun emit-openapi` e confirmar que o grep passa a **acusar**; reverter. Sem
+esse ida-e-volta a alínea não distingue "não emitida" de "não implementada".
+&nbsp;&nbsp;&nbsp;&nbsp;**CORREÇÃO — o grep antigo (`git grep -n "/mcp\|codedm__" … packages/client/dist`
+→ 0 hits) está REVOGADO e era duplamente inválido:** (i) sob o desenho gerado, `packages/client/dist`
+**contém** `mcp-issue-handling/` e `mcp-system/` **por construção** — é a entrega da fase, e a AC
+antiga a proibiria; (ii) o pedaço `codedm__` passou a ser **vacuamente verdadeiro** no momento em que
+os nomes de tool deixaram de ser `codedm__*` (AC-6.17) — uma AC que só pode passar não é uma AC. O
+que continua sendo medido é o **endpoint JSON-RPC** não estar no spec emitido, que é o invariante
+real.
+&nbsp;&nbsp;(e) **`x-mcp-scope` e as tags sintéticas ESTÃO no spec emitido** — é o oposto de (d) e
+vale a pena dizer, porque um executor apressado poderia "limpar" a extensão para fazer (d) passar:
+`git grep -c "x-mcp-scope" -- packages/api/typescript/public/docs/openapi.json` → **≥1**, e o
+conjunto de operações que a carrega é **exatamente** o do manifesto (AC-6.15).
+**AC-6.9** `bun tsc` + `bun lint` + `bun run test` (a partir de `packages/api/typescript`) +
+`bun test:tooling` + `bun detect` + **`bun e2e` executado de verdade** + `go build/vet/test` nos
+**dois** módulos, todos verdes. **Os seis detectores não crescem além de `39/0/37/33/3/2`** —
+número por detector, na ordem de `scripts/detectors/run-all.ts`, e comparado contra o HEAD de
+entrada da fase. Crescer é regressão mesmo com tudo o mais verde.
+**AC-6.10** **`AskOperator` exercitada** (§4.4), determinística, via `E2eStubAgentRunner`:
 (a) a chamada **retorna antes** do operador responder — teste que asserta que a promessa do handler
 resolve sem nenhum sinal externo e devolve `{ delivered: true }` (fire-and-forget provado, não
 prometido); (b) ela produz **exatamente um** `integration.issue.stop_raised` no outbox com
 `kind === StopKind.HUMAN_REQUESTED` e **`detail === question`** — satisfazível **porque** a fase
 acrescentou `detail` ao `issue-stop-raised.tsp` (§4.4 item (i)); sem esse campo a AC é impossível, e
-essa é a única leitura correta dela; (c) o `kind` é fixado **pelo handler** — um payload que tente
-enviar `kind` é rejeitado pelo schema (a chave não existe, mesma disciplina da AC-1.6); (d) a issue
-aparece em "Needs you" pelo caminho já existente, sem bridge novo, e o **card mostra a pergunta**:
-`RaiseStop` recebe `title === question` (porque `kind === HUMAN_REQUESTED`) e `detail === question`,
-não o `STOP_TITLES` genérico.
-**AC-6.11** **A perna do artefato tem dono e aterrissa** (§4.4 item (ii)): (a)
-`artifact/mcp/RecordArtifactTool.ts` existe e é o **único** caller novo de `RecordArtifact`;
-(b) `git grep -n "DeclareArtifact" -- packages/api/typescript/src` → **0 hits**;
-(c) teste provando que uma tool call `codedm__record_artifact` grava **exatamente uma** linha de
+essa é a única leitura correta dela; (c) o `kind` é fixado **pelo handler**, e a prova agora é
+**estrutural sobre o schema GERADO**, não sobre um schema à mão: o `inputSchema` com que
+`registerTool("AskOperator", …)` é emitido tem chaves **exatamente** `{question}` (mais o path param
+de identidade, que a AC-6.6 já cobre) — **`kind` não aparece**; e um `tools/call` que mande `kind`
+mesmo assim produz um stop `HUMAN_REQUESTED`, porque quem escolhe é o handler. É por isso que
+`AskOperator` **não pode** ser a mesma operação que `RaiseStop` (correção de contagem da emenda);
+(d) a issue aparece em "Needs you" pelo caminho já existente, sem bridge novo, e o **card mostra a
+pergunta**: `RaiseStop` recebe `title === question` (porque `kind === HUMAN_REQUESTED`) e
+`detail === question`, não o `STOP_TITLES` genérico.
+&nbsp;&nbsp;**Falsificador:** apontar o teste (a) para uma implementação que aguarda um sinal externo
+— tem de estourar por timeout, não passar por "resolveu rápido o bastante".
+**AC-6.11** **A perna do artefato tem dono e aterrissa** (§4.4 item (ii)) — **reancorada, porque a
+emenda dissolveu o arquivo que a AC antiga exigia**:
+&nbsp;&nbsp;(a) `git grep -n "RecordArtifactTool" -- packages/api/typescript/src` → **0 hits**, e
+`artifact/mcp/` **não existe**. **Medido em 27-jul: hoje são 4 hits**, todos em
+`agent/schemas/AgentToolSchemas.ts` (dois de comentário prometendo o arquivo, mais
+`RecordArtifactToolInputSchema` e seu uso no registry). Ou seja, **esta alínea começa VERMELHA e só
+fica verde quando a AC-6.17(b) apagar aquele arquivo** — as duas estão acopladas de propósito, e uma
+verde isolada aqui significaria que alguém apagou o comentário sem apagar o mecanismo. A tool **é** `artifact/controllers/RecordArtifact.ts`, que já
+existia, e o `RecordArtifact` continua com **exatamente um** caller: aquele controller
+(`git grep -n "new RecordArtifact\|: RecordArtifact" -- packages/api/typescript/src` não revela um
+segundo despachante). A propriedade que a AC antiga perseguia — *"a tool é um controller fino do
+contexto DONO da escrita"* — passa a ser **verdadeira por construção**, e a AC verifica que ninguém
+recriou um segundo mecanismo ao lado;
+&nbsp;&nbsp;(b) `git grep -n "DeclareArtifact" -- packages/api/typescript/src` → **0 hits**;
+&nbsp;&nbsp;(c) teste provando que uma tool call `RecordArtifact` grava **exatamente uma** linha de
 artefato (com `ref` e `meta` preservados — o que a rota via integration event perderia) e produz
 **exatamente um** `integration.artifact.recorded` no outbox, publicado pelo bridge **que já existia**
-(`artifact/handlers/PublishArtifactIntegrationEvents.ts`); (d) `artifact/handlers/external.ts`
-continua **sem consumidor** — ou, se a escada da §4.4 item (ii) tiver descido até o **degrau 3**, ele
-contém **só** `MaterializeArtifactFromAgent` e há um teste de **não-eco** (duas passadas → uma linha,
-o segundo `RecordArtifact` no-op sem evento). **Registrar no BUILD-LOG em qual degrau (1, 2 ou 3)
-parou, com a saída literal do rail que reprovou os anteriores** — parar no degrau 3 sem ter tentado
-1 e 2 é violação da AC, porque paga mudança de contrato por um problema que duas declarações
-resolvem.
+(`artifact/handlers/PublishArtifactIntegrationEvents.ts`);
+&nbsp;&nbsp;(d) `artifact/handlers/external.ts` continua **sem consumidor** — a razão escrita nele
+continua verdadeira;
+&nbsp;&nbsp;(e) **a ESCADA da §4.4 item (ii) continua valendo, só que o degrau agora é sobre o
+IMPORT DO MANIFESTO**, que é o único ponto onde `agent` toca `artifact`: `agent/mcp/manifest.ts`
+importa `RecordArtifactController` (e `SendDirectMessageController`, e os de `ui`/`owner`/`workspace`
+no escopo `system`). Descer na ordem, **parando no primeiro que passar**: **degrau 1** — compor o
+manifesto a partir de arquivo de bootstrap (`shared/index.ts`, `shared/registry.ts`, `routers.ts`,
+`index.ts` são `BOOTSTRAP_FILES` e ficam **fora** da checagem de edge por construção); **degrau 2** —
+`CONTEXT_MAP` + `POLICY_EXCEPTIONS` nomeando o arquivo e a superfície, preferindo a exceção per-file
+a alargar `CROSS_CONTEXT_POLICY.allowed`; **degrau 3** — o caminho caro de integration event, que sob
+esta emenda quase certamente **não é necessário**, porque não há mais tool cross-context para
+registrar. **Registrar no BUILD-LOG em qual degrau parou, com a saída literal do rail que reprovou os
+anteriores** — pular para o degrau 3 sem ter tentado 1 e 2 é violação da AC.
 **AC-6.12** **A metade de identidade que a AC-1.11 adiou, agora que runner e `types/Agent.ts`
 existem**: `git grep -nE "ownerId|issueId|threadId" -- packages/api/typescript/src/agent/services/AgentRunner packages/api/typescript/src/agent/providers`
 → **0 hits**; `git grep -n "\.mint(" -- packages/api/typescript/src` → **só** `agent/types/Agent.ts`;
 `git grep -n "\.revoke(" -- packages/api/typescript/src` → **só** o runner. Os três pathspecs
 **existem** neste ponto — se algum sair `fatal:`, a AC **não** está cumprida.
-**AC-6.13** **Os três códigos de erro novos fecharam o ripple de 4 paradas da §5.1** — grep por
-código, para cada um de `AGENT_RESUME_INVALIDATED`, `AGENT_TOOLS_UNSUPPORTED` e
-`AGENT_RUN_TOKEN_INVALID` (se o primeiro tiver virado só log estruturado na Fase 4, registrar no
-BUILD-LOG e cobrar só os outros dois):
+&nbsp;&nbsp;**Escopo, agora que o MCP existe:** `agent/mcp/router.ts` **é** o lugar onde
+`ownerId`/`issueId`/`threadId` aparecem legitimamente (ele lê as claims e compara — AC-6.6), e as
+tools **geradas** carregam identidade nos params por construção; nada disso entra nos pathspecs desta
+AC, que são **só** o runner e os providers. O invariante é o do seam, e ele não mudou: o transporte
+não vê identidade.
+&nbsp;&nbsp;**Falsificador:** acrescentar `const ownerId = ''` a um arquivo sob
+`services/AgentRunner/` e confirmar hit; reverter.
+**AC-6.13** **Os QUATRO códigos de erro novos fecharam o ripple de 4 paradas da §5.1** — grep por
+código, para cada um de `AGENT_RESUME_INVALIDATED`, `AGENT_TOOLS_UNSUPPORTED`,
+`AGENT_RUN_TOKEN_INVALID` e **`AGENT_RUN_SCOPE_MISMATCH`** (se o primeiro tiver virado só log
+estruturado na Fase 4, registrar no BUILD-LOG e cobrar só os outros três). **O quarto é novo nesta
+reconciliação** e a razão está na `CORREÇÃO DO PROBE` da emenda: a rejeição por identidade divergente
+é **403** com token válido, e reaproveitar o 401 de `AGENT_RUN_TOKEN_INVALID` mentiria para o cliente
+e para o log. Alocação: `<Ctx>InterfaceErrors` + `HttpStatusCode.FORBIDDEN`, Fase 6, mesmo ripple:
 &nbsp;&nbsp;(a) `git grep -c "<CODE>" -- packages/api/typescript/src/agent/errors/index.ts` → **2**
 (uma ocorrência na `*Errors` union, uma na chave de `registerErrorCodes`) — é literalmente o
 conjunto-igual que `tests/architecture/error-coherence.test.ts` mede. **Cuidado:** `git grep -c` conta
@@ -2635,6 +2913,152 @@ nunca a soma; a AC é *"1 em cada catálogo, os dois presentes"*, não *"2"*;
 **e** `react tsc` verde — este último é o que prova a parada 3, porque
 `locales/error-codes.check.ts` (`pt.errors satisfies Record<ErrorCode, string>`) só compila com as
 duas traduções presentes.
+
+> **AC-6.14 … AC-6.19 — o que a emenda ACRESCENTA.** Estas seis não existiam porque o desenho antigo
+> não tinha gerador: eram propriedades de código escrito à mão, garantidas por revisão. Agora são
+> propriedades de uma pipeline, e o probe mostrou que **três** delas falham em silêncio com build
+> verde. São gate duro.
+
+**AC-6.14** **O DEFAULT NÃO É EXPOSTO — e a superfície não pode ficar vazia em silêncio.** É a
+propriedade de segurança sobre a qual todo o esquema se apoia, e o probe provou que ela **não** é
+default: sem `include`, as 40 operações viraram tool.
+&nbsp;&nbsp;(a) **Allowlist em toda instância.** Toda chamada de `pluginMcp(` no gerador tem
+`include`; o count de `pluginMcp(` é igual ao count de `include:` no mesmo bloco. Uma instância sem
+`include` expõe a API inteira ao modelo;
+&nbsp;&nbsp;(b) **Padrão ANCORADO, sempre RegExp.** `new RegExp(\`^mcp:${scope}$\`)` — nunca uma
+string. Medido: `pattern: 'mcp:issue'` (string) **casou** a tag `mcp:issue-handling`, porque o match
+é substring não-ancorado; e um filtro por `operationId` exigiria `friendlyCase` (camelCase),
+casando **nada** com os nossos `operationId` PascalCase. `type: 'tag'` é o único usado;
+&nbsp;&nbsp;(c) **Asserção de CONTAGEM no gerador, que ESTOURA.** Para cada escopo, o gerador conta
+os arquivos de handler emitidos (e os `registerTool` no `server.ts` daquele escopo) e **lança** se
+≠ `SCOPE_OPS(s).length`. Sem isso, um escopo com typo, um `type` não suportado ou um pattern
+PascalCase produzem **zero** tools com `RESULT: build ok` e nenhum aviso — e o agent degrada em
+silêncio para o caminho inferido, que é exatamente o que AC-6.4/AC-6.7 tentam distinguir;
+&nbsp;&nbsp;(d) **As duas operações SSE não têm escopo:** `ListenEvents` e `StreamTerminalSession`
+não aparecem no manifesto nem em nenhum diretório `mcp-*`. No baseline do probe elas foram emitidas
+como tools ordinárias; chamadas, **pendurariam** o agent;
+&nbsp;&nbsp;(e) **Um controller novo NÃO vira tool.** Teste/roteiro: acrescentar um controller
+trivial ao repo **sem** tocar no manifesto, rodar `bun run contracts` + `bun sdk`, e confirmar
+`git status --porcelain -- packages/client/dist/typescript/src/typescript/mcp-issue-handling
+packages/client/dist/typescript/src/typescript/mcp-system` **vazio**.
+&nbsp;&nbsp;**Falsificadores, os dois executados e registrados:** (i) trocar o pattern de um escopo
+por `/^mcp:nao-existe$/` → a asserção (c) tem de **estourar** (o probe mediu que, sem ela, o build
+sai `ok` com 0 handlers e um `server.ts` sem nenhum `registerTool`); (ii) no roteiro (e), depois
+pôr o controller no manifesto → o diretório do escopo **muda**, provando que o teste tem poder de
+detecção e não estava só olhando para uma pipeline parada.
+**AC-6.15** **A DECLARAÇÃO É UM MANIFESTO TIPADO, e a tipagem MORDE.** É a decisão do founder de tirar
+a declaração do controller; sem estas provas ela vira uma lista de strings com outro nome.
+&nbsp;&nbsp;(a) `agent/mcp/manifest.ts` referencia **classes**:
+`git grep -nP "['\"][A-Za-z]+['\"]\s*," -- packages/api/typescript/src/agent/mcp/manifest.ts` →
+**0 hits**; as entradas são identificadores importados. **`-P`, nunca `-E`** — ver a armadilha 1 do
+vocabulário acima, medida contra este mesmo padrão;
+&nbsp;&nbsp;(b) **uma deleção quebra o build e um rename segue** — executado, não afirmado: renomear
+temporariamente um controller do manifesto (`XController` → `XRenamedController`) e confirmar que
+(i) sem tocar no manifesto o `bun tsc` fica **vermelho** no manifesto, e (ii) com o manifesto
+atualizado o `operationId`, a tag `mcp:<escopo>` e o nome da tool emitida **acompanham** sozinhos.
+Reverter e registrar a saída literal;
+&nbsp;&nbsp;(c) **a derivação do `operationId` é a MESMA do emissor** — o manifesto/gerador computa
+`ctor.name.replace('Controller','')` e não uma segunda regra; um teste compara o conjunto derivado do
+manifesto com o conjunto de `operationId` que carregam `x-mcp-scope` no `openapi.json` emitido:
+**iguais**, nos dois sentidos;
+&nbsp;&nbsp;(d) **extensão e tag descrevem o mesmo conjunto**: as operações com `x-mcp-scope: s` no
+spec emitido são exatamente as que têm a tag `mcp:s`. Divergir aqui significa que a declaração de
+registro e o transporte se soltaram.
+&nbsp;&nbsp;**Falsificador:** tirar uma entrada do manifesto **sem** regenerar e confirmar que (c)
+fica vermelha — se continuar verde, o teste está lendo o spec antigo.
+**AC-6.16** **O SERVIDOR GERADO RODA — `tsc` verde não é evidência de que roda.** Blocker medido: o
+`server.ts` emitido importa `@modelcontextprotocol/sdk/server/mcp` **sem `.js`**; o exports map do
+SDK é `"./*": { types: ./dist/esm/*.d.ts, import: ./dist/esm/* }`, então o `tsc` resolve pelo
+`types` e o **runtime não resolve nada** (`Cannot find module …/server/mcp`). Um gate só de `tsc`
+teria embarcado isto verde.
+&nbsp;&nbsp;(a) **Fixup pós-geração** reescrevendo `…/server/mcp` → `…/server/mcp.js` e
+`…/server/stdio` → `…/server/stdio.js` (mesmo idioma dos `replace` que o gerador já faz);
+&nbsp;&nbsp;(b) **smoke de runtime commitado**, para **cada** escopo: importar o `getServer()`
+emitido, ligá-lo a um `Client` real do `@modelcontextprotocol/sdk` sobre `InMemoryTransport`, e
+provar que `tools/list` devolve **exatamente** `SCOPE_OPS(s)`;
+&nbsp;&nbsp;(c) **uma tool de dentro do escopo faz round-trip `isError: false`** contra o daemon de
+teste — a mesma exigência da AC-6.2, aqui no nível do servidor;
+&nbsp;&nbsp;(d) **uma tool FORA do escopo devolve "not found"** — o probe mediu
+`isError: true, "Tool ArchiveIssue not found"`, o que prova que o `include` é fronteira de **runtime**
+e não só conveniência de codegen;
+&nbsp;&nbsp;(e) **`startServer()` gerado NÃO é usado** (ele fixa `StdioServerTransport`): o router
+monta via `getServer()` + `StreamableHTTPServerTransport`.
+`git grep -n "startServer" -- packages/api/typescript/src` → **0 hits**.
+&nbsp;&nbsp;**Falsificador, executado:** reverter o fixup (a) e confirmar que (b) morre com o
+`Cannot find module` literal **enquanto o `bun tsc` continua verde**. Registrar as duas saídas lado a
+lado no BUILD-LOG — é a demonstração de que o gate de `tsc` sozinho é cego aqui.
+**AC-6.17** **O NOME DA TOOL É DERIVADO, e as grafias congeladas na Fase 1 MORREM.** Defeito de
+contrato encontrado na reconciliação, corrigido aqui em vez de contornado (§8).
+&nbsp;&nbsp;**O que estava errado:** a Fase 1 congelou `AgentToolName` com os literais
+`codedm__complete_issue` / `codedm__raise_stop` / `codedm__record_artifact` / `codedm__ask_operator`
+e um `CODEDM_TOOL_PREFIX = 'codedm__'`, documentados como *"o valor É o nome de wire que o modelo
+chama"*. Sob tools geradas isso é **inatingível**: `serverGenerator` registra
+`name: operation.getOperationId()` e o nome **não passa** por `resolveName` nem por `transformers`
+(PROVADO — com `transformers.name` os arquivos viraram `XXrecordArtifact.ts` e o registro continuou
+`server.registerTool("RecordArtifact", …)`). Manter os literais deixaria o `--allowedTools`
+apontando para tools que não existem e o modelo sem ferramenta nenhuma — falha silenciosa.
+&nbsp;&nbsp;(a) `git grep -n "codedm__" -- packages/api/typescript/src` → **0 hits**. **Esta AC
+começa VERMELHA no HEAD de entrada da fase — medido em 27-jul: 41 linhas**, incluindo os quatro
+membros do enum, o `CODEDM_TOOL_PREFIX` e o uso dele no accumulator. É o falsificador embutido: se
+ela sair verde no primeiro dia, o grep está errado (pathspec inexistente sai `fatal:` e o executor
+lê como zero);
+&nbsp;&nbsp;(b) `AgentToolName` passa a ser **derivado do manifesto** (a expansão `TOOLS_IN_SCOPE`),
+não uma união de literais escritos à mão. `AGENT_TOOL_INPUT_SCHEMAS` e os quatro
+`*ToolInputSchema` de `agent/schemas/AgentToolSchemas.ts` **morrem** — o `inputSchema` da tool passa
+a ser gerado do schema Zod que o controller já declara, que é a promessa "zero schema de tool mantido
+à mão" da emenda. **O invariante da AC-1.6 NÃO morre, muda de portador:** deixa de ser "nenhum schema
+de tool tem campo de identidade" (inexprimível, porque a tool gerada herda os params do controller) e
+passa a ser "**identidade divergente é rejeitada**", que é a AC-6.6. Registrar essa transferência no
+BUILD-LOG explicitamente — é a regressão consciente da emenda, e ela precisa estar escrita onde a
+AC-1.6 é lida;
+&nbsp;&nbsp;(c) `MCP_SERVER_KEY` continua **single-source** (`ClaudeAgentRunner.ts:43`, valor
+`'codedm'`) e `WIRE(C)` é computado a partir dele num lugar só —
+`git grep -n "mcp__" -- packages/api/typescript/src` revela a construção **uma** vez, nunca uma
+grafia digitada;
+&nbsp;&nbsp;(d) **A GUARDA ANTI-DOUBLE-PUBLISH CASA A GRAFIA REAL.** A guarda de hoje é
+`frame.tool.startsWith(CODEDM_TOOL_PREFIX)`
+(`StreamJsonToTurnFactAccumulator.ts:94`) e ela **falha** contra `mcp__codedm__RecordArtifact`, que
+não *começa* com `codedm__` — o prefixo está no meio. Teste obrigatório: um frame `tool_use` com o
+nome medido pela AC-6.1 (ou `WIRE(C)` enquanto ela estiver PARKED) produz **zero** fato, e um teste
+irmão asserta explicitamente que `startsWith('codedm__')` sobre esse mesmo nome é **`false`** — a
+asserção existe para que ninguém "conserte" a guarda de volta ao prefixo antigo.
+&nbsp;&nbsp;**Falsificador:** rodar o teste (d) contra a guarda atual (`startsWith`) e confirmar que
+ele fica **vermelho** — se passar, o teste está alimentando o nome errado.
+**AC-6.18** **TOOL = CASO DE USO COMPLETO, e não existe um segundo mecanismo** (crítica #3 do
+founder, convergência com o medscall tornada explícita em vez de paralela).
+&nbsp;&nbsp;(a) **Toda entrada do manifesto despacha um use case.** Para cada controller do
+manifesto, o `handle()` chama um use case injetado — nenhum toca repositório direto. É a cadeia
+`tool → endpoint HTTP → controller → use case`, a mesma que a SDK percorre;
+&nbsp;&nbsp;(b) **Nenhuma abstração `Tool` à mão nasce ao lado da gerada:**
+`git grep -nP "class [A-Za-z]+Tool\b" -- packages/api/typescript/src` → **0 hits** (**`-P`
+obrigatório**: medido em 27-jul, o mesmo padrão com `-E` deu **0 hits com um `class FooTool` plantado
+na frente** — armadilha 1 do vocabulário), e
+`packages/api/typescript/src/agent/mcp/tools/` **não existe**. O `execute(input, context)` do
+medscall **é** o `<op>Handler(input)` gerado; o `ToolContext` dele **é** o `AsyncLocalStorage` do run
+token (AC-6.19); o `name`/`description`/`inputSchema`/`outputSchema` dele **são** a config do
+`registerTool`, geradas do Zod do controller;
+&nbsp;&nbsp;(c) **A §5.3 fica coerente com isso** — as linhas que prometiam
+`mcp/{router.ts, tools/*.ts, RunTokenService.ts}` e `artifact/mcp/RecordArtifactTool.ts` estão
+corrigidas no corpo da Fase 6; um executor que crie esses arquivos está seguindo o texto revogado.
+&nbsp;&nbsp;**Falsificador:** criar um `FooTool.ts` de mentira sob `src/` e confirmar hit em (b) —
+**com `--untracked`**, senão o arquivo novo é invisível ao `git grep` e o falsificador "confirma"
+zero (armadilha 2, medida); remover depois.
+**AC-6.19** **O `_http` POR ESCOPO É O ÚNICO SEAM DE AUTH — e ele fecha, não abre.** Medido: nenhum
+handler gerado aceita parâmetro de config/headers (`mcpGenerator` passa `isConfigurable={false}`),
+então o **único** ponto onde o run token pode entrar é o módulo apontado por `client.importPath`.
+&nbsp;&nbsp;(a) existe `mcp-<escopo>/_http.ts` por escopo, emitido pelo mesmo `writeServiceHttp` que
+já emite o `_http.ts` de serviço, e ele **não** é o cliente ky pelado: lê o run token do
+`AsyncLocalStorage` estabelecido pelo router e o anexa antes de delegar ao core compartilhado;
+&nbsp;&nbsp;(b) `client.baseURL` é **omitido** na config do `pluginMcp` — com ele, um literal é
+inlinado em todo call site e o `resolveURL` do repo deixa de valer (medido: omitindo, a chamada sai
+`fetch({ method, url, data })`, sem `baseURL`);
+&nbsp;&nbsp;(c) **uma chamada FORA do contexto do router não vira request anônimo**: invocar um
+`<op>Handler` sem `AsyncLocalStorage` ativo **falha** — nunca emite um POST que o daemon atenderia
+como se fosse ele mesmo. Esta é a alínea que impede o servidor MCP de virar uma porta de
+confused-deputy dentro do próprio processo.
+&nbsp;&nbsp;**Falsificador:** chamar o handler direto, sem contexto, e confirmar a falha; e trocar o
+`_http` do escopo pelo cliente de serviço comum e confirmar que (c) fica verde indevidamente — é
+essa troca que a AC existe para proibir.
 
 ### Fase 7 — Frame SSE estruturado + fechamento
 
@@ -2704,9 +3128,13 @@ Herdadas de `OVERNIGHT-GOAL-2026-07-24-go-domain-port.md:68-91`, atualizadas ao 
    shape/enums/returns); enums de domínio **ALIAS** das wire enums, nunca redeclaração de value-set;
    `bun sdk` regenera; **`react tsc` + `e2e tsc` nos gates**. **Campo ADITIVO num evento congelado é
    permitido** (é o caso do `detail` em `issue-stop-raised.tsp`, §4.4 item (i)); o que a regra proíbe
-   é **redeclarar value-set** e criar evento paralelo. O router MCP é HTTP mas **não é emitido na
-   OpenAPI** (§4.4): o wire-identity dele é garantido pelos schemas Zod das tools + `AgentToolName`
-   (AC-1.6), e a regra vale integralmente para o que a §4.9 muda no SSE.
+   é **redeclarar value-set** e criar evento paralelo. O **endpoint JSON-RPC** do router MCP é HTTP
+   mas **não é emitido na OpenAPI** (§4.4). **RECONCILIAÇÃO 27-jul:** a frase seguinte dizia que o
+   wire-identity das tools era garantido *"pelos schemas Zod das tools + `AgentToolName` (AC-1.6)"* —
+   isso valia para tools escritas à mão. Com tools **geradas**, o wire-identity delas **é a própria
+   OpenAPI**, exatamente como o da SDK, e é **mais forte**, não mais fraco: mesmo emissor, mesma
+   regeneração, mesmo gate de idempotência (AC-6.8). O que continua fora do spec é só a **porta**
+   JSON-RPC. A regra vale integralmente para o que a §4.9 muda no SSE.
 6. **Gates por fase, com RUNTIME — não só `tsc`:** `go build/vet/test` (Fase 0), `bun tsc`,
    `bun run test` (rodado a partir de `packages/api/typescript`), `bun lint`, `bun detect`,
    `bun sdk` 2× idempotente, **`bun e2e` executado de verdade**, boot smoke.
@@ -2810,11 +3238,19 @@ Herdadas de `OVERNIGHT-GOAL-2026-07-24-go-domain-port.md:68-91`, atualizadas ao 
 8. **O buraco de tipo está fechado:** `AgentInputEnvelope` e `AgentInputSchemaConstraint` definidos e
    exportados, `z.agentInput()` existe, e o runner lê `ownerId`/`issueId`/`cwd` **sem cast** — com
    `bun tsc` verde e nenhum `as any`/`@ts-expect-error` novo.
-9. **O agent DECLARA:** servidor MCP do CodeDM no ar com as quatro tools `codedm__*` (incluindo
-   `ask_operator` **fire-and-forget** aterrissando em `integration.issue.stop_raised` /
-   `HUMAN_REQUESTED`, AC-6.10); `AgentMcpInvocation` definido como tipo; identidade vem do run token
-   — **cunhado pela base `Agent`, revogado pelo runner** — e **não** do payload; escopo por agent
-   (classificador sem tools, worker com as quatro); **um** integration event por tool call (sem
+9. **O agent DECLARA:** servidor MCP do CodeDM no ar, com as tools **GERADAS** do mesmo OpenAPI que
+   gera a SDK, em **dois escopos** declarados num **manifesto tipado** por classes de controller
+   (`issue-handling` / `system`) — nomes de tool derivados do `operationId`, **zero schema de tool à
+   mão**, default **não exposto** e superfície **não vazia** provada por asserção de contagem
+   (AC-6.14/AC-6.15/AC-6.17), servidor gerado que **roda** e não só compila (AC-6.16), e tool =
+   caso de uso completo, sem segundo mecanismo (AC-6.18). Inclui `AskOperator` **fire-and-forget**
+   aterrissando em `integration.issue.stop_raised` / `HUMAN_REQUESTED` (AC-6.10);
+   `AgentMcpInvocation` definido como tipo; identidade vem do run token
+   — **cunhado pela base `Agent`, revogado pelo runner** — e **não** do payload, com a **rejeição de
+   identidade divergente em path + query + body (403) e o teste de tentativa cross-issue verde**, que
+   é a mitigação obrigatória da regressão consciente da emenda e **sem a qual a fase não fecha**
+   (AC-6.6); escopo por agent (classificador sem tools, worker só com `issue-handling`); **um**
+   integration event por tool call (sem
    double-publish — inclusive no caso "declarou E terminou normalmente", AC-6.4); degradação sem
    tools marcada `FactSource.INFERRED`, com stops de **transporte** ainda possíveis e stops de
    **domínio** não; a fatia de materialização de issue **destravada** e provada por e2e

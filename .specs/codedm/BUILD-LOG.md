@@ -2599,3 +2599,92 @@ de declaração no `IssueWorkPromptBuilder`, `buildMcpInvocation` + a dependênc
 `mint` na base `Agent`, o estreitamento de `issueId` no ponto de cunhagem, `source: z.enum(FactSource)`
 nos schemas de `AgentRunCompletedEvent`/`AgentRunStopRaisedEvent`, e os três códigos de erro novos com
 o ripple de 4 paradas.
+
+---
+
+# 2026-07-27 — RECONCILIAÇÃO DAS AC-6.x (pré-Fase 6): emenda + probe dobrados no goal
+
+Tarefa declarada pela própria emenda da Fase 6 (*"AS AC-6.x ABAIXO PRECISAM DE RECONCILIAÇÃO … é
+tarefa declarada, não improviso de última hora"*). **Zero código tocado** — só
+`.specs/codedm/GOAL-agent-abstraction.md`. As ACs foram escritas para **quatro tools à mão**; o
+desenho agora é **gerado do OpenAPI, em dois escopos, com manifesto tipado**.
+
+## O QUE O PROBE INVALIDOU NA PRÓPRIA EMENDA (corrigido NELA, em blocos `CORREÇÃO DO PROBE`)
+
+1. **"o Kubb filtra por `x-mcp-scope`" — FALSO.** `@kubb/plugin-oas` filtra por
+   `tag | operationId | path | method | contentType` e por nada mais
+   (`dist/createGenerator-BZA5dzMY.d.ts:188-213`, `dist/index.js:108-119`); `type` desconhecido cai
+   em `default: return false` **em silêncio**. `x-mcp-scope` fica como declaração de registro no
+   spec; o transporte até o Kubb é uma **tag sintética `mcp:<escopo>`** em `buildTags`
+   (`OpenAPI.ts:832`), com RegExp **ancorada** (string casa substring: `'mcp:issue'` casou
+   `mcp:issue-handling`).
+2. **"declarar o escopo no próprio controller" — superseded pela decisão do founder** (manifesto
+   tipado por classes de controller, em `agent/mcp/manifest.ts`).
+3. **"TRÊS operações nascem aqui" — são QUATRO.** A emenda dobrou `ask_operator` dentro de "pedir
+   approval"; a AC-6.10(c), escrita pelo próprio founder, exige que `AskOperator` **não tenha** `kind`
+   (fixado pelo handler) enquanto `RaiseStop` **tem** `kind` no corpo. Uma operação não pode aceitar e
+   proibir a mesma chave.
+4. **A regressão de identidade é MAIS LARGA do que a emenda diz.** O probe dirigiu o servidor gerado
+   por um `Client` real sobre `InMemoryTransport`: além do `threadId` de path, o corpo de
+   `RecordArtifact` carrega `issueId` escolhido pelo modelo
+   (`artifact/usecases/RecordArtifact.ts:15` — `issueId: z.uuid().optional()`, e o controller faz
+   `.omit({ ownerId, threadId })`). **A rejeição percorre path + query + body.** Daí um QUARTO código
+   de erro: `AGENT_RUN_SCOPE_MISMATCH` (403), porque o 401 de `AGENT_RUN_TOKEN_INVALID` mentiria.
+5. **Nomes de tool `codedm__*` são INATINGÍVEIS.** `serverGenerator` registra
+   `name: operation.getOperationId()` e o nome não passa por `resolveName`/`transformers`. O enum
+   `AgentToolName` congelado na Fase 1 (4 literais + `CODEDM_TOOL_PREFIX`) deixa de ser nome de wire.
+   **Consequência não-óbvia e load-bearing:** a guarda anti-double-publish
+   (`StreamJsonToTurnFactAccumulator.ts:94`, `startsWith(CODEDM_TOOL_PREFIX)`) **não casa**
+   `mcp__codedm__RecordArtifact` — o prefixo está no meio, não no início.
+
+## O QUE MUDOU NO GOAL
+
+- Emenda da Fase 6 corrigida em 5 pontos (acima) + `QUEM DECLARA QUAL ESCOPO` fechado
+  (`IssueWorkAgent` → só `issue-handling`; `system` gerado e montado, sem consumidor interno).
+- Corpo da Fase 6 reescrito: `agent/mcp/tools/*.ts` e `artifact/mcp/RecordArtifactTool.ts` **não
+  nascem** — `record_artifact` **é** `artifact/controllers/RecordArtifact.ts`, que já existe.
+- **AC-6.1 … AC-6.13 reescritas, numeração PRESERVADA** (o doc as referencia cruzado em 20 lugares).
+- **AC-6.14 … AC-6.19 novas:** default não exposto + asserção de contagem; manifesto tipado que morde;
+  servidor gerado que **roda** (não só compila); nome de tool derivado; tool = caso de uso completo;
+  `_http` por escopo como único seam de auth.
+- Notas de reconciliação plantadas onde o texto antigo enganaria: **AC-1.6** (o invariante muda de
+  portador, não some — vai para a AC-6.6), **§4.4** (comportamento vale, forma não), **§5.3** (duas
+  linhas revogadas), **§5.4** (bad practice nº 5 reescrito), **§8 regra 5** e **§9 critério 9**.
+
+## ARMADILHAS DE GATE MEDIDAS NESTA SESSÃO (as ACs que eu escrevi já nasceram com elas erradas)
+
+Plantei `export class FooTool {}` e rodei os greps que eu mesmo tinha acabado de escrever:
+
+    git grep -nE "class [A-Za-z]+Tool\b" -- packages/api/typescript/src   → 0 hits, exit 1  (!!)
+    git grep -nP "class [A-Za-z]+Tool\b" ... --untracked                  → 1 hit,  exit 0
+
+- **`-E` não suporta `\b` nem `\s`** (medido também com `'[A-Za-z]+'\s*,`). Duas ACs minhas eram
+  silenciosamente infalsificáveis; corrigidas para `-P`. Terceira ocorrência desta classe no goal.
+- **`git grep` ignora arquivo não rastreado** — todo falsificador que PLANTA arquivo precisa de
+  `--untracked`, senão "confirma" verde e prova nada.
+- Ambas registradas no vocabulário do bloco de ACs, não só aqui.
+
+## ESTADO MEDIDO NO HEAD DE ENTRADA (para as ACs não nascerem vacuosas)
+
+    git grep -c "codedm__"          -- packages/api/typescript/src  → 41 linhas   (AC-6.17a nasce VERMELHA)
+    git grep -n "RecordArtifactTool" -- packages/api/typescript/src  → 4 hits      (AC-6.11a nasce VERMELHA)
+    git grep -n "mcp__"             -- packages/api/typescript/src  → 0
+    git grep -n "startServer"       -- packages/api/typescript/src  → 0
+    git grep -n '"/mcp' -- packages/api/typescript/public/docs/openapi.json → 0   (AC-6.8d é VACUOSA hoje
+      → falsificador ida-e-volta obrigatório: emitir o router, ver o grep acusar, reverter)
+
+Caminho do dist conferido contra a árvore: `packages/client/dist/typescript/src/typescript/`
+(escrevi errado na primeira passada, três ocorrências, corrigidas).
+
+## GATES
+
+Mudança **doc-only** — `git diff --stat` toca **um** arquivo (o goal) mais esta entrada. Não há
+superfície de código, logo `tsc`/`lint`/`test`/`detect` são não-aplicáveis e não foram invocados como
+teatro; o que foi rodado de verdade são os greps acima, contra a árvore real, com falsificador.
+
+## PRÓXIMO PASSO
+
+Fase 6 propriamente dita, agora contra ACs que descrevem o que será construído. Ordem sugerida pelo
+acoplamento: manifesto + emissor (`x-mcp-scope` + tag) → gerador (2× `pluginMcp`, `barrelType: false`,
+asserção de contagem, fixup de import) → os quatro controllers → router + `RunTokenService` + a
+rejeição de identidade nos três eixos (AC-6.6, sem a qual a fase não fecha) → matar `codedm__`.
