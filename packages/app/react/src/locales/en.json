@@ -442,9 +442,12 @@
 	},
 	"nav": {
 		"account": "My Account",
+		"channels": "Channels",
 		"comingSoon": "Coming soon",
 		"home": "Home",
-		"settings": "Settings"
+		"issues": "Issues",
+		"settings": "Settings",
+		"workspaces": "Workspaces"
 	},
 	"notifications": {
 		"allCaughtUp": "You're all caught up.",

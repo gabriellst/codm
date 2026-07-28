@@ -23,6 +23,18 @@ chain.init({
 	},
 	lng: typeof window === 'undefined' ? 'pt' : undefined,
 	fallbackLng: 'pt',
+	// Collapses region variants to the base language, so `i18n.language` is `pt` and never `pt-BR`.
+	// This is load-bearing, not hygiene: the detector reports what `navigator` says (`pt-BR`, `en-US`)
+	// and the only registered bundles are `pt`/`en`. `t()` survives that by walking the fallback chain,
+	// but anything calling `i18n.getResourceBundle(i18n.language, …)` gets `undefined` and silently
+	// degrades — which is why enum labels rendered raw (`DISCONNECTED` instead of "Não conectado").
+	// `enumLabel` and `zod-config`'s `getEnumLabel` both read the bundle directly, because a scan over
+	// every registered enum cannot be expressed through `t()`; fixing the language here fixes both.
+	//
+	// Do NOT add `load: 'languageOnly'` alongside it. Measured against all three configurations:
+	// neither setting -> `i18n.language` stays `pt-BR` (the bug); `supportedLngs` alone -> normalizes;
+	// BOTH -> `pt-BR` again, i.e. `load` UNDOES the normalization. `enums.test.ts` pins this.
+	supportedLngs: ['pt', 'en'],
 	defaultNS: 'translation',
 	interpolation: {
 		escapeValue: false,

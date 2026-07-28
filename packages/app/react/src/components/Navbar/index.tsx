@@ -39,11 +39,11 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 			</div>
 
 			<nav className="flex flex-col gap-1">
-				<NavItem to="/dashboard" icon={IconHome} label="Home" />
-				<NavItem to="/issues" icon={IconListDetails} label="Issues" count={issueCount} />
-				<NavItem to="/channels" icon={IconAntennaBars5} label="Channels" count={channelCount} />
-				<NavItem to="/workspaces" icon={IconFolder} label="Workspaces" count={workspaceCount} />
-				<NavItem to="/settings" icon={IconSettings} label="Settings" />
+				<NavItem to="/dashboard" icon={IconHome} label={t('nav.home')} />
+				<NavItem to="/issues" icon={IconListDetails} label={t('nav.issues')} count={issueCount} />
+				<NavItem to="/channels" icon={IconAntennaBars5} label={t('nav.channels')} count={channelCount} />
+				<NavItem to="/workspaces" icon={IconFolder} label={t('nav.workspaces')} count={workspaceCount} />
+				<NavItem to="/settings" icon={IconSettings} label={t('nav.settings')} />
 			</nav>
 
 			<div className="flex min-h-0 flex-1 flex-col gap-2">

@@ -442,9 +442,12 @@
 	},
 	"nav": {
 		"account": "Minha Conta",
+		"channels": "Canais",
 		"comingSoon": "Em breve",
 		"home": "Início",
-		"settings": "Configurações"
+		"issues": "Issues",
+		"settings": "Configurações",
+		"workspaces": "Workspaces"
 	},
 	"notifications": {
 		"allCaughtUp": "Você está em dia.",
