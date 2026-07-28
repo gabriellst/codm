@@ -2647,8 +2647,11 @@ no BUILD-LOG e seguir — **não é decisão de founder, não bloqueia a fase**.
 > - **`WIRE(C)`** — a grafia que o CLIENTE MCP usa ao chamar, e a que entra em `--allowedTools`.
 >   Convenção do Claude Code: `mcp__<chave do servidor no .mcp.json>__<nome da tool>`, e a chave **é
 >   nossa** — `MCP_SERVER_KEY = 'codedm'` já existe em `ClaudeAgentRunner.ts:43`. Logo
->   `WIRE(C) = mcp__codedm__${OP(C)}`. **NÃO PROBADO** — é o que a AC-6.1 mede, e a AC-6.17 exige que
->   ele seja uma constante derivada num lugar só, para que a correção seja **uma** edição.
+>   `WIRE(C) = mcp__codedm__${OP(C)}`. **PROBADO em 28-jul (AC-6.1, `.specs/codedm/phase6-mcp-smoke/`)
+>   — MEDIDO CORRETO, zero edição**: um `claude 2.1.220` real, apontado via `--mcp-config` para o
+>   router com `--allowedTools mcp__codedm__TransitionIssueStatus`, emitiu o frame `tool_use` com
+>   `name: "mcp__codedm__TransitionIssueStatus"` byte a byte — exatamente `mcp__${MCP_SERVER_KEY}__${OP(C)}`
+>   — e a issue semeada chegou em `COMPLETED` depois. `agent/mcp/wire.ts` não mudou.
 > - **`SCOPE_OPS(s)`** — `MCP_SCOPES[s].map(OP)`, lido do manifesto (AC-6.15).
 >
 > **DUAS ARMADILHAS DE `git grep` MEDIDAS NESTA RECONCILIAÇÃO (27-jul, macOS) — quem escrever ou
@@ -2688,6 +2691,28 @@ AC-6.2 e a AC-6.16 existem.
 &nbsp;&nbsp;**Falsificador:** um "smoke" derivado do spec sem `claude` no ar **não** conta — a regra
 8-bis(3) obriga o carimbo `SOURCE: spec-derived (ATTEMPT-FAILED)` no cabeçalho, e um artefato sem
 carimbo nem JSONL cru reprova a AC.
+&nbsp;&nbsp;**MEDIDO 28-jul — TENTADO E CUMPRIDO NORMALMENTE, sem degradação.** A regra 8-bis(1) foi
+seguida literalmente: `claude 2.1.220` (o binário do `PATH`, `which claude` →
+`/Applications/cmux.app/Contents/Resources/bin/claude`) rodou de verdade, num processo filho
+(`spawn`, env própria escrubada de `CLAUDE*`/`ANTHROPIC*`/`CMUX*`, timeout de 240s), a partir de
+`packages/api/typescript/scripts/phase6-mcp-smoke.ts` — que sobe o daemon real em processo (mesma
+composition root do `src/index.ts`, `CODEDM_E2E` **não setado**, nada estubado), semeia uma `Issue`
+real via `IssueRepository` (padrão `given*`, nunca use case) e cunha um run token pelo MESMO
+`RunTokenService` singleton que o router verifica. Resultado: `exitCode 0`, `tool_use` com
+`name: "mcp__codedm__TransitionIssueStatus"` (byte a byte igual a `WIRE(C)`), `tool_result`
+`{"data":{"issueId":"…","status":"COMPLETED"}}`, frame terminal `is_error: false` /
+`stop_reason: "end_turn"` / `permission_denials: []`, e a issue semeada lida de volta em `COMPLETED`.
+Transporte: **HTTP**. `--allowedTools` medido: `mcp__codedm__TransitionIssueStatus` — a mesma
+constante derivada, sem correção necessária. Artefato commitado em
+`.specs/codedm/phase6-mcp-smoke/` (`README.md` + `raw/smoke.jsonl` + `raw/report.json`). **Achado não
+planejado, registrado no README e não agido nesta rodada (fora do escopo dos quatro findings que a
+motivaram)**: antes de chamar nossa tool, o modelo chamou a tool NATIVA `ToolSearch` do próprio
+`claude` (`{"query":"select:mcp__codedm__TransitionIssueStatus"}`) — nesta versão do CLI, tools de
+`--mcp-config` chegam DEFERRED e precisam ser buscadas antes de invocadas por nome. Não bloqueou nada
+aqui (`--permission-mode auto` aprovou as duas chamadas, `permission_denials: []`), mas é relevante
+para quem tocar `IssueWorkPromptBuilder` depois — não medido se generaliza ao `--mcp-config` de
+produção (um servidor, seis tools, sem outros servidores MCP ambiente disputando o orçamento de
+tools deferred).
 **AC-6.2** **e2e determinístico**: o `E2eStubAgentRunner` chama o endpoint MCP local (sem `claude`
 no ar) e o e2e prova a cadeia inteira — inbound → issue aberta → `RecordArtifact` → artefato
 **listado pela query que a UI já usa** → `TransitionIssueStatus` → issue `COMPLETED` — **sem nenhum
@@ -2732,7 +2757,17 @@ que declara `TransitionIssueStatus` **e também termina normalmente** (o `outcom
 regra 6); no caso (b) o evento carrega `DECLARED`.
 &nbsp;&nbsp;Contagem sobre o **outbox**, não sobre log. Teste extra de guarda estrutural, para o
 predicado não regredir para o campo inalcançável:
-`git grep -n "request\.mcp" -- packages/api/typescript/src/agent/usecases` → **0 hits**, e
+**CORREÇÃO (28-jul) — o grep como escrito era LITERALMENTE VERMELHO e nunca tinha sido rodado como
+está redigido.** `git grep -n "request\.mcp" -- packages/api/typescript/src/agent/usecases` contrata
+**0 hits**; medido: **6 hits**, `RunIssueTurn.ts:244,246,251` e `RunIssueTurn.test.ts:185,362,371` —
+e os seis são COMENTÁRIO (o docblock que justifica por que o predicado NÃO PODE ser `request.mcp`, e
+o comentário de teste que explica a mesma restrição), **nenhum é código que lê `request.mcp`**. A
+SUBSTÂNCIA se sustenta — o predicado real é `agent.tools.length`, não `request.mcp` — só o grep
+estava errado ao contar prosa como violação. **Leitura corrigida da alínea:** `git grep -n
+"request\.mcp" -- packages/api/typescript/src/agent/usecases` → hits restritos EXATAMENTE a
+`RunIssueTurn.ts:244,246,251` e `RunIssueTurn.test.ts:185,362,371` (as seis linhas de comentário
+nomeadas acima); **qualquer hit fora dessas seis linhas é regressão ao predicado errado** e reprova a
+alínea. Rodado após a correção: os mesmos 6 hits, nas mesmas 6 linhas — verde pelo motivo certo.
 `git grep -n "\.tools\.length" -- packages/api/typescript/src/agent/usecases/RunIssueTurn.ts` →
 **≥1 hit** (o predicado está onde a informação está).
 &nbsp;&nbsp;**Falsificador:** trocar o predicado por `true` (cunhar sempre) e confirmar que (b) fica
@@ -2968,9 +3003,20 @@ detecção e não estava só olhando para uma pipeline parada.
 **AC-6.15** **A DECLARAÇÃO É UM MANIFESTO TIPADO, e a tipagem MORDE.** É a decisão do founder de tirar
 a declaração do controller; sem estas provas ela vira uma lista de strings com outro nome.
 &nbsp;&nbsp;(a) `agent/mcp/manifest.ts` referencia **classes**:
+**CORREÇÃO (28-jul) — o grep como escrito era LITERALMENTE VERMELHO** contra o arquivo INTEIRO:
 `git grep -nP "['\"][A-Za-z]+['\"]\s*," -- packages/api/typescript/src/agent/mcp/manifest.ts` →
-**0 hits**; as entradas são identificadores importados. **`-P`, nunca `-E`** — ver a armadilha 1 do
-vocabulário acima, medida contra este mesmo padrão;
+contrata **0 hits**; medido: **2 hits**, e nenhum é uma entrada do manifesto —
+`manifest.ts:164` é COMENTÁRIO (o parêntese que cita `server.registerTool("RecordArtifact", …)` como
+prova de que `transformers.name` não muda o registro) e `manifest.ts:173` é
+`return controller.name.replace('Controller', '')`, a própria implementação de `operationIdOf` — o
+argumento literal de um `.replace()`, não uma entrada de `MCP_SCOPES`. A SUBSTÂNCIA se sustenta: as
+entradas de `MCP_SCOPES` são de fato identificadores de classe importados, zero string. O grep
+estava medindo o arquivo errado — precisa mirar o LITERAL do manifesto, não o módulo inteiro.
+**Leitura corrigida da alínea**, restrita ao objeto `MCP_SCOPES` (hoje linhas 97–152, delimitado por
+`^export const MCP_SCOPES` e `^} as const satisfies`):
+`sed -n '/^export const MCP_SCOPES/,/^} as const satisfies/p' packages/api/typescript/src/agent/mcp/manifest.ts | grep -nP "['\"][A-Za-z]+['\"]\s*,"` →
+**0 hits** (`grep` sobre uma fatia não-vazia — sem a ambiguidade pathspec-morto do `git grep`).
+**`-P`, nunca `-E`** — ver a armadilha 1 do vocabulário acima, medida contra este mesmo padrão;
 &nbsp;&nbsp;(b) **uma deleção quebra o build e um rename segue** — executado, não afirmado: renomear
 temporariamente um controller do manifesto (`XController` → `XRenamedController`) e confirmar que
 (i) sem tocar no manifesto o `bun tsc` fica **vermelho** no manifesto, e (ii) com o manifesto

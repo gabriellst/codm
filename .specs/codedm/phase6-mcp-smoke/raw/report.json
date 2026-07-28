@@ -1,0 +1,30 @@
+{
+	"binary": "/Applications/cmux.app/Contents/Resources/bin/claude",
+	"startedAt": "2026-07-28T04:43:15.224Z",
+	"command": "/Applications/cmux.app/Contents/Resources/bin/claude -p --input-format stream-json --output-format stream-json --verbose --mcp-config <redacted-token> --allowedTools mcp__codedm__TransitionIssueStatus --permission-mode auto",
+	"mcpConfig": {
+		"mcpServers": {
+			"codedm": {
+				"type": "http",
+				"url": "http://127.0.0.1:39998/v1/mcp/issue-handling",
+				"headers": {
+					"Authorization": "Bearer <redacted>"
+				}
+			}
+		}
+	},
+	"allowedTools": "mcp__codedm__TransitionIssueStatus",
+	"issueId": "019fa708-bb95-7f7d-bf54-41c3350ac14e",
+	"threadId": "019fa708-bb95-7f7d-bf54-41c2fd623804",
+	"exitCode": 0,
+	"signal": null,
+	"durationMs": 9486,
+	"measuredToolNames": [
+		"ToolSearch",
+		"mcp__codedm__TransitionIssueStatus"
+	],
+	"toolResultIsError": null,
+	"issueStatusAfter": "COMPLETED",
+	"verdict": "OK",
+	"stderr": ""
+}

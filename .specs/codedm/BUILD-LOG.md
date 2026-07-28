@@ -3239,3 +3239,157 @@ está provado por teste executado nesta branch:
 
 ` M packages/app/react/src/components/console/AppChrome.tsx` — continua fora do commit por pathspec
 explícito. Não tocado.
+
+---
+
+# 2026-07-28 — FASE 6, RODADA 3 DE CORREÇÃO: os quatro achados que deixaram a fase em 87 (dois MAJOR
+não vistos, dois grep quebrados, dois falsificadores nunca rodados)
+
+Entrada contra as quatro findings do juiz que barraram o bar ≥90. Nenhuma é implementação errada — as
+duas MAJOR eram AUSÊNCIA DE PROVA sobre código que já existia (o mesmo modo de falha que a §8 nomeia:
+"AC vista só verde não é AC"), e as duas MODERATE são o MESMO defeito de grep já visto em `D6-1` /
+`D6-14` — um grep escrito contra o alvo errado, nunca rodado como está redigido — mais dois
+falsificadores obrigatórios que ficaram como dívida de duas rodadas.
+
+## MAJOR 1 — AC-6.1 estava `NÃO TENTADO`. Agora foi TENTADO E CUMPRIDO, sem degradação
+
+Seguida a regra 8-bis(1) ao pé da letra: `claude 2.1.220` real (`which claude` →
+`/Applications/cmux.app/Contents/Resources/bin/claude`), num processo filho independente (`spawn`, env
+escrubada de `CLAUDE*`/`ANTHROPIC*`/`CMUX*`, timeout 240s), a partir do novo
+`packages/api/typescript/scripts/phase6-mcp-smoke.ts` — que sobe o daemon real EM PROCESSO (mesma
+composition root do `src/index.ts`, `CODEDM_E2E` **não setado**, nada estubado), semeia uma `Issue`
+real via `IssueRepository` (padrão `given*`, nunca use case) e cunha o run token pelo MESMO
+`RunTokenService` singleton que o router verifica.
+
+**Resultado: `exitCode 0`, `verdict: OK`.** O frame `tool_use` cru trouxe
+`name: "mcp__codedm__TransitionIssueStatus"` — byte a byte `WIRE(C) = mcp__codedm__${OP(C)}`, a
+convenção que a Fase 1 só tinha adivinhado. `--allowedTools` medido:
+`mcp__codedm__TransitionIssueStatus`, a mesma constante derivada. A issue semeada foi lida de volta em
+`COMPLETED`. `agent/mcp/wire.ts` **não mudou** — nenhuma correção foi necessária.
+
+Artefato commitado em `.specs/codedm/phase6-mcp-smoke/` (`README.md` + `raw/smoke.jsonl` (10 linhas,
+cru) + `raw/report.json`). Vocabulário `WIRE(C)` do goal atualizado de `NÃO PROBADO` para `PROBADO
+28-jul`, com a evidência inline; AC-6.1 ganhou um parágrafo `MEDIDO 28-jul` registrando o resultado
+(regra 7: rewriting history proibido — nada da redação original foi apagado).
+
+**Achado não planejado, registrado e NÃO agido** (fora do escopo desta rodada): antes de chamar nossa
+tool, o modelo chamou a tool NATIVA `ToolSearch` do próprio `claude` — nesta versão do CLI, tools de
+`--mcp-config` chegam DEFERRED e precisam ser buscadas antes de invocadas por nome. Não bloqueou nada
+(`permission_denials: []`), mas é relevante para quem tocar `IssueWorkPromptBuilder` depois — não
+medido se generaliza ao `--mcp-config` de produção. Detalhe completo no README do artefato.
+
+## MAJOR 2 — `AskOperator` tinha ZERO testes. Agora tem dois, colocados
+
+`git grep -n AskOperator` sobre todo `*.test.ts` dava 2 hits, os dois comentário; `E2eMcpDriver`
+declara só `RecordArtifact`+`TransitionIssueStatus`; `stop-control-plane.flow.test.ts` CONSTRÓI À MÃO
+um `AgentRunStopRaisedEvent`, provando a perna do bridge/card mas nem (a) o fire-and-forget nem (b) a
+contagem do fato.
+
+Novo `src/agent/usecases/AskOperator.test.ts`, 2 testes:
+
+- **(a) fire-and-forget PROVADO, não prometido** — a chamada corre numa `Promise.race` contra um
+  timeout de 200ms que só uma implementação BLOQUEANTE perderia. **Falsificador executado**: um
+  `await sleep(5000)` plantado no `handle()` fez as DUAS asserções estourarem — a (a) pelo texto do
+  erro do timeout (`"AskOperator did not resolve — it is blocking on an external signal"`), a (b) por
+  timeout do próprio `bun test` (5000ms) — nenhuma passou "por ter resolvido rápido o bastante".
+  Revertido → 2 pass.
+- **(b) EXATAMENTE UM `AgentRunStopRaisedEvent`**, `kind === HUMAN_REQUESTED` (fixado pelo handler,
+  nunca pelo input — `AskOperatorInputSchema` não tem `kind`), `detail === question` verbatim,
+  `source === DECLARED`. Contado sobre `events` **e** `outbox` via `testBed.probe().snapshot(...)`
+  antes/depois (nunca um `find` isolado) — o mesmo padrão de `DeclareStop.test.ts`. O mapeamento deste
+  domain event para `integration.issue.stop_raised` (`detail` incluso) já está provado, isolado, em
+  `PublishAgentIntegrationEvents.test.ts` — este arquivo prova o portador que faltava, não duplica a
+  prova do bridge.
+
+```
+bun test src/agent/usecases/AskOperator.test.ts   →   2 pass / 0 fail
+```
+
+## MODERATE 3 — dois greps LITERALMENTE VERMELHOS, nunca rodados como escritos (mesma classe do D6-1/D6-14)
+
+**AC-6.4**, guarda estrutural: `git grep -n "request\.mcp" -- .../agent/usecases` contrata **0 hits**.
+Medido: **6 hits**, todos comentário —
+`RunIssueTurn.ts:244,246,251` (o docblock que justifica por que o predicado NÃO é `request.mcp`) e
+`RunIssueTurn.test.ts:185,362,371` (comentário do teste explicando a mesma restrição). **Zero é
+código.** A substância se sustenta (o predicado real é `agent.tools.length`); só o grep contava prosa
+como violação. Redação corrigida no goal: hits restritos exatamente a essas 6 linhas nomeadas; hit
+fora delas é regressão. Rodado após a correção: os mesmos 6 hits, nas mesmas 6 linhas — verde pelo
+motivo certo.
+
+**AC-6.15(a)**, manifesto por classes: `git grep -nP "['\"][A-Za-z]+['\"]\s*," -- .../agent/mcp/manifest.ts`
+contrata **0 hits**. Medido: **2 hits** — `manifest.ts:164` é comentário (cita
+`server.registerTool("RecordArtifact", …)` como prova de que `transformers.name` não muda o registro)
+e `manifest.ts:173` é `controller.name.replace('Controller', '')`, a própria implementação de
+`operationIdOf` — argumento literal de um `.replace()`, não uma entrada de `MCP_SCOPES`. Redação
+corrigida no goal: o grep passa a mirar SÓ o literal `MCP_SCOPES` (linhas 97–152, delimitado por
+`^export const MCP_SCOPES` / `^} as const satisfies`) via `sed -n '<range>p' | grep -nP ...` — evita a
+ambiguidade pathspec-morto-vs-zero-hits do `git grep` porque a fatia é sempre não-vazia. Rodado:
+
+```
+sed -n '/^export const MCP_SCOPES/,/^} as const satisfies/p' .../manifest.ts | grep -nP "['\"][A-Za-z]+['\"]\s*,"
+  → 0 hits, exit 1 — verde pelo motivo certo
+```
+
+## MODERATE 4 — dois falsificadores obrigatórios, executados pela primeira vez
+
+**AC-6.8(d) ida-e-volta.** `src/agent/index.ts` editado para sempre incluir `McpRouterController` no
+conjunto emitido (mesmo sob `EMIT_OPENAPI=true`); `bun run scripts/emit-openapi.ts` rodado.
+
+- Achado ao longo do caminho: o grep ORIGINAL da AC (`git grep -n '"/mcp' -- .../openapi.json`) é
+  **estruturalmente incapaz de acusar**, com ou sem o carve-out — `buildPath` sempre prefixa o path
+  com a versão (`/${version}${router.path}${controller.path}`), então a chave real no spec é
+  `"/v1/mcp/{scope}"`, nunca `"/mcp...`. Medido nos dois lados com o padrão corrigido `"/v1/mcp`:
+  **baseline (router fora do conjunto) → 0 hits, exit 1**; **falsificado (router dentro) → 1 hit,
+  `openapi.json:1278: "/v1/mcp/{scope}": {`, exit 0**. Revertido (`git checkout` nos dois arquivos) →
+  0 hits de novo. O `git status --porcelain` dos dois arquivos ficou limpo depois.
+
+**AC-6.14(e), controlador que NASCE fora do manifesto.** `Phase6FalsifierProbeController` (trivial,
+`GET /ui/phase6-falsifier-probe`) criado em `ui/controllers/`, exportado, **sem** tocar
+`agent/mcp/manifest.ts`. `bun tsc` verde; `bun x nx run client:generate` rodado:
+
+```
+ANTES (fora do manifesto):  mcp scope 'system': 23 tools — (sem Phase6FalsifierProbe)
+  git status --porcelain -- .../mcp-issue-handling .../mcp-system   → VAZIO
+```
+
+Depois, a mesma classe acrescentada a `MCP_SCOPES.system`, regen de novo:
+
+```
+DEPOIS (dentro do manifesto): mcp scope 'system': 24 tools — (... Phase6FalsifierProbe ...)
+  git status --porcelain -- .../mcp-system   → M server.ts, ?? phase6FalsifierProbe.ts
+```
+
+O round-trip completo: controlador novo sem manifesto → diretórios `mcp-*` intocados; o MESMO
+controlador no manifesto → os diretórios mudam exatamente como a AC prevê. Revertido: arquivo
+deletado, export e entrada do manifesto revertidos (`git checkout`), SDK regenerado de novo — e como o
+`bun sdk` (kubb) é **incremental** (nota do `CLAUDE.md`), a regeneração deixou 5 arquivos ÓRFÃOS
+(`client/phase6FalsifierProbe.ts`, os 2 hooks, o type, o zod schema) que precisaram ser apagados à mão;
+o `mcp-system/server.ts` e os agregadores (`Client.ts`, `client/index.ts`, `index.ts`) já tinham voltado
+sozinhos ao conteúdo original. `git status --porcelain` limpo no fim, confirmado por
+`grep -rn Phase6FalsifierProbe packages/client/dist` → 0 hits.
+
+## VERIFICAÇÃO (rodada de verdade, saída medida, exit codes checados — não os de um pipeline)
+
+```
+cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit
+  → exit 0
+
+bun test src/agent tests/flows
+  → 236 pass / 0 fail, 582 expect() calls, 28 arquivos
+    (era 234 no HEAD de entrada da rodada; +2 = os dois testes novos de AskOperator.test.ts)
+
+bun run detect   (seis detectores, na ordem de scripts/detectors/run-all.ts)
+  → 39 / 0 / 37 / 33 / 3 / 2 — IDÊNTICO ao baseline (945 arquivos escaneados, 64 baselinados em
+    registry-scan), zero crescimento. `exit 1` do script é o esperado (findings > 0 é o estado
+    normal — o gate da AC-6.9 é NÃO CRESCER além desses seis números, não zerar).
+
+cd packages/e2e && bun scripts/run-e2e.ts
+  → 5 passed / 2 skipped (9.3s) — 03-owner-create, 04-inbound-issue, 05-whisper-direct,
+    06-onboarding-attach, 07-issue-archive-restore verdes; 08-stop-resolve e 09-sse-pill skipped
+    (mesmo par já skipped no baseline). Idêntico ao último resultado registrado no BUILD-LOG.
+```
+
+## TRABALHO DE TERCEIRO NA ÁRVORE — SURFACED, NÃO ABSORVIDO (quarta vez)
+
+` M packages/app/react/src/components/console/AppChrome.tsx` — continua fora do commit por pathspec
+explícito. Não tocado.
