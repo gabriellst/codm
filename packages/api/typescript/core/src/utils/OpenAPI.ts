@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { z, type ZodType } from 'zod'
 import { OpenAPIV3 } from 'openapi-types'
 import { AllErrors, GlobalErrorMapper } from './GlobalErrorMapper'
-import { mcpScopesFor } from './McpScopeRegistry'
+import { mcpScopeRegistrySnapshot, mcpScopesFor } from './McpScopeRegistry'
 import { API_PUBLIC } from './paths'
 
 const SPECIFICATION_OUTPUT_DIR = join(API_PUBLIC, 'docs')
@@ -496,6 +496,25 @@ export class OpenAPI {
 		// typed union so app locale catalogues can be compile-checked against it — a missing
 		// translation is a tsc error, not a runtime raw-key render.
 		;(this.spec as OpenAPIV3.Document & { 'x-error-codes'?: string[] })['x-error-codes'] = Object.keys(GlobalErrorMapper).sort()
+
+		// THE MANIFEST ITSELF, published at the ROOT — `scope → the operationIds declared under it`.
+		//
+		// NOT a convenience index over the per-operation `x-mcp-scope` stamps: it is the OTHER SIDE of
+		// them, and it exists so the SDK generator's tool-count assertion has something to compare
+		// AGAINST. Deriving the expected surface by reading those same stamps would make the assertion
+		// tautological — the artifact that can break verifying itself — and a scope whose tag filter
+		// matched nothing would then emit zero tools with a green build, silently degrading the agent
+		// onto the INFERRED path that AC-6.4/AC-6.7 exist to distinguish from the declared one.
+		//
+		// Emitted only when something registered, so a service with no MCP surface stays byte-identical.
+		const mcpByScope = new Map<string, string[]>()
+		for (const [operationId, scopes] of mcpScopeRegistrySnapshot()) {
+			for (const scope of scopes) mcpByScope.set(scope, [...(mcpByScope.get(scope) ?? []), operationId])
+		}
+		if (mcpByScope.size > 0) {
+			const manifest = Object.fromEntries([...mcpByScope].map(([scope, operationIds]) => [scope, operationIds.sort()]))
+			;(this.spec as OpenAPIV3.Document & { 'x-mcp-scopes'?: Record<string, string[]> })['x-mcp-scopes'] = manifest
+		}
 
 		if (process.env.EMIT_OPENAPI === 'true') {
 			const filePath = `${SPECIFICATION_OUTPUT_DIR}/openapi.json`

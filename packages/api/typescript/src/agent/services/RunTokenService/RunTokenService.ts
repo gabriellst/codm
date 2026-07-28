@@ -1,4 +1,5 @@
 import type { AgentName } from '../../enums'
+import type { McpScope } from '../../mcp/manifest'
 
 /**
  * The claims a run token carries (GOAL-agent-abstraction §4.4). This is the ONLY place a tool handler
@@ -13,6 +14,23 @@ export interface RunTokenClaims {
 	issueId: string
 	threadId: string
 	agentName: AgentName
+	/**
+	 * WHICH declared tool surface this credential opens — the AUTHORIZATION half of the claims, added
+	 * in Fase 6 (contract defect D6-8) after the router shipped able to answer any scope for any token.
+	 *
+	 * Without it a token is a bearer credential for the WHOLE MCP door: `IssueWorkAgent` is minted for
+	 * `issue-handling` (six writes on its own issue) and the same bytes would authenticate a
+	 * `tools/call` against `/mcp/system` and its twenty-three operations — `CreateOwner`,
+	 * `DisableOwner`, `AddWorkspace`, `RemoveWorkspace` among them. None of those carry
+	 * `ownerId`/`issueId`/`threadId` in their tool arguments, so the identity walk finds nothing to
+	 * reject and waves them through. The token travels on the child CLI's argv, readable by the very
+	 * shell-capable model this design defends against, so "the agent only asks for its own scope" is
+	 * not a property anyone can rely on.
+	 *
+	 * `--allowedTools` is the CLIENT-side half of the same rule; this is the SERVER-side half, and only
+	 * the server-side one is a boundary.
+	 */
+	scope: McpScope
 	/** Short-lived: the run window plus a grace period. Expiry is a backstop; `revoke` is the primary. */
 	expiresAt: Date
 }

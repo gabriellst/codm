@@ -7729,5 +7729,40 @@
     "WORKSPACE_ALREADY_REGISTERED",
     "WORKSPACE_IN_USE",
     "WORKSPACE_NOT_FOUND"
-  ]
+  ],
+  "x-mcp-scopes": {
+    "issue-handling": [
+      "AskOperator",
+      "CreateIssue",
+      "RaiseStop",
+      "RecordArtifact",
+      "SendDirectMessage",
+      "TransitionIssueStatus"
+    ],
+    "system": [
+      "AddWorkspace",
+      "ConfigureContextBuffer",
+      "ConfigureMentionGate",
+      "CreateOwner",
+      "DisableOwner",
+      "EnableOwner",
+      "GetAttachThreadWizard",
+      "GetHomeDashboard",
+      "GetIssueDetail",
+      "GetIssuesOverview",
+      "GetMyAccount",
+      "GetNeedsYouPanel",
+      "GetSessionChat",
+      "GetSessionIssues",
+      "GetSettings",
+      "GetSetupChecklist",
+      "GetThreadSettings",
+      "GetUserInfo",
+      "ListArtifacts",
+      "ListWorkspaces",
+      "RemoveWorkspace",
+      "SetActiveOwner",
+      "UpdateOwnerSettings"
+    ]
+  }
 }

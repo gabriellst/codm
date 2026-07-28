@@ -1,6 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { ClassificationVerdict, AgentRunOutcome } from '../../../enums'
+import { E2eMcpDriver } from '../../../mcp/E2eMcpDriver'
+import { wireToolName } from '../../../mcp/wire'
 import type { AgentFrame, AgentRunRequest, AgentRuntimeEvent } from '../../../types'
 import { AgentRunner } from '../AgentRunner'
 
@@ -8,13 +10,25 @@ import { AgentRunner } from '../AgentRunner'
  * The `AgentRunner` bound in the `real` DI env under `CODEDM_E2E` (agent/registry.ts).
  *
  * The Playwright harness boots the REAL daemon over the real SQLite, but must never spawn a provider
- * CLI. This stand-in keeps the whole inbound → classify → session → reply chain hermetic AND
+ * CLI. This stand-in keeps the whole inbound → classify → session → declare chain hermetic AND
  * deterministic, which is what lets a spec poll for a settled issue status instead of guessing.
  *
  *   - CLASSIFICATION (`outputSchema` present) — always a `NEW_ISSUE` decision, so the saga closer
  *     mints a fresh issue and a slug key derived from the inbound message.
  *   - WORK (no `outputSchema`) — a couple of canned `assistant_text` frames and a COMPLETED terminal
- *     event, so the issue settles at COMPLETED rather than STOPPED.
+ *     event.
+ *
+ * ### WHEN THE RUN CARRIES TOOLS IT DECLARES, because nothing else will (AC-6.2)
+ * Fase 6 removed the INFERRED completion for any agent with a non-empty tool scope (§4.3 rule 7): with
+ * tools, "the issue is done" is SAID, never derived from a clean exit. A stub that only exits cleanly
+ * would therefore leave every issue stuck at WORKING — the removal and its replacement cannot ship
+ * apart. So a run that arrives with an `mcp` invocation drives the REAL MCP endpoint through a real
+ * client and declares: an artifact, then the completion.
+ *
+ * The identity those calls need is resolved INSIDE `E2eMcpDriver` from the opaque token, and that is
+ * not fastidiousness: AC-6.12 greps this whole directory for the envelope's three identity keys and
+ * requires ZERO hits, because the transport seam does not see identity — not even to name it. This
+ * file honours that by handing the driver the invocation whole and never looking inside it.
  */
 @injectable()
 export class E2eStubAgentRunner extends AgentRunner {
@@ -22,6 +36,10 @@ export class E2eStubAgentRunner extends AgentRunner {
 	static readonly REPLY_LINE = 'e2e-agent: acknowledged — working on it'
 	/** Stable NEW_ISSUE title the classification run returns. */
 	static readonly ISSUE_TITLE = 'Fix the login bug'
+
+	constructor(private readonly declarations: E2eMcpDriver) {
+		super()
+	}
 
 	async *run<OutputSchema extends ZodType | undefined = undefined>(
 		request: AgentRunRequest<OutputSchema>,
@@ -42,6 +60,22 @@ export class E2eStubAgentRunner extends AgentRunner {
 			const frame: AgentFrame = { kind: 'assistant_text', messageId: `e2e-stub-${index}`, text, parentToolUseId: null }
 			yield { type: 'frame', frame }
 		}
+
+		// THE DECLARATION. `request.mcp` present ⟺ the agent declared a non-empty tool scope (§4.3 rule
+		// 7) — the same equivalence `RunIssueTurn` reads from the other side as `agent.tools.length`.
+		if (request.mcp) {
+			const calls = await this.declarations.declareIssueWorkComplete(request.mcp)
+			// The frames are emitted with the WIRE spelling a CLI would report, so the accumulator's
+			// anti-double-publish guard is exercised on the real shape rather than on a name only this
+			// file ever produces.
+			for (const [index, call] of calls.entries()) {
+				const toolUseId = `e2e-stub-tool-${index}`
+				const tool = wireToolName(call.tool)
+				yield { type: 'frame', frame: { kind: 'tool_use', toolUseId, tool, input: call.input, parentToolUseId: null } }
+				yield { type: 'frame', frame: { kind: 'tool_result', toolUseId, ok: true, summary: call.summary, parentToolUseId: null } }
+			}
+		}
+
 		yield {
 			type: 'finished',
 			result: { outcome: AgentRunOutcome.COMPLETED, replyText: lines.join('\n'), sessionId: 'e2e-stub-session', failed: false },

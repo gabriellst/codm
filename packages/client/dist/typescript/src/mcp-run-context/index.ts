@@ -24,10 +24,23 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 
-/** What one in-flight tool call carries. Deliberately just the opaque token — claims stay in the api. */
+/** What one in-flight tool call carries. Deliberately opaque — the CLAIMS stay in the api. */
 export interface McpRunContext {
 	/** The opaque run token, verified by the router before the context was established. */
 	token: string
+	/**
+	 * The ORIGIN a generated tool's outbound request goes back to — the daemon serving this very
+	 * JSON-RPC call.
+	 *
+	 * Per request rather than configured once, because neither alternative works. `configureClient()`
+	 * at boot would install a process-global base URL under the SERVICE key, inside a package whose
+	 * standing rule is that the api never uses the SDK's HTTP client at all. `client.baseURL` in the
+	 * `pluginMcp` config would inline a literal at every generated call site (AC-6.19(b) forbids it for
+	 * exactly that reason), freezing at CODEGEN time a value that is a RUNTIME property of the machine.
+	 * MEASURED with neither: `resolveURL` returns the bare path and the call dies with
+	 * `Failed to parse URL from /v1/threads/…/artifacts`.
+	 */
+	baseUrl: string
 }
 
 const storage = new AsyncLocalStorage<McpRunContext>()
@@ -46,7 +59,7 @@ export function currentMcpRunContext(): McpRunContext | undefined {
 export const MCP_RUN_TOKEN_HEADER = 'x-codedm-run-token'
 
 /**
- * Read the current run token, or FAIL.
+ * Read the current context — token AND origin — or FAIL.
  *
  * This is the confused-deputy guard, and the failure is the feature (AC-6.19(c)): a generated tool
  * handler invoked outside a router-established context must NOT fall back to an anonymous request. The
@@ -54,7 +67,7 @@ export const MCP_RUN_TOKEN_HEADER = 'x-codedm-run-token'
  * which would turn the MCP server into an in-process privilege escalator. Throwing instead means the
  * only way to reach the domain through a tool is through the router that verified a token.
  */
-export function requireMcpRunToken(): string {
+export function requireMcpRunContext(): McpRunContext {
 	const context = currentMcpRunContext()
 	if (!context) {
 		throw new Error(
@@ -62,5 +75,10 @@ export function requireMcpRunToken(): string {
 				'Tool handlers must be called from the MCP router, which establishes the context after verifying the token.',
 		)
 	}
-	return context.token
+	return context
+}
+
+/** The run token of the tool call in flight, or FAIL. See `requireMcpRunContext`. */
+export function requireMcpRunToken(): string {
+	return requireMcpRunContext().token
 }

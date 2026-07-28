@@ -102,7 +102,10 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 */
 	async *run(input: this['input']): AsyncIterable<AgentRuntimeEvent> {
 		const request = { ...this.buildRequest(input), agentName: (this.constructor as typeof Agent).NAME }
-		yield* this.runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request) }) })
+		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
+		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token
+		// is always bound to a scope" hold by type instead of by a cast.
+		yield* this.runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope) }) })
 	}
 
 	/**
@@ -122,7 +125,7 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * it fails loudly rather than minting a token confined to nothing, which would hand a model a
 	 * credential the identity check cannot constrain.
 	 */
-	private buildMcpInvocation(input: this['input'], request: { caps?: ProviderCapabilities }): AgentMcpInvocation {
+	private buildMcpInvocation(input: this['input'], request: { caps?: ProviderCapabilities }, scope: McpScope): AgentMcpInvocation {
 		// A CLI whose probe says it cannot take an MCP config cannot serve an agent that REQUIRES tools.
 		// NAMED failure, never a silent drop to the inferred path (§4.7): degrading here would look
 		// exactly like a healthy run that simply chose to declare nothing, which is the one distinction
@@ -146,6 +149,11 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 			issueId: input.issueId,
 			threadId: input.threadId,
 			agentName: (this.constructor as typeof Agent).NAME,
+			// AUTHORIZATION, not decoration (D6-8). Without this field a token minted for the six writes of
+			// `issue-handling` also opened `/mcp/system` — `CreateOwner`, `DisableOwner`, `AddWorkspace`,
+			// `RemoveWorkspace` — because the router verified the token and never asked what it was FOR.
+			// `--allowedTools` is the client-side half of the same rule and the client is the attacker's.
+			scope,
 			expiresAt: new Date(Date.now() + RUN_TOKEN_TTL_MS),
 		})
 

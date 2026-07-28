@@ -3128,6 +3128,117 @@ essa troca que a AC existe para proibir.
 > vez no load, que não constrói e não chama nada. Junto: 4 edges novas no `CONTEXT_MAP` e 6
 > `POLICY_EXCEPTIONS` per-file — o **degrau 2** da escada da AC-6.11(e).
 
+> ## ⚠️ SEIS DEFEITOS A MAIS, ENCONTRADOS NA RODADA 1 DE CORREÇÃO DA FASE 6 (28-jul)
+>
+> Todos apareceram porque a AC-6.2 finalmente RODOU — o `E2eStubAgentRunner` passou a chamar o
+> endpoint MCP de verdade, sob o daemon EMPACOTADO que o harness boota. Cinco dos seis são runtime
+> puro: `bun test` os escondia inteiros. Vale registrar a lição antes deles: **a AC-6.16 dizia "`tsc`
+> verde não é evidência de que roda" e estava CERTA E CURTA — `bun test` verde também não é.**
+>
+> **D6-8. O RUN TOKEN NÃO CARREGAVA ESCOPO, ENTÃO QUALQUER TOKEN ABRIA `/mcp/system`.** As
+> `RunTokenClaims` congeladas na Fase 1 são `{ownerId, issueId, threadId, agentName, expiresAt}` —
+> identidade, nenhuma autorização. O router resolvia o escopo pelo PATH e nunca o comparava com o
+> token, então os bytes cunhados para o `IssueWorkAgent` (escopo `issue-handling`, seis escritas na
+> própria issue) autenticavam um `tools/call` contra `/mcp/system` e suas **23** operações —
+> `CreateOwner`, `DisableOwner`, `AddWorkspace`, `RemoveWorkspace` entre elas. Nenhuma delas leva
+> `ownerId`/`issueId`/`threadId` nos argumentos da tool, então a caminhada de identidade não achava
+> nada para rejeitar. E o token viaja no **argv do CLI filho** (`--mcp-config … headers.Authorization`),
+> legível pelo próprio modelo shell-capable que este desenho existe para conter. A propriedade que a
+> emenda enuncia — *"dar `system` ao `IssueWorkAgent` poria `owner/*` e `workspace/*` ao alcance de um
+> modelo dirigido por mensagem de WhatsApp"* — estava sustentada **só** por `--allowedTools`, isto é,
+> **do lado do cliente**, que é do atacante. Exatamente a inversão que a AC-6.6 existe para impedir.
+> **CORREÇÃO:** `scope: McpScope` entra nas claims; o base `Agent` cunha com o escopo que já decidiu
+> (`buildMcpInvocation` só é chamado sob `this.mcpScope &&`, então o campo é obrigatório por
+> construção); o router responde **403 `AGENT_RUN_SCOPE_MISMATCH`** a um token usado contra outro
+> escopo, ANTES de montar transporte. Coberto por três testes novos (o vetor do ataque, o espelho
+> simétrico com token `system`, e o caso feliz que impede "rejeitar tudo" de satisfazer a AC) mais a
+> contagem de linhas/outbox. **Falsificador executado:** `if (claims.scope !== scope)` → `if (false)`
+> ⇒ 3 testes vermelhos; restaurado ⇒ 29/29.
+>
+> **D6-9. A AC-6.6(b) CONTRATA 403 E O ROUTER RESPONDIA 200 — E A AC-6.6(c) DESCREVE UM MECANISMO QUE
+> NÃO EXISTE.** Duas metades de uma mesma alínea mal-resolvida.
+> (i) A rejeição por identidade devolvia `{status: 200}` com um erro JSON-RPC no corpo, justificada num
+> comentário ("um cliente MCP não interpreta o nosso envelope HTTP"). A justificativa é defensável e
+> **não é desculpa para desviar em silêncio** de uma AC cujo cabeçalho diz que a fase não fecha sem
+> ela. **CORREÇÃO:** as DUAS camadas carregam a recusa — HTTP **403** (o que a AC contrata, e o que um
+> access log, um proxy e uma revisão de segurança leem) **com** o objeto de erro JSON-RPC no corpo (o
+> que o cliente MCP consegue renderizar), chaveado pelo `id` do membro para que um batch continue
+> identificável. Assertado no teste (`response.status` = 403), não só a mensagem.
+> (ii) A AC-6.6(c) diz *"o router preenche esse `ctx` a partir das claims"*. Ele **não** preenche e
+> **não pode**: o salto seguinte é um request HTTP REAL para um controller que leva
+> `OperatorMiddleware`, e esse middleware carimba `OPERATOR_ID` incondicionalmente — o daemon é
+> single-operator por decisão de founder. O router não constrói o `ctx`; ele recusa antes. **CORREÇÃO
+> (texto do contrato):** a propriedade que a alínea persegue — *"um token de O1 não escreve em recurso
+> de O2"* — é entregue por (a) a caminhada de identidade comparar `ownerId` em QUALQUER posição do
+> argumento contra a claim, e (b) o daemon servir exatamente um operador, então não existe sessão de
+> O2 para confundir. Leia-se a alínea assim; o teste que a cobre asserta (a) explicitamente.
+>
+> **D6-10. A ASSERÇÃO DE CONTAGEM DA AC-6.14(c) ERA TAUTOLÓGICA.** O gerador comparava os
+> `registerTool` emitidos contra `plan.mcpScopes`, que ele mesmo LIA dos carimbos `x-mcp-scope` por
+> operação — isto é, comparava a saída da pipeline com a própria ENTRADA dela, o que passa exatamente
+> quando a entrada é o que quebrou. **Falsificado:** comentando `import './mcp/register'` em
+> `agent/registry.ts`, `x-mcp-scope` cai a 0, os dois `server.ts` saem com **zero** `registerTool` e
+> `bun sdk` termina **exit 0, sem aviso** — o "zero tools, RESULT: build ok, agent degrada em silêncio
+> para o caminho inferido" que a AC foi escrita para tornar impossível. **CORREÇÃO, em duas peças
+> porque o buraco tem duas formas:** (1) o emissor publica **o MANIFESTO** na raiz do spec como
+> `x-mcp-scopes` (`escopo → operationIds`), pelo mesmo seam que já escreve `x-error-codes`; o gerador
+> passa a assertar contra ELE e a exigir igualdade de conjuntos manifesto↔carimbos **nos dois
+> sentidos**, o que estoura antes de gerar qualquer coisa. (2) O caso "o manifesto nunca se registrou"
+> é **invisível de dentro de um spec** — "este serviço não tem superfície MCP" e "a superfície falhou
+> ao registrar" são os mesmos bytes, e a descoberta de serviços é genérica (`lib/discover.ts`), então
+> especializar o serviço `typescript` no gerador seria inventar uma segunda fonte de verdade. Esse
+> caso é fechado uma camada acima, pela AC-6.15(c) finalmente ESCRITA:
+> `tests/architecture/mcp-manifest.test.ts` lê o manifesto TIPADO e o `openapi.json` COMMITADO e exige
+> igualdade nos dois sentidos, por escopo, mais a concordância extensão↔tag (AC-6.15(d)) e a ausência
+> de `mcp:` em operação sem escopo. **Falsificadores executados, os três:** (a) manifesto declarando
+> uma operação nunca carimbada ⇒ gerador **exit 1**; (b) pattern do escopo apontado para
+> `/^mcp:nao-existe$/` ⇒ gerador **exit 1** com `registered in server.ts: (none)`; (c) o import de
+> registro removido ⇒ **5 testes vermelhos** no rail novo (era verde-vazio antes dele existir).
+>
+> **D6-11. O SERVIDOR GERADO NÃO CARREGAVA NO ARTEFATO QUE A GENTE ENVIA.** A AC-6.16 provou que ele
+> roda **sob `bun test`**. O daemon shipado é um BUNDLE Node (`scripts/build.ts` → `dist/server.js`, o
+> que o harness Playwright e a imagem Docker bootam), e o router o carregava por
+> `import(\`…/mcp-${scope}/server\`)` — **template literal**, que nenhum bundler resolve: o especificador
+> sobrevive verbatim e é resolvido por Node em runtime, a partir de `dist/`, contra um pacote de
+> workspace cujo export map aponta para **fonte TypeScript**. Falha literal medida:
+> `ERR_UNSUPPORTED_DIR_IMPORT — Directory import '…/client/dist/typescript/src/http' is not supported
+> resolving ES modules imported from '…/mcp-issue-handling/_http.ts'`. Ou seja: `getServer()` nunca
+> poderia carregar em produção, e a primeira tool call de um agent real teria virado 500. **CORREÇÃO:**
+> um `Record<McpScope, () => Promise<…>>` com um especificador **estático** por escopo — o bundler
+> passa a compilar os servidores gerados PARA DENTRO do bundle (medido: `registerTool` no
+> `dist/server.js` foi de **0 → 33**) e nenhuma resolução acontece em runtime. Tipado por `McpScope`,
+> então um escopo novo no manifesto **quebra o `tsc` deste arquivo** até ganhar seu módulo: é a única
+> forma de manter honesta uma lista que o bundler precisa enxergar.
+>
+> **D6-12. O TRANSPORTE STATELESS NÃO PODE SER REUSADO — e o router o cacheava por escopo.** Medido na
+> primeira tool call real: `Error: Stateless transport cannot be reused across requests. Create a new
+> transport per request.`, lançado pelo próprio guard do SDK dentro de `handleRequest`, chegando ao
+> agent como um opaco `Streamable HTTP error`. O cache existia por um motivo escrito ("um server por
+> request re-registraria todas as tools"), e o motivo é real mas menor. **CORREÇÃO:** server +
+> transporte **novos por request**. O server também precisa ser novo: `connect()` liga um `Server` a
+> exatamente um transporte, então reusar um entre requests concorrentes faria duas chamadas em voo
+> sobrescreverem o canal de resposta uma da outra. Re-registrar ~29 tools é construção de objeto sobre
+> schemas já residentes — não é da mesma ordem de grandeza que a correção.
+>
+> **D6-13. A AC-6.19(b) MANDA OMITIR `client.baseURL` E NINGUÉM CONFIGURAVA O HOST.** A alínea está
+> certa no que proíbe (com `baseURL` na config do `pluginMcp`, um literal é inlinado em 29 call sites,
+> congelando em tempo de CODEGEN um valor que é propriedade de RUNTIME da máquina) e silenciosa no que
+> falta: `resolveURL` só resolve contra um base URL registrado, e o api **nunca** chama
+> `configureClient` — a regra permanente é que o api não usa o cliente HTTP da SDK. Resultado medido:
+> `Failed to parse URL from /v1/threads/…/artifacts` em toda tool call. **CORREÇÃO:** o `McpRunContext`
+> — que já é o único seam de auth e já atravessa o `AsyncLocalStorage` do router — passa a carregar
+> `baseUrl` junto do `token`, e o `_http.ts` gerado faz **UMA** leitura de contexto para os dois, de
+> modo que um handler não pode acabar autenticado contra um daemon e endereçado a outro. O host vira
+> fato de runtime, vindo do processo que está servindo a própria chamada JSON-RPC, sem global.
+>
+> **E o que a AC-6.2 obrigou a existir junto (não é defeito, é dívida do §4.8 sendo paga):** o
+> parágrafo de DECLARAÇÃO no `IssueWorkPromptBuilder`, que a Fase 5 adiou por escrito para cá. Ele
+> nomeia as tools **lidas do manifesto** (nunca digitadas) e **renderiza `threadId`/`issueId`** — a
+> face visível da regressão consciente da emenda: tool gerada herda os path params do controller, logo
+> quem chama precisa conhecê-los, logo o prompt precisa carregá-los. Não é alargamento: o router
+> rejeita qualquer outro valor (AC-6.6), então o que o prompt entrega é o único par que seria aceito.
+> Sem esse parágrafo um `claude` real narraria a conclusão em prosa e nunca a declararia.
+
 ### Fase 7 — Frame SSE estruturado + fechamento
 
 `TerminalActionFrameSchema` re-chaveado em `tool` (`z.string()`) + resumo de `input`; `bun sdk`;

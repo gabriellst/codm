@@ -32,25 +32,67 @@ interface Plan {
 	outputRoot: string
 	generateHooks: boolean
 	/**
-	 * MCP scope → the operationIds declared under it, read from the `x-mcp-scope` vendor extension of
-	 * the spec. Empty for every service that declares none (today: the Go gateway).
+	 * MCP scope → the operationIds declared under it, read from the ROOT `x-mcp-scopes` extension: the
+	 * MANIFEST AS PUBLISHED. Empty for every service that declares none (today: the Go gateway).
 	 *
 	 * THE SPEC IS THE CROSSING. The declaration is a TYPED MANIFEST in the api package
 	 * (`src/agent/mcp/manifest.ts`, keyed by controller CLASS), and `packages/contracts` cannot import
 	 * from `api/src` — so the manifest reaches Kubb through the emitted spec, written by the same
 	 * emitter seam that already writes `x-error-codes`. There is no second list here: this is a READ.
+	 *
+	 * It is deliberately NOT the per-operation `x-mcp-scope` stamps. Those are the INPUT to the tag
+	 * filter this file drives; checking the emitted tools against them would be checking the pipeline
+	 * against its own input, which passes trivially when the stamps are the thing that broke.
 	 */
 	mcpScopes: Map<string, string[]>
+	/**
+	 * The same relation as seen from the per-operation stamps — carried separately so the two can be
+	 * compared. Divergence is a build error (`assertManifestMatchesStamps`).
+	 */
+	mcpScopeStamps: Map<string, string[]>
 }
 
 /**
- * Collect `operationId`s by MCP scope from a preprocessed spec.
- *
- * Reads the vendor extension rather than the synthetic `mcp:<scope>` tag, deliberately: the extension
- * is the DECLARATION OF RECORD and the tag is only the transport Kubb can filter on. Reading the
- * transport to verify the transport would make the count assertion below tautological.
+ * Read the PUBLISHED MANIFEST from the root `x-mcp-scopes` extension — the authority for what the
+ * emitted tool surface must be.
  */
-function collectMcpScopes(spec: Record<string, unknown>): Map<string, string[]> {
+function readMcpManifest(spec: Record<string, unknown>): Map<string, string[]> {
+	const declared = (spec['x-mcp-scopes'] ?? {}) as Record<string, unknown>
+	const manifest = new Map<string, string[]>()
+	for (const [scope, operationIds] of Object.entries(declared)) {
+		if (Array.isArray(operationIds)) manifest.set(scope, [...(operationIds as string[])].sort())
+	}
+	return manifest
+}
+
+/**
+ * The manifest and the per-operation stamps must describe the SAME surface, in BOTH directions.
+ *
+ * A stamp with no manifest entry means an operation claims a scope the manifest does not publish; a
+ * manifest entry with no stamp means an operation was declared and never rendered — and THAT is the
+ * case that yields a synthetic tag matching nothing, hence a scope with zero tools and a green build.
+ * Both are invisible downstream (`tsc` is content with zero tools, and so is an MCP client that simply
+ * sees a short list), so both are build errors here.
+ */
+function assertManifestMatchesStamps(service: string, manifest: Map<string, string[]>, stamps: Map<string, string[]>): void {
+	for (const scope of [...new Set([...manifest.keys(), ...stamps.keys()])].sort()) {
+		const declared = manifest.get(scope) ?? []
+		const stamped = [...(stamps.get(scope) ?? [])].sort()
+		if (declared.length === stamped.length && declared.every((id, index) => id === stamped[index])) continue
+		throw new Error(
+			`[${service}] mcp scope '${scope}': the published manifest and the per-operation stamps disagree.\n` +
+				`  root x-mcp-scopes:           ${declared.join(', ') || '(none)'}\n` +
+				`  operations with x-mcp-scope: ${stamped.join(', ') || '(none)'}\n` +
+				`  One of the two never reached the spec — which yields a tag matching nothing and a scope with zero tools.`,
+		)
+	}
+}
+
+/**
+ * Collect `operationId`s by MCP scope from the PER-OPERATION `x-mcp-scope` stamps — the input to the
+ * synthetic-tag filter, checked against the manifest rather than trusted.
+ */
+function collectMcpScopeStamps(spec: Record<string, unknown>): Map<string, string[]> {
 	const scopes = new Map<string, string[]>()
 	const paths = (spec.paths ?? {}) as Record<string, Record<string, unknown>>
 	for (const operations of Object.values(paths)) {
@@ -130,12 +172,19 @@ async function preprocessAll(sources: ApiSource[]): Promise<Plan[]> {
 		await writeFile(tmp, JSON.stringify(spec))
 		const hasPaths = Object.keys((spec.paths ?? {}) as object).length > 0
 		console.log(`[${source.service}] preprocessed (sse skipped: ${skippedSse}, paths: ${hasPaths ? 'yes' : 'no'})`)
+		const mcpScopes = readMcpManifest(spec as Record<string, unknown>)
+		const mcpScopeStamps = collectMcpScopeStamps(spec as Record<string, unknown>)
+		// Checked BEFORE any generation: if the two halves of the declaration disagree there is nothing
+		// worth generating, and the disagreement is exactly the shape that would otherwise surface as an
+		// empty-but-successful build.
+		assertManifestMatchesStamps(source.service, mcpScopes, mcpScopeStamps)
 		plans.push({
 			source,
 			preprocessedSpecPath: tmp,
 			outputRoot: path.join(distRoot, source.service),
 			generateHooks: hasPaths,
-			mcpScopes: collectMcpScopes(spec as Record<string, unknown>),
+			mcpScopes,
+			mcpScopeStamps,
 		})
 	}
 	return plans
@@ -178,7 +227,11 @@ async function writeServiceHttp(plan: Plan): Promise<void> {
  *    plain service client is exactly the confused-deputy regression AC-6.19(c) forbids.
  *
  * `baseURL` is deliberately absent from the pluginMcp config, so the call site emits
- * `fetch({ method, url, data })` and the repo's own `resolveURL` registry still decides the host.
+ * `fetch({ method, url, data })` and the HOST is decided at RUNTIME rather than frozen into 29 call
+ * sites at codegen time. It is decided HERE, from the same router context the token comes from: the
+ * daemon serving the JSON-RPC call is by definition the daemon the tool must call back into.
+ * MEASURED before this line existed: `resolveURL` fell through to the bare path and every tool call
+ * died with `Failed to parse URL from /v1/threads/…/artifacts`.
  */
 async function writeMcpScopeHttp(plan: Plan, scope: string): Promise<void> {
 	const dir = path.join(plan.outputRoot, `mcp-${scope}`)
@@ -189,18 +242,23 @@ async function writeMcpScopeHttp(plan: Plan, scope: string): Promise<void> {
 // the single place a run token can be attached. It THROWS outside a router-established context rather
 // than degrading to an anonymous request the daemon would serve with full operator authority.
 import { createClient } from '../../http'
-import { requireMcpRunToken, MCP_RUN_TOKEN_HEADER } from '../../mcp-run-context'
+import { requireMcpRunContext, MCP_RUN_TOKEN_HEADER } from '../../mcp-run-context'
 import type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig } from '../../http'
 
 const core = createClient('${plan.source.service}')
 
 const client = async <TData, TError = unknown, TVariables = unknown>(
 	config: RequestConfig<TVariables>,
-): Promise<ResponseConfig<TData>> =>
-	core<TData, TError, TVariables>({
+): Promise<ResponseConfig<TData>> => {
+	// ONE read: token and origin come from the SAME established context, so a handler can never end up
+	// authenticated against one daemon and addressed at another.
+	const run = requireMcpRunContext()
+	return core<TData, TError, TVariables>({
 		...config,
-		headers: { ...(config.headers as Record<string, string> | undefined), [MCP_RUN_TOKEN_HEADER]: requireMcpRunToken() },
+		baseURL: run.baseUrl,
+		headers: { ...(config.headers as Record<string, string> | undefined), [MCP_RUN_TOKEN_HEADER]: run.token },
 	})
+}
 
 export default client
 export type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig }
@@ -218,11 +276,21 @@ export type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig }
  *     A `tsc`-only gate would ship this green — which is why AC-6.16 pairs the fixup with a runtime
  *     smoke and why its falsifier reverts this rewrite and shows `bun tsc` still passing.
  *
- * (b) THE COUNT ASSERTION. A scope typo, an unsupported filter `type`, or a PascalCase `operationId`
- *     pattern all produce ZERO tools with `RESULT: build ok` and no warning (measured three ways).
- *     The agent would then simply have no tools and degrade silently into the inferred path — exactly
- *     the failure AC-6.4/AC-6.7 exist to distinguish from the declared one. So the generator counts
- *     what it emitted against what the spec declared, and THROWS.
+ * (b) THE COUNT ASSERTION, and WHAT IT COUNTS AGAINST. A scope typo, an unsupported filter `type`, or
+ *     a PascalCase `operationId` pattern all produce ZERO tools with `RESULT: build ok` and no warning
+ *     (measured three ways). The agent would then simply have no tools and degrade silently into the
+ *     inferred path — exactly the failure AC-6.4/AC-6.7 exist to distinguish from the declared one.
+ *     So the generator counts what it emitted against the PUBLISHED MANIFEST (root `x-mcp-scopes`),
+ *     never against the per-operation stamps it feeds the tag filter with: the stamps are this
+ *     pipeline's input, and an assertion that compares a pipeline's output to its own input is green
+ *     precisely when the input is what broke.
+ *
+ *     The one case this cannot see is a manifest that never registered AT ALL — no root extension, no
+ *     stamps, no tags: from inside a spec, "this service has no MCP surface" and "this service's MCP
+ *     surface failed to register" are the same bytes, and the api-ts service is not special-cased here
+ *     because service discovery is generic. That case is caught one layer up, by
+ *     `tests/architecture/mcp-manifest.test.ts`, which reads the TYPED manifest and the committed
+ *     `openapi.json` and requires set-equality in both directions.
  */
 async function fixupAndVerifyMcpOutput(plan: Plan): Promise<void> {
 	for (const [scope, operationIds] of plan.mcpScopes) {
@@ -244,8 +312,8 @@ async function fixupAndVerifyMcpOutput(plan: Plan): Promise<void> {
 		if (expected.length !== actual.length || expected.some((id, i) => id !== actual[i])) {
 			throw new Error(
 				`[${plan.source.service}] mcp scope '${scope}': the emitted tool surface does not match the manifest.\n` +
-					`  declared in the spec (x-mcp-scope): ${expected.join(', ') || '(none)'}\n` +
-					`  registered in server.ts:            ${actual.join(', ') || '(none)'}\n` +
+					`  published manifest (x-mcp-scopes): ${expected.join(', ') || '(none)'}\n` +
+					`  registered in server.ts:           ${actual.join(', ') || '(none)'}\n` +
 					`  A zero-tool surface builds "ok" and degrades the agent silently — that is why this throws.`,
 			)
 		}

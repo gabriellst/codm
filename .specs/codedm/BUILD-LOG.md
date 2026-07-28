@@ -2854,3 +2854,129 @@ pelo motivo que ela própria descreve.
 ` M packages/app/react/src/components/console/AppChrome.tsx` (altura do title bar `h-11` → `h-8`,
 continuação do trabalho de Tauri registrado na entrada anterior). **Nada a ver com a Fase 6.** Ficou
 FORA do commit por pathspec explícito. Não tocar.
+
+---
+
+# 2026-07-28 — FASE 6, RODADA 1 DE CORREÇÃO: a AC-6.2 aterrissa e derruba cinco defeitos de RUNTIME
+
+Entrada de correção contra as findings do juiz. A peça central é a AC-6.2 — que a rodada anterior
+deixou **PARKED** — e ela não veio sozinha: ligar o `E2eStubAgentRunner` ao endpoint MCP de verdade,
+sob o daemon EMPACOTADO que o Playwright boota, expôs cinco defeitos que **`bun test` escondia
+inteiros**. A lição em uma linha, e ela generaliza a AC-6.16: *"`tsc` verde não é evidência de que
+roda" estava certo e curto — `bun test` verde também não é.*
+
+## A CRÍTICA (crítico): o e2e estava VERMELHO no HEAD e o commit anterior causou isso
+
+Confirmado e consertado. O commit anterior removeu, corretamente, a conclusão INFERIDA para agent com
+escopo de tool (§4.3 regra 7) e **não** aterrissou a metade declarativa, então um `IssueWorkAgent`
+abria a issue e nunca a fechava — `04-inbound-issue.spec.ts` ficava preso em `WORKING`.
+
+**A metade que faltava, exatamente no desenho que a entrada anterior já tinha fechado:**
+`agent/mcp/E2eMcpDriver.ts` recebe o `AgentMcpInvocation` OPACO, resolve as claims via
+`RunTokenService.verify` (o MESMO caminho do router) e conduz um `Client` real do
+`@modelcontextprotocol/sdk` sobre `StreamableHTTPClientTransport` contra o endpoint local. Fora de
+`services/AgentRunner/` porque a AC-6.12 proíbe `ownerId|issueId|threadId` naquele diretório — o stub
+entrega a invocação inteira e nunca olha dentro.
+
+Cadeia provada ponta a ponta, sem nenhum parse de texto: inbound → classify → issue aberta →
+`RecordArtifact` (tool) → **artefato listado por `ListArtifacts`**, a query que o console usa (e que
+mora no escopo `system`, não no `issue-handling` que escreveu — a leitura não pode ser satisfeita pela
+tool que gravou) → `TransitionIssueStatus` (tool) → issue **COMPLETED**. Ambas as chamadas assertadas
+`isError: false`.
+
+```
+bun e2e   →  5 passed / 2 skipped   (era 1 failed / 4 passed / 2 skipped)
+```
+
+**Falsificador executado:** `if (request.mcp)` → `if (false && request.mcp)` no stub ⇒ o spec fica
+vermelho em *"the agent never recorded an artifact through the MCP endpoint"*; restaurado ⇒ verde.
+
+## SEIS DEFEITOS DE CONTRATO NOVOS — ESCRITOS NO GOAL (`D6-8` … `D6-13`), NÃO SÓ AQUI
+
+Bloco novo em `GOAL-agent-abstraction.md`, logo depois de `D6-1..D6-7`. Resumo com a evidência:
+
+| # | o que estava errado | evidência literal |
+|---|---|---|
+| D6-8 | **run token sem escopo** — qualquer token abria `/mcp/system` (23 ops, `CreateOwner`/`RemoveWorkspace` inclusive); `--allowedTools` era a única guarda e mora **do lado do cliente**, que é do atacante | falsificador `if (claims.scope !== scope)` → `if (false)` ⇒ 3 testes vermelhos |
+| D6-9 | AC-6.6(b) contrata **403** e o router respondia **200**; e AC-6.6(c) descreve um preenchimento de `ctx` que não existe (o salto é HTTP real; `OperatorMiddleware` carimba `OPERATOR_ID`) | agora 403 **+** corpo JSON-RPC, assertado por `response.status` |
+| D6-10 | asserção de contagem do gerador **tautológica** — comparava a saída da pipeline com a própria entrada | import de registro removido ⇒ `x-mcp-scope` = 0, dois `server.ts` com **0** `registerTool`, `bun sdk` **exit 0** |
+| D6-11 | o servidor gerado **nunca carregaria** no bundle Node que a gente envia (import por template literal + export map apontando para fonte `.ts`) | `ERR_UNSUPPORTED_DIR_IMPORT — Directory import '…/src/http' is not supported resolving ES modules imported from '…/mcp-issue-handling/_http.ts'` |
+| D6-12 | transporte stateless **cacheado por escopo** | `Error: Stateless transport cannot be reused across requests. Create a new transport per request.` |
+| D6-13 | AC-6.19(b) manda omitir `client.baseURL` e **ninguém configurava host** | `Failed to parse URL from /v1/threads/…/artifacts` |
+
+Correções, uma linha cada:
+- **D6-8** — `scope: McpScope` nas claims; o base `Agent` cunha com o escopo já narrowed; router recusa
+  403 antes de montar transporte. 3 testes de router + 1 de contagem no outbox.
+- **D6-9** — 403 na linha **e** erro JSON-RPC no corpo (chaveado pelo `id`, então um batch continua
+  identificável). A alínea (c) foi corrigida NO GOAL para dizer o que de fato entrega a propriedade.
+- **D6-10** — o emissor publica o MANIFESTO na raiz (`x-mcp-scopes`), o gerador asserta contra ELE e
+  exige igualdade manifesto↔carimbos nos dois sentidos; o caso "nunca registrou" (invisível de dentro
+  de um spec) é fechado por `tests/architecture/mcp-manifest.test.ts` — a **AC-6.15(c) finalmente
+  escrita**, com (d) junto.
+- **D6-11** — `Record<McpScope, () => import(…)>` com especificador **estático** por escopo.
+  `registerTool` no `dist/server.js`: **0 → 33**.
+- **D6-12** — server + transporte novos **por request** (o `connect()` liga um `Server` a um transporte
+  só; reusar entre requests concorrentes cruzaria canais de resposta).
+- **D6-13** — o `McpRunContext` passa a carregar `baseUrl` junto do `token`, e o `_http.ts` gerado faz
+  **uma** leitura para os dois: um handler não pode acabar autenticado contra um daemon e endereçado a
+  outro.
+
+## AS OUTRAS FINDINGS
+
+- **AC-6.6 "nenhuma escrita" agora é MEDIDA, não lida.** `router.write-isolation.test.ts` (integração,
+  TestBed real) tira `probe.snapshot(['artifacts','events','outbox'])` antes/depois. O transporte
+  substituído **executa o `RecordArtifact` real**, então o caso de CONTROLE move os três contadores e
+  os rejeitados não movem nenhum — a assimetria É a medição. `router.test.ts` ganhou um
+  `ObservableRouter` que conta despachos, então *"NEVER reaches the transport"* deixou de ser um
+  comentário. **Falsificador obrigatório executado:** removida SÓ a descida recursiva de `identity.ts`
+  ⇒ o vetor **corpo** fica verde indevidamente (e a contagem de linhas sobe: a escrita acontece na
+  issue B) enquanto o vetor **path** segue vermelho — 6 vermelhos no total; restaurado ⇒ 29/29.
+- **AC-6.5(a)** ganhou teste direto: o request do `ClassifyIssueAgent` não carrega `mcp` **e** nada é
+  cunhado (contador sobre `mint`) — a metade que importa, porque `mcp` ausente também poderia
+  significar credencial criada e descartada.
+- **AC-6.16(e)** — `git grep -n "startServer" -- packages/api/typescript/src` agora sai **0 hits**
+  (exit 1). O único hit era um comentário; para um grep, comentário e call site são a mesma coisa.
+- **§4.8 pago junto:** o parágrafo de DECLARAÇÃO entrou no `IssueWorkPromptBuilder`, com os nomes de
+  tool **lidos do manifesto** e os ids renderizados. Sem ele um `claude` real narraria a conclusão em
+  prosa e nunca a declararia — e não teria como saber os path params que a tool gerada herdou.
+
+## GATES (exit codes, todos verdes)
+
+```
+bun tsc                        0   (7/7 projetos)
+bun lint                       0   (3/3)
+bun test  (packages/api/ts)    734 pass / 0 fail  — 115 arquivos, 8 execuções consecutivas idênticas
+bun test:tooling               414 pass / 0 fail
+bun run contracts + bun sdk    idempotentes: hash do diff igual em duas regerações consecutivas
+bun x nx run app-react:tsc     0
+e2e tsc                        0
+go build/vet/test (api/go)     0
+go build/vet/test (api/go/core) 0
+bun e2e                        5 passed / 2 skipped   ← ERA 1 failed / 4 passed / 2 skipped
+detectores                     39 / 0 / 37 / 33 / 3 / 2   — idênticos ao baseline, zero crescimento
+```
+
+**FLAKE DE AMBIENTE ISOLADA E NOMEADA, não absorvida.** Duas execuções isoladas de `bun test`
+mostraram `735 tests / 1 fail` — repare no **735**, um a mais. A causa é
+`tests/integration/redis-bridge.integration.test.ts`, que faz `describeBridge = REACHABLE ? describe :
+describe.skip` com um PING de 1500 ms: quando o Redis responde, ele registra **+1 teste**. E há um
+Redis respondendo em `:6379` que **não é nosso** — `medscall-monorepo-redis`, container de
+repo irmão, `Up 5 days`, com grupos de consumidor alheios. Verificado dos dois lados: o arquivo passa
+sozinho **1 pass / 0 fail** com o diff aplicado, e passa igual **no HEAD** (`git stash` + 3 execuções)
+— logo a intermitência é contenção contra um Redis de terceiro sob concorrência de suíte cheia, não o
+diff. 8 execuções consecutivas de suíte cheia depois disso: **734 / 0**, sem exceção.
+
+## O QUE SEGUE PARKED (sem maquiagem)
+
+- **AC-6.1 (smoke com `claude` real)** — segue **NÃO TENTADO**. Transporte e grafia de
+  `--allowedTools` continuam INDECIDIDOS POR EVIDÊNCIA; padrões que permanecem: **HTTP** (§4.4) e
+  `mcp__codedm__<OP>` (`agent/mcp/wire.ts`, onde a correção seria UMA edição).
+- **AC-6.10(c)** — a asserção estrutural sobre o `inputSchema` GERADO de `AskOperator` ter chaves
+  exatamente `{question}` continua não escrita.
+- **AC-6.8(d) ida-e-volta** e **AC-6.14(e)** — os falsificadores obrigatórios dessas duas alíneas
+  seguem não executados.
+
+## TRABALHO DE TERCEIRO NA ÁRVORE — SURFACED, NÃO ABSORVIDO (de novo)
+
+` M packages/app/react/src/components/console/AppChrome.tsx` — continua fora do commit por pathspec
+explícito. Não tocado.

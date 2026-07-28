@@ -178,6 +178,28 @@ export function scopeOperationIds(scope: McpScope): readonly string[] {
 	return MCP_SCOPES[scope].map(operationIdOf)
 }
 
+/**
+ * The `issue-handling` operationIds, KEYED — for the one kind of caller that needs to name a single
+ * operation rather than the whole scope (the deterministic e2e driver, which declares an artifact and
+ * then a completion).
+ *
+ * Still DERIVED: every value is `operationIdOf(<the same class the scope list holds>)`, so a rename
+ * follows the symbol here exactly as it does above. The keys are local labels, not wire names. A
+ * colocated test asserts these values are set-equal to `scopeOperationIds('issue-handling')`, which is
+ * what stops this from silently becoming a second, stale list of the scope.
+ *
+ * It lives HERE rather than in the driver so that the cross-context imports of controller classes stay
+ * confined to this one file — the file the context-map rail has named per-file exceptions for.
+ */
+export const ISSUE_HANDLING_OPERATION = {
+	createIssue: operationIdOf(CreateIssueController),
+	transitionIssueStatus: operationIdOf(TransitionIssueStatusController),
+	raiseStop: operationIdOf(RaiseStopController),
+	askOperator: operationIdOf(AskOperatorController),
+	sendDirectMessage: operationIdOf(SendDirectMessageController),
+	recordArtifact: operationIdOf(RecordArtifactController),
+} as const
+
 /** `WIRE(C)` — re-exported from the leaf module that owns the spelling, never rebuilt here. */
 export { wireToolName }
 

@@ -133,3 +133,37 @@ describe('ClassifyIssueAgent — classify() IS collect(), the base half IssueWor
 		await expect(rejection).rejects.toThrow(expect.objectContaining({ name: 'CLASSIFICATION_FAILED' }) as BaseError)
 	})
 })
+
+/**
+ * AC-6.5(a) — THE CLASSIFIER CARRIES NO TOOLS, ASSERTED ON THE AGENT'S OWN REQUEST.
+ *
+ * `buildArgs.test.ts` already proves that `--mcp-config` / `--allowedTools` appear in argv only when a
+ * request carries an `mcp` invocation. That is the runner's half. This is the AGENT's half, and the AC
+ * asks for it per agent: it is here that "the classifier declares nothing" is decided, and a future
+ * edit granting it a scope would sail past a runner test that only ever sees what it is handed.
+ */
+describe('AC-6.5(a) — ClassifyIssueAgent runs with NO mcp invocation and mints NO run token', () => {
+	it('the request the runner receives has no `mcp`, and nothing was minted', async () => {
+		const runner = new StubbedRunner()
+		const tokens = new InMemoryRunTokenService()
+		// The mint counter is the load-bearing half: `mcp` being absent could also mean the invocation was
+		// built and dropped, which would leave a live credential for a run that never got tools.
+		let minted = 0
+		const originalMint = tokens.mint.bind(tokens)
+		tokens.mint = claims => {
+			minted += 1
+			return originalMint(claims)
+		}
+
+		const agent = new ClassifyIssueAgent(runner, tokens, new ClassifyIssuePromptBuilder())
+		await agent.classify(input())
+
+		expect(runner.requests).toHaveLength(1)
+		expect(runner.requests[0]!.mcp).toBeUndefined()
+		expect(minted).toBe(0)
+		// The predicate §4.3 rule 7 states, read from the agent rather than the request: empty scope ⟺
+		// no `mcp`. `RunIssueTurn` reads the same field to decide whether to mint the INFERRED completion.
+		expect(agent.tools).toHaveLength(0)
+		expect(agent.mcpScope).toBeUndefined()
+	})
+})

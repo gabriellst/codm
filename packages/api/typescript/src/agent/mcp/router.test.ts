@@ -41,8 +41,32 @@ const claimsForA = (): RunTokenClaims => ({
 	issueId: ISSUE_A,
 	threadId: THREAD_A,
 	agentName: AgentName.ISSUE_WORK,
+	scope: 'issue-handling',
 	expiresAt: new Date(Date.now() + 60_000),
 })
+
+/**
+ * A router whose transport is OBSERVABLE — it records every dispatch instead of performing one.
+ *
+ * This is what turns "the reject happens before the transport" from a claim argued in a comment into
+ * an assertion. `handleRequest` is the single door every tool call must pass through to reach a
+ * generated handler, an outbound HTTP call and therefore the domain; counting how many times it was
+ * entered is the cheapest honest proxy for "nothing was written", and the integration suite in
+ * `router.write-isolation.test.ts` measures the same property by counting rows and outbox events.
+ */
+class ObservableRouter extends McpRouterController {
+	readonly dispatched: Request[] = []
+
+	protected override async buildTransport(): Promise<never> {
+		const transport = {
+			handleRequest: async (request: Request): Promise<Response> => {
+				this.dispatched.push(request)
+				return Response.json({ jsonrpc: '2.0', id: 1, result: { content: [], isError: false } })
+			},
+		}
+		return transport as never
+	}
+}
 
 /** One JSON-RPC `tools/call` envelope, shaped exactly as the generated server receives it. */
 const toolCall = (name: string, args: unknown): string =>
@@ -108,11 +132,11 @@ describe('AC-6.6(b) — the cross-issue attempt is rejected on ALL THREE axes', 
 
 describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an invalid token at all', () => {
 	let tokens: InMemoryRunTokenService
-	let router: McpRouterController
+	let router: ObservableRouter
 
 	beforeEach(() => {
 		tokens = new InMemoryRunTokenService()
-		router = new McpRouterController(tokens)
+		router = new ObservableRouter(tokens)
 	})
 
 	const authorized = (token: string) => ({ authorization: `Bearer ${token}`, 'content-type': 'application/json' })
@@ -122,6 +146,9 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		await expect(router.handle(post('issue-handling', call, { 'content-type': 'application/json' }))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
+		// MEASURED, not read off the control flow: nothing was dispatched, so no generated handler ran,
+		// so no outbound HTTP call was built, so nothing could have been written.
+		expect(router.dispatched).toHaveLength(0)
 	})
 
 	it('(a) a REVOKED token → 401. This is the late tool call from a run that already died.', async () => {
@@ -141,7 +168,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		})
 	})
 
-	it('a VALID token aimed at another issue gets a JSON-RPC error and NEVER reaches the transport', async () => {
+	it('a VALID token aimed at another issue answers 403 and NEVER reaches the transport', async () => {
 		const token = tokens.mint(claimsForA())
 		// The body vector — correct thread, wrong issue. If the router dispatched this, the generated
 		// handler would issue `POST /v1/threads/<A>/artifacts` carrying issue B, and the MCP SDK would
@@ -151,8 +178,23 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as Response
 		const payload = (await response.json()) as { error?: { message?: string } }
 
+		// BOTH layers carry the refusal: 403 on the wire (what AC-6.6(b) contracts, and what an access
+		// log or a proxy reads) and a JSON-RPC error the MCP client can actually render.
+		expect(response.status).toBe(HttpStatusCode.FORBIDDEN)
 		expect(payload.error?.message).toContain('AGENT_RUN_SCOPE_MISMATCH')
 		expect(payload.error?.message).toContain(ISSUE_B)
+		expect(router.dispatched).toHaveLength(0)
+	})
+
+	it('AC-6.6(d) — the CONCORDANT call IS dispatched, which is what makes the counts above mean something', async () => {
+		// Without this, a router that refused everything would satisfy every assertion in this file and
+		// `dispatched` would be trivially empty forever.
+		const token = tokens.mint(claimsForA())
+		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { issueId: ISSUE_A, kind: 'LINK' } })
+		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as Response
+
+		expect(response.status).toBe(HttpStatusCode.OK)
+		expect(router.dispatched).toHaveLength(1)
 	})
 
 	it('an UNKNOWN scope is refused rather than resolved to the nearest one', async () => {
@@ -163,6 +205,40 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		})
 	})
 
+	it('a token minted for issue-handling CANNOT open /mcp/system — the scope is in the CLAIMS (D6-8)', async () => {
+		// THE ESCALATION THIS CLOSES, stated as the attacker would run it. `IssueWorkAgent` is driven by
+		// the text of an inbound WhatsApp message written by a stranger; its token is handed to the child
+		// CLI on argv, where a shell-capable model can read it. Before the scope claim existed, replaying
+		// those same bytes against `/mcp/system` authenticated `CreateOwner`, `DisableOwner`,
+		// `AddWorkspace` and `RemoveWorkspace` — none of which carry an identity key, so the walk found
+		// nothing to compare and waved them through. `--allowedTools` is the client-side half of the
+		// rule, and the client is the attacker's.
+		const token = tokens.mint(claimsForA())
+		const call = toolCall(wireToolName('RemoveWorkspace'), { workspaceId: '019e4d24-6524-7041-9e1c-8108180cddae' })
+
+		await expect(router.handle(post('system', call, authorized(token)))).rejects.toMatchObject({
+			name: 'AGENT_RUN_SCOPE_MISMATCH',
+		})
+		expect(router.dispatched).toHaveLength(0)
+		expect(GlobalErrorMapper.AGENT_RUN_SCOPE_MISMATCH).toBe(HttpStatusCode.FORBIDDEN)
+	})
+
+	it('the SAME token is accepted against the scope it WAS minted for — the check is not "refuse everything"', async () => {
+		const token = tokens.mint(claimsForA())
+		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { kind: 'LINK' } })
+		await router.handle(post('issue-handling', call, authorized(token)))
+		expect(router.dispatched).toHaveLength(1)
+	})
+
+	it('a SYSTEM-scoped token is likewise confined — the rule is symmetric, not a special case for one scope', async () => {
+		const token = tokens.mint({ ...claimsForA(), scope: 'system' })
+		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { kind: 'LINK' } })
+		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
+			name: 'AGENT_RUN_SCOPE_MISMATCH',
+		})
+		expect(router.dispatched).toHaveLength(0)
+	})
+
 	it('a BATCH is checked member by member — one bad member taints the batch', async () => {
 		const token = tokens.mint(claimsForA())
 		const batch = JSON.stringify([
@@ -171,7 +247,11 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		])
 		const response = (await router.handle(post('issue-handling', batch, authorized(token)))) as Response
 		const payload = (await response.json()) as { error?: { message?: string } }
+		expect(response.status).toBe(HttpStatusCode.FORBIDDEN)
 		expect(payload.error?.message).toContain('AGENT_RUN_SCOPE_MISMATCH')
+		// The GOOD member is not dispatched either: a batch is one message, and half-executing it would
+		// let an attacker smuggle a legitimate call through alongside a rejected one.
+		expect(router.dispatched).toHaveLength(0)
 	})
 })
 

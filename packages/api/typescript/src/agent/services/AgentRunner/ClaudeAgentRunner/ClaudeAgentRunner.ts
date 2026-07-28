@@ -232,8 +232,10 @@ export class ClaudeAgentRunner extends AgentRunner {
 			this.logging.warn({ content: { message, agentName: request.agentName, bin: ClaudeAgentRunner.binary.bin } })
 
 		const codec = new StreamJsonCodec({ onWarn: warn })
-		// UNSTAMPED on purpose — the runner has no `ownerId`/`issueId` to stamp with, by design
-		// (AC-1.11: identity rides inside the opaque MCP token). The layer holding the envelope adds it.
+		// UNSTAMPED on purpose — the runner holds none of the envelope's identity keys to stamp with, by
+		// design (AC-1.11: identity rides inside the opaque MCP token). The layer holding the envelope
+		// adds it. Their NAMES are absent here too: AC-6.12 greps this directory for them and a comment
+		// is indistinguishable from a field to a grep.
 		const accumulator = new StreamJsonToTurnFactAccumulator({})
 
 		const args = ClaudeAgentRunner.buildArgs({
