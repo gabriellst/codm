@@ -33,9 +33,9 @@ export const owners = sqliteTable(
 			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
-	t => ({
-		kindCheck: enumCheck('owner_owners_kind_check', t.kind, Object.values(OwnerKind)),
-		isDisabledIdx: index('owners_is_disabled_idx').on(t.isDisabled),
-		responsibleUserIdx: index('owners_responsible_user_id_idx').on(t.responsibleUserId),
-	}),
+	t => [
+		enumCheck('owner_owners_kind_check', t.kind, Object.values(OwnerKind)),
+		index('owners_is_disabled_idx').on(t.isDisabled),
+		index('owners_responsible_user_id_idx').on(t.responsibleUserId),
+	],
 )

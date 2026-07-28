@@ -114,7 +114,10 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 
 	it('an aborted run kills the process, and the drain still ends on ONE terminal event', async () => {
 		const { proc, state } = fakeBlockingProcess()
-		const runner = new ClaudeAgentRunner(new LoggingService(), new InMemoryRunTokenService(), { spawner: () => proc, inactivityMs: 30_000 })
+		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryRunTokenService(), {
+			spawner: () => proc,
+			inactivityMs: 30_000,
+		})
 		const controller = new AbortController()
 
 		const types: string[] = []
@@ -141,7 +144,10 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 
 	it('shutdown() kills every process the runner still owns', async () => {
 		const { proc, state } = fakeBlockingProcess()
-		const runner = new ClaudeAgentRunner(new LoggingService(), new InMemoryRunTokenService(), { spawner: () => proc, inactivityMs: 30_000 })
+		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryRunTokenService(), {
+			spawner: () => proc,
+			inactivityMs: 30_000,
+		})
 
 		const types: string[] = []
 		const iteration = (async () => {
@@ -163,7 +169,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 	})
 
 	it('shutdown() is idempotent — a second call has nothing left to own', async () => {
-		const runner = new ClaudeAgentRunner(new LoggingService(), new InMemoryRunTokenService(), { inactivityMs: 30_000 })
+		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryRunTokenService(), { inactivityMs: 30_000 })
 		await runner.shutdown()
 		await runner.shutdown()
 	})

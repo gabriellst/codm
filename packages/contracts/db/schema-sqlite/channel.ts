@@ -36,12 +36,12 @@ export const channels = sqliteTable(
 		// bigint → integer.
 		version: integer('version').notNull().default(0),
 	},
-	t => ({
-		platformCheck: enumCheck('gateway_channels_platform_check', t.platform, Object.values(ChannelKind)),
-		statusCheck: enumCheck('gateway_channels_status_check', t.status, Object.values(ChannelStatus)),
-		ownerIdx: index('idx_channels_owner_id').on(t.ownerId),
-		ownerPlatformIdx: index('idx_channels_owner_platform').on(t.ownerId, t.platform),
-	}),
+	t => [
+		enumCheck('gateway_channels_platform_check', t.platform, Object.values(ChannelKind)),
+		enumCheck('gateway_channels_status_check', t.status, Object.values(ChannelStatus)),
+		index('idx_channels_owner_id').on(t.ownerId),
+		index('idx_channels_owner_platform').on(t.ownerId, t.platform),
+	],
 )
 
 export const remotes = sqliteTable(
@@ -76,20 +76,18 @@ export const remotes = sqliteTable(
 		// bigint → integer.
 		version: integer('version').notNull().default(0),
 	},
-	t => ({
-		pk: primaryKey({ columns: [t.channelId, t.remoteId] }),
-		typeCheck: enumCheck('gateway_remotes_type_check', t.type, Object.values(ContactKind)),
-		platformCheck: enumCheck('gateway_remotes_platform_check', t.platform, Object.values(ChannelKind)),
+	t => [
+		primaryKey({ columns: [t.channelId, t.remoteId] }),
+		enumCheck('gateway_remotes_type_check', t.type, Object.values(ContactKind)),
+		enumCheck('gateway_remotes_platform_check', t.platform, Object.values(ChannelKind)),
 		// sqlite-core has no column .desc()/.nullsLast(); order is expressed via raw SQL.
 		// (pg used DESC NULLS LAST; on SQLite a NULL is smaller than any value, so DESC already
 		// sorts NULLs last — the explicit clause is redundant and hurts older-SQLite portability.)
-		lastMessageAtIdx: index('idx_remotes_last_message_at').on(t.channelId, sql`${t.lastMessageAt} DESC`),
-		typeIdx: index('idx_remotes_type').on(t.channelId, t.type),
-		pinnedIdx: index('idx_remotes_pinned').on(t.channelId, sql`${t.pinnedAt} DESC`).where(sql`${t.pinnedAt} IS NOT NULL`),
-		avatarMissingIdx: index('idx_remotes_avatar_missing')
-			.on(t.channelId, t.remoteId)
-			.where(sql`${t.avatarUrl} IS NULL AND ${t.deletedAt} IS NULL`),
-	}),
+		index('idx_remotes_last_message_at').on(t.channelId, sql`${t.lastMessageAt} DESC`),
+		index('idx_remotes_type').on(t.channelId, t.type),
+		index('idx_remotes_pinned').on(t.channelId, sql`${t.pinnedAt} DESC`).where(sql`${t.pinnedAt} IS NOT NULL`),
+		index('idx_remotes_avatar_missing').on(t.channelId, t.remoteId).where(sql`${t.avatarUrl} IS NULL AND ${t.deletedAt} IS NULL`),
+	],
 )
 
 export const remoteMemberships = sqliteTable(
@@ -101,14 +99,14 @@ export const remoteMemberships = sqliteTable(
 		isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
 		joinedAt: integer('joined_at', { mode: 'timestamp_ms' }).notNull(),
 	},
-	t => ({
-		pk: primaryKey({ columns: [t.channelId, t.groupId, t.memberId] }),
+	t => [
+		primaryKey({ columns: [t.channelId, t.groupId, t.memberId] }),
 		// (channel_id, group_id) → remotes(channel_id, remote_id); deleting the group cascades members.
-		groupFk: foreignKey({
+		foreignKey({
 			columns: [t.channelId, t.groupId],
 			foreignColumns: [remotes.channelId, remotes.remoteId],
 		}).onDelete('cascade'),
-	}),
+	],
 )
 
 export const messages = sqliteTable(
@@ -135,14 +133,12 @@ export const messages = sqliteTable(
 		// bigint → integer.
 		version: integer('version').notNull().default(0),
 	},
-	t => ({
-		directionCheck: enumCheck('gateway_messages_direction_check', t.direction, Object.values(Direction)),
-		platformCheck: enumCheck('gateway_messages_platform_check', t.platform, Object.values(ChannelKind)),
-		channelPlatformUnq: uniqueIndex('idx_messages_channel_platform').on(t.channelId, t.platformMessageId),
-		remoteIdx: index('idx_messages_remote').on(t.channelId, t.remoteId, sql`${t.occurredAt} DESC`),
-		channelIdx: index('idx_messages_channel').on(t.channelId, sql`${t.occurredAt} DESC`),
-		channelRemoteOccurredIdx: index('idx_messages_channel_remote_occurred')
-			.on(t.channelId, t.remoteId, sql`${t.occurredAt} DESC`)
-			.where(sql`${t.deletedAt} IS NULL`),
-	}),
+	t => [
+		enumCheck('gateway_messages_direction_check', t.direction, Object.values(Direction)),
+		enumCheck('gateway_messages_platform_check', t.platform, Object.values(ChannelKind)),
+		uniqueIndex('idx_messages_channel_platform').on(t.channelId, t.platformMessageId),
+		index('idx_messages_remote').on(t.channelId, t.remoteId, sql`${t.occurredAt} DESC`),
+		index('idx_messages_channel').on(t.channelId, sql`${t.occurredAt} DESC`),
+		index('idx_messages_channel_remote_occurred').on(t.channelId, t.remoteId, sql`${t.occurredAt} DESC`).where(sql`${t.deletedAt} IS NULL`),
+	],
 )

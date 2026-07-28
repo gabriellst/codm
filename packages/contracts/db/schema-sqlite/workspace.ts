@@ -30,8 +30,5 @@ export const workspaces = sqliteTable(
 			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
-	t => ({
-		ownerPathUnq: uniqueIndex('workspaces_owner_path_unq').on(t.ownerId, t.path),
-		ownerIdx: index('workspaces_owner_id_idx').on(t.ownerId),
-	}),
+	t => [uniqueIndex('workspaces_owner_path_unq').on(t.ownerId, t.path), index('workspaces_owner_id_idx').on(t.ownerId)],
 )

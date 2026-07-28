@@ -21,14 +21,12 @@ export const events = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		entityIdx: index('events_entity_idx').on(t.entityId, t.occurredAt),
-		nameIdx: index('events_name_idx').on(t.name, t.occurredAt),
+	t => [
+		index('events_entity_idx').on(t.entityId, t.occurredAt),
+		index('events_name_idx').on(t.name, t.occurredAt),
 		// Webhook-arrival idempotency: at most one billing.webhook.received row per entity_id.
-		billingWebhookReceivedUnq: uniqueIndex('events_billing_webhook_received_entity_unq')
-			.on(t.entityId)
-			.where(sql`name = 'billing.webhook.received'`),
-	}),
+		uniqueIndex('events_billing_webhook_received_entity_unq').on(t.entityId).where(sql`name = 'billing.webhook.received'`),
+	],
 )
 
 export const outbox = sqliteTable(
@@ -55,11 +53,11 @@ export const outbox = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		unprocessedIdx: index('outbox_unprocessed_idx').on(t.source, t.processedAt, t.createdAt),
+	t => [
+		index('outbox_unprocessed_idx').on(t.source, t.processedAt, t.createdAt),
 		// Serves the SqlExternalMediator claim scan (source + unprocessed + lease).
-		claimIdx: index('outbox_claim_idx').on(t.source, t.processedAt, t.leaseUntil),
-	}),
+		index('outbox_claim_idx').on(t.source, t.processedAt, t.leaseUntil),
+	],
 )
 
 export const idempotencyKeys = sqliteTable(
@@ -74,10 +72,7 @@ export const idempotencyKeys = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		pk: primaryKey({ columns: [t.key, t.scope] }),
-		expiresIdx: index('idempotency_expires_idx').on(t.expiresAt),
-	}),
+	t => [primaryKey({ columns: [t.key, t.scope] }), index('idempotency_expires_idx').on(t.expiresAt)],
 )
 
 /**
@@ -104,7 +99,5 @@ export const scheduledCommands = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		dueIdx: index('scheduled_commands_due_idx').on(t.runAt).where(sql`dead_at IS NULL`),
-	}),
+	t => [index('scheduled_commands_due_idx').on(t.runAt).where(sql`dead_at IS NULL`)],
 )

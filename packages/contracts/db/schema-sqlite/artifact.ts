@@ -29,9 +29,9 @@ export const artifacts = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		kindCheck: enumCheck('artifact_artifacts_kind_check', t.kind, Object.values(ArtifactKind)),
-		threadIdx: index('artifacts_thread_id_idx').on(t.threadId),
-		issueIdx: index('artifacts_issue_id_idx').on(t.issueId),
-	}),
+	t => [
+		enumCheck('artifact_artifacts_kind_check', t.kind, Object.values(ArtifactKind)),
+		index('artifacts_thread_id_idx').on(t.threadId),
+		index('artifacts_issue_id_idx').on(t.issueId),
+	],
 )

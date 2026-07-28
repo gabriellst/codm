@@ -38,15 +38,15 @@ export const issues = sqliteTable(
 			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
-	t => ({
-		statusCheck: enumCheck('issue_issues_status_check', t.status, Object.values(IssueStatus)),
-		providerCheck: enumCheck('issue_issues_provider_check', t.provider, Object.values(ProviderKind)),
-		archiveReasonCheck: enumCheck('issue_issues_archive_reason_check', t.archiveReason, Object.values(IssueArchiveReason)),
-		threadKeyUnq: uniqueIndex('issues_thread_key_unq').on(t.threadId, t.key),
-		ownerStatusIdx: index('issues_owner_status_idx').on(t.ownerId, t.status),
-		threadIdx: index('issues_thread_id_idx').on(t.threadId),
-		completedAtIdx: index('issues_completed_at_idx').on(t.completedAt),
-	}),
+	t => [
+		enumCheck('issue_issues_status_check', t.status, Object.values(IssueStatus)),
+		enumCheck('issue_issues_provider_check', t.provider, Object.values(ProviderKind)),
+		enumCheck('issue_issues_archive_reason_check', t.archiveReason, Object.values(IssueArchiveReason)),
+		uniqueIndex('issues_thread_key_unq').on(t.threadId, t.key),
+		index('issues_owner_status_idx').on(t.ownerId, t.status),
+		index('issues_thread_id_idx').on(t.threadId),
+		index('issues_completed_at_idx').on(t.completedAt),
+	],
 )
 
 export const stops = sqliteTable(
@@ -70,12 +70,12 @@ export const stops = sqliteTable(
 		resolution: text('resolution').$type<StopResolution>(),
 		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
 	},
-	t => ({
-		kindCheck: enumCheck('issue_stops_kind_check', t.kind, Object.values(StopKind)),
-		resolutionCheck: enumCheck('issue_stops_resolution_check', t.resolution, Object.values(StopResolution)),
-		issueIdx: index('stops_issue_id_idx').on(t.issueId),
-		threadIdx: index('stops_thread_id_idx').on(t.threadId),
-	}),
+	t => [
+		enumCheck('issue_stops_kind_check', t.kind, Object.values(StopKind)),
+		enumCheck('issue_stops_resolution_check', t.resolution, Object.values(StopResolution)),
+		index('stops_issue_id_idx').on(t.issueId),
+		index('stops_thread_id_idx').on(t.threadId),
+	],
 )
 
 export const terminalLines = sqliteTable(
@@ -91,9 +91,7 @@ export const terminalLines = sqliteTable(
 		line: text('line').notNull(),
 		at: integer('at', { mode: 'timestamp_ms' }).notNull(),
 	},
-	t => ({
-		issueSeqUnq: uniqueIndex('terminal_lines_issue_seq_unq').on(t.issueId, t.seq),
-	}),
+	t => [uniqueIndex('terminal_lines_issue_seq_unq').on(t.issueId, t.seq)],
 )
 
 export const stopPolicyConfig = sqliteTable('issue_stop_policy_config', {

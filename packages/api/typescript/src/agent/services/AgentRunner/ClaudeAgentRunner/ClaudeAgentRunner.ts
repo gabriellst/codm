@@ -4,7 +4,6 @@ import { AgentModelId, AgentStopReason, StopKind } from '@codedm/contracts-types
 import { LoggingService } from '@codedm/core-typescript'
 import { AgentRunOutcome, type TransportStopKind } from '../../../enums'
 import type {
-	AgentFrame,
 	AgentMcpInvocation,
 	AgentRunRequest,
 	AgentRunResult,
@@ -43,7 +42,6 @@ const CLAUDE_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
 	[AgentModelId.OPUS]: 'opus',
 	[AgentModelId.HAIKU]: 'haiku',
 }
-
 
 /** Everything `buildArgs` needs to produce a full argv. One record, no ambient state. */
 export interface ClaudeBuildArgsOptions {
@@ -148,18 +146,50 @@ export class ClaudeAgentRunner extends AgentRunner {
 		},
 	}
 
-	private readonly spawner: AgentProcessSpawner
-	private readonly inactivityMs: number
+	// NOT `readonly`, and NOT constructor parameters — see `withOptions` below for why.
+	private spawner: AgentProcessSpawner = nodeAgentProcessSpawner
+	private inactivityMs = Number(process.env.CODEDM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
 	private readonly live = new Set<AgentProcess>()
 
+	/**
+	 * EVERY PARAMETER HERE MUST BE DI-RESOLVABLE. This class is constructed by the container (through
+	 * `AgentRunnerFactory`, which injects it by concrete type), and tsyringe introspects EVERY
+	 * constructor parameter — INCLUDING one that has a default value. The previous signature ended in
+	 * `options: ClaudeAgentRunnerOptions = {}`, whose emitted `design:paramtypes` entry is `Object`;
+	 * resolving `Object` throws `TypeInfo not known for "Object"`.
+	 *
+	 * That throw was silent and catastrophic. `Mediator.register` catches a handler that fails to
+	 * resolve, logs `Failed to resolve Handler …` and decrements a counter — so the whole chain that
+	 * reaches this class (`ConsumeInboundMessage` → `ClassifyMessage` → `DefaultIssueRouter` →
+	 * `ClassifyIssueAgent` → here) simply never registered, while the daemon booted, reported healthy
+	 * and served 200s. `SqlExternalMediator` claims only event names that HAVE a registered handler,
+	 * so every `integration.channel_message.received` row sat in the outbox untouched at
+	 * `attempts = 0`: inbound messages produced nothing, forever, with no error anywhere.
+	 *
+	 * Nothing caught it because nothing exercised this path: `mock`/`integration` bind a stub,
+	 * `CODEDM_E2E` swaps in `E2eStubAgentRunner` (whose one parameter IS resolvable), and the unit
+	 * tests construct this class by hand. Production was the only caller that went through the
+	 * container.
+	 */
 	constructor(
 		private readonly logging: LoggingService,
 		private readonly runTokens: RunTokenService,
-		options: ClaudeAgentRunnerOptions = {},
 	) {
 		super()
-		this.spawner = options.spawner ?? nodeAgentProcessSpawner
-		this.inactivityMs = options.inactivityMs ?? Number(process.env.CODEDM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
+	}
+
+	/**
+	 * TEST SEAM — the only supported way to override the spawner or the inactivity budget.
+	 *
+	 * Deliberately a static rather than an optional constructor parameter: an optional parameter reads
+	 * as harmless and is not (see the constructor docblock), and a seam that only tests use should be
+	 * visible as such at the call site instead of hiding in the signature the container reads.
+	 */
+	static withOptions(logging: LoggingService, runTokens: RunTokenService, options: ClaudeAgentRunnerOptions): ClaudeAgentRunner {
+		const runner = new ClaudeAgentRunner(logging, runTokens)
+		if (options.spawner !== undefined) runner.spawner = options.spawner
+		if (options.inactivityMs !== undefined) runner.inactivityMs = options.inactivityMs
+		return runner
 	}
 
 	/**

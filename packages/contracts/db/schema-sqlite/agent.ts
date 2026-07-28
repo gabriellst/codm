@@ -47,10 +47,10 @@ export const agentSessions = sqliteTable(
 			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
-	t => ({
-		providerCheck: enumCheck('agent_agent_sessions_provider_check', t.provider, Object.values(ProviderKind)),
-		modelCheck: enumCheck('agent_agent_sessions_model_check', t.model, Object.values(AgentModelId)),
-		issueUnq: uniqueIndex('agent_sessions_issue_unq').on(t.issueId),
-		lastTurnIdx: index('agent_sessions_last_turn_idx').on(t.lastTurnAt),
-	}),
+	t => [
+		enumCheck('agent_agent_sessions_provider_check', t.provider, Object.values(ProviderKind)),
+		enumCheck('agent_agent_sessions_model_check', t.model, Object.values(AgentModelId)),
+		uniqueIndex('agent_sessions_issue_unq').on(t.issueId),
+		index('agent_sessions_last_turn_idx').on(t.lastTurnAt),
+	],
 )

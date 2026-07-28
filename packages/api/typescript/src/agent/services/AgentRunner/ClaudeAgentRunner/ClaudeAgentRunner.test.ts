@@ -74,7 +74,7 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 }
 
 function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivityMs = 60_000): ClaudeAgentRunner {
-	return new ClaudeAgentRunner(new MockLoggingService(), new InMemoryRunTokenService(), { spawner, inactivityMs })
+	return ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryRunTokenService(), { spawner, inactivityMs })
 }
 
 const request = (overrides: Partial<AgentRunRequest<z.ZodType | undefined>> = {}): AgentRunRequest<z.ZodType | undefined> => ({
@@ -434,7 +434,7 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 	})
 
 	it('surfaces a spawn failure as the terminal event instead of throwing out of run()', async () => {
-		const runner = new ClaudeAgentRunner(new MockLoggingService(), new InMemoryRunTokenService(), {
+		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryRunTokenService(), {
 			spawner: () => {
 				throw new Error('ENOENT')
 			},

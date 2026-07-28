@@ -60,14 +60,14 @@ export const threads = sqliteTable(
 			.$defaultFn(() => new Date()),
 		version: integer('version').notNull().default(1),
 	},
-	t => ({
-		contactKindCheck: enumCheck('thread_threads_contact_kind_check', t.contactKind, Object.values(ContactKind)),
-		bufferSizeCheck: enumCheck('thread_threads_buffer_size_check', t.bufferSize, Object.values(BufferSize)),
-		statusCheck: enumCheck('thread_threads_status_check', t.status, Object.values(ThreadStatus)),
-		ownerIdx: index('threads_owner_id_idx').on(t.ownerId),
-		ownerChannelContactUnq: uniqueIndex('threads_owner_channel_contact_unq').on(t.ownerId, t.channelId, t.contactExternalId),
-		workspaceIdx: index('threads_workspace_id_idx').on(t.workspaceId),
-	}),
+	t => [
+		enumCheck('thread_threads_contact_kind_check', t.contactKind, Object.values(ContactKind)),
+		enumCheck('thread_threads_buffer_size_check', t.bufferSize, Object.values(BufferSize)),
+		enumCheck('thread_threads_status_check', t.status, Object.values(ThreadStatus)),
+		index('threads_owner_id_idx').on(t.ownerId),
+		uniqueIndex('threads_owner_channel_contact_unq').on(t.ownerId, t.channelId, t.contactExternalId),
+		index('threads_workspace_id_idx').on(t.workspaceId),
+	],
 )
 
 export const transcriptEntries = sqliteTable(
@@ -95,13 +95,13 @@ export const transcriptEntries = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		kindCheck: enumCheck('thread_transcript_entries_kind_check', t.kind, Object.values(TranscriptKind)),
-		providerCheck: enumCheck('thread_transcript_entries_provider_check', t.provider, Object.values(ProviderKind)),
-		classificationCheck: enumCheck('thread_transcript_entries_classification_check', t.classification, Object.values(ClassificationMethod)),
-		threadAtIdx: index('transcript_entries_thread_at_idx').on(t.threadId, t.at),
-		issueIdx: index('transcript_entries_issue_id_idx').on(t.issueId),
-	}),
+	t => [
+		enumCheck('thread_transcript_entries_kind_check', t.kind, Object.values(TranscriptKind)),
+		enumCheck('thread_transcript_entries_provider_check', t.provider, Object.values(ProviderKind)),
+		enumCheck('thread_transcript_entries_classification_check', t.classification, Object.values(ClassificationMethod)),
+		index('transcript_entries_thread_at_idx').on(t.threadId, t.at),
+		index('transcript_entries_issue_id_idx').on(t.issueId),
+	],
 )
 
 /**
@@ -126,9 +126,7 @@ export const consumedMessages = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => ({
-		channelMessageUnq: uniqueIndex('consumed_messages_channel_message_unq').on(t.channelId, t.platformMessageId),
-	}),
+	t => [uniqueIndex('consumed_messages_channel_message_unq').on(t.channelId, t.platformMessageId)],
 )
 
 export const threadClarifications = sqliteTable(
@@ -150,7 +148,5 @@ export const threadClarifications = sqliteTable(
 			.$defaultFn(() => new Date()),
 		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
 	},
-	t => ({
-		threadSenderIdx: index('thread_clarifications_thread_sender_idx').on(t.threadId, t.senderExternalId),
-	}),
+	t => [index('thread_clarifications_thread_sender_idx').on(t.threadId, t.senderExternalId)],
 )
