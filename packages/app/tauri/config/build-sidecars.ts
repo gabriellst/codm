@@ -201,6 +201,33 @@ export async function buildSidecars(): Promise<void> {
 		`[sidecars] staged ${roots.size} node modules → src-tauri/binaries/${DAEMON_RUNTIME.subpath}/node_modules/`,
 	)
 
+	// THIRD: purge the CARGO-SIDE copies of the two dirs above. `tauri dev` copies each
+	// `bundle.resources` entry from `binaries/<subpath>` into `target/<profile>/<subpath>`, and that
+	// copy is ADDITIVE — it overwrites same-named files and leaves everything else in place. The
+	// `rmSync`es above keep `binaries/` honest but do not reach the destination, so a file that has
+	// since been deleted upstream lives on in the build dir forever.
+	//
+	// That is not hypothetical. This repo's migrations moved from Postgres to SQLite, and ten
+	// pre-move PG files (`CREATE SCHEMA "artifact"`, …) survived in `target/debug/migrations`
+	// alongside the three real ones. The applier derives its set from `readdir | filter .sql | sort`,
+	// so it found thirteen files and tried to apply `0000_condemned_brother_voodoo.sql` FIRST — it
+	// sorts ahead of `0000_flaky_carmella_unuscione.sql`. The daemon died on
+	// `SQLITE_ERROR: near "SCHEMA"` before opening its port, and because the supervisor reports a
+	// sidecar's death through a `sidecar:error` event rather than the terminal, the desktop app just
+	// came up with no daemon and no message.
+	//
+	// Deleting a derived copy is safe: the next `tauri dev`/`tauri build` re-copies from `binaries/`,
+	// which is authoritative and was just rebuilt.
+	for (const profile of ['debug', 'release']) {
+		for (const subpath of ['migrations', DAEMON_RUNTIME.subpath]) {
+			const derived = join(pkgRoot, 'src-tauri', 'target', profile, subpath)
+			if (existsSync(derived)) {
+				rmSync(derived, { recursive: true, force: true })
+				console.log(`[sidecars] purged stale cargo-side copy → target/${profile}/${subpath}/`)
+			}
+		}
+	}
+
 	console.log(`[sidecars] done → src-tauri/binaries/ (${triple})`)
 }
 
