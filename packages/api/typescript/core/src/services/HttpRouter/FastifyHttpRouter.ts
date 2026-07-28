@@ -136,19 +136,34 @@ export class FastifyHttpRouter implements HttpRouter {
 			else if (v != null) webHeaders.set(k, String(v))
 		}
 
-		// Hook the Node socket close to a Web AbortSignal so that consumers
-		// using `request.raw.signal` (SSE streams, Better Auth) detect client
-		// disconnects.
+		// Hook the client disconnect to a Web AbortSignal so that consumers
+		// using `request.raw.signal` (SSE streams, Better Auth) detect it.
 		//
-		// Listen on the RESPONSE, not the request: `req.raw`'s 'close' fires as soon as the
-		// request stream is fully read — which for any body-carrying request is BEFORE the
-		// controller runs. Any consumer that forwards this signal to an upstream fetch (the
-		// service proxy) would see every POST born aborted. The response socket only closes
-		// early on a genuine client disconnect, so `writableFinished` discriminates the two.
+		// TWO listeners, because neither event alone covers both shapes of disconnect.
+		//
+		// (1) The RESPONSE's `close`. `req.raw`'s own `close` is unusable as the primary: it fires as
+		//     soon as the request stream is fully read — which for any body-carrying request is BEFORE
+		//     the controller runs — so a consumer forwarding this signal to an upstream fetch (the
+		//     service proxy) would see every POST born aborted. `writableFinished` discriminates a
+		//     genuine early close from a completed response.
+		//
+		// (2) The REQUEST's `aborted`. MEASURED (Fase 7, instrumented daemon under a real Chromium):
+		//     when the browser aborts an in-flight SSE fetch, `reply.raw` emits NEITHER `finish` NOR
+		//     `close` — the response never completes and Node never tears it down — while `req.raw`
+		//     emits `aborted`, then `close`, and the socket closes. With (1) alone the signal therefore
+		//     never fired for exactly the case it was written for, and every SSE controller leaked
+		//     whatever its `onStart` had claimed: the console's terminal panel took one observer slot
+		//     per issue and then answered 409 `issue already streaming` on every reconnect for the life
+		//     of the process. `aborted` is emitted ONLY on a premature client disconnect — never on a
+		//     completed request — so it is the discriminator (1) is missing, with none of the
+		//     false-positive risk that made `req.raw`'s `close` unusable.
+		//
+		// `AbortController.abort()` is idempotent, so a disconnect that trips both is harmless.
 		const ac = new AbortController()
 		reply.raw.once('close', () => {
 			if (!reply.raw.writableFinished) ac.abort()
 		})
+		req.raw.once('aborted', () => ac.abort())
 
 		const method = req.method.toUpperCase()
 		const hasBody = !['GET', 'HEAD'].includes(method) && body.length > 0

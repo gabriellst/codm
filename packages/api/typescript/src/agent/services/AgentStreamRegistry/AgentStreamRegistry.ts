@@ -1,7 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, tryCatchAsync, z } from '@codedm/core-typescript'
 import type Z from 'zod'
-import { TuiActionType } from '../../enums'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 
 /**
@@ -9,8 +8,8 @@ import type { ApplicationErrors, DomainErrors } from '../../errors'
  * observing browser. NOT domain facts; they never touch the outbox.
  *
  *   - `browser.terminal_output_appended` — one line of terminal output (T12 panel).
- *   - `browser.terminal_action_detected` — one structured claude TUI action line (wave-0
- *     AMENDMENT: action_detected is an SSE frame ONLY — no wire event).
+ *   - `browser.terminal_action_detected` — one tool the agent invoked, named (wave-0 AMENDMENT:
+ *     action_detected is an SSE frame ONLY — no wire event).
  *
  * Declared as ZOD (types inferred) so the emitting surface (`StreamTerminalSession`) publishes the
  * MATERIALIZED discriminated union on the wire — never z.unknown().
@@ -23,11 +22,26 @@ export const TerminalOutputFrameSchema = z.object({
 	stream: z.enum(['stdout', 'stderr']),
 })
 
+/**
+ * One tool call, as the panel shows it — "Claude is editing `foo.ts`" (§4.9's net gain).
+ *
+ * ### `tool` is `z.string()`, and that is not a lapse of the closed-set rule
+ * Until Fase 7 this frame was keyed on a nine-member enum of TUI action types — the output of a
+ * regex parser over claude's terminal UI, i.e. a guess at a vocabulary nobody publishes. The
+ * decoder now reads the REAL tool name off the `tool_use` frame of `--output-format stream-json`, and
+ * that set is OPEN by construction: every MCP server a run mounts adds tools at runtime, including
+ * our own (`mcp__codedm__TransitionIssueStatus` and friends). `CLAUDE.md`'s "closed set → enum" rule
+ * is about closed sets; enumerating an open one is what produced the brittle thing this replaces.
+ * The same carve-out is already written on `AgentToolCallEvent.tool`, for the same reason.
+ *
+ * `input` is a one-line SUMMARY of the tool's arguments, not the argument object: the panel wants
+ * "which file", and a transport frame is not a place to mirror an unbounded payload.
+ */
 export const TerminalActionFrameSchema = z.object({
 	name: z.literal('browser.terminal_action_detected'),
 	issueId: z.uuid(),
-	action: z.enum(TuiActionType),
-	value: z.string(),
+	tool: z.string(),
+	input: z.string(),
 	at: z.iso.datetime(),
 })
 

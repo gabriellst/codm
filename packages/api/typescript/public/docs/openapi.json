@@ -1135,10 +1135,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
-                        "action": {
-                          "$ref": "#/components/schemas/Action"
+                        "tool": {
+                          "type": "string"
                         },
-                        "value": {
+                        "input": {
                           "type": "string"
                         },
                         "at": {
@@ -1150,8 +1150,8 @@
                       "required": [
                         "name",
                         "issueId",
-                        "action",
-                        "value",
+                        "tool",
+                        "input",
                         "at"
                       ],
                       "additionalProperties": false
@@ -7392,21 +7392,6 @@
         "enum": [
           "stdout",
           "stderr"
-        ]
-      },
-      "Action": {
-        "type": "string",
-        "enum": [
-          "BASH",
-          "EDIT",
-          "UPDATE",
-          "WRITE",
-          "READ",
-          "GREP",
-          "GLOB",
-          "TASK",
-          "TODO_WRITE",
-          "UNKNOWN"
         ]
       },
       "IssueStatus": {

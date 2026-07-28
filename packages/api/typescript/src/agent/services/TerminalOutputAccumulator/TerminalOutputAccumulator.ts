@@ -86,14 +86,16 @@ export class TerminalOutputAccumulator {
 	}
 
 	/**
-	 * One transport frame → at most one SSE line.
+	 * One transport frame → at most one SSE frame.
 	 *
-	 * Only `browser.terminal_output_appended` is produced. `browser.terminal_action_detected` is keyed
-	 * on `TuiActionType` — the output of the deleted TUI regex parser — and re-keying it onto the real
-	 * `tool` name is Fase 7 (§4.9), a CONTRACT change with an SDK + `react tsc` + `e2e tsc` ripple that
-	 * this phase deliberately does not open. Until then a tool call stays visible, rendered as an
-	 * output line in the shape the panel already knows: no observability is lost, and no wire schema
-	 * moves.
+	 * ### Fase 7 — a `tool_use` stops being a LINE and becomes the structured action frame
+	 * Both members of the `TerminalSseFrame` union are now produced. Until this phase
+	 * `browser.terminal_action_detected` was keyed on the nine-member TUI action enum (the output of the
+	 * deleted regex parser), so a tool call was flattened into a `⏺ Tool(args)` STRING on the output frame —
+	 * the panel could print it but could not read it. Re-keyed onto the real `tool` name (§4.9), the
+	 * frame carries the name the CLI actually reported plus a one-line summary of the input, and the
+	 * panel can finally say *"Claude is editing `foo.ts`"* without parsing prose back out of a line it
+	 * just rendered. The `⏺ ` glyph moves to the panel, where presentation belongs.
 	 *
 	 * `text_delta` is dropped on purpose: the decoder emits deltas AND, at block close, the
 	 * consolidated `assistant_text`. Rendering both would print every token twice.
@@ -114,7 +116,7 @@ export class TerminalOutputAccumulator {
 			case 'assistant_text':
 				return frame.text.length > 0 ? line(frame.text, 'stdout') : null
 			case 'tool_use':
-				return line(`⏺ ${frame.tool}(${summarize(frame.input)})`, 'stdout')
+				return { name: 'browser.terminal_action_detected', issueId: this.ctx.issueId, tool: frame.tool, input: summarize(frame.input), at }
 			case 'tool_result':
 				return line(`  ⎿ ${frame.ok ? frame.summary : `error: ${frame.summary}`}`, frame.ok ? 'stdout' : 'stderr')
 			case 'error':

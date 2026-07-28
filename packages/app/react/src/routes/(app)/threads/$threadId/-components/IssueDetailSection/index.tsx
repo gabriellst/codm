@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { enumLabel } from '@/lib'
+import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
+import { Dot } from '@/components/console/StatusDot'
 import { TranscriptBubble } from '../TranscriptBubble'
 
 type Detail = GetIssueDetailQueryResponse
@@ -78,7 +80,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 				)}
 			</div>
 
-			<TerminalPanel lines={data.terminalLog} />
+			<TerminalPanel issueId={issueId} lines={data.terminalLog} />
 
 			{data.routedMessages.length > 0 && (
 				<section className="flex flex-col gap-3">
@@ -96,26 +98,82 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 	)
 }
 
-/** The one dark surface in the console: a monospace terminal log on near-black. */
-function TerminalPanel({ lines }: { lines: Detail['terminalLog'] }) {
+/**
+ * The one dark surface in the console: a monospace terminal log on near-black.
+ *
+ * Two sources, concatenated in that order and never interleaved: the DURABLE log the detail query
+ * returns (steers, replayed on every mount) followed by the LIVE tail of the issue's SSE session.
+ * The live half is what Fase 7 made worth rendering — a tool call now arrives as
+ * `browser.terminal_action_detected` carrying the CLI's REAL tool name plus a one-line input summary,
+ * instead of a pre-flattened `⏺ Tool(args)` string the panel could print but not read. Rendering it
+ * as its own row is the whole "net gain" of §4.9: the panel can finally say *which* tool, which is
+ * the difference between a log and a status.
+ */
+function TerminalPanel({ issueId, lines }: { issueId: string; lines: Detail['terminalLog'] }) {
 	const { t } = useTranslation()
+	const { connected, frames } = useTerminalStream(issueId)
+	const empty = lines.length === 0 && frames.length === 0
+
 	return (
 		<section className="flex flex-col gap-3">
-			<h2 className="label-eyebrow">{t('session.terminalSession')}</h2>
-			<div className="overflow-x-auto rounded-2xl bg-[oklch(0.16_0_0)] p-4 font-mono text-sm leading-relaxed text-[oklch(0.9_0_0)]">
-				{lines.length === 0 ? (
+			<div className="flex items-center gap-2">
+				<h2 className="label-eyebrow">{t('session.terminalSession')}</h2>
+				{connected && (
+					<span
+						data-testid="terminal-stream-connected"
+						title={t('session.terminalLive')}
+						className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+					>
+						<Dot className="size-1.5 bg-success" />
+						{t('session.terminalLive')}
+					</span>
+				)}
+			</div>
+			<div
+				data-testid="terminal-panel"
+				className="overflow-x-auto rounded-2xl bg-[oklch(0.16_0_0)] p-4 font-mono text-sm leading-relaxed text-[oklch(0.9_0_0)]"
+			>
+				{empty ? (
 					<p className="text-[oklch(0.6_0_0)]">{t('session.waitingTerminal')}</p>
 				) : (
-					lines.map((line, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: terminal log is append-only — index is a stable identity
-						<div key={`${line.at}-${i}`} className="flex gap-2 whitespace-pre">
-							<span className="select-none text-[oklch(0.55_0_0)]">›</span>
-							<span>{line.line}</span>
-						</div>
-					))
+					<>
+						{lines.map((line, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: terminal log is append-only — index is a stable identity
+							<div key={`log-${line.at}-${i}`} className="flex gap-2 whitespace-pre">
+								<span className="select-none text-[oklch(0.55_0_0)]">›</span>
+								<span>{line.line}</span>
+							</div>
+						))}
+						{frames.map((frame, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: the live tail is append-only — index is a stable identity
+							<TerminalFrameRow key={`frame-${frame.at}-${i}`} frame={frame} />
+						))}
+					</>
 				)}
 			</div>
 		</section>
+	)
+}
+
+/** One live SSE frame: a plain output line, or the structured tool call the re-key made legible. */
+function TerminalFrameRow({ frame }: { frame: TerminalStreamFrame }) {
+	if (frame.name === 'browser.terminal_action_detected') {
+		return (
+			<div data-testid="terminal-action" className="flex gap-2 whitespace-pre">
+				<span className="select-none text-[oklch(0.55_0_0)]">⏺</span>
+				<span data-testid="terminal-action-tool" className="text-[oklch(0.82_0.13_150)]">
+					{frame.tool}
+				</span>
+				{frame.input && <span className="text-[oklch(0.68_0_0)]">{frame.input}</span>}
+			</div>
+		)
+	}
+
+	return (
+		<div className="flex gap-2 whitespace-pre">
+			<span className="select-none text-[oklch(0.55_0_0)]">›</span>
+			<span className={frame.stream === 'stderr' ? 'text-[oklch(0.72_0.16_25)]' : undefined}>{frame.line}</span>
+		</div>
 	)
 }
 

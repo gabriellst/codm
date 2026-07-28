@@ -3393,3 +3393,183 @@ cd packages/e2e && bun scripts/run-e2e.ts
 
 ` M packages/app/react/src/components/console/AppChrome.tsx` — continua fora do commit por pathspec
 explícito. Não tocado.
+
+---
+
+# FASE 7 — o frame SSE estruturado, e os dois defeitos que ele desenterrou (28-jul-2026)
+
+**Branch:** `agent-abstraction` (verificada por NOME **e** por ESTADO da árvore — §8 regra 1: as
+entregas congeladas da Fase 6 existem no HEAD `07bfa4ed`: `agent/mcp/{manifest,router,wire}.ts`,
+`mcp-issue-handling/`, `mcp-system/`, `E2eMcpDriver`). `main` intocada em `4ac90824`.
+
+**Estado da árvore na entrada:** ` M packages/app/react/src/components/console/AppChrome.tsx` — edição
+do founder (altura do title bar, `h-11` → `h-8`). **Surfaceada, não absorvida, não tocada.** Quinta vez.
+
+## O que a fase mudou
+
+1. **`TerminalActionFrameSchema` re-chaveado.** Sai `action: z.enum(TuiActionType)` + `value`; entra
+   `tool: z.string()` + `input: z.string()` (resumo de uma linha). O conjunto é **aberto** por
+   construção — todo servidor MCP montado num run acrescenta ferramentas em runtime, inclusive as
+   nossas —, então a regra "conjunto fechado → enum" do `CLAUDE.md` não se aplica; é a mesma carve-out
+   que `AgentToolCallEvent.tool` já carregava.
+2. **`TerminalOutputAccumulator.transport` passou a emitir os DOIS membros da união.** Um `tool_use`
+   deixou de ser achatado em `⏺ Tool(args)` no frame de output e virou o frame estruturado. O glifo
+   `⏺` migrou para o painel, onde apresentação pertence.
+3. **`TuiActionType` DELETADO** — o último enum de TUI (`TuiMarker` e `TurnEndSignal` morreram na
+   Fase 3). AC-7.4 a zero hits, **prosa incluída**: duas docstrings minhas que nomeavam o símbolo
+   foram reescritas depois de o grep as pegar.
+4. **O painel do console passou a consumir o SSE por issue** (`useTerminalStream`) e a renderizar a
+   linha estruturada com a ferramenta real. É a primeira spec de browser da suíte.
+
+## AC-7.1 — OpenAPI bate com o contrato; `bun sdk` idempotente 2×
+
+```
+bun run contracts        → 0   ("No schema changes, nothing to migrate")
+bun sdk (passe A)        → 0
+bun sdk (passe B)        → 0
+git status --porcelain -- packages/client/dist packages/contracts/generated packages/api/typescript/public
+                         → nenhuma linha NÃO-STAGED após o 2º passe  (idempotente)
+```
+
+Diff emitido, exatamente o contrato:
+```
+-  "action": { "$ref": "#/components/schemas/Action" }      +  "tool":  { "type": "string" }
+-  "value":  { "type": "string" }                           +  "input": { "type": "string" }
+-  required: [name, issueId, action, value, at]             +  required: [name, issueId, tool, input, at]
+-  components.schemas.Action: enum[BASH…UNKNOWN]            (removido)
+```
+
+**Resíduo do kubb incremental, de novo** (a nota do `CLAUDE.md`): `types/Action.ts` ficou **órfão** —
+não mais exportado do `index.ts`, mas ainda no disco. Apagado à mão (`git rm`) depois de confirmar 0
+referências. Sem isso o `git status` não fecharia e a idempotência seria falsa.
+
+`TestRunIssueTurnController` **não** entra no spec: `grep -c "_test/agent" openapi.json` → **0**.
+
+## AC-7.2 / AC-7.3 — e as duas coisas que quebraram de verdade
+
+`react tsc` → 0 · `e2e tsc` → 0 · **e2e RODADO**: `6 passed / 2 skipped` (era 5/2).
+
+A spec nova (`10-terminal-tool-frame.spec.ts`) dirige um Chromium de verdade e assere
+`mcp__codedm__TransitionIssueStatus` **no DOM**. Chegar lá custou dois defeitos reais:
+
+### (a) O daemon vazava o slot de observador SSE em TODO disconnect de cliente
+
+Sintoma: o painel nunca conectava. Primeira requisição registrava, era abortada pelo efeito
+duplo-invocado do React, e **toda** reconexão levava `409 issue already streaming` — indefinidamente.
+
+Diagnóstico por instrumentação (não por leitura). Sonda de socket cru, varrendo o atraso do disconnect
+contra o daemon booted, ids únicos por iteração:
+
+```
+destroy@0ms → reopen 200      destroy@16ms → reopen 200
+destroy@4ms → reopen 200      destroy@24ms → reopen 500
+destroy@8ms → reopen 200      destroy@32ms → reopen 500 …
+```
+
+E o log do daemon instrumentado sob o Chromium real, que é a prova:
+
+```
+[DBG 44115] handler-start /v1/terminal/sessions/<id>/stream
+[DBG] registered <id> signalAborted= false
+[DBG 44115] sending stream
+[DBG 44115] req.raw aborted          ← o REQUEST avisa
+[DBG 44115] socket close             ← o SOCKET avisa
+[DBG 44115] req.raw close destroyed= true
+                                     ← reply-close NUNCA aparece para 44115
+[DBG 44117] reply-close writableFinished= true    ← só as requisições NORMAIS emitem
+```
+
+Ou seja: **`reply.raw` não emite `finish` nem `close` quando o cliente aborta um SSE em voo.** O
+`FastifyHttpRouter` derivava seu `AbortSignal` **só** desse evento, então o sinal nunca disparava
+exatamente no caso para o qual foi escrito, e todo controller SSE segurava para sempre o que seu
+`onStart` reivindicou.
+
+Correção em dois pontos, ambos com o porquê escrito no código:
+- `FastifyHttpRouter.buildWebRequest`: **segundo** listener em `req.raw.once('aborted')`. É o
+  discriminador que falta ao primeiro — `aborted` só é emitido em disconnect prematuro, nunca numa
+  requisição completa, então não tem o falso-positivo que torna o `close` do request inutilizável (era
+  ele que fazia "todo POST nascer abortado"). `abort()` é idempotente; um disconnect que dispare os
+  dois é inofensivo.
+- `createSSEResponse`: fecha se `signal.aborted` **já** estava true ao construir o stream — adicionar
+  listener a um `AbortSignal` já disparado nunca o invoca, e a janela é alcançável porque o controller
+  roda assíncrono entre o wiring do router e a construção do stream. Mais um `cancel` no
+  `ReadableStream` para o consumidor que para de ler.
+- Rail novo: `core/src/utils/sse.test.ts` — 3 casos (abort durante, abort ANTES, teardown uma vez só).
+
+### (b) O helper de rota tipada do e2e era inutilizável — e nunca tinha sido usado
+
+`ExtractParams` terminava a recursão em `Record<string, never>`, que **envenena a interseção**:
+`/threads/$threadId/issues` colapsava `threadId` para `never` (compila só quando TODOS os segmentos
+têm param). E `resolveRoute` não prefixava o basepath `/app`, então todo `goto` cairia no 404 do
+daemon. Nenhuma spec usava `goto` — a primeira spec de browser do repositório encontrou os dois.
+
+### Duas tentativas construídas, MEDIDAS e descartadas antes do desenho final
+
+Registradas porque a próxima pessoa vai ter as mesmas ideias:
+
+1. **Segurar o run num rendezvous até o painel anexar** (`E2eRunGate` + marcador `[e2e:hold:<token>]`
+   no prompt, opaco ao runner por causa da AC-6.12). **Deadlock por construção:** `RunIssueTurn` é
+   invocado **pelo** outbox dispatcher, então um run parado **para o dispatcher**, e o
+   `integration.issue.opened` que a spec está pollando não pode ser entregue até o hold acabar.
+   Medido: `warm done` em T+2,6s, `issue materialized` só em **T+22,5s** contra um hold de 15s. Código
+   removido inteiro.
+2. **Esperar o primeiro run terminar e re-rodar a MESMA issue.** Funciona, mas re-declara conclusão
+   numa issue já `COMPLETED`, o que põe um `CompleteIssue` perdedor no retry do dispatcher.
+
+**Desenho final:** a spec abre a **própria** issue pelo endpoint REAL (`CreateIssue`), espera o read
+model materializar, anexa o painel, e só então pede o turno por
+`POST /v1/_test/agent/run-turn` — test-only, montado só sob `CODEDM_E2E`, fora da OpenAPI, no contexto
+`agent` (uma porta em `shared/` faria o contexto raiz importar o write model de uma folha). O turno é o
+**use case real**: mesmo grafo de DI, mesmo agent, mesmo runner stub, mesmo round-trip MCP, mesmo
+registry SSE. O que a porta substitui é só o **gatilho** — exatamente como
+`POST /api/channel/_test/connect` do Go substitui um pareamento.
+
+`WIRE-03` pegou o controller fora do barril (um controller escondido do barril é indistinguível de
+wiring morto): exportado do `controllers/index.ts` e **desestruturado para fora** em `agent/index.ts`,
+onde as três decisões de montagem agora se leem juntas.
+
+## AC-7.4
+
+```
+git grep -n "TuiActionType\|TuiMarker\|TurnEndSignal" -- packages   → exit 1 (ZERO hits)
+```
+
+## AC-7.5
+
+`.specs/codedm/OVERNIGHT-REPORT.md` — relatório do goal `agent-abstraction` **prependado**, com o
+relatório de 23-jul preservado abaixo intacto. Traz: commits por fase, o RSS da AC-0.10
+(`337712 → 183888 KB`, **−150,2 MB / −45,5%**), os PARKED com findings inteiros, as decisões que
+esperam o founder, e as **quatro portas vazias** que este goal produziu (`grep -q CONNECTED` passando
+sobre `DISCONNECTED`; `| tee` engolindo exit code; `\b` ausente do ERE do git grep no macOS + pathspec
+morto saindo exit 1 sem `fatal:`; AC-6.8(d) grepando prefixo que não pode aparecer).
+
+## Gates (exit codes, conferidos um a um — nunca a cauda de um pipeline)
+
+```
+bun tsc                                   → 0   (7 projetos)
+bun lint                                  → 0   (3 projetos)
+bun run test                              → 0   (api-ts 747 pass / 3 skip / 0 fail)
+bun test:tooling                          → 0   (414 pass / 0 fail)
+bun run contracts                         → 0
+bun sdk 2×                                → 0 / 0, diff vazio no 2º
+packages/app/react  bun x tsc --noEmit    → 0
+packages/e2e        bun x tsc --noEmit    → 0
+packages/api/go       build/vet/test      → 0 / 0 / 0
+packages/api/go/core  build/vet/test      → 0 / 0 / 0
+packages/e2e  bun scripts/run-e2e.ts      → 0   (6 passed / 2 skipped)
+bun run detect                            → 1 (esperado)
+   registry-scan 40 · import-direction 0 · slice-closure 37 · component-props 33 ·
+   projection-shape 3 · go-enum-literals 2
+```
+
+**Detectores — o baseline foi MEDIDO, não citado.** O BUILD-LOG registrava `39` para `registry-scan`;
+rodado numa **worktree destacada em HEAD** (`.worktrees/f7-baseline`, removida depois) o número é
+**40**. Diff item-a-item contra essa medição: **ZERO findings novos, ZERO removidos**. No caminho
+apareceu **um** finding meu (`bg-emerald-500`, `component#bp-06`, hardcoded color) — corrigido usando
+o primitivo `Dot` + token `bg-success`, não silenciado.
+
+`--no-verify`: **sim**, e justificado — o hook pré-commit está registrado como inutilizável nesta
+branch (`OVERNIGHT-BLOCKED.md`, 27-jul) e os gates acima foram rodados **à mão**, com exit code lido do
+comando e não de um pipeline (a armadilha do `| tee`, que já mascarou um `tsc` vermelho neste goal).
+
+`git status` limpo salvo a edição do founder. **Zero push, zero fetch. `main` intocada.**

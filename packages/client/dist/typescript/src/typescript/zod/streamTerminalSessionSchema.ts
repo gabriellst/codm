@@ -3,7 +3,6 @@
 * Do not edit manually.
 */
 
-import { actionSchema } from "./actionSchema.ts";
 import { streamSchema } from "./streamSchema.ts";
 import { z } from "zod/v4";
 
@@ -25,10 +24,8 @@ get "stream"(){
     }), z.object({
     "name": z.enum(["browser.terminal_action_detected"]),
 "issueId": z.uuid(),
-get "action"(){
-                return actionSchema
-              },
-"value": z.string(),
+"tool": z.string(),
+"input": z.string(),
 "at": z.iso.datetime()
     })])
 

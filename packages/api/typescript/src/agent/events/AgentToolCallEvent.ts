@@ -26,10 +26,11 @@ export const AgentToolCallEventSchema = z.domainEvent({
 	/** Provider-assigned id correlating the `tool_use` frame with its `tool_result`. */
 	toolUseId: z.string(),
 	/**
-	 * OPEN set — `z.string()`, deliberately, and this is the ONE exception §4.9 carves out. MCP servers
-	 * add tools at runtime, so the tool name is not a value-set anyone can close. `model` and
-	 * `stopReason` ARE closed and are therefore enums; conflating the two cases is what produced the
-	 * brittle `TuiActionType` this rewrite deletes.
+	 * OPEN set — `z.string()`, deliberately, and this is the exception §4.9 carves out. MCP servers add
+	 * tools at runtime, so the tool name is not a value-set anyone can close. `model` and `stopReason`
+	 * ARE closed and are therefore enums; conflating the two cases is what produced the brittle
+	 * nine-member TUI action enum this rewrite deleted (Fase 7 took the last one, on the SSE frame —
+	 * see `TerminalActionFrameSchema`, which now carries this same open `tool` name).
 	 */
 	tool: z.string(),
 	input: z.record(z.string(), z.unknown()),

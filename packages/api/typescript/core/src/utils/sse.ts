@@ -61,6 +61,10 @@ export function createSSEResponse({ signal, headers, keepalive = true, onStart }
 	let keepaliveTimer: ReturnType<typeof setInterval> | undefined
 	let closed = false
 
+	// Assigned inside `start` (which the ReadableStream constructor invokes synchronously) so `cancel`
+	// below can reach the same handle.
+	let close: () => void = () => undefined
+
 	const stream = new ReadableStream<Uint8Array>({
 		start: controller => {
 			const finalize = () => {
@@ -88,13 +92,35 @@ export function createSSEResponse({ signal, headers, keepalive = true, onStart }
 				},
 			}
 
+			close = handle.close
+
 			if (keepalive) {
 				keepaliveTimer = setInterval(() => handle.send(SSE_KEEPALIVE_FRAME), SSE_KEEPALIVE_INTERVAL_MS)
 			}
 			signal.addEventListener('abort', handle.close)
 
 			teardown = onStart(handle) ?? undefined
+
+			// ALREADY ABORTED — adding a listener to a fired `AbortSignal` never invokes it, so without
+			// this line a client that vanished before the stream was built leaks whatever `onStart`
+			// claimed, for the life of the process.
+			//
+			// This is reachable, not defensive: the controller runs asynchronously between the router
+			// wiring the signal and this stream being constructed, and the disconnect the router listens
+			// for (`req.raw`'s `aborted`) can land inside that window. It is the same leak the router fix
+			// addresses, one layer up, and the two are independent — this one holds even if a future
+			// consumer hands in a signal that was aborted before the call.
+			//
+			// Checked AFTER `onStart` so `teardown` is assigned and actually runs.
+			if (signal.aborted) handle.close()
 		},
+
+		/**
+		 * The consumer stopped reading — release the same claim. Reached when whatever adapts this web
+		 * stream to the transport destroys its reader; idempotent with the paths above, since
+		 * `handle.close` returns early once closed.
+		 */
+		cancel: () => close(),
 	})
 
 	return new Response(stream, {

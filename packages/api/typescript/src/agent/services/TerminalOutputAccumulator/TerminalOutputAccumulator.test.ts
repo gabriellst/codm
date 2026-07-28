@@ -19,12 +19,52 @@ describe('TerminalOutputAccumulator (two-stream split over AgentRuntimeEvent)', 
 		expect(sse).toMatchObject({ name: 'browser.terminal_output_appended', issueId: 'issue-1', line: 'compiling…', stream: 'stdout' })
 	})
 
-	it('renders a tool call as an output line — the action frame is Fase 7, not a silent drop', () => {
+	it('renders a tool call as the STRUCTURED action frame, keyed on the real tool name (Fase 7, §4.9)', () => {
 		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
 		const sse = acc.feed(
 			frame({ kind: 'tool_use', toolUseId: 'toolu_1', tool: 'Edit', input: { file_path: 'src/a.ts' }, parentToolUseId: null }),
 		)
-		expect(sse).toMatchObject({ name: 'browser.terminal_output_appended', line: '⏺ Edit(file_path: src/a.ts)' })
+		expect(sse).toMatchObject({
+			name: 'browser.terminal_action_detected',
+			issueId: 'issue-1',
+			tool: 'Edit',
+			input: 'file_path: src/a.ts',
+		})
+	})
+
+	/**
+	 * The whole point of the re-key: an MCP tool name is not a member of any enum anyone could have
+	 * written down, and it must survive to the panel VERBATIM. A frame that mangled it, truncated it,
+	 * or dropped it into an UNKNOWN bucket would be indistinguishable from the parser this replaced.
+	 */
+	it('passes an MCP tool name through verbatim — the set is open, so nothing normalizes it', () => {
+		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
+		const sse = acc.feed(
+			frame({
+				kind: 'tool_use',
+				toolUseId: 'toolu_2',
+				tool: 'mcp__codedm__TransitionIssueStatus',
+				input: { issueId: 'issue-1', data: { status: 'COMPLETED' } },
+				parentToolUseId: null,
+			}),
+		)
+		// Nested objects are not scalars, so the one-line summary keeps only the scalar keys.
+		expect(sse).toMatchObject({
+			name: 'browser.terminal_action_detected',
+			tool: 'mcp__codedm__TransitionIssueStatus',
+			input: 'issueId: issue-1',
+		})
+	})
+
+	it('clamps a long tool input to one line — the frame is transport, not a payload mirror', () => {
+		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
+		const sse = acc.feed(
+			frame({ kind: 'tool_use', toolUseId: 'toolu_3', tool: 'Bash', input: { command: 'x'.repeat(400) }, parentToolUseId: null }),
+		)
+		const detected = sse as { name: string; input: string }
+		expect(detected.name).toBe('browser.terminal_action_detected')
+		expect(detected.input.length).toBeLessThanOrEqual(120)
+		expect(detected.input.endsWith('…')).toBe(true)
 	})
 
 	it('routes a FAILED tool result to the stderr stream so the panel can tint it', () => {

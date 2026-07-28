@@ -3,7 +3,6 @@
 * Do not edit manually.
 */
 
-import type { Action } from "./Action.ts";
 import type { Stream } from "./Stream.ts";
 
 export type StreamTerminalSessionPathParams = {
@@ -61,11 +60,11 @@ export type StreamTerminalSession200 = ({
     /**
      * @type string
     */
-    action: Action;
+    tool: string;
     /**
      * @type string
     */
-    value: string;
+    input: string;
     /**
      * @type string, date-time
     */

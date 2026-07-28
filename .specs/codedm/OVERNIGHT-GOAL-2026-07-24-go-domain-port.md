@@ -1,5 +1,6 @@
 > **⚠️ SUPERSEDED (2026-07-26)** — o port do domínio para Go foi ABANDONADO (branch arquivado em
-> `archive/go-domain-port-2026-07-26`). Este doc fica apenas como histórico. O contrato vigente é
+> `archive/go-domain-port-2026-07-26`). Este doc fica apenas como histórico. O que sobreviveu do
+> port foi o substrato SQLite, salvo em **`469eed5b`**; o contrato vigente é
 > **`.specs/codedm/GOAL-agent-abstraction.md`**.
 
 # GOAL — Noite CodeDM: PORT go-domain — domínio em Go + SQLite, um sidecar só

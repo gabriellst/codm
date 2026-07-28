@@ -10,6 +10,13 @@ import { INSTANCE_REGISTRY } from './registry'
 // sweep existed to pay claude's REPL cold-start ahead of the first inbound. With bidirectional
 // stream-json on pipes there is no REPL to keep warm — every turn is its own short-lived process — so
 // a sweep would spawn N processes at boot to warm nothing.
+
+// TEST-ONLY turn trigger (Fase 7), split OFF the barrel so all three mount decisions read in one
+// place. It is IN the barrel because the WIRE-03 rail requires every controller class to be — a
+// controller hidden from its barrel is indistinguishable from dead wiring — and it is pulled out
+// here because it must never serve outside the Playwright harness.
+const { TestRunIssueTurnController, ...productionControllers } = controllers
+
 // OPENAPI CARVE-OUT — the MCP router is a runtime-only JSON-RPC door (`/mcp/:scope`). It is a REAL
 // production route, but emitting it would render a tool endpoint into the SDK as React Query hooks
 // with no consumer. Same discipline as `ChannelProxy` (external/index.ts) and `TestIngressController`
@@ -18,11 +25,18 @@ import { INSTANCE_REGISTRY } from './registry'
 // zero hits in openapi.json AND an actual `initialize` round trip — because "not emitted" is not the
 // same claim as "not implemented".
 const runtimeControllers =
-	process.env.EMIT_OPENAPI === 'true' ? controllers : { ...controllers, McpRouterController }
+	process.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpRouterController }
+
+// The test trigger takes the same carve-out, one condition tighter: emission never sets CODEDM_E2E,
+// so it is doubly absent from the spec, and a production boot refuses the flag outright
+// (`src/boot/assert-e2e-safe.ts`). It exists so a spec can attach the console's SSE observer BEFORE
+// the run it means to watch; the controller documents why nothing on the production path can.
+const mountedControllers =
+	process.env.CODEDM_E2E === 'true' ? { ...runtimeControllers, TestRunIssueTurnController } : runtimeControllers
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.agent,
-	controllers: runtimeControllers,
+	controllers: mountedControllers,
 	internalHandlers,
 	externalHandlers,
 	registry: INSTANCE_REGISTRY,

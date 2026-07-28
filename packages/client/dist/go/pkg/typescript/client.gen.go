@@ -19,48 +19,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for Action.
-const (
-	BASH      Action = "BASH"
-	EDIT      Action = "EDIT"
-	GLOB      Action = "GLOB"
-	GREP      Action = "GREP"
-	READ      Action = "READ"
-	TASK      Action = "TASK"
-	TODOWRITE Action = "TODO_WRITE"
-	UNKNOWN   Action = "UNKNOWN"
-	UPDATE    Action = "UPDATE"
-	WRITE     Action = "WRITE"
-)
-
-// Valid indicates whether the value is a known member of the Action enum.
-func (e Action) Valid() bool {
-	switch e {
-	case BASH:
-		return true
-	case EDIT:
-		return true
-	case GLOB:
-		return true
-	case GREP:
-		return true
-	case READ:
-		return true
-	case TASK:
-		return true
-	case TODOWRITE:
-		return true
-	case UNKNOWN:
-		return true
-	case UPDATE:
-		return true
-	case WRITE:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ApiErrors.
 const (
 	AGENTRUNSCOPEMISMATCH           ApiErrors = "AGENT_RUN_SCOPE_MISMATCH"
@@ -1068,9 +1026,6 @@ func (e WorkspaceBadge) Valid() bool {
 		return false
 	}
 }
-
-// Action defines model for Action.
-type Action string
 
 // ApiErrors All possible error codes
 type ApiErrors string
