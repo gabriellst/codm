@@ -1072,7 +1072,7 @@ import type { ZodObject, ZodRawShape } from 'zod'
 /** O envelope que TODO input de agent do CodeDM carrega — a identidade do run. */
 export const BaseAgentInputSchema = z.object({
 	ownerId: z.uuid(),                                 // uuid, alinhado ao resto do repo — ver nota
-	issueId: z.uuid(),
+	issueId: z.uuid().optional(),                      // OPCIONAL — corrigido na Fase 5, ver nota abaixo
 	threadId: z.uuid(),
 	cwd: z.string(),                                   // workspace ABSOLUTO — nunca opcional
 	context: z.record(z.string(), z.unknown()).optional(),
@@ -2422,6 +2422,26 @@ commitar, e provar: `git grep -c "src/terminal/" scripts/detectors/registry-scan
 `bun detect` verde **depois** da re-baseline (a AC-5.1 roda antes, sobre a árvore renomeada). Se a
 re-baseline **adicionar** chaves novas em vez de só remover, listá-las no BUILD-LOG com o motivo —
 uma chave nova é dívida nova, não ratchet.
+
+> **EMENDA 27-jul — `bun detect:baseline` foi RODADO e o resultado foi REJEITADO; a re-baseline que
+> **entrou** no commit foi feita à mão. Registrado aqui, e não só no BUILD-LOG, porque a regra 2 da
+> §8 proíbe reinterpretar AC em silêncio.** O comando existe e roda: a regeneração a partir de um
+> scan vivo produz um arquivo onde as 3 chaves de `DetectProviders.ts` somem — mas junto com elas o
+> scan também ABSORVE as ~40 findings **hoje gating** que ainda não têm entrada na baseline (react
+> `component#bp-20`, `as-any` do tauri, `as-unknown` de contracts, `AgentStreamRegistry service#bp-03`,
+> …). Commitar esse output deixaria `bun detect` verde por **anistia**, não por **ratchet** —
+> exatamente o que esta própria AC proíbe duas linhas acima ("uma chave nova é dívida nova"). **O que
+> a AC de fato exige, e o que foi feito no lugar do commit direto do regen:** editar
+> `registry-scan.baseline.json` **à mão**, removendo só as **3** chaves de `DetectProviders.ts`
+> enraizadas em `src/terminal/` que o `git mv` desta fase invalidou, sem tocar em nenhuma outra chave
+> do arquivo. As provas continuam sendo as mesmas três que a AC já pedia — `git grep -c
+> "src/terminal/"` → **0**, `git grep -c "TerminalSessionRegistry"` → **0**, `bun detect` verde — mais
+> uma quarta que a edição manual torna necessária: `bun detect` **numericamente inalterado**
+> (**39/0/37/33/3/2** antes e depois), prova de que nenhuma chave viva foi perdida nem anistiada.
+> **Regra derivada para a próxima fase que re-baselinar:** rodar `bun detect:baseline` primeiro é
+> sempre o passo 0 — é o que revela se o scan vivo diverge do esperado —, mas o **output** desse
+> comando só vira commit se a diferença for **exclusivamente** remoção de chaves fósseis; qualquer
+> chave nova no diff é motivo para editar a re-baseline à mão em vez de aceitar o regen inteiro.
 
 ### Fase 6 — O servidor MCP: o agent passa a DECLARAR (a inversão)
 

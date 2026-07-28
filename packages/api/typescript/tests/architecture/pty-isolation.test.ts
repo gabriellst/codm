@@ -44,8 +44,9 @@ const FORBIDDEN_SPAWN_REFS = ["from 'node:child_process'", "require('node:child_
 // Repo-wide rail home (tests/architecture) — re-rooted onto the package's src tree.
 const SRC = join(import.meta.dir, '..', '..', 'src')
 
-// ── The path constants, all together: Fase 5 swaps `terminal/` for `agent/` in THIS BLOCK and nowhere
-// else (AC-5.9). They read `terminal/` here because the `git mv terminal → agent` is Fase 5, not 3.
+// ── The path constants, all together: Fase 5 swapped `terminal/` for `agent/` in THIS BLOCK and
+// nowhere else (AC-5.9). The `git mv terminal → agent` already landed in Fase 5, so they read
+// `agent/` below, not `terminal/`.
 const ALLOWED_PREFIX = join(SRC, 'agent/services/AgentRunner')
 // Spawn is a wider capability than PTY: TWO modules legitimately create a process.
 const ALLOWED_SPAWN_PREFIXES = [
