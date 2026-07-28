@@ -15,7 +15,8 @@ import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import type { AgentApplicationErrors } from '../errors'
-import { ResumeInvalidationReason, AgentRunOutcome } from '../enums'
+import { ResumeInvalidationReason, AgentRunOutcome, FactSource } from '../enums'
+import { isTransportStopKind } from '../enums/TransportStopKind'
 
 export const RunIssueTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -237,7 +238,38 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		return { outcome: accumulator.outcome(), agentSessionId: accumulator.sessionId }
 	}
 
+	/**
+	 * Persist the run's conclusion — and this is where §4.3 rule 7 (ONE producer per fact) is enforced.
+	 *
+	 * ### The predicate is the agent's TOOL SCOPE, and it cannot be `request.mcp`
+	 * `AgentRunRequest` is assembled INSIDE the agent (§4.2/§4.5): this use case injects the agent and
+	 * calls `agent.run(input)`, so it never sees the request and `if (request.mcp)` would be literally
+	 * unreachable from here. The equivalent predicate it CAN see is `agent.tools.length`, and the
+	 * equivalence is exact rather than approximate, because the two rules that sustain it are closed:
+	 * §4.2 ("empty `tools` ⇒ no `mcp` is built at all") and §4.7 (an agent that REQUIRES tools against a
+	 * provider with no `mcpConfigFlag` fails named with `AGENT_TOOLS_UNSUPPORTED`, never degrades
+	 * silently). There is no third case, so `request.mcp` present ⟺ `agent.tools.length > 0`.
+	 *
+	 * ### What that buys, concretely
+	 * With a non-empty scope the agent DECLARES its conclusion through `TransitionIssueStatus` /
+	 * `RaiseStop`, which already raise these exact event classes with `FactSource.DECLARED`. Minting a
+	 * second one from the terminal outcome would publish the frozen `integration.issue.completed`
+	 * TWICE — the double-publish AC-6.4 measures, and the reason the degenerate case ("declared AND
+	 * also ended normally") is a named test rather than a footnote.
+	 *
+	 * ### The one thing that is minted unconditionally
+	 * A TRANSPORT stop (`AUTH_REQUIRED` / `SERVER_ERROR`) never depended on a tool — the runner
+	 * observes it on the process/stream — so it is minted whatever the scope is, always `INFERRED`.
+	 * The accumulator can only ever report a transport kind (`TerminalOutputAccumulator.outcome()`
+	 * narrows to the transport half by construction), which is what makes "a run without tools cannot
+	 * manufacture a DOMAIN stop" true by type rather than by discipline.
+	 *
+	 * An `if` on `agent.tools.length` is legitimate here: it is fact-origin POLICY, not a provider
+	 * branch (§8 rule 4 forbids `if (provider === 'x')`, not this).
+	 */
 	private async persistOutcome(input: this['input'], outcome: TerminalOutcome, stopId: string | undefined, tx: Transaction): Promise<void> {
+		// The reply draft is NOT a lifecycle fact and is not gated: it is the turn's text, which the
+		// declarative path never carries and never duplicates.
 		if (outcome.kind === 'COMPLETED') {
 			if (outcome.replyText.length > 0) {
 				await this.domainEventRepository.save(
@@ -249,22 +281,39 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 					tx,
 				)
 			}
+			if (this.agent.tools.length > 0) return
 			await this.domainEventRepository.save(
 				new AgentRunCompletedEvent({
 					entityId: input.issueId,
 					ownerId: input.ownerId,
-					payload: { issueId: input.issueId, threadId: input.threadId, key: input.key, completedAt: new Date() },
+					payload: {
+						issueId: input.issueId,
+						threadId: input.threadId,
+						key: input.key,
+						completedAt: new Date(),
+						source: FactSource.INFERRED,
+					},
 				}),
 				tx,
 			)
 			return
 		}
 
+		// Transport stops are ALWAYS minted (see the docblock); a domain stop can only reach this
+		// branch if the accumulator's type narrowing were broken, and gating it costs nothing.
+		if (!isTransportStopKind(outcome.stopKind) && this.agent.tools.length > 0) return
 		await this.domainEventRepository.save(
 			new AgentRunStopRaisedEvent({
 				entityId: input.issueId,
 				ownerId: input.ownerId,
-				payload: { stopId: stopId ?? uuidv7(), issueId: input.issueId, threadId: input.threadId, kind: outcome.stopKind },
+				payload: {
+					stopId: stopId ?? uuidv7(),
+					issueId: input.issueId,
+					threadId: input.threadId,
+					kind: outcome.stopKind,
+					detail: outcome.detail,
+					source: FactSource.INFERRED,
+				},
 			}),
 			tx,
 		)

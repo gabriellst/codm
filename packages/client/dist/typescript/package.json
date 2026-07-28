@@ -8,6 +8,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./http": "./src/http/index.ts",
+		"./mcp-run-context": "./src/mcp-run-context/index.ts",
+		"./*/server": "./src/*/server.ts",
 		"./*/_http": "./src/*/_http.ts",
 		"./*": "./src/*/index.ts"
 	},
@@ -15,6 +17,7 @@
 		"tsc": "bun x tsc --noEmit"
 	},
 	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.30.0",
 		"ky": "^1.14.0"
 	},
 	"peerDependencies": {

@@ -157,7 +157,8 @@
     "/v1/owners": {
       "post": {
         "tags": [
-          "owner"
+          "owner",
+          "mcp:system"
         ],
         "description": "Create a new owner (tenant); the creator becomes the responsible user",
         "operationId": "CreateOwner",
@@ -238,13 +239,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/owners/disable": {
       "post": {
         "tags": [
-          "owner"
+          "owner",
+          "mcp:system"
         ],
         "description": "Disable a owner (C19 DisableOwner; OWNER only)",
         "operationId": "DisableOwner",
@@ -314,13 +319,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/owners/enable": {
       "post": {
         "tags": [
-          "owner"
+          "owner",
+          "mcp:system"
         ],
         "description": "Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)",
         "operationId": "EnableOwner",
@@ -366,13 +375,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/owners/{ownerId}/activate": {
       "post": {
         "tags": [
-          "owner"
+          "owner",
+          "mcp:system"
         ],
         "description": "Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)",
         "operationId": "SetActiveOwner",
@@ -420,13 +433,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/owners/settings": {
       "patch": {
         "tags": [
-          "owner"
+          "owner",
+          "mcp:system"
         ],
         "description": "Update owner profile settings (name / picture / timezone)",
         "operationId": "UpdateOwnerSettings",
@@ -475,7 +492,371 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
+      }
+    },
+    "/v1/threads/{threadId}/issues/{issueId}/operator-questions": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)",
+        "operationId": "AskOperator",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "question"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "question": "Should the refund be full or partial for orders older than 90 days?"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "delivered": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "stopId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "delivered",
+                    "stopId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "delivered": true,
+                      "stopId": "019e4d24-6524-7041-9e1c-8108180cdda0"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "delivered": true,
+                      "stopId": "019e4d24-6524-7041-9e1c-8108180cdda0"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
+    "/v1/threads/{threadId}/issues": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Open a new issue on a thread",
+        "operationId": "CreateIssue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "provider": {
+                    "$ref": "#/components/schemas/ProviderKind"
+                  }
+                },
+                "required": [
+                  "title",
+                  "provider"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "title": "Pix payment bug",
+                    "provider": "CLAUDE_CODE"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open a new issue on a thread",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issueId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "issueId",
+                    "key"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "key": "pix-payment-bug"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "key": "pix-payment-bug"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      },
+      "get": {
+        "tags": [
+          "issue",
+          "mcp:system"
+        ],
+        "description": "Issues of one thread grouped by status + auto-archive note (T11)",
+        "operationId": "GetSessionIssues",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Issues of one thread grouped by status + auto-archive note (T11)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statsLine": {
+                      "type": "object",
+                      "properties": {
+                        "awaitingInput": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "working": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "completed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "awaitingInput",
+                        "working",
+                        "completed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "$ref": "#/components/schemas/IssueStatus"
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "issueId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "$ref": "#/components/schemas/IssueStatus"
+                                },
+                                "meta": {
+                                  "type": "string"
+                                },
+                                "archived": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "issueId",
+                                "key",
+                                "title",
+                                "status",
+                                "archived"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "status",
+                          "items"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "archived": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "issueId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/IssueStatus"
+                          },
+                          "meta": {
+                            "type": "string"
+                          },
+                          "archived": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "issueId",
+                          "key",
+                          "title",
+                          "status",
+                          "archived"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "autoArchiveNote": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "statsLine",
+                    "groups",
+                    "archived",
+                    "autoArchiveNote"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/terminal/providers": {
@@ -583,6 +964,107 @@
         }
       }
     },
+    "/v1/threads/{threadId}/issues/{issueId}/stops": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Declare that the agent is blocked and needs the human (approval, classification, …)",
+        "operationId": "RaiseStop",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "$ref": "#/components/schemas/StopKind"
+                  },
+                  "detail": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "kind",
+                  "detail"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "kind": "APPROVAL_NEEDED",
+                    "detail": "This deletes 3 production tables — confirm before I run it."
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Declare that the agent is blocked and needs the human (approval, classification, …)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stopId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "stopId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "stopId": "019e4d24-6524-7041-9e1c-8108180cdda0"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "stopId": "019e4d24-6524-7041-9e1c-8108180cdda0"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
     "/v1/terminal/sessions/{issueId}/stream": {
       "get": {
         "tags": [
@@ -682,10 +1164,122 @@
         }
       }
     },
+    "/v1/threads/{threadId}/issues/{issueId}/status": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Declare the lifecycle status of an issue (done / needs input)",
+        "operationId": "TransitionIssueStatus",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "$ref": "#/components/schemas/IssueStatus"
+                  },
+                  "summary": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "key": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "status": "COMPLETED",
+                    "summary": "Fixed the webhook retry and added a regression test.",
+                    "key": "pix-payment-bug"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Declare the lifecycle status of an issue (done / needs input)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issueId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/IssueStatus"
+                    }
+                  },
+                  "required": [
+                    "issueId",
+                    "status"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "status": "COMPLETED"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "status": "COMPLETED"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
     "/v1/workspaces": {
       "post": {
         "tags": [
-          "workspace"
+          "workspace",
+          "mcp:system"
         ],
         "description": "Register a local project folder; auto-detects git / Claude-project badges",
         "operationId": "AddWorkspace",
@@ -768,11 +1362,15 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       },
       "get": {
         "tags": [
-          "workspace"
+          "workspace",
+          "mcp:system"
         ],
         "description": "List registered workspaces with badges and thread counts (T07)",
         "operationId": "ListWorkspaces",
@@ -833,13 +1431,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/workspaces/{workspaceId}": {
       "delete": {
         "tags": [
-          "workspace"
+          "workspace",
+          "mcp:system"
         ],
         "description": "Remove a registered workspace (refused while an issue is WORKING on it)",
         "operationId": "RemoveWorkspace",
@@ -863,7 +1465,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/threads": {
@@ -987,7 +1592,8 @@
     "/v1/threads/{threadId}/buffer": {
       "put": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:system"
         ],
         "description": "Set the rolling context-buffer size {25,50,100,200} (C14)",
         "operationId": "ConfigureContextBuffer",
@@ -1036,13 +1642,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/threads/{threadId}/mention-gate": {
       "put": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:system"
         ],
         "description": "Configure the mention gate (respond only when a @tag is written) (C12)",
         "operationId": "ConfigureMentionGate",
@@ -1124,13 +1734,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/threads/{threadId}/chat": {
       "get": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:system"
         ],
         "description": "Full thread conversation + control-plane state + active stops (T09)",
         "operationId": "GetSessionChat",
@@ -1328,13 +1942,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/threads/{threadId}/settings": {
       "get": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:system"
         ],
         "description": "Per-thread behavior: mention gate, participants + invocation, buffer size (T10)",
         "operationId": "GetThreadSettings",
@@ -1438,7 +2056,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/threads/{threadId}/pause": {
@@ -1504,7 +2125,8 @@
     "/v1/threads/{threadId}/direct": {
       "post": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:issue-handling"
         ],
         "description": "Send a direct message as the operator (only while paused) (C20)",
         "operationId": "SendDirectMessage",
@@ -1580,7 +2202,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
       }
     },
     "/v1/threads/{threadId}/participants/{participantId}": {
@@ -1762,7 +2387,8 @@
     "/v1/issues/{issueId}": {
       "get": {
         "tags": [
-          "issue"
+          "issue",
+          "mcp:system"
         ],
         "description": "One issue drill-down: terminal log, routed messages, stops (T12)",
         "operationId": "GetIssueDetail",
@@ -1918,13 +2544,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/issues": {
       "get": {
         "tags": [
-          "issue"
+          "issue",
+          "mcp:system"
         ],
         "description": "All issues across every thread, grouped by status (T04)",
         "operationId": "GetIssuesOverview",
@@ -2097,13 +2727,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/threads/{threadId}/needs-you": {
       "get": {
         "tags": [
-          "issue"
+          "issue",
+          "mcp:system"
         ],
         "description": "Active stops on a thread with per-kind resolution actions (T14)",
         "operationId": "GetNeedsYouPanel",
@@ -2185,165 +2819,10 @@
               }
             }
           }
-        }
-      }
-    },
-    "/v1/threads/{threadId}/issues": {
-      "get": {
-        "tags": [
-          "issue"
-        ],
-        "description": "Issues of one thread grouped by status + auto-archive note (T11)",
-        "operationId": "GetSessionIssues",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "threadId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Issues of one thread grouped by status + auto-archive note (T11)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "statsLine": {
-                      "type": "object",
-                      "properties": {
-                        "awaitingInput": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "working": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "completed": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        }
-                      },
-                      "required": [
-                        "awaitingInput",
-                        "working",
-                        "completed"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "groups": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "status": {
-                            "$ref": "#/components/schemas/IssueStatus"
-                          },
-                          "items": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "issueId": {
-                                  "type": "string",
-                                  "format": "uuid",
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                                },
-                                "key": {
-                                  "type": "string"
-                                },
-                                "title": {
-                                  "type": "string"
-                                },
-                                "status": {
-                                  "$ref": "#/components/schemas/IssueStatus"
-                                },
-                                "meta": {
-                                  "type": "string"
-                                },
-                                "archived": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "required": [
-                                "issueId",
-                                "key",
-                                "title",
-                                "status",
-                                "archived"
-                              ],
-                              "additionalProperties": false
-                            }
-                          }
-                        },
-                        "required": [
-                          "status",
-                          "items"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "archived": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "issueId": {
-                            "type": "string",
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                          },
-                          "key": {
-                            "type": "string"
-                          },
-                          "title": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "$ref": "#/components/schemas/IssueStatus"
-                          },
-                          "meta": {
-                            "type": "string"
-                          },
-                          "archived": {
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "issueId",
-                          "key",
-                          "title",
-                          "status",
-                          "archived"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "autoArchiveNote": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "statsLine",
-                    "groups",
-                    "archived",
-                    "autoArchiveNote"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/stops/{stopId}/resolve": {
@@ -2591,7 +3070,8 @@
     "/v1/threads/{threadId}/artifacts": {
       "get": {
         "tags": [
-          "artifact"
+          "artifact",
+          "mcp:system"
         ],
         "description": "The non-code outputs of a thread (T13)",
         "operationId": "ListArtifacts",
@@ -2661,11 +3141,15 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       },
       "post": {
         "tags": [
-          "artifact"
+          "artifact",
+          "mcp:issue-handling"
         ],
         "description": "Record a non-code agent output (image / file / link) (C30)",
         "operationId": "RecordArtifact",
@@ -2764,13 +3248,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
       }
     },
     "/v1/ui/attach-thread-wizard": {
       "get": {
         "tags": [
-          "ui"
+          "ui",
+          "mcp:system"
         ],
         "description": "Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)",
         "operationId": "GetAttachThreadWizard",
@@ -2947,13 +3435,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/ui/home": {
       "get": {
         "tags": [
-          "ui"
+          "ui",
+          "mcp:system"
         ],
         "description": "Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)",
         "operationId": "GetHomeDashboard",
@@ -3125,13 +3617,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/ui/account": {
       "get": {
         "tags": [
-          "ui"
+          "ui",
+          "mcp:system"
         ],
         "description": "Account settings read",
         "operationId": "GetMyAccount",
@@ -3229,13 +3725,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/ui/settings": {
       "get": {
         "tags": [
-          "ui"
+          "ui",
+          "mcp:system"
         ],
         "description": "Settings — providers, stop criteria, general, app version (T08)",
         "operationId": "GetSettings",
@@ -3337,13 +3837,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/ui/setup-checklist": {
       "get": {
         "tags": [
-          "ui"
+          "ui",
+          "mcp:system"
         ],
         "description": "Onboarding checklist — channel/workspace/thread done flags (cross-context)",
         "operationId": "GetSetupChecklist",
@@ -3376,13 +3880,17 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/ui/user-info": {
       "get": {
         "tags": [
-          "ui"
+          "ui",
+          "mcp:system"
         ],
         "description": "Header context — user identity, all member owners (role), active owner, and profile alerts",
         "operationId": "GetUserInfo",
@@ -3476,7 +3984,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
       }
     },
     "/v1/ui/events": {
@@ -6495,13 +7006,17 @@
                             },
                             "kind": {
                               "$ref": "#/components/schemas/StopKind"
+                            },
+                            "detail": {
+                              "type": "string"
                             }
                           },
                           "required": [
                             "stopId",
                             "issueId",
                             "threadId",
-                            "kind"
+                            "kind",
+                            "detail"
                           ],
                           "additionalProperties": false
                         }
@@ -6762,6 +7277,10 @@
       "ApiErrors": {
         "type": "string",
         "enum": [
+          "AGENT_RUN_SCOPE_MISMATCH",
+          "AGENT_RUN_TOKEN_INVALID",
+          "AGENT_TOOLS_UNSUPPORTED",
+          "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
           "CANNOT_CONVERT_INPUT",
           "CHANNEL_NOT_CONNECTED",
           "CLARIFICATION_ALREADY_PENDING",
@@ -6858,6 +7377,16 @@
           "NOT_INSTALLED"
         ]
       },
+      "StopKind": {
+        "type": "string",
+        "enum": [
+          "SERVER_ERROR",
+          "BLOCKED_BY_CLASSIFICATION",
+          "HUMAN_REQUESTED",
+          "APPROVAL_NEEDED",
+          "AUTH_REQUIRED"
+        ]
+      },
       "Stream": {
         "type": "string",
         "enum": [
@@ -6878,6 +7407,14 @@
           "TASK",
           "TODO_WRITE",
           "UNKNOWN"
+        ]
+      },
+      "IssueStatus": {
+        "type": "string",
+        "enum": [
+          "NEEDS_INPUT",
+          "WORKING",
+          "COMPLETED"
         ]
       },
       "WorkspaceBadge": {
@@ -6920,16 +7457,6 @@
           "PAUSED"
         ]
       },
-      "StopKind": {
-        "type": "string",
-        "enum": [
-          "SERVER_ERROR",
-          "BLOCKED_BY_CLASSIFICATION",
-          "HUMAN_REQUESTED",
-          "APPROVAL_NEEDED",
-          "AUTH_REQUIRED"
-        ]
-      },
       "TranscriptKind": {
         "type": "string",
         "enum": [
@@ -6954,14 +7481,6 @@
         "enum": [
           "STEER",
           "DIRECT"
-        ]
-      },
-      "IssueStatus": {
-        "type": "string",
-        "enum": [
-          "NEEDS_INPUT",
-          "WORKING",
-          "COMPLETED"
         ]
       },
       "StopResolution": {
@@ -7136,6 +7655,10 @@
     }
   },
   "x-error-codes": [
+    "AGENT_RUN_SCOPE_MISMATCH",
+    "AGENT_RUN_TOKEN_INVALID",
+    "AGENT_TOOLS_UNSUPPORTED",
+    "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
     "CANNOT_CONVERT_INPUT",
     "CHANNEL_NOT_CONNECTED",
     "CLARIFICATION_ALREADY_PENDING",

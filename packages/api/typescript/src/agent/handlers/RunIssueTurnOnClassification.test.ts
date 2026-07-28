@@ -51,7 +51,7 @@ describe('RunIssueTurnOnClassification (saga closer)', () => {
 			payload: { threadId, entryId, method: issueId ? ClassificationMethod.CONTEXT_MATCH : ClassificationMethod.NEW_ISSUE, issueId },
 		})
 
-	it('a NEW_ISSUE classification mints an issue (slug key) and runs the session → opened + completed facts', async () => {
+	it('a NEW_ISSUE classification mints an issue (slug key) and runs the session → the opened fact', async () => {
 		const { threadId, entryId } = await seedClassifiedEntry()
 
 		await testBed.resolve(RunIssueTurnOnClassification).handle(classified(threadId, entryId) as never)
@@ -61,7 +61,9 @@ describe('RunIssueTurnOnClassification (saga closer)', () => {
 		expect(started[0]?.payload.threadId).toBe(threadId)
 		// The minted key is a thread-unique slug.
 		expect(started[0]?.payload.key).toMatch(/^[a-z0-9-]+$/)
-		expect(await testBed.resolve(DomainEventRepository).findByType(AgentRunCompletedEvent)).toHaveLength(1)
+		// NO completion fact: the injected `IssueWorkAgent` declares a tool scope, so the conclusion is
+		// the declaration use case's to mint (§4.3 rule 7). The saga closer's job is to OPEN and RUN.
+		expect(await testBed.resolve(DomainEventRepository).findByType(AgentRunCompletedEvent)).toHaveLength(0)
 	})
 
 	it('drops (no-op) a fact whose thread cannot be resolved', async () => {

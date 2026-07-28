@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { z, type ZodType } from 'zod'
 import { OpenAPIV3 } from 'openapi-types'
 import { AllErrors, GlobalErrorMapper } from './GlobalErrorMapper'
+import { mcpScopesFor } from './McpScopeRegistry'
 import { API_PUBLIC } from './paths'
 
 const SPECIFICATION_OUTPUT_DIR = join(API_PUBLIC, 'docs')
@@ -819,20 +820,38 @@ export class OpenAPI {
 	}
 
 	private buildOperation(controller: Controller, router: Router, method: string): OpenAPIV3.OperationObject {
+		const operationId = this.buildOperationId(controller, method)
+		// THE MCP CROSSING (GOAL-agent-abstraction Fase 6). The declaration itself lives in the api
+		// package (`src/agent/mcp/manifest.ts`, typed by controller CLASS); it reaches here through the
+		// same load-time registry seam `x-error-codes` uses, because `core` must not import from `src`.
+		//
+		// Empty for every operation nobody declared — THE DEFAULT IS NOT EXPOSED, and that is the whole
+		// security property: an endpoint born tomorrow is not a model-callable tool tomorrow.
+		const mcpScopes = mcpScopesFor(operationId)
 		return {
-			tags: this.buildTags(controller, router),
+			tags: this.buildTags(router, mcpScopes),
 			description: controller.description,
-			operationId: this.buildOperationId(controller, method),
+			operationId,
 			requestBody: this.buildRequestBody(controller),
 			parameters: this.buildRequestParams(controller),
 			responses: this.buildOpenAPIControllerResponse(controller),
+			// The DECLARATION OF RECORD: greppable, human-readable, survives into the committed spec.
+			// Emitted only when non-empty so the 34 untouched operations stay byte-identical.
+			...(mcpScopes.length > 0 && { 'x-mcp-scope': mcpScopes }),
 		}
 	}
 
-	private buildTags(_controller: Controller, router: Router): string[] {
+	private buildTags(router: Router, mcpScopes: readonly string[]): string[] {
 		// The tag is the CONTEXT NAME from the manifest — never the mount prefix (which is
 		// uniformly empty; the old prefix-derived tag left every root-mounted operation with '').
-		return [router.name]
+		//
+		// Plus, since Fase 6, one SYNTHETIC tag per MCP scope. This is not a stylistic duplicate of
+		// `x-mcp-scope` above: `@kubb/plugin-oas` filters operations by `tag | operationId | path |
+		// method | contentType` and by NOTHING else — no branch reads a vendor extension, none invokes a
+		// predicate, and an unknown filter `type` falls through to `return false` SILENTLY (measured: an
+		// `x-mcp-scope` filter emitted zero tools with a green build). The tag is the ONLY axis the tool
+		// generator can see, and the `mcp:` prefix keeps it un-collidable with a context name.
+		return [router.name, ...mcpScopes.map(scope => `mcp:${scope}`)]
 	}
 
 	private buildOperationId(controller: Controller, method: string): string {

@@ -13,7 +13,7 @@ import { StopKind } from '@codedm/contracts-typescript/wire/enums'
  * |-----------|-----------------------------------------------------------------|-----------------------------------------------------------|------------|
  * | TRANSPORT | AUTH_REQUIRED, SERVER_ERROR                                     | the RUNNER, observing the process/stream (CLI asked for   | INFERRED   |
  * |           |                                                                 | `/login`, the process died, the stream broke)             |            |
- * | DOMAIN    | APPROVAL_NEEDED, HUMAN_REQUESTED, BLOCKED_BY_CLASSIFICATION     | ONLY `codedm__raise_stop` / `codedm__ask_operator` (§4.4) | DECLARED   |
+ * | DOMAIN    | APPROVAL_NEEDED, HUMAN_REQUESTED, BLOCKED_BY_CLASSIFICATION     | ONLY `RaiseStop` / `AskOperator` (§4.4) | DECLARED   |
  *
  * `AgentRunResult.stop` is typed with THIS type, not with `StopKind`, so the type system states the
  * consequence the goal spells out: a run with NO tool scope can still end in `AUTH_REQUIRED` — a

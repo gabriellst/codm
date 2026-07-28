@@ -1,0 +1,25 @@
+import fetch from "@codedm/client-typescript/typescript/mcp-system/_http";
+import type { GetIssuesOverviewQueryResponse, GetIssuesOverviewQueryParams } from "../types/GetIssuesOverview.ts";
+import type { ResponseErrorConfig } from "@codedm/client-typescript/typescript/mcp-system/_http";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+
+/**
+ * @description All issues across every thread, grouped by status (T04)
+ * {@link /v1/issues}
+ */
+export async function getIssuesOverviewHandler({ params }: { params?: GetIssuesOverviewQueryParams } = {}): Promise<Promise<CallToolResult>> {
+
+
+
+
+  const res = await fetch<GetIssuesOverviewQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/issues`, params })
+  return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(res.data)
+                }
+              ],
+              structuredContent: { data: res.data }
+             }
+}

@@ -59,12 +59,26 @@ export class MaterializeIssueFromExecution extends EventHandler<
 
 		if (event instanceof IssueStopRaisedEvent) {
 			try {
+				// `detail` is the agent's OWN words, additive on the frozen event since Fase 6 (§4.4 item
+				// (i)) — before it existed this was hardcoded `''` and every Needs-you card rendered the
+				// generic `STOP_TITLES` line with no body.
+				//
+				// HUMAN_REQUESTED is the one kind whose title is the text: it is what `AskOperator` raises,
+				// and the operator needs to read the QUESTION on the card, not "A participant asked for a
+				// human". The other four keep the generic title, which describes a condition rather than a
+				// sentence somebody wrote. Empty `detail` falls back so a producer that carries no text
+				// still renders something.
+				const detail = event.payload.detail
+				const title =
+					event.payload.kind === StopKind.HUMAN_REQUESTED && detail.length > 0
+						? detail
+						: (STOP_TITLES[event.payload.kind] ?? 'The agent needs you')
 				await this.raiseStop.execute({
 					stopId: event.payload.stopId || Id.value(),
 					issueId: event.payload.issueId,
 					kind: event.payload.kind,
-					title: STOP_TITLES[event.payload.kind] ?? 'The agent needs you',
-					detail: '',
+					title,
+					detail,
 				})
 			} catch (error) {
 				// ONLY the sanctioned no-op outcomes are swallowed (the stop is simply not recorded).

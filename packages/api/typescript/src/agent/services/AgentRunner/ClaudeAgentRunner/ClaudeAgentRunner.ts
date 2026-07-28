@@ -15,6 +15,11 @@ import type {
 import { StreamJsonCodec, StreamJsonToTurnFactAccumulator, type TerminalResultRecord } from '../../StreamJsonCodec'
 import { AgentRunner } from '../AgentRunner'
 import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } from './AgentProcess'
+// The server key is single-sourced in `mcp/wire.ts` — a LEAF module — because the runner, the MCP
+// manifest and the turn-fact accumulator all need the same spelling and routing them through one
+// another would drag a subprocess-spawning module into a pure state machine.
+import { MCP_SERVER_KEY } from '../../../mcp/wire'
+import { RunTokenService } from '../../RunTokenService'
 
 /** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
 const DEFAULT_INACTIVITY_MS = 180_000
@@ -39,8 +44,6 @@ const CLAUDE_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
 	[AgentModelId.HAIKU]: 'haiku',
 }
 
-/** The server key our tools are namespaced under inside the CLI's MCP config. */
-const MCP_SERVER_KEY = 'codedm'
 
 /** Everything `buildArgs` needs to produce a full argv. One record, no ambient state. */
 export interface ClaudeBuildArgsOptions {
@@ -151,6 +154,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 	constructor(
 		private readonly logging: LoggingService,
+		private readonly runTokens: RunTokenService,
 		options: ClaudeAgentRunnerOptions = {},
 	) {
 		super()
@@ -351,6 +355,14 @@ export class ClaudeAgentRunner extends AgentRunner {
 			request.signal?.removeEventListener('abort', onAbort)
 			this.live.delete(proc)
 			proc.kill()
+			// REVOKE — the runner is the ONLY caller (§4.4), because it is the only layer that knows the
+			// process died, and it knows for every ending: clean finish, transport failure, watchdog and
+			// cancellation all pass through this `finally`. A late tool call from a dead run then gets 401
+			// and writes nothing, which is exactly what §4.11 promises about cancellation.
+			//
+			// The token stays OPAQUE here. The runner revokes a string it was handed; it never learns —
+			// and must never learn — whose issue it belonged to (AC-6.12).
+			if (request.mcp) this.runTokens.revoke(request.mcp.token)
 		}
 	}
 
@@ -359,7 +371,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 *
 	 * Only TRANSPORT stops can be raised here (`AUTH_REQUIRED`, `SERVER_ERROR`); the type says so, and
 	 * that is the point. A DOMAIN stop is unrepresentable from this side because it can only come from
-	 * a `codedm__raise_stop` call, which is Fase 6.
+	 * a `RaiseStop` / `AskOperator` tool call, which lands through the MCP router and not through here.
 	 */
 	private buildResult<OutputSchema extends ZodType | undefined>(
 		request: AgentRunRequest<OutputSchema>,

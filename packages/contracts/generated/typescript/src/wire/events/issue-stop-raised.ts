@@ -9,6 +9,7 @@ export const IssueStopRaisedEventSchema = z.integrationEvent('integration.issue.
 	issueId: z.string(),
 	threadId: z.string(),
 	kind: z.enum(StopKind),
+	detail: z.string(),
 })
 
 export class IssueStopRaisedEvent extends BaseIntegrationEvent<typeof IssueStopRaisedEventSchema> {

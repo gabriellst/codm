@@ -1,33 +1,45 @@
 /**
- * The tools the CodeDM MCP server exposes to an external agent CLI (GOAL-agent-abstraction §4.4).
- * FOUR, and the value IS the wire name the model calls — which is why the members carry the
- * `codedm__` prefix literally instead of a pretty name plus a mapping table.
+ * The wire name of a tool the CodeDM MCP server exposes.
  *
- * The prefix is LOad-BEARING, not cosmetic. Two separate mechanisms read it:
- *  1. `--allowedTools` scope: the runner passes these literals straight through from the agent's
- *     declared `tools` (§4.2) — a mapping layer would be one more place for a typo to become a
- *     silently-unavailable tool.
- *  2. ANTI-DOUBLE-PUBLISH (§4.3, rule 3): the turn-fact accumulator sees `tool_use`/`tool_result`
- *     frames for OUR tools too. On a `codedm__`-prefixed frame it emits the frame (observability)
- *     and NEVER a fact — the fact was already persisted by the use case that served the call. Without
- *     that guard one `complete_issue` publishes `integration.issue.completed` twice.
+ * ─────────────────────────────────────────────────────────────────────────────────────────────────
+ * THIS WAS A UNION OF FOUR HAND-WRITTEN LITERALS AND THEY WERE UNREACHABLE. Fase 1 froze four
+ * `codedm`-prefixed spellings — one per declaration — and documented them as *"the value IS the wire
+ * name the model calls"*. (The literals themselves are deliberately not repeated here: AC-6.17(a)
+ * keeps them out of `src` so nobody copies a dead name into a new call site. The one surviving
+ * occurrence is the regression assertion in the accumulator's test, which AC-6.17(d) requires.)
+ * Under GENERATED tools that promise is
+ * unattainable: `@kubb/plugin-mcp`'s `serverGenerator` registers `name: operation.getOperationId()`
+ * and the name never passes through `resolveName` or `transformers` (PROVEN — with a
+ * `transformers.name` the emitted FILES were renamed while the registration stayed
+ * `server.registerTool("RecordArtifact", …)`). Keeping the literals would have left `--allowedTools`
+ * naming tools that do not exist and the model holding nothing — a SILENT failure, which is the exact
+ * class of defect this phase exists to eliminate.
  *
- * Ownership is NOT uniform, and that is deliberate (§4.4 item (ii)): a tool is a thin controller of
- * the bounded context that OWNS the write it causes. `complete_issue` / `raise_stop` / `ask_operator`
- * are execution facts → this context. `record_artifact` is a write to the artifact catalogue → its
- * handler lives in the artifact context, dispatching the `RecordArtifact` use case that already exists.
- * The NAME is single-sourced here regardless, because `--allowedTools` is one flat list.
+ * So the name is now DERIVED. There is no list here to keep in step with anything: a tool name is
+ * whatever the emitter derived from a controller class in `mcp/manifest.ts`, and the manifest is the
+ * single place a scope is declared.
  *
- * Context-private: the MCP router is deliberately mounted OUTSIDE the emitted OpenAPI (§4.4), so the
- * wire-identity of these tools is guaranteed by this enum plus the Zod input schemas in
- * `schemas/AgentToolSchemas.ts` — that pair IS the contract, and AC-1.6 is what checks it.
+ * THE AC-1.6 INVARIANT DID NOT DIE — IT CHANGED CARRIER, and that transfer is the design amendment's
+ * conscious regression, recorded here because this is where AC-1.6 is read. It used to be "no tool
+ * schema has an identity field", which made declaring against the WRONG issue INEXPRESSIBLE. A tool
+ * generated from a controller inherits that controller's `issueId`/`threadId`, so the invariant is now
+ * "DIVERGENT IDENTITY IS REJECTED" — implemented in `mcp/identity.ts`, enforced per call by
+ * `mcp/router.ts`, and measured by the cross-issue attempt test without which this phase does not
+ * close.
+ * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
-export enum AgentToolName {
-	COMPLETE_ISSUE = 'codedm__complete_issue',
-	RAISE_STOP = 'codedm__raise_stop',
-	RECORD_ARTIFACT = 'codedm__record_artifact',
-	ASK_OPERATOR = 'codedm__ask_operator',
-}
 
-/** The prefix every CodeDM-declared tool carries. The accumulator's anti-double-publish guard keys on it. */
-export const CODEDM_TOOL_PREFIX = 'codedm__' as const
+/**
+ * A tool's WIRE name — the spelling an MCP client uses when calling, e.g.
+ * `mcp__<server key>__TransitionIssueStatus`. Built in exactly one place, `mcp/wire.ts#wireToolName`,
+ * from `MCP_SERVER_KEY` and the derived operationId.
+ *
+ * `string` rather than a closed union ON PURPOSE: the set is derived from the manifest at emit time,
+ * so pinning it here would be a SECOND declaration of a value-set that already has an owner — stale
+ * the day a controller joins a scope, and stale silently.
+ *
+ * The alias survives (rather than every signature saying `string`) because it carries meaning:
+ * `Agent.tools` and `AgentMcpInvocation.allowedTools` hold WIRE names, not operationIds, and the two
+ * differ by the `mcp__<server key>__` prefix the CLIENT adds.
+ */
+export type AgentToolName = string

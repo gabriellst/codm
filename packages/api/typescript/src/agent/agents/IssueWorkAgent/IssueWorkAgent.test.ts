@@ -6,6 +6,10 @@ import { AgentName, AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkAgent } from './IssueWorkAgent'
+// The real token service, not a double: it is a Map with a clock, so a stub would only be a second
+// implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
+import { InMemoryRunTokenService } from '../../mcp/RunTokenService'
+import { TOOLS_IN_SCOPE, MCP_SCOPES } from '../../mcp/manifest'
 
 /**
  * The BASE's contract, exercised through the agent that has no `outputSchema` (§4.5/AC-5.8).
@@ -45,7 +49,7 @@ const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[0]> = {}): P
 
 const build = () => {
 	const runner = new CapturingRunner()
-	return { runner, agent: new IssueWorkAgent(runner, new IssueWorkPromptBuilder()) }
+	return { runner, agent: new IssueWorkAgent(runner, new InMemoryRunTokenService(), new IssueWorkPromptBuilder()) }
 }
 
 describe('IssueWorkAgent (and the Agent template method under it)', () => {
@@ -75,15 +79,68 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		expect(request?.systemPrompt).toContain('coupon-focus')
 	})
 
-	it('declares NOTHING — empty tool scope means no `mcp` on the request at all (§4.3 rule 7)', async () => {
+	it('DECLARES the issue-handling scope, derived from the manifest and never typed by hand (AC-6.5)', async () => {
 		const { runner, agent } = build()
 
 		for await (const _ of agent.run(input())) {
 			// drain
 		}
 
-		expect(agent.tools).toEqual([])
-		expect(runner.requests[0]?.mcp).toBeUndefined()
+		// Compared against the DERIVED constant, never against a literal list. A literal here would be
+		// exactly the second source of truth this phase exists to kill — and the falsifier is cheap:
+		// add a seventh entry to `MCP_SCOPES['issue-handling']` and this assertion follows with no edit.
+		expect(agent.tools).toEqual(TOOLS_IN_SCOPE['issue-handling'])
+		expect(agent.tools).toHaveLength(MCP_SCOPES['issue-handling'].length)
+		expect(runner.requests[0]?.mcp?.allowedTools).toEqual(TOOLS_IN_SCOPE['issue-handling'])
+	})
+
+	it('carries NO operation of the `system` scope — owner/* and workspace/* stay out of reach (AC-6.5(c))', async () => {
+		const { runner, agent } = build()
+
+		for await (const _ of agent.run(input())) {
+			// drain
+		}
+
+		// The agent is driven by the text of an inbound message written by someone who is not the
+		// operator. `system` carries account administration; a single overlapping entry would put it one
+		// prompt injection away from a stranger.
+		const declared = new Set(runner.requests[0]?.mcp?.allowedTools ?? [])
+		for (const systemTool of TOOLS_IN_SCOPE.system) expect(declared.has(systemTool)).toBe(false)
+	})
+
+	it('the BASE mints the run token and points the CLI at this scope endpoint — the subclass sets no `mcp`', async () => {
+		const runner = new CapturingRunner()
+		const tokens = new InMemoryRunTokenService()
+		const agent = new IssueWorkAgent(runner, tokens, new IssueWorkPromptBuilder())
+
+		for await (const _ of agent.run(input())) {
+			// drain
+		}
+
+		const mcp = runner.requests[0]?.mcp
+		expect(mcp?.transport).toBe('http')
+		expect(mcp?.endpoint).toContain('/mcp/issue-handling')
+		// The token is OPAQUE on the request and resolves to the ENVELOPE's identity — the seam carries
+		// no `ownerId`/`issueId`/`threadId` of its own, which is the invariant AC-1.11 and AC-6.12 pin.
+		expect(tokens.verify(mcp?.token ?? '')).toMatchObject({
+			ownerId: '00000000-0000-4000-8000-0000000000aa',
+			issueId: '00000000-0000-4000-8000-0000000000cc',
+			threadId: '00000000-0000-4000-8000-0000000000bb',
+			agentName: AgentName.ISSUE_WORK,
+		})
+	})
+
+	it('an agent with a tool scope but NO issueId fails NAMED rather than minting an unconfined token', async () => {
+		const { agent } = build()
+		// `issueId` is optional on the envelope because the CLASSIFIER runs before an issue exists. An
+		// agent that declares tools must never inherit that latitude: a token with nothing to be confined
+		// to would give the identity check nothing to reject against.
+		const drain = async () => {
+			for await (const _ of agent.run(input({ issueId: undefined }))) {
+				// drain
+			}
+		}
+		await expect(drain()).rejects.toThrow(/issueId/)
 	})
 
 	it('has NO structured output — the consumer drains the stream (`outputSchema` absent)', async () => {

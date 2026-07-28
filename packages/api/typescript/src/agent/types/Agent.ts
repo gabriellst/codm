@@ -1,7 +1,22 @@
 import type Z from 'zod'
 import type { ZodType } from 'zod'
+import { BaseError, Config } from '@codedm/core-typescript'
 import type { AgentName, AgentToolName } from '../enums'
 import type { AgentRunner } from '../services/AgentRunner'
+import type { RunTokenService } from '../services/RunTokenService'
+import type { AgentMcpInvocation } from './AgentMcpInvocation'
+import type { ProviderCapabilities } from './ProviderCapabilities'
+import type { McpScope } from '../mcp/manifest'
+import { MCP_ROUTE_PREFIX } from '../mcp/route'
+import type { AgentApplicationErrors } from '../errors'
+
+/**
+ * How long a minted run token stays valid. The RUN WINDOW plus grace — expiry is a backstop, and
+ * `revoke` at termination is the primary invalidation (§4.4). Generous rather than tight on purpose: a
+ * long agent turn that outlived its own credential would fail at the worst possible moment, mid-work,
+ * with an error the model cannot act on.
+ */
+const RUN_TOKEN_TTL_MS = 6 * 60 * 60 * 1000
 import type { AgentInputEnvelope, AgentInputSchemaConstraint } from './AgentInput'
 import type { AgentRunRequest } from './AgentRunRequest'
 import type { AgentRuntimeEvent } from './AgentRuntimeEvent'
@@ -57,12 +72,26 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	/** The tool scope of this agent. Empty = this run declares nothing and carries no `mcp` (§4.3 rule 7). */
 	readonly tools: readonly AgentToolName[] = []
 
+	/**
+	 * WHICH declared scope this agent's `tools` came from — the MCP endpoint it is pointed at.
+	 *
+	 * Undefined means NO tools, and the two must agree: `tools` is always the derived expansion
+	 * `TOOLS_IN_SCOPE[mcpScope]`, never a hand-written list (AC-6.5's falsifier adds a seventh entry to
+	 * the manifest and requires the argv to change with no edit to a runner or a test). Keeping the
+	 * scope NAME rather than only the expansion is what lets the base build the endpoint URL without a
+	 * second mapping table.
+	 */
+	readonly mcpScope?: McpScope
+
 	/** Phantom — never assigned. See the class docstring. */
 	readonly input!: Z.output<InputSchema> & AgentInputEnvelope
 	/** Phantom — never assigned. `never` for an agent with no `outputSchema`, which makes `collect()` unusable there. */
 	readonly output!: OutputSchema extends ZodType ? Z.output<OutputSchema> : never
 
-	constructor(protected readonly runner: AgentRunner) {}
+	constructor(
+		protected readonly runner: AgentRunner,
+		protected readonly runTokens: RunTokenService,
+	) {}
 
 	/**
 	 * The ONE entry point, and it is CONCRETE. DO NOT OVERRIDE — see the class docstring.
@@ -72,7 +101,63 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * `buildRequest`.
 	 */
 	async *run(input: this['input']): AsyncIterable<AgentRuntimeEvent> {
-		yield* this.runner.run({ ...this.buildRequest(input), agentName: (this.constructor as typeof Agent).NAME })
+		const request = { ...this.buildRequest(input), agentName: (this.constructor as typeof Agent).NAME }
+		yield* this.runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request) }) })
+	}
+
+	/**
+	 * Build the MCP invocation for this run — MINTING the run token in the process.
+	 *
+	 * This is the ONLY `.mint(` call site in the codebase, and AC-6.12 greps for exactly that. The
+	 * reason is structural rather than stylistic: this class is the only layer holding BOTH the input
+	 * envelope (`ownerId`/`issueId`/`threadId`, §4.6) and the request being assembled. A runner that
+	 * minted would have to be handed the identity the seam exists to keep out of it; a subclass that
+	 * minted would be a SECOND place a credential is created.
+	 *
+	 * ### `issueId` is NARROWED HERE — the narrowing §4.6 deferred to this phase
+	 * The envelope's `issueId` is OPTIONAL because `ClassifyIssueAgent` runs BEFORE an issue exists: the
+	 * id is its OUTPUT, never its input. That is sound precisely because a classifier declares an EMPTY
+	 * scope and therefore never reaches this method. An agent that DOES declare a scope always runs
+	 * against a resolved issue, so an absent id here is a broken invariant, not a missing optional — and
+	 * it fails loudly rather than minting a token confined to nothing, which would hand a model a
+	 * credential the identity check cannot constrain.
+	 */
+	private buildMcpInvocation(input: this['input'], request: { caps?: ProviderCapabilities }): AgentMcpInvocation {
+		// A CLI whose probe says it cannot take an MCP config cannot serve an agent that REQUIRES tools.
+		// NAMED failure, never a silent drop to the inferred path (§4.7): degrading here would look
+		// exactly like a healthy run that simply chose to declare nothing, which is the one distinction
+		// AC-6.4 and AC-6.7 exist to preserve. Absent `caps` stays permissive by the same rule the argv
+		// builder uses — the probe did not run, so nothing was ruled out.
+		if (request.caps && request.caps.mcpConfig === false) {
+			throw new BaseError<AgentApplicationErrors>(
+				'AGENT_TOOLS_UNSUPPORTED',
+				`agent ${(this.constructor as typeof Agent).NAME} requires the '${this.mcpScope}' tool scope, but this CLI build cannot take an MCP config`,
+			)
+		}
+		if (!input.issueId) {
+			throw new BaseError<AgentApplicationErrors>(
+				'AGENT_TOOLS_UNSUPPORTED',
+				`agent ${(this.constructor as typeof Agent).NAME} declares a tool scope but received no issueId — a run token must be confined to an issue`,
+			)
+		}
+
+		const token = this.runTokens.mint({
+			ownerId: input.ownerId,
+			issueId: input.issueId,
+			threadId: input.threadId,
+			agentName: (this.constructor as typeof Agent).NAME,
+			expiresAt: new Date(Date.now() + RUN_TOKEN_TTL_MS),
+		})
+
+		// HTTP is the DECIDED default (§4.4): the daemon is already an HTTP server, so the MCP door costs
+		// no extra process and no extra port. The stdio fallback exists in the contract and is a
+		// BUILD-LOG decision if a CLI turns out not to speak HTTP MCP — explicitly not a founder call.
+		return {
+			transport: 'http',
+			endpoint: `http://127.0.0.1:${Config.env.API_PORT}/${Config.version}${MCP_ROUTE_PREFIX}/${this.mcpScope}`,
+			token,
+			allowedTools: this.tools,
+		}
 	}
 
 	/** The ONLY point of variation per agent: input → request, WITHOUT `mcp` and WITHOUT identity. */

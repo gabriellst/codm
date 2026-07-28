@@ -902,6 +902,7 @@ type IssueStopRaisedEvent struct {
 	IssueID string `json:"issueId"`
 	ThreadID string `json:"threadId"`
 	Kind StopKind `json:"kind"`
+	Detail string `json:"detail"`
 }
 
 func (e IssueStopRaisedEvent) EventName() string { return IssueStopRaisedEventName }
@@ -912,6 +913,7 @@ type IssueStopRaisedPayload struct {
 	IssueID string `json:"issueId" validate:"required"`
 	ThreadID string `json:"threadId" validate:"required"`
 	Kind StopKind `json:"kind" validate:"required"`
+	Detail string `json:"detail" validate:"required"`
 }
 
 // IssueStopResolvedEventName is the wire discriminator for IssueStopResolvedEvent.

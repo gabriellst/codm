@@ -7,6 +7,9 @@ import { AgentRunOutcome, type TransportStopKind } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { ClassifyIssuePromptBuilder } from './prompt'
 import { ClassifyIssueAgent } from './ClassifyIssueAgent'
+// The real token service, not a double: it is a Map with a clock, so a stub would only be a second
+// implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
+import { InMemoryRunTokenService } from '../../mcp/RunTokenService'
 
 /**
  * `classify()` is the ONE public method this agent exposes (§4.5), and its whole body is
@@ -53,7 +56,7 @@ const input = (overrides: Partial<Parameters<ClassifyIssueAgent['classify']>[0]>
 
 const build = () => {
 	const runner = new StubbedRunner()
-	return { runner, agent: new ClassifyIssueAgent(runner, new ClassifyIssuePromptBuilder()) }
+	return { runner, agent: new ClassifyIssueAgent(runner, new InMemoryRunTokenService(), new ClassifyIssuePromptBuilder()) }
 }
 
 describe('ClassifyIssueAgent — classify() IS collect(), the base half IssueWorkAgent cannot reach', () => {

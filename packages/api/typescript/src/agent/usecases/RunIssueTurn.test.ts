@@ -100,10 +100,14 @@ describe('RunIssueTurn use case', () => {
 		expect(frames.length).toBeGreaterThan(0)
 		expect(frames.every(f => f.issueId === issueId)).toBe(true)
 
-		// FACTS — opened + reply + completed persisted; no stop.
+		// FACTS — opened + reply persisted. The COMPLETION is deliberately absent (AC-6.4(b)): the
+		// injected `IssueWorkAgent` declares a non-empty tool scope, so the ONLY producer of the
+		// completion fact is the declaration use case behind `TransitionIssueStatus`. Minting one here
+		// too would publish the frozen `integration.issue.completed` twice — the exact double-publish
+		// this phase's predicate exists to prevent, in the "declared AND also ended normally" case.
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunReplyDraftedEvent)).toHaveLength(1)
-		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(1)
+		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 
 		// TEARDOWN — the single-active claim is released.
@@ -121,7 +125,7 @@ describe('RunIssueTurn use case', () => {
 		expect(row?.agentSessionId).toBe('stub-session')
 	})
 
-	it('drives the seam with the workspace as cwd and ONE user message — no mcp, no outputSchema', async () => {
+	it('drives the seam with the workspace as cwd and ONE user message — with mcp, no outputSchema', async () => {
 		const runner = new CapturingRunner()
 		testBed.override(AgentRunner, runner)
 		const useCase = testBed.resolve(RunIssueTurn)
@@ -134,7 +138,12 @@ describe('RunIssueTurn use case', () => {
 		expect(request?.messages).toHaveLength(1)
 		expect(request?.messages[0]?.content).toBe('fix the coupon focus bug')
 		expect(request?.outputSchema).toBeUndefined()
-		expect(request?.mcp).toBeUndefined()
+		// `mcp` IS present now, and its presence is the same fact the completion predicate reads from the
+		// other side: `request.mcp` present ⟺ `agent.tools.length > 0` (§4.3 rule 7). The use case cannot
+		// see the request — it is assembled inside the agent — which is why the predicate is written on
+		// the tool scope and this assertion is the mirror that proves the two agree.
+		expect(request?.mcp?.transport).toBe('http')
+		expect(request?.mcp?.allowedTools.length).toBeGreaterThan(0)
 		// `binaryPath` is threaded from detection, never read from an ambient map (§4.7).
 		expect(request?.binaryPath).toBeDefined()
 	})
@@ -188,7 +197,12 @@ describe('RunIssueTurn use case', () => {
 		testBed.override(
 			ProviderDetector,
 			MockProviderDetector.with({
-				[ProviderKind.CODEX]: { name: ProviderKind.CODEX, status: ProviderStatus.DETECTED, binaryPath: '/usr/local/bin/codex', version: '1.0.0' },
+				[ProviderKind.CODEX]: {
+					name: ProviderKind.CODEX,
+					status: ProviderStatus.DETECTED,
+					binaryPath: '/usr/local/bin/codex',
+					version: '1.0.0',
+				},
 			}),
 		)
 		const useCase = testBed.resolve(RunIssueTurn)

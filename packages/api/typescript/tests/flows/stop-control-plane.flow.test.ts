@@ -47,12 +47,28 @@ describe('Flow (mock): stop raised → recorded → resolved → integration.iss
 		await testBed.resolve(MaterializeIssueFromExecution).handle(
 			new IssueStopRaisedEvent({
 				ownerId: OPERATOR_ID,
-				payload: { stopId, issueId: issue.id.value, threadId: issue.threadId, kind: StopKind.HUMAN_REQUESTED },
+				// `detail` is REQUIRED on the frozen event since Fase 6 (§4.4 item (i)) — it is the agent's own
+				// words, and it is what the Needs-you card renders. For HUMAN_REQUESTED it also becomes the
+				// card's TITLE, which is how an `AskOperator` question reaches the operator verbatim instead
+				// of the generic 'A participant asked for a human'.
+				payload: {
+					stopId,
+					issueId: issue.id.value,
+					threadId: issue.threadId,
+					kind: StopKind.HUMAN_REQUESTED,
+					detail: 'Should the refund be full or partial for orders older than 90 days?',
+				},
 			}) as never,
 		)
 
 		const stops = testBed.resolve(StopRepository)
-		expect(await stops.openByIssue(issue.id.value)).toHaveLength(1)
+		const open = await stops.openByIssue(issue.id.value)
+		expect(open).toHaveLength(1)
+		// THE TEXT SURVIVES END TO END (AC-6.10(b)/(d)). Before the additive `detail` field this was
+		// hardcoded `''` at the bridge and the card was born empty; for HUMAN_REQUESTED the question is
+		// also promoted to the title, so the operator reads the QUESTION, not a category name.
+		expect(open[0]?.detail).toBe('Should the refund be full or partial for orders older than 90 days?')
+		expect(open[0]?.title).toBe('Should the refund be full or partial for orders older than 90 days?')
 
 		// 2. The operator resolves it — REVIEW_AND_SEND is applicable to HUMAN_REQUESTED.
 		await testBed.resolve(ResolveStop).execute({ ownerId: OPERATOR_ID, stopId, resolution: StopResolution.REVIEW_AND_SEND })
@@ -81,7 +97,7 @@ describe('Flow (mock): stop raised → recorded → resolved → integration.iss
 		await testBed.resolve(MaterializeIssueFromExecution).handle(
 			new IssueStopRaisedEvent({
 				ownerId: OPERATOR_ID,
-				payload: { stopId: uuidv7(), issueId: issue.id.value, threadId: issue.threadId, kind: StopKind.HUMAN_REQUESTED },
+				payload: { stopId: uuidv7(), issueId: issue.id.value, threadId: issue.threadId, kind: StopKind.HUMAN_REQUESTED, detail: 'needs a human' },
 			}) as never,
 		)
 		await outbox.flush()

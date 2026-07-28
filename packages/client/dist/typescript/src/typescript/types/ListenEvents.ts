@@ -2617,6 +2617,10 @@ export type ListenEvents200 = ({
          * @type string
         */
         kind: StopKind;
+        /**
+         * @type string
+        */
+        detail: string;
     };
 } | {
     /**

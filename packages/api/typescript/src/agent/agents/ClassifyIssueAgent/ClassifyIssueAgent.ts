@@ -3,6 +3,7 @@ import { BaseError } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
 import type { ApplicationErrors } from '../../errors'
 import { AgentRunner } from '../../services/AgentRunner'
+import { RunTokenService } from '../../services/RunTokenService'
 import { Agent } from '../../types/Agent'
 import type { AgentRunRequest } from '../../types'
 import { ClassifyIssuePromptBuilder } from './prompt'
@@ -40,11 +41,16 @@ export class ClassifyIssueAgent extends Agent<typeof ClassifyIssueInputSchema, t
 	override readonly inputSchema = ClassifyIssueInputSchema
 	override readonly outputSchema = LlmDecisionSchema
 
+	// NO `mcpScope`, therefore no `tools` and no `mcp` on the request — the base never mints a token for
+	// this agent. Classifying is DECIDING, not acting: a classifier that could write would be able to
+	// act on a message it has not finished judging. It also runs BEFORE an issue exists (the issueId is
+	// its OUTPUT), so there is no issue a token could even be confined to.
 	constructor(
 		runner: AgentRunner,
+		runTokens: RunTokenService,
 		private readonly prompt: ClassifyIssuePromptBuilder,
 	) {
-		super(runner)
+		super(runner, runTokens)
 	}
 
 	/** The typed entry point. Delegates straight through to the base's drain helper, which delegates to `run()`. Zero new transport. */

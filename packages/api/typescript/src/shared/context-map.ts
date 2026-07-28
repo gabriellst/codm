@@ -1,6 +1,13 @@
 import type { ContextModule } from './contexts'
 
 /**
+ * Why the MCP manifest imports another context's controllers — written once and cited by both the
+ * declared edges and the named policy exceptions below, so the two can never drift apart.
+ */
+const NOTE_MCP_MANIFEST =
+	"The MCP manifest (agent/mcp/manifest.ts) names the CONTROLLER CLASSES this context exposes as MCP tools. It is a DECLARATION, not a call: nothing is constructed, nothing is invoked, no state crosses. The founder decision behind it is that a controller is an HTTP door and who consumes it is not its business, so the audience is declared in one reviewable screen instead of a flag scattered over 40 controllers — and it is TYPED by class rather than by operationId string so a rename follows and a deletion breaks the build. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case."
+
+/**
  * CONTEXT MAP — the DECLARED (intent-first) map of who may depend on whom, and the global policy of
  * which surfaces may cross a context boundary.
  *
@@ -25,6 +32,10 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 		},
 	},
 	agent: {
+		artifact: { note: NOTE_MCP_MANIFEST },
+		issue: { note: NOTE_MCP_MANIFEST },
+		ui: { note: NOTE_MCP_MANIFEST },
+		owner: { note: NOTE_MCP_MANIFEST },
 		thread: {
 			note: 'The severed-saga closer (RunIssueTurnOnClassification) resolves the run context — thread providers/workspaceId + the prompt from the transcript — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader), and IssueRouter takes its OpenIssueRef shape from the same reader (the ref is a THREAD concept and lives there).',
 		},
@@ -119,13 +130,38 @@ export const AMBIENT: Partial<Record<ContextModule, readonly string[] | '*'>> = 
  * exception is a conscious decision with a review trail, never a silent branch. Liveness-gated:
  * an entry whose file/import no longer exists fails the rail (no fossil permissions).
  */
-export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: string }[] = []
+export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: string }[] = [
+	// GOAL-agent-abstraction Fase 6, AC-6.11(e) — the LADDER, descended in order and stopped at the
+	// first rung that passed:
+	//   degrau 1 (compose from a BOOTSTRAP_FILE) — NOT APPLICABLE. The manifest is not a composition
+	//     root: it is a typed declaration the OPENAPI EMITTER reads at module load, and moving it into
+	//     `routers.ts` would put a security-relevant allowlist inside a file whose job is wiring, where
+	//     no reviewer looks for it.
+	//   degrau 2 (declared edge + NAMED per-file exception) — TAKEN. Four edges in CONTEXT_MAP plus the
+	//     six entries below, per-file and liveness-gated. Preferred over widening
+	//     CROSS_CONTEXT_POLICY.allowed with 'controllers', which would license EVERY context to import
+	//     any other's controllers — an architecture decision for the whole repo, made to solve one file.
+	//   degrau 3 (integration event) — NOT NEEDED, and under the generated-tools amendment almost
+	//     certainly never will be: there is no cross-context TOOL to register any more. The tool IS the
+	//     owning context's controller.
+	// No cycle is created: `artifact`, `issue`, `ui`, `owner` and `workspace` do not depend on `agent`
+	// except for the already-annotated `agent ↔ thread` partnership.
+	...(['artifact', 'issue', 'thread', 'ui', 'workspace', 'owner'] as const).map(context => ({
+		file: 'agent/mcp/manifest.ts',
+		imports: `${context}/controllers`,
+		why: NOTE_MCP_MANIFEST,
+	})),
+]
 
 /**
  * Cycles that are CONSCIOUS partnerships (DDD Partnership) rather than accidents. Any cycle in
  * CONTEXT_MAP not listed here fails the rail.
  */
 export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = [
+	{
+		between: ['agent', 'ui'],
+		why: "ASYMMETRIC BY NATURE, and only one half is a runtime dependency. ui → agent is real code calling real code: the BFF Settings/AttachWizard queries resolve provider availability through ProviderDetector. agent → ui is the MCP manifest NAMING ui's read controllers as `system`-scope tools — a DECLARATION evaluated once at module load, which constructs nothing and calls nothing. Breaking it would mean either moving the allowlist into a wiring file where no reviewer looks for it, or dropping the console's own read surface from the scope an external MCP client uses to navigate the system, which is the scope's entire purpose. Recorded rather than hidden: if the manifest ever starts INVOKING a ui controller, this annotation stops being true and the edge must be re-argued.",
+	},
 	{
 		between: ['agent', 'thread'],
 		why: 'Partnership across the demux→execute seam, renamed with the context in Fase 5 (GOAL-agent-abstraction §5.1) — the EDGE is unchanged, only the name on one side of it. BC4 Thread & Routing consumes the agent context’s routing services (IssueRouter, which drives ClassifyIssueAgent, plus ProviderDetector) to make the routing decision, while the agent context’s saga-closer consumes BC4’s thread/transcript read seams to run the turn that decision triggers. Two halves of one classify→run boundary; integration events (message.classified / issue.opened) carry the runtime hand-off, the read seams only resolve context.',

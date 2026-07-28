@@ -1,1 +1,5 @@
 export { RunIssueTurn, RunIssueTurnInputSchema, RunIssueTurnOutputSchema } from './RunIssueTurn'
+export { DeclareIssueOpen, DeclareIssueOpenInputSchema, DeclareIssueOpenOutputSchema } from './DeclareIssueOpen'
+export { DeclareIssueComplete, DeclareIssueCompleteInputSchema, DeclareIssueCompleteOutputSchema } from './DeclareIssueComplete'
+export { DeclareStop, DeclareStopInputSchema, DeclareStopOutputSchema } from './DeclareStop'
+export { AskOperator, AskOperatorInputSchema, AskOperatorOutputSchema } from './AskOperator'

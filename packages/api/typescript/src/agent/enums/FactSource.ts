@@ -1,7 +1,7 @@
 /**
  * How a domain fact about an agent run came to be known (GOAL-agent-abstraction §4.3, rule 6).
  *
- * - `DECLARED` — the agent CALLED one of our MCP tools (`codedm__complete_issue`, …). Typed payload,
+ * - `DECLARED` — the agent CALLED one of our MCP tools (`TransitionIssueStatus`, …). Typed payload,
  *   no parsing, no heuristic. This is the source of truth the whole MCP inversion exists to buy.
  * - `INFERRED` — nobody declared anything; the fact was derived from the terminal outcome of the run.
  *   Legitimate in exactly two situations: an agent running with an EMPTY tool scope (the degraded

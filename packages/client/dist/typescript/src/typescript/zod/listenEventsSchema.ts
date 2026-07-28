@@ -704,7 +704,8 @@ get "provider"(){
 "threadId": z.string(),
 get "kind"(){
                 return stopKindSchema
-              }
+              },
+"detail": z.string()
     })
     }), z.object({
     "ownerId": z.string(),

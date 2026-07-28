@@ -9,6 +9,12 @@ import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { AgentSessionRepository, DrizzleAgentSessionRepository, MockAgentSessionRepository } from './repositories'
 import { IssueRouter, DefaultIssueRouter } from './services/IssueRouter'
 import { ClassifyIssueAgent, ClassifyIssuePromptBuilder, IssueWorkAgent, IssueWorkPromptBuilder } from './agents'
+import { RunTokenService } from './services/RunTokenService'
+import { InMemoryRunTokenService } from './mcp/RunTokenService'
+// Side-effect: publishes the MCP manifest to the core registry the OpenAPI emitter reads. It has to
+// happen before `generateSpecification()`, which the composition root guarantees by importing every
+// context router first — the same ordering `x-error-codes` already relies on.
+import './mcp/register'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the `real`
@@ -104,4 +110,10 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// decision and assert what `ClassifyMessage` persists around it — reached via
 	// `testBed.override(IssueRouter, new MockIssueRouter())`, per-suite, rather than as the env default.
 	{ token: IssueRouter, mock: { useClass: DefaultIssueRouter }, real: { useClass: DefaultIssueRouter } },
+	// The run token — the SINGLE source of identity for every MCP tool call (§4.4). One in-memory
+	// instance per process in every env: a token's lifetime is one run inside one daemon, and a
+	// persisted one would outlive the process it authorizes. Bound in all three envs because the
+	// integration and mock suites exercise the router's 401/403 boundary directly, and a double would
+	// be a second implementation of the thing under test.
+	{ token: RunTokenService, mock: InMemoryRunTokenService, integration: InMemoryRunTokenService, real: InMemoryRunTokenService },
 ])

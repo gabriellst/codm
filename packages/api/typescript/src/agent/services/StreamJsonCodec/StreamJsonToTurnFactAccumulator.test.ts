@@ -15,6 +15,7 @@ import { AgentMessageRole, AgentToolCallStatus } from '../../enums'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from '../../events'
 import type { AgentFrame, AgentTurnUsage } from '../../types'
 import { StreamJsonToTurnFactAccumulator } from './StreamJsonToTurnFactAccumulator'
+import { wireToolName } from '../../mcp/wire'
 
 const OWNER = 'tenant'
 const ENTITY = 'issue-1'
@@ -161,36 +162,52 @@ describe('StreamJsonToTurnFactAccumulator — sub-agent SCOPE, keyed by parent_t
 	})
 })
 
-describe('StreamJsonToTurnFactAccumulator — ANTI-DOUBLE-PUBLISH (AC-2.4, §4.3 rule 3)', () => {
-	it('mints NO fact for a codedm__ tool call — the use case that served it already persisted one', () => {
+describe('StreamJsonToTurnFactAccumulator — ANTI-DOUBLE-PUBLISH (AC-2.4, §4.3 rule 3; AC-6.17(d))', () => {
+	// Every name below comes from `wireToolName`, never typed as a literal. That is the whole point of
+	// this block after Fase 6: the guard used to be `startsWith('codedm__')` and the REAL wire name is
+	// `mcp__codedm__RecordArtifact`, in which `codedm__` sits in the MIDDLE — so the old guard matched
+	// NOTHING and the double-publish it existed to prevent would have come back silently.
+	const COMPLETE = wireToolName('TransitionIssueStatus')
+	const RAISE_STOP = wireToolName('RaiseStop')
+	const RECORD_ARTIFACT = wireToolName('RecordArtifact')
+
+	it('mints NO fact for one of OUR tool calls — the use case that served it already persisted one', () => {
 		const accumulator = makeAccumulator()
 
 		const facts = fold(accumulator, [
-			toolUse('toolu_declared', 'codedm__complete_issue'),
+			toolUse('toolu_declared', COMPLETE),
 			toolResult('toolu_declared', true),
-			toolUse('toolu_declared_2', 'codedm__raise_stop'),
+			toolUse('toolu_declared_2', RAISE_STOP),
 			toolResult('toolu_declared_2', true),
 		])
 
-		// Without this guard ONE `complete_issue` publishes `integration.issue.completed` TWICE.
+		// Without this guard ONE `TransitionIssueStatus` publishes `integration.issue.completed` TWICE.
 		expect(facts).toEqual([])
 	})
 
-	it('does not resurrect an UNFINISHED codedm__ call as an orphan failure on flush()', () => {
+	it('THE FASE-1 PREFIX DOES NOT MATCH THE REAL NAME — the reason the guard had to change', () => {
+		// This assertion exists so nobody "fixes" the guard back to the frozen prefix. It is not a
+		// tautology: the two spellings are close enough to look interchangeable, and the failure mode of
+		// getting it wrong is silent (a fact minted twice), not loud.
+		expect(COMPLETE.startsWith('codedm__')).toBe(false)
+		expect(COMPLETE).toContain('codedm__')
+	})
+
+	it('does not resurrect one of OUR unfinished calls as an orphan failure on flush()', () => {
 		const accumulator = makeAccumulator()
-		accumulator.apply(toolUse('toolu_declared', 'codedm__record_artifact'))
+		accumulator.apply(toolUse('toolu_declared', RECORD_ARTIFACT))
 
 		// The guard is at INGESTION — the call is never tracked — so the flush path is closed too.
 		expect(accumulator.flush()).toEqual([])
 	})
 
-	it('still mints facts for ordinary tools in the same turn as a codedm__ call', () => {
+	it('still mints facts for ordinary tools in the same turn as one of ours', () => {
 		const accumulator = makeAccumulator()
 
 		const facts = fold(accumulator, [
 			toolUse('toolu_read', 'Read'),
 			toolResult('toolu_read', true),
-			toolUse('toolu_declared', 'codedm__complete_issue'),
+			toolUse('toolu_declared', COMPLETE),
 			toolResult('toolu_declared', true),
 		])
 

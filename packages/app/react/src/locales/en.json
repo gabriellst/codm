@@ -348,6 +348,10 @@
 		}
 	},
 	"errors": {
+		"AGENT_RUN_SCOPE_MISMATCH": "The agent tried to act on a different issue than the one it is running on. The action was blocked.",
+		"AGENT_RUN_TOKEN_INVALID": "The agent run token is missing, expired or was revoked. The run it belonged to is no longer active.",
+		"AGENT_TOOLS_UNSUPPORTED": "This agent needs tools, but the selected CLI does not support them.",
+		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "That stop kind is observed by the runtime and cannot be declared by the agent.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_NOT_CONNECTED": "The channel is not connected.",
 		"CLARIFICATION_ALREADY_PENDING": "A clarification is already pending for this sender.",
@@ -360,6 +364,7 @@
 		"ENTRY_NOT_FOUND": "Message entry not found.",
 		"ENTRY_NOT_INVOCABLE": "This message cannot invoke an agent.",
 		"FORBIDDEN": "You do not have permission to perform this action.",
+		"GATEWAY_UNAVAILABLE": "Channel gateway unavailable. Check that the service is running.",
 		"HANDLER_NOT_BOUND": "Internal error while dispatching the operation. Try again shortly.",
 		"INVALIDATED_AUTH_TOKEN": "Your session was invalidated. Sign in again.",
 		"INVALID_AUTH_TOKEN": "Invalid authentication token. Sign in again.",
@@ -419,8 +424,7 @@
 		"WEAK_PASSWORD": "Password too weak. Use letters, numbers and symbols.",
 		"WORKSPACE_ALREADY_REGISTERED": "This workspace is already registered.",
 		"WORKSPACE_IN_USE": "This workspace has an issue currently working on it.",
-		"WORKSPACE_NOT_FOUND": "Workspace not found.",
-		"GATEWAY_UNAVAILABLE": "Channel gateway unavailable. Check that the service is running."
+		"WORKSPACE_NOT_FOUND": "Workspace not found."
 	},
 	"home": {
 		"replayIntro": "Replay intro",

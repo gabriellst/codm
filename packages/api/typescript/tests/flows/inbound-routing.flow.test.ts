@@ -160,7 +160,11 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		// 3. integration.issue.opened + issue.completed FIRE live off the terminal facts.
 		const opened = testBed.externalSpy.getPublishedOfType('integration.issue.opened')
 		expect(opened).toHaveLength(1)
-		expect(testBed.externalSpy.getPublishedOfType('integration.issue.completed')).toHaveLength(1)
+		// NOT completed — and that is the inversion working. `IssueWorkAgent` declares a tool scope, so
+		// `RunIssueTurn` no longer mints the conclusion from the terminal outcome (§4.3 rule 7): the ONLY
+		// producer is the declaration use case behind the `TransitionIssueStatus` tool. Publishing here as
+		// well would put `integration.issue.completed` in the outbox twice for one finished run.
+		expect(testBed.externalSpy.getPublishedOfType('integration.issue.completed')).toHaveLength(0)
 
 		const openedEvent = opened[0] as { payload: { issueId: string; threadId: string } }
 		expect(openedEvent.payload.threadId).toBe(thread.id.value)

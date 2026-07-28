@@ -63,81 +63,93 @@ func (e Action) Valid() bool {
 
 // Defines values for ApiErrors.
 const (
-	CANNOTCONVERTINPUT          ApiErrors = "CANNOT_CONVERT_INPUT"
-	CHANNELNOTCONNECTED         ApiErrors = "CHANNEL_NOT_CONNECTED"
-	CLARIFICATIONALREADYPENDING ApiErrors = "CLARIFICATION_ALREADY_PENDING"
-	CLASSIFICATIONFAILED        ApiErrors = "CLASSIFICATION_FAILED"
-	COMMANDHANDLERNOTFOUND      ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
-	COMMANDQUEUENOTFOUND        ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
-	CREDENTIALDECRYPTFAILED     ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
-	EMAILALREADYREGISTERED      ApiErrors = "EMAIL_ALREADY_REGISTERED"
-	ENTITYNOTFOUNDWHILESAVING   ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
-	ENTRYNOTFOUND               ApiErrors = "ENTRY_NOT_FOUND"
-	ENTRYNOTINVOCABLE           ApiErrors = "ENTRY_NOT_INVOCABLE"
-	FORBIDDEN                   ApiErrors = "FORBIDDEN"
-	GATEWAYUNAVAILABLE          ApiErrors = "GATEWAY_UNAVAILABLE"
-	HANDLERNOTBOUND             ApiErrors = "HANDLER_NOT_BOUND"
-	INVALIDATEDAUTHTOKEN        ApiErrors = "INVALIDATED_AUTH_TOKEN"
-	INVALIDAUTHTOKEN            ApiErrors = "INVALID_AUTH_TOKEN"
-	INVALIDCONTROLLEREXAMPLES   ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
-	INVALIDEMAIL                ApiErrors = "INVALID_EMAIL"
-	INVALIDEMAILFORMAT          ApiErrors = "INVALID_EMAIL_FORMAT"
-	INVALIDENTITY               ApiErrors = "INVALID_ENTITY"
-	INVALIDID                   ApiErrors = "INVALID_ID"
-	INVALIDIDVALUESLENGTH       ApiErrors = "INVALID_ID_VALUES_LENGTH"
-	INVALIDLANGUAGE             ApiErrors = "INVALID_LANGUAGE"
-	INVALIDOUTBOXPAYLOAD        ApiErrors = "INVALID_OUTBOX_PAYLOAD"
-	INVALIDPHONE                ApiErrors = "INVALID_PHONE"
-	INVALIDPICTUREURL           ApiErrors = "INVALID_PICTURE_URL"
-	INVALIDRANGE                ApiErrors = "INVALID_RANGE"
-	INVALIDREQUEST              ApiErrors = "INVALID_REQUEST"
-	INVALIDTIMEZONE             ApiErrors = "INVALID_TIMEZONE"
-	ISSUEALREADYARCHIVED        ApiErrors = "ISSUE_ALREADY_ARCHIVED"
-	ISSUEALREADYCOMPLETED       ApiErrors = "ISSUE_ALREADY_COMPLETED"
-	ISSUEARCHIVED               ApiErrors = "ISSUE_ARCHIVED"
-	ISSUENOTARCHIVED            ApiErrors = "ISSUE_NOT_ARCHIVED"
-	ISSUENOTFOUND               ApiErrors = "ISSUE_NOT_FOUND"
-	LASTINVOKER                 ApiErrors = "LAST_INVOKER"
-	MISSINGENVIRONMENTVARIABLE  ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
-	MISSINGLOGCONTENT           ApiErrors = "MISSING_LOG_CONTENT"
-	NOCHANNELCONNECTED          ApiErrors = "NO_CHANNEL_CONNECTED"
-	NOPROVIDERSELECTED          ApiErrors = "NO_PROVIDER_SELECTED"
-	NOTFOUND                    ApiErrors = "NOT_FOUND"
-	NOTIMPLEMENTED              ApiErrors = "NOT_IMPLEMENTED"
-	OPTIMISTICLOCKCONFLICT      ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
-	OWNERALREADYDISABLED        ApiErrors = "OWNER_ALREADY_DISABLED"
-	OWNERNOTDISABLED            ApiErrors = "OWNER_NOT_DISABLED"
-	OWNERNOTFOUND               ApiErrors = "OWNER_NOT_FOUND"
-	PARTICIPANTNOTFOUND         ApiErrors = "PARTICIPANT_NOT_FOUND"
-	PASSWORDSDONTMATCH          ApiErrors = "PASSWORDS_DONT_MATCH"
-	PASSWORDTOOWEAK             ApiErrors = "PASSWORD_TOO_WEAK"
-	PATHNOTADIRECTORY           ApiErrors = "PATH_NOT_A_DIRECTORY"
-	PATHNOTFOUND                ApiErrors = "PATH_NOT_FOUND"
-	PROVIDERNOTDETECTED         ApiErrors = "PROVIDER_NOT_DETECTED"
-	RATELIMITED                 ApiErrors = "RATE_LIMITED"
-	RESOLUTIONNOTAPPLICABLE     ApiErrors = "RESOLUTION_NOT_APPLICABLE"
-	SESSIONALREADYSTREAMING     ApiErrors = "SESSION_ALREADY_STREAMING"
-	STOPCRITERIONDISABLED       ApiErrors = "STOP_CRITERION_DISABLED"
-	STOPNOTFOUND                ApiErrors = "STOP_NOT_FOUND"
-	TERMINALALREADYRUNNING      ApiErrors = "TERMINAL_ALREADY_RUNNING"
-	TERMINALSPAWNFAILED         ApiErrors = "TERMINAL_SPAWN_FAILED"
-	THREADALREADYATTACHED       ApiErrors = "THREAD_ALREADY_ATTACHED"
-	THREADNOTFOUND              ApiErrors = "THREAD_NOT_FOUND"
-	THREADNOTPAUSED             ApiErrors = "THREAD_NOT_PAUSED"
-	THREADPAUSED                ApiErrors = "THREAD_PAUSED"
-	TOOMANYTERMINALSTREAMS      ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
-	UNAUTHORIZED                ApiErrors = "UNAUTHORIZED"
-	USERNOTFOUND                ApiErrors = "USER_NOT_FOUND"
-	VALIDATIONERROR             ApiErrors = "VALIDATION_ERROR"
-	WEAKPASSWORD                ApiErrors = "WEAK_PASSWORD"
-	WORKSPACEALREADYREGISTERED  ApiErrors = "WORKSPACE_ALREADY_REGISTERED"
-	WORKSPACEINUSE              ApiErrors = "WORKSPACE_IN_USE"
-	WORKSPACENOTFOUND           ApiErrors = "WORKSPACE_NOT_FOUND"
+	AGENTRUNSCOPEMISMATCH           ApiErrors = "AGENT_RUN_SCOPE_MISMATCH"
+	AGENTRUNTOKENINVALID            ApiErrors = "AGENT_RUN_TOKEN_INVALID"
+	AGENTTOOLSUNSUPPORTED           ApiErrors = "AGENT_TOOLS_UNSUPPORTED"
+	AGENTTRANSPORTSTOPNOTDECLARABLE ApiErrors = "AGENT_TRANSPORT_STOP_NOT_DECLARABLE"
+	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
+	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
+	CLARIFICATIONALREADYPENDING     ApiErrors = "CLARIFICATION_ALREADY_PENDING"
+	CLASSIFICATIONFAILED            ApiErrors = "CLASSIFICATION_FAILED"
+	COMMANDHANDLERNOTFOUND          ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
+	COMMANDQUEUENOTFOUND            ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
+	CREDENTIALDECRYPTFAILED         ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
+	EMAILALREADYREGISTERED          ApiErrors = "EMAIL_ALREADY_REGISTERED"
+	ENTITYNOTFOUNDWHILESAVING       ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
+	ENTRYNOTFOUND                   ApiErrors = "ENTRY_NOT_FOUND"
+	ENTRYNOTINVOCABLE               ApiErrors = "ENTRY_NOT_INVOCABLE"
+	FORBIDDEN                       ApiErrors = "FORBIDDEN"
+	GATEWAYUNAVAILABLE              ApiErrors = "GATEWAY_UNAVAILABLE"
+	HANDLERNOTBOUND                 ApiErrors = "HANDLER_NOT_BOUND"
+	INVALIDATEDAUTHTOKEN            ApiErrors = "INVALIDATED_AUTH_TOKEN"
+	INVALIDAUTHTOKEN                ApiErrors = "INVALID_AUTH_TOKEN"
+	INVALIDCONTROLLEREXAMPLES       ApiErrors = "INVALID_CONTROLLER_EXAMPLES"
+	INVALIDEMAIL                    ApiErrors = "INVALID_EMAIL"
+	INVALIDEMAILFORMAT              ApiErrors = "INVALID_EMAIL_FORMAT"
+	INVALIDENTITY                   ApiErrors = "INVALID_ENTITY"
+	INVALIDID                       ApiErrors = "INVALID_ID"
+	INVALIDIDVALUESLENGTH           ApiErrors = "INVALID_ID_VALUES_LENGTH"
+	INVALIDLANGUAGE                 ApiErrors = "INVALID_LANGUAGE"
+	INVALIDOUTBOXPAYLOAD            ApiErrors = "INVALID_OUTBOX_PAYLOAD"
+	INVALIDPHONE                    ApiErrors = "INVALID_PHONE"
+	INVALIDPICTUREURL               ApiErrors = "INVALID_PICTURE_URL"
+	INVALIDRANGE                    ApiErrors = "INVALID_RANGE"
+	INVALIDREQUEST                  ApiErrors = "INVALID_REQUEST"
+	INVALIDTIMEZONE                 ApiErrors = "INVALID_TIMEZONE"
+	ISSUEALREADYARCHIVED            ApiErrors = "ISSUE_ALREADY_ARCHIVED"
+	ISSUEALREADYCOMPLETED           ApiErrors = "ISSUE_ALREADY_COMPLETED"
+	ISSUEARCHIVED                   ApiErrors = "ISSUE_ARCHIVED"
+	ISSUENOTARCHIVED                ApiErrors = "ISSUE_NOT_ARCHIVED"
+	ISSUENOTFOUND                   ApiErrors = "ISSUE_NOT_FOUND"
+	LASTINVOKER                     ApiErrors = "LAST_INVOKER"
+	MISSINGENVIRONMENTVARIABLE      ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
+	MISSINGLOGCONTENT               ApiErrors = "MISSING_LOG_CONTENT"
+	NOCHANNELCONNECTED              ApiErrors = "NO_CHANNEL_CONNECTED"
+	NOPROVIDERSELECTED              ApiErrors = "NO_PROVIDER_SELECTED"
+	NOTFOUND                        ApiErrors = "NOT_FOUND"
+	NOTIMPLEMENTED                  ApiErrors = "NOT_IMPLEMENTED"
+	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
+	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
+	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
+	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
+	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
+	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
+	PATHNOTADIRECTORY               ApiErrors = "PATH_NOT_A_DIRECTORY"
+	PATHNOTFOUND                    ApiErrors = "PATH_NOT_FOUND"
+	PROVIDERNOTDETECTED             ApiErrors = "PROVIDER_NOT_DETECTED"
+	RATELIMITED                     ApiErrors = "RATE_LIMITED"
+	RESOLUTIONNOTAPPLICABLE         ApiErrors = "RESOLUTION_NOT_APPLICABLE"
+	SESSIONALREADYSTREAMING         ApiErrors = "SESSION_ALREADY_STREAMING"
+	STOPCRITERIONDISABLED           ApiErrors = "STOP_CRITERION_DISABLED"
+	STOPNOTFOUND                    ApiErrors = "STOP_NOT_FOUND"
+	TERMINALALREADYRUNNING          ApiErrors = "TERMINAL_ALREADY_RUNNING"
+	TERMINALSPAWNFAILED             ApiErrors = "TERMINAL_SPAWN_FAILED"
+	THREADALREADYATTACHED           ApiErrors = "THREAD_ALREADY_ATTACHED"
+	THREADNOTFOUND                  ApiErrors = "THREAD_NOT_FOUND"
+	THREADNOTPAUSED                 ApiErrors = "THREAD_NOT_PAUSED"
+	THREADPAUSED                    ApiErrors = "THREAD_PAUSED"
+	TOOMANYTERMINALSTREAMS          ApiErrors = "TOO_MANY_TERMINAL_STREAMS"
+	UNAUTHORIZED                    ApiErrors = "UNAUTHORIZED"
+	USERNOTFOUND                    ApiErrors = "USER_NOT_FOUND"
+	VALIDATIONERROR                 ApiErrors = "VALIDATION_ERROR"
+	WEAKPASSWORD                    ApiErrors = "WEAK_PASSWORD"
+	WORKSPACEALREADYREGISTERED      ApiErrors = "WORKSPACE_ALREADY_REGISTERED"
+	WORKSPACEINUSE                  ApiErrors = "WORKSPACE_IN_USE"
+	WORKSPACENOTFOUND               ApiErrors = "WORKSPACE_NOT_FOUND"
 )
 
 // Valid indicates whether the value is a known member of the ApiErrors enum.
 func (e ApiErrors) Valid() bool {
 	switch e {
+	case AGENTRUNSCOPEMISMATCH:
+		return true
+	case AGENTRUNTOKENINVALID:
+		return true
+	case AGENTTOOLSUNSUPPORTED:
+		return true
+	case AGENTTRANSPORTSTOPNOTDECLARABLE:
+		return true
 	case CANNOTCONVERTINPUT:
 		return true
 	case CHANNELNOTCONNECTED:
@@ -1233,6 +1245,30 @@ type SendDirectMessageJSONBody struct {
 	Text string `json:"text"`
 }
 
+// CreateIssueJSONBody defines parameters for CreateIssue.
+type CreateIssueJSONBody struct {
+	Provider ProviderKind `json:"provider"`
+	Title    string       `json:"title"`
+}
+
+// AskOperatorJSONBody defines parameters for AskOperator.
+type AskOperatorJSONBody struct {
+	Question string `json:"question"`
+}
+
+// TransitionIssueStatusJSONBody defines parameters for TransitionIssueStatus.
+type TransitionIssueStatusJSONBody struct {
+	Key     *string     `json:"key,omitempty"`
+	Status  IssueStatus `json:"status"`
+	Summary *string     `json:"summary,omitempty"`
+}
+
+// RaiseStopJSONBody defines parameters for RaiseStop.
+type RaiseStopJSONBody struct {
+	Detail string   `json:"detail"`
+	Kind   StopKind `json:"kind"`
+}
+
 // ConfigureMentionGateJSONBody defines parameters for ConfigureMentionGate.
 type ConfigureMentionGateJSONBody struct {
 	MentionGate ConfigureMentionGateJSONBody_MentionGate `json:"mentionGate"`
@@ -1320,6 +1356,18 @@ type ConfigureContextBufferJSONRequestBody ConfigureContextBufferJSONBody
 
 // SendDirectMessageJSONRequestBody defines body for SendDirectMessage for application/json ContentType.
 type SendDirectMessageJSONRequestBody SendDirectMessageJSONBody
+
+// CreateIssueJSONRequestBody defines body for CreateIssue for application/json ContentType.
+type CreateIssueJSONRequestBody CreateIssueJSONBody
+
+// AskOperatorJSONRequestBody defines body for AskOperator for application/json ContentType.
+type AskOperatorJSONRequestBody AskOperatorJSONBody
+
+// TransitionIssueStatusJSONRequestBody defines body for TransitionIssueStatus for application/json ContentType.
+type TransitionIssueStatusJSONRequestBody TransitionIssueStatusJSONBody
+
+// RaiseStopJSONRequestBody defines body for RaiseStop for application/json ContentType.
+type RaiseStopJSONRequestBody RaiseStopJSONBody
 
 // ConfigureMentionGateJSONRequestBody defines body for ConfigureMentionGate for application/json ContentType.
 type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
@@ -1680,6 +1728,26 @@ type ClientInterface interface {
 
 	// GetSessionIssues request
 	GetSessionIssues(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateIssueWithBody request with any body
+	CreateIssueWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateIssue(ctx context.Context, threadId string, body CreateIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AskOperatorWithBody request with any body
+	AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AskOperator(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// TransitionIssueStatusWithBody request with any body
+	TransitionIssueStatusWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	TransitionIssueStatus(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RaiseStopWithBody request with any body
+	RaiseStopWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RaiseStop(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ConfigureMentionGateWithBody request with any body
 	ConfigureMentionGateWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2127,6 +2195,102 @@ func (c *Client) SendDirectMessage(ctx context.Context, threadId string, body Se
 
 func (c *Client) GetSessionIssues(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSessionIssuesRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateIssueWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateIssueRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateIssue(ctx context.Context, threadId string, body CreateIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateIssueRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAskOperatorRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AskOperator(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAskOperatorRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) TransitionIssueStatusWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewTransitionIssueStatusRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) TransitionIssueStatus(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewTransitionIssueStatusRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RaiseStopWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRaiseStopRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RaiseStop(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRaiseStopRequest(c.Server, threadId, issueId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3285,6 +3449,215 @@ func NewGetSessionIssuesRequest(server string, threadId string) (*http.Request, 
 	return req, nil
 }
 
+// NewCreateIssueRequest calls the generic CreateIssue builder with application/json body
+func NewCreateIssueRequest(server string, threadId string, body CreateIssueJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateIssueRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewCreateIssueRequestWithBody generates requests for CreateIssue with any type of body
+func NewCreateIssueRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAskOperatorRequest calls the generic AskOperator builder with application/json body
+func NewAskOperatorRequest(server string, threadId string, issueId string, body AskOperatorJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAskOperatorRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewAskOperatorRequestWithBody generates requests for AskOperator with any type of body
+func NewAskOperatorRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/operator-questions", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewTransitionIssueStatusRequest calls the generic TransitionIssueStatus builder with application/json body
+func NewTransitionIssueStatusRequest(server string, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewTransitionIssueStatusRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewTransitionIssueStatusRequestWithBody generates requests for TransitionIssueStatus with any type of body
+func NewTransitionIssueStatusRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/status", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRaiseStopRequest calls the generic RaiseStop builder with application/json body
+func NewRaiseStopRequest(server string, threadId string, issueId string, body RaiseStopJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRaiseStopRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewRaiseStopRequestWithBody generates requests for RaiseStop with any type of body
+func NewRaiseStopRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/stops", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewConfigureMentionGateRequest calls the generic ConfigureMentionGate builder with application/json body
 func NewConfigureMentionGateRequest(server string, threadId string, body ConfigureMentionGateJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -4029,6 +4402,26 @@ type ClientWithResponsesInterface interface {
 
 	// GetSessionIssuesWithResponse request
 	GetSessionIssuesWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetSessionIssuesResponse, error)
+
+	// CreateIssueWithBodyWithResponse request with any body
+	CreateIssueWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateIssueResponse, error)
+
+	CreateIssueWithResponse(ctx context.Context, threadId string, body CreateIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIssueResponse, error)
+
+	// AskOperatorWithBodyWithResponse request with any body
+	AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
+
+	AskOperatorWithResponse(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
+
+	// TransitionIssueStatusWithBodyWithResponse request with any body
+	TransitionIssueStatusWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error)
+
+	TransitionIssueStatusWithResponse(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error)
+
+	// RaiseStopWithBodyWithResponse request with any body
+	RaiseStopWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error)
+
+	RaiseStopWithResponse(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error)
 
 	// ConfigureMentionGateWithBodyWithResponse request with any body
 	ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
@@ -4937,6 +5330,137 @@ func (r GetSessionIssuesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetSessionIssuesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		IssueId openapi_types.UUID `json:"issueId"`
+		Key     string             `json:"key"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AskOperatorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Delivered bool               `json:"delivered"`
+		StopId    openapi_types.UUID `json:"stopId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r AskOperatorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AskOperatorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AskOperatorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type TransitionIssueStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		IssueId openapi_types.UUID `json:"issueId"`
+		Status  IssueStatus        `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r TransitionIssueStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r TransitionIssueStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r TransitionIssueStatusResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RaiseStopResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		StopId openapi_types.UUID `json:"stopId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r RaiseStopResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RaiseStopResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RaiseStopResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -5889,6 +6413,74 @@ func (c *ClientWithResponses) GetSessionIssuesWithResponse(ctx context.Context, 
 	return ParseGetSessionIssuesResponse(rsp)
 }
 
+// CreateIssueWithBodyWithResponse request with arbitrary body returning *CreateIssueResponse
+func (c *ClientWithResponses) CreateIssueWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateIssueResponse, error) {
+	rsp, err := c.CreateIssueWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateIssueResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateIssueWithResponse(ctx context.Context, threadId string, body CreateIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIssueResponse, error) {
+	rsp, err := c.CreateIssue(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateIssueResponse(rsp)
+}
+
+// AskOperatorWithBodyWithResponse request with arbitrary body returning *AskOperatorResponse
+func (c *ClientWithResponses) AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error) {
+	rsp, err := c.AskOperatorWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAskOperatorResponse(rsp)
+}
+
+func (c *ClientWithResponses) AskOperatorWithResponse(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error) {
+	rsp, err := c.AskOperator(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAskOperatorResponse(rsp)
+}
+
+// TransitionIssueStatusWithBodyWithResponse request with arbitrary body returning *TransitionIssueStatusResponse
+func (c *ClientWithResponses) TransitionIssueStatusWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error) {
+	rsp, err := c.TransitionIssueStatusWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTransitionIssueStatusResponse(rsp)
+}
+
+func (c *ClientWithResponses) TransitionIssueStatusWithResponse(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error) {
+	rsp, err := c.TransitionIssueStatus(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTransitionIssueStatusResponse(rsp)
+}
+
+// RaiseStopWithBodyWithResponse request with arbitrary body returning *RaiseStopResponse
+func (c *ClientWithResponses) RaiseStopWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error) {
+	rsp, err := c.RaiseStopWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRaiseStopResponse(rsp)
+}
+
+func (c *ClientWithResponses) RaiseStopWithResponse(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error) {
+	rsp, err := c.RaiseStop(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRaiseStopResponse(rsp)
+}
+
 // ConfigureMentionGateWithBodyWithResponse request with arbitrary body returning *ConfigureMentionGateResponse
 func (c *ClientWithResponses) ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error) {
 	rsp, err := c.ConfigureMentionGateWithBody(ctx, threadId, contentType, body, reqEditors...)
@@ -6815,6 +7407,121 @@ func ParseGetSessionIssuesResponse(rsp *http.Response) (*GetSessionIssuesRespons
 				Completed     int `json:"completed"`
 				Working       int `json:"working"`
 			} `json:"statsLine"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateIssueResponse parses an HTTP response from a CreateIssueWithResponse call
+func ParseCreateIssueResponse(rsp *http.Response) (*CreateIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			IssueId openapi_types.UUID `json:"issueId"`
+			Key     string             `json:"key"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAskOperatorResponse parses an HTTP response from a AskOperatorWithResponse call
+func ParseAskOperatorResponse(rsp *http.Response) (*AskOperatorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AskOperatorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Delivered bool               `json:"delivered"`
+			StopId    openapi_types.UUID `json:"stopId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseTransitionIssueStatusResponse parses an HTTP response from a TransitionIssueStatusWithResponse call
+func ParseTransitionIssueStatusResponse(rsp *http.Response) (*TransitionIssueStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &TransitionIssueStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			IssueId openapi_types.UUID `json:"issueId"`
+			Status  IssueStatus        `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRaiseStopResponse parses an HTTP response from a RaiseStopWithResponse call
+func ParseRaiseStopResponse(rsp *http.Response) (*RaiseStopResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RaiseStopResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			StopId openapi_types.UUID `json:"stopId"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

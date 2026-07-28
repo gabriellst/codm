@@ -14,7 +14,7 @@ import { AgentToolCallStatus } from '../enums'
  *  - `status` is terminal-only, so `flush()` MUST materialize a `tool_use` that never received its
  *    `tool_result` as `FAILED`. An orphan tool call silently disappearing is the failure mode this
  *    field exists to make impossible.
- *  - the accumulator NEVER emits this event for a `codedm__`-prefixed tool. Our own tools already
+ *  - the accumulator NEVER emits this event for a our own tool. Our own tools already
  *    persisted their fact through the use case that served the call; emitting here too would publish
  *    `integration.issue.completed` twice for one `complete_issue`.
  *

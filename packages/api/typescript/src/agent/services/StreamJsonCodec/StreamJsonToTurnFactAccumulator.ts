@@ -1,4 +1,5 @@
-import { AgentMessageRole, AgentToolCallStatus, CODEDM_TOOL_PREFIX } from '../../enums'
+import { AgentMessageRole, AgentToolCallStatus } from '../../enums'
+import { isCodedmTool } from '../../mcp/wire'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from '../../events'
 import type { AgentFrame } from '../../types'
 
@@ -42,10 +43,10 @@ function asInput(value: unknown): Record<string, unknown> {
  * in one place.
  *
  * ### Rule 3 — ANTI-DOUBLE-PUBLISH: our own tools mint NOTHING
- * A `codedm__`-prefixed `tool_use`/`tool_result` yields the FRAME (observability) and never a fact.
+ * A `tool_use`/`tool_result` naming one of OUR tools yields the FRAME (observability) and never a fact.
  * The fact for those calls was already persisted by the use case that served the MCP call (Fase 6);
  * minting here as well would publish `integration.issue.completed` TWICE for one `complete_issue`.
- * The guard is at ingestion — a `codedm__` call is never even tracked — so `flush()` cannot resurrect
+ * The guard is at ingestion — one of our calls is never even tracked — so `flush()` cannot resurrect
  * it as an orphan either.
  *
  * ### Sub-agent SCOPE — keyed by `parent_tool_use_id`, the one thing that survived D1
@@ -91,7 +92,12 @@ export class StreamJsonToTurnFactAccumulator {
 				})
 
 			case 'tool_use':
-				if (frame.parentToolUseId !== null || frame.tool.startsWith(CODEDM_TOOL_PREFIX)) return null
+				// `isCodedmTool`, NOT `startsWith('codedm__')`. The Fase-1 guard was the latter and it would
+				// have failed silently: the real wire name is `mcp__codedm__RecordArtifact`, so the old
+				// prefix sits in the MIDDLE and `startsWith` is false — the accumulator would mint a turn
+				// fact for a call whose use case already persisted one, publishing
+				// `integration.issue.completed` twice.
+				if (frame.parentToolUseId !== null || isCodedmTool(frame.tool)) return null
 				this.inflight.set(frame.toolUseId, {
 					tool: frame.tool,
 					input: asInput(frame.input),
@@ -100,7 +106,7 @@ export class StreamJsonToTurnFactAccumulator {
 				return null
 
 			case 'tool_result': {
-				// An untracked id covers three cases at once, all correctly silent: a `codedm__` call
+				// An untracked id covers three cases at once, all correctly silent: one of OUR calls
 				// (never tracked, rule 3), a sub-agent's own call, and a result for a `tool_use` this
 				// process never saw (mid-stream attach).
 				const started = this.inflight.get(frame.toolUseId)

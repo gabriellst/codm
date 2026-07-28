@@ -8,6 +8,9 @@ import { AgentRunOutcome, AgentName, type TransportStopKind } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { ClassifyIssueAgent, ClassifyIssuePromptBuilder } from '../../agents/ClassifyIssueAgent'
 import { DefaultIssueRouter, type RouteMessageInput } from './IssueRouter'
+// The real token service, not a double: it is a Map with a clock, so a stub would only be a second
+// implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
+import { InMemoryRunTokenService } from '../../mcp/RunTokenService'
 
 /**
  * Stubbed `AgentRunner` — never spawns a subprocess, never calls a real LLM.
@@ -66,7 +69,7 @@ const route = (overrides: Partial<RouteMessageInput> = {}): RouteMessageInput =>
 /** The real router over the real agent over a stubbed runner — only the process boundary is faked. */
 const build = () => {
 	const runner = new StubbedRunner()
-	const router = new DefaultIssueRouter(new ClassifyIssueAgent(runner, new ClassifyIssuePromptBuilder()))
+	const router = new DefaultIssueRouter(new ClassifyIssueAgent(runner, new InMemoryRunTokenService(), new ClassifyIssuePromptBuilder()))
 	return { runner, router }
 }
 

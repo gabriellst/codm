@@ -2,7 +2,9 @@ import { injectable } from 'tsyringe-neo'
 import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentName } from '../../enums'
 import { AgentRunner } from '../../services/AgentRunner'
+import { RunTokenService } from '../../services/RunTokenService'
 import { Agent } from '../../types/Agent'
+import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
 import type { AgentRunRequest } from '../../types'
 import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkInputSchema } from './types'
@@ -24,13 +26,11 @@ import { IssueWorkInputSchema } from './types'
  * by convention): identical interface, identical transport, and the only difference is the request —
  * an `outputSchema` there, a session plan and a workspace here.
  *
- * ### `tools` is EMPTY until Fase 6, and that is a scheduling fact, not a stub
- * §4.8 gives this agent the four `codedm__*` tools. They arrive with the phase that births what they
- * talk to: the MCP router, the four tool handlers and the single implementation of `RunTokenService`
- * are all Fase 6 deliverables (§5.3's NASCEM list). Declaring the scope now would make the base build
- * an `AgentMcpInvocation` whose endpoint is a route that does not exist and whose token cannot be
- * minted — `RunTokenService` has no DI binding today, by contract ("contract only in Fase 1"). The
- * invariant §4.3 rule 7 states holds either way: `request.mcp` present ⟺ `tools.length > 0`.
+ * ### `tools` is the DERIVED expansion of ONE declared scope (Fase 6)
+ * `issue-handling`, read from `mcp/manifest.ts` and never typed out here. The base's template-method
+ * `run()` is what turns that scope into an `AgentMcpInvocation` — minting the run token and pointing
+ * the CLI at this daemon's MCP door — so the invariant §4.3 rule 7 states holds by construction:
+ * `request.mcp` present ⟺ `tools.length > 0`.
  */
 @injectable()
 export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
@@ -38,11 +38,26 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 
 	override readonly inputSchema = IssueWorkInputSchema
 
+	/**
+	 * The tool scope this agent declares — `issue-handling` and NOTHING else.
+	 *
+	 * `system` exists, is generated and is mounted, but no internal agent declares it: it carries
+	 * `owner/*` and `workspace/*`, and this agent is driven by the text of an inbound WhatsApp message
+	 * written by someone who is not the operator. Handing it those operations would put account
+	 * administration one prompt injection away from a stranger.
+	 *
+	 * `tools` is the DERIVED expansion, never a hand-written list — add a seventh entry to the manifest
+	 * and the argv changes with no edit here (AC-6.5's falsifier).
+	 */
+	override readonly mcpScope = 'issue-handling' as const
+	override readonly tools = TOOLS_IN_SCOPE['issue-handling']
+
 	constructor(
 		runner: AgentRunner,
+		runTokens: RunTokenService,
 		private readonly prompt: IssueWorkPromptBuilder,
 	) {
-		super(runner)
+		super(runner, runTokens)
 	}
 
 	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {

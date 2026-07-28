@@ -15,6 +15,9 @@ import { AgentRunOutcome } from '../../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../../types'
 import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
 import { ClaudeAgentRunner } from './ClaudeAgentRunner'
+// The real token service, not a double: it is a Map with a clock, so a stub would only be a second
+// implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
+import { InMemoryRunTokenService } from '../../../mcp/RunTokenService'
 
 // ── A fake process: canned stdout, observable stdin ───────────────────────────────────────────────
 
@@ -71,7 +74,7 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 }
 
 function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivityMs = 60_000): ClaudeAgentRunner {
-	return new ClaudeAgentRunner(new MockLoggingService(), { spawner, inactivityMs })
+	return new ClaudeAgentRunner(new MockLoggingService(), new InMemoryRunTokenService(), { spawner, inactivityMs })
 }
 
 const request = (overrides: Partial<AgentRunRequest<z.ZodType | undefined>> = {}): AgentRunRequest<z.ZodType | undefined> => ({
@@ -394,7 +397,7 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 		const finished = (await drain(makeRunner(spawner).run(request()))).at(-1)
 
 		// The DOMAIN stops (APPROVAL_NEEDED, HUMAN_REQUESTED, BLOCKED_BY_CLASSIFICATION) are
-		// unrepresentable here by TYPE — they can only ever come from a codedm__raise_stop call.
+		// unrepresentable here by TYPE — they can only ever come from a RaiseStop call.
 		expect(finished).toMatchObject({ type: 'finished', result: { outcome: AgentRunOutcome.STOPPED, stop: { kind: 'AUTH_REQUIRED' } } })
 	})
 
@@ -431,7 +434,7 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 	})
 
 	it('surfaces a spawn failure as the terminal event instead of throwing out of run()', async () => {
-		const runner = new ClaudeAgentRunner(new MockLoggingService(), {
+		const runner = new ClaudeAgentRunner(new MockLoggingService(), new InMemoryRunTokenService(), {
 			spawner: () => {
 				throw new Error('ENOENT')
 			},

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
-import { AgentToolName } from '../../../enums'
+// Tool names come from the MANIFEST, never typed as literals: the whole point of AC-6.17 is that the
+// Fase-1 tool-name spellings are unreachable under generated tools, and a literal here would be the
+// second source of truth this phase deletes.
+import { wireToolName } from '../../../mcp/manifest'
+import type { AgentToolName } from '../../../enums'
 import type { AgentMcpInvocation } from '../../../types'
 import { ClaudeAgentRunner, type ClaudeBuildArgsOptions } from './ClaudeAgentRunner'
 
@@ -27,7 +31,7 @@ const opts = (overrides: Partial<ClaudeBuildArgsOptions> = {}): ClaudeBuildArgsO
 	...overrides,
 })
 
-const mcp = (allowedTools: readonly AgentToolName[] = [AgentToolName.COMPLETE_ISSUE, AgentToolName.RAISE_STOP]): AgentMcpInvocation => ({
+const mcp = (allowedTools: readonly AgentToolName[] = [wireToolName('TransitionIssueStatus'), wireToolName('RaiseStop')]): AgentMcpInvocation => ({
 	transport: 'http',
 	endpoint: 'http://127.0.0.1:3030/mcp',
 	token: 'run-token-opaque',
@@ -107,7 +111,7 @@ describe('AC-1.1 — ClaudeAgentRunner.buildArgs produces EXACTLY the spec argv'
 		expect(config.mcpServers.codedm).toMatchObject({ type: 'http', url: 'http://127.0.0.1:3030/mcp' })
 		// The run token rides the Authorization header — never a tool argument, never the prompt.
 		expect(config.mcpServers.codedm.headers.Authorization).toBe('Bearer run-token-opaque')
-		expect(withMcp[withMcp.indexOf('--allowedTools') + 1]).toBe('codedm__complete_issue,codedm__raise_stop')
+		expect(withMcp[withMcp.indexOf('--allowedTools') + 1]).toBe(`${wireToolName('TransitionIssueStatus')},${wireToolName('RaiseStop')}`)
 	})
 
 	it('the full-house invocation is exactly the spec argv, in the spec order', () => {
@@ -117,7 +121,7 @@ describe('AC-1.1 — ClaudeAgentRunner.buildArgs produces EXACTLY the spec argv'
 				model: AgentModelId.OPUS,
 				extraDirs: ['/tmp/shared'],
 				resumeSessionId: 'sess-42',
-				mcp: mcp([AgentToolName.COMPLETE_ISSUE]),
+				mcp: mcp([wireToolName('TransitionIssueStatus')]),
 			}),
 		)
 		expect(args).toEqual([
@@ -141,7 +145,7 @@ describe('AC-1.1 — ClaudeAgentRunner.buildArgs produces EXACTLY the spec argv'
 				},
 			}),
 			'--allowedTools',
-			'codedm__complete_issue',
+			wireToolName('TransitionIssueStatus'),
 			'--permission-mode',
 			'auto',
 		])

@@ -14,7 +14,7 @@ import type { AgentFrame } from './AgentFrame'
  * `stop` is TRANSPORT-only, and the type says so: `TransportStopKind` is the `{AUTH_REQUIRED,
  * SERVER_ERROR}` half of the frozen `StopKind` value-set — the half the runner is allowed to raise by
  * observing the process. DOMAIN stops (`APPROVAL_NEEDED`, `HUMAN_REQUESTED`,
- * `BLOCKED_BY_CLASSIFICATION`) can only ever come from a `codedm__raise_stop` tool call (Fase 6), so
+ * `BLOCKED_BY_CLASSIFICATION`) can only ever come from a `RaiseStop` tool call (Fase 6), so
  * they are unrepresentable here by construction rather than by convention.
  */
 export interface AgentRunResult {
@@ -37,7 +37,7 @@ export interface AgentRunResult {
  *  - `fact`  — an OBSERVED domain fact, folded out of frames by the pure accumulator. Outbox-bound.
  *  - `finished` — exactly ONE, always last.
  *
- * The THIRD signal category — a DECLARED fact (`codedm__complete_issue` and friends) — is deliberately
+ * The THIRD signal category — a DECLARED fact (`TransitionIssueStatus` and friends) — is deliberately
  * absent: it does not travel this stream at all. It arrives as an MCP tool call on a separate
  * transport and is persisted by the use case that serves it (Fase 6). Routing it through here too is
  * exactly the double-publish §4.3 rule 3 exists to prevent.

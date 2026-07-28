@@ -17,6 +17,7 @@
 		"@codedm/contracts-typescript": "workspace:*",
 		"@codedm/core-typescript": "workspace:*",
 		"@faker-js/faker": "^10.4.0",
+		"@modelcontextprotocol/sdk": "^1.30.0",
 		"@react-email/components": "^1.0.12",
 		"@react-email/render": "^1.0.0",
 		"drizzle-orm": "^0.45.2",

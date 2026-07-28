@@ -81,7 +81,7 @@ describe('the tool-call fact carries a WHOLE lifecycle', () => {
 	it('keeps `tool` an OPEN set (z.string) — MCP adds tools at runtime', () => {
 		const parsed = AgentToolCallEvent.schema.shape.payload.safeParse({
 			toolUseId: 'toolu_02',
-			tool: 'codedm__complete_issue',
+			tool: 'TransitionIssueStatus',
 			input: {},
 			status: AgentToolCallStatus.COMPLETED,
 			startedAt,
@@ -111,12 +111,8 @@ describe('the usage fact is token counts, not money', () => {
 	})
 
 	it('rejects negative or fractional CACHE token counts too — same rule, all four buckets', () => {
-		expect(
-			AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, cacheCreationInputTokens: -1 }).success,
-		).toBe(false)
-		expect(AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, cacheReadInputTokens: 1.5 }).success).toBe(
-			false,
-		)
+		expect(AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, cacheCreationInputTokens: -1 }).success).toBe(false)
+		expect(AgentUsageEvent.schema.shape.payload.safeParse({ ...zeroed, cacheReadInputTokens: 1.5 }).success).toBe(false)
 	})
 
 	it('has no cost/currency field — pricing is policy applied by the reader, not a fact of the run', () => {

@@ -2,9 +2,11 @@
 import {
 	addWorkspace,
 	archiveIssue,
+	askOperator,
 	attachThread,
 	configureContextBuffer,
 	configureMentionGate,
+	createIssue,
 	createOwner,
 	detectProviders,
 	disableOwner,
@@ -26,6 +28,7 @@ import {
 	listWorkspaces,
 	listenEvents,
 	pauseThread,
+	raiseStop,
 	recordArtifact,
 	removeWorkspace,
 	resolveStop,
@@ -37,6 +40,7 @@ import {
 	steerIssue,
 	steerThread,
 	streamTerminalSession,
+	transitionIssueStatus,
 	updateOwnerSettings,
 	updateStopCriteria,
 	uploadAvatar,
@@ -62,6 +66,10 @@ export class TypescriptClient {
 		return (archiveIssue as (...a: any[]) => ReturnType<typeof archiveIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	askOperator(...args: Parameters<typeof askOperator>): ReturnType<typeof askOperator> {
+		return (askOperator as (...a: any[]) => ReturnType<typeof askOperator>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	attachThread(...args: Parameters<typeof attachThread>): ReturnType<typeof attachThread> {
 		return (attachThread as (...a: any[]) => ReturnType<typeof attachThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -72,6 +80,10 @@ export class TypescriptClient {
 
 	configureMentionGate(...args: Parameters<typeof configureMentionGate>): ReturnType<typeof configureMentionGate> {
 		return (configureMentionGate as (...a: any[]) => ReturnType<typeof configureMentionGate>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	createIssue(...args: Parameters<typeof createIssue>): ReturnType<typeof createIssue> {
+		return (createIssue as (...a: any[]) => ReturnType<typeof createIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	createOwner(...args: Parameters<typeof createOwner>): ReturnType<typeof createOwner> {
@@ -158,6 +170,10 @@ export class TypescriptClient {
 		return (pauseThread as (...a: any[]) => ReturnType<typeof pauseThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	raiseStop(...args: Parameters<typeof raiseStop>): ReturnType<typeof raiseStop> {
+		return (raiseStop as (...a: any[]) => ReturnType<typeof raiseStop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	recordArtifact(...args: Parameters<typeof recordArtifact>): ReturnType<typeof recordArtifact> {
 		return (recordArtifact as (...a: any[]) => ReturnType<typeof recordArtifact>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -200,6 +216,10 @@ export class TypescriptClient {
 
 	streamTerminalSession(...args: Parameters<typeof streamTerminalSession>): ReturnType<typeof streamTerminalSession> {
 		return (streamTerminalSession as (...a: any[]) => ReturnType<typeof streamTerminalSession>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	transitionIssueStatus(...args: Parameters<typeof transitionIssueStatus>): ReturnType<typeof transitionIssueStatus> {
+		return (transitionIssueStatus as (...a: any[]) => ReturnType<typeof transitionIssueStatus>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	updateOwnerSettings(...args: Parameters<typeof updateOwnerSettings>): ReturnType<typeof updateOwnerSettings> {

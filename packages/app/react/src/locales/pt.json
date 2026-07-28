@@ -348,6 +348,10 @@
 		}
 	},
 	"errors": {
+		"AGENT_RUN_SCOPE_MISMATCH": "O agente tentou agir sobre uma issue diferente daquela em que está executando. A ação foi bloqueada.",
+		"AGENT_RUN_TOKEN_INVALID": "O token da execução do agente está ausente, expirou ou foi revogado. A execução a que pertencia não está mais ativa.",
+		"AGENT_TOOLS_UNSUPPORTED": "Este agente precisa de ferramentas, mas a CLI selecionada não as suporta.",
+		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "Esse tipo de parada é observado pelo runtime e não pode ser declarado pelo agente.",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
 		"CHANNEL_NOT_CONNECTED": "O canal não está conectado.",
 		"CLARIFICATION_ALREADY_PENDING": "Já há uma clarificação pendente para este remetente.",
@@ -360,6 +364,7 @@
 		"ENTRY_NOT_FOUND": "Mensagem não encontrada.",
 		"ENTRY_NOT_INVOCABLE": "Esta mensagem não pode invocar um agente.",
 		"FORBIDDEN": "Você não tem permissão para executar esta ação.",
+		"GATEWAY_UNAVAILABLE": "Gateway de canais indisponível. Verifique se o serviço está rodando.",
 		"HANDLER_NOT_BOUND": "Erro interno ao despachar a operação. Tente novamente em instantes.",
 		"INVALIDATED_AUTH_TOKEN": "Sua sessão foi invalidada. Entre novamente.",
 		"INVALID_AUTH_TOKEN": "Token de autenticação inválido. Entre novamente.",
@@ -419,8 +424,7 @@
 		"WEAK_PASSWORD": "Senha muito fraca. Use letras, números e símbolos.",
 		"WORKSPACE_ALREADY_REGISTERED": "Este workspace já está registrado.",
 		"WORKSPACE_IN_USE": "Há uma issue trabalhando neste workspace.",
-		"WORKSPACE_NOT_FOUND": "Workspace não encontrado.",
-		"GATEWAY_UNAVAILABLE": "Gateway de canais indisponível. Verifique se o serviço está rodando."
+		"WORKSPACE_NOT_FOUND": "Workspace não encontrado."
 	},
 	"home": {
 		"replayIntro": "Rever introdução",

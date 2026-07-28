@@ -12,10 +12,16 @@ import { pluginTs } from '@kubb/plugin-ts'
 import { pluginZod } from '@kubb/plugin-zod'
 import { pluginReactQuery } from '@kubb/plugin-react-query'
 import { pluginClient } from '@kubb/plugin-client'
+import { pluginMcp } from '@kubb/plugin-mcp'
 import { discoverApis, type ApiSource } from '../lib/discover'
 import { assertClientDistRoot } from '../lib/output-root'
 import { preprocessSpec } from '../lib/preprocess'
 import { renderServiceClient, renderAggregateClient, type ServiceMeta } from '../lib/render/typescript'
+
+/** Escape a scope name for embedding in the anchored tag RegExp — a scope is ours, but the anchor is the point. */
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..')
 const distRoot = assertClientDistRoot(path.resolve(import.meta.dirname, '../dist/typescript/src'))
@@ -25,6 +31,42 @@ interface Plan {
 	preprocessedSpecPath: string
 	outputRoot: string
 	generateHooks: boolean
+	/**
+	 * MCP scope → the operationIds declared under it, read from the `x-mcp-scope` vendor extension of
+	 * the spec. Empty for every service that declares none (today: the Go gateway).
+	 *
+	 * THE SPEC IS THE CROSSING. The declaration is a TYPED MANIFEST in the api package
+	 * (`src/agent/mcp/manifest.ts`, keyed by controller CLASS), and `packages/contracts` cannot import
+	 * from `api/src` — so the manifest reaches Kubb through the emitted spec, written by the same
+	 * emitter seam that already writes `x-error-codes`. There is no second list here: this is a READ.
+	 */
+	mcpScopes: Map<string, string[]>
+}
+
+/**
+ * Collect `operationId`s by MCP scope from a preprocessed spec.
+ *
+ * Reads the vendor extension rather than the synthetic `mcp:<scope>` tag, deliberately: the extension
+ * is the DECLARATION OF RECORD and the tag is only the transport Kubb can filter on. Reading the
+ * transport to verify the transport would make the count assertion below tautological.
+ */
+function collectMcpScopes(spec: Record<string, unknown>): Map<string, string[]> {
+	const scopes = new Map<string, string[]>()
+	const paths = (spec.paths ?? {}) as Record<string, Record<string, unknown>>
+	for (const operations of Object.values(paths)) {
+		for (const operation of Object.values(operations)) {
+			if (!operation || typeof operation !== 'object') continue
+			const record = operation as { operationId?: string; 'x-mcp-scope'?: unknown }
+			const declared = record['x-mcp-scope']
+			if (!Array.isArray(declared) || !record.operationId) continue
+			for (const scope of declared as string[]) {
+				const bucket = scopes.get(scope) ?? []
+				bucket.push(record.operationId)
+				scopes.set(scope, bucket)
+			}
+		}
+	}
+	return scopes
 }
 
 /**
@@ -93,6 +135,7 @@ async function preprocessAll(sources: ApiSource[]): Promise<Plan[]> {
 			preprocessedSpecPath: tmp,
 			outputRoot: path.join(distRoot, source.service),
 			generateHooks: hasPaths,
+			mcpScopes: collectMcpScopes(spec as Record<string, unknown>),
 		})
 	}
 	return plans
@@ -115,6 +158,99 @@ async function writeServiceHttp(plan: Plan): Promise<void> {
 		``,
 	].join('\n')
 	await writeFile(file, body)
+
+	for (const scope of plan.mcpScopes.keys()) await writeMcpScopeHttp(plan, scope)
+}
+
+/**
+ * The per-scope http shim — THE ONLY AUTH SEAM THAT EXISTS for a generated tool.
+ *
+ * Measured, not assumed: no generated handler takes a config or headers parameter
+ * (`mcpGenerator` passes `isConfigurable={false}` to the shared client component), so the module named
+ * by `client.importPath` is the single point where anything can be attached to a tool's outbound
+ * request. That makes this file security-relevant rather than plumbing.
+ *
+ * It is NOT the ordinary service client. Two differences, both load-bearing:
+ *  - it attaches the run token from the router's `AsyncLocalStorage`, which is what lets the daemon
+ *    tell "issue A's agent" from "issue B's agent" on an inbound tool-driven write;
+ *  - `requireMcpRunToken()` THROWS outside a router context, so a handler invoked directly cannot fall
+ *    through to an anonymous request that the daemon would serve as itself. Swapping this shim for the
+ *    plain service client is exactly the confused-deputy regression AC-6.19(c) forbids.
+ *
+ * `baseURL` is deliberately absent from the pluginMcp config, so the call site emits
+ * `fetch({ method, url, data })` and the repo's own `resolveURL` registry still decides the host.
+ */
+async function writeMcpScopeHttp(plan: Plan, scope: string): Promise<void> {
+	const dir = path.join(plan.outputRoot, `mcp-${scope}`)
+	await mkdir(dir, { recursive: true })
+	const body = `// AUTO-GENERATED — do not edit. MCP scope '${scope}' of the '${plan.source.service}' service.
+//
+// THE ONLY AUTH SEAM a generated tool has: the handlers take no config parameter, so this module is
+// the single place a run token can be attached. It THROWS outside a router-established context rather
+// than degrading to an anonymous request the daemon would serve with full operator authority.
+import { createClient } from '../../http'
+import { requireMcpRunToken, MCP_RUN_TOKEN_HEADER } from '../../mcp-run-context'
+import type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig } from '../../http'
+
+const core = createClient('${plan.source.service}')
+
+const client = async <TData, TError = unknown, TVariables = unknown>(
+	config: RequestConfig<TVariables>,
+): Promise<ResponseConfig<TData>> =>
+	core<TData, TError, TVariables>({
+		...config,
+		headers: { ...(config.headers as Record<string, string> | undefined), [MCP_RUN_TOKEN_HEADER]: requireMcpRunToken() },
+	})
+
+export default client
+export type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig }
+`
+	await writeFile(path.join(dir, '_http.ts'), body)
+}
+
+/**
+ * TWO POST-GENERATION FIXUPS, plus the assertion that keeps an empty tool surface from shipping green.
+ *
+ * (a) THE EMITTED SERVER TYPECHECKS BUT DOES NOT RUN. `serverGenerator` writes
+ *     `import … from "@modelcontextprotocol/sdk/server/mcp"` with no `.js`. The SDK's exports map is
+ *     `"./*": { types: ./dist/esm/*.d.ts, import: ./dist/esm/* }`, so `tsc` resolves through `types`
+ *     (`mcp.d.ts` exists) while the RUNTIME resolver looks for `dist/esm/server/mcp`, which does not.
+ *     A `tsc`-only gate would ship this green — which is why AC-6.16 pairs the fixup with a runtime
+ *     smoke and why its falsifier reverts this rewrite and shows `bun tsc` still passing.
+ *
+ * (b) THE COUNT ASSERTION. A scope typo, an unsupported filter `type`, or a PascalCase `operationId`
+ *     pattern all produce ZERO tools with `RESULT: build ok` and no warning (measured three ways).
+ *     The agent would then simply have no tools and degrade silently into the inferred path — exactly
+ *     the failure AC-6.4/AC-6.7 exist to distinguish from the declared one. So the generator counts
+ *     what it emitted against what the spec declared, and THROWS.
+ */
+async function fixupAndVerifyMcpOutput(plan: Plan): Promise<void> {
+	for (const [scope, operationIds] of plan.mcpScopes) {
+		const dir = path.join(plan.outputRoot, `mcp-${scope}`)
+		const serverFile = path.join(dir, 'server.ts')
+		if (!existsSync(serverFile)) throw new Error(`[${plan.source.service}] mcp scope '${scope}' emitted no server.ts`)
+
+		const original = await Bun.file(serverFile).text()
+		const patched = original
+			.replace(/@modelcontextprotocol\/sdk\/server\/mcp"/g, '@modelcontextprotocol/sdk/server/mcp.js"')
+			.replace(/@modelcontextprotocol\/sdk\/server\/stdio"/g, '@modelcontextprotocol/sdk/server/stdio.js"')
+		if (patched !== original) await writeFile(serverFile, patched)
+
+		// Count `registerTool(` in the emitted server, not handler FILES: the server is what an MCP
+		// client actually sees, and a handler file nobody registered would be an invisible tool.
+		const registered = [...patched.matchAll(/registerTool\(\s*"([^"]+)"/g)].map(m => m[1]!)
+		const expected = [...operationIds].sort()
+		const actual = [...registered].sort()
+		if (expected.length !== actual.length || expected.some((id, i) => id !== actual[i])) {
+			throw new Error(
+				`[${plan.source.service}] mcp scope '${scope}': the emitted tool surface does not match the manifest.\n` +
+					`  declared in the spec (x-mcp-scope): ${expected.join(', ') || '(none)'}\n` +
+					`  registered in server.ts:            ${actual.join(', ') || '(none)'}\n` +
+					`  A zero-tool surface builds "ok" and degrades the agent silently — that is why this throws.`,
+			)
+		}
+		console.log(`[${plan.source.service}] mcp scope '${scope}': ${actual.length} tools — ${actual.join(', ')}`)
+	}
 }
 
 function buildKubbConfig(plan: Plan) {
@@ -148,6 +284,30 @@ function buildKubbConfig(plan: Plan) {
 					pluginClient({ output: { path: path.join(plan.outputRoot, 'client'), barrelType: 'named' }, importPath: httpImport }),
 				]
 			: []),
+		// ONE pluginMcp INSTANCE PER DECLARED SCOPE. Three properties of this block are load-bearing and
+		// each was measured against the real spec:
+		//
+		//  1. `include` IS THE SECURITY BOUNDARY. Without it, ALL 40 operations became tools. The filter
+		//     is fail-closed (`if (context.include && !isIncluded) return null`), so the allowlist is
+		//     what keeps a controller born tomorrow out of a model's reach. Never omit it.
+		//  2. THE PATTERN IS AN ANCHORED RegExp, NEVER A STRING. String patterns are UNANCHORED
+		//     substring matches — `'mcp:issue'` matched the tag `mcp:issue-handling`, and a scope named
+		//     `system` would match a tag `subsystem`. Filtering by `operationId` instead is a trap of
+		//     its own: the matcher uses `getOperationId({ friendlyCase: true })` (camelCase), so our
+		//     PascalCase ids silently match nothing.
+		//  3. `barrelType: false` IS MANDATORY. With the default, the ROOT barrel re-exports
+		//     `getServer/server/startServer` from BOTH scopes (TS2308) and injects every tool handler
+		//     into the barrel the frontend app imports.
+		//
+		// `client.baseURL` is omitted on purpose — passing it inlines a literal host at every call site
+		// and the repo's `resolveURL` registry stops deciding.
+		...[...plan.mcpScopes.keys()].map(scope =>
+			pluginMcp({
+				output: { path: path.join(plan.outputRoot, `mcp-${scope}`), barrelType: false },
+				include: [{ type: 'tag', pattern: new RegExp(`^mcp:${escapeRegExp(scope)}$`) }],
+				client: { importPath: `${REPO.sdkPackage}/${plan.source.service}/mcp-${scope}/_http` },
+			}),
+		),
 	]
 	return {
 		config: {
@@ -229,13 +389,13 @@ async function main(): Promise<void> {
 		await writeServiceHttp(plan)
 		console.log(`[${plan.source.service}] kubb running…`)
 		await runKubb(plan)
+		await fixupAndVerifyMcpOutput(plan)
 		await emitServiceClient(plan)
 	}
 	await emitAggregateClient(plans)
-	const strays = [
-		path.join(repoRoot, 'packages/client/packages'),
-		...plans.map(p => path.join(p.outputRoot, 'packages')),
-	].filter(p => existsSync(p))
+	const strays = [path.join(repoRoot, 'packages/client/packages'), ...plans.map(p => path.join(p.outputRoot, 'packages'))].filter(p =>
+		existsSync(p),
+	)
 	if (strays.length > 0) throw new Error(`stray nested gen output at ${strays.join(', ')} — kubb wrote outside the dist root`)
 	console.log('done.')
 }

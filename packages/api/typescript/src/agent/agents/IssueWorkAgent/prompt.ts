@@ -10,8 +10,8 @@ type IssueWorkInput = Z.output<typeof IssueWorkInputSchema>
  * running in, which issue it is working, under what key.
  *
  * ### The declaration instruction is deliberately ABSENT until Fase 6
- * §4.8 says this prompt must explicitly instruct the model to call `codedm__complete_issue` when it
- * finishes and `codedm__raise_stop` when it is stuck — "the declaration only exists if it is asked
+ * §4.8 says this prompt must explicitly instruct the model to call `TransitionIssueStatus` when it
+ * finishes and `RaiseStop` when it is stuck — "the declaration only exists if it is asked
  * for". That instruction lands in the SAME phase as the tools it names: the MCP router, the four tool
  * handlers and the `RunTokenService` implementation are all Fase 6, and `IssueWorkAgent.tools` is
  * empty until then. Telling a model to call a tool that is not in its `--allowedTools` scope produces

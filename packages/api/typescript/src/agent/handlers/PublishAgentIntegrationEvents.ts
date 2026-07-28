@@ -95,6 +95,11 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						issueId: event.payload.issueId,
 						threadId: event.payload.threadId,
 						kind: event.payload.kind,
+						// ADDITIVE in Fase 6 (§4.4 item (i)): without it the agent's own words die here and
+						// the Needs-you card is born empty. `source` deliberately does NOT cross — it records
+						// HOW we learned the fact, which is a context-private observation, and forwarding it
+						// would turn a zero-cost domain field into a contract change (§4.3 rule 6).
+						detail: event.payload.detail,
 					},
 				}),
 			)

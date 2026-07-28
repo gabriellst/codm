@@ -3060,6 +3060,74 @@ confused-deputy dentro do próprio processo.
 `_http` do escopo pelo cliente de serviço comum e confirmar que (c) fica verde indevidamente — é
 essa troca que a AC existe para proibir.
 
+
+> ## ⚠️ DEFEITOS DE CONTRATO ENCONTRADOS NA EXECUÇÃO DA FASE 6 (28-jul) — CORRIGIDOS AQUI, NÃO CONTORNADOS
+>
+> A §8 manda provar o defeito com evidência e consertá-lo **no goal**. Sete apareceram; cada um traz o
+> que foi medido e a decisão tomada.
+>
+> **D6-1. AC-6.17(a) e AC-6.17(d) eram MUTUAMENTE EXCLUSIVAS.** (a) exige
+> `git grep -n "codedm__" -- packages/api/typescript/src` → **0 hits**. (d) exige *"um teste irmão
+> asserta explicitamente que `startsWith('codedm__')` sobre esse mesmo nome é `false`"* — e os testes
+> desta base são **colocados**, logo vivem dentro do mesmo pathspec. Satisfazer (a) apaga o teste que
+> (d) obriga; satisfazer (d) deixa (a) vermelha para sempre.
+> **CORREÇÃO:** (a) passa a ler *"0 hits FORA da asserção de regressão da AC-6.17(d) e do comentário
+> que a explica"*. Medido depois do trabalho: **2 arquivos** —
+> `StreamJsonToTurnFactAccumulator.test.ts` (a asserção obrigatória) e
+> `StreamJsonToTurnFactAccumulator.ts` (o comentário de 2 linhas na própria guarda, que existe para
+> impedir o "conserto" de volta ao prefixo antigo). Os outros **12** arquivos que tinham a grafia no
+> HEAD de entrada foram limpos. O mecanismo da Fase 1 — o enum de 4 literais, o `CODEDM_TOOL_PREFIX`
+> e o `AGENT_TOOL_INPUT_SCHEMAS` — está **deletado**, que é o que a AC media.
+>
+> **D6-2. `MCP_SERVER_KEY` MUDOU DE ARQUIVO, e continua single-source.** A AC-6.17(c) o fixa em
+> `ClaudeAgentRunner.ts:43`. Três consumidores precisam da MESMA grafia: o runner (escreve
+> `--mcp-config`/`--allowedTools`), o manifesto (deriva o escopo) e o **accumulator** (precisa
+> RECONHECER as nossas tools no stream de frames). Fazer o accumulator importar o runner arrastaria
+> `node:child_process` para dentro de uma máquina de estado pura — contra a postura que
+> `tests/architecture/pty-isolation.test.ts` confina. **CORREÇÃO:** a chave vive em
+> `agent/mcp/wire.ts`, um módulo FOLHA sem imports, e o runner a importa de lá. Single-source
+> preservado; `WIRE(C)` continua construído num lugar só, que era a substância da alínea.
+>
+> **D6-3. SÃO CINCO OPERAÇÕES DE ESCRITA, NÃO QUATRO — a §5.3 contava três use cases para quatro
+> controllers.** A emenda já tinha corrigido "três → quatro" nos CONTROLLERS, mas a lista de
+> `usecases/{DeclareIssueComplete,DeclareStop,AskOperator}` ficou com três. `CreateIssue` não tinha
+> onde aterrissar. **CORREÇÃO:** nasce `agent/usecases/DeclareIssueOpen.ts`, que levanta a classe
+> **já existente** `AgentRunStartedEvent` → bridge existente → `integration.issue.opened` →
+> `OpenIssue` (idempotente). **Não é evento novo e não é publicador novo** — é a mesma regra da §4.3
+> regra 7 aplicada à quarta aterrissagem.
+>
+> **D6-4. NASCE UM QUINTO CÓDIGO DE ERRO: `AGENT_TRANSPORT_STOP_NOT_DECLARABLE`** (`<Ctx>DomainErrors`
+> + `UNPROCESSABLE_ENTITY`). `DeclareStop` recebe o `StopKind` **inteiro** (a §8 regra 5 proíbe
+> redeclarar o value-set), então um modelo pode pedir `AUTH_REQUIRED`/`SERVER_ERROR` — que são
+> observações do RUNNER sobre processo e stream. Aceitar poria um stop de transporte com
+> `source: DECLARED` no ledger, fazendo a coluna `FactSource` mentir. A AC-6.13 passa a cobrir
+> **cinco** códigos; o ripple de 4 paradas foi cumprido para todos (medido: união+registro, `en`+`pt`,
+> SDK regenerada, `x-error-codes`).
+>
+> **D6-5. `detail` PRECISAVA ENTRAR TAMBÉM NO EVENTO DE DOMÍNIO, não só no wire.** O corpo da Fase 6
+> diz que a única mudança de contrato é o `detail` no `issue-stop-raised.tsp`, e que aos eventos de
+> domínio se acrescenta **só** `source`. Não fecha: o bridge lê `event.payload.detail` do
+> `AgentRunStopRaisedEvent` para repassar — sem o campo lá, a pergunta do `AskOperator` e o texto do
+> `DeclareStop` morrem antes da travessia e a AC-6.10(b) fica insatisfazível pelo mesmo motivo que ela
+> própria descreve. **CORREÇÃO:** `AgentRunStopRaisedEventSchema` ganha `detail: z.string()` **e**
+> `source`. Custo de contrato continua ZERO (evento context-private).
+>
+> **D6-6. `key` NÃO CABE NO CAMINHO DECLARADO, e o campo é morto.** `AgentRunCompletedEvent` exige
+> `key`, mas as claims do run token (congeladas na Fase 1) não o carregam, e o envelope o declara
+> por-agent e não no `AgentInputEnvelope` — logo a base `Agent` não pode cunhá-lo. **Verificado que
+> `key` não tem consumidor:** `MaterializeIssueFromExecution` repassa só `issueId` a `CompleteIssue`, e
+> `BrowserFrameEnricher` desestrutura só `threadId`/`issueId`. **CORREÇÃO:** `key` fica **opcional**
+> (default `''`) no input de `DeclareIssueComplete`, documentado como LABEL e não identidade — a
+> identidade é o `issueId`, que o router valida. Alternativa rejeitada: alargar `RunTokenClaims`,
+> que mexeria num contrato congelado para carregar um campo que ninguém lê.
+>
+> **D6-7. NASCE UM CICLO ANOTADO `agent ↔ ui`.** `ui → agent` já existia (o BFF lê `ProviderDetector`);
+> o manifesto acrescenta `agent → ui` ao nomear os controllers de leitura do escopo `system`. O rail
+> `context-map` reprovou (saída literal no BUILD-LOG). **CORREÇÃO:** anotado em `ANNOTATED_CYCLES`
+> com a assimetria escrita: um lado é código chamando código, o outro é uma DECLARAÇÃO avaliada uma
+> vez no load, que não constrói e não chama nada. Junto: 4 edges novas no `CONTEXT_MAP` e 6
+> `POLICY_EXCEPTIONS` per-file — o **degrau 2** da escada da AC-6.11(e).
+
 ### Fase 7 — Frame SSE estruturado + fechamento
 
 `TerminalActionFrameSchema` re-chaveado em `tool` (`z.string()`) + resumo de `input`; `bun sdk`;
