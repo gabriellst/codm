@@ -10,6 +10,7 @@ import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { RunIssueTurnOnClassification } from '@agent/handlers/RunIssueTurnOnClassification'
 import { AgentSessionRepository } from '@agent/repositories'
 import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { ClaudeAgentRunner } from '@agent/services/AgentRunner'
 import { ResumeInvalidationReason, AgentRunOutcome } from '@agent/enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
@@ -116,7 +117,7 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 
 	it('turn 1 opens with --session-id, turn 2 resumes it with --resume, and the row follows', async () => {
 		const runner = new CapturingRunner()
-		testBed.override(AgentRunner, runner)
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 		const handler = testBed.resolve(RunIssueTurnOnClassification)
 		const sessions = testBed.resolve(AgentSessionRepository)
 		const { thread, issue, workspace } = await givenIssueOnThread()
@@ -167,7 +168,7 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 
 	it('AC-4.4 — a conversation that advanced past the cursor starts fresh AND logs the named reason', async () => {
 		const runner = new CapturingRunner()
-		testBed.override(AgentRunner, runner)
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 		const logging = testBed.resolve(LoggingService) as MockLoggingService
 		const handler = testBed.resolve(RunIssueTurnOnClassification)
 		const { thread, issue } = await givenIssueOnThread()

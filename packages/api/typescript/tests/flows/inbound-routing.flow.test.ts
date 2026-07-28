@@ -12,6 +12,7 @@ import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { PublishAgentIntegrationEvents } from '@agent/handlers/PublishAgentIntegrationEvents'
 import { RunIssueTurnOnClassification } from '@agent/handlers/RunIssueTurnOnClassification'
 import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { AgentRunOutcome } from '@agent/enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
 import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
@@ -123,7 +124,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	})
 
 	it('an invocable inbound is classified → integration.message.classified is published (captured)', async () => {
-		testBed.override(AgentRunner, new NewIssueStubRunner())
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new NewIssueStubRunner()))
 		const outbox = await wireBridges()
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
@@ -138,7 +139,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 	})
 
 	it('classified → RunIssueTurn → issue OPENED fires live, materializes the Issue + an SSE frame', async () => {
-		testBed.override(AgentRunner, new NewIssueStubRunner())
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new NewIssueStubRunner()))
 		const outbox = await wireBridges()
 
 		// A workspace bound to the thread so the closer can resolve the run cwd.

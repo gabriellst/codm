@@ -40,10 +40,12 @@ import {
 // Calling it explicitly in start(), then DYNAMICALLY importing `./routers` after it, is what forces
 // the ordering: migrate → then contexts create against the already-migrated singleton.
 import { migrateEmbeddedDatabase } from '@shared/registry'
-// The agent seam, imported for its SHUTDOWN token only (see the 'agent runs' step below). Statically:
-// it is a pure type + abstract class module with no DB reach, so it does not need the deferral that
-// `./routers` does, and a dynamic import here is what forced the duck-typed `any` this phase removes.
-import { AgentRunner } from '@agent/services/AgentRunner/AgentRunner'
+// The agent runtime's WIRING token, imported for SHUTDOWN only (see the 'agent runs' step below).
+// Statically: a pure type + abstract class module with no DB reach, so it does not need the deferral
+// that `./routers` does, and a dynamic import here is what forced the duck-typed `any` this phase
+// removes. It is the FACTORY rather than the seam because `AgentRunner` is no longer a token — the
+// factory owns every runner it handed out, and is the only thing that can reach them to kill them.
+import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.
@@ -114,12 +116,12 @@ async function start(): Promise<void> {
 		await step('http server', () => mainRouter.stop())
 		// Agent runtime: kill every live provider PROCESS GROUP before the outbox/db drain, so no CLI —
 		// nor any child it spawned — outlives the daemon. `shutdown()` is DECLARED on the `AgentRunner`
-		// seam (§4.11), which is exactly what removed the duck-typing this step used to need: it
-		// dynamically imported the old token and probed `typeof runner.shutdown === 'function'` because
-		// only one of four implementations had the method. With one execution method plus `shutdown` on
-		// the abstract class, every binding answers it and this is an ordinary typed resolve.
+		// seam (§4.11) and FANNED OUT by the factory, which is exactly what removed the duck-typing this
+		// step used to need: it dynamically imported the old token and probed `typeof runner.shutdown ===
+		// 'function'` because only one of four implementations had the method. The factory is a container
+		// SINGLETON, so the runners it shuts down are the same instances it handed to the agents.
 		// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
-		await step('agent runs', () => (container.resolve(AgentRunner as any) as AgentRunner).shutdown())
+		await step('agent runs', () => (container.resolve(AgentRunnerFactory as any) as AgentRunnerFactory).shutdown())
 		await step('outbox dispatcher', () => (container.resolve(OutboxDispatcher as any) as OutboxDispatcher).stop())
 		await step('mediator listeners', () => {
 			;(container.resolve(InternalMediator as any) as InternalMediator).removeAllListeners()

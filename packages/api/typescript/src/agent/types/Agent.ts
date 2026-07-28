@@ -88,10 +88,7 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	/** Phantom — never assigned. `never` for an agent with no `outputSchema`, which makes `collect()` unusable there. */
 	readonly output!: OutputSchema extends ZodType ? Z.output<OutputSchema> : never
 
-	constructor(
-		protected readonly runner: AgentRunner,
-		protected readonly runTokens: RunTokenService,
-	) {}
+	constructor(protected readonly runTokens: RunTokenService) {}
 
 	/**
 	 * The ONE entry point, and it is CONCRETE. DO NOT OVERRIDE — see the class docstring.
@@ -99,13 +96,21 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * It adds exactly what a subclass is not allowed to decide: the agent's IDENTITY (and, from Fase 6,
 	 * the `mcp` invocation carrying the minted run token). Everything domain-shaped comes from
 	 * `buildRequest`.
+	 *
+	 * ### Why the runner is a PARAMETER and not a constructor dependency
+	 * WHICH CLI drives a turn is a property of the THREAD (`thread.providers[0]`), so it is not known
+	 * until a request exists — while a constructor dependency is resolved when the container is built.
+	 * With exactly one runner bound that distinction was invisible; `AgentRunnerFactory` makes it real,
+	 * and the caller that already holds the provider (`RunIssueTurn`, `DefaultIssueRouter`) is the one
+	 * layer that can resolve it. The agent is left holding NO I/O at all, which is what lets §4.8 keep
+	 * binding agents identically in all three envs.
 	 */
-	async *run(input: this['input']): AsyncIterable<AgentRuntimeEvent> {
+	async *run(runner: AgentRunner, input: this['input']): AsyncIterable<AgentRuntimeEvent> {
 		const request = { ...this.buildRequest(input), agentName: (this.constructor as typeof Agent).NAME }
 		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
 		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token
 		// is always bound to a scope" hold by type instead of by a cast.
-		yield* this.runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope) }) })
+		yield* runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope) }) })
 	}
 
 	/**
@@ -186,8 +191,8 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * method's job, and `collectFailure()` is where each agent supplies its own code instead of this
 	 * base inventing one it has no vocabulary for.
 	 */
-	protected async collect(input: this['input']): Promise<this['output']> {
-		for await (const event of this.run(input)) {
+	protected async collect(runner: AgentRunner, input: this['input']): Promise<this['output']> {
+		for await (const event of this.run(runner, input)) {
 			if (event.type !== 'finished') continue
 			const { result } = event
 			if (result.stop) throw this.collectFailure(`agent run stopped: ${result.stop.kind} — ${result.stop.detail}`)

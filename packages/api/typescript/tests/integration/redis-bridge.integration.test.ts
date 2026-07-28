@@ -9,6 +9,7 @@ import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { AgentRunOutcome } from '@agent/enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
 
@@ -146,7 +147,7 @@ describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + clas
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
 		// Deterministic classification (NEW_ISSUE) — set BEFORE resolving the consumer graph.
-		testBed.override(AgentRunner, new NewIssueStubRunner())
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new NewIssueStubRunner()))
 
 		producer = new RedisClient(REDIS_URL)
 		await producer.connect()

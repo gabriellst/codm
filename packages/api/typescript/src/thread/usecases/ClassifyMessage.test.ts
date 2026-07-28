@@ -3,7 +3,8 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenIssue } from '@test/support'
 import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
 import { ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { AgentRunner } from '@agent/services/AgentRunner'
+import type { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { AgentRunOutcome } from '@agent/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ClassifyMessage } from './ClassifyMessage'
@@ -52,7 +53,9 @@ describe('ClassifyMessage — classification routes + clarification invariant', 
 				})(),
 			shutdown: async () => {},
 		} as unknown as AgentRunner
-		testBed.override(AgentRunner, fakeRunner)
+		// The FACTORY is the seam now — `AgentRunner` is no longer a token, so a runner double reaches the
+		// agent only through the thing that produces it.
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(fakeRunner))
 	})
 	afterAll(async () => {
 		await testBed.destroy()

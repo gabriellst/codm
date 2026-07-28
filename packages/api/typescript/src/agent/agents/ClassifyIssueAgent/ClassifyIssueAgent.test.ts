@@ -45,7 +45,7 @@ class StubbedRunner extends AgentRunner {
 	async shutdown(): Promise<void> {}
 }
 
-const input = (overrides: Partial<Parameters<ClassifyIssueAgent['classify']>[0]> = {}): Parameters<ClassifyIssueAgent['classify']>[0] => ({
+const input = (overrides: Partial<Parameters<ClassifyIssueAgent['classify']>[1]> = {}): Parameters<ClassifyIssueAgent['classify']>[1] => ({
 	ownerId: '00000000-0000-4000-8000-0000000000aa',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
@@ -56,7 +56,7 @@ const input = (overrides: Partial<Parameters<ClassifyIssueAgent['classify']>[0]>
 
 const build = () => {
 	const runner = new StubbedRunner()
-	return { runner, agent: new ClassifyIssueAgent(runner, new InMemoryRunTokenService(), new ClassifyIssuePromptBuilder()) }
+	return { runner, agent: new ClassifyIssueAgent(new InMemoryRunTokenService(), new ClassifyIssuePromptBuilder()) }
 }
 
 describe('ClassifyIssueAgent — classify() IS collect(), the base half IssueWorkAgent cannot reach', () => {
@@ -75,7 +75,7 @@ describe('ClassifyIssueAgent — classify() IS collect(), the base half IssueWor
 			},
 		]
 
-		const decision = await agent.classify(input())
+		const decision = await agent.classify(runner, input())
 
 		// Deep-equal to the EXACT object the runner produced (`result.output`, cast — never re-parsed,
 		// per the base's own docstring): no `kind`, no `slugKey`, no default title. That reshaping is
@@ -100,7 +100,7 @@ describe('ClassifyIssueAgent — classify() IS collect(), the base half IssueWor
 			},
 		]
 
-		const rejection = agent.classify(input())
+		const rejection = agent.classify(runner, input())
 
 		// Overridden on `ClassifyIssueAgent.ts` (`collectFailure`) — the base's default would throw a bare
 		// `Error`, unnamed and un-mappable by `GlobalErrorMapper`. Asserting the `BaseError` type, not just
@@ -124,7 +124,7 @@ describe('ClassifyIssueAgent — classify() IS collect(), the base half IssueWor
 			},
 		]
 
-		const rejection = agent.classify(input())
+		const rejection = agent.classify(runner, input())
 
 		// Same `collectFailure` override as the transport-stop case above — `collect()`'s contract is that
 		// BOTH failure modes (`result.stop` and `result.failed`) land on the SAME hook (`types/Agent.ts`
@@ -155,8 +155,8 @@ describe('AC-6.5(a) — ClassifyIssueAgent runs with NO mcp invocation and mints
 			return originalMint(claims)
 		}
 
-		const agent = new ClassifyIssueAgent(runner, tokens, new ClassifyIssuePromptBuilder())
-		await agent.classify(input())
+		const agent = new ClassifyIssueAgent(tokens, new ClassifyIssuePromptBuilder())
+		await agent.classify(runner, input())
 
 		expect(runner.requests).toHaveLength(1)
 		expect(runner.requests[0]!.mcp).toBeUndefined()

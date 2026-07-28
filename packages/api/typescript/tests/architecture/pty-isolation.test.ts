@@ -31,7 +31,7 @@
  */
 import { describe, it, expect } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 // `new Bun.Terminal` (construction) rather than the bare name — docstrings across the seam
 // legitimately DESCRIBE the deleted Fork-D2 engine; only real PTY construction is confined.
@@ -47,11 +47,15 @@ const SRC = join(import.meta.dir, '..', '..', 'src')
 // ── The path constants, all together: Fase 5 swapped `terminal/` for `agent/` in THIS BLOCK and
 // nowhere else (AC-5.9). The `git mv terminal → agent` already landed in Fase 5, so they read
 // `agent/` below, not `terminal/`.
-const ALLOWED_PREFIX = join(SRC, 'agent/services/AgentRunner')
+// DIRECTORY prefixes — the trailing separator is load-bearing. A bare `startsWith` on
+// `…/services/AgentRunner` also matches `…/services/AgentRunnerFactory`, so the sibling that resolves
+// `ProviderKind` → runner would have silently INHERITED the spawn permission it must not have. The
+// hole is not hypothetical: that sibling exists (see `services/AgentRunnerFactory/index.ts`).
+const ALLOWED_PREFIX = join(SRC, 'agent/services/AgentRunner') + sep
 // Spawn is a wider capability than PTY: TWO modules legitimately create a process.
 const ALLOWED_SPAWN_PREFIXES = [
-	join(SRC, 'agent/services/AgentRunner'), // Fase 5 (AC-5.9): 'agent/services/AgentRunner'
-	join(SRC, 'agent/services/ProviderDetector'), // Fase 5 (AC-5.9): 'agent/services/ProviderDetector'
+	join(SRC, 'agent/services/AgentRunner') + sep, // Fase 5 (AC-5.9): 'agent/services/AgentRunner'
+	join(SRC, 'agent/services/ProviderDetector') + sep, // Fase 5 (AC-5.9): 'agent/services/ProviderDetector'
 ]
 
 function walk(dir: string, out: string[] = []): string[] {

@@ -8,6 +8,7 @@ import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { DeclareIssueComplete } from './DeclareIssueComplete'
 import { AgentRunner } from '../services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
 import { RunTokenService } from '../services/RunTokenService'
@@ -170,7 +171,7 @@ describe('RunIssueTurn use case', () => {
 
 	it('drives the seam with the workspace as cwd and ONE user message — with mcp, no outputSchema', async () => {
 		const runner = new CapturingRunner()
-		testBed.override(AgentRunner, runner)
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 		const useCase = testBed.resolve(RunIssueTurn)
 		const issueId = testId('run-issue-turn', 'issue-request')
 
@@ -220,14 +221,15 @@ describe('RunIssueTurn use case', () => {
 	 * claude-code, and `AttachThread` only checks installation — so a machine where the codex BINARY
 	 * happens to be on PATH lets a thread declare `providers: ['CODEX']` even though no runner drives
 	 * it. Before this guard, `resolveProvider` would return normally (detection succeeded) and
-	 * `drainRun` would fall through to `this.runner.run()` — silently executing the turn with
-	 * whichever runner IS bound (`StubAgentRunner` here, `ClaudeAgentRunner` in `real`).
+	 * `drainRun` would fall through to a `run()` on whichever runner IS bound (`StubAgentRunner` here,
+	 * `ClaudeAgentRunner` in `real`).
 	 *
-	 * Overriding `ProviderDetector` (not `AgentRunner`) is what proves the RIGHT layer is doing the
-	 * rejecting: the bound runner stays the ordinary `StubAgentRunner` — the guard is `RunIssueTurn`
-	 * comparing `input.provider` against `RUNNER_SUPPORTED_PROVIDERS` (`agent/registry.ts`), the DI
-	 * wiring's own declaration of what the bound runner drives, so a codex request is refused before
-	 * `run()` is ever reached without the runner class itself ever naming a `ProviderKind` (AC-4.5.3).
+	 * Overriding `ProviderDetector` (not the runner factory) is what proves the RIGHT layer is doing
+	 * the rejecting: the bound factory stays the ordinary `StubAgentRunnerFactory` — the guard is
+	 * `AgentRunnerFactory.for(provider)` returning no runner for CODEX, the DI wiring's own declaration
+	 * of what it can drive, so a codex request is refused before `run()` is ever reached without the
+	 * runner class itself ever naming a `ProviderKind` (AC-4.5.3). The stub factory deliberately stands
+	 * in only for CLAUDE_CODE, which is what keeps this assertion meaningful.
 	 *
 	 * Placed AFTER "rejects a provider that is not installed": `testBed.override` replaces the
 	 * container binding for the rest of the suite (it is not undone by `reset()`), so this must run
@@ -261,7 +263,7 @@ describe('RunIssueTurn use case', () => {
 	})
 
 	it('maps a TRANSPORT stop to a STOPPED outcome + a stop-raised fact (runner overridden last)', async () => {
-		testBed.override(AgentRunner, new StoppingRunner())
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
 		const useCase = testBed.resolve(RunIssueTurn)
 		const eventRepo = testBed.resolve(DomainEventRepository)
 		const issueId = testId('run-issue-turn', 'issue-4')
@@ -292,7 +294,7 @@ describe('RunIssueTurn use case', () => {
 	 */
 	it('CWD_CHANGED converges: fires exactly once when the workspace moves, then the next turn under the SAME new cwd resumes', async () => {
 		const runner = new CapturingRunner()
-		testBed.override(AgentRunner, runner)
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 		const logging = testBed.resolve(LoggingService) as MockLoggingService
 		const sessions = testBed.resolve(AgentSessionRepository)
 		const useCase = testBed.resolve(RunIssueTurn)
@@ -403,12 +405,13 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 		messageId: testId('run-issue-turn-toolless', 'entry-1'),
 	})
 
-	/** Rebinds `IssueWorkAgent` to the tool-less double, built over whatever runner is bound NOW. */
+	/**
+	 * Rebinds `IssueWorkAgent` to the tool-less double. It takes NO runner: the runner reaches an agent
+	 * as a parameter to `run()`, resolved by `RunIssueTurn` from whichever `AgentRunnerFactory` is bound
+	 * at call time — so a double built here can no longer capture a stale one.
+	 */
 	const injectToollessAgent = () =>
-		testBed.override(
-			IssueWorkAgent,
-			new ToollessIssueWorkAgent(testBed.resolve(AgentRunner), testBed.resolve(RunTokenService), new IssueWorkPromptBuilder()),
-		)
+		testBed.override(IssueWorkAgent, new ToollessIssueWorkAgent(testBed.resolve(RunTokenService), new IssueWorkPromptBuilder()))
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
@@ -461,7 +464,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 	 * already observed the ordinary stub.
 	 */
 	it('AC-6.7(c) — still raises a TRANSPORT stop with no tools, marked INFERRED, and mints no completion', async () => {
-		testBed.override(AgentRunner, new StoppingRunner())
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
 		injectToollessAgent()
 		const useCase = testBed.resolve(RunIssueTurn)
 		const eventRepo = testBed.resolve(DomainEventRepository)

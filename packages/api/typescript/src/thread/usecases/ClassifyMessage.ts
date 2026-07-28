@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
-import { ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { BufferSize, ClassificationMethod, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { IssueRouter } from '@agent/services/IssueRouter'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { ThreadRepository } from '../repositories/ThreadRepository'
@@ -9,7 +9,7 @@ import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { ClarificationRepository } from '../repositories/ClarificationRepository'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
 import { MessageClassifiedEvent, ClarificationRequestedEvent } from '../events'
-import type { ApplicationErrors } from '../errors'
+import type { ApplicationErrors, ThreadDomainErrors } from '../errors'
 
 export const ClassifyMessageInputSchema = z.object({
 	threadId: z.uuid(),
@@ -75,9 +75,18 @@ export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, 
 		const workspace = await this.workspaces.findById(thread.workspaceId)
 		if (!workspace) throw new BaseError<ApplicationErrors>('WORKSPACE_NOT_FOUND', `no workspace ${thread.workspaceId}`)
 
+		// The thread's PRIMARY CLI — the same `providers[0]` the turn itself runs under
+		// (`RunIssueTurnOnClassification`), so a message is classified by the CLI that will answer it.
+		// `Thread` enforces `providers.min(1)` at create and at attach, so an empty list here means the
+		// row predates that invariant or was written around it; failing named beats classifying under a
+		// CLI nobody chose.
+		const provider = thread.providers[0]
+		if (!provider) throw new BaseError<ThreadDomainErrors>('NO_PROVIDER_SELECTED', `thread ${input.threadId} has no provider`)
+
 		const decision = await this.router.classify({
 			ownerId: thread.ownerId,
 			threadId: input.threadId,
+			provider,
 			cwd: workspace.path,
 			message: entry.text,
 			quotedIssueId,
@@ -140,7 +149,13 @@ export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, 
 		})
 	}
 
-	private async appendAction(ownerId: string, input: this['input'], method: ClassificationMethod, tx: Transaction, issueId?: string): Promise<void> {
+	private async appendAction(
+		ownerId: string,
+		input: this['input'],
+		method: ClassificationMethod,
+		tx: Transaction,
+		issueId?: string,
+	): Promise<void> {
 		// Every classification decision is appended as an ACTION line (auditability NFR).
 		await this.transcript.append(
 			{ ownerId, threadId: input.threadId, kind: TranscriptKind.ACTION, text: `classified: ${method}`, classification: method, issueId },
@@ -148,7 +163,12 @@ export class ClassifyMessage extends Handler<typeof ClassifyMessageInputSchema, 
 		)
 	}
 
-	private bufferLimit(bufferSize: string): number {
+	/**
+	 * `BufferSize`, not `string` — the parameter type is what `local/no-enum-widening` is about. Widening
+	 * here would let a caller pass any string and lose the compile error the day a new member lands with
+	 * a non-numeric spelling, at which point the fallback below would silently swallow it.
+	 */
+	private bufferLimit(bufferSize: BufferSize): number {
 		const n = Number.parseInt(bufferSize, 10)
 		return Number.isFinite(n) && n > 0 ? n : 50
 	}

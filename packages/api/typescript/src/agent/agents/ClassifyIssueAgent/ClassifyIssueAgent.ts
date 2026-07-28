@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { BaseError } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
 import type { ApplicationErrors } from '../../errors'
-import { AgentRunner } from '../../services/AgentRunner'
+import type { AgentRunner } from '../../services/AgentRunner'
 import { RunTokenService } from '../../services/RunTokenService'
 import { Agent } from '../../types/Agent'
 import type { AgentRunRequest } from '../../types'
@@ -46,16 +46,22 @@ export class ClassifyIssueAgent extends Agent<typeof ClassifyIssueInputSchema, t
 	// act on a message it has not finished judging. It also runs BEFORE an issue exists (the issueId is
 	// its OUTPUT), so there is no issue a token could even be confined to.
 	constructor(
-		runner: AgentRunner,
 		runTokens: RunTokenService,
 		private readonly prompt: ClassifyIssuePromptBuilder,
 	) {
-		super(runner, runTokens)
+		super(runTokens)
 	}
 
-	/** The typed entry point. Delegates straight through to the base's drain helper, which delegates to `run()`. Zero new transport. */
-	async classify(input: this['input']): Promise<this['output']> {
-		return this.collect(input)
+	/**
+	 * The typed entry point. Delegates straight through to the base's drain helper, which delegates to
+	 * `run()`. Zero new transport.
+	 *
+	 * The RUNNER arrives as a parameter because WHICH CLI classifies is the thread's choice, resolved
+	 * from `AgentRunnerFactory` by `DefaultIssueRouter` — see the base class for why an agent holds no
+	 * I/O of its own.
+	 */
+	async classify(runner: AgentRunner, input: this['input']): Promise<this['output']> {
+		return this.collect(runner, input)
 	}
 
 	protected buildRequest(input: this['input']): Omit<AgentRunRequest<typeof LlmDecisionSchema>, 'mcp' | 'agentName'> {

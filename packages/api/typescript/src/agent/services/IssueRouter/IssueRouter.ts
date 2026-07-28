@@ -1,15 +1,23 @@
 import { injectable } from 'tsyringe-neo'
 import type Z from 'zod'
-import { ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
+import { ClassificationMethod, type ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import type { OpenIssueRef } from '@thread/services/OpenIssuesReader'
 import { ClassifyIssueAgent, type LlmDecisionSchema } from '../../agents/ClassifyIssueAgent'
 import { ClassificationVerdict } from '../../enums'
+import { AgentRunnerFactory } from '../AgentRunnerFactory'
 import { uniqueSlugKey } from './slug'
 
 /** What the router is asked to route. The envelope fields it needs to run the agent are part of it. */
 export interface RouteMessageInput {
 	ownerId: string
 	threadId: string
+	/**
+	 * WHICH CLI classifies — the thread's primary provider (`thread.providers[0]`), the same one the
+	 * turn itself will run under. Supplied by the caller rather than resolved here because the router
+	 * has no thread repository and should not grow one: it is POLICY over an agent, not a reader.
+	 * `DefaultIssueRouter` turns it into a runner via `AgentRunnerFactory`.
+	 */
+	provider: ProviderKind
 	/** The thread's ABSOLUTE workspace path — the classification run's `cwd`. Never `process.cwd()`. */
 	cwd: string
 	/** The inbound message text to demultiplex. */
@@ -74,13 +82,16 @@ export abstract class IssueRouter {
  * The real policy, over the real `ClassifyIssueAgent`. The abstract port above exists for the usual
  * reason a service has one here: `thread/usecases/ClassifyMessage` injects the ROUTER, and a test of
  * that use case wants a deterministic decision without reaching an agent at all — that is what
- * `MockIssueRouter` is for. The agent's own stubbing seam (the `AgentRunner` DI binding) stays
- * available for tests that DO want the policy exercised end to end, which is what
- * `IssueRouter.test.ts` does.
+ * `MockIssueRouter` is for. The agent's own stubbing seam (the `AgentRunnerFactory` DI binding, swapped
+ * per-suite with `new FixedAgentRunnerFactory(stub)`) stays available for tests that DO want the policy
+ * exercised end to end, which is what `IssueRouter.test.ts` does.
  */
 @injectable()
 export class DefaultIssueRouter extends IssueRouter {
-	constructor(private readonly agent: ClassifyIssueAgent) {
+	constructor(
+		private readonly agent: ClassifyIssueAgent,
+		private readonly runners: AgentRunnerFactory,
+	) {
 		super()
 	}
 
@@ -91,8 +102,15 @@ export class DefaultIssueRouter extends IssueRouter {
 		}
 
 		// 2. ONE structured agent run for context-match / new-issue / clarification.
+		//
+		// The runner is resolved HERE and handed to the agent, which is the whole of decision (2): the
+		// agent holds no I/O, and `for()` raises the named NOT_IMPLEMENTED when the thread declares a CLI
+		// no runner class drives. Note the ORDER against the shortcut above — a reply-quote routes
+		// without ever touching a runner, so a thread on a detect-only provider still classifies
+		// deterministically instead of failing on a lookup it did not need.
+		const runner = this.runners.for(input.provider)
 		const threshold = input.threshold ?? IssueRouter.DEFAULT_THRESHOLD
-		const decision = await this.agent.classify({
+		const decision = await this.agent.classify(runner, {
 			ownerId: input.ownerId,
 			threadId: input.threadId,
 			cwd: input.cwd,

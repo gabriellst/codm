@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import { BaseError } from '@codedm/core-typescript'
-import { ClassificationMethod, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { ClassificationMethod, ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import type { OpenIssueRef } from '@thread/services/OpenIssuesReader'
 import { AgentRunner } from '../AgentRunner'
+import { FixedAgentRunnerFactory } from '../AgentRunnerFactory'
 import { AgentRunOutcome, AgentName, type TransportStopKind } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { ClassifyIssueAgent, ClassifyIssuePromptBuilder } from '../../agents/ClassifyIssueAgent'
@@ -60,6 +61,7 @@ const openIssues: OpenIssueRef[] = [
 const route = (overrides: Partial<RouteMessageInput> = {}): RouteMessageInput => ({
 	ownerId: '00000000-0000-4000-8000-0000000000aa',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
+	provider: ProviderKind.CLAUDE_CODE,
 	cwd: '/Users/dev/project',
 	message: 'x',
 	openIssues,
@@ -69,7 +71,10 @@ const route = (overrides: Partial<RouteMessageInput> = {}): RouteMessageInput =>
 /** The real router over the real agent over a stubbed runner — only the process boundary is faked. */
 const build = () => {
 	const runner = new StubbedRunner()
-	const router = new DefaultIssueRouter(new ClassifyIssueAgent(runner, new InMemoryRunTokenService(), new ClassifyIssuePromptBuilder()))
+	const router = new DefaultIssueRouter(
+		new ClassifyIssueAgent(new InMemoryRunTokenService(), new ClassifyIssuePromptBuilder()),
+		new FixedAgentRunnerFactory(runner),
+	)
 	return { runner, router }
 }
 

@@ -1,10 +1,11 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError, LoggingService } from '@codedm/core-typescript'
-import type { Transaction, BaseInfrastructureErrors } from '@codedm/core-typescript'
+import type { Transaction } from '@codedm/core-typescript'
 import { AgentModelId, ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { IssueWorkAgent } from '../agents/IssueWorkAgent'
-import { RUNNER_SUPPORTED_PROVIDERS } from '../registry'
+import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
+import type { AgentRunner } from '../services/AgentRunner'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
@@ -113,6 +114,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 
 	constructor(
 		private readonly agent: IssueWorkAgent,
+		private readonly runners: AgentRunnerFactory,
 		private readonly providerDetector: ProviderDetector,
 		private readonly registry: AgentStreamRegistry,
 		private readonly sessions: AgentSessionRepository,
@@ -125,7 +127,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// Single-active-run guard (independent of whether a browser is observing).
 		this.registry.beginSession(input.issueId)
 		try {
-			const detection = await this.resolveProvider(input.provider)
+			const { detection, runner } = await this.resolveProvider(input.provider)
 			// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
 			// produces has to exist by the time the stream starts.
 			const session = await this.resolveSession(input, detection)
@@ -143,7 +145,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			})
 
 			// TRANSPORT — stream the run's frames to the SSE observer, strictly outside any tx.
-			const observed = await this.drainRun(input, detection, session)
+			const observed = await this.drainRun(input, runner, detection, session)
 
 			// FACT — the run's conclusion.
 			const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
@@ -165,58 +167,55 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	}
 
 	/**
-	 * Resolve the binary AND its probed capabilities in one call.
+	 * Resolve the binary, its probed capabilities AND the runner that will drive it, in one call.
 	 *
 	 * `caps` is threaded to `run()` beside `binaryPath` rather than read from an ambient map, which is
 	 * the whole point of §4.7: `ClaudeAgentRunner.buildArgs` stays a pure function of its arguments, so
 	 * the argv can never depend on whether detection happened to have run yet.
 	 *
-	 * ### The misrouting guard (Fase 4.5 hazard fix)
-	 * Detection succeeding says only that a binary is INSTALLED — `PROVIDER_BINARIES` declares real
-	 * `bin` names for codex/opencode so they show up correctly in `DetectProviders`, even though
-	 * neither has a runner yet (they are DETECT-ONLY, see `ProviderDetector.ts`). Without this second
-	 * check, a thread attached to codex, on a machine where the codex CLI happens to be on PATH, would
-	 * fall through to `this.runner.run()` and silently be driven by whichever runner IS bound —
-	 * `ClaudeAgentRunner`'s argv, stream format and session semantics, applied to the wrong CLI.
+	 * ### Two DIFFERENT questions, asked in this order and of different layers
+	 * `ProviderDetector` answers "is the binary INSTALLED" — nothing more. `PROVIDER_BINARIES` declares
+	 * real `bin` names for codex/opencode so they show up correctly in `DetectProviders`, even though
+	 * neither has a runner yet (they are DETECT-ONLY), and `AttachThread` only checks installation. So
+	 * a thread on a machine with the codex CLI on PATH can declare `providers: ['CODEX']` and pass
+	 * detection cleanly.
 	 *
-	 * `RUNNER_SUPPORTED_PROVIDERS` (`registry.ts`) is the DI wiring's own declaration of what the
-	 * bound `AgentRunner` can actually drive — today always just `CLAUDE_CODE`, since exactly one CLI
-	 * has a runner and the binding is direct rather than a `ProviderKind`-keyed lookup. It is checked
-	 * HERE, at the use case, rather than added as a field on `AgentRunner` itself: AC-4.5.3 forbids a
-	 * runner from naming a `ProviderKind` at all (`git grep ProviderKind\.(CLAUDE|CODEX|OPENCODE) --
-	 * services/AgentRunner` must stay 0 hits) — the resolution belongs to the WIRING layer, exactly as
-	 * the `AgentRunner` binding comment in `registry.ts` already says.
+	 * "Can we DRIVE it" is a wiring question, and `AgentRunnerFactory.for()` is where it is asked and
+	 * where the named `NOT_IMPLEMENTED` is raised. It used to be an `includes()` here against a flat
+	 * `RUNNER_SUPPORTED_PROVIDERS` const declared beside the `AgentRunner` binding — two statements of
+	 * one fact, and the const had no way of noticing a second runner being bound. AC-4.5.3 is
+	 * unchanged: the resolution belongs to the wiring layer, and no class under `services/AgentRunner`
+	 * names a `ProviderKind`.
 	 *
-	 * `NOT_IMPLEMENTED` is core's EXISTING base code for "this concrete implementation does not
-	 * support the requested operation" (see `RedisExternalMediator.execute`, `SqlExternalMediator`,
-	 * `MockCommandQueue`) — reused here rather than minting a new context code, which §5.1 of the goal
-	 * reserves for Fase 6. It is also the semantically HONEST choice: `PROVIDER_NOT_DETECTED` would
-	 * falsely tell the operator to install a binary that is already installed.
+	 * The order matters and is preserved: NOT-INSTALLED is reported before CANNOT-DRIVE, so an
+	 * operator missing the binary is told to install it rather than told the product does not support
+	 * their CLI.
 	 */
-	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
+	private async resolveProvider(provider: ProviderKind): Promise<{ detection: ProviderDetection; runner: AgentRunner }> {
 		const detection = await this.providerDetector.resolve(provider)
 		if (!detection || detection.status !== ProviderStatus.DETECTED) {
 			throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)
 		}
-		if (!RUNNER_SUPPORTED_PROVIDERS.includes(provider)) {
-			throw new BaseError<BaseInfrastructureErrors>(
-				'NOT_IMPLEMENTED',
-				`no AgentRunner implementation exists for provider ${provider} — the bound runner only drives ${RUNNER_SUPPORTED_PROVIDERS.join(', ')}`,
-			)
-		}
-		return detection
+		return { detection, runner: this.runners.for(provider) }
 	}
 
-	private async drainRun(input: this['input'], detection: ProviderDetection, session: SessionPlan): Promise<RunObservations> {
+	private async drainRun(
+		input: this['input'],
+		runner: AgentRunner,
+		detection: ProviderDetection,
+		session: SessionPlan,
+	): Promise<RunObservations> {
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.issueId })
 
 		// The AGENT, not the runner (Fase 5, §4.8): `IssueWorkAgent.buildRequest` is the one place allowed
 		// to assemble an `AgentRunRequest`, and the base's template-method `run()` is what stamps the
 		// agent identity onto it (and, from Fase 6, mints the run token and attaches `mcp`). What this use
 		// case resolved — the detected binary + its probed caps, and the session plan — travels IN the
-		// agent's input, because detection (§4.7, incl. the RUNNER_SUPPORTED_PROVIDERS misrouting guard)
-		// and the resume decision (§4.10) are use-case concerns by contract.
-		for await (const event of this.agent.run({
+		// agent's input, because detection (§4.7, incl. the `AgentRunnerFactory.for` misrouting guard)
+		// and the resume decision (§4.10) are use-case concerns by contract. The RUNNER travels as a
+		// separate parameter rather than inside that input: it is not data the agent reasons about, it
+		// is the transport the agent is pointed at.
+		for await (const event of this.agent.run(runner, {
 			ownerId: input.ownerId,
 			issueId: input.issueId,
 			threadId: input.threadId,

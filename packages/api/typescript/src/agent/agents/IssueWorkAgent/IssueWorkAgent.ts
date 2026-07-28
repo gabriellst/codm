@@ -1,7 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentName } from '../../enums'
-import { AgentRunner } from '../../services/AgentRunner'
 import { RunTokenService } from '../../services/RunTokenService'
 import { Agent } from '../../types/Agent'
 import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
@@ -22,9 +21,11 @@ import { IssueWorkInputSchema } from './types'
  * `buildRequest`.
  *
  * ### Same runner, same transport, different request
- * This and `ClassifyIssueAgent` inject the SAME `AgentRunner` (D3, satisfied structurally rather than
- * by convention): identical interface, identical transport, and the only difference is the request —
- * an `outputSchema` there, a session plan and a workspace here.
+ * This and `ClassifyIssueAgent` are handed the SAME `AgentRunner` (D3, satisfied structurally rather
+ * than by convention): identical interface, identical transport, and the only difference is the
+ * request — an `outputSchema` there, a session plan and a workspace here. It ARRIVES at `run()` rather
+ * than at the constructor, because which CLI drives a turn is the thread's choice and the caller
+ * resolves it from `AgentRunnerFactory`; the agent itself holds no I/O.
  *
  * ### `tools` is the DERIVED expansion of ONE declared scope (Fase 6)
  * `issue-handling`, read from `mcp/manifest.ts` and never typed out here. The base's template-method
@@ -53,11 +54,10 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 	override readonly tools = TOOLS_IN_SCOPE['issue-handling']
 
 	constructor(
-		runner: AgentRunner,
 		runTokens: RunTokenService,
 		private readonly prompt: IssueWorkPromptBuilder,
 	) {
-		super(runner, runTokens)
+		super(runTokens)
 	}
 
 	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {

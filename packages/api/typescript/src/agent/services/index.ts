@@ -1,6 +1,9 @@
 export * from './AgentStreamRegistry'
 export * from './TerminalOutputAccumulator'
 export * from './AgentRunner'
+// The WIRING layer over that seam: `ProviderKind` → runner. A SIBLING of `AgentRunner/`, never nested
+// — see that directory's `index.ts` for the two invariants the separation carries.
+export * from './AgentRunnerFactory'
 export * from './StreamJsonCodec'
 export * from './ProviderDetector'
 // The routing POLICY around `ClassifyIssueAgent` — reply-quote shortcut, confidence floor, slug

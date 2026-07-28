@@ -37,7 +37,7 @@ class CapturingRunner extends AgentRunner {
 	async shutdown(): Promise<void> {}
 }
 
-const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[0]> = {}): Parameters<IssueWorkAgent['run']>[0] => ({
+const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[1]> = {}): Parameters<IssueWorkAgent['run']>[1] => ({
 	ownerId: '00000000-0000-4000-8000-0000000000aa',
 	issueId: '00000000-0000-4000-8000-0000000000cc',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
@@ -50,14 +50,14 @@ const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[0]> = {}): P
 
 const build = () => {
 	const runner = new CapturingRunner()
-	return { runner, agent: new IssueWorkAgent(runner, new InMemoryRunTokenService(), new IssueWorkPromptBuilder()) }
+	return { runner, agent: new IssueWorkAgent(new InMemoryRunTokenService(), new IssueWorkPromptBuilder()) }
 }
 
 describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('the BASE stamps identity — `buildRequest` never sets `agentName`', async () => {
 		const { runner, agent } = build()
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
@@ -67,7 +67,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('translates the envelope into one user turn in the thread workspace', async () => {
 		const { runner, agent } = build()
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
@@ -83,7 +83,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('DECLARES the issue-handling scope, derived from the manifest and never typed by hand (AC-6.5)', async () => {
 		const { runner, agent } = build()
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
@@ -98,7 +98,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('carries NO operation of the `system` scope — owner/* and workspace/* stay out of reach (AC-6.5(c))', async () => {
 		const { runner, agent } = build()
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
@@ -112,9 +112,9 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('the BASE mints the run token and points the CLI at this scope endpoint — the subclass sets no `mcp`', async () => {
 		const runner = new CapturingRunner()
 		const tokens = new InMemoryRunTokenService()
-		const agent = new IssueWorkAgent(runner, tokens, new IssueWorkPromptBuilder())
+		const agent = new IssueWorkAgent(tokens, new IssueWorkPromptBuilder())
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
@@ -146,9 +146,9 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	 * falsy would satisfy the first assertion and break every ordinary run.
 	 */
 	it('AC-6.7 — a CLI whose probe says it cannot take an MCP config fails NAMED, never degrades to the inferred path', async () => {
-		const { agent } = build()
+		const { runner, agent } = build()
 		const drain = async (caps: ProviderCapabilities) => {
-			for await (const _ of agent.run(input({ caps }))) {
+			for await (const _ of agent.run(runner, input({ caps }))) {
 				// drain
 			}
 		}
@@ -159,12 +159,12 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	})
 
 	it('an agent with a tool scope but NO issueId fails NAMED rather than minting an unconfined token', async () => {
-		const { agent } = build()
+		const { runner, agent } = build()
 		// `issueId` is optional on the envelope because the CLASSIFIER runs before an issue exists. An
 		// agent that declares tools must never inherit that latitude: a token with nothing to be confined
 		// to would give the identity check nothing to reject against.
 		const drain = async () => {
-			for await (const _ of agent.run(input({ issueId: undefined }))) {
+			for await (const _ of agent.run(runner, input({ issueId: undefined }))) {
 				// drain
 			}
 		}
@@ -174,7 +174,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('has NO structured output — the consumer drains the stream (`outputSchema` absent)', async () => {
 		const { runner, agent } = build()
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
@@ -186,6 +186,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		const { runner, agent } = build()
 
 		for await (const _ of agent.run(
+			runner,
 			input({
 				model: AgentModelId.OPUS,
 				session: { resumeId: 'sess-prev' },
@@ -204,10 +205,10 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	})
 
 	it('yields the runner stream through untouched — the base adds identity, not frames', async () => {
-		const { agent } = build()
+		const { runner, agent } = build()
 
 		const events: AgentRuntimeEvent[] = []
-		for await (const event of agent.run(input())) events.push(event)
+		for await (const event of agent.run(runner, input())) events.push(event)
 
 		expect(events.map(e => e.type)).toEqual(['frame', 'finished'])
 	})
@@ -215,7 +216,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 	it('defaults the model to DEFAULT rather than omitting it — the CLI picks, and we say so', async () => {
 		const { runner, agent } = build()
 
-		for await (const _ of agent.run(input())) {
+		for await (const _ of agent.run(runner, input())) {
 			// drain
 		}
 
