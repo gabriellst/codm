@@ -1,37 +1,15 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler, LoggingService } from '@codedm/core-typescript'
 import { MessageType } from '@codedm/contracts-typescript/wire/enums'
-import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
-// Generated zod schemas from the OWNER service's client subpath (types/schemas ONLY — never the
-// HTTP client): the only way this workspace knows the union variant shapes (union-slots spec §2.3).
-import { internalTextContentSchema, whatsAppTextContentSchema } from '@codedm/client-typescript/go'
+// The IN-PROCESS materialization (wire/events/in-process): the same event, with `content` and
+// `platformData` already joined into per-(platform, messageType) arms and every scalar still
+// carrying its CONTRACT type. Binding to it is what lets this handler read `content?.text` instead
+// of hand-parsing the slot — and what keeps `occurredAt` a `Date` for `IngestChannelMessage`.
+import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { IngestChannelMessage } from '../usecases/IngestChannelMessage'
 import { ClassifyMessage } from '../usecases/ClassifyMessage'
-
-type InboundPayload = InstanceType<typeof ChannelMessageReceivedEvent>['payload']
-
-/**
- * Opportunistic union-slot narrowing (union-slots spec §2.5): this consumer reads ONLY the
- * TEXT content variants it ingests (WHATSAPP/TEXT, INTERNAL/TEXT), validating with the
- * generated schemas from the owner's client. Every other (platform, messageType) pair —
- * including discriminator values this build does not know — is treated as an opaque slot:
- * the message is still claimed (dedup ledger) and then dropped, never rejected, so new
- * variants can ship on the gateway without breaking this consumer.
- */
-export function extractInboundText(payload: Pick<InboundPayload, 'platform' | 'messageType' | 'content'>): string | undefined {
-	if (payload.messageType !== MessageType.TEXT) return undefined
-	if (payload.platform === 'WHATSAPP') {
-		const parsed = whatsAppTextContentSchema.safeParse(payload.content)
-		return parsed.success ? parsed.data.text : undefined
-	}
-	if (payload.platform === 'INTERNAL') {
-		const parsed = internalTextContentSchema.safeParse(payload.content)
-		return parsed.success ? parsed.data.text : undefined
-	}
-	return undefined
-}
 
 /**
  * The BC4 inbound ingestion consumer (phase-6 HARD GATE). Subscribes to the gateway's
@@ -44,15 +22,16 @@ export function extractInboundText(payload: Pick<InboundPayload, 'platform' | 'm
  *      effect. This is what turns at-least-once delivery into exactly-once PROCESSING.
  *   2. Resolve the thread bound to (channel, contact); an inbound for an unattached contact is
  *      recorded (consumed) and dropped.
- *   3. Narrow the `content` slot opportunistically (see `extractInboundText`) — a non-text or
- *      unknown-variant message is recorded (consumed) and dropped with a log line.
+ *   3. Narrow the union slot by its DISCRIMINATOR — the arms arrive pre-joined from the generated
+ *      in-process surface, so this is a `messageType` check and a field read, never a parse. A
+ *      non-text message is recorded (consumed) and dropped with a log line.
  *   4. Ingest (buffer + transcript + gates) → and, when the sender may invoke, classify into an issue.
  *
  * Dedup is deliberately BEFORE ingestion so a duplicate never even reaches the transcript.
  */
 @injectable()
-export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageReceivedEvent> {
-	readonly event = ChannelMessageReceivedEvent
+export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageReceivedInProcessEvent> {
+	readonly event = ChannelMessageReceivedInProcessEvent
 
 	constructor(
 		private readonly consumed: ConsumedMessageRepository,
@@ -66,7 +45,10 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 
 	async handle(event: this['input']): Promise<void> {
 		const ownerId = event.ownerId ?? ''
-		const { channelId, messageId, remoteId, senderId, occurredAt } = event.payload
+		// The union LOCAL, kept whole: narrowing happens on `payload` so the arm — and with it the
+		// `content` variant — stays correlated with the `messageType` guard below.
+		const payload = event.payload
+		const { channelId, messageId, remoteId, senderId, occurredAt } = payload
 
 		// 1. DEDUP FIRST — exactly-once latch. A redelivery is a no-op.
 		const firstDelivery = await this.consumed.claim({ ownerId, channelId, platformMessageId: messageId })
@@ -76,16 +58,24 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		const thread = await this.threads.findByChannelContact(channelId, remoteId)
 		if (!thread) return
 
-		// 3. Opportunistic slot narrowing — unknown variant → opaque passthrough (log + drop).
-		const text = extractInboundText(event.payload)
-		if (text === undefined) {
+		// 3. Discriminator narrowing — no parse. `content` is `.optional()` on every arm, so this is
+		// `string | undefined` by type; the `typeof` guard also covers the RUNTIME case the type cannot,
+		// since nothing zod-parses an integration payload on the mediator path (the envelope is
+		// `new Cls(input)`, not a validated parse). A gateway that emits `messageType: TEXT` with a
+		// missing or non-string `text` — the whatsmeow mapper can, it fills `content.text` only when the
+		// upstream field is non-nil — must drop here, exactly as the old per-variant `safeParse` did.
+		// Without the `typeof`, a `null` would sail past an `=== undefined` check and become a
+		// VALIDATION_ERROR thrown out of `IngestChannelMessage`, burning outbox attempts on a message
+		// that is simply not for us.
+		const text = payload.messageType === MessageType.TEXT ? payload.content?.text : undefined
+		if (typeof text !== 'string') {
 			this.logging.info({
 				content: {
-					message: 'inbound message dropped: content slot not a known text variant (forward-compat passthrough)',
+					message: 'inbound message dropped: not a text variant, or the text slot was absent (forward-compat passthrough)',
 					channelId,
 					messageId,
-					platform: event.payload.platform,
-					messageType: event.payload.messageType,
+					platform: payload.platform,
+					messageType: payload.messageType,
 				},
 			})
 			return

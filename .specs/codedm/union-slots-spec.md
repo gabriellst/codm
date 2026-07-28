@@ -110,14 +110,56 @@ consumo do rail e da composição (2.4).
 - Cadeia canônica: forma no dono → openapi do dono → schema gerado → composição nos consumidores →
   openapi dos consumidores → SDK final. **Um shape, N superfícies, zero redeclaração.**
 
+#### 2.4.1 DUAS materializações — emenda de 28-jul-2026
+
+A materialização é feita uma vez, na camada wire gerada, e sai em **duas** variantes que não são
+intercambiáveis. O que as separa não é o quanto estreitam — ambas estreitam por completo — e sim o
+**dialeto escalar**:
+
+| superfície | arquivo gerado | payload | datas | consumidor |
+|---|---|---|---|---|
+| **wire / JSON** | `wire/events/materialized.ts` | o agregado kubb do dono | strings ISO | SSE, browser, SDK |
+| **in-process** | `wire/events/in-process.ts` | os campos do CONTRATO, com só os slots + discriminadores trocados por variante | `Date` | `EventHandler` |
+
+A segunda existe porque o mediator **revive** as strings ISO em `Date` antes de qualquer `handle()`
+rodar, enquanto o frame SSE é JSON até o fim. Entregar a superfície do wire a um handler falha no
+primeiro campo de data — e essa falha é o objetivo, não um efeito colateral: é o que impede as duas
+de serem confundidas. O pino mecânico é `tests/architecture/union-narrowing.typecheck.ts`, que fixa
+as **três** origens e cujo `const occurredAt: Date` vira `TS2322` se alguém substituir uma pela outra.
+
+O conjunto de braços das duas é o mesmo, espelhado de `packages/api/go/pkg/openapi/schema.go`:
+primário = slot com MAIS variantes (empate: o primeiro declarado); slots secundários estreitados por
+igualdade na INTERSEÇÃO das chaves discriminadoras; zero correspondências ⇒ união completa do
+secundário. `emitTsInProcess` reproduz isso literalmente em vez de melhorar, para que os dois lados
+concordem por construção e não por revisão.
+
 ### 2.5 Runtime: validação e forward-compat
 
 - O **dono valida** suas formas na borda (como o verbatim já faz).
-- Consumidores validam opportunisticamente com os schemas gerados APENAS das variantes que
-  consomem (ex.: classificação lê `WhatsAppTextContent`); todo o resto é passthrough opaco.
 - **Regra de forward-compat**: consumidor que encontra valor de discriminador desconhecido trata o
   slot como opaco (log + passthrough), nunca rejeita o evento — variantes novas não podem quebrar
   consumidores antigos.
+
+**Emenda de 28-jul-2026 — como um consumidor interno estreita.** A redação anterior mandava o
+consumidor validar oportunisticamente com `safeParse` dos schemas por variante. Isso nasceu de uma
+limitação que não existe mais: com o slot emitido `z.unknown()`, não havia o que estreitar, porque o
+TypeScript **não correlaciona um campo-slot com um discriminador irmão do mesmo objeto** — só uma
+união do payload INTEIRO estreita. Agora que `wire/events/in-process.ts` emite essa união, um handler
+interno estreita **pelo discriminador** e lê o campo; não faz parse.
+
+Isso não afrouxa a regra de forward-compat, porque nada faz zod-parse de um payload de integration
+event no caminho do mediator: o envelope chega por `new Cls(input)`, cujo construtor apenas atribui.
+Uma variante desconhecida simplesmente não casa com nenhum guard e cai no drop, como antes.
+
+Duas consequências que valem dizer em voz alta, porque mudam comportamento:
+1. O guard tem de ser sobre o **valor**, não sobre a ausência (`typeof text !== 'string'`, não
+   `text === undefined`). O `safeParse` antigo rejeitava um `content.text` presente mas nulo; com a
+   leitura direta, um `null` passaria por um teste de `undefined` e viraria `VALIDATION_ERROR` lá
+   dentro do use case, queimando tentativas do outbox por uma mensagem que nem era para nós.
+2. Uma plataforma **nova** mandando `messageType: TEXT` agora é ingerida, onde a cadeia
+   `platform === 'WHATSAPP' | 'INTERNAL'` a descartava. Isso é o comportamento desejado — "variantes
+   novas não podem quebrar consumidores antigos" vale nas duas direções — mas é uma mudança, não uma
+   preservação.
 
 ## 3. Rail `union-parity` (tests/architecture)
 

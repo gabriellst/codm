@@ -14,9 +14,20 @@
  * (union-slot payloads materialized from the owner client), so literal-name narrowing is exact by
  * construction — and this pin keeps it that way. The gateway origin (`ServerEvent`) narrows through
  * its discriminated oneOf.
+ *
+ * THREE origins, not two. The third — IN-PROCESS — is the one an `EventHandler` binds to, and it
+ * exists because the other two are JSON surfaces: their `occurredAt`/`observedAt` are ISO STRINGS,
+ * which is right on the wire and wrong in a process where the mediator has already revived them into
+ * `Date`s. `narrowInProcessOrigin` therefore pins BOTH halves at once — the slot narrows AND
+ * `occurredAt` is a `Date` — so substituting the wire surface for the in-process one fails with
+ * TS2322 rather than compiling into a lie. That substitution is the exact regression this file was
+ * extended to catch; verified red by hand before it was written.
  */
+import type Z from 'zod'
 import type { ServerEvent } from '@codedm/client-typescript/go'
 import type { ListenEvents200 } from '@codedm/client-typescript/typescript'
+import type { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
+import { MessageType } from '@codedm/contracts-typescript/wire/enums'
 
 export interface NarrowedInboundText {
 	text: string | undefined
@@ -54,4 +65,21 @@ export function narrowGatewayOrigin(event: ServerEvent): NarrowedInboundText | u
 		return { text: payload.content?.text, pushName: payload.platformData?.pushName }
 	}
 	return { text: undefined, pushName: undefined }
+}
+
+/**
+ * IN-PROCESS origin: what `thread/handlers/ConsumeInboundMessage` actually reads.
+ *
+ * `occurredAt` is the load-bearing line. It is `z.date()` on the contract and therefore on every
+ * in-process arm, while both JSON origins type it `string` — so this function only compiles against
+ * the in-process surface, and swapping in `ChannelMessageReceivedEventMaterializedSchema`'s payload
+ * turns it red. Both discriminators are guarded because `pushName` lives only on the WhatsApp
+ * platform-data variant, not the INTERNAL one.
+ */
+export function narrowInProcessOrigin(
+	payload: Z.output<(typeof ChannelMessageReceivedInProcessEvent)['schema']>['payload'],
+): (NarrowedInboundText & { occurredAt: Date }) | undefined {
+	if (payload.platform !== 'WHATSAPP' || payload.messageType !== MessageType.TEXT) return undefined
+	const occurredAt: Date = payload.occurredAt
+	return { text: payload.content?.text, pushName: payload.platformData?.pushName, occurredAt }
 }

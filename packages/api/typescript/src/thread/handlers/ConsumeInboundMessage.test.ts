@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
 import { ChannelKind, MessageType } from '@codedm/contracts-typescript/wire/enums'
-import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
+import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from './ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
@@ -30,7 +30,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 
 	// Verbatim gateway payload (union-slots pilot): text rides the WHATSAPP/TEXT content variant.
 	const buildEvent = (channelId: string, contactExternalId: string, messageId: string) =>
-		new ChannelMessageReceivedEvent({
+		new ChannelMessageReceivedInProcessEvent({
 			ownerId: OPERATOR_ID,
 			payload: {
 				channelId,

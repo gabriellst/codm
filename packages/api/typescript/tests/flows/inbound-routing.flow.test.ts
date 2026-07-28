@@ -4,7 +4,7 @@ import type { ZodType } from 'zod'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { MockOutboxDispatcher } from '@codedm/core-typescript'
 import { ChannelKind, MessageType, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
+import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIntegrationEvents'
@@ -82,7 +82,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		messageId: string,
 		opts: Partial<{ senderExternalId: string; text: string }> = {},
 	) =>
-		new ChannelMessageReceivedEvent({
+		new ChannelMessageReceivedInProcessEvent({
 			ownerId: OPERATOR_ID,
 			// Verbatim gateway payload (union-slots pilot): text rides the WHATSAPP/TEXT content variant.
 			payload: {

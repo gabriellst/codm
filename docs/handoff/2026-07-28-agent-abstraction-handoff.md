@@ -57,11 +57,15 @@ Tasks #14–#19 carry full descriptions. Summary, with decisions already settled
 - Also reword `agent/typescript/registry.yaml` bp-15 and `agent/registry.ts:86` so "NO factory"
   scopes to `AgentName`→agent resolution, not runners — otherwise `bun review` flags this work.
 
-**#15 — delete `extractInboundText`.** If the Go union-slot declarations were right, the event typing
-would narrow `content` to the text variant and the call site would be plain `content?.text`. Start at
-`ChannelMessageReceivedUnions` (discriminators `['platform','messageType']`) in
-`packages/contracts/generated/typescript/src/wire/events/channel-message-received.ts` and the Go
-producer.
+**#15 — done.** `extractInboundText` is gone and the call site is `payload.content?.text`. The
+premise was right but the diagnosis in this section was not: the Go union-slot declarations were
+never wrong. TypeScript simply cannot correlate a slot field with a sibling discriminator, so an
+opaque `content: z.unknown()` could never narrow no matter how the manifest was declared — only a
+union of the WHOLE payload does, and `tests/architecture/union-narrowing.typecheck.ts` had been
+compiling exactly that for the SSE surface all along. The emitter now produces a SECOND
+materialization, `wire/events/in-process.ts`, whose arms are built from the CONTRACT payload so
+`occurredAt` stays a `Date` for an in-process handler (the wire/kubb one types it `string`, which is
+right for JSON and wrong for a mediator that already revived it). See union-slots spec §2.4.1.
 
 **#16 — `@mention` as the default gate.** `@<definedname>` citations should be created as part of the
 workspace-link flow, and the agent should reply *only* to messages citing it while still receiving the

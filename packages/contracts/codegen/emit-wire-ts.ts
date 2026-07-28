@@ -2,9 +2,16 @@ import { mkdir, writeFile, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
-import { parseContractsOpenapi, type ParsedEnum, type ParsedUnion, type ParsedEvent, type FieldType } from './lib/parse-openapi'
+import {
+	parseContractsOpenapi,
+	type ParsedEnum,
+	type ParsedUnion,
+	type ParsedEvent,
+	type FieldType,
+	type EventField,
+} from './lib/parse-openapi'
 import { assertIntegrationWireNames } from './lib/assert-wire-names'
-import { assertUnionSlotOwners } from './lib/union-slots'
+import { assertUnionSlotOwners, type UnionSlotDecl, type UnionVariantDecl } from './lib/union-slots'
 import { REPO } from '../../../template.config'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -275,9 +282,211 @@ export function emitTsMaterialized(events: ParsedEvent[], workspaces: Record<str
 	)
 }
 
+/** Kubb's identifier for a bare variant type: FIRST character lowercased, the rest verbatim
+ *  (WhatsAppTextContent → whatsAppTextContentSchema; WhatsAppQRCodeUpdated → whatsAppQRCodeUpdatedSchema). */
+const variantSchemaId = (typeName: string) => `${camel(typeName)}Schema`
+
+/** Zip a slot's (JSON-name) discriminators with a variant's POSITIONAL values. The TS manifest keys
+ *  values positionally; the Go manifest keys them by field name — this is the adapter that makes the
+ *  join predicate below comparable across the two sides. */
+function pinnedOf(slot: UnionSlotDecl, v: UnionVariantDecl): Record<string, string> {
+	const out: Record<string, string> = {}
+	slot.discriminators.forEach((d, i) => {
+		out[d] = v.values[i] as string
+	})
+	return out
+}
+
+/** PRIMARY slot — argmax by VARIANT COUNT, first-declared wins ties. Verbatim from
+ *  `packages/api/go/pkg/openapi/schema.go` (`>`, not `>=`). NOT argmax by discriminator arity —
+ *  that is the *association* rule in `lib/union-slots.ts`, a different question. */
+function primarySlotOf(slots: readonly UnionSlotDecl[]): UnionSlotDecl {
+	let primary = slots[0] as UnionSlotDecl
+	for (const s of slots) if (s.variants.length > primary.variants.length) primary = s
+	return primary
+}
+
+/** THE CROSS-SLOT JOIN, mirrored from Go's `secondarySlotSchema`. A secondary variant survives iff
+ *  every discriminator key it SHARES with the pinned primary variant carries the same value; keys
+ *  present on only one side impose no constraint. Zero survivors ⇒ NO narrowing at all — the full
+ *  slot union. That widening is reproduced deliberately rather than improved on: the two emitters
+ *  must agree by construction, and diverging here would desync the surfaces silently. */
+function joinSecondary(sec: UnionSlotDecl, pinned: Record<string, string>): readonly UnionVariantDecl[] {
+	const matching = sec.variants.filter(sv => Object.entries(pinnedOf(sec, sv)).every(([k, val]) => !(k in pinned) || pinned[k] === val))
+	return matching.length === 0 ? sec.variants : matching
+}
+
+/** `z.literal(...)` for a pinned discriminator, in the CONTRACT's own value type — an enum-backed
+ *  discriminator gets the ENUM MEMBER (`z.literal(MessageType.TEXT)`) because that is what the
+ *  contract declares; a `z.string()` discriminator gets a bare string literal and must NOT be
+ *  "upgraded" to an enum member it was never typed as. */
+function discriminatorLiteral(field: EventField, value: string): string {
+	return field.type.kind === 'enum-ref' ? `z.literal(${field.type.ref}.${toTsEnumMember(value)})` : `z.literal('${value}')`
+}
+
+/**
+ * The IN-PROCESS wire-event surface — the SECOND materialization (union-slots spec §2.4).
+ *
+ * Two materializations exist, they are NOT interchangeable, and what separates them is the SCALAR
+ * DIALECT rather than how much they narrow (both narrow fully):
+ *
+ *   ./materialized  `<Model>EventMaterializedSchema` — the JSON/HTTP surface. Its payload IS the
+ *                   owner client's kubb aggregate, so `occurredAt`/`observedAt` are ISO STRINGS.
+ *                   That is CORRECT for its consumer (an SSE frame is JSON on the wire) and FROZEN.
+ *   ./in-process    `<Model>InProcessEventSchema` — the MEDIATOR surface. The mediator revives ISO
+ *                   strings into `Date`s before a handler ever sees the envelope (core's
+ *                   `reviveIsoDates`), so the arms are built from the CONTRACT payload object:
+ *                   every scalar keeps its contract type (`occurredAt: z.date()`) and ONLY the slot
+ *                   fields plus the discriminators that pin them are replaced, per variant, with the
+ *                   owner client's PER-VARIANT schemas.
+ *
+ * Materialized FOR THE WIRE vs materialized FOR THIS PROCESS — pick by where the frame is going.
+ * Handing a handler the wire surface fails loudly on the first `Date` field, which is the point.
+ *
+ * The arm SET mirrors `packages/api/go/pkg/openapi/schema.go` exactly — primary selection, the
+ * cross-slot join, the zero-match fallback, and the field-override walk in payload DECLARATION
+ * order — so the Go openapi and this surface agree by construction rather than by review. The
+ * declaration-order walk is also what makes emission byte-stable for `bun check:generated`.
+ *
+ * Emitted ONLY for events that declare a union-slot manifest: a slot-less event's contract class
+ * already narrows, so a second class for it would be pure noise. Deliberately emits NO tuple and NO
+ * `z.discriminatedUnion` — these schemas share a wire `name` with their contract twin, and zod v4
+ * does not reject a duplicate discriminator at CONSTRUCTION, only on the first parse. A tuple here
+ * would be a landmine that detonates far from the edit that armed it.
+ *
+ * NOTE the validity asymmetry, on purpose: `emitTsMaterialized` hard-throws on a manifest whose
+ * variants span more than one owner, and `run()` writes it FIRST. This emitter resolves owners
+ * per-variant and relies on that gate rather than restating it — do not "fix" the asymmetry by
+ * deleting the throw over there.
+ */
+export function emitTsInProcess(events: ParsedEvent[], workspaces: Record<string, { alias: string }>, sdkPackage: string): string {
+	// Sorted by model name so emission never depends on OpenAPI component ordering. ONE comparator
+	// (`localeCompare`) is used for every sort in this function — mixing it with codepoint `.sort()`
+	// produces genuinely different orders and a diff that looks like drift.
+	const byName = (a: string, b: string) => a.localeCompare(b)
+	const slotted = events.filter(ev => ev.unionSlots.length > 0).sort((a, b) => byName(a.modelName, b.modelName))
+	if (slotted.length === 0) return `${HEADER}\nexport {}\n`
+
+	const enumRefs = new Set<string>()
+	const byAlias = new Map<string, Set<string>>()
+	const blocks: string[] = []
+
+	/** Record the owner-client import this arm needs and return the identifier to emit. */
+	const bind = (ev: ParsedEvent, v: UnionVariantDecl): string => {
+		const ws = workspaces[v.owner]
+		if (!ws) throw new Error(`${ev.modelName}: @variant "${v.typeName}" declares owner "${v.owner}", which is not a WORKSPACES id`)
+		const ids = byAlias.get(ws.alias) ?? new Set<string>()
+		ids.add(variantSchemaId(v.typeName))
+		byAlias.set(ws.alias, ids)
+		return variantSchemaId(v.typeName)
+	}
+
+	for (const ev of slotted) {
+		const model = ev.modelName.replace(/Event$/, '')
+		// The same payload projection `emitTsEvents` uses — the arms extend THAT object.
+		const payloadFields = ev.ownFields.filter(f => f.name !== 'name' && f.name !== 'entityId')
+		const fieldByName = new Map(payloadFields.map(f => [f.name, f]))
+		const primary = primarySlotOf(ev.unionSlots)
+		const secondaries = ev.unionSlots.filter(s => s.field !== primary.field)
+
+		// Fail LOUD rather than silently widen: a slot or discriminator that lives on the ENVELOPE
+		// instead of the payload cannot be replaced or pinned by an arm.
+		for (const slot of ev.unionSlots) {
+			if (!fieldByName.has(slot.field)) {
+				throw new Error(`${ev.modelName}: union slot "${slot.field}" is not a payload field — the in-process arms cannot replace it`)
+			}
+		}
+		for (const d of primary.discriminators) {
+			if (!fieldByName.has(d)) {
+				throw new Error(`${ev.modelName}: primary discriminator "${d}" is not a payload field — the in-process arms cannot pin it`)
+			}
+		}
+
+		const armBodies: string[][] = primary.variants.map(pv => {
+			const pinned = pinnedOf(primary, pv)
+			const lines: string[] = []
+			for (const f of payloadFields) {
+				let expr: string | undefined
+				if (primary.discriminators.includes(f.name)) {
+					// (a) a PRIMARY discriminator this variant pins → the literal. Literals come ONLY from
+					// the primary's discriminator list; a secondary-only discriminator gets none and stays
+					// a plain typed field, exactly as the Go emitter leaves it.
+					expr = discriminatorLiteral(f, pinned[f.name] as string)
+					if (f.type.kind === 'enum-ref') enumRefs.add(f.type.ref)
+				} else if (f.name === primary.field) {
+					// (b) the primary slot field → this variant's shape.
+					expr = bind(ev, pv)
+				} else {
+					// (c) a SECONDARY slot → the join, narrowed by the pinned values.
+					const sec = secondaries.find(s => s.field === f.name)
+					if (sec) {
+						const kept = joinSecondary(sec, pinned)
+						expr = kept.length === 1 ? bind(ev, kept[0] as UnionVariantDecl) : `z.union([${kept.map(v => bind(ev, v)).join(', ')}])`
+					}
+				}
+				// (d) every OTHER field is NOT re-emitted — it keeps the CONTRACT schema, which is the whole
+				// point of this surface: `occurredAt` stays `z.date()` and the arm stays honest for a
+				// revived envelope.
+				if (expr) lines.push(`${f.name}: ${expr}${f.required ? '' : '.optional()'},`)
+			}
+			return lines
+		})
+
+		const renderArms = (indent: string) =>
+			armBodies.map(
+				fields => `${indent}${ev.modelName}Schema.shape.payload.extend({\n${fields.map(l => `${indent}\t${l}`).join('\n')}\n${indent}})`,
+			)
+		const payloadExpr =
+			armBodies.length === 1 ? (renderArms('\t')[0] as string).trimStart() : `z.union([\n${renderArms('\t\t').join(',\n')},\n\t])`
+
+		blocks.push(
+			`export const ${model}InProcessEventSchema = ${ev.modelName}Schema.extend({\n\tpayload: ${payloadExpr},\n})\n\n` +
+				`export class ${model}InProcessEvent extends BaseIntegrationEvent<typeof ${model}InProcessEventSchema> {\n` +
+				`\tstatic override readonly name = '${ev.wireName}' as const\n` +
+				`\tstatic readonly schema = ${model}InProcessEventSchema\n` +
+				`}`,
+		)
+	}
+
+	const importLines = [
+		`import { z } from '${REPO.corePackage}/schema'`,
+		`import { BaseIntegrationEvent } from '${REPO.corePackage}/events'`,
+		`import {\n${slotted
+			.map(e => `\t${e.modelName}Schema,`)
+			.sort(byName)
+			.join('\n')}\n} from './_imports'`,
+	]
+	if (enumRefs.size > 0) importLines.push(`import { ${[...enumRefs].sort(byName).join(', ')} } from '../enums'`)
+	for (const [alias, ids] of [...byAlias.entries()].sort(([a], [b]) => byName(a, b))) {
+		importLines.push(`import { ${[...ids].sort(byName).join(', ')} } from '${sdkPackage}/${alias}'`)
+	}
+
+	return (
+		HEADER +
+		'//\n' +
+		'// The IN-PROCESS event surface: the union-slot join done against the CONTRACT payload object,\n' +
+		'// so every scalar keeps its contract type (`occurredAt: z.date()`). This is the surface an\n' +
+		'// EventHandler binds to — the mediator revives ISO strings into Dates before `handle()` runs.\n' +
+		'// Its sibling ./materialized is the JSON/HTTP (SSE/browser) surface, whose payload is the owner\n' +
+		'// client aggregate and whose dates are ISO STRINGS. Same arm set, different scalar dialect:\n' +
+		'// "materialized for the wire" vs "materialized for this process". Do not swap them — handing a\n' +
+		'// handler the wire surface fails on the first Date field, which is exactly the intent.\n' +
+		'// The arm set mirrors packages/api/go/pkg/openapi/schema.go (primary = argmax by variant count;\n' +
+		'// secondary slots narrowed by equality on the INTERSECTION of discriminator keys).\n' +
+		importLines.join('\n') +
+		'\n\n' +
+		blocks.join('\n\n') +
+		'\n'
+	)
+}
+
 export function emitTsBarrel(events: ParsedEvent[]): string {
 	const names = events.map(e => e.modelName)
-	const reExports = [...events.map(e => `export * from './${kebab(e.modelName.replace(/Event$/, ''))}'`), `export * from './materialized'`]
+	const reExports = [
+		...events.map(e => `export * from './${kebab(e.modelName.replace(/Event$/, ''))}'`),
+		`export * from './in-process'`,
+		`export * from './materialized'`,
+	]
 		.sort()
 		.join('\n')
 	const schemaImports = names.map(n => `\t${n}Schema,`).join('\n')
@@ -342,6 +551,11 @@ async function run() {
 	await writeFile(
 		join(eventDir, 'materialized.ts'),
 		emitTsMaterialized(parsed.events, REPO.workspaces as unknown as Record<string, { alias: string }>, REPO.sdkPackage),
+	)
+
+	await writeFile(
+		join(eventDir, 'in-process.ts'),
+		emitTsInProcess(parsed.events, REPO.workspaces as unknown as Record<string, { alias: string }>, REPO.sdkPackage),
 	)
 
 	await writeFile(join(eventDir, 'index.ts'), emitTsBarrel(parsed.events))

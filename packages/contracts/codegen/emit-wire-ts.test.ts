@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { REPO } from '../../../template.config'
-import { emitTsEnums, emitTsEvents, emitTsBarrel, emitTsMaterialized, emitTsUnions } from './emit-wire-ts'
+import { emitTsEnums, emitTsEvents, emitTsBarrel, emitTsInProcess, emitTsMaterialized, emitTsUnions } from './emit-wire-ts'
 import type { ParsedEnum, ParsedEvent, ParsedUnion } from './lib/parse-openapi'
 
 describe('emitTsEnums', () => {
@@ -307,5 +307,157 @@ describe('emitTsMaterialized — the manifest×aggregate join at the wire layer 
 
 	test('the barrel re-exports the materialized surface', () => {
 		expect(emitTsBarrel([plain])).toContain("export * from './materialized'")
+	})
+})
+
+/**
+ * `emitTsInProcess` — the SECOND materialization (contract scalars preserved).
+ *
+ * The whole reason it exists is that the wire materialization types dates as ISO strings, which is
+ * right for SSE and wrong for a handler. So the load-bearing assertions here are (a) the arms extend
+ * the CONTRACT payload object rather than importing the owner's aggregate, and (b) the cross-slot
+ * join reproduces the Go emitter's rules — which are NOT self-evident and were mirrored deliberately
+ * rather than reinvented.
+ */
+describe('emitTsInProcess — the in-process materialization', () => {
+	const workspaces = { apiGo: { alias: 'go' }, apiTs: { alias: 'typescript' } }
+	const sdkPackage = '@codedm/client-typescript'
+
+	/** Two slots with DIFFERENT discriminator arity — the shape the pilot actually has. */
+	const twoSlot = (slots: ParsedEvent['unionSlots']): ParsedEvent =>
+		withDerived({
+			modelName: 'ChannelMessageReceivedEvent',
+			wireName: 'integration.channel_message.received',
+			fields: [
+				{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.received' }, required: true },
+				{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+				{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
+				{ name: 'messageType', type: { kind: 'enum-ref', ref: 'MessageType' }, required: true },
+				{ name: 'content', type: { kind: 'unknown' }, required: false },
+				{ name: 'platform', type: { kind: 'string' }, required: true },
+				{ name: 'platformData', type: { kind: 'unknown' }, required: false },
+			],
+			ownFields: [
+				{ name: 'name', type: { kind: 'literal', value: 'integration.channel_message.received' }, required: true },
+				{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+				{ name: 'occurredAt', type: { kind: 'date-time' }, required: true },
+				{ name: 'messageType', type: { kind: 'enum-ref', ref: 'MessageType' }, required: true },
+				{ name: 'content', type: { kind: 'unknown' }, required: false },
+				{ name: 'platform', type: { kind: 'string' }, required: true },
+				{ name: 'platformData', type: { kind: 'unknown' }, required: false },
+			],
+			unionSlots: slots,
+		})
+
+	/** A slot-LESS event — the emitter must ignore it entirely. */
+	const slotless: ParsedEvent = withDerived({
+		modelName: 'ChannelConnectedEvent',
+		wireName: 'integration.channel.connected',
+		fields: [
+			{ name: 'name', type: { kind: 'literal', value: 'integration.channel.connected' }, required: true },
+			{ name: 'channelId', type: { kind: 'uuid' }, required: true },
+		],
+	})
+
+	const CONTENT: ParsedEvent['unionSlots'][number] = {
+		field: 'content',
+		discriminators: ['platform', 'messageType'],
+		variants: [
+			{ values: ['WHATSAPP', 'TEXT'], typeName: 'WhatsAppTextContent', owner: 'apiGo' },
+			{ values: ['WHATSAPP', 'IMAGE'], typeName: 'WhatsAppImageContent', owner: 'apiGo' },
+			{ values: ['INTERNAL', 'TEXT'], typeName: 'InternalTextContent', owner: 'apiGo' },
+		],
+	}
+	const PLATFORM_DATA: ParsedEvent['unionSlots'][number] = {
+		field: 'platformData',
+		discriminators: ['platform'],
+		variants: [
+			{ values: ['WHATSAPP'], typeName: 'WhatsAppPlatformData', owner: 'apiGo' },
+			{ values: ['INTERNAL'], typeName: 'InternalPlatformData', owner: 'apiGo' },
+		],
+	}
+
+	test('one arm per PRIMARY variant, extending the CONTRACT payload — never the owner aggregate', () => {
+		const out = emitTsInProcess([twoSlot([CONTENT, PLATFORM_DATA])], workspaces, sdkPackage)
+		// Three content variants ⇒ three arms. The `.shape.payload.extend` form is what preserves
+		// `occurredAt: z.date()`; importing `channelMessageReceivedPayloadSchema` instead would be the
+		// wire surface wearing a different name.
+		expect(out.split('ChannelMessageReceivedEventSchema.shape.payload.extend({').length - 1).toBe(3)
+		expect(out).not.toContain('channelMessageReceivedPayloadSchema')
+		expect(out).toContain('export class ChannelMessageReceivedInProcessEvent')
+		expect(out).toContain("static override readonly name = 'integration.channel_message.received' as const")
+		// The scalars are NOT restated — they are inherited from the contract object. Sliced past the
+		// header, whose prose legitimately names `occurredAt`.
+		expect(out.slice(out.indexOf('export const'))).not.toContain('occurredAt')
+	})
+
+	test('the cross-slot join pins the secondary by the discriminators it SHARES with the primary', () => {
+		const out = emitTsInProcess([twoSlot([CONTENT, PLATFORM_DATA])], workspaces, sdkPackage)
+		// WHATSAPP arms take the WhatsApp platform data; the INTERNAL arm takes the internal one. A
+		// broken join would emit a `z.union([...])` of both in every arm — the silent widening the
+		// zero-match fallback is allowed to produce and this case must not.
+		expect(out).toContain("platform: z.literal('WHATSAPP'),\n\t\t\tplatformData: whatsAppPlatformDataSchema.optional(),")
+		expect(out).toContain("platform: z.literal('INTERNAL'),\n\t\t\tplatformData: internalPlatformDataSchema.optional(),")
+		expect(out).not.toContain('z.union([whatsAppPlatformDataSchema, internalPlatformDataSchema])')
+	})
+
+	test('PRIMARY is argmax by VARIANT COUNT, independent of declaration order', () => {
+		// The pilot's larger slot happens to be declared first, so declaration order would pass by
+		// accident. `ChannelMessageSentPayload` on the Go side declares the SMALLER slot first — feeding
+		// both orders is what keeps this emitter and `schema.go` agreeing when that one migrates.
+		const a = emitTsInProcess([twoSlot([CONTENT, PLATFORM_DATA])], workspaces, sdkPackage)
+		const b = emitTsInProcess([twoSlot([PLATFORM_DATA, CONTENT])], workspaces, sdkPackage)
+		expect(b.split('.shape.payload.extend({').length - 1).toBe(3)
+		expect(b).toBe(a)
+	})
+
+	test('a disjoint secondary slot widens to the full union rather than dropping the field', () => {
+		// The zero-match fallback, mirrored verbatim from Go. Unreachable for the pilot (platformData's
+		// discriminators are a strict subset of content's), so it ships covered only here.
+		const disjoint: ParsedEvent['unionSlots'][number] = {
+			field: 'platformData',
+			discriminators: ['channelId'],
+			variants: [
+				{ values: ['a'], typeName: 'AData', owner: 'apiGo' },
+				{ values: ['b'], typeName: 'BData', owner: 'apiGo' },
+			],
+		}
+		const out = emitTsInProcess([twoSlot([CONTENT, disjoint])], workspaces, sdkPackage)
+		expect(out).toContain('platformData: z.union([aDataSchema, bDataSchema]).optional(),')
+	})
+
+	test('an enum-backed discriminator emits the ENUM MEMBER, a string one a bare literal', () => {
+		const out = emitTsInProcess([twoSlot([CONTENT, PLATFORM_DATA])], workspaces, sdkPackage)
+		expect(out).toContain('messageType: z.literal(MessageType.TEXT),')
+		expect(out).toContain("platform: z.literal('WHATSAPP'),")
+		expect(out).toContain("import { MessageType } from '../enums'")
+	})
+
+	test('a contract with NO union slots emits an empty module and imports no client', () => {
+		const out = emitTsInProcess([slotless], workspaces, sdkPackage)
+		expect(out).toContain('export {}')
+		expect(out).not.toContain("from '@codedm/client-typescript")
+	})
+
+	test('an unknown @variant owner fails LOUD', () => {
+		const ghost: ParsedEvent['unionSlots'][number] = {
+			field: 'content',
+			discriminators: ['platform'],
+			variants: [{ values: ['X'], typeName: 'T', owner: 'ghost' }],
+		}
+		expect(() => emitTsInProcess([twoSlot([ghost])], workspaces, sdkPackage)).toThrow(/not a WORKSPACES id/)
+	})
+
+	test('a slot that is not a payload field fails LOUD rather than silently widening', () => {
+		const offEnvelope: ParsedEvent['unionSlots'][number] = {
+			field: 'nope',
+			discriminators: ['platform'],
+			variants: [{ values: ['WHATSAPP'], typeName: 'WhatsAppTextContent', owner: 'apiGo' }],
+		}
+		expect(() => emitTsInProcess([twoSlot([offEnvelope])], workspaces, sdkPackage)).toThrow(/not a payload field/)
+	})
+
+	test('the barrel re-exports the in-process surface', () => {
+		expect(emitTsBarrel([slotless])).toContain("export * from './in-process'")
 	})
 })
