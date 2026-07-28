@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const transcriptKindSchema = z.enum(["CONTACT", "AGENT", "OPERATOR_DIRECT", "WHISPER", "ACTION"])
+export const transcriptKindSchema = z.enum(["CONTACT", "SYSTEM", "DIRECT", "WHISPER", "ACTION"])

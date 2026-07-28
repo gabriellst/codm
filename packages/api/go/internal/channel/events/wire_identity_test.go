@@ -76,6 +76,7 @@ func cases() map[string]any {
 				RemoteID:          "5511999999999@s.whatsapp.net",
 				SenderID:          "5511999999999@s.whatsapp.net",
 				FromMe:            false,
+				Author:            channelenums.MessageAuthorHuman,
 				IsGroup:           false,
 				Timestamp:         1751371200,
 				OccurredAt:        t0,

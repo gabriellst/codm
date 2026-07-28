@@ -6,8 +6,8 @@
 
 export const TranscriptKindEnum = {
     CONTACT: "CONTACT",
-    AGENT: "AGENT",
-    OPERATOR_DIRECT: "OPERATOR_DIRECT",
+    SYSTEM: "SYSTEM",
+    DIRECT: "DIRECT",
     WHISPER: "WHISPER",
     ACTION: "ACTION"
 } as const;

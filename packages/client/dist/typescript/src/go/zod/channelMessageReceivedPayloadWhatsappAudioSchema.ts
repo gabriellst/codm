@@ -3,12 +3,16 @@
 * Do not edit manually.
 */
 
+import { messageAuthorSchema } from "./messageAuthorSchema.ts";
 import { whatsAppAudioContentSchema } from "./whatsAppAudioContentSchema.ts";
 import { whatsAppChannelMessageReceivedPlatformDataSchema } from "./whatsAppChannelMessageReceivedPlatformDataSchema.ts";
 import { z } from "zod/v4";
 
 export const channelMessageReceivedPayloadWhatsappAudioSchema = z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 get "content"(){
                 return whatsAppAudioContentSchema.optional()
               },

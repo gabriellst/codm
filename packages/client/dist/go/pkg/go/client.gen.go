@@ -881,6 +881,24 @@ func (e MembershipAction) Valid() bool {
 	}
 }
 
+// Defines values for MessageAuthor.
+const (
+	MessageAuthorHuman  MessageAuthor = "HUMAN"
+	MessageAuthorSystem MessageAuthor = "SYSTEM"
+)
+
+// Valid indicates whether the value is a known member of the MessageAuthor enum.
+func (e MessageAuthor) Valid() bool {
+	switch e {
+	case MessageAuthorHuman:
+		return true
+	case MessageAuthorSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MessageType.
 const (
 	MessageTypeAudio    MessageType = "AUDIO"
@@ -1100,27 +1118,6 @@ func (e Role) Valid() bool {
 	case RoleMEMBER:
 		return true
 	case RoleOWNER:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SenderIdentity.
-const (
-	SenderIdentityAGENT    SenderIdentity = "AGENT"
-	SenderIdentityOPERATOR SenderIdentity = "OPERATOR"
-	SenderIdentityROUTER   SenderIdentity = "ROUTER"
-)
-
-// Valid indicates whether the value is a known member of the SenderIdentity enum.
-func (e SenderIdentity) Valid() bool {
-	switch e {
-	case SenderIdentityAGENT:
-		return true
-	case SenderIdentityOPERATOR:
-		return true
-	case SenderIdentityROUTER:
 		return true
 	default:
 		return false
@@ -2239,11 +2236,11 @@ func (e Timezone) Valid() bool {
 
 // Defines values for TranscriptKind.
 const (
-	TranscriptKindACTION         TranscriptKind = "ACTION"
-	TranscriptKindAGENT          TranscriptKind = "AGENT"
-	TranscriptKindCONTACT        TranscriptKind = "CONTACT"
-	TranscriptKindOPERATORDIRECT TranscriptKind = "OPERATOR_DIRECT"
-	TranscriptKindWHISPER        TranscriptKind = "WHISPER"
+	TranscriptKindACTION  TranscriptKind = "ACTION"
+	TranscriptKindCONTACT TranscriptKind = "CONTACT"
+	TranscriptKindDIRECT  TranscriptKind = "DIRECT"
+	TranscriptKindSYSTEM  TranscriptKind = "SYSTEM"
+	TranscriptKindWHISPER TranscriptKind = "WHISPER"
 )
 
 // Valid indicates whether the value is a known member of the TranscriptKind enum.
@@ -2251,11 +2248,11 @@ func (e TranscriptKind) Valid() bool {
 	switch e {
 	case TranscriptKindACTION:
 		return true
-	case TranscriptKindAGENT:
-		return true
 	case TranscriptKindCONTACT:
 		return true
-	case TranscriptKindOPERATORDIRECT:
+	case TranscriptKindDIRECT:
+		return true
+	case TranscriptKindSYSTEM:
 		return true
 	case TranscriptKindWHISPER:
 		return true
@@ -2566,6 +2563,7 @@ type ChannelMessageReceivedPayload struct {
 
 // ChannelMessageReceivedPayloadInternalText defines model for ChannelMessageReceivedPayload_Internal_Text.
 type ChannelMessageReceivedPayloadInternalText struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *InternalTextContent                        `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2585,6 +2583,7 @@ type ChannelMessageReceivedPayloadInternalText struct {
 
 // ChannelMessageReceivedPayloadWhatsappAudio defines model for ChannelMessageReceivedPayload_Whatsapp_Audio.
 type ChannelMessageReceivedPayloadWhatsappAudio struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppAudioContent                       `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2604,6 +2603,7 @@ type ChannelMessageReceivedPayloadWhatsappAudio struct {
 
 // ChannelMessageReceivedPayloadWhatsappContact defines model for ChannelMessageReceivedPayload_Whatsapp_Contact.
 type ChannelMessageReceivedPayloadWhatsappContact struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppContactContent                     `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2623,6 +2623,7 @@ type ChannelMessageReceivedPayloadWhatsappContact struct {
 
 // ChannelMessageReceivedPayloadWhatsappDocument defines model for ChannelMessageReceivedPayload_Whatsapp_Document.
 type ChannelMessageReceivedPayloadWhatsappDocument struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppDocumentContent                    `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2642,6 +2643,7 @@ type ChannelMessageReceivedPayloadWhatsappDocument struct {
 
 // ChannelMessageReceivedPayloadWhatsappImage defines model for ChannelMessageReceivedPayload_Whatsapp_Image.
 type ChannelMessageReceivedPayloadWhatsappImage struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppImageContent                       `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2661,6 +2663,7 @@ type ChannelMessageReceivedPayloadWhatsappImage struct {
 
 // ChannelMessageReceivedPayloadWhatsappLocation defines model for ChannelMessageReceivedPayload_Whatsapp_Location.
 type ChannelMessageReceivedPayloadWhatsappLocation struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppLocationContent                    `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2680,6 +2683,7 @@ type ChannelMessageReceivedPayloadWhatsappLocation struct {
 
 // ChannelMessageReceivedPayloadWhatsappPoll defines model for ChannelMessageReceivedPayload_Whatsapp_Poll.
 type ChannelMessageReceivedPayloadWhatsappPoll struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppPollContent                        `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2699,6 +2703,7 @@ type ChannelMessageReceivedPayloadWhatsappPoll struct {
 
 // ChannelMessageReceivedPayloadWhatsappReaction defines model for ChannelMessageReceivedPayload_Whatsapp_Reaction.
 type ChannelMessageReceivedPayloadWhatsappReaction struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppReactionContent                    `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2718,6 +2723,7 @@ type ChannelMessageReceivedPayloadWhatsappReaction struct {
 
 // ChannelMessageReceivedPayloadWhatsappSticker defines model for ChannelMessageReceivedPayload_Whatsapp_Sticker.
 type ChannelMessageReceivedPayloadWhatsappSticker struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppStickerContent                     `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2737,6 +2743,7 @@ type ChannelMessageReceivedPayloadWhatsappSticker struct {
 
 // ChannelMessageReceivedPayloadWhatsappText defines model for ChannelMessageReceivedPayload_Whatsapp_Text.
 type ChannelMessageReceivedPayloadWhatsappText struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppTextContent                        `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -2756,6 +2763,7 @@ type ChannelMessageReceivedPayloadWhatsappText struct {
 
 // ChannelMessageReceivedPayloadWhatsappVideo defines model for ChannelMessageReceivedPayload_Whatsapp_Video.
 type ChannelMessageReceivedPayloadWhatsappVideo struct {
+	Author            MessageAuthor                               `json:"author"`
 	ChannelId         openapi_types.UUID                          `json:"channelId"`
 	Content           *WhatsAppVideoContent                       `json:"content,omitempty"`
 	FromMe            bool                                        `json:"fromMe"`
@@ -3603,6 +3611,9 @@ type LogoutChannelOutput struct {
 // MembershipAction defines model for MembershipAction.
 type MembershipAction string
 
+// MessageAuthor defines model for MessageAuthor.
+type MessageAuthor string
+
 // MessageType defines model for MessageType.
 type MessageType string
 
@@ -3753,9 +3764,6 @@ type SendVideoOutput struct {
 	MessageId string `json:"messageId"`
 	Timestamp int    `json:"timestamp"`
 }
-
-// SenderIdentity defines model for SenderIdentity.
-type SenderIdentity string
 
 // ServerEvent defines model for ServerEvent.
 type ServerEvent struct {

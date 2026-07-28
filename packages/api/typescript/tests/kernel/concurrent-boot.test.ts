@@ -30,7 +30,7 @@
 // The cross-LANGUAGE shape (this applier racing the Go applier) lives in the Go twin,
 // `core/db/sqlite/store_test.go` TestConcurrentBoot, which spawns the same helper script.
 import { afterAll, describe, expect, it } from 'bun:test'
-import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, rmSync, existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -40,8 +40,15 @@ import { join } from 'node:path'
  * right, since a rename that forgot its DROP would surface here as 26.
  */
 const DRIZZLE_TABLE_COUNT = 25
-/** Ledger rows after a full apply: one per `.sql` file (0000, 0001, 0002) — never 2× that, the bug. */
-const MIGRATION_FILE_COUNT = 3
+/**
+ * Ledger rows after a full apply: one per `.sql` file — never 2× that, which is the bug this suite
+ * exists for. DERIVED from the directory rather than hardcoded: a literal here turns "someone added
+ * a migration" into a red test that reads like a race regression, which is the most expensive kind
+ * of false alarm in a suite that runs 20 probabilistic rounds.
+ */
+const MIGRATION_FILE_COUNT = readdirSync(
+	join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema-sqlite', 'migrations'),
+).filter(f => f.endsWith('.sql')).length
 /** Racers per round. Three, so a bug that needs more than a pair to surface still has room. */
 const RACERS = 3
 /** Cold data dirs. The race is probabilistic, so it is repeated — the plan's T28 asks for 20. */

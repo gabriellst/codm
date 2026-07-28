@@ -5,6 +5,7 @@
 
 import type { InternalChannelMessageReceivedPlatformData } from "./InternalChannelMessageReceivedPlatformData.ts";
 import type { InternalTextContent } from "./InternalTextContent.ts";
+import type { MessageAuthor } from "./MessageAuthor.ts";
 
 export const ChannelMessageReceivedPayloadInternalTextMessageTypeEnum = {
     TEXT: "TEXT"
@@ -19,6 +20,10 @@ export const ChannelMessageReceivedPayloadInternalTextPlatformEnum = {
 export type ChannelMessageReceivedPayloadInternalTextPlatformEnumKey = (typeof ChannelMessageReceivedPayloadInternalTextPlatformEnum)[keyof typeof ChannelMessageReceivedPayloadInternalTextPlatformEnum];
 
 export type ChannelMessageReceivedPayloadInternalText = {
+    /**
+     * @type string
+    */
+    author: MessageAuthor;
     /**
      * @type string, uuid
     */

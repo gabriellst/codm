@@ -46,7 +46,7 @@ import "./enums/stop-resolution.tsp";
 import "./enums/classification-method.tsp";
 import "./enums/artifact-kind.tsp";
 import "./enums/transcript-kind.tsp";
-import "./enums/sender-identity.tsp";
+import "./enums/message-author.tsp";
 import "./enums/buffer-size.tsp";
 import "./enums/attach-flow-style.tsp";
 // Persistence-lane discriminator of the SINGLE shared_outbox table in the shared SQLite

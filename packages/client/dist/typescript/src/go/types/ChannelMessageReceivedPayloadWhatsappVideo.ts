@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { MessageAuthor } from "./MessageAuthor.ts";
 import type { WhatsAppChannelMessageReceivedPlatformData } from "./WhatsAppChannelMessageReceivedPlatformData.ts";
 import type { WhatsAppVideoContent } from "./WhatsAppVideoContent.ts";
 
@@ -19,6 +20,10 @@ export const ChannelMessageReceivedPayloadWhatsappVideoPlatformEnum = {
 export type ChannelMessageReceivedPayloadWhatsappVideoPlatformEnumKey = (typeof ChannelMessageReceivedPayloadWhatsappVideoPlatformEnum)[keyof typeof ChannelMessageReceivedPayloadWhatsappVideoPlatformEnum];
 
 export type ChannelMessageReceivedPayloadWhatsappVideo = {
+    /**
+     * @type string
+    */
+    author: MessageAuthor;
     /**
      * @type string, uuid
     */

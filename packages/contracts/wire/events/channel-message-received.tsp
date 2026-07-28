@@ -32,6 +32,8 @@ model ChannelMessageReceivedEvent extends IntegrationEvent {
   remoteId: string;
   senderId: string;
   fromMe: boolean;
+  @doc("Who wrote it. Distinct from `fromMe`, which says whose ACCOUNT it came from: once this product can send, a from-me message is either the owner typing or the product replying, and only this field separates them.")
+  author: MessageAuthor;
   isGroup: boolean;
   @doc("Platform timestamp, unix seconds.")
   timestamp: int64;

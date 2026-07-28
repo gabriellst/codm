@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z, DrizzleDatabaseDriver } from '@codedm/core-typescript'
 import { channels, outbox } from '@codedm/contracts/db'
-import { ChannelKind, ContactKind, ChannelStatus, MessageType } from '@codedm/contracts-typescript/wire/enums'
+import { ChannelKind, ContactKind, ChannelStatus, MessageType, MessageAuthor } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
 
@@ -123,6 +123,8 @@ export class TestIngressController extends Controller<typeof TestIngressInputSch
 				remoteId: body.contactExternalId,
 				senderId: body.senderExternalId ?? body.contactExternalId,
 				fromMe: false,
+				// A test ingress stands in for a person on the other side of the conversation.
+				author: MessageAuthor.HUMAN,
 				isGroup: body.isGroup,
 				timestamp: Math.floor(now.getTime() / 1000),
 				occurredAt: now,

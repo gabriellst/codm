@@ -5,10 +5,14 @@
 
 import { internalChannelMessageReceivedPlatformDataSchema } from "./internalChannelMessageReceivedPlatformDataSchema.ts";
 import { internalTextContentSchema } from "./internalTextContentSchema.ts";
+import { messageAuthorSchema } from "./messageAuthorSchema.ts";
 import { z } from "zod/v4";
 
 export const channelMessageReceivedPayloadInternalTextSchema = z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 get "content"(){
                 return internalTextContentSchema.optional()
               },

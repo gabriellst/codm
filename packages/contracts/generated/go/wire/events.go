@@ -123,7 +123,7 @@ type ChannelConnectedPayload struct {
 const ChannelDeliveryRequestedEventName = "integration.channel.delivery_requested"
 
 // ChannelDeliveryRequestedEvent — wire shape of integration.channel.delivery_requested.
-// BC4 Thread & Routing -> BC1 Channel Gateway (command-event). Orders the gateway to deliver an outbound message. In medscall this is an HTTP send call; modeled here as an integration event so it rides the same outbox/transport as the rest of the lock. The label prefix is applied by the gateway on agent replies (senderIdentity=AGENT). ownerId travels on the envelope.
+// BC4 Thread & Routing -> BC1 Channel Gateway (command-event). Orders the gateway to deliver an outbound message. In medscall this is an HTTP send call; modeled here as an integration event so it rides the same outbox/transport as the rest of the lock. The label fields carry the issue/thread a SYSTEM message belongs to. ownerId travels on the envelope.
 type ChannelDeliveryRequestedEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
@@ -136,7 +136,7 @@ type ChannelDeliveryRequestedEvent struct {
 	Text string `json:"text"`
 	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
 	LabelThreadID *string `json:"labelThreadId,omitempty"`
-	SenderIdentity SenderIdentity `json:"senderIdentity"`
+	Author MessageAuthor `json:"author"`
 }
 
 func (e ChannelDeliveryRequestedEvent) EventName() string { return ChannelDeliveryRequestedEventName }
@@ -150,7 +150,7 @@ type ChannelDeliveryRequestedPayload struct {
 	Text string `json:"text" validate:"required"`
 	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
 	LabelThreadID *string `json:"labelThreadId,omitempty"`
-	SenderIdentity SenderIdentity `json:"senderIdentity" validate:"required"`
+	Author MessageAuthor `json:"author" validate:"required"`
 }
 
 // ChannelDisconnectedEventName is the wire discriminator for ChannelDisconnectedEvent.
@@ -368,6 +368,7 @@ type ChannelMessageReceivedEvent struct {
 	RemoteID string `json:"remoteId"`
 	SenderID string `json:"senderId"`
 	FromMe bool `json:"fromMe"`
+	Author MessageAuthor `json:"author"`
 	IsGroup bool `json:"isGroup"`
 	Timestamp int64 `json:"timestamp"`
 	ObservedAt time.Time `json:"observedAt"`
@@ -403,6 +404,7 @@ type ChannelMessageReceivedPayload struct {
 	RemoteID string `json:"remoteId" validate:"required"`
 	SenderID string `json:"senderId" validate:"required"`
 	FromMe bool `json:"fromMe"`
+	Author MessageAuthor `json:"author" validate:"required"`
 	IsGroup bool `json:"isGroup"`
 	Timestamp int64 `json:"timestamp" validate:"required"`
 	OccurredAt time.Time `json:"occurredAt" validate:"required"`
@@ -516,7 +518,7 @@ type ChannelMessagesSyncedPayload struct {
 const ChannelOutboundDeliveredEventName = "integration.channel.outbound_delivered"
 
 // ChannelOutboundDeliveredEvent — wire shape of integration.channel.outbound_delivered.
-// BC1 Channel Gateway -> BC4 Thread & Routing. An outbound message was delivered to the channel (optimistic emit). Descends medscall channel.message_sent. The ContactRef and the optional IssueLabel are flattened to scalar fields; label* is present only on agent replies.
+// BC1 Channel Gateway -> BC4 Thread & Routing. An outbound message was delivered to the channel (optimistic emit). Descends medscall channel.message_sent. The ContactRef and the optional IssueLabel are flattened to scalar fields; label* is present only on SYSTEM messages.
 type ChannelOutboundDeliveredEvent struct {
 	Name       string    `json:"name"`
 	EntityID   string    `json:"entityId"`
@@ -528,7 +530,7 @@ type ChannelOutboundDeliveredEvent struct {
 	ContactKind ContactKind `json:"contactKind"`
 	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
 	LabelThreadID *string `json:"labelThreadId,omitempty"`
-	SenderIdentity SenderIdentity `json:"senderIdentity"`
+	Author MessageAuthor `json:"author"`
 	DeliveredAt time.Time `json:"deliveredAt"`
 }
 
@@ -542,7 +544,7 @@ type ChannelOutboundDeliveredPayload struct {
 	ContactKind ContactKind `json:"contactKind" validate:"required"`
 	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
 	LabelThreadID *string `json:"labelThreadId,omitempty"`
-	SenderIdentity SenderIdentity `json:"senderIdentity" validate:"required"`
+	Author MessageAuthor `json:"author" validate:"required"`
 	DeliveredAt time.Time `json:"deliveredAt" validate:"required"`
 }
 

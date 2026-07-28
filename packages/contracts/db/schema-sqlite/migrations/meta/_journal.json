@@ -22,6 +22,13 @@
       "when": 1785181439474,
       "tag": "0002_pink_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785271812771,
+      "tag": "0003_stormy_may_parker",
+      "breakpoints": true
     }
   ]
 }

@@ -10,9 +10,9 @@ import type { ClassificationMethod } from "./ClassificationMethod.ts";
 import type { ContactKind } from "./ContactKind.ts";
 import type { HistorySyncType } from "./HistorySyncType.ts";
 import type { IssueArchiveReason } from "./IssueArchiveReason.ts";
+import type { MessageAuthor } from "./MessageAuthor.ts";
 import type { MessageType } from "./MessageType.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
-import type { SenderIdentity } from "./SenderIdentity.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
 import type { ThreadStatus } from "./ThreadStatus.ts";
@@ -540,6 +540,10 @@ export type ListenEvents200 = ({
     name: ListenEvents200NameEnum7Key;
     payload: ({
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -676,6 +680,10 @@ export type ListenEvents200 = ({
         timestamp: number;
     } | {
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -796,6 +804,10 @@ export type ListenEvents200 = ({
         timestamp: number;
     } | {
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -910,6 +922,10 @@ export type ListenEvents200 = ({
         timestamp: number;
     } | {
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -1019,6 +1035,10 @@ export type ListenEvents200 = ({
         */
         timestamp: number;
     } | {
+        /**
+         * @type string
+        */
+        author: MessageAuthor;
         /**
          * @type string, uuid
         */
@@ -1132,6 +1152,10 @@ export type ListenEvents200 = ({
         timestamp: number;
     } | {
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -1240,6 +1264,10 @@ export type ListenEvents200 = ({
         timestamp: number;
     } | {
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -1345,6 +1373,10 @@ export type ListenEvents200 = ({
         */
         timestamp: number;
     } | {
+        /**
+         * @type string
+        */
+        author: MessageAuthor;
         /**
          * @type string, uuid
         */
@@ -1461,6 +1493,10 @@ export type ListenEvents200 = ({
         timestamp: number;
     } | {
         /**
+         * @type string
+        */
+        author: MessageAuthor;
+        /**
          * @type string, uuid
         */
         channelId: string;
@@ -1554,6 +1590,10 @@ export type ListenEvents200 = ({
         */
         timestamp: number;
     } | {
+        /**
+         * @type string
+        */
+        author: MessageAuthor;
         /**
          * @type string, uuid
         */
@@ -1665,6 +1705,10 @@ export type ListenEvents200 = ({
         */
         timestamp: number;
     } | {
+        /**
+         * @type string
+        */
+        author: MessageAuthor;
         /**
          * @type string, uuid
         */
@@ -2000,7 +2044,7 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
-        senderIdentity: SenderIdentity;
+        author: MessageAuthor;
     };
 } | {
     /**
@@ -2206,7 +2250,7 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
-        senderIdentity: SenderIdentity;
+        author: MessageAuthor;
         /**
          * @type string, date-time
         */

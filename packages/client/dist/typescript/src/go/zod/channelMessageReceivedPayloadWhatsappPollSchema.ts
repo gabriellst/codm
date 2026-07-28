@@ -3,12 +3,16 @@
 * Do not edit manually.
 */
 
+import { messageAuthorSchema } from "./messageAuthorSchema.ts";
 import { whatsAppChannelMessageReceivedPlatformDataSchema } from "./whatsAppChannelMessageReceivedPlatformDataSchema.ts";
 import { whatsAppPollContentSchema } from "./whatsAppPollContentSchema.ts";
 import { z } from "zod/v4";
 
 export const channelMessageReceivedPayloadWhatsappPollSchema = z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 get "content"(){
                 return whatsAppPollContentSchema.optional()
               },

@@ -96,6 +96,7 @@ describe('ListenEvents declarative output union (the contract is the single sour
 			remoteId: '5511999999999@s.whatsapp.net',
 			senderId: '5511999999999',
 			fromMe: false,
+			author: 'HUMAN',
 			isGroup: false,
 			timestamp: 1753200000,
 			occurredAt: '2026-07-23T00:00:00Z',

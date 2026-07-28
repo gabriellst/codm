@@ -739,6 +739,24 @@ func (e Language) Valid() bool {
 	}
 }
 
+// Defines values for MessageAuthor.
+const (
+	MessageAuthorHUMAN  MessageAuthor = "HUMAN"
+	MessageAuthorSYSTEM MessageAuthor = "SYSTEM"
+)
+
+// Valid indicates whether the value is a known member of the MessageAuthor enum.
+func (e MessageAuthor) Valid() bool {
+	switch e {
+	case MessageAuthorHUMAN:
+		return true
+	case MessageAuthorSYSTEM:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MessageType.
 const (
 	MessageTypeAUDIO    MessageType = "AUDIO"
@@ -841,27 +859,6 @@ func (e ProviderStatus) Valid() bool {
 	case DETECTED:
 		return true
 	case NOTINSTALLED:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SenderIdentity.
-const (
-	SenderIdentityAGENT    SenderIdentity = "AGENT"
-	SenderIdentityOPERATOR SenderIdentity = "OPERATOR"
-	SenderIdentityROUTER   SenderIdentity = "ROUTER"
-)
-
-// Valid indicates whether the value is a known member of the SenderIdentity enum.
-func (e SenderIdentity) Valid() bool {
-	switch e {
-	case SenderIdentityAGENT:
-		return true
-	case SenderIdentityOPERATOR:
-		return true
-	case SenderIdentityROUTER:
 		return true
 	default:
 		return false
@@ -984,11 +981,11 @@ func (e ThreadStatus) Valid() bool {
 
 // Defines values for TranscriptKind.
 const (
-	TranscriptKindACTION         TranscriptKind = "ACTION"
-	TranscriptKindAGENT          TranscriptKind = "AGENT"
-	TranscriptKindCONTACT        TranscriptKind = "CONTACT"
-	TranscriptKindOPERATORDIRECT TranscriptKind = "OPERATOR_DIRECT"
-	TranscriptKindWHISPER        TranscriptKind = "WHISPER"
+	TranscriptKindACTION  TranscriptKind = "ACTION"
+	TranscriptKindCONTACT TranscriptKind = "CONTACT"
+	TranscriptKindDIRECT  TranscriptKind = "DIRECT"
+	TranscriptKindSYSTEM  TranscriptKind = "SYSTEM"
+	TranscriptKindWHISPER TranscriptKind = "WHISPER"
 )
 
 // Valid indicates whether the value is a known member of the TranscriptKind enum.
@@ -996,11 +993,11 @@ func (e TranscriptKind) Valid() bool {
 	switch e {
 	case TranscriptKindACTION:
 		return true
-	case TranscriptKindAGENT:
-		return true
 	case TranscriptKindCONTACT:
 		return true
-	case TranscriptKindOPERATORDIRECT:
+	case TranscriptKindDIRECT:
+		return true
+	case TranscriptKindSYSTEM:
 		return true
 	case TranscriptKindWHISPER:
 		return true
@@ -1066,6 +1063,9 @@ type IssueStatus string
 // Language defines model for Language.
 type Language string
 
+// MessageAuthor defines model for MessageAuthor.
+type MessageAuthor string
+
 // MessageType defines model for MessageType.
 type MessageType string
 
@@ -1077,9 +1077,6 @@ type ProviderKind string
 
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
-
-// SenderIdentity defines model for SenderIdentity.
-type SenderIdentity string
 
 // StopKind defines model for StopKind.
 type StopKind string

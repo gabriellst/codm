@@ -4303,6 +4303,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -4437,6 +4440,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -4456,6 +4460,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -4580,6 +4587,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -4599,6 +4607,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -4718,6 +4729,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -4737,6 +4749,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -4848,6 +4863,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -4867,6 +4883,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -4984,6 +5003,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -5003,6 +5023,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -5117,6 +5140,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -5136,6 +5160,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -5248,6 +5275,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -5267,6 +5295,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -5388,6 +5419,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -5407,6 +5439,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -5512,6 +5547,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -5531,6 +5567,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -5648,6 +5687,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -5667,6 +5707,9 @@
                             {
                               "type": "object",
                               "properties": {
+                                "author": {
+                                  "$ref": "#/components/schemas/MessageAuthor"
+                                },
                                 "channelId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -5746,6 +5789,7 @@
                                 }
                               },
                               "required": [
+                                "author",
                                 "channelId",
                                 "fromMe",
                                 "internalMessageId",
@@ -6107,8 +6151,8 @@
                             "labelThreadId": {
                               "type": "string"
                             },
-                            "senderIdentity": {
-                              "$ref": "#/components/schemas/SenderIdentity"
+                            "author": {
+                              "$ref": "#/components/schemas/MessageAuthor"
                             }
                           },
                           "required": [
@@ -6117,7 +6161,7 @@
                             "contactDisplayName",
                             "contactKind",
                             "text",
-                            "senderIdentity"
+                            "author"
                           ],
                           "additionalProperties": false
                         }
@@ -6406,8 +6450,8 @@
                             "labelThreadId": {
                               "type": "string"
                             },
-                            "senderIdentity": {
-                              "$ref": "#/components/schemas/SenderIdentity"
+                            "author": {
+                              "$ref": "#/components/schemas/MessageAuthor"
                             },
                             "deliveredAt": {
                               "type": "string",
@@ -6419,7 +6463,7 @@
                             "contactExternalId",
                             "contactDisplayName",
                             "contactKind",
-                            "senderIdentity",
+                            "author",
                             "deliveredAt"
                           ],
                           "additionalProperties": false
@@ -7446,8 +7490,8 @@
         "type": "string",
         "enum": [
           "CONTACT",
-          "AGENT",
-          "OPERATOR_DIRECT",
+          "SYSTEM",
+          "DIRECT",
           "WHISPER",
           "ACTION"
         ]
@@ -7606,20 +7650,19 @@
           "STATUS"
         ]
       },
+      "MessageAuthor": {
+        "type": "string",
+        "enum": [
+          "HUMAN",
+          "SYSTEM"
+        ]
+      },
       "ChatPresenceType": {
         "type": "string",
         "enum": [
           "composing",
           "recording",
           "paused"
-        ]
-      },
-      "SenderIdentity": {
-        "type": "string",
-        "enum": [
-          "AGENT",
-          "ROUTER",
-          "OPERATOR"
         ]
       },
       "HistorySyncType": {

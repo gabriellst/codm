@@ -8,7 +8,7 @@ import { Dot } from '@/components/console/StatusDot'
 type Entry = GetSessionChatQueryResponse['transcript'][number]
 
 /**
- * One transcript line. CONTACT sits left in a soft bubble; AGENT / OPERATOR_DIRECT sit
+ * One transcript line. CONTACT sits left in a soft bubble; SYSTEM / DIRECT sit
  * right in a dark bubble; WHISPER is a right-aligned agents-only aside; ACTION is a
  * full-width system line (classifications, edits, test runs).
  */
@@ -33,7 +33,7 @@ export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: 
 	}
 
 	const isWhisper = entry.kind === 'WHISPER'
-	const caption = entry.kind === 'AGENT' ? (entry.provider ? providerLabel[entry.provider] : 'Agent') : isWhisper ? 'Whisper' : 'You'
+	const caption = entry.kind === 'SYSTEM' ? (entry.provider ? providerLabel[entry.provider] : 'Agent') : isWhisper ? 'Whisper' : 'You'
 
 	return (
 		<div className="flex flex-col items-end gap-1">

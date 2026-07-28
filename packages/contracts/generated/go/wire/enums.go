@@ -392,6 +392,22 @@ func ParseMembershipAction(s string) (MembershipAction, error) {
 	}
 }
 
+type MessageAuthor string
+
+const (
+	MessageAuthorHUMAN MessageAuthor = "HUMAN"
+	MessageAuthorSYSTEM MessageAuthor = "SYSTEM"
+)
+
+func ParseMessageAuthor(s string) (MessageAuthor, error) {
+	switch MessageAuthor(s) {
+	case MessageAuthorHUMAN, MessageAuthorSYSTEM:
+		return MessageAuthor(s), nil
+	default:
+		return "", fmt.Errorf("invalid MessageAuthor: %q", s)
+	}
+}
+
 type MessageType string
 
 const (
@@ -518,23 +534,6 @@ func ParseRole(s string) (Role, error) {
 		return Role(s), nil
 	default:
 		return "", fmt.Errorf("invalid Role: %q", s)
-	}
-}
-
-type SenderIdentity string
-
-const (
-	SenderIdentityAGENT SenderIdentity = "AGENT"
-	SenderIdentityROUTER SenderIdentity = "ROUTER"
-	SenderIdentityOPERATOR SenderIdentity = "OPERATOR"
-)
-
-func ParseSenderIdentity(s string) (SenderIdentity, error) {
-	switch SenderIdentity(s) {
-	case SenderIdentityAGENT, SenderIdentityROUTER, SenderIdentityOPERATOR:
-		return SenderIdentity(s), nil
-	default:
-		return "", fmt.Errorf("invalid SenderIdentity: %q", s)
 	}
 }
 
@@ -954,15 +953,15 @@ type TranscriptKind string
 
 const (
 	TranscriptKindCONTACT TranscriptKind = "CONTACT"
-	TranscriptKindAGENT TranscriptKind = "AGENT"
-	TranscriptKindOPERATOR_DIRECT TranscriptKind = "OPERATOR_DIRECT"
+	TranscriptKindSYSTEM TranscriptKind = "SYSTEM"
+	TranscriptKindDIRECT TranscriptKind = "DIRECT"
 	TranscriptKindWHISPER TranscriptKind = "WHISPER"
 	TranscriptKindACTION TranscriptKind = "ACTION"
 )
 
 func ParseTranscriptKind(s string) (TranscriptKind, error) {
 	switch TranscriptKind(s) {
-	case TranscriptKindCONTACT, TranscriptKindAGENT, TranscriptKindOPERATOR_DIRECT, TranscriptKindWHISPER, TranscriptKindACTION:
+	case TranscriptKindCONTACT, TranscriptKindSYSTEM, TranscriptKindDIRECT, TranscriptKindWHISPER, TranscriptKindACTION:
 		return TranscriptKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid TranscriptKind: %q", s)

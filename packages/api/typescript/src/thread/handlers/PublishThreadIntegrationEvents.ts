@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-import { SenderIdentity } from '@codedm/contracts-typescript/wire/enums'
+import { MessageAuthor } from '@codedm/contracts-typescript/wire/enums'
 import {
 	ThreadAttachedEvent as ThreadAttachedIntegrationEvent,
 	MessageClassifiedEvent as MessageClassifiedIntegrationEvent,
@@ -62,7 +62,8 @@ export class PublishThreadIntegrationEvents extends EventHandler<
 						contactDisplayName: event.payload.contactDisplayName,
 						contactKind: event.payload.contactKind,
 						text: event.payload.question,
-						senderIdentity: SenderIdentity.ROUTER,
+						// The product composed this — a clarification question is our words, not anyone's.
+						author: MessageAuthor.SYSTEM,
 					},
 				}),
 			)
@@ -79,7 +80,9 @@ export class PublishThreadIntegrationEvents extends EventHandler<
 						contactDisplayName: event.payload.contactDisplayName,
 						contactKind: event.payload.contactKind,
 						text: event.payload.text,
-						senderIdentity: SenderIdentity.OPERATOR,
+						// A HUMAN wrote it. The owner typed it in the console and we are only the courier —
+						// which is exactly the distinction `fromMe` cannot make once we can send.
+						author: MessageAuthor.HUMAN,
 					},
 				}),
 			)

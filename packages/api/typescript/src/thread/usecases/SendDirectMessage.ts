@@ -13,7 +13,7 @@ export const SendDirectMessageOutputSchema = z.object({ entryId: z.uuid() })
 
 /**
  * C20 SendDirectMessage — the operator speaks as themselves on the channel. Requires the thread to be
- * PAUSED (`THREAD_NOT_PAUSED`) and the channel CONNECTED. Appends an OPERATOR_DIRECT transcript entry
+ * PAUSED (`THREAD_NOT_PAUSED`) and the channel CONNECTED. Appends a DIRECT transcript entry
  * and orders the delivery via `thread.direct_message_sent` → `integration.channel.delivery_requested`.
  */
 @injectable()
@@ -32,7 +32,8 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.assertCanSendDirect()
 		if (!(await this.connectivity.isConnected(thread.channelId))) {
 			throw new BaseError<ApplicationErrors>('CHANNEL_NOT_CONNECTED', 'the channel is not connected')
@@ -40,7 +41,7 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 
 		return this.withTransaction(tx, async tx => {
 			const entry = await this.transcript.append(
-				{ ownerId: thread.ownerId, threadId: thread.id.value, kind: TranscriptKind.OPERATOR_DIRECT, text: input.text },
+				{ ownerId: thread.ownerId, threadId: thread.id.value, kind: TranscriptKind.DIRECT, text: input.text },
 				tx,
 			)
 			await this.domainEventRepository.save(

@@ -78,7 +78,7 @@ export const transcriptEntries = sqliteTable(
 		ownerId: text('owner_id').notNull(),
 		threadId: text('thread_id').notNull(),
 
-		// TranscriptKind (CONTACT | AGENT | OPERATOR_DIRECT | WHISPER | ACTION).
+		// TranscriptKind (CONTACT | SYSTEM | DIRECT | WHISPER | ACTION).
 		kind: text('kind').$type<TranscriptKind>().notNull(),
 		text: text('text').notNull(),
 

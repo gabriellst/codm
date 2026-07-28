@@ -10,9 +10,9 @@ import { classificationMethodSchema } from "./classificationMethodSchema.ts";
 import { contactKindSchema } from "./contactKindSchema.ts";
 import { historySyncTypeSchema } from "./historySyncTypeSchema.ts";
 import { issueArchiveReasonSchema } from "./issueArchiveReasonSchema.ts";
+import { messageAuthorSchema } from "./messageAuthorSchema.ts";
 import { messageTypeSchema } from "./messageTypeSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
-import { senderIdentitySchema } from "./senderIdentitySchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
 import { threadStatusSchema } from "./threadStatusSchema.ts";
@@ -93,7 +93,10 @@ get "platform"(){
     "ownerId": z.string(),
 "name": z.enum(["integration.channel_message.received"]),
 "payload": z.union([z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "contextInfo": z.object({
     "participant": z.optional(z.string()),
@@ -131,7 +134,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "imageMessage": z.object({
     "caption": z.optional(z.string()),
@@ -162,7 +168,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "videoMessage": z.object({
     "caption": z.optional(z.string()),
@@ -192,7 +201,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "audioMessage": z.object({
     "fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
@@ -221,7 +233,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "documentMessage": z.object({
     "caption": z.optional(z.string()),
@@ -251,7 +266,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "stickerMessage": z.object({
     "fileLength": z.optional(z.int().min(-9007199254740991).max(9007199254740991)),
@@ -280,7 +298,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "locationMessage": z.object({
     "address": z.optional(z.string()),
@@ -309,7 +330,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "contactMessage": z.object({
     "displayName": z.optional(z.string()),
@@ -341,7 +365,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "pollMessage": z.object({
     "options": z.array(z.string()),
@@ -367,7 +394,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "reactionMessage": z.object({
     "key": z.object({
@@ -398,7 +428,10 @@ get "platform"(){
 "senderId": z.string(),
 "timestamp": z.int().min(-9007199254740991).max(9007199254740991)
     }), z.object({
-    "channelId": z.uuid(),
+    get "author"(){
+                return messageAuthorSchema
+              },
+"channelId": z.uuid(),
 "content": z.optional(z.object({
     "text": z.string()
     })),
@@ -501,8 +534,8 @@ get "contactKind"(){
 "text": z.string(),
 "labelIssueKey": z.optional(z.string()),
 "labelThreadId": z.optional(z.string()),
-get "senderIdentity"(){
-                return senderIdentitySchema
+get "author"(){
+                return messageAuthorSchema
               }
     })
     }), z.object({
@@ -566,8 +599,8 @@ get "contactKind"(){
               },
 "labelIssueKey": z.optional(z.string()),
 "labelThreadId": z.optional(z.string()),
-get "senderIdentity"(){
-                return senderIdentitySchema
+get "author"(){
+                return messageAuthorSchema
               },
 "deliveredAt": z.iso.datetime()
     })

@@ -342,7 +342,7 @@ CREATE TABLE "thread_transcript_entries" (
 	"classification" text,
 	"at" integer NOT NULL,
 	"created_at" integer NOT NULL,
-	CONSTRAINT "thread_transcript_entries_kind_check" CHECK("thread_transcript_entries"."kind" IN ('CONTACT', 'AGENT', 'OPERATOR_DIRECT', 'WHISPER', 'ACTION')),
+	CONSTRAINT "thread_transcript_entries_kind_check" CHECK("thread_transcript_entries"."kind" IN ('CONTACT', 'SYSTEM', 'DIRECT', 'WHISPER', 'ACTION')),
 	CONSTRAINT "thread_transcript_entries_provider_check" CHECK("thread_transcript_entries"."provider" IN ('CLAUDE_CODE', 'CODEX', 'OPENCODE')),
 	CONSTRAINT "thread_transcript_entries_classification_check" CHECK("thread_transcript_entries"."classification" IN ('REPLY_QUOTE', 'CONTEXT_MATCH', 'NEW_ISSUE', 'CLARIFIED'))
 );
