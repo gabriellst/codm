@@ -13,6 +13,7 @@ import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { FactSource } from '../enums'
 
 const ownerId = testId('terminal-bridge', 'owner')
 
@@ -73,14 +74,23 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		})
 	})
 
-	it('agent.run.completed → integration.issue.completed', async () => {
+	/**
+	 * `source` GOES IN AND DOES NOT COME OUT — the contract-cost claim of §4.3 rule 6, asserted.
+	 *
+	 * The field Fase 6 added to these two domain events is CONTEXT-PRIVATE: it never reaches TypeSpec,
+	 * never reaches OpenAPI, and the bridge deliberately does not forward it. That is what makes
+	 * "DECLARED vs INFERRED costs zero contract" true rather than asserted, and the `toEqual` below is
+	 * where it is enforced — `toEqual` is exact, so a bridge that started copying `source` across would
+	 * turn this red rather than silently widening the frozen integration event.
+	 */
+	it('agent.run.completed → integration.issue.completed, WITHOUT the private `source`', async () => {
 		const { handler, published } = makeHandler()
 		const completedAt = new Date('2026-07-22T00:00:00.000Z')
 		await handler.handle(
 			new AgentRunCompletedEvent({
 				entityId: 'issue-1',
 				ownerId,
-				payload: { issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', completedAt },
+				payload: { issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', completedAt, source: FactSource.DECLARED },
 			}) as never,
 		)
 		const event = published[0] as IssueCompletedEvent
@@ -89,19 +99,40 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		expect(event.payload).toEqual({ issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', completedAt })
 	})
 
-	it('agent.run.stop_raised → integration.issue.stop_raised', async () => {
+	/**
+	 * The stop half of the same rule — plus the one field that DOES cross (D6-5).
+	 *
+	 * `detail` is the agent's own words, and the whole reason the phase added it to BOTH the domain
+	 * event and `issue-stop-raised.tsp`: without it the `AskOperator` question dies at the bridge and
+	 * the "Needs you" card falls back to a generic title. So this test pins the asymmetry in one place —
+	 * `detail` crosses, `source` does not.
+	 */
+	it('agent.run.stop_raised → integration.issue.stop_raised: `detail` crosses, `source` does not', async () => {
 		const { handler, published } = makeHandler()
 		await handler.handle(
 			new AgentRunStopRaisedEvent({
 				entityId: 'issue-1',
 				ownerId,
-				payload: { stopId: 'stop-1', issueId: 'issue-1', threadId: 'thread-1', kind: StopKind.SERVER_ERROR },
+				payload: {
+					stopId: 'stop-1',
+					issueId: 'issue-1',
+					threadId: 'thread-1',
+					kind: StopKind.SERVER_ERROR,
+					detail: 'provider exited with code 1',
+					source: FactSource.INFERRED,
+				},
 			}) as never,
 		)
 		const event = published[0] as IssueStopRaisedEvent
 		expect(event).toBeInstanceOf(IssueStopRaisedEvent)
 		expect(event.name).toBe('integration.issue.stop_raised')
-		expect(event.payload).toEqual({ stopId: 'stop-1', issueId: 'issue-1', threadId: 'thread-1', kind: StopKind.SERVER_ERROR })
+		expect(event.payload).toEqual({
+			stopId: 'stop-1',
+			issueId: 'issue-1',
+			threadId: 'thread-1',
+			kind: StopKind.SERVER_ERROR,
+			detail: 'provider exited with code 1',
+		})
 	})
 
 	it('subscribes to exactly the four terminal.* facts', () => {

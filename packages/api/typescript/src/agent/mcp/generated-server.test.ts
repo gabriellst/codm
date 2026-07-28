@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { withMcpRunContext } from '@codedm/client-typescript/mcp-run-context'
+import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/mcp-run-context'
 import { MCP_SCOPE_NAMES, scopeOperationIds, type McpScope } from './manifest'
 import { loadGeneratedServer } from './router'
 
@@ -20,6 +20,9 @@ import { loadGeneratedServer } from './router'
  * codegen time: the tool list is exactly the manifest's, and a tool from outside the scope is
  * genuinely not there.
  */
+
+/** The path param the `CreateIssue` tool inherits from its controller — used by two tests below. */
+const THREAD_ID = '019e4d24-6524-7041-9e1c-8108180cddae'
 
 async function connectTo(scope: McpScope): Promise<Client> {
 	const server = await loadGeneratedServer(scope)
@@ -63,26 +66,63 @@ describe('the generated MCP server', () => {
 		// no issue confinement. This is the confused-deputy clause (AC-6.19(c)).
 		const result = await client.callTool({
 			name: 'CreateIssue',
-			arguments: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae', data: { title: 'x', provider: 'CLAUDE_CODE' } },
+			arguments: { threadId: THREAD_ID, data: { title: 'x', provider: 'CLAUDE_CODE' } },
 		})
 		expect(result.isError).toBe(true)
 		expect(JSON.stringify(result.content)).toContain('outside a run-token context')
 		await client.close()
 	})
 
-	it('WITH a run-token context the shim gets past the guard and attempts the HTTP call', async () => {
-		const client = await connectTo('issue-handling')
-		// The mirror of the test above, and it is what stops that one from passing for the wrong reason:
-		// if the shim threw unconditionally, "refuses without a context" would be green while the tool
-		// was simply broken. Here the guard is satisfied, so the failure that surfaces is a TRANSPORT
-		// one (no daemon is listening in a unit test), never the context guard.
-		const result = await withMcpRunContext({ token: 'test-token' }, () =>
-			client.callTool({
-				name: 'CreateIssue',
-				arguments: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae', data: { title: 'x', provider: 'CLAUDE_CODE' } },
-			}),
-		)
-		expect(JSON.stringify(result.content)).not.toContain('outside a run-token context')
-		await client.close()
+	/**
+	 * The mirror of the test above, and it is what stops that one from passing for the wrong reason: if
+	 * the shim threw unconditionally, "refuses without a context" would be green while the tool was
+	 * simply broken.
+	 *
+	 * ### It OBSERVES the request instead of reading an error string, and that is D6-13's lesson
+	 * `McpRunContext` carries `token` AND `baseUrl`, because the generated `_http.ts` makes ONE context
+	 * read for both — a handler must never end up authenticated against one daemon and addressed at
+	 * another. An earlier version of this test passed `{ token }` alone and stayed green: the call died
+	 * in URL construction, BEFORE the transport, so "it got past the guard" was true for a reason that
+	 * had nothing to do with the guard. It was invisible because `tsconfig.build.json` excludes
+	 * `src/**\/*.test.ts`, so no gate typechecks this file and the missing REQUIRED field was not an
+	 * error anywhere.
+	 *
+	 * Catching a request on a real socket removes the whole class of problem: no error wording is
+	 * asserted (that wording is runtime-specific — Bun says `Failed to construct 'Request'` where Node
+	 * says `Failed to parse URL`, and MEASURED, the old assertion would have keyed on the wrong one),
+	 * and the three things AC-6.19 actually contracts are read off the wire — the origin came from the
+	 * context, the path is the controller's, and the run token is attached.
+	 */
+	it('WITH a run-token context the shim issues the request AT the context origin, carrying the token', async () => {
+		const received: { pathname: string; token: string | null }[] = []
+		const daemon = Bun.serve({
+			port: 0,
+			fetch(request) {
+				received.push({ pathname: new URL(request.url).pathname, token: request.headers.get(MCP_RUN_TOKEN_HEADER) })
+				return Response.json({ issueId: THREAD_ID, status: 'WORKING' })
+			},
+		})
+
+		try {
+			const client = await connectTo('issue-handling')
+			await withMcpRunContext({ token: 'test-token', baseUrl: daemon.url.origin }, () =>
+				client.callTool({
+					name: 'CreateIssue',
+					arguments: { threadId: THREAD_ID, data: { title: 'x', provider: 'CLAUDE_CODE' } },
+				}),
+			)
+			await client.close()
+
+			expect(received).toHaveLength(1)
+			// The PATH the controller declares, rendered from the tool's own arguments — proof the
+			// generated handler is a client of the real endpoint and not of some parallel mechanism.
+			expect(received[0]?.pathname).toBe(`/v1/threads/${THREAD_ID}/issues`)
+			// AC-6.19(a): the per-scope `_http` shim is the ONE auth seam, and it attached the credential
+			// the router established. No generated handler takes a config argument, so there is nowhere
+			// else this could have come from.
+			expect(received[0]?.token).toBe('test-token')
+		} finally {
+			await daemon.stop(true)
+		}
 	})
 })

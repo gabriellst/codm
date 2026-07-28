@@ -157,7 +157,7 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 		const before = await testBed.probe().snapshot(COUNTED)
 		const response = (await router.handle(
 			post('issue-handling', call({ threadId: THREAD_B, data: { kind: ArtifactKind.LINK } }), authorized(token)),
-		)) as Response
+		)) as unknown as Response
 		expect(response.status).toBe(403)
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
 	})
@@ -170,7 +170,7 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 		const before = await testBed.probe().snapshot(COUNTED)
 		const response = (await router.handle(
 			post('issue-handling', call({ threadId, data: { issueId: ISSUE_B, kind: ArtifactKind.LINK } }), authorized(token)),
-		)) as Response
+		)) as unknown as Response
 		expect(response.status).toBe(403)
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
 	})

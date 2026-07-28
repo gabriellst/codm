@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
+import type { BaseError } from '@codedm/core-typescript'
 import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../../enums'
-import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
+import type { AgentRunRequest, AgentRuntimeEvent, ProviderCapabilities } from '../../types'
 import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkAgent } from './IssueWorkAgent'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
@@ -128,6 +129,33 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 			threadId: '00000000-0000-4000-8000-0000000000bb',
 			agentName: AgentName.ISSUE_WORK,
 		})
+	})
+
+	/**
+	 * AC-6.7, last clause — "an agent that REQUIRES tools against a provider with no mcp-config flag
+	 * fails with `AGENT_TOOLS_UNSUPPORTED`".
+	 *
+	 * This is the failure mode the whole phase is built to make LOUD. Dropping the scope silently would
+	 * produce a run that looks EXACTLY like a healthy one that simply chose to declare nothing — same
+	 * frames, same clean exit, an issue closed by inference — and AC-6.4/AC-6.7 exist precisely to keep
+	 * those two apart. The probe result is the input: `caps.mcpConfig === false` is a measured fact
+	 * about THIS install of the CLI, never a static property of the provider.
+	 *
+	 * Absent `caps` stays permissive on purpose (the probe did not run, so nothing was ruled out), and
+	 * that is why the second half of this test exists: a guard that refused whenever `caps` was merely
+	 * falsy would satisfy the first assertion and break every ordinary run.
+	 */
+	it('AC-6.7 — a CLI whose probe says it cannot take an MCP config fails NAMED, never degrades to the inferred path', async () => {
+		const { agent } = build()
+		const drain = async (caps: ProviderCapabilities) => {
+			for await (const _ of agent.run(input({ caps }))) {
+				// drain
+			}
+		}
+
+		await expect(drain({ mcpConfig: false })).rejects.toThrow(expect.objectContaining({ name: 'AGENT_TOOLS_UNSUPPORTED' }) as BaseError)
+		// The permissive half: an UNPROBED capability is not a denial.
+		await expect(drain({})).resolves.toBeUndefined()
 	})
 
 	it('an agent with a tool scope but NO issueId fails NAMED rather than minting an unconfined token', async () => {

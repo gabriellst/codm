@@ -2980,3 +2980,226 @@ diff. 8 execuções consecutivas de suíte cheia depois disso: **734 / 0**, sem 
 
 ` M packages/app/react/src/components/console/AppChrome.tsx` — continua fora do commit por pathspec
 explícito. Não tocado.
+
+---
+
+# 2026-07-28 — FASE 6, RODADA 2 DE CORREÇÃO: a coluna que ninguém lia, e a AC que não podia ficar vermelha
+
+Rodada contra as cinco findings do juiz. Nenhuma delas era uma implementação errada — as duas graves
+são **asserções que faltavam sobre código que já estava certo**, que é precisamente o modo de falha
+que a §8 nomeia (*"AC vista só verde não é AC"*) e que a rodada anterior repetiu ao **reportar como
+feito** o que devia ter ido para o PARKED. A lição desta rodada, em uma linha e no mesmo formato das
+outras duas: *"`tsc` verde não prova que roda; `bun test` verde não prova que roda; **e um grep verde
+não prova que o pathspec existe**."*
+
+## A FINDING GRAVE 1 — `FactSource` era uma coluna ESCRITA E NUNCA LIDA
+
+`AC-6.4(c)` e `AC-6.7(a)` mandam, com todas as letras, assertar `payload.source` **lido do
+outbox/`shared_events`, nunca de log**. Medido no HEAD desta rodada:
+`grep -rn "FactSource|INFERRED|DECLARED" --include="*.test.ts"` sobre `src` + `tests` devolvia
+**só comentários**. O campo era escrito em quatro lugares (`RunIssueTurn.ts:294,315` INFERRED;
+`DeclareIssueComplete.ts:71,91`, `DeclareStop.ts:65`, `AskOperator.ts:61` DECLARED) e **relido em
+nenhum**. A coluna que existe para tornar *"quantas issues fecharam por inferência?"* um `SELECT`
+não tinha um único teste provando que o `SELECT` responde a verdade.
+
+**O que passou a existir** (`src/agent/usecases/RunIssueTurn.test.ts`, +4 testes):
+
+| AC | caso | asserção |
+|---|---|---|
+| 6.4(b) | DECLAROU **e também** terminou normalmente | exatamente **1** `AgentRunCompletedEvent`, `source === DECLARED` |
+| 6.4(c) / 6.7(a) | `tools.length === 0`, terminou normalmente | exatamente **1**, `source === INFERRED` — **o espelho, que não existia** |
+| 6.7(b) | o mesmo run | **0** `AgentRunStopRaisedEvent` — sem tools não há stop de DOMÍNIO |
+| 6.7(c) | `tools.length === 0` + stop de transporte | **1** stop `SERVER_ERROR`, `source === INFERRED`, **0** conclusões |
+| 6.7(c), a metade entre parênteses | agent **COM** escopo + stop de transporte | idem, no teste que já existia |
+
+O caso `tools.length === 0` é montado como a AC manda — **um agent-duplo cujo `readonly tools` é
+`[]`**, injetado no lugar do `IssueWorkAgent` — e não por `request.mcp`, que o use case não enxerga.
+O duplo vive num **segundo `describe` com TestBed próprio**: `testBed.override` não é desfeito por
+`reset()`, então trocar o agent na suíte de cima entregaria o duplo a todo teste declarado depois,
+inclusive o que asserta `mcp.allowedTools.length > 0`.
+
+**Três falsificadores executados, cada um revertido e reverificado verde:**
+
+```
+predicado `if (this.agent.tools.length > 0) return` → `if (false) return`
+  ⇒ AC-6.4(b) VERMELHA com  Expected length: 1 / Received length: 2   ← o DOIS que uma AC de
+    double-publish precisa ter visto ao menos uma vez
+  ⇒ e o happy path junto (Expected 0 / Received 1)
+
+RunIssueTurn:  FactSource.INFERRED → DECLARED   ⇒ 3 vermelhas (Expected "INFERRED" / Received "DECLARED")
+DeclareIssueComplete: FactSource.DECLARED → INFERRED  ⇒ AC-6.4(b) vermelha (Expected "DECLARED")
+```
+
+## A FINDING GRAVE 2 — a guarda do D6-4 vinha sem teste, e mais duas cláusulas da AC-6.7
+
+**`AGENT_TRANSPORT_STOP_NOT_DECLARABLE` aparecia em 3 lugares e em ZERO testes.** O executor
+descobriu o defeito, escreveu-o no goal (*"aceitar poria um stop de transporte com `source: DECLARED`
+no ledger, fazendo a coluna `FactSource` mentir"*) e deixou o conserto **não verificado** — a forma
+mais fina do mesmo erro: a coluna do parágrafo acima só é confiável se **nada além do runner** puder
+escrever um transporte nela.
+
+`src/agent/usecases/DeclareStop.test.ts` (novo, 3 testes) fecha isso, e **conta linhas** em vez de
+ler ausência de exceção:
+
+- **o CONTROLE primeiro** — `APPROVAL_NEEDED` É declarável, produz 1 stop `DECLARED`, e move
+  `events` **+1** e `outbox` **+1**. Sem ele, um `DeclareStop` que recusasse TUDO passaria em todas as
+  asserções de recusa;
+- as recusas são geradas **por `TRANSPORT_STOP_KINDS`**, não por dois casos digitados: um terceiro
+  kind de transporte amanhã chega aqui sem edição.
+
+**Dois falsificadores, e o segundo é o que importa:**
+
+```
+guarda desligada (`if (false && isTransportStopKind(...))`)     ⇒ 2 vermelhas (o código nomeado some)
+guarda MOVIDA para DEPOIS do save (ainda lança, ainda é 422)    ⇒ 2 vermelhas em
+                                                                  Expected length: 0 / Received length: 1
+```
+
+O segundo prova que a contagem não é zelo: uma implementação que recusa **tarde** passa em
+`expect().rejects` e deixa a linha mentirosa no ledger assim mesmo.
+
+**As outras duas cláusulas da AC-6.7:**
+- **`AGENT_TOOLS_UNSUPPORTED` contra provider sem `mcpConfigFlag`** (`IssueWorkAgent.test.ts`) — só a
+  variante "sem issueId" estava coberta. O teste tem **duas metades**: `caps.mcpConfig === false`
+  falha NOMEADO, e `caps` **vazio** passa — sem a segunda, uma guarda que recusasse qualquer `caps`
+  falsy satisfaria a primeira e quebraria todo run normal. **Falsificador:** guarda → `if (false)`
+  ⇒ vermelha.
+- **O TESTE DE TIPO** que a AC pede (`TransportStopKind` não admite os três kinds de domínio) nasce em
+  `tests/architecture/transport-stop-kind.typecheck.ts` — o molde do `agent-input.type-test.ts`:
+  `tsconfig.build.json` inclui `tests/**/*.ts` e exclui só `*.test.ts`, então **`bun tsc` verde É a
+  asserção**. Quatro `@ts-expect-error` (os três kinds + a mesma tentativa através de
+  `AgentRunResult['stop']`, que é onde a propriedade importa), mais a metade POSITIVA — sem ela um
+  `TransportStopKind` colapsado em `never` satisfaria todas as recusas.
+  **Falsificador executado:** `type TransportStopKind = StopKind` ⇒ **4 × TS2578 "Unused
+  '@ts-expect-error' directive"**, `tsc` **exit 2**; revertido ⇒ exit 0. Não existe estado do mundo em
+  que essas asserções sejam vacuosas, que é o que a §8 cobra de um gate.
+
+## A FINDING 3 — `baseUrl` faltando, e o gate que não olhava para lá (D6-15)
+
+`generated-server.test.ts` chamava `withMcpRunContext({ token: 'test-token' }, …)` **sem** `baseUrl`,
+campo que o D6-13 tornou **obrigatório**. Erro de tipo real, invisível porque o alvo `tsc` do Nx roda
+`tsconfig.build.json`, que **exclui `src/**/*.test.ts`**.
+
+Consertar a chamada não bastava: a asserção antiga (*"não contém `outside a run-token context`"*)
+ficava verde porque a chamada morria **antes** do transporte. **Medido, os dois lados:**
+
+```
+sem baseUrl:   "Failed to construct 'Request': Invalid URL \"/v1/threads/…/issues\""
+com baseUrl:   "Unable to connect. Is the computer able to access the url?"
+```
+
+E repare: a grafia é do **Bun**; o D6-13 registrou a do **Node** (`Failed to parse URL`). Uma
+asserção por texto de erro teria travado na runtime errada. O teste foi **reescrito para OBSERVAR a
+requisição**: um `Bun.serve` em porta efêmera, `baseUrl` = a origem dele, e três leituras do fio —
+chegou **1** request, o `pathname` é `/v1/threads/<id>/issues` (o do controller) e o header
+`x-codedm-run-token` traz o token. **Dois falsificadores:** tirar `baseUrl` ⇒ `Expected length: 1 /
+Received length: 0`; tirar o header do `_http.ts` gerado ⇒ `Expected "test-token" / Received null`.
+
+**E o buraco atrás disso foi MEDIDO, não só citado.** `bun x tsc -p tsconfig.json --noEmit` (mesmo
+compilador, tsconfig que INCLUI testes): **32 erros em 13 arquivos**. Os **8 que a Fase 6 causou**
+estão consertados — 3 em `PublishAgentIntegrationEvents.test.ts` (os campos `source`/`detail` que a
+fase acrescentou aos eventos de domínio; o conserto **fortalece** a suíte: agora ela asserta o que o
+goal só prometia — `source` entra e **não sai**, `detail` **sai**) e 5 casts `as Response` →
+`as unknown as Response` nos dois testes de router nascidos nesta fase. **Restam 24 em 10 arquivos**,
+anteriores à fase e espalhados por 4 contextos — ver o PARKED abaixo, com o número exato.
+
+## A FINDING 4 — dois defeitos de contrato da AC-6.12, agora ESCRITOS NO GOAL (D6-14)
+
+A §8 manda consertar no goal, não só logar. Bloco novo `D6-14`/`D6-15` logo depois do `D6-8..D6-13`,
+e o **texto da AC-6.12 foi reescrito**:
+
+1. **O terceiro pathspec estava MORTO.** `src/agent/providers` não existe desde a Fase 4.5 — e a
+   **AC-4.5.2 asserta exatamente isso**, então duas ACs do mesmo goal se contradiziam.
+2. **A frase-guarda da própria AC não dispara.** Ela dizia *"se algum sair `fatal:`"*. Medido:
+   `git grep -nE "ownerId" -- <caminho inexistente>`, **sozinho**, sai **exit 1, zero linhas, sem
+   `fatal:`**. "Pathspec morto" e "zero hits" são os mesmos bytes. A guarda passou a ser
+   **afirmativa**: `test -d …/services/AgentRunner` tem de sair 0 ANTES do grep.
+3. **`.mint(`/`.revoke(` casavam teste colocado** (15 e 3 linhas em `router.test.ts` +
+   `router.write-isolation.test.ts`, que cunham e revogam **para exercitar o router**, como a AC-6.6
+   exige). Mesma forma do **D6-1** — documentado lá para a AC-6.17(a) e não aqui. Os greps passam a
+   excluir `':!*.test.ts'`.
+
+**Executado depois da correção:**
+
+```
+test -d …/services/AgentRunner                                      → exit 0
+git grep -nE "ownerId|issueId|threadId" -- …/services/AgentRunner   → 0 hits, exit 1
+  falsificador: `const ownerId = ''` plantado                        → 1 hit, exit 0 ; revertido → 0 hits
+git grep -n "\.mint("   -- packages/api/typescript/src ':!*.test.ts' → só agent/types/Agent.ts
+git grep -n "\.revoke(" -- packages/api/typescript/src ':!*.test.ts' → só ClaudeAgentRunner.ts
+```
+
+## A FINDING 5 — o symlink que não foi nem commitado nem surfaced
+
+`packages/client/dist/typescript/node_modules/@modelcontextprotocol/sdk` estava **untracked**
+enquanto os **9 irmãos** no mesmo diretório estão **todos rastreados** — inclusive com o mesmo
+formato de sufixo de peer-hash (`@tanstack+react-query@5.101.4+0f58469d5b3bd39f`). Ele nasceu desta
+fase: é a dependência que a fase acrescentou ao `package.json` do pacote gerado, materializada pelo
+`bun install`. **Commitado**, por consistência com os irmãos e porque `!packages/client/dist/**` no
+`.gitignore` desliga o ignore universal exatamente nesse subtree.
+
+**Decisão alternativa considerada e REJEITADA, registrada para quem passar aqui:** ignorar o subtree
+`node_modules` inteiro seria mexer em 9 arquivos rastreados de infraestrutura compartilhada, sem
+relação com a Fase 6. Que esse `node_modules` seja rastreado **é anterior a esta fase** e merece uma
+decisão própria — não a tomo aqui.
+
+## GATES (exit codes)
+
+```
+bun tsc                        0   (7/7 projetos, --skip-nx-cache)
+bun lint                       0   (3/3)
+bun test  (packages/api/ts)    740 pass / 3 skip / 0 fail  — 116 arquivos
+                               (HEAD de entrada, medido por stash: 733 pass; +7 = os 7 testes novos)
+bun test:tooling               <ver linha abaixo>
+bun run contracts + bun sdk    idempotentes 2×
+bun x nx run app-react:tsc     0
+e2e tsc                        0
+go build/vet/test (api/go)     0
+go build/vet/test (api/go/core) 0
+bun e2e                        5 passed / 2 skipped
+detectores                     39 / 0 / 37 / 33 / 3 / 2   — baseline, zero crescimento
+```
+
+## O QUE SEGUE PARKED (sem maquiagem, e a lista agora é COMPLETA)
+
+A rodada anterior levou finding por listar PARKED incompleto. Esta lista é a íntegra do que **não**
+está provado por teste executado nesta branch:
+
+- **AC-6.1 (smoke com `claude` real)** — segue **NÃO TENTADO**. Transporte e grafia de
+  `--allowedTools` continuam INDECIDIDOS POR EVIDÊNCIA; padrões que permanecem: **HTTP** (§4.4) e
+  `mcp__codedm__<OP>` (`agent/mcp/wire.ts`, onde a correção seria UMA edição). Degradável pela regra
+  8-bis; o substituto determinístico (AC-6.16) está verde.
+- **AC-6.10(c)** — a asserção estrutural sobre o `inputSchema` GERADO de `AskOperator` ter chaves
+  exatamente `{question}` continua **não escrita**. A PROPRIEDADE foi verificada por inspeção no
+  artefato (`data` é `z.object({ question })`, sem `kind`); o que falta é a asserção.
+- **AC-6.8(d) ida-e-volta** e **AC-6.14(e)** — os falsificadores obrigatórios seguem **não executados
+  por este executor**.
+- **AC-6.11(c)**, **AC-6.15(b)**, **AC-6.19(b)** — verificados por inspeção/grep, **sem teste
+  dedicado**. (A AC-6.15(c)/(d) deixou de estar aqui: `tests/architecture/mcp-manifest.test.ts` a
+  cobre desde a rodada 1; a AC-6.19(a) deixou de estar aqui: o teste de observação de request acima a
+  cobre.)
+- **D6-15 — os 24 erros de tipo restantes em teste colocado**, todos anteriores à Fase 6:
+  `ui/controllers/ListenEvents.test.ts` 5 · `tests/flows/agent-session-resume.flow.test.ts` 4 ·
+  `tests/kernel/insert-site-audit.test.ts` 3 · `thread/entities/Thread.test.ts` 3 ·
+  `agent/services/AgentRunner/ClaudeAgentRunner/cancellation.test.ts` 3 ·
+  `ui/services/BrowserFrameEnricher/BrowserFrameEnricher.test.ts` 2 · 1 cada em
+  `tests/flows/stop-control-plane.flow.test.ts`,
+  `agent/services/StreamJsonCodec/StreamJsonToTurnFactAccumulator.test.ts`,
+  `agent/services/AgentRunner/AgentRunner.test.ts`,
+  `agent/agents/ClassifyIssueAgent/ClassifyIssueAgent.test.ts`. **Promover
+  `tsc -p tsconfig.json` a gate exige zerá-los primeiro** — passe transversal, fora de uma rodada de
+  correção de findings. Enquanto não acontecer, **teste colocado não tem type-check**, e é por isso
+  que a asserção de tipo desta fase mora num `*.typecheck.ts` sob `tests/`.
+- **Testes colocados dos 4 controllers e dos 5 use cases novos** — a doutrina do CLAUDE.md pede
+  `*.test.ts` colocado por use case. Esta rodada entregou **dois** (`RunIssueTurn.test.ts`, ampliado,
+  e `DeclareStop.test.ts`, novo). Seguem sem suíte colocada: `CreateIssue`,
+  `TransitionIssueStatus`, `RaiseStop`, `AskOperator` (controllers) e `DeclareIssueComplete`,
+  `DeclareIssueOpen`, `AskOperator` (use cases). **Não é "coberto de outro jeito e pronto"**: os
+  caminhos que importam estão exercitados pelo router (AC-6.6), pelo servidor gerado (AC-6.16), pelo
+  flow `stop-control-plane` e pelo e2e — mas isso é cobertura de INTEGRAÇÃO, não a suíte por operação
+  que a doutrina pede, e a diferença aparece no dia em que uma regra de campo mudar.
+
+## TRABALHO DE TERCEIRO NA ÁRVORE — SURFACED, NÃO ABSORVIDO (terceira vez)
+
+` M packages/app/react/src/components/console/AppChrome.tsx` — continua fora do commit por pathspec
+explícito. Não tocado.

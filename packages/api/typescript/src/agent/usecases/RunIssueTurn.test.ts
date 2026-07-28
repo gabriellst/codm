@@ -3,18 +3,21 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codedm/core-typescript'
-import { ProviderKind, ProviderStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStatus, ProviderKind, ProviderStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
+import { DeclareIssueComplete } from './DeclareIssueComplete'
 import { AgentRunner } from '../services/AgentRunner'
 import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
+import { RunTokenService } from '../services/RunTokenService'
 import { AgentSessionRepository } from '../repositories'
+import { IssueWorkAgent, IssueWorkPromptBuilder } from '../agents/IssueWorkAgent'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
-import { ResumeInvalidationReason, AgentRunOutcome, type TransportStopKind } from '../enums'
+import { ResumeInvalidationReason, AgentRunOutcome, FactSource, type TransportStopKind } from '../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../types'
 
 /** A runner whose one run ends on a TRANSPORT stop — drives the STOPPED branch deterministically. */
@@ -125,6 +128,46 @@ describe('RunIssueTurn use case', () => {
 		expect(row?.agentSessionId).toBe('stub-session')
 	})
 
+	/**
+	 * AC-6.4(b) — THE DEGENERATE CASE, and the DECLARED half of §4.3 rule 6.
+	 *
+	 * Two plausible producers of the same fact are live at once: the agent DECLARED completion through
+	 * the tool, and its turn ALSO ended normally. Exactly one of them may write, and the ledger must say
+	 * WHICH — otherwise `FactSource` is a column nobody ever reads back and the whole DECLARED/INFERRED
+	 * distinction is a promise rather than a fact.
+	 *
+	 * The declaration is executed as the USE CASE behind `TransitionIssueStatus`, not through the MCP
+	 * router: the router's job (authorising the call) is measured by AC-6.6's own suite, and going
+	 * through it here would make this test fail for reasons that have nothing to do with double-publish.
+	 * The write it performs is byte-identical either way.
+	 *
+	 * The source is read back from `shared_events` — `DomainEventRepository.findByType` rehydrates from
+	 * the table — never from a log line, which is what AC-6.4(c)/AC-6.7(a) spell out.
+	 */
+	it('AC-6.4(b) — DECLARED then ALSO ended normally: exactly ONE completion fact, and the ledger says DECLARED', async () => {
+		const declare = testBed.resolve(DeclareIssueComplete)
+		const useCase = testBed.resolve(RunIssueTurn)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const issueId = testId('run-issue-turn', 'issue-declared-and-completed')
+
+		await declare.execute({
+			ownerId,
+			issueId,
+			threadId,
+			status: IssueStatus.COMPLETED,
+			summary: 'coupon focus restored',
+			key: 'coupon-focus',
+		})
+
+		// The injected agent is the REAL `IssueWorkAgent`, whose `tools` is the derived expansion of
+		// `issue-handling` — i.e. non-empty — so `RunIssueTurn` must stay silent about the conclusion.
+		await useCase.execute(baseInput(issueId))
+
+		const completed = await eventRepo.findByType(AgentRunCompletedEvent)
+		expect(completed).toHaveLength(1)
+		expect(completed[0]?.payload.source).toBe(FactSource.DECLARED)
+	})
+
 	it('drives the seam with the workspace as cwd and ONE user message — with mcp, no outputSchema', async () => {
 		const runner = new CapturingRunner()
 		testBed.override(AgentRunner, runner)
@@ -228,8 +271,16 @@ describe('RunIssueTurn use case', () => {
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.stopId).toBeDefined()
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
-		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
+
+		// AC-6.7(c), the parenthetical half: "and the same holds for an agent WITH a tool scope — the
+		// transport stop is minted just the same". This agent's scope is NON-empty, and the stop lands
+		// anyway, tagged INFERRED: the runner OBSERVED it on the process, no tool was involved, and no
+		// model could have declared it (`DeclareStop` refuses the transport kinds outright).
+		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
+		expect(stops).toHaveLength(1)
+		expect(stops[0]?.payload.kind).toBe(StopKind.SERVER_ERROR)
+		expect(stops[0]?.payload.source).toBe(FactSource.INFERRED)
 	})
 
 	/**
@@ -297,5 +348,132 @@ describe('RunIssueTurn use case', () => {
 		// No further CWD_CHANGED invalidation — the guard converged instead of latching.
 		const warningsAfterTurn3 = logging.getLogsByLevel('warn').map(entry => entry.args.content)
 		expect(warningsAfterTurn3.some(content => content?.reason === ResumeInvalidationReason.CWD_CHANGED)).toBe(false)
+	})
+})
+
+/**
+ * A double of the WORKING agent whose only difference is an EMPTY tool scope — the shape AC-6.4
+ * prescribes verbatim ("injeta-se um agent-duplo cujo `readonly tools` é `[]` ou
+ * `TOOLS_IN_SCOPE['issue-handling']`").
+ *
+ * ### Why `tools` and nothing else
+ * `RunIssueTurn` reads exactly one thing off the agent besides `run()`: `this.agent.tools.length`
+ * (`RunIssueTurn.ts:284` and `:304`). That is the whole predicate, and §4.3 rule 7 is explicit that it
+ * must be so — the use case cannot see `request.mcp`, which is assembled INSIDE the agent, so a test
+ * that tried to build the case from the request would be testing a field the code under test never
+ * touches.
+ *
+ * ### What `mcpScope` is doing here, said out loud
+ * It stays `'issue-handling'`: `IssueWorkAgent` narrows the field to a literal, so a subclass cannot
+ * un-declare it. The consequence is that the base still mints a run token and still attaches an `mcp`
+ * invocation — with an EMPTY `allowedTools`. Far from weakening the test, that is what makes it sharp:
+ * the request carries `mcp` and the use case mints the INFERRED fact anyway, which is only possible if
+ * the predicate really is the tool scope. A use case that had (wrongly) keyed on `request.mcp` would
+ * stay silent and this suite would go red.
+ */
+class ToollessIssueWorkAgent extends IssueWorkAgent {
+	override readonly tools: readonly string[] = []
+}
+
+/**
+ * AC-6.4(c) and AC-6.7 — the INFERRED half of the ledger, in its own TestBed.
+ *
+ * Isolated in a second `describe` on purpose: `testBed.override` is NOT undone by `reset()`, so
+ * swapping the agent inside the suite above would hand the tool-less double to every test declared
+ * after it — including the one that asserts `mcp.allowedTools.length > 0`. A second bed costs one
+ * PGlite instance and removes an ordering hazard that a future edit would otherwise re-introduce
+ * silently.
+ */
+describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7)', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	const ownerId = testId('run-issue-turn-toolless', 'owner')
+	const threadId = testId('run-issue-turn-toolless', 'thread')
+
+	const baseInput = (issueId: string) => ({
+		ownerId,
+		issueId,
+		threadId,
+		key: 'coupon-focus',
+		title: 'Coupon focus bug',
+		provider: ProviderKind.CLAUDE_CODE,
+		workspacePath: '/tmp/workspace',
+		prompt: 'fix the coupon focus bug',
+		messageId: testId('run-issue-turn-toolless', 'entry-1'),
+	})
+
+	/** Rebinds `IssueWorkAgent` to the tool-less double, built over whatever runner is bound NOW. */
+	const injectToollessAgent = () =>
+		testBed.override(
+			IssueWorkAgent,
+			new ToollessIssueWorkAgent(testBed.resolve(AgentRunner), testBed.resolve(RunTokenService), new IssueWorkPromptBuilder()),
+		)
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	/**
+	 * AC-6.4(c) — the MIRROR of the degenerate case, and AC-6.7(a) in the same breath.
+	 *
+	 * With no tools there is no declaration path at all, so the turn's clean end is the ONLY evidence
+	 * the issue is done, and `RunIssueTurn` must mint the completion — exactly once, and marked
+	 * INFERRED. That mark is the point: "how many issues closed by inference?" has to be a `SELECT`
+	 * over the ledger, which is only true if something actually writes the column AND something
+	 * actually reads it back. Read from `shared_events`, never from a log (AC-6.7(a), literally).
+	 */
+	it('AC-6.4(c)/AC-6.7(a) — ends normally with NO tools: exactly ONE completion fact, and it is INFERRED', async () => {
+		injectToollessAgent()
+		const useCase = testBed.resolve(RunIssueTurn)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const issueId = testId('run-issue-turn-toolless', 'issue-inferred')
+
+		const out = await useCase.execute(baseInput(issueId))
+		expect(out.outcome).toBe(AgentRunOutcome.COMPLETED)
+
+		const completed = await eventRepo.findByType(AgentRunCompletedEvent)
+		expect(completed).toHaveLength(1)
+		expect(completed[0]?.payload.source).toBe(FactSource.INFERRED)
+
+		// AC-6.7(b) — a run with no tools produces NO domain stop. `RaiseStop` / `AskOperator` are the
+		// only origins of APPROVAL_NEEDED / HUMAN_REQUESTED / BLOCKED_BY_CLASSIFICATION, and neither is
+		// reachable without a tool scope, so the absence here is structural rather than incidental.
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
+	})
+
+	/**
+	 * AC-6.7(c) — degradation is VISIBLE, not silent: a run with no tools can still be stopped by the
+	 * TRANSPORT, and that stop is minted whatever the scope is, always INFERRED.
+	 *
+	 * This is the alínea that keeps "no tools" from meaning "no observations". The runner watches the
+	 * process and the stream; `AUTH_REQUIRED` / `SERVER_ERROR` are its findings, and they never needed a
+	 * tool to be true.
+	 *
+	 * Declared LAST in this bed because the runner override persists — every earlier test must have
+	 * already observed the ordinary stub.
+	 */
+	it('AC-6.7(c) — still raises a TRANSPORT stop with no tools, marked INFERRED, and mints no completion', async () => {
+		testBed.override(AgentRunner, new StoppingRunner())
+		injectToollessAgent()
+		const useCase = testBed.resolve(RunIssueTurn)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const issueId = testId('run-issue-turn-toolless', 'issue-transport-stop')
+
+		const out = await useCase.execute(baseInput(issueId))
+		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
+
+		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
+		expect(stops).toHaveLength(1)
+		expect(stops[0]?.payload.kind).toBe(StopKind.SERVER_ERROR)
+		expect(stops[0]?.payload.source).toBe(FactSource.INFERRED)
+		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 	})
 })

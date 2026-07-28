@@ -175,7 +175,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		// only notice afterwards while validating the OUTPUT schema — with the write already sent.
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { issueId: ISSUE_B, kind: 'LINK' } })
 
-		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as Response
+		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as unknown as Response
 		const payload = (await response.json()) as { error?: { message?: string } }
 
 		// BOTH layers carry the refusal: 403 on the wire (what AC-6.6(b) contracts, and what an access
@@ -191,7 +191,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		// `dispatched` would be trivially empty forever.
 		const token = tokens.mint(claimsForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { issueId: ISSUE_A, kind: 'LINK' } })
-		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as Response
+		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as unknown as Response
 
 		expect(response.status).toBe(HttpStatusCode.OK)
 		expect(router.dispatched).toHaveLength(1)
@@ -245,7 +245,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 			{ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'RecordArtifact', arguments: { threadId: THREAD_A } } },
 			{ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'RecordArtifact', arguments: { threadId: THREAD_B } } },
 		])
-		const response = (await router.handle(post('issue-handling', batch, authorized(token)))) as Response
+		const response = (await router.handle(post('issue-handling', batch, authorized(token)))) as unknown as Response
 		const payload = (await response.json()) as { error?: { message?: string } }
 		expect(response.status).toBe(HttpStatusCode.FORBIDDEN)
 		expect(payload.error?.message).toContain('AGENT_RUN_SCOPE_MISMATCH')

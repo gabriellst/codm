@@ -2878,15 +2878,34 @@ esta emenda quase certamente **não é necessário**, porque não há mais tool 
 registrar. **Registrar no BUILD-LOG em qual degrau parou, com a saída literal do rail que reprovou os
 anteriores** — pular para o degrau 3 sem ter tentado 1 e 2 é violação da AC.
 **AC-6.12** **A metade de identidade que a AC-1.11 adiou, agora que runner e `types/Agent.ts`
-existem**: `git grep -nE "ownerId|issueId|threadId" -- packages/api/typescript/src/agent/services/AgentRunner packages/api/typescript/src/agent/providers`
-→ **0 hits**; `git grep -n "\.mint(" -- packages/api/typescript/src` → **só** `agent/types/Agent.ts`;
-`git grep -n "\.revoke(" -- packages/api/typescript/src` → **só** o runner. Os três pathspecs
-**existem** neste ponto — se algum sair `fatal:`, a AC **não** está cumprida.
+existem** — **REDAÇÃO CORRIGIDA POR D6-14 (28-jul); a anterior tinha um pathspec MORTO e dois greps
+que passaram a casar teste colocado**:
+`git grep -nE "ownerId|issueId|threadId" -- packages/api/typescript/src/agent/services/AgentRunner`
+→ **0 hits**;
+`git grep -n "\.mint(" -- packages/api/typescript/src ':!*.test.ts'` → **só** `agent/types/Agent.ts`;
+`git grep -n "\.revoke(" -- packages/api/typescript/src ':!*.test.ts'` → **só** o runner
+(`ClaudeAgentRunner.ts`). **O pathspec de exclusão é parte da AC, não conveniência** — ver logo abaixo.
+&nbsp;&nbsp;**O pathspec é UM, não dois** (era `.../services/AgentRunner` **+** `.../src/agent/providers`):
+`src/agent/providers` **não existe** desde a Fase 4.5, que o dissolveu — a **AC-4.5.2 asserta
+exatamente isso**, então as duas ACs se contradiziam e a metade morta era **vacuamente verde**.
+&nbsp;&nbsp;**A frase-guarda antiga NÃO FUNCIONAVA e foi substituída.** Ela dizia *"os três pathspecs
+existem neste ponto — se algum sair `fatal:`, a AC não está cumprida"*. **Medido em 28-jul (macOS,
+git 2.x):** `git grep -nE "ownerId" -- packages/api/typescript/src/agent/providers` — pathspec
+inexistente, **sozinho** — sai **exit 1 e NENHUMA linha de saída**, sem `fatal:`. Ou seja, a guarda
+nunca dispara e "pathspec morto" é indistinguível de "zero hits". **A guarda correta é AFIRMATIVA e é
+esta:** antes de rodar o grep, `test -d packages/api/typescript/src/agent/services/AgentRunner` tem de
+sair **0**. É a terceira armadilha desta família neste goal, junto do `grep -q CONNECTED` e do `| tee`.
+&nbsp;&nbsp;**`.mint(`/`.revoke(` leem-se FORA DO TESTE COLOCADO, pela razão do D6-1.** Medido:
+`.mint(` casa 3 arquivos (`types/Agent.ts` **15 linhas**, `mcp/router.test.ts` 9, `mcp/router.write-isolation.test.ts` 5)
+e `.revoke(` casa 3 (`ClaudeAgentRunner.ts` 1, os mesmos dois testes 1 cada). Os testes cunham e
+revogam tokens **para exercitar o router** — é o que a AC-6.6 exige deles. O invariante é sobre
+PRODUÇÃO: um segundo lugar que CRIA credencial. Exigir 0 hits em testes obrigaria a apagar as suítes
+que provam a mitigação obrigatória da emenda — a mesma incompatibilidade que o D6-1 resolveu para a
+AC-6.17(a), aqui deixada por escrito em vez de descoberta de novo.
 &nbsp;&nbsp;**Escopo, agora que o MCP existe:** `agent/mcp/router.ts` **é** o lugar onde
 `ownerId`/`issueId`/`threadId` aparecem legitimamente (ele lê as claims e compara — AC-6.6), e as
-tools **geradas** carregam identidade nos params por construção; nada disso entra nos pathspecs desta
-AC, que são **só** o runner e os providers. O invariante é o do seam, e ele não mudou: o transporte
-não vê identidade.
+tools **geradas** carregam identidade nos params por construção; nada disso entra no pathspec desta
+AC, que é **só** o runner. O invariante é o do seam, e ele não mudou: o transporte não vê identidade.
 &nbsp;&nbsp;**Falsificador:** acrescentar `const ownerId = ''` a um arquivo sob
 `services/AgentRunner/` e confirmar hit; reverter.
 **AC-6.13** **Os QUATRO códigos de erro novos fecharam o ripple de 4 paradas da §5.1** — grep por
@@ -3238,6 +3257,57 @@ essa troca que a AC existe para proibir.
 > quem chama precisa conhecê-los, logo o prompt precisa carregá-los. Não é alargamento: o router
 > rejeita qualquer outro valor (AC-6.6), então o que o prompt entrega é o único par que seria aceito.
 > Sem esse parágrafo um `claude` real narraria a conclusão em prosa e nunca a declararia.
+
+> ## ⚠️ DOIS DEFEITOS A MAIS, ENCONTRADOS NA RODADA 2 DE CORREÇÃO DA FASE 6 (28-jul)
+>
+> Os dois são da mesma família e o juiz os apontou junto: **uma AC que não podia ficar vermelha** e
+> **um gate que não olhava para onde o defeito estava**. A rodada 1 aprendeu que `bun test` verde não
+> prova que roda; esta aprende que **um pathspec verde não prova que existe**.
+>
+> **D6-14. A AC-6.12 TINHA UM PATHSPEC MORTO, E A PRÓPRIA FRASE-GUARDA DELA NÃO DISPARAVA.** A AC
+> mandava grepar `src/agent/services/AgentRunner` **e** `src/agent/providers`, e se protegia com *"os
+> três pathspecs existem neste ponto — se algum sair `fatal:`, a AC não está cumprida"*. **Medido:**
+> `src/agent/providers` **não existe** — a **Fase 4.5 o dissolveu e a AC-4.5.2 asserta exatamente
+> isso**, então duas ACs deste mesmo goal se contradiziam e um terço do grep era **vacuamente verde**.
+> Pior, a guarda escrita para pegar isso é inoperante: `git grep -nE "ownerId" -- <caminho
+> inexistente>`, **sozinho**, sai **exit 1, zero linhas, sem `fatal:`**. "Pathspec morto" e "zero hits"
+> são os mesmos bytes. **CORREÇÃO (no texto da AC-6.12):** o pathspec vira **um**; a guarda vira
+> **afirmativa** (`test -d …/services/AgentRunner` tem de sair 0 ANTES do grep); e os greps de
+> `.mint(`/`.revoke(` passam a excluir teste colocado (`':!*.test.ts'`) — porque `router.test.ts` e
+> `router.write-isolation.test.ts` cunham e revogam token **para exercitar o router**, que é o que a
+> AC-6.6 exige deles. Exigir 0 hits ali obrigaria a apagar as suítes que provam a mitigação
+> obrigatória da emenda: exatamente a incompatibilidade que o **D6-1** já tinha resolvido para a
+> AC-6.17(a), aqui deixada por escrito em vez de redescoberta. Medido depois da correção: `.mint(` → 1
+> arquivo de produção (`types/Agent.ts`), `.revoke(` → 1 (`ClaudeAgentRunner.ts`). **Falsificador
+> executado:** `const ownerId = ''` plantado em `services/AgentRunner/AgentRunner.ts` ⇒ 1 hit, exit 0;
+> revertido ⇒ 0 hits, exit 1.
+>
+> **D6-15. NENHUM GATE TIPA ARQUIVO DE TESTE — e foi por aí que o próprio D6-13 vazou.** O alvo `tsc`
+> do Nx roda `bun x tsc -p tsconfig.build.json`, e esse tsconfig **exclui** `src/**/*.test.ts`. Bun
+> apaga tipos em runtime, então um teste com erro de tipo **passa**. Consequência concreta e medida:
+> `generated-server.test.ts` chamava `withMcpRunContext({ token }, …)` **sem** `baseUrl` — campo que o
+> D6-13 tornou **obrigatório** em `McpRunContext` — e ficava verde porque a chamada morria antes do
+> transporte, em construção de URL. Isto é, a asserção *"passou da guarda de contexto"* era verdadeira
+> por um motivo que nada tinha a ver com a guarda. **Medição do buraco inteiro, no HEAD de entrada
+> desta rodada:** `bun x tsc -p tsconfig.json --noEmit` (o mesmo compilador, o tsconfig que INCLUI
+> testes) → **32 erros em 13 arquivos**. **CORREÇÃO, na parte que é dívida DESTA fase:** os **8** erros
+> que a Fase 6 causou estão consertados — 3 em `handlers/PublishAgentIntegrationEvents.test.ts` (os
+> campos `source`/`detail` que a fase acrescentou aos eventos de domínio e que o teste do bridge nunca
+> passou; o conserto **fortalece** a suíte, porque agora ela asserta o que o goal só prometia: `source`
+> ENTRA e **não sai**, `detail` **sai**) e 5 casts `as Response` → `as unknown as Response` nos dois
+> arquivos de teste do router, ambos nascidos nesta fase. **E a parte que NÃO é desta fase fica PARKED
+> com número, não absorvida:** restam **24 erros em 10 arquivos** (`ui/controllers/ListenEvents.test.ts`
+> 5, `tests/flows/agent-session-resume.flow.test.ts` 4, `tests/kernel/insert-site-audit.test.ts` 3,
+> `thread/entities/Thread.test.ts` 3, `agent/services/AgentRunner/ClaudeAgentRunner/cancellation.test.ts` 3,
+> `ui/services/BrowserFrameEnricher/BrowserFrameEnricher.test.ts` 2, e 1 cada em
+> `tests/flows/stop-control-plane.flow.test.ts`, `agent/services/StreamJsonCodec/StreamJsonToTurnFactAccumulator.test.ts`,
+> `agent/services/AgentRunner/AgentRunner.test.ts`, `agent/agents/ClassifyIssueAgent/ClassifyIssueAgent.test.ts`),
+> anteriores à Fase 6 e espalhados por 4 contextos. **Promover `tsc -p tsconfig.json` a gate exige
+> zerá-los primeiro**, o que é um passe transversal e não cabe numa rodada de correção de findings —
+> registrado como o trabalho que destrava o gate, com o número exato para que "melhorou" seja
+> verificável. Enquanto isso não acontecer, **teste colocado não tem type-check**, e essa frase é a
+> razão pela qual as asserções desta fase que dependem de tipo (a rejeição dos três kinds de domínio,
+> AC-6.7) vivem num `*.typecheck.ts` sob `tests/`, que o `tsconfig.build.json` **inclui**.
 
 ### Fase 7 — Frame SSE estruturado + fechamento
 
