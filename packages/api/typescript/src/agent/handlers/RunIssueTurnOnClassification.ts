@@ -74,7 +74,11 @@ export class RunIssueTurnOnClassification extends EventHandler<typeof MessageCla
 		const provider = thread.providers[0]
 		if (!provider) return
 
-		const resolved = await this.resolveIssue(threadId, issueId, entry.text)
+		// The citation is addressing, not content: without this every issue would be titled and keyed
+		// `codedm-…`, because with the gate on EVERY inbound carries the tag.
+		const text = thread.textWithoutMention(entry.text)
+
+		const resolved = await this.resolveIssue(threadId, issueId, text)
 
 		await this.runIssueTurn.execute({
 			ownerId,
@@ -84,7 +88,7 @@ export class RunIssueTurnOnClassification extends EventHandler<typeof MessageCla
 			title: resolved.title,
 			provider,
 			workspacePath: workspace.path,
-			prompt: entry.text,
+			prompt: text,
 			messageId: entryId,
 			priorMessageId: await this.conversationCursor(resolved.issueId, entryId),
 		})

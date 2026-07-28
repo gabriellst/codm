@@ -5,6 +5,7 @@ import { ProviderKind, ContactKind, ProviderStatus } from '@codedm/contracts-typ
 import { WorkspaceRepository } from '@workspace/repositories'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
 import { Thread } from '../entities/Thread'
+import { mintMentionTag } from '../schemas'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ChannelConnectivity } from '../services/ChannelConnectivity'
 import { GroupMemberReader } from '../services/GroupMemberReader'
@@ -82,10 +83,20 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 					participants.push({ participantId: m.memberId, name: m.memberId, source: 'Channel group member', canInvoke: false })
 				}
 			} else {
-				participants.push({ participantId: input.contactRef.externalId, name: input.contactRef.displayName, source: 'Channel group', canInvoke: false })
+				participants.push({
+					participantId: input.contactRef.externalId,
+					name: input.contactRef.displayName,
+					source: 'Channel group',
+					canInvoke: false,
+				})
 			}
 		} else {
-			participants.push({ participantId: input.contactRef.externalId, name: input.contactRef.displayName, source: 'Channel contact', canInvoke: false })
+			participants.push({
+				participantId: input.contactRef.externalId,
+				name: input.contactRef.displayName,
+				source: 'Channel contact',
+				canInvoke: false,
+			})
 		}
 
 		return this.withTransaction(tx, async tx => {
@@ -95,6 +106,7 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 				contactRef: { externalId: input.contactRef.externalId, displayName: input.contactRef.displayName, kind: input.contactRef.kind },
 				workspaceId: input.workspaceId,
 				providers: input.providers,
+				mentionTag: mintMentionTag(workspace.path),
 				participants,
 			})
 			await this.threads.save(thread, tx)

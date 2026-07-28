@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenThread } from '@test/support'
+import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { IngestChannelMessage } from './IngestChannelMessage'
@@ -48,10 +48,20 @@ describe('IngestChannelMessage gate matrix', () => {
 		expect(events).toHaveLength(1)
 	})
 
-	it('gate: an unknown sender (no participant deny) is invocable', async () => {
+	it('gate: an unknown sender (no participant deny) is invocable WHEN they cite the thread', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const out = await ingest(thread.id.value, 'stranger-42', `${GIVEN_MENTION_TAG} ship the coupon fix`)
+		expect(out.invocable).toBe(true)
+	})
+
+	it('gate: the SAME sender and text without the citation is transcribed but NOT invocable', async () => {
+		// The half that makes the previous test mean something, and the founder's actual ask: the agent
+		// hears every message and answers only the ones addressed to it.
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const out = await ingest(thread.id.value, 'stranger-42', 'ship the coupon fix')
-		expect(out.invocable).toBe(true)
+		expect(out.invocable).toBe(false)
+		// Still transcribed — the context window is unconditional.
+		expect(out.entryId).toBeTruthy()
 	})
 
 	it('gate: a paused thread is never invocable', async () => {

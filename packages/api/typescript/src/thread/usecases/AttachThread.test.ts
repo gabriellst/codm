@@ -35,7 +35,12 @@ describe('AttachThread use case', () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
 		const useCase = testBed.resolve(AttachThread)
 
-		const out = await useCase.execute({ ownerId: OPERATOR_ID, contactRef, workspaceId: workspace.id.value, providers: [ProviderKind.CLAUDE_CODE] })
+		const out = await useCase.execute({
+			ownerId: OPERATOR_ID,
+			contactRef,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
 		expect(out.threadId).toBeDefined()
 
 		const thread = await testBed.resolve(ThreadRepository).findById(out.threadId)
@@ -44,6 +49,29 @@ describe('AttachThread use case', () => {
 
 		const events = await testBed.resolve(DomainEventRepository).findByType(ThreadAttachedEvent)
 		expect(events).toHaveLength(1)
+	})
+
+	it('MINTS the citation tag from the linked workspace folder and gates the thread on it', async () => {
+		// The headline behaviour of #16, asserted at the place the founder named — the workspace-LINK
+		// flow. Without this, wiring `mintMentionTag` to the wrong argument (or dropping the line) leaves
+		// every unit and flow suite green, because they all seed threads through `givenThread`'s own
+		// constant instead of going through this use case.
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID, path: '/Users/dev/Berzerk Club' })
+		const useCase = testBed.resolve(AttachThread)
+
+		const out = await useCase.execute({
+			ownerId: OPERATOR_ID,
+			contactRef: { ...contactRef, externalId: 'c-mint' },
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
+
+		const thread = await testBed.resolve(ThreadRepository).findById(out.threadId)
+		// Slugged from the basename: lowercased, spaces collapsed to a dash. The gate is ON from birth —
+		// nobody has to call ConfigureMentionGate for the product to have its default behaviour.
+		expect(thread?.mentionGate).toEqual({ enabled: true, tag: '@berzerk-club' })
+		expect(thread?.canInvoke({ senderExternalId: 'stranger', text: '@berzerk-club fix it' })).toBe(true)
+		expect(thread?.canInvoke({ senderExternalId: 'stranger', text: 'fix it' })).toBe(false)
 	})
 
 	it('rejects when the channel is not connected (CHANNEL_NOT_CONNECTED)', async () => {

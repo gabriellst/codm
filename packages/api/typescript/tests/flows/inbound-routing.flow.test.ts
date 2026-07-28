@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import { TestBed, givenThread, givenWorkspace } from '@test/support'
+import { TestBed, givenThread, givenWorkspace, GIVEN_MENTION_TAG } from '@test/support'
 import { MockOutboxDispatcher } from '@codedm/core-typescript'
 import { ChannelKind, MessageType, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
@@ -97,7 +97,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 				occurredAt: new Date(),
 				observedAt: new Date(),
 				messageType: MessageType.TEXT,
-				content: { text: opts.text ?? 'ship the coupon fix' },
+				content: { text: opts.text ?? `${GIVEN_MENTION_TAG} ship the coupon fix` },
 				platform: ChannelKind.WHATSAPP,
 				ownerId: OPERATOR_ID,
 			},

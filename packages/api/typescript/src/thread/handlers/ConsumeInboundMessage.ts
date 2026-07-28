@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, LoggingService } from '@codedm/core-typescript'
+import { EventHandler } from '@codedm/core-typescript'
 import { MessageType } from '@codedm/contracts-typescript/wire/enums'
 // The IN-PROCESS materialization (wire/events/in-process): the same event, with `content` and
 // `platformData` already joined into per-(platform, messageType) arms and every scalar still
@@ -24,7 +24,7 @@ import { ClassifyMessage } from '../usecases/ClassifyMessage'
  *      recorded (consumed) and dropped.
  *   3. Narrow the union slot by its DISCRIMINATOR — the arms arrive pre-joined from the generated
  *      in-process surface, so this is a `messageType` check and a field read, never a parse. A
- *      non-text message is recorded (consumed) and dropped with a log line.
+ *      non-text message is recorded (consumed) and dropped.
  *   4. Ingest (buffer + transcript + gates) → and, when the sender may invoke, classify into an issue.
  *
  * Dedup is deliberately BEFORE ingestion so a duplicate never even reaches the transcript.
@@ -38,7 +38,6 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		private readonly threads: ThreadRepository,
 		private readonly ingest: IngestChannelMessage,
 		private readonly classify: ClassifyMessage,
-		private readonly logging: LoggingService,
 	) {
 		super()
 	}
@@ -59,25 +58,20 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		if (!thread) return
 
 		// 3. Discriminator narrowing — no parse. `content` is `.optional()` on every arm, so this is
-		// `string | undefined` by type; the `typeof` guard also covers the RUNTIME case the type cannot,
+		// `string | undefined` by type; the falsy guard also covers the RUNTIME case the type cannot,
 		// since nothing zod-parses an integration payload on the mediator path (the envelope is
 		// `new Cls(input)`, not a validated parse). A gateway that emits `messageType: TEXT` with a
-		// missing or non-string `text` — the whatsmeow mapper can, it fills `content.text` only when the
+		// missing, null or empty `text` — the whatsmeow mapper can, it fills `content.text` only when the
 		// upstream field is non-nil — must drop here, exactly as the old per-variant `safeParse` did.
-		// Without the `typeof`, a `null` would sail past an `=== undefined` check and become a
-		// VALIDATION_ERROR thrown out of `IngestChannelMessage`, burning outbox attempts on a message
-		// that is simply not for us.
-		const text = payload.messageType === MessageType.TEXT ? payload.content?.text : undefined
-		if (typeof text !== 'string') {
-			this.logging.info({
-				content: {
-					message: 'inbound message dropped: not a text variant, or the text slot was absent (forward-compat passthrough)',
-					channelId,
-					messageId,
-					platform: payload.platform,
-					messageType: payload.messageType,
-				},
-			})
+		// Without it, a `null` would reach `IngestChannelMessage` and become a thrown VALIDATION_ERROR,
+		// burning outbox attempts on a message that is simply not for us.
+		if (payload.messageType !== MessageType.TEXT) {
+			return
+		}
+
+		const text = payload.content?.text
+
+		if (!text) {
 			return
 		}
 

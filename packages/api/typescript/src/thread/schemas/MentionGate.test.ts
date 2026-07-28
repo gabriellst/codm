@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'bun:test'
+import { mentionsTag, mintMentionTag, stripMentionTag } from './MentionGate'
+
+/**
+ * The citation tag is the one string in the product a human has to type EXACTLY, from a phone, to get
+ * an answer. These are the rules that decide whether they get one.
+ */
+describe('mintMentionTag — the tag is the folder name, slugged', () => {
+	it('takes the basename and slugs it', () => {
+		expect(mintMentionTag('/Users/work/Desktop/Projetos/pessoal/codedm')).toBe('@codedm')
+		expect(mintMentionTag('/Users/dev/Berzerk Club')).toBe('@berzerk-club')
+		expect(mintMentionTag('/Users/dev/my_app.v2/')).toBe('@my-app-v2')
+	})
+
+	it('strips combining marks instead of dashing them', () => {
+		// This is why the mint is NOT `agent/services/IssueRouter/slug.ts`: that one is the ISSUE-KEY rule
+		// and turns `conversação` into `conversac-a-o`, which nobody would ever type.
+		expect(mintMentionTag('/Users/dev/conversação')).toBe('@conversacao')
+	})
+
+	it('falls back rather than minting an unusable tag', () => {
+		// A root path and a non-latin basename both slug to nothing. An empty tag would be worse than a
+		// wrong one: `MentionGateSchema` rejects it, so `Thread.create` would throw on attach.
+		expect(mintMentionTag('/')).toBe('@codedm')
+		expect(mintMentionTag('/Users/dev/日本語')).toBe('@codedm')
+	})
+})
+
+describe('mentionsTag — a standalone token, not a substring', () => {
+	it('matches a citation anywhere in the message, case-insensitively', () => {
+		expect(mentionsTag('@codedm fix the login bug', '@codedm')).toBe(true)
+		expect(mentionsTag('hey @codedm, can you look?', '@codedm')).toBe(true)
+		// The mint lowercases; every UI surface renders the raw folder path. An operator reading
+		// `/Users/x/MyApp` will tell the group to type `@MyApp`.
+		expect(mentionsTag('@CodeDM ping', '@codedm')).toBe(true)
+	})
+
+	it('does NOT match inside a longer token — the reason this is not String.includes', () => {
+		// The tag is derived from a folder name, so it collides with the vocabulary of the project it
+		// names. This repo's packages are literally `@codedm/*` and its live thread mints `@codedm`.
+		expect(mentionsTag('bump @codedm/core-typescript to 2.0', '@codedm')).toBe(false)
+		expect(mentionsTag('see codedm.ts', '@codedm')).toBe(false)
+		expect(mentionsTag('@codedmx is someone else', '@codedm')).toBe(false)
+		expect(mentionsTag('mail me at a@codedm.dev', '@codedm')).toBe(false)
+	})
+
+	it('treats an operator-set tag as text, never as a pattern', () => {
+		// `ConfigureMentionGate` accepts any non-empty string, so the tag must be escaped.
+		expect(mentionsTag('ping @a+b now', '@a+b')).toBe(true)
+		expect(mentionsTag('ping @aaab now', '@a+b')).toBe(false)
+	})
+
+	it('is stateless across calls', () => {
+		// A `g`-flagged RegExp carries `lastIndex`; reusing one would make every other call miss.
+		expect(mentionsTag('@codedm one', '@codedm')).toBe(true)
+		expect(mentionsTag('@codedm two', '@codedm')).toBe(true)
+	})
+})
+
+describe('stripMentionTag — addressing is not content', () => {
+	it('removes every citation and collapses the gap', () => {
+		expect(stripMentionTag('@codedm fix the login bug', '@codedm')).toBe('fix the login bug')
+		expect(stripMentionTag('hey @codedm please @codedm hurry', '@codedm')).toBe('hey please hurry')
+	})
+
+	it('leaves a non-citation occurrence alone', () => {
+		expect(stripMentionTag('bump @codedm/core to 2.0', '@codedm')).toBe('bump @codedm/core to 2.0')
+	})
+
+	it('CAN empty a bare summon — the caller is responsible for that', () => {
+		// `Thread.textWithoutMention` falls back to the original text precisely because of this.
+		expect(stripMentionTag('@codedm', '@codedm')).toBe('')
+	})
+})

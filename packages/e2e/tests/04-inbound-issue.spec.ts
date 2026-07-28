@@ -41,7 +41,9 @@ test('inbound message → issue appears with slug label → session runs', async
 		channelId: thread.channelId,
 		contactExternalId: thread.contactExternalId,
 		senderExternalId: 'stranger-e2e',
-		text: 'fix the login bug please',
+		// The thread is gated on its minted citation from birth — an uncited message is transcribed and
+		// never classified, so without this the poll below simply times out.
+		text: `${thread.mentionTag} fix the login bug please`,
 	})
 
 	// The classified NEW_ISSUE materializes with a slug key derived from the message.
@@ -53,6 +55,8 @@ test('inbound message → issue appears with slug label → session runs', async
 			},
 			{ timeout: 20_000, message: 'issue with slug key never materialized' },
 		)
+		// The citation is STRIPPED before the title and slug are derived (`Thread.textWithoutMention`) —
+		// addressing is not content, so the key is unchanged by gating the thread.
 		.toContain('fix-the-login-bug-please')
 
 	// AC-6.2, the artifact leg — read through `ListArtifacts`, the SAME query the console's thread view
@@ -78,7 +82,10 @@ test('inbound message → issue appears with slug label → session runs', async
 				const opened = issues.groups.flatMap(group => group.items).find(item => item.key === 'fix-the-login-bug-please')
 				return opened?.status
 			},
-			{ timeout: 20_000, message: 'issue never settled at COMPLETED (stuck at WORKING/STOPPED — the agent never DECLARED completion over MCP)' },
+			{
+				timeout: 20_000,
+				message: 'issue never settled at COMPLETED (stuck at WORKING/STOPPED — the agent never DECLARED completion over MCP)',
+			},
 		)
 		.toBe('COMPLETED')
 

@@ -2,7 +2,7 @@ import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
 import type Z from 'zod'
 import { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
 import type { ApplicationErrors, DomainErrors } from '../errors'
-import { MentionGateSchema } from '../schemas'
+import { mentionsTag, stripMentionTag, MentionGateSchema } from '../schemas'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
 export const ContactRefSchema = z.object({
@@ -55,6 +55,8 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		contactRef: ContactRef
 		workspaceId: string
 		providers: ProviderKind[]
+		/** The citation tag, minted by the caller from the linked workspace folder. */
+		mentionTag: string
 		participants: Participant[]
 		bufferSize?: BufferSize
 	}): Thread {
@@ -67,7 +69,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			workspaceId: data.workspaceId,
 			providers: data.providers,
 			paused: false,
-			mentionGate: { enabled: false },
+			// The gate is ON from birth and the tag is MINTED BY THE CALLER from the linked workspace
+			// (`AttachThread`) — the entity has no workspace to derive it from. Required rather than
+			// defaulted so an ungated thread is unconstructible, not merely unusual. Pre-existing rows are
+			// untouched: this is create-time only, and `toPersistence` always writes the column explicitly,
+			// so the schema's `.default(false)` never fires.
+			mentionGate: { enabled: true, tag: data.mentionTag },
 			participants: data.participants,
 			bufferSize: data.bufferSize ?? BufferSize._50,
 			status: ThreadStatus.IDLE,
@@ -110,8 +117,24 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		if (this.paused) return false
 		const participant = this.participants.find(p => p.participantId === input.senderExternalId)
 		if (participant && !participant.canInvoke) return false
-		if (this.mentionGate.enabled && !input.text.includes(this.mentionGate.tag)) return false
+		if (this.mentionGate.enabled && !mentionsTag(input.text, this.mentionGate.tag)) return false
 		return true
+	}
+
+	/**
+	 * The message as the AGENT should read it — a citation is ADDRESSING, not content.
+	 *
+	 * With the gate on, every inbound carries the tag, so leaving it in would put `@codedm` at the head
+	 * of every issue title and every slug key. The transcript keeps the text verbatim; only what is fed
+	 * to the model is cleaned.
+	 *
+	 * Falls back to the ORIGINAL text when stripping empties it. A bare `@codedm` is the most natural
+	 * thing someone types once told to cite the agent, and it strips to `''` — which `RunIssueTurn`'s
+	 * `prompt: z.string().trim().min(1)` rejects, turning a summon into a thrown VALIDATION_ERROR.
+	 */
+	textWithoutMention(text: string): string {
+		if (!this.mentionGate.enabled) return text
+		return stripMentionTag(text, this.mentionGate.tag) || text
 	}
 
 	/** Whispers (steer) are only valid while the thread is live — a paused thread uses direct mode. */

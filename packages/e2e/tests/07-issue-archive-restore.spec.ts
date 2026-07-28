@@ -34,7 +34,7 @@ test('issue archive → restore', async ({ given }) => {
 		channelId: thread.channelId,
 		contactExternalId: thread.contactExternalId,
 		senderExternalId: 'stranger-arch',
-		text: 'add a dark mode toggle',
+		text: `${thread.mentionTag} add a dark mode toggle`,
 	})
 	const issueId = await openIssueId(thread.threadId, client)
 

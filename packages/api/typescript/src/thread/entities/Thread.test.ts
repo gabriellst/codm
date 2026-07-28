@@ -9,6 +9,7 @@ const base = {
 	contactRef: { externalId: 'c1', displayName: 'Contact', kind: ContactKind.USER },
 	workspaceId: '00000000-0000-4000-8000-0000000000bb',
 	providers: [ProviderKind.CLAUDE_CODE],
+	mentionTag: '@base',
 	participants: [
 		{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true },
 		{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false },
@@ -16,10 +17,12 @@ const base = {
 }
 
 describe('Thread entity', () => {
-	it('creates attached, idle, unpaused, gate off', () => {
+	it('creates attached, idle, unpaused, and GATED on the minted tag', () => {
 		const t = Thread.create(base)
 		expect(t.paused).toBe(false)
-		expect(t.mentionGate.enabled).toBe(false)
+		// The gate is an INVARIANT, not a default: `mentionTag` is required, so an ungated thread is
+		// unconstructible. `AttachThread` mints it from the linked workspace folder.
+		expect(t.mentionGate).toEqual({ enabled: true, tag: '@base' })
 		expect(t.status).toBe('IDLE')
 	})
 
@@ -56,19 +59,41 @@ describe('Thread entity', () => {
 	it('canInvoke: false when paused', () => {
 		const t = Thread.create(base)
 		t.pause()
-		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hi' })).toBe(false)
+		// CITES the tag, so the refusal can only come from the pause — with a bare 'hi' this test would
+		// pass on the mention gate and prove nothing about pausing.
+		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base hi' })).toBe(false)
 	})
 
 	it('canInvoke: false when the sender is a read-only participant', () => {
 		const t = Thread.create(base)
-		expect(t.canInvoke({ senderExternalId: 'c1', text: 'hi' })).toBe(false)
+		// Cites the tag for the same reason as above: isolate the participant-deny branch.
+		expect(t.canInvoke({ senderExternalId: 'c1', text: '@base hi' })).toBe(false)
 	})
 
-	it('canInvoke: mention gate requires the tag', () => {
+	it('canInvoke: mention gate requires the tag as a STANDALONE token', () => {
 		const t = Thread.create(base)
 		t.configureMentionGate({ enabled: true, tag: '@bot' })
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hello' })).toBe(false)
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @bot go' })).toBe(true)
+		// Case-insensitive: the mint lowercases while every UI surface renders the raw folder path, so an
+		// operator reading `/Users/x/MyApp` tells the group to type `@MyApp`.
+		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @BOT go' })).toBe(true)
+		// THE REASON THIS IS NOT `String.includes`. The tag is derived from a folder name, so it collides
+		// with the vocabulary of the project it names — this repo's own packages are `@codedm/*` and its
+		// live thread mints `@codedm`. A scoped package name must NOT summon the agent.
+		expect(t.canInvoke({ senderExternalId: 'operator', text: 'bump @bot/core to 2.0' })).toBe(false)
+		expect(t.canInvoke({ senderExternalId: 'operator', text: 'see bot.ts and @botanical' })).toBe(false)
+	})
+
+	it('textWithoutMention strips the citation, and never empties a bare summon', () => {
+		const t = Thread.create(base)
+		expect(t.textWithoutMention('@base fix the login bug')).toBe('fix the login bug')
+		// A bare summon strips to '' — which `RunIssueTurn`'s `prompt: z.string().trim().min(1)` rejects,
+		// turning the most natural message in the product into a thrown VALIDATION_ERROR. Fall back.
+		expect(t.textWithoutMention('@base')).toBe('@base')
+		// Gate off ⇒ verbatim.
+		t.configureMentionGate({ enabled: false })
+		expect(t.textWithoutMention('@base hi')).toBe('@base hi')
 	})
 
 	it('assertCanSteer: allowed while live, rejected once paused (THREAD_PAUSED)', () => {

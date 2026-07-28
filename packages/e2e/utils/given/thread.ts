@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { addWorkspace, attachThread } from '@codedm/client-typescript/typescript'
+import { addWorkspace, attachThread, getThreadSettings } from '@codedm/client-typescript/typescript'
 import type { ApiSession } from './api'
 import { seedConnectedChannel } from './gateway'
 
@@ -11,6 +11,13 @@ export interface AttachedThread {
 	threadId: string
 	contactExternalId: string
 	workspacePath: string
+	/**
+	 * The citation the thread was gated on, minted server-side by `AttachThread` from the workspace
+	 * folder name. Read BACK through the SDK rather than recomputed here: the e2e workspace path is a
+	 * `mkdtemp` name, so the tag is non-deterministic, and recomputing it would put a second copy of
+	 * `mintMentionTag` in the test suite — the copy that stays green when the real one breaks.
+	 */
+	mentionTag: string
 }
 
 /**
@@ -43,5 +50,16 @@ export async function givenAttachedThread(
 		{ client: session.client },
 	)
 
-	return { channelId, workspaceId: workspace.workspaceId, threadId: thread.threadId, contactExternalId, workspacePath }
+	// The gate is ON from birth, so every inbound in these specs has to cite the thread.
+	const settings = await getThreadSettings(thread.threadId, { client: session.client })
+	if (!settings.mentionGate.enabled) throw new Error('attach did not gate the thread — the mention gate should be on from birth')
+
+	return {
+		channelId,
+		workspaceId: workspace.workspaceId,
+		threadId: thread.threadId,
+		contactExternalId,
+		workspacePath,
+		mentionTag: settings.mentionGate.tag,
+	}
 }

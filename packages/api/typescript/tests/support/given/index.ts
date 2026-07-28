@@ -23,7 +23,7 @@ export function createGivenHelpers(testBed: TestBed) {
 export { givenUser, givenAccount, givenUserWithAccount, givenActiveSession }
 export { givenOwner, givenOwnerWithResponsible } from './owners'
 export { givenWorkspace } from './workspaces'
-export { givenThread } from './threads'
+export { givenThread, GIVEN_MENTION_TAG } from './threads'
 export { givenIssue } from './issues'
 export { givenStop } from './stops'
 export { givenDomainEvent } from './events'

@@ -2,7 +2,7 @@ import { RedisClient } from 'bun'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import { TestBed, givenThread } from '@test/support'
+import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { RedisExternalMediator, Config, type Handler } from '@codedm/core-typescript'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
@@ -120,7 +120,7 @@ function goWireEnvelope(channelId: string, contactExternalId: string, messageId:
 			occurredAt: now,
 			observedAt: now,
 			messageType: 'TEXT',
-			content: { text: 'fix the login bug' },
+			content: { text: `${GIVEN_MENTION_TAG} fix the login bug` },
 			platform: 'WHATSAPP',
 			ownerId: OPERATOR_ID,
 		},

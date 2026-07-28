@@ -7,6 +7,9 @@ import { Thread } from '@thread/entities/Thread'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { givenWorkspace } from './workspaces'
 
+/** The citation every `givenThread` expects in an invoking message. Exported so suites cite it by name. */
+export const GIVEN_MENTION_TAG = '@test-workspace'
+
 type ThreadOverrides = Partial<{
 	ownerId: string
 	channelId: string
@@ -16,6 +19,8 @@ type ThreadOverrides = Partial<{
 	workspaceId: string
 	providers: ProviderKind[]
 	bufferSize: BufferSize
+	/** The citation tag. Defaults to the production-shaped `@test-workspace`; pass `undefined` explicitly to vary it. */
+	mentionTag: string
 }>
 
 /**
@@ -39,6 +44,12 @@ export async function givenThread(testBed: TestBed, overrides: ThreadOverrides =
 		},
 		workspaceId,
 		providers: overrides.providers ?? [ProviderKind.CLAUDE_CODE],
+		// MIRRORS PRODUCTION: `AttachThread` mints a tag and the gate is on from birth, so a helper that
+		// seeded an ungated thread would let a suite prove an invocation path the product cannot reach.
+		// The default is a fixed, tag-shaped constant rather than a mint over the temp workspace path —
+		// tests assert against it by name, and a derived value would make every citation in the suite a
+		// second implementation of `mintMentionTag`.
+		mentionTag: overrides.mentionTag ?? GIVEN_MENTION_TAG,
 		participants: [
 			{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
 			{ participantId: contactExternalId, name: 'Test Contact', source: 'Channel contact', canInvoke: false },
