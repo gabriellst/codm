@@ -207,6 +207,10 @@
 			"IMAGE": "Captura de tela",
 			"LINK": "Deploy de preview"
 		},
+		"ChannelKind": {
+			"WHATSAPP": "WhatsApp",
+			"INTERNAL": "Interno"
+		},
 		"ChannelStatus": {
 			"CREATED": "Criado",
 			"CONNECTING": "Conectando…",
@@ -445,9 +449,9 @@
 		"channels": "Canais",
 		"comingSoon": "Em breve",
 		"home": "Início",
-		"issues": "Issues",
+		"issues": "Tarefas",
 		"settings": "Configurações",
-		"workspaces": "Workspaces"
+		"workspaces": "Espaços de trabalho"
 	},
 	"notifications": {
 		"allCaughtUp": "Você está em dia.",

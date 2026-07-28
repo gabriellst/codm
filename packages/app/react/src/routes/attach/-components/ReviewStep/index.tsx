@@ -6,7 +6,8 @@ import type { ChannelKind, GetAttachThreadWizardQueryResponse } from '@codedm/cl
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
-import { channelLabel, providerLabel } from '@/components/console/glyphs'
+import { enumLabel } from '@/lib'
+import { providerLabel } from '@/components/console/glyphs'
 import { StepHeading } from '../StepHeading'
 import type { AttachForm } from '../AttachThreadWizard'
 
@@ -37,7 +38,7 @@ export function ReviewStep({ form, channelKindById, workspaces, onBack, onFinish
 					const rows = [
 						{
 							label: t('attach.rowContact'),
-							value: `${values.contactRef?.displayName ?? '—'}${channelKind ? ` · ${channelLabel[channelKind]}` : ''}`,
+							value: `${values.contactRef?.displayName ?? '—'}${channelKind ? ` · ${enumLabel('ChannelKind', channelKind)}` : ''}`,
 						},
 						{ label: t('attach.rowWorkspace'), value: workspacePath, mono: true },
 						{ label: t('attach.rowAgents'), value: (values.providers ?? []).map(p => providerLabel[p]).join(', ') || '—' },

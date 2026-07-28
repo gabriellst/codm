@@ -16,7 +16,7 @@ import { useServerEvents } from '@/hooks'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 import { enumLabel } from '@/lib'
 import { Dot } from '@/components/console/StatusDot'
-import { channelLabel, providerGlyph, providerLabel } from '@/components/console/glyphs'
+import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { ThreadSettingsDialog } from '../ThreadSettingsDialog'
 
 const TABS = [
@@ -65,7 +65,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 						<div className="flex flex-col">
 							<h1 className="heading-display text-2xl text-foreground md:text-3xl">{data.thread.displayName}</h1>
 							<span className="font-mono text-sm text-muted-foreground">
-								{channelLabel[data.thread.channelKind]} · {data.thread.workspacePath}
+								{enumLabel('ChannelKind', data.thread.channelKind)} · {data.thread.workspacePath}
 							</span>
 						</div>
 					</div>

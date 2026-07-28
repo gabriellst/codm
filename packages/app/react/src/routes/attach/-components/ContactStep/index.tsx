@@ -6,12 +6,12 @@ import { attachThreadMutationRequestSchema } from '@codedm/client-typescript/typ
 import type { ChannelKind, GetAttachThreadWizardQueryResponse } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { enumLabel } from '@/lib'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
-import { channelLabel } from '@/components/console/glyphs'
 import { StepHeading } from '../StepHeading'
 
 type Contact = GetAttachThreadWizardQueryResponse['contacts'][number]
@@ -88,7 +88,7 @@ export function ContactStep({ contacts, channelKindById, defaultValues, onSubmit
 									<ThreadAvatar name={contact.displayName} channelKind={channelKind} />
 									<div className="flex min-w-0 flex-1 flex-col">
 										<span className="truncate font-semibold text-foreground">{contact.displayName}</span>
-										<span className="text-sm text-muted-foreground">{channelKind ? channelLabel[channelKind] : ''}</span>
+										<span className="text-sm text-muted-foreground">{channelKind ? enumLabel('ChannelKind', channelKind) : ''}</span>
 									</div>
 									{contact.alreadyAttached ? (
 										<Badge variant="outline">{t('attach.attached')}</Badge>

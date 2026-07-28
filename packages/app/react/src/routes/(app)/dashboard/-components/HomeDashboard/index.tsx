@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { enumLabel } from '@/lib'
 import { useServerEvents } from '@/hooks'
 import { greeting } from '@/components/console/time'
-import { channelGlyph, channelLabel } from '@/components/console/glyphs'
+import { channelGlyph } from '@/components/console/glyphs'
 import { Dot, ThreadStatusDot } from '@/components/console/StatusDot'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 
@@ -178,7 +178,7 @@ function ChannelsCard({ channels }: { channels: Dashboard['channels'] }) {
 							<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
 								<Glyph className="size-4" />
 							</span>
-							<span className="flex-1 text-sm font-medium text-foreground">{channelLabel[channel.kind]}</span>
+							<span className="flex-1 text-sm font-medium text-foreground">{enumLabel('ChannelKind', channel.kind)}</span>
 							<span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
 								<Dot className={connected ? 'bg-success' : 'bg-muted-foreground/40'} />
 								{enumLabel('ChannelStatus', channel.status)}

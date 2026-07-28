@@ -4,7 +4,7 @@ import { useGetHomeDashboard } from '@codedm/client-typescript/typescript'
 import type { ChannelKind, ChannelStatus } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
 import { enumLabel } from '@/lib'
-import { CHANNEL_KINDS, channelGlyph, channelLabel } from '@/components/console/glyphs'
+import { CHANNEL_KINDS, channelGlyph } from '@/components/console/glyphs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConnectChannelDialog } from '../ConnectChannelDialog'
 
@@ -47,7 +47,7 @@ export function ChannelsSection() {
 										<Glyph className="size-5" />
 									</span>
 									<div className="flex min-w-0 flex-1 flex-col">
-										<span className="font-semibold text-foreground">{channelLabel[kind]}</span>
+										<span className="font-semibold text-foreground">{enumLabel('ChannelKind', kind)}</span>
 										<span className="text-sm text-muted-foreground">
 											{connectable ? enumLabel('ChannelStatus', status) : t('channels.comingSoon')}
 										</span>

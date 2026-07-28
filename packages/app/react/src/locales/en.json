@@ -207,6 +207,10 @@
 			"IMAGE": "Screenshot",
 			"LINK": "Preview deploy"
 		},
+		"ChannelKind": {
+			"WHATSAPP": "WhatsApp",
+			"INTERNAL": "Internal"
+		},
 		"ChannelStatus": {
 			"CREATED": "Created",
 			"CONNECTING": "Connecting…",

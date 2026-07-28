@@ -15,10 +15,6 @@ export const channelGlyph: Record<ChannelKind, Icon> = {
 	INTERNAL: IconTerminal2,
 }
 
-export const channelLabel: Record<ChannelKind, string> = {
-	WHATSAPP: 'WhatsApp',
-	INTERNAL: 'Internal',
-}
 
 /**
  * User-connectable channel kinds in display order — used to render the connectivity list.
@@ -35,6 +31,13 @@ export const providerGlyph: Record<ProviderKind, Icon> = {
 	OPENCODE: IconTerminal2,
 }
 
+/**
+ * Provider labels stay a MAP, unlike ChannelKind which moved to `enums.ChannelKind` in the catalog:
+ * every member here is a PRODUCT NAME. "Claude Code" is the same string in every language, so a
+ * catalog entry would duplicate a non-decision in two files and invite someone to translate it.
+ * ChannelKind had to move because it mixes a brand (WhatsApp) with a common noun (Internal), and the
+ * common noun was rendering untranslated.
+ */
 export const providerLabel: Record<ProviderKind, string> = {
 	CLAUDE_CODE: 'Claude Code',
 	CODEX: 'Codex',
