@@ -26,6 +26,13 @@ export const CAPABILITY_PERMISSIONS = {
 	secrets: [],
 	autostart: ['autostart:allow-is-enabled', 'autostart:allow-enable', 'autostart:allow-disable'],
 	hostInfo: [],
+	// The integrated title bar (AppChrome) drags the window through `data-tauri-drag-region`. That
+	// attribute is INERT without this permission — verified in gen/schemas/acl-manifests.json, where
+	// `core:window` declares `allow-start-dragging` but its `default` set does NOT contain it, and
+	// `core:default` does not grant it either. It was missing since the title bar was introduced, so
+	// dragging never worked at all. No react service backs this one: the capability is consumed by a
+	// DOM attribute rather than an injected port, which is why it has no <Name>Service counterpart.
+	windowDrag: ['core:window:allow-start-dragging'],
 } as const satisfies Record<string, readonly string[]>
 
 export type CapabilityKey = keyof typeof CAPABILITY_PERMISSIONS
@@ -39,4 +46,5 @@ export const CAPABILITIES = [
 	'secrets',
 	'autostart',
 	'hostInfo',
+	'windowDrag',
 ] as const satisfies readonly CapabilityKey[]

@@ -151,7 +151,7 @@ export function renderCapabilities(): string {
 		$schema: '../gen/schemas/desktop-schema.json',
 		identifier: 'default',
 		description:
-			'GENERATED from template.config.ts REPO.desktop.services (bun desktop:generate) — permissions derive from the native services the console consumes; do NOT hand-edit.',
+			'GENERATED from config/capabilities.ts (bun desktop:generate) — permissions derive from the capabilities the console consumes; do NOT hand-edit.',
 		windows: [WINDOW_FRAME.label],
 		permissions,
 	}
