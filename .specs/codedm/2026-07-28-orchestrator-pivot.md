@@ -310,6 +310,25 @@ das issues, tom da conversa, pendências) — então minta sessão NOVA semeada 
 roda o turno real nela. Depois de cada turno, `lastContextTokens` é atualizado do frame
 terminal. Genérico no `AgentSession` ⇒ vale para orquestrador e subagents.
 
+### 7.9 Idioma e formatação (founder, 28-jul)
+
+**Idioma: espelha o operador.** A resposta sai no idioma em que a mensagem chegou — não há idioma
+fixado. Nada no código, contrato ou doc pinava um; o espelhamento de hoje é emergente e vira regra
+explícita no prompt. (`Language` / `DEFAULT_LANGUAGE = PT_BR` existem em `shared/i18n` com zero
+callers e nunca alcançam o caminho do agente — continuam sem uso.)
+
+**Formatação: a do WhatsApp, não a do markdown.** WhatsApp faz negrito com **um** asterisco
+(`*negrito*`). Markdown (`**negrito**`) **não é interpretado** — os asteriscos aparecem literais
+para quem lê. Isso não é preferência de estilo: a resposta das 19:02 saiu com `**` e chegou assim
+no grupo real. O prompt instrui a sintaxe do WhatsApp, e a orientação de voz continua a mesma do
+exemplo canônico — o padrão é texto puro, e formatação é exceção, não enfeite.
+
+> Dívida honesta: instruir não é garantir. O modelo é treinado em markdown e vai reincidir. A
+> correção estrutural é um saneamento na fronteira de entrega (`**x**` → `*x*`), onde hoje
+> **nada transforma o texto** — verificado. Fica registrado como recomendação, não como parte da
+> F2+F3, para não alargar o PR atômico; mas é a diferença entre "instruído" e "garantido", e o
+> defeito já aconteceu uma vez em produção.
+
 ## 8. Fluxos-alvo
 
 **Conversa:** inbound → gates → mailbox `OPERATOR_MESSAGE` (tx do ingest) → dispatcher →
