@@ -15,6 +15,24 @@ export const IssueSchema = z.object({
 	archived: z.boolean(),
 	archiveReason: z.enum(IssueArchiveReason).optional(),
 	completedAt: z.date().optional(),
+	/**
+	 * The transcript entry that ASKED for this issue — the message the finished result will quote
+	 * (§7.6, where the issue return always cites it).
+	 *
+	 * OPTIONAL, and it has to be: `DeclareIssueOpen` also opens issues for work an agent separated out
+	 * mid-run, and `CreateIssueController` opens them from the console. Neither has an originating
+	 * message. Making it required would break both, which is why §6.2 states it as nullable and
+	 * mandatory only on the orchestrator path.
+	 */
+	originEntryId: z.uuid().optional(),
+	/**
+	 * What the operator actually asked for, in their words — the subagent's prompt.
+	 *
+	 * Before the pivot the prompt was the raw inbound text, re-read from the transcript at spawn time.
+	 * Now the issue OWNS its goal, because the orchestrator may reword what it heard into a brief the
+	 * transcript never literally contained.
+	 */
+	goal: z.string().trim().min(1).optional(),
 })
 
 export type IssueProps = Z.infer<typeof IssueSchema>
@@ -28,7 +46,16 @@ export type IssueProps = Z.infer<typeof IssueSchema>
 export class Issue extends AggregateRoot<typeof IssueSchema> {
 	static override schema = IssueSchema
 
-	static open(data: { ownerId: string; threadId: string; key: string; title: string; provider: ProviderKind; status?: IssueStatus }): Issue {
+	static open(data: {
+		ownerId: string
+		threadId: string
+		key: string
+		title: string
+		provider: ProviderKind
+		status?: IssueStatus
+		originEntryId?: string
+		goal?: string
+	}): Issue {
 		return new Issue({
 			ownerId: data.ownerId,
 			threadId: data.threadId,
@@ -40,6 +67,8 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 			archived: false,
 			archiveReason: undefined,
 			completedAt: undefined,
+			originEntryId: data.originEntryId,
+			goal: data.goal,
 		})
 	}
 

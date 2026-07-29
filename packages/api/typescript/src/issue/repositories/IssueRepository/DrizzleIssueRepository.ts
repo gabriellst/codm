@@ -25,7 +25,11 @@ export class DrizzleIssueRepository extends IssueRepository {
 	async findByThreadAndKey(threadId: string, key: string, tx?: DrizzleClient): Promise<Issue | undefined> {
 		const dbc = tx ?? this.db
 		const result = await tryCatchAsync(async () => {
-			const rows = await dbc.select().from(issues).where(and(eq(issues.threadId, threadId), eq(issues.key, key))).limit(1)
+			const rows = await dbc
+				.select()
+				.from(issues)
+				.where(and(eq(issues.threadId, threadId), eq(issues.key, key)))
+				.limit(1)
 			return rows[0]
 		})
 		if (!result.success || !result.data) return undefined
@@ -68,6 +72,18 @@ export class DrizzleIssueRepository extends IssueRepository {
 				.values(data)
 				.onConflictDoUpdate({
 					target: issues.id,
+					// `originEntryId` and `goal` are DELIBERATELY ABSENT from this set — they are
+					// write-once, at insert, and the omission is what enforces it (§6.2).
+					//
+					// An issue has two birth paths that reconcile on the same row: the `issue/create`
+					// tool INSERTS it knowing both values, and `RunIssueTurn` independently raises
+					// `integration.issue.opened`, whose idempotent `MaterializeIssueFromExecution`
+					// re-opens the SAME issue knowing NEITHER. Listing them here would let that second,
+					// blameless path write NULL over the provenance the first one just recorded — and
+					// the damage surfaces much later and nowhere near the cause: the finished result
+					// has no `originEntryId` to quote, so the reply lands attached to nothing.
+					// Enforced by omission rather than by a conditional, so there is no branch to get
+					// wrong and no caller that has to remember.
 					set: {
 						title: data.title,
 						status: data.status,
@@ -105,6 +121,8 @@ export class DrizzleIssueRepository extends IssueRepository {
 			archived: row.archived,
 			archiveReason: (row.archiveReason ?? undefined) as IssueArchiveReason | undefined,
 			completedAt: row.completedAt ?? undefined,
+			originEntryId: row.originEntryId ?? undefined,
+			goal: row.goal ?? undefined,
 		})
 		return new Issue({ ...parsed, id: row.id, createdAt: row.createdAt, updatedAt: row.updatedAt, version: row.version })
 	}
@@ -122,6 +140,8 @@ export class DrizzleIssueRepository extends IssueRepository {
 			archived: entity.archived,
 			archiveReason: entity.archiveReason ?? null,
 			completedAt: entity.completedAt ?? null,
+			originEntryId: entity.originEntryId ?? null,
+			goal: entity.goal ?? null,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			version: entity.version,
