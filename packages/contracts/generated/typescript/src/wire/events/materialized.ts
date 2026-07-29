@@ -9,7 +9,6 @@
 import { z } from '@codedm/core-typescript/schema'
 import Z from 'zod'
 import {
-	AgentReplyDraftedEventSchema,
 	ArtifactRecordedEventSchema,
 	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
@@ -49,7 +48,6 @@ import {
 } from './_imports'
 import { channelMessageReceivedPayloadSchema, channelSpecialPlatformEventReceivedPayloadSchema } from '@codedm/client-typescript/go'
 
-export const AgentReplyDraftedEventMaterializedSchema = AgentReplyDraftedEventSchema
 export const ArtifactRecordedEventMaterializedSchema = ArtifactRecordedEventSchema
 export const ChannelChatPresenceUpdatedEventMaterializedSchema = ChannelChatPresenceUpdatedEventSchema
 export const ChannelConnectedEventMaterializedSchema = ChannelConnectedEventSchema
@@ -89,7 +87,6 @@ export const WorkspaceRemovedEventMaterializedSchema = WorkspaceRemovedEventSche
 
 /** Every materialized event schema, sorted by wire name (deterministic emission order). */
 export const materializedIntegrationEventSchemas = [
-	AgentReplyDraftedEventMaterializedSchema,
 	ArtifactRecordedEventMaterializedSchema,
 	SubscriptionChangedEventMaterializedSchema,
 	ChannelMessageDeletedEventMaterializedSchema,
@@ -129,7 +126,6 @@ export const materializedIntegrationEventSchemas = [
 ] as const
 
 export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [
-	AgentReplyDraftedEventMaterializedSchema,
 	ArtifactRecordedEventMaterializedSchema,
 	SubscriptionChangedEventMaterializedSchema,
 	ChannelMessageDeletedEventMaterializedSchema,

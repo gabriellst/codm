@@ -1,5 +1,4 @@
 export { AgentRunStartedEvent, AgentRunStartedEventSchema } from './AgentRunStartedEvent'
-export { AgentRunReplyDraftedEvent, AgentRunReplyDraftedEventSchema } from './AgentRunReplyDraftedEvent'
 export { AgentRunCompletedEvent, AgentRunCompletedEventSchema } from './AgentRunCompletedEvent'
 export { AgentRunStopRaisedEvent, AgentRunStopRaisedEventSchema } from './AgentRunStopRaisedEvent'
 // The phase-10 port also carried three ENGINE-lifecycle facts — session resumed / session killed /

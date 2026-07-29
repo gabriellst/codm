@@ -2,7 +2,6 @@
 import { z } from '@codedm/core-typescript/schema'
 import Z from 'zod'
 import {
-	AgentReplyDraftedEventSchema,
 	ArtifactRecordedEventSchema,
 	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
@@ -41,7 +40,6 @@ import {
 	WorkspaceRemovedEventSchema,
 } from './_imports'
 
-export * from './agent-reply-drafted'
 export * from './artifact-recorded'
 export * from './channel-chat-presence-updated'
 export * from './channel-connected'
@@ -82,7 +80,6 @@ export * from './thread-attached'
 export * from './workspace-removed'
 
 export const IntegrationEventSchema = z.discriminatedUnion('name', [
-	AgentReplyDraftedEventSchema,
 	ArtifactRecordedEventSchema,
 	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,

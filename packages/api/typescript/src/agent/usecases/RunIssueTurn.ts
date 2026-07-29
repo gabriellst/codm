@@ -2,17 +2,16 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError, LoggingService } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
-import { AgentModelId, ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind, MailboxTargetKind, ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
 import { IssueWorkAgent } from '../agents/IssueWorkAgent'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import type { AgentRunner } from '../services/AgentRunner'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
-import { AgentSessionRepository } from '../repositories'
+import { AgentSessionRepository, MailboxRepository } from '../repositories'
 import { AgentSession } from '../entities/AgentSession'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
-import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import type { AgentApplicationErrors } from '../errors'
@@ -38,6 +37,14 @@ export const RunIssueTurnInputSchema = z.object({
 	priorMessageId: z.uuid().optional(),
 	/** Which model to ask the provider CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
 	model: z.enum(AgentModelId).optional(),
+	/**
+	 * The transcript entry that ASKED for this issue (§7.6) — carried from the `WORK` mailbox item.
+	 *
+	 * Optional because an issue can also be born from the console or from work an agent separated out
+	 * mid-run, and neither has an originating message. When present it rides onto the `ISSUE_RESULT`
+	 * item, which is what lets the composed answer quote the request instead of arriving unanchored.
+	 */
+	originEntryId: z.uuid().optional(),
 })
 
 export const RunIssueTurnOutputSchema = z.object({
@@ -71,7 +78,7 @@ interface SessionPlan {
  *   TRANSPORT — every `frame` event becomes at most one SSE line pushed to the observer via
  *               `AgentStreamRegistry.send`, streamed STRICTLY OUTSIDE any transaction.
  *   FACTS     — the run's conclusion is persisted as context-private domain events; the internal
- *               bridge maps them to the FROZEN integration events (issue.opened / agent.reply_drafted
+ *               bridge maps them to the FROZEN integration events (issue.opened
  *               / issue.completed / issue.stop_raised).
  *
  * ### What this use case STOPPED doing in Fase 3, and why each removal is structural
@@ -118,6 +125,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		private readonly providerDetector: ProviderDetector,
 		private readonly registry: AgentStreamRegistry,
 		private readonly sessions: AgentSessionRepository,
+		private readonly mailbox: MailboxRepository,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -267,19 +275,19 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * branch (§8 rule 4 forbids `if (provider === 'x')`, not this).
 	 */
 	private async persistOutcome(input: this['input'], outcome: TerminalOutcome, stopId: string | undefined, tx: Transaction): Promise<void> {
-		// The reply draft is NOT a lifecycle fact and is not gated: it is the turn's text, which the
-		// declarative path never carries and never duplicates.
+		// THE RESULT GOES BACK TO THE CONVERSATION (§6.3, B1) — in THIS transaction, beside the outcome
+		// facts. Transactional ⇒ exactly-once: an outcome that commits always has a result queued, and
+		// one that rolls back queues nothing, so "the summary had no source" cannot happen by
+		// construction.
+		//
+		// This REPLACES `AgentRunReplyDraftedEvent`, which used to carry the same text to
+		// the old raw-delivery handler and out to the channel UNEDITED. Keeping both would put the worker's
+		// unedited voice on the wire in a race with the orchestrator's composed answer — two messages
+		// per conclusion, which is the hole the design review found (§5). The text is the same; what
+		// changed is who says it.
+		await this.enqueueResult(input, outcome, tx)
+
 		if (outcome.kind === 'COMPLETED') {
-			if (outcome.replyText.length > 0) {
-				await this.domainEventRepository.save(
-					new AgentRunReplyDraftedEvent({
-						entityId: input.issueId,
-						ownerId: input.ownerId,
-						payload: { issueId: input.issueId, threadId: input.threadId, key: input.key, text: outcome.replyText },
-					}),
-					tx,
-				)
-			}
 			if (this.agent.tools.length > 0) return
 			await this.domainEventRepository.save(
 				new AgentRunCompletedEvent({
@@ -410,6 +418,39 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				model,
 				lastMessageId: input.messageId,
 			}),
+			tx,
+		)
+	}
+
+	/**
+	 * Queue the conversational turn that will TELL the operator what happened.
+	 *
+	 * The payload is shaped for `OrchestratorInputSchema`'s `ISSUE_RESULT` member, plus `originEntryId`,
+	 * which the schema deliberately does NOT expose to the model: the issue return always quotes it
+	 * (§7.6), so `RunOrchestratorTurn` sets `replyToEntryId` itself rather than trusting a sentinel.
+	 * Carrying it on the item and withholding it from the agent's view is what makes that structural.
+	 *
+	 * `dedupKey` is the ISSUE id: an issue concludes once, so a redelivered outcome re-inserts,
+	 * conflicts on the unique index, and schedules no second announcement.
+	 */
+	private async enqueueResult(input: this['input'], outcome: TerminalOutcome, tx: Transaction): Promise<void> {
+		await this.mailbox.enqueue(
+			{
+				ownerId: input.ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: input.threadId,
+				kind: MailboxItemKind.ISSUE_RESULT,
+				payload: {
+					kind: MailboxItemKind.ISSUE_RESULT,
+					issueKey: input.key,
+					outcome:
+						outcome.kind === 'COMPLETED'
+							? { kind: AgentRunOutcome.COMPLETED, replyText: outcome.replyText }
+							: { kind: AgentRunOutcome.STOPPED, stopKind: outcome.stopKind, detail: outcome.detail },
+					originEntryId: input.originEntryId,
+				},
+				dedupKey: `result:${input.issueId}`,
+			},
 			tx,
 		)
 	}

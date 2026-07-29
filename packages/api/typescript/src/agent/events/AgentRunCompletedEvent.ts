@@ -17,6 +17,14 @@ export const AgentRunCompletedEventSchema = z.domainEvent({
 	key: z.string(),
 	completedAt: z.date(),
 	source: z.enum(FactSource),
+	/**
+	 * What the agent DECLARED it did, via the `transitionIssueStatus` tool.
+	 *
+	 * Absent when the completion was INFERRED from a clean exit (no tool scope), because then nobody
+	 * said anything — inventing a summary there would put words in the agent's mouth. Before the pivot
+	 * this value was destructured in `DeclareIssueComplete` and thrown away.
+	 */
+	summary: z.string().optional(),
 })
 
 export class AgentRunCompletedEvent extends BaseDomainEvent<typeof AgentRunCompletedEventSchema> {

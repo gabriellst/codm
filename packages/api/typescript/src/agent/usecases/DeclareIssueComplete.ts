@@ -68,7 +68,7 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 					new AgentRunCompletedEvent({
 						entityId: issueId,
 						ownerId,
-						payload: { issueId, threadId, key, completedAt: new Date(), source: FactSource.DECLARED },
+						payload: { issueId, threadId, key, completedAt: new Date(), source: FactSource.DECLARED, summary },
 					}),
 					tx,
 				)

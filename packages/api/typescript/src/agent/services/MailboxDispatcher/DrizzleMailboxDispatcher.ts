@@ -202,7 +202,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		const provider = thread.providers[0]
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
-		const payload = item.payload as { entryId?: string }
+		const payload = item.payload as { entryId?: string; originEntryId?: string }
 		await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
@@ -212,12 +212,16 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 			// Only an OPERATOR_MESSAGE has an originating entry; an ISSUE_RESULT turn is triggered by a
 			// subagent finishing, and the entry it will CITE is carried on the item, not on the token.
 			entryId: item.kind === MailboxItemKind.OPERATOR_MESSAGE ? payload.entryId : undefined,
+			// The entry the finished issue must QUOTE (§7.6). It rides the ISSUE_RESULT item rather than
+			// the run-token claims, because this turn was triggered by a subagent finishing, not by a
+			// message — there is no entry to mint a claim from.
+			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
 		})
 	}
 
 	/** An ISSUE item is a subagent turn — `WORK` today, `STEER` from F4. */
 	private async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
-		const payload = item.payload as { threadId: string; key: string; title: string; goal: string; provider: string }
+		const payload = item.payload as { threadId: string; key: string; title: string; goal: string; provider: string; originEntryId?: string }
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
 
@@ -236,6 +240,8 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 			// the raw inbound text re-read from a transcript.
 			prompt: payload.goal,
 			messageId: item.id,
+			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
+			originEntryId: payload.originEntryId,
 		})
 	}
 

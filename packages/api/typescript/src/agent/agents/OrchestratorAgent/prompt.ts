@@ -274,7 +274,7 @@ export class OrchestratorPromptBuilder {
 	 * The framing "written to you, not to the room" is doing the work. The worker's `replyText` was
 	 * drafted for a chat message and reads publishable, so a model handed it without that line pastes
 	 * it — which is precisely the raw-worker-voice-in-the-channel outcome that killing
-	 * `RequestAgentReplyDelivery` (F4) exists to prevent. Saying it is private notes makes composing
+	 * killing the old raw-delivery handler (B3) exists to prevent. Saying it is private notes makes composing
 	 * the only sensible move.
 	 *
 	 * The payload mirrors `TerminalOutcome`, which carries `replyText` ONLY on the completed branch

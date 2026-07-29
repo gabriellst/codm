@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codedm/core-typescript'
-import { IssueStatus, ProviderKind, ProviderStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStatus, MailboxItemKind, MailboxTargetKind, ProviderKind, ProviderStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { DeclareIssueComplete } from './DeclareIssueComplete'
@@ -12,10 +12,9 @@ import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRu
 import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
 import { RunTokenService } from '../services/RunTokenService'
-import { AgentSessionRepository } from '../repositories'
+import { AgentSessionRepository, MailboxRepository } from '../repositories'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from '../agents/IssueWorkAgent'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
-import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { ResumeInvalidationReason, AgentRunOutcome, FactSource, type TransportStopKind } from '../enums'
@@ -104,15 +103,24 @@ describe('RunIssueTurn use case', () => {
 		expect(frames.length).toBeGreaterThan(0)
 		expect(frames.every(f => f.issueId === issueId)).toBe(true)
 
-		// FACTS — opened + reply persisted. The COMPLETION is deliberately absent (AC-6.4(b)): the
+		// FACTS — opened. The reply is NO LONGER a fact: since B1 the turn's text rides the ISSUE_RESULT
+		// mailbox item instead of `agent.run.reply_drafted`, so the orchestrator can COMPOSE it rather
+		// than the raw worker voice going straight to the channel. Asserted below on the mailbox.
+		//
+		// The COMPLETION is deliberately absent (AC-6.4(b)): the
 		// injected `IssueWorkAgent` declares a non-empty tool scope, so the ONLY producer of the
 		// completion fact is the declaration use case behind `TransitionIssueStatus`. Minting one here
 		// too would publish the frozen `integration.issue.completed` twice — the exact double-publish
 		// this phase's predicate exists to prevent, in the "declared AND also ended normally" case.
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
-		expect(await eventRepo.findByType(AgentRunReplyDraftedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
+
+		// AC-B1.1 — the RESULT is queued for the thread, in the same transaction as the outcome facts.
+		const queued = await testBed.resolve(MailboxRepository).claimNext('run-issue-turn-test', 60_000)
+		expect(queued?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
+		expect(queued?.targetKind).toBe(MailboxTargetKind.THREAD)
+		expect((queued?.payload as { outcome: { replyText: string } }).outcome.replyText).toBeTruthy()
 
 		// TEARDOWN — the single-active claim is released.
 		expect(registry.isActive(issueId)).toBe(false)

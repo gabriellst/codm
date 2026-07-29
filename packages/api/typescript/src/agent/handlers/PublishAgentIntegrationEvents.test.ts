@@ -10,7 +10,6 @@ import {
 import { ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { PublishAgentIntegrationEvents } from './PublishAgentIntegrationEvents'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
-import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
@@ -53,26 +52,6 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		})
 	})
 
-	it('agent.run.reply_drafted → integration.agent.reply_drafted (labeled)', async () => {
-		const { handler, published } = makeHandler()
-		await handler.handle(
-			new AgentRunReplyDraftedEvent({
-				entityId: 'issue-1',
-				ownerId,
-				payload: { issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', text: 'Fixed it. PR #214.' },
-			}) as never,
-		)
-		const event = published[0] as AgentReplyDraftedEvent
-		expect(event).toBeInstanceOf(AgentReplyDraftedEvent)
-		expect(event.name).toBe('integration.agent.reply_drafted')
-		expect(event.payload).toEqual({
-			issueId: 'issue-1',
-			threadId: 'thread-1',
-			labelIssueKey: 'coupon-focus',
-			labelThreadId: 'thread-1',
-			text: 'Fixed it. PR #214.',
-		})
-	})
 
 	/**
 	 * `source` GOES IN AND DOES NOT COME OUT — the contract-cost claim of §4.3 rule 6, asserted.
@@ -141,6 +120,10 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 	 * mapping with no fact is dead code. Both fail invisibly at runtime — nothing throws, a message
 	 * simply never arrives.
 	 *
+	 * `agent.run.reply_drafted` LEFT in B1/B3: the turn's text now rides the ISSUE_RESULT mailbox item so
+	 * the orchestrator composes it, instead of going to the channel as the raw worker voice. Keeping the
+	 * mapping alongside the composition would have delivered BOTH — two messages per conclusion.
+	 *
 	 * Two joined in the orchestrator pivot, and NEITHER is a `terminal.*` execution fact:
 	 *  - `agent.issue_forked` (§7.2) says an issue was DECLARED, before any work exists. It maps to
 	 *    `integration.issue.created`, deliberately not to `issue.opened` — that one still means
@@ -148,13 +131,12 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 	 *  - `agent.orchestrator_replied` (§7.5) says the thread's orchestrator SPOKE. The runtime knows
 	 *    WHAT was said; only the thread context knows WHO to say it to, which is why it crosses.
 	 */
-	it('subscribes to exactly the four terminal.* facts plus the fork and the reply', () => {
+	it('subscribes to exactly the THREE terminal.* facts plus the fork and the reply', () => {
 		const { handler } = makeHandler()
 		expect(handler.events).toEqual([
 			'agent.run.started',
 			'agent.issue_forked',
 			'agent.orchestrator_replied',
-			'agent.run.reply_drafted',
 			'agent.run.completed',
 			'agent.run.stop_raised',
 		])

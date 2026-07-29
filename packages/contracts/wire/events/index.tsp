@@ -55,7 +55,6 @@ import "./issue-created.tsp";
 import "./issue-opened.tsp";
 import "./orchestrator-replied.tsp";
 import "./issue-completed.tsp";
-import "./agent-reply-drafted.tsp";
 import "./issue-stop-raised.tsp";
 import "./issue-stop-resolved.tsp";
 import "./issue-archived.tsp";

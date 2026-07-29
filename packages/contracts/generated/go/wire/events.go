@@ -9,34 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// AgentReplyDraftedEventName is the wire discriminator for AgentReplyDraftedEvent.
-const AgentReplyDraftedEventName = "integration.agent.reply_drafted"
-
-// AgentReplyDraftedEvent — wire shape of integration.agent.reply_drafted.
-// BC5 Issue Execution -> BC4 Thread & Routing -> BC1 Channel Gateway. An agent drafted a reply for an issue; carries the issue label so the gateway can prefix it on delivery. Descends whatscode ChatMessageEvent. The IssueLabel VO is flattened to labelIssueKey/labelThreadId (both required here — every agent reply is labeled).
-type AgentReplyDraftedEvent struct {
-	Name       string    `json:"name"`
-	EntityID   string    `json:"entityId"`
-	OwnerID    string    `json:"ownerId"`
-	OccurredAt time.Time `json:"occurredAt"`
-	IssueID string `json:"issueId"`
-	ThreadID string `json:"threadId"`
-	LabelIssueKey string `json:"labelIssueKey"`
-	LabelThreadID string `json:"labelThreadId"`
-	Text string `json:"text"`
-}
-
-func (e AgentReplyDraftedEvent) EventName() string { return AgentReplyDraftedEventName }
-
-// AgentReplyDraftedPayload — payload of integration.agent.reply_drafted, generated from the contract declaration.
-type AgentReplyDraftedPayload struct {
-	IssueID string `json:"issueId" validate:"required"`
-	ThreadID string `json:"threadId" validate:"required"`
-	LabelIssueKey string `json:"labelIssueKey" validate:"required"`
-	LabelThreadID string `json:"labelThreadId" validate:"required"`
-	Text string `json:"text" validate:"required"`
-}
-
 // ArtifactRecordedEventName is the wire discriminator for ArtifactRecordedEvent.
 const ArtifactRecordedEventName = "integration.artifact.recorded"
 
@@ -854,6 +826,7 @@ type IssueCompletedEvent struct {
 	ThreadID string `json:"threadId"`
 	Key string `json:"key"`
 	CompletedAt time.Time `json:"completedAt"`
+	Summary *string `json:"summary,omitempty"`
 }
 
 func (e IssueCompletedEvent) EventName() string { return IssueCompletedEventName }
@@ -864,6 +837,7 @@ type IssueCompletedPayload struct {
 	ThreadID string `json:"threadId" validate:"required"`
 	Key string `json:"key" validate:"required"`
 	CompletedAt time.Time `json:"completedAt" validate:"required"`
+	Summary *string `json:"summary,omitempty"`
 }
 
 // IssueCreatedEventName is the wire discriminator for IssueCreatedEvent.

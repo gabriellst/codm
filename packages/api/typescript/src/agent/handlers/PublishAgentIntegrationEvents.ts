@@ -6,12 +6,10 @@ import {
 	OrchestratorRepliedEvent as OrchestratorRepliedIntegrationEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
-	AgentReplyDraftedEvent as AgentReplyDraftedIntegrationEvent,
 } from '@codedm/contracts-typescript/wire/events'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
-import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 
@@ -24,7 +22,6 @@ import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
  *
  * One multi-event handler, one 1:1 map:
  *   agent.run.started    → integration.issue.opened        (BC5 → BC4, triggers transcript/status)
- *   agent.run.reply_drafted→ integration.agent.reply_drafted (BC5 → BC4 → BC1, labeled delivery)
  *   agent.run.completed  → integration.issue.completed     (BC5 → BC4, starts the 24h clock)
  *   agent.run.stop_raised        → integration.issue.stop_raised   (BC5 → BC4, NEEDS_ATTENTION)
  */
@@ -34,7 +31,6 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 		typeof AgentRunStartedEvent,
 		typeof IssueForkedEvent,
 		typeof OrchestratorRepliedEvent,
-		typeof AgentRunReplyDraftedEvent,
 		typeof AgentRunCompletedEvent,
 		typeof AgentRunStopRaisedEvent,
 	]
@@ -43,7 +39,6 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 		AgentRunStartedEvent,
 		IssueForkedEvent,
 		OrchestratorRepliedEvent,
-		AgentRunReplyDraftedEvent,
 		AgentRunCompletedEvent,
 		AgentRunStopRaisedEvent,
 	] as const
@@ -111,21 +106,6 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 			return
 		}
 
-		if (event instanceof AgentRunReplyDraftedEvent) {
-			await this.mediator.publish(
-				new AgentReplyDraftedIntegrationEvent({
-					ownerId,
-					payload: {
-						issueId: event.payload.issueId,
-						threadId: event.payload.threadId,
-						labelIssueKey: event.payload.key,
-						labelThreadId: event.payload.threadId,
-						text: event.payload.text,
-					},
-				}),
-			)
-			return
-		}
 
 		if (event instanceof AgentRunCompletedEvent) {
 			await this.mediator.publish(
@@ -136,6 +116,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						threadId: event.payload.threadId,
 						key: event.payload.key,
 						completedAt: event.payload.completedAt,
+						summary: event.payload.summary,
 					},
 				}),
 			)

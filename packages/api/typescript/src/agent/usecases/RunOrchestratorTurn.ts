@@ -38,6 +38,16 @@ export const RunOrchestratorTurnInputSchema = z.object({
 	item: OrchestratorInputSchema.shape.item,
 	/** The entry that triggered the turn, when the item carries one — becomes a run-token claim. */
 	entryId: z.uuid().optional(),
+	/**
+	 * On an ISSUE_RESULT turn: the entry the composed answer MUST quote (§7.6).
+	 *
+	 * D6 has two halves and only one of them is the model's. In conversation, citing is a permission it
+	 * exercises through the sentinel. On an issue return it is a MANDATE, so the use case sets
+	 * `replyToEntryId` from this value and the model is never handed it — `OrchestratorInputSchema`
+	 * deliberately omits it from the ISSUE_RESULT member. A model that cannot name the anchor cannot
+	 * pick the wrong one, and cannot forget it either.
+	 */
+	originEntryId: z.uuid().optional(),
 	model: z.enum(AgentModelId).optional(),
 })
 
@@ -160,13 +170,18 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 
 		const reply = parseReply(outcome.replyText)
 
+		// THE MANDATORY HALF OF D6. An issue return always quotes the message that asked for the work,
+		// so the anchor is imposed here rather than read off a sentinel: it is not a decision, and a
+		// turn that forgot to emit one would otherwise arrive attached to nothing.
+		const replyToEntryId = input.originEntryId ?? reply.replyToEntryId
+
 		await this.withTransaction(tx, async tx => {
 			if (reply.text.length > 0) {
 				await this.domainEventRepository.save(
 					new OrchestratorRepliedEvent({
 						entityId: input.threadId,
 						ownerId: input.ownerId,
-						payload: { threadId: input.threadId, text: reply.text, replyToEntryId: reply.replyToEntryId },
+						payload: { threadId: input.threadId, text: reply.text, replyToEntryId },
 					}),
 					tx,
 				)
@@ -174,7 +189,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			await this.upsertSession(input, accumulator.sessionId ?? session.id, tx)
 		})
 
-		return reply
+		return { text: reply.text, replyToEntryId }
 	}
 
 	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {

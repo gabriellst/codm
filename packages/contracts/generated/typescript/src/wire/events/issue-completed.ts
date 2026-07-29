@@ -8,6 +8,7 @@ export const IssueCompletedEventSchema = z.integrationEvent('integration.issue.c
 	threadId: z.string(),
 	key: z.string(),
 	completedAt: z.date(),
+	summary: z.string().optional(),
 })
 
 export class IssueCompletedEvent extends BaseIntegrationEvent<typeof IssueCompletedEventSchema> {

@@ -89,7 +89,18 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 					targetKind: MailboxTargetKind.ISSUE,
 					targetId: issueId,
 					kind: MailboxItemKind.WORK,
-					payload: { issueId, threadId: input.threadId, key, title, goal: input.goal, provider: input.provider },
+					// `originEntryId` rides along so the finished turn can put it on the ISSUE_RESULT without
+					// reading the issue row — the agent context has no runtime read of `issue` (the declared
+					// edge is declaration-only), and the value is already in hand here.
+					payload: {
+						issueId,
+						threadId: input.threadId,
+						key,
+						title,
+						goal: input.goal,
+						provider: input.provider,
+						originEntryId: input.originEntryId,
+					},
 					// The issue can be forked exactly once, so its own id IS the idempotency key. A redelivered
 					// fact re-inserts, conflicts on the unique index, and schedules nothing.
 					dedupKey: `work:${issueId}`,

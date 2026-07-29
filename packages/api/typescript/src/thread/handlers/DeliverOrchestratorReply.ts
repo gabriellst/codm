@@ -7,9 +7,10 @@ import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 
 /**
- * The orchestrator's reply crosses to the channel (orchestrator pivot §7.5) — the structural heir of
- * `RequestAgentReplyDelivery`, which stays alive until F4 because it still carries the WORKER's
- * drafts and nothing yet duplicates it.
+ * The orchestrator's reply crosses to the channel (orchestrator pivot §7.5) — and, since B3, the ONLY
+ * path from an agent to the channel. The old handler that delivered the worker's raw draft is gone:
+ * with composition live, keeping it would have put the unedited voice on the wire in a race with the
+ * composed answer, i.e. two messages per conclusion.
  *
  * It does three things that handler does not, and each closes a gap the design review found:
  *
@@ -46,7 +47,7 @@ export class DeliverOrchestratorReply extends EventHandler<typeof OrchestratorRe
 		const ownerId = event.ownerId
 		if (!ownerId) return
 
-		// Defensive drop, the same posture the inbound consumer and `RequestAgentReplyDelivery` take: a
+		// Defensive drop, the same posture the inbound consumer takes: a
 		// reply for a thread that no longer exists has nowhere to go, and forging a destination would be
 		// worse than silence.
 		const thread = await this.threads.findById(event.payload.threadId)

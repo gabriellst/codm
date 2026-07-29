@@ -21,12 +21,6 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 		return nil, err
 	}
 	switch discriminator.Name {
-	case "integration.agent.reply_drafted":
-		var v AgentReplyDraftedEvent
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
 	case "integration.artifact.recorded":
 		var v ArtifactRecordedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
