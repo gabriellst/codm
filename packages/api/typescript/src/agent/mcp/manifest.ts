@@ -36,6 +36,7 @@ import { TransitionIssueStatusController } from '../controllers/TransitionIssueS
 import { RaiseStopController } from '../controllers/RaiseStop'
 import { AskOperatorController } from '../controllers/AskOperator'
 import { ForkIssueController } from '../controllers/ForkIssue'
+import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
 
 /**
  * THE MANIFEST — the single declaration of which HTTP operations are reachable as MCP tools, and
@@ -159,14 +160,15 @@ export const MCP_SCOPES = {
 	 * WHAT THE ORCHESTRATOR MAY DO WHILE TALKING (§7.2) — fork an issue, and look at this thread's own.
 	 *
 	 * Deliberately NOT the six writes of `issue-handling`: this agent converses and decides, it never
-	 * does issue work (§3, "o orquestrador nunca executa trabalho de issue"). `issue/steer` joins in F4,
-	 * with the dispatcher branch that makes a queued STEER actually run — shipping the tool earlier
-	 * would be a write with no consumer, the dormancy D5 forbids.
+	 * does issue work (§3, "o orquestrador nunca executa trabalho de issue"). Steering is the one
+	 * exception and it is not issue WORK — it is telling a worker something, which is conversation
+	 * pointed at a subagent. It ships together with the dispatcher branch that makes a queued STEER
+	 * actually run; a tool whose item nothing consumes would be the dormancy D5 forbids.
 	 *
 	 * Every entry is thread-shaped: `ForkIssue` and `GetSessionIssues` take `threadId` (which the claims
 	 * confine), and `GetIssueStatus` takes both, checking ownership itself.
 	 */
-	orchestration: [ForkIssueController, GetSessionIssuesController, GetIssueStatusController],
+	orchestration: [ForkIssueController, SteerIssueTurnController, GetSessionIssuesController, GetIssueStatusController],
 	/**
 	 * NAVIGATION AND OPERATION of the system. Generated and mounted, but NO internal agent declares it
 	 * in this phase — its consumer is an external MCP client (the operator's own agent, browsing the

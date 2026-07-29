@@ -219,9 +219,27 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		})
 	}
 
-	/** An ISSUE item is a subagent turn — `WORK` today, `STEER` from F4. */
+	/**
+	 * An ISSUE item is a subagent turn. `WORK` is the first one; `STEER` is a MID-FLIGHT redirection.
+	 *
+	 * Both run the same use case — what differs is only the PROMPT, because a steer continues an
+	 * existing CLI session (`--resume` keeps the work context) and just tells it something new. Modelling
+	 * steer as its own use case would have duplicated provider resolution, the session plan and the
+	 * outcome persistence to change one string.
+	 *
+	 * The per-target lease is what makes a steer safe with a turn already in flight: the item simply
+	 * waits for the lease rather than racing the running turn — no retry-throw, no interleaving.
+	 */
 	private async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
-		const payload = item.payload as { threadId: string; key: string; title: string; goal: string; provider: string; originEntryId?: string }
+		const payload = item.payload as {
+			threadId: string
+			key: string
+			title: string
+			goal?: string
+			text?: string
+			provider: string
+			originEntryId?: string
+		}
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
 
@@ -237,8 +255,9 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 			provider: thread.providers[0] ?? (payload.provider as never),
 			workspacePath: workspace.path,
 			// The issue OWNS its goal since the pivot — the prompt is what the operator asked for, not
-			// the raw inbound text re-read from a transcript.
-			prompt: payload.goal,
+			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the
+			// session is resumed, so the turn needs the NEW instruction, not the original brief again.
+			prompt: item.kind === MailboxItemKind.STEER ? (payload.text ?? '') : (payload.goal ?? ''),
 			messageId: item.id,
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,

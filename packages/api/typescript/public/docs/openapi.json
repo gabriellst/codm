@@ -1160,6 +1160,108 @@
         ]
       }
     },
+    "/v1/threads/{threadId}/issues/{issueId}/steer": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:orchestration"
+        ],
+        "description": "Redirect an issue that is already being worked, mid-flight",
+        "operationId": "SteerIssueTurn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "text": "prefira o refactor menor"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Redirect an issue that is already being worked, mid-flight",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issueId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "queued": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "issueId",
+                    "queued"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "queued": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "queued": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
+      }
+    },
     "/v1/terminal/sessions/{issueId}/stream": {
       "get": {
         "tags": [
@@ -4199,53 +4301,6 @@
                         },
                         "name": {
                           "type": "string",
-                          "const": "integration.agent.reply_drafted"
-                        },
-                        "payload": {
-                          "type": "object",
-                          "properties": {
-                            "issueId": {
-                              "type": "string"
-                            },
-                            "threadId": {
-                              "type": "string"
-                            },
-                            "labelIssueKey": {
-                              "type": "string"
-                            },
-                            "labelThreadId": {
-                              "type": "string"
-                            },
-                            "text": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "issueId",
-                            "threadId",
-                            "labelIssueKey",
-                            "labelThreadId",
-                            "text"
-                          ],
-                          "additionalProperties": false
-                        }
-                      },
-                      "required": [
-                        "ownerId",
-                        "name",
-                        "payload"
-                      ],
-                      "additionalProperties": false,
-                      "examples": []
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "ownerId": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string",
                           "const": "integration.artifact.recorded"
                         },
                         "payload": {
@@ -7152,6 +7207,9 @@
                             "completedAt": {
                               "type": "string",
                               "format": "date-time"
+                            },
+                            "summary": {
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -8016,7 +8074,8 @@
     "orchestration": [
       "ForkIssue",
       "GetIssueStatus",
-      "GetSessionIssues"
+      "GetSessionIssues",
+      "SteerIssueTurn"
     ],
     "system": [
       "AddWorkspace",

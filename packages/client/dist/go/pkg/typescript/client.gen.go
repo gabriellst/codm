@@ -1220,6 +1220,11 @@ type TransitionIssueStatusJSONBody struct {
 	Summary *string     `json:"summary,omitempty"`
 }
 
+// SteerIssueTurnJSONBody defines parameters for SteerIssueTurn.
+type SteerIssueTurnJSONBody struct {
+	Text string `json:"text"`
+}
+
 // RaiseStopJSONBody defines parameters for RaiseStop.
 type RaiseStopJSONBody struct {
 	Detail string   `json:"detail"`
@@ -1325,6 +1330,9 @@ type AskOperatorJSONRequestBody AskOperatorJSONBody
 
 // TransitionIssueStatusJSONRequestBody defines body for TransitionIssueStatus for application/json ContentType.
 type TransitionIssueStatusJSONRequestBody TransitionIssueStatusJSONBody
+
+// SteerIssueTurnJSONRequestBody defines body for SteerIssueTurn for application/json ContentType.
+type SteerIssueTurnJSONRequestBody SteerIssueTurnJSONBody
 
 // RaiseStopJSONRequestBody defines body for RaiseStop for application/json ContentType.
 type RaiseStopJSONRequestBody RaiseStopJSONBody
@@ -1711,6 +1719,11 @@ type ClientInterface interface {
 	TransitionIssueStatusWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	TransitionIssueStatus(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SteerIssueTurnWithBody request with any body
+	SteerIssueTurnWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SteerIssueTurn(ctx context.Context, threadId string, issueId string, body SteerIssueTurnJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RaiseStopWithBody request with any body
 	RaiseStopWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2271,6 +2284,30 @@ func (c *Client) TransitionIssueStatusWithBody(ctx context.Context, threadId str
 
 func (c *Client) TransitionIssueStatus(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewTransitionIssueStatusRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SteerIssueTurnWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSteerIssueTurnRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SteerIssueTurn(ctx context.Context, threadId string, issueId string, body SteerIssueTurnJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSteerIssueTurnRequest(c.Server, threadId, issueId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3696,6 +3733,60 @@ func NewTransitionIssueStatusRequestWithBody(server string, threadId string, iss
 	return req, nil
 }
 
+// NewSteerIssueTurnRequest calls the generic SteerIssueTurn builder with application/json body
+func NewSteerIssueTurnRequest(server string, threadId string, issueId string, body SteerIssueTurnJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSteerIssueTurnRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewSteerIssueTurnRequestWithBody generates requests for SteerIssueTurn with any type of body
+func NewSteerIssueTurnRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/steer", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewRaiseStopRequest calls the generic RaiseStop builder with application/json body
 func NewRaiseStopRequest(server string, threadId string, issueId string, body RaiseStopJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -4517,6 +4608,11 @@ type ClientWithResponsesInterface interface {
 	TransitionIssueStatusWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error)
 
 	TransitionIssueStatusWithResponse(ctx context.Context, threadId string, issueId string, body TransitionIssueStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error)
+
+	// SteerIssueTurnWithBodyWithResponse request with any body
+	SteerIssueTurnWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerIssueTurnResponse, error)
+
+	SteerIssueTurnWithResponse(ctx context.Context, threadId string, issueId string, body SteerIssueTurnJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerIssueTurnResponse, error)
 
 	// RaiseStopWithBodyWithResponse request with any body
 	RaiseStopWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error)
@@ -5604,6 +5700,39 @@ func (r TransitionIssueStatusResponse) ContentType() string {
 	return ""
 }
 
+type SteerIssueTurnResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		IssueId openapi_types.UUID `json:"issueId"`
+		Queued  bool               `json:"queued"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SteerIssueTurnResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SteerIssueTurnResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SteerIssueTurnResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type RaiseStopResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -6657,6 +6786,23 @@ func (c *ClientWithResponses) TransitionIssueStatusWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseTransitionIssueStatusResponse(rsp)
+}
+
+// SteerIssueTurnWithBodyWithResponse request with arbitrary body returning *SteerIssueTurnResponse
+func (c *ClientWithResponses) SteerIssueTurnWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerIssueTurnResponse, error) {
+	rsp, err := c.SteerIssueTurnWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSteerIssueTurnResponse(rsp)
+}
+
+func (c *ClientWithResponses) SteerIssueTurnWithResponse(ctx context.Context, threadId string, issueId string, body SteerIssueTurnJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerIssueTurnResponse, error) {
+	rsp, err := c.SteerIssueTurn(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSteerIssueTurnResponse(rsp)
 }
 
 // RaiseStopWithBodyWithResponse request with arbitrary body returning *RaiseStopResponse
@@ -7750,6 +7896,35 @@ func ParseTransitionIssueStatusResponse(rsp *http.Response) (*TransitionIssueSta
 		var dest struct {
 			IssueId openapi_types.UUID `json:"issueId"`
 			Status  IssueStatus        `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSteerIssueTurnResponse parses an HTTP response from a SteerIssueTurnWithResponse call
+func ParseSteerIssueTurnResponse(rsp *http.Response) (*SteerIssueTurnResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SteerIssueTurnResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			IssueId openapi_types.UUID `json:"issueId"`
+			Queued  bool               `json:"queued"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

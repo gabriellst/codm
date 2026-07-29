@@ -6,9 +6,11 @@
 import { forkIssueHandler } from "./forkIssue.ts";
 import { getIssueStatusHandler } from "./getIssueStatus.ts";
 import { getSessionIssuesHandler } from "./getSessionIssues.ts";
+import { steerIssueTurnHandler } from "./steerIssueTurn.ts";
 import { forkIssueMutationRequestSchema, forkIssueMutationResponseSchema } from "../../../zod/forkIssueSchema.ts";
 import { getIssueStatusQueryResponseSchema } from "../../../zod/getIssueStatusSchema.ts";
 import { getSessionIssuesQueryResponseSchema } from "../../../zod/getSessionIssuesSchema.ts";
+import { steerIssueTurnMutationRequestSchema, steerIssueTurnMutationResponseSchema } from "../../../zod/steerIssueTurnSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -34,6 +36,15 @@ server.registerTool("ForkIssue", {
   inputSchema: { threadId: z.string(), data: forkIssueMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return forkIssueHandler({ threadId, data })
+})
+          
+
+server.registerTool("SteerIssueTurn", {
+  description: "Redirect an issue that is already being worked, mid-flight",
+  outputSchema: { data: steerIssueTurnMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: steerIssueTurnMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return steerIssueTurnHandler({ threadId, issueId, data })
 })
           
 

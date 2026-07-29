@@ -13,3 +13,4 @@ export { AskOperatorController } from './AskOperator'
 // simulator: the barrel says the class exists, the composition root says when it serves.
 export { TestRunIssueTurnController } from './TestRunIssueTurn'
 export { ForkIssueController } from './ForkIssue'
+export { SteerIssueTurnController } from './SteerIssueTurn'

@@ -22,16 +22,6 @@ import { z } from "zod/v4";
  */
 export const listenEvents200Schema = z.union([z.object({
     "ownerId": z.string(),
-"name": z.enum(["integration.agent.reply_drafted"]),
-"payload": z.object({
-    "issueId": z.string(),
-"threadId": z.string(),
-"labelIssueKey": z.string(),
-"labelThreadId": z.string(),
-"text": z.string()
-    })
-    }), z.object({
-    "ownerId": z.string(),
 "name": z.enum(["integration.artifact.recorded"]),
 "payload": z.object({
     "artifactId": z.string(),
@@ -715,7 +705,8 @@ get "reason"(){
     "issueId": z.string(),
 "threadId": z.string(),
 "key": z.string(),
-"completedAt": z.iso.datetime()
+"completedAt": z.iso.datetime(),
+"summary": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),

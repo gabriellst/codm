@@ -40,6 +40,7 @@ import {
 	setActiveOwner,
 	setParticipantInvocation,
 	steerIssue,
+	steerIssueTurn,
 	steerThread,
 	streamTerminalSession,
 	transitionIssueStatus,
@@ -218,6 +219,10 @@ export class TypescriptClient {
 
 	steerIssue(...args: Parameters<typeof steerIssue>): ReturnType<typeof steerIssue> {
 		return (steerIssue as (...a: any[]) => ReturnType<typeof steerIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	steerIssueTurn(...args: Parameters<typeof steerIssueTurn>): ReturnType<typeof steerIssueTurn> {
+		return (steerIssueTurn as (...a: any[]) => ReturnType<typeof steerIssueTurn>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	steerThread(...args: Parameters<typeof steerThread>): ReturnType<typeof steerThread> {
