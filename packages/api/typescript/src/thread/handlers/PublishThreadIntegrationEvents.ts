@@ -3,12 +3,9 @@ import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
 import { MessageAuthor } from '@codedm/contracts-typescript/wire/enums'
 import {
 	ThreadAttachedEvent as ThreadAttachedIntegrationEvent,
-	MessageClassifiedEvent as MessageClassifiedIntegrationEvent,
 	ChannelDeliveryRequestedEvent,
 } from '@codedm/contracts-typescript/wire/events'
 import { ThreadAttachedEvent } from '../events/ThreadAttachedEvent'
-import { MessageClassifiedEvent } from '../events/MessageClassifiedEvent'
-import { ClarificationRequestedEvent } from '../events/ClarificationRequestedEvent'
 import { DirectMessageSentEvent } from '../events/DirectMessageSentEvent'
 
 /**
@@ -20,10 +17,8 @@ import { DirectMessageSentEvent } from '../events/DirectMessageSentEvent'
  *   thread.direct_message_sent → integration.channel.delivery_requested (OPERATOR — deliver as self)
  */
 @injectable()
-export class PublishThreadIntegrationEvents extends EventHandler<
-	readonly [typeof ThreadAttachedEvent, typeof MessageClassifiedEvent, typeof ClarificationRequestedEvent, typeof DirectMessageSentEvent]
-> {
-	readonly event = [ThreadAttachedEvent, MessageClassifiedEvent, ClarificationRequestedEvent, DirectMessageSentEvent] as const
+export class PublishThreadIntegrationEvents extends EventHandler<readonly [typeof ThreadAttachedEvent, typeof DirectMessageSentEvent]> {
+	readonly event = [ThreadAttachedEvent, DirectMessageSentEvent] as const
 
 	constructor(private readonly mediator: ExternalMediator) {
 		super()
@@ -34,39 +29,6 @@ export class PublishThreadIntegrationEvents extends EventHandler<
 
 		if (event instanceof ThreadAttachedEvent) {
 			await this.mediator.publish(new ThreadAttachedIntegrationEvent({ ownerId, payload: { ...event.payload } }))
-			return
-		}
-
-		if (event instanceof MessageClassifiedEvent) {
-			await this.mediator.publish(
-				new MessageClassifiedIntegrationEvent({
-					ownerId,
-					payload: {
-						threadId: event.payload.threadId,
-						entryId: event.payload.entryId,
-						method: event.payload.method,
-						issueId: event.payload.issueId,
-					},
-				}),
-			)
-			return
-		}
-
-		if (event instanceof ClarificationRequestedEvent) {
-			await this.mediator.publish(
-				new ChannelDeliveryRequestedEvent({
-					ownerId,
-					payload: {
-						channelId: event.payload.channelId,
-						contactExternalId: event.payload.contactExternalId,
-						contactDisplayName: event.payload.contactDisplayName,
-						contactKind: event.payload.contactKind,
-						text: event.payload.question,
-						// The product composed this — a clarification question is our words, not anyone's.
-						author: MessageAuthor.SYSTEM,
-					},
-				}),
-			)
 			return
 		}
 

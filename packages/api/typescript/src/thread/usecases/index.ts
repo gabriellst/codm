@@ -15,6 +15,5 @@ export {
 export { SteerThread, SteerThreadInputSchema, SteerThreadOutputSchema } from './SteerThread'
 export { SendDirectMessage, SendDirectMessageInputSchema, SendDirectMessageOutputSchema } from './SendDirectMessage'
 export { IngestChannelMessage, IngestChannelMessageInputSchema, IngestChannelMessageOutputSchema } from './IngestChannelMessage'
-export { ClassifyMessage, ClassifyMessageInputSchema, ClassifyMessageOutputSchema } from './ClassifyMessage'
 export { GetSessionChat, GetSessionChatInputSchema, GetSessionChatOutputSchema } from './GetSessionChat'
 export { GetThreadSettings, GetThreadSettingsInputSchema, GetThreadSettingsOutputSchema } from './GetThreadSettings'

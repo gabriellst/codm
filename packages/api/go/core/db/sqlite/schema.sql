@@ -282,17 +282,6 @@ CREATE TABLE "thread_consumed_messages" (
 	"entry_id" text,
 	"consumed_at" integer NOT NULL
 );
-CREATE TABLE "thread_thread_clarifications" (
-	"id" text PRIMARY KEY NOT NULL,
-	"owner_id" text NOT NULL,
-	"thread_id" text NOT NULL,
-	"entry_id" text NOT NULL,
-	"sender_external_id" text NOT NULL,
-	"question" text NOT NULL,
-	"candidate_issue_ids" text NOT NULL,
-	"asked_at" integer NOT NULL,
-	"resolved_at" integer
-);
 CREATE TABLE "thread_threads" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_id" text NOT NULL,
@@ -379,7 +368,6 @@ CREATE INDEX "scheduled_commands_due_idx" ON "shared_scheduled_commands" ("run_a
 CREATE INDEX "stops_issue_id_idx" ON "issue_stops" ("issue_id");
 CREATE INDEX "stops_thread_id_idx" ON "issue_stops" ("thread_id");
 CREATE UNIQUE INDEX "terminal_lines_issue_seq_unq" ON "issue_terminal_lines" ("issue_id","seq");
-CREATE INDEX "thread_clarifications_thread_sender_idx" ON "thread_thread_clarifications" ("thread_id","sender_external_id");
 CREATE UNIQUE INDEX "threads_owner_channel_contact_unq" ON "thread_threads" ("owner_id","channel_id","contact_external_id");
 CREATE INDEX "threads_owner_id_idx" ON "thread_threads" ("owner_id");
 CREATE INDEX "threads_workspace_id_idx" ON "thread_threads" ("workspace_id");

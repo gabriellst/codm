@@ -5,8 +5,8 @@ import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { ALL_REGISTRIES } from '@shared/registry'
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { ClaudeAgentRunner, E2eStubAgentRunner } from '@agent/services/AgentRunner'
-import { ClassifyIssueAgent, IssueWorkAgent } from '@agent/agents'
-import { IssueRouter } from '@agent/services/IssueRouter'
+import { IssueWorkAgent, OrchestratorAgent } from '@agent/agents'
+import { MailboxDispatcher } from '@agent/services'
 
 /**
  * THE RAIL THAT WAS MISSING ON 28-JUL-2026, written the day the bug it would have caught was found.
@@ -46,12 +46,18 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 	// a flag is a rail that proves nothing in exactly the configuration CI runs Playwright in.
 	const hermetic = process.env.CODEDM_E2E === 'true'
 
-	it('resolves the whole agent graph — factory, both agents and the router', () => {
+	/**
+	 * The graph the pivot left behind: the classifier and the router are gone, and the ORCHESTRATOR and
+	 * the dispatcher took their place. Resolving the dispatcher is the load-bearing one — it is the only
+	 * consumer of the mailbox, so a DI break there means messages queue and nothing ever runs them,
+	 * which looks exactly like a quiet conversation rather than a broken boot.
+	 */
+	it('resolves the whole agent graph — factory, both agents and the dispatcher', () => {
 		const child = realContainer()
 		expect(() => child.resolve(AgentRunnerFactory as never)).not.toThrow()
-		expect(() => child.resolve(ClassifyIssueAgent)).not.toThrow()
 		expect(() => child.resolve(IssueWorkAgent)).not.toThrow()
-		expect(() => child.resolve(IssueRouter as never)).not.toThrow()
+		expect(() => child.resolve(OrchestratorAgent)).not.toThrow()
+		expect(() => child.resolve(MailboxDispatcher as never)).not.toThrow()
 	})
 
 	it('the resolved factory yields the runner its env promises, and refuses a CLI with no runner class', () => {

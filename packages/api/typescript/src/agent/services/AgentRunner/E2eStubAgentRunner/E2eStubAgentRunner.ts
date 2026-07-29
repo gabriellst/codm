@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import { ClassificationVerdict, AgentRunOutcome } from '../../../enums'
+import { AgentName, AgentRunOutcome } from '../../../enums'
 import { E2eMcpDriver } from '../../../mcp/E2eMcpDriver'
 import { wireToolName } from '../../../mcp/wire'
 import type { AgentFrame, AgentRunRequest, AgentRuntimeEvent } from '../../../types'
@@ -44,14 +44,11 @@ export class E2eStubAgentRunner extends AgentRunner {
 	async *run<OutputSchema extends ZodType | undefined = undefined>(
 		request: AgentRunRequest<OutputSchema>,
 	): AsyncIterable<AgentRuntimeEvent> {
-		if (request.outputSchema) {
-			const output = { decision: ClassificationVerdict.NEW_ISSUE, title: E2eStubAgentRunner.ISSUE_TITLE }
-			yield {
-				type: 'finished',
-				result: { outcome: AgentRunOutcome.COMPLETED, replyText: JSON.stringify(output), sessionId: null, output, failed: false },
-			}
-			return
-		}
+		// WHICH agent this is, not whether it wants structured output. The stub used to branch on
+		// `request.outputSchema`, which existed only because the classifier declared one — and the
+		// classifier is gone (§5). Branching on identity is also what lets the orchestrator's turn drive
+		// the REAL `issue/create` tool instead of returning a fabricated verdict.
+		const isOrchestrator = request.agentName === AgentName.ORCHESTRATOR
 
 		// `agentName`, not a provider: since Fase 4.5 the request carries no provider identity — WHICH
 		// CLI a run belongs to is settled by the DI binding that produced this very object.
@@ -64,7 +61,9 @@ export class E2eStubAgentRunner extends AgentRunner {
 		// THE DECLARATION. `request.mcp` present ⟺ the agent declared a non-empty tool scope (§4.3 rule
 		// 7) — the same equivalence `RunIssueTurn` reads from the other side as `agent.tools.length`.
 		if (request.mcp) {
-			const calls = await this.declarations.declareIssueWorkComplete(request.mcp)
+			const calls = isOrchestrator
+				? await this.declarations.forkIssue(request.mcp)
+				: await this.declarations.declareIssueWorkComplete(request.mcp)
 			// The frames are emitted with the WIRE spelling a CLI would report, so the accumulator's
 			// anti-double-publish guard is exercised on the real shape rather than on a name only this
 			// file ever produces.

@@ -42,7 +42,6 @@ import {
 	IssueOpenedEventSchema,
 	IssueStopRaisedEventSchema,
 	IssueStopResolvedEventSchema,
-	MessageClassifiedEventSchema,
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
@@ -83,7 +82,6 @@ export const IssueCreatedEventMaterializedSchema = IssueCreatedEventSchema
 export const IssueOpenedEventMaterializedSchema = IssueOpenedEventSchema
 export const IssueStopRaisedEventMaterializedSchema = IssueStopRaisedEventSchema
 export const IssueStopResolvedEventMaterializedSchema = IssueStopResolvedEventSchema
-export const MessageClassifiedEventMaterializedSchema = MessageClassifiedEventSchema
 export const OrchestratorRepliedEventMaterializedSchema = OrchestratorRepliedEventSchema
 export const SubscriptionChangedEventMaterializedSchema = SubscriptionChangedEventSchema
 export const ThreadAttachedEventMaterializedSchema = ThreadAttachedEventSchema
@@ -125,7 +123,6 @@ export const materializedIntegrationEventSchemas = [
 	IssueOpenedEventMaterializedSchema,
 	IssueStopRaisedEventMaterializedSchema,
 	IssueStopResolvedEventMaterializedSchema,
-	MessageClassifiedEventMaterializedSchema,
 	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
 	WorkspaceRemovedEventMaterializedSchema,
@@ -166,7 +163,6 @@ export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [
 	IssueOpenedEventMaterializedSchema,
 	IssueStopRaisedEventMaterializedSchema,
 	IssueStopResolvedEventMaterializedSchema,
-	MessageClassifiedEventMaterializedSchema,
 	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
 	WorkspaceRemovedEventMaterializedSchema,

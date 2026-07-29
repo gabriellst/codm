@@ -6,7 +6,6 @@
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ChannelKind } from "./ChannelKind.ts";
 import type { ChatPresenceType } from "./ChatPresenceType.ts";
-import type { ClassificationMethod } from "./ClassificationMethod.ts";
 import type { ContactKind } from "./ContactKind.ts";
 import type { HistorySyncType } from "./HistorySyncType.ts";
 import type { IssueArchiveReason } from "./IssueArchiveReason.ts";
@@ -300,40 +299,34 @@ export const ListenEvents200NameEnum34 = {
 export type ListenEvents200NameEnum34Key = (typeof ListenEvents200NameEnum34)[keyof typeof ListenEvents200NameEnum34];
 
 export const ListenEvents200NameEnum35 = {
-    "integration.message.classified": "integration.message.classified"
+    "integration.orchestrator.replied": "integration.orchestrator.replied"
 } as const;
 
 export type ListenEvents200NameEnum35Key = (typeof ListenEvents200NameEnum35)[keyof typeof ListenEvents200NameEnum35];
 
 export const ListenEvents200NameEnum36 = {
-    "integration.orchestrator.replied": "integration.orchestrator.replied"
+    "integration.thread.attached": "integration.thread.attached"
 } as const;
 
 export type ListenEvents200NameEnum36Key = (typeof ListenEvents200NameEnum36)[keyof typeof ListenEvents200NameEnum36];
 
 export const ListenEvents200NameEnum37 = {
-    "integration.thread.attached": "integration.thread.attached"
+    "integration.workspace.removed": "integration.workspace.removed"
 } as const;
 
 export type ListenEvents200NameEnum37Key = (typeof ListenEvents200NameEnum37)[keyof typeof ListenEvents200NameEnum37];
 
 export const ListenEvents200NameEnum38 = {
-    "integration.workspace.removed": "integration.workspace.removed"
+    "browser.thread_status_changed": "browser.thread_status_changed"
 } as const;
 
 export type ListenEvents200NameEnum38Key = (typeof ListenEvents200NameEnum38)[keyof typeof ListenEvents200NameEnum38];
 
 export const ListenEvents200NameEnum39 = {
-    "browser.thread_status_changed": "browser.thread_status_changed"
-} as const;
-
-export type ListenEvents200NameEnum39Key = (typeof ListenEvents200NameEnum39)[keyof typeof ListenEvents200NameEnum39];
-
-export const ListenEvents200NameEnum40 = {
     "browser.stop_raised": "browser.stop_raised"
 } as const;
 
-export type ListenEvents200NameEnum40Key = (typeof ListenEvents200NameEnum40)[keyof typeof ListenEvents200NameEnum40];
+export type ListenEvents200NameEnum39Key = (typeof ListenEvents200NameEnum39)[keyof typeof ListenEvents200NameEnum39];
 
 /**
  * @description Owner-scoped real-time integration events via SSE
@@ -2774,36 +2767,6 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
-        entryId: string;
-        /**
-         * @type string
-        */
-        method: ClassificationMethod;
-        /**
-         * @type string | undefined
-        */
-        issueId?: string;
-    };
-} | {
-    /**
-     * @type string
-    */
-    ownerId: string;
-    /**
-     * @type string
-    */
-    name: ListenEvents200NameEnum36Key;
-    /**
-     * @type object
-    */
-    payload: {
-        /**
-         * @type string
-        */
-        threadId: string;
-        /**
-         * @type string
-        */
         text: string;
         /**
          * @type string | undefined
@@ -2822,7 +2785,7 @@ export type ListenEvents200 = ({
     /**
      * @type string
     */
-    name: ListenEvents200NameEnum37Key;
+    name: ListenEvents200NameEnum36Key;
     /**
      * @type object
     */
@@ -2864,7 +2827,7 @@ export type ListenEvents200 = ({
     /**
      * @type string
     */
-    name: ListenEvents200NameEnum38Key;
+    name: ListenEvents200NameEnum37Key;
     /**
      * @type object
     */
@@ -2882,7 +2845,7 @@ export type ListenEvents200 = ({
     /**
      * @type string
     */
-    name: ListenEvents200NameEnum39Key;
+    name: ListenEvents200NameEnum38Key;
     /**
      * @type string
     */
@@ -2901,7 +2864,7 @@ export type ListenEvents200 = ({
     /**
      * @type string
     */
-    name: ListenEvents200NameEnum40Key;
+    name: ListenEvents200NameEnum39Key;
     /**
      * @type string
     */

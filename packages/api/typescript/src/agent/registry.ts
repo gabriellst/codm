@@ -6,6 +6,7 @@ import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, 
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { MailboxDispatcher, DrizzleMailboxDispatcher } from './services/MailboxDispatcher'
+import { IssueWorkAgent, IssueWorkPromptBuilder, OrchestratorAgent, OrchestratorPromptBuilder } from './agents'
 import {
 	AgentSessionRepository,
 	DrizzleAgentSessionRepository,
@@ -14,8 +15,6 @@ import {
 	MockAgentSessionRepository,
 	MockMailboxRepository,
 } from './repositories'
-import { IssueRouter, DefaultIssueRouter } from './services/IssueRouter'
-import { ClassifyIssueAgent, ClassifyIssuePromptBuilder, IssueWorkAgent, IssueWorkPromptBuilder } from './agents'
 import { RunTokenService } from './services/RunTokenService'
 import { InMemoryRunTokenService } from './mcp/RunTokenService'
 // Side-effect: publishes the MCP manifest to the core registry the OpenAPI emitter reads. It has to
@@ -88,24 +87,11 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// an agent holds nothing but its prompt builder, so a singleton buys no shared state, while it WOULD
 	// capture whichever `RunTokenService` and builder were bound at first construction — and
 	// `TestBed.override` swaps bindings per suite. One allocation per resolve, and the graph stays honest.
-	{ token: ClassifyIssuePromptBuilder, mock: { useClass: ClassifyIssuePromptBuilder }, real: { useClass: ClassifyIssuePromptBuilder } },
 	{ token: IssueWorkPromptBuilder, mock: { useClass: IssueWorkPromptBuilder }, real: { useClass: IssueWorkPromptBuilder } },
-	{ token: ClassifyIssueAgent, mock: { useClass: ClassifyIssueAgent }, real: { useClass: ClassifyIssueAgent } },
 	{ token: IssueWorkAgent, mock: { useClass: IssueWorkAgent }, real: { useClass: IssueWorkAgent } },
-	// The routing POLICY over the classification agent — what `thread/usecases/ClassifyMessage` injects.
+	{ token: OrchestratorPromptBuilder, mock: { useClass: OrchestratorPromptBuilder }, real: { useClass: OrchestratorPromptBuilder } },
+	{ token: OrchestratorAgent, mock: { useClass: OrchestratorAgent }, real: { useClass: OrchestratorAgent } },
 	//
-	// `DefaultIssueRouter` in ALL THREE envs, and the `mock` column is the interesting one. The usual
-	// service shape binds the Mock there, but this service's only I/O is the `ClassifyIssueAgent` it
-	// drives, over whatever runner the factory above yields — already a stub outside `real`. Binding
-	// the canned router by default would therefore replace REAL policy (reply-quote shortcut,
-	// confidence floor, slug minting) with a fixed answer in exactly the suites that exist to exercise
-	// the inbound→classify→run choreography end to end. Measured, not assumed: doing so turned two flow
-	// tests red, because a runner staged to answer NEW_ISSUE no longer reached any policy.
-	//
-	// `MockIssueRouter` is exported and is the right double for a consumer test that wants to FIX the
-	// decision and assert what `ClassifyMessage` persists around it — reached via
-	// `testBed.override(IssueRouter, new MockIssueRouter())`, per-suite, rather than as the env default.
-	{ token: IssueRouter, mock: { useClass: DefaultIssueRouter }, real: { useClass: DefaultIssueRouter } },
 	// The run token — the SINGLE source of identity for every MCP tool call (§4.4). One in-memory
 	// instance per process in every env: a token's lifetime is one run inside one daemon, and a
 	// persisted one would outlive the process it authorizes. Bound in all three envs because the

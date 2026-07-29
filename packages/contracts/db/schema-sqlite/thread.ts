@@ -133,25 +133,3 @@ export const consumedMessages = sqliteTable(
 		index('consumed_messages_entry_idx').on(t.entryId),
 	],
 )
-
-export const threadClarifications = sqliteTable(
-	'thread_thread_clarifications',
-	{
-		id: text('id').primaryKey(),
-
-		ownerId: text('owner_id').notNull(),
-		threadId: text('thread_id').notNull(),
-
-		entryId: text('entry_id').notNull(),
-		senderExternalId: text('sender_external_id').notNull(),
-		question: text('question').notNull(),
-		// pg jsonb (string[]) → sqlite json.
-		candidateIssueIds: text('candidate_issue_ids', { mode: 'json' }).$type<string[]>().notNull(),
-
-		askedAt: integer('asked_at', { mode: 'timestamp_ms' })
-			.notNull()
-			.$defaultFn(() => new Date()),
-		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
-	},
-	t => [index('thread_clarifications_thread_sender_idx').on(t.threadId, t.senderExternalId)],
-)

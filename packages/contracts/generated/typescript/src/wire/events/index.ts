@@ -35,7 +35,6 @@ import {
 	IssueOpenedEventSchema,
 	IssueStopRaisedEventSchema,
 	IssueStopResolvedEventSchema,
-	MessageClassifiedEventSchema,
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
@@ -77,7 +76,6 @@ export * from './issue-opened'
 export * from './issue-stop-raised'
 export * from './issue-stop-resolved'
 export * from './materialized'
-export * from './message-classified'
 export * from './orchestrator-replied'
 export * from './subscription-changed'
 export * from './thread-attached'
@@ -117,7 +115,6 @@ export const IntegrationEventSchema = z.discriminatedUnion('name', [
 	IssueOpenedEventSchema,
 	IssueStopRaisedEventSchema,
 	IssueStopResolvedEventSchema,
-	MessageClassifiedEventSchema,
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,

@@ -10,7 +10,6 @@ import { ConsumedMessageRepository } from '../repositories/ConsumedMessageReposi
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { IngestChannelMessage } from '../usecases/IngestChannelMessage'
-import { ClassifyMessage } from '../usecases/ClassifyMessage'
 
 /**
  * The BC4 inbound ingestion consumer (phase-6 HARD GATE). Subscribes to the gateway's
@@ -40,7 +39,6 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		private readonly consumed: ConsumedMessageRepository,
 		private readonly threads: ThreadRepository,
 		private readonly ingest: IngestChannelMessage,
-		private readonly classify: ClassifyMessage,
 	) {
 		super()
 	}
@@ -94,7 +92,7 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		const stanzaId = payload.platform === 'WHATSAPP' ? payload.content?.contextInfo?.stanzaId : undefined
 		const quoted = stanzaId ? await this.consumed.findEntry(channelId, stanzaId) : undefined
 
-		// 5. Ingest (always buffers + transcribes) then classify if the gates let it through.
+		// 5. Ingest — buffers, transcribes, and (when invocable) queues the orchestrator turn atomically.
 		//
 		// A message the owner typed is attributed to the OPERATOR roster id, not to their phone-number
 		// JID. The gateway's group snapshot enumerates every participant with no self filter, so the
@@ -114,8 +112,9 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		// turn, both by a human replying to it and by the agent citing it on the way out.
 		await this.consumed.linkEntry({ channelId, platformMessageId: messageId, threadId: thread.id.value, entryId: ingested.entryId })
 
-		if (ingested.invocable) {
-			await this.classify.execute({ threadId: thread.id.value, entryId: ingested.entryId })
-		}
+		// The turn is scheduled INSIDE `IngestChannelMessage`, in the same transaction as the entry
+		// (§7.4). Nothing happens here any more, and that is the point: an enqueue at this level would
+		// sit outside the ingest's transaction and re-open the window where a crash loses the message
+		// after it is already visible in the operator's own chat history.
 	}
 }

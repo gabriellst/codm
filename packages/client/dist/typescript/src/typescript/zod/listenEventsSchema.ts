@@ -6,7 +6,6 @@
 import { artifactKindSchema } from "./artifactKindSchema.ts";
 import { channelKindSchema } from "./channelKindSchema.ts";
 import { chatPresenceTypeSchema } from "./chatPresenceTypeSchema.ts";
-import { classificationMethodSchema } from "./classificationMethodSchema.ts";
 import { contactKindSchema } from "./contactKindSchema.ts";
 import { historySyncTypeSchema } from "./historySyncTypeSchema.ts";
 import { issueArchiveReasonSchema } from "./issueArchiveReasonSchema.ts";
@@ -765,17 +764,6 @@ get "kind"(){
 get "resolution"(){
                 return stopResolutionSchema
               }
-    })
-    }), z.object({
-    "ownerId": z.string(),
-"name": z.enum(["integration.message.classified"]),
-"payload": z.object({
-    "threadId": z.string(),
-"entryId": z.string(),
-get "method"(){
-                return classificationMethodSchema
-              },
-"issueId": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),

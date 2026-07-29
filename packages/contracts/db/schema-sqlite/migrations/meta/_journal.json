@@ -43,6 +43,13 @@
       "when": 1785285141397,
       "tag": "0005_tan_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785297999923,
+      "tag": "0006_faulty_chronomancer",
+      "breakpoints": true
     }
   ]
 }

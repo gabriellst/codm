@@ -3,11 +3,10 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService, MockLoggingService } from '@codedm/core-typescript'
-import { AgentModelId, ClassificationMethod, ProviderKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, ProviderKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
-import { MessageClassifiedEvent } from '@thread/events/MessageClassifiedEvent'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { RunIssueTurnOnClassification } from '@agent/handlers/RunIssueTurnOnClassification'
+import { RunIssueTurn } from '@agent/usecases'
 import { AgentSessionRepository } from '@agent/repositories'
 import { AgentRunner } from '@agent/services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
@@ -107,24 +106,52 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 		return entry.entryId
 	}
 
-	function classified(threadId: string, entryId: string, issueId: string): MessageClassifiedEvent {
-		return new MessageClassifiedEvent({
-			entityId: threadId,
+	/**
+	 * Drives a turn the way the MAILBOX DISPATCHER now does — directly, with the run context resolved
+	 * from the thread. It used to go through `RunIssueTurnOnClassification`, which was the sole runtime
+	 * caller of `RunIssueTurn` and died with the classifier it listened to (§5). The PROPERTY under
+	 * test is unchanged and is the reason this file survived the deletion rather than going with it:
+	 * turn 1 mints a session, turn 2 resumes it, and the durable row follows.
+	 */
+	const runTurnFor = (
+		runTurn: RunIssueTurn,
+		ctx: { threadId: string; issueId: string; key: string; title: string; workspacePath: string },
+		entryId: string,
+		prompt: string,
+		priorMessageId?: string,
+	) =>
+		runTurn.execute({
 			ownerId: OPERATOR_ID,
-			payload: { threadId, entryId, issueId, method: ClassificationMethod.CONTEXT_MATCH },
+			issueId: ctx.issueId,
+			threadId: ctx.threadId,
+			key: ctx.key,
+			title: ctx.title,
+			provider: ProviderKind.CLAUDE_CODE,
+			workspacePath: ctx.workspacePath,
+			prompt,
+			messageId: entryId,
+			// The conversation position this turn CONTINUES FROM. `resumeDecision` compares it against the
+			// persisted cursor, so omitting it makes every turn look like it skipped ahead and invalidates
+			// the resume — which is what happened when this driver was first rewired, and is exactly the
+			// guard doing its job.
+			priorMessageId,
 		})
-	}
 
 	it('turn 1 opens with --session-id, turn 2 resumes it with --resume, and the row follows', async () => {
 		const runner = new CapturingRunner()
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
-		const handler = testBed.resolve(RunIssueTurnOnClassification)
+		const runTurn = testBed.resolve(RunIssueTurn)
 		const sessions = testBed.resolve(AgentSessionRepository)
 		const { thread, issue, workspace } = await givenIssueOnThread()
 
 		// ── TURN 1 ─────────────────────────────────────────────────────────────────────────────────
 		const entry1 = await givenInboundOnIssue(thread.id.value, issue.id.value, 'fix the coupon focus bug')
-		await handler.handle(classified(thread.id.value, entry1, issue.id.value))
+		await runTurnFor(
+			runTurn,
+			{ threadId: thread.id.value, issueId: issue.id.value, key: issue.key, title: issue.title, workspacePath: workspace.path },
+			entry1,
+			'fix the coupon focus bug',
+		)
 
 		const argv1 = argvFor(runner.requests[0])
 		// A brand-new session: the id is MINTED by us and pinned with --session-id. No --resume.
@@ -142,7 +169,13 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 
 		// ── TURN 2 ─────────────────────────────────────────────────────────────────────────────────
 		const entry2 = await givenInboundOnIssue(thread.id.value, issue.id.value, 'also fix the coupon label')
-		await handler.handle(classified(thread.id.value, entry2, issue.id.value))
+		await runTurnFor(
+			runTurn,
+			{ threadId: thread.id.value, issueId: issue.id.value, key: issue.key, title: issue.title, workspacePath: workspace.path },
+			entry2,
+			'also fix the coupon label',
+			entry1,
+		)
 
 		expect(runner.requests).toHaveLength(2)
 		const argv2 = argvFor(runner.requests[1])
@@ -170,19 +203,30 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 		const runner = new CapturingRunner()
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 		const logging = testBed.resolve(LoggingService) as MockLoggingService
-		const handler = testBed.resolve(RunIssueTurnOnClassification)
-		const { thread, issue } = await givenIssueOnThread()
+		const runTurn = testBed.resolve(RunIssueTurn)
+		const { thread, issue, workspace } = await givenIssueOnThread()
 
 		const entry1 = await givenInboundOnIssue(thread.id.value, issue.id.value, 'first message')
-		await handler.handle(classified(thread.id.value, entry1, issue.id.value))
+		await runTurnFor(
+			runTurn,
+			{ threadId: thread.id.value, issueId: issue.id.value, key: issue.key, title: issue.title, workspacePath: workspace.path },
+			entry1,
+			'fix the coupon focus bug',
+		)
 
 		// A message lands on the issue WITHOUT a turn consuming it — the handler's defensive drops, or
 		// a turn that died before committing. The session's cursor is now stale by one.
-		await givenInboundOnIssue(thread.id.value, issue.id.value, 'a message no turn ever consumed')
+		const skipped = await givenInboundOnIssue(thread.id.value, issue.id.value, 'a message no turn ever consumed')
 
 		logging.clearLogs()
 		const entry3 = await givenInboundOnIssue(thread.id.value, issue.id.value, 'third message')
-		await handler.handle(classified(thread.id.value, entry3, issue.id.value))
+		await runTurnFor(
+			runTurn,
+			{ threadId: thread.id.value, issueId: issue.id.value, key: issue.key, title: issue.title, workspacePath: workspace.path },
+			entry3,
+			'third message',
+			skipped,
+		)
 
 		// FRESH, not resumed: the skipped message would otherwise be silently missing from the context.
 		const argv = argvFor(runner.requests[1])

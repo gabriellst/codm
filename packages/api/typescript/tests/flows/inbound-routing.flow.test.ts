@@ -1,23 +1,17 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import { TestBed, givenThread, givenWorkspace, GIVEN_MENTION_TAG } from '@test/support'
-import { MockOutboxDispatcher } from '@codedm/core-typescript'
+import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { ChannelKind, MessageType, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
-import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIntegrationEvents'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
-import { PublishAgentIntegrationEvents } from '@agent/handlers/PublishAgentIntegrationEvents'
-import { RunIssueTurnOnClassification } from '@agent/handlers/RunIssueTurnOnClassification'
 import { AgentRunner } from '@agent/services/AgentRunner'
-import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { AgentRunOutcome } from '@agent/enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
-import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
-import { IssueRepository } from '@issue/repositories/IssueRepository'
-import { BrowserFrameEnricher } from '@ui/services/BrowserFrameEnricher'
+import { MailboxRepository } from '@agent/repositories'
+import { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
 
 /**
  * FLOW (mock DI) — inbound → route → classify → SPAWN → issue OPENED → SSE, the now-CLOSED Core saga.
@@ -123,61 +117,74 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		expect(entries.filter(e => e.kind === TranscriptKind.CONTACT)).toHaveLength(1)
 	})
 
-	it('an invocable inbound is classified → integration.message.classified is published (captured)', async () => {
-		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new NewIssueStubRunner()))
-		const outbox = await wireBridges()
+	/**
+	 * THE REPOINT (§7.4), and the property that makes it worth a flow test rather than a unit one: the
+	 * item is written in the SAME transaction as the transcript entry it refers to.
+	 *
+	 * Before the pivot this branch called `ClassifyMessage`. The classifier is gone, and what an
+	 * invocable message now produces is a queued turn of the thread's orchestrator — nothing else, and
+	 * nothing synchronous. No LLM runs on the ingest path any more.
+	 */
+	it('an invocable inbound QUEUES an orchestrator turn — same transaction as the entry', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
-		// Sender is not the read-only seeded contact → invocable.
 		await testBed
 			.resolve(ConsumeInboundMessage)
 			.handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-1', { senderExternalId: 'stranger-42' }) as never)
-		await outbox.flush()
 
-		const classified = testBed.externalSpy.getPublishedOfType('integration.message.classified')
-		expect(classified).toHaveLength(1)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const claimed = await mailbox.claimNext('flow-test', 60_000)
+
+		expect(claimed?.targetKind).toBe(MailboxTargetKind.THREAD)
+		expect(claimed?.targetId).toBe(thread.id.value)
+		expect(claimed?.kind).toBe(MailboxItemKind.OPERATOR_MESSAGE)
+
+		// The payload carries the entry the turn answers — the id the orchestrator may cite (D6) and the
+		// one the run token claim is minted from.
+		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
+		const contact = entries.find(e => e.kind === TranscriptKind.CONTACT)
+		expect(claimed).toBeDefined()
+		const payload = claimed?.payload as { entryId: string } | undefined
+		expect(payload?.entryId).toBe(contact?.entryId)
 	})
 
-	it('classified → RunIssueTurn → issue OPENED fires live, materializes the Issue + an SSE frame', async () => {
-		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new NewIssueStubRunner()))
-		const outbox = await wireBridges()
+	/**
+	 * D3 as a pipeline property: a message nobody addressed is TRANSCRIBED and schedules NOTHING. It is
+	 * context for the next turn's window, never a turn of its own — and the gate is what stops the
+	 * orchestrator answering a group's small talk.
+	 */
+	it('a NON-invocable inbound is transcribed but queues nothing (D3)', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
-		// A workspace bound to the thread so the closer can resolve the run cwd.
-		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
-		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
+		// No mention tag → the gate refuses to invoke.
+		await testBed.resolve(ConsumeInboundMessage).handle(
+			inbound(thread.channelId, thread.contactRef.externalId, 'wamid-quiet', {
+				senderExternalId: 'stranger-42',
+				text: 'só conversando',
+			}) as never,
+		)
 
-		// 1. Inbound → classify → integration.message.classified.
-		await testBed
-			.resolve(ConsumeInboundMessage)
-			.handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-open', { senderExternalId: 'stranger-42' }) as never)
-		await outbox.flush()
-		const classified = testBed.externalSpy.getPublishedOfType('integration.message.classified')[0]
-		expect(classified).toBeDefined()
+		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
+		expect(entries.filter(e => e.kind === TranscriptKind.CONTACT)).toHaveLength(1)
+		expect(await testBed.resolve(MailboxRepository).claimNext('flow-test', 60_000)).toBeUndefined()
+	})
 
-		// 2. The phase-6b closer consumes it and runs the (stub) terminal session in-process.
-		await testBed.resolve(RunIssueTurnOnClassification).handle(classified as never)
-		await outbox.flush()
+	/**
+	 * The redelivery story end to end: the gateway's at-least-once becomes exactly-once TURNS, because
+	 * the mailbox `dedupKey` is the entry id. Without it a redelivered message answers twice in a real
+	 * group.
+	 */
+	it('a redelivered inbound queues exactly ONE turn', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const event = inbound(thread.channelId, thread.contactRef.externalId, 'wamid-twice', { senderExternalId: 'stranger-42' })
 
-		// 3. integration.issue.opened + issue.completed FIRE live off the terminal facts.
-		const opened = testBed.externalSpy.getPublishedOfType('integration.issue.opened')
-		expect(opened).toHaveLength(1)
-		// NOT completed — and that is the inversion working. `IssueWorkAgent` declares a tool scope, so
-		// `RunIssueTurn` no longer mints the conclusion from the terminal outcome (§4.3 rule 7): the ONLY
-		// producer is the declaration use case behind the `TransitionIssueStatus` tool. Publishing here as
-		// well would put `integration.issue.completed` in the outbox twice for one finished run.
-		expect(testBed.externalSpy.getPublishedOfType('integration.issue.completed')).toHaveLength(0)
+		await testBed.resolve(ConsumeInboundMessage).handle(event as never)
+		await testBed.resolve(ConsumeInboundMessage).handle(event as never)
 
-		const openedEvent = opened[0] as { payload: { issueId: string; threadId: string } }
-		expect(openedEvent.payload.threadId).toBe(thread.id.value)
-
-		// 4. MaterializeIssueFromExecution materializes the Issue row from the opened fact.
-		await testBed.resolve(MaterializeIssueFromExecution).handle(opened[0] as never)
-		const issue = await testBed.resolve(IssueRepository).findById(openedEvent.payload.issueId)
-		expect(issue).toBeDefined()
-		expect(issue?.threadId).toBe(thread.id.value)
-
-		// 5. The SSE enricher synthesizes a browser.thread_status_changed frame from the opened fact.
-		const frames = await testBed.resolve(BrowserFrameEnricher).enrich(opened[0] as never)
-		expect(frames.some(f => f.name === 'browser.thread_status_changed')).toBe(true)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const first = await mailbox.claimNext('flow-test', 60_000)
+		expect(first).toBeDefined()
+		await mailbox.complete(first?.id ?? '')
+		expect(await mailbox.claimNext('flow-test', 60_000)).toBeUndefined()
 	})
 })

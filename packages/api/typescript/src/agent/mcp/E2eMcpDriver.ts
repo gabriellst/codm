@@ -3,11 +3,12 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { ArtifactKind, IssueStatus } from '@codedm/contracts-typescript/wire/enums'
 import { BaseError } from '@codedm/core-typescript'
-import { RunTokenService } from '../services/RunTokenService'
+import { RunTokenService, type RunTokenClaims } from '../services/RunTokenService'
 import type { AgentMcpInvocation } from '../types/AgentMcpInvocation'
 import type { AgentApplicationErrors } from '../errors'
 import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
-import { ISSUE_HANDLING_OPERATION } from './manifest'
+import { ISSUE_HANDLING_OPERATION, operationIdOf } from './manifest'
+import { ForkIssueController } from '../controllers/ForkIssue'
 
 /** One tool call the driver actually made — enough for the caller to render a frame pair. */
 export interface DeclaredToolCall {
@@ -55,6 +56,7 @@ export class E2eMcpDriver {
 	static readonly ARTIFACT_REF = 'https://codedm.local/e2e/run-notes'
 	/** Stable completion note — carried on the declaration, not inferred from any text. */
 	static readonly COMPLETION_SUMMARY = 'e2e-agent: declared complete over MCP'
+	static readonly FORK_GOAL = 'e2e-agent: fix the login bug'
 
 	constructor(private readonly runTokens: RunTokenService) {}
 
@@ -67,7 +69,54 @@ export class E2eMcpDriver {
 	 * endpoint returns turns a COMPLETED write into a tool error — and a real model retries, which is a
 	 * silent double write wearing a failure's clothes. Failing loudly here is what makes that visible.
 	 */
+	/**
+	 * The ORCHESTRATOR's half (T8): fork an issue through the REAL `orchestration` surface.
+	 *
+	 * The stub used to fake this by returning a structured classification verdict — which only worked
+	 * because `ClassifyIssueAgent` had an `outputSchema` to discriminate on. That agent is gone, so the
+	 * deterministic driver now does what the real orchestrator does: it calls the tool. Strictly better
+	 * coverage, too — the old shape never exercised the MCP router, the run-token claims or the
+	 * thread-ownership check, and every e2e run does now.
+	 *
+	 * `originEntryId` is NOT passed and could not be: the router injects it from the claims (§7.2). If
+	 * this driver could supply it, so could a model.
+	 */
+	async forkIssue(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
+		return this.call(mcp, claims => [
+			{
+				tool: operationIdOf(ForkIssueController),
+				input: { threadId: claims.threadId, data: { goal: E2eMcpDriver.FORK_GOAL } },
+				summary: 'issue forked from the conversation',
+			},
+		])
+	}
+
 	async declareIssueWorkComplete(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
+		return this.call(mcp, claims => [
+			{
+				tool: ISSUE_HANDLING_OPERATION.recordArtifact,
+				// NO `issueId`: the use case validates the issue EXISTS when one is supplied, and the issue
+				// is materialized asynchronously. Naming the thread only is sufficient and race-free.
+				input: {
+					threadId: claims.threadId,
+					data: { kind: ArtifactKind.LINK, name: E2eMcpDriver.ARTIFACT_NAME, ref: E2eMcpDriver.ARTIFACT_REF, meta: '{}' },
+				},
+				summary: 'artifact recorded',
+			},
+			{
+				tool: ISSUE_HANDLING_OPERATION.transitionIssueStatus,
+				input: {
+					threadId: claims.threadId,
+					issueId: claims.issueId,
+					data: { status: IssueStatus.COMPLETED, summary: E2eMcpDriver.COMPLETION_SUMMARY },
+				},
+				summary: 'issue declared complete',
+			},
+		])
+	}
+
+	/** Connect over the real MCP door, make the calls, fail loudly on `isError`. */
+	private async call(mcp: AgentMcpInvocation, build: (claims: RunTokenClaims) => DeclaredToolCall[]): Promise<DeclaredToolCall[]> {
 		const claims = this.runTokens.verify(mcp.token)
 		if (!claims) {
 			throw new BaseError<AgentApplicationErrors>('AGENT_TOOLS_UNSUPPORTED', 'run token is not valid — nothing can be declared with it')
@@ -84,33 +133,7 @@ export class E2eMcpDriver {
 
 		try {
 			await client.connect(transport)
-			const calls: DeclaredToolCall[] = [
-				{
-					tool: ISSUE_HANDLING_OPERATION.recordArtifact,
-					// NO `issueId`: the use case validates the issue EXISTS when one is supplied, and the
-					// issue is materialized asynchronously off `integration.issue.opened`. Naming the thread
-					// only is both sufficient (the console lists a thread's artifacts) and race-free.
-					input: {
-						threadId: claims.threadId,
-						data: {
-							kind: ArtifactKind.LINK,
-							name: E2eMcpDriver.ARTIFACT_NAME,
-							ref: E2eMcpDriver.ARTIFACT_REF,
-							meta: '{}',
-						},
-					},
-					summary: 'artifact recorded',
-				},
-				{
-					tool: ISSUE_HANDLING_OPERATION.transitionIssueStatus,
-					input: {
-						threadId: claims.threadId,
-						issueId: claims.issueId,
-						data: { status: IssueStatus.COMPLETED, summary: E2eMcpDriver.COMPLETION_SUMMARY },
-					},
-					summary: 'issue declared complete',
-				},
-			]
+			const calls = build(claims)
 
 			for (const call of calls) {
 				const result = await client.callTool({ name: call.tool, arguments: call.input })

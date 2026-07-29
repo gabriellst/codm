@@ -7367,48 +7367,6 @@
                         },
                         "name": {
                           "type": "string",
-                          "const": "integration.message.classified"
-                        },
-                        "payload": {
-                          "type": "object",
-                          "properties": {
-                            "threadId": {
-                              "type": "string"
-                            },
-                            "entryId": {
-                              "type": "string"
-                            },
-                            "method": {
-                              "$ref": "#/components/schemas/ClassificationMethod"
-                            },
-                            "issueId": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "threadId",
-                            "entryId",
-                            "method"
-                          ],
-                          "additionalProperties": false
-                        }
-                      },
-                      "required": [
-                        "ownerId",
-                        "name",
-                        "payload"
-                      ],
-                      "additionalProperties": false,
-                      "examples": []
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "ownerId": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string",
                           "const": "integration.orchestrator.replied"
                         },
                         "payload": {

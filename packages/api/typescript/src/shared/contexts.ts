@@ -22,7 +22,7 @@ export const CONTEXTS = {
 	owner: { pgSchema: 'owner' },
 	shared: { pgSchema: 'shared' },
 	// agent — the agent runtime: the one-method `AgentRunner` seam, the two internal agents
-	// (`ClassifyIssueAgent` / `IssueWorkAgent`), the routing policy (`IssueRouter`) and provider
+	// (`OrchestratorAgent` / `IssueWorkAgent`), the mailbox dispatcher that schedules their turns, and provider
 	// detection. Its outbound facts are the frozen `integration.issue.*` events on the shared outbox.
 	//
 	// Fase 5 of GOAL-agent-abstraction closed the split this entry used to carry: the pgSchema moved to

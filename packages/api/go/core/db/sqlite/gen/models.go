@@ -314,18 +314,6 @@ type ThreadThread struct {
 	Version            int64
 }
 
-type ThreadThreadClarification struct {
-	ID                string
-	OwnerID           string
-	ThreadID          string
-	EntryID           string
-	SenderExternalID  string
-	Question          string
-	CandidateIssueIds string
-	AskedAt           int64
-	ResolvedAt        sql.NullInt64
-}
-
 type ThreadTranscriptEntry struct {
 	ID               string
 	OwnerID          string

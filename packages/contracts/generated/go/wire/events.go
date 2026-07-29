@@ -978,32 +978,6 @@ type IssueStopResolvedPayload struct {
 	Resolution StopResolution `json:"resolution" validate:"required"`
 }
 
-// MessageClassifiedEventName is the wire discriminator for MessageClassifiedEvent.
-const MessageClassifiedEventName = "integration.message.classified"
-
-// MessageClassifiedEvent — wire shape of integration.message.classified.
-// BC4 Thread & Routing -> BC5 Issue Execution. A single-stream inbound message was demultiplexed into an issue (or fell through to clarification). issueId is absent only when the method resolved to a clarification.
-type MessageClassifiedEvent struct {
-	Name       string    `json:"name"`
-	EntityID   string    `json:"entityId"`
-	OwnerID    string    `json:"ownerId"`
-	OccurredAt time.Time `json:"occurredAt"`
-	ThreadID string `json:"threadId"`
-	EntryID string `json:"entryId"`
-	Method ClassificationMethod `json:"method"`
-	IssueID *string `json:"issueId,omitempty"`
-}
-
-func (e MessageClassifiedEvent) EventName() string { return MessageClassifiedEventName }
-
-// MessageClassifiedPayload — payload of integration.message.classified, generated from the contract declaration.
-type MessageClassifiedPayload struct {
-	ThreadID string `json:"threadId" validate:"required"`
-	EntryID string `json:"entryId" validate:"required"`
-	Method ClassificationMethod `json:"method" validate:"required"`
-	IssueID *string `json:"issueId,omitempty"`
-}
-
 // OrchestratorRepliedEventName is the wire discriminator for OrchestratorRepliedEvent.
 const OrchestratorRepliedEventName = "integration.orchestrator.replied"
 

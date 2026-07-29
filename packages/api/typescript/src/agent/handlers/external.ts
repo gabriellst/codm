@@ -8,4 +8,3 @@
 // existing `PublishAgentIntegrationEvents` bridge republishes as `integration.issue.opened` /
 // `agent.reply_drafted` / `issue.completed` / `issue.stop_raised`. The classification/routing seam
 // stays clean — the engine is triggered by event only, never wired into a use case.
-export { RunIssueTurnOnClassification } from './RunIssueTurnOnClassification'

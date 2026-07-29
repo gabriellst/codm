@@ -28,7 +28,7 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 	thread: {
 		workspace: { note: 'AttachThread validates the workspace exists via WorkspaceRepository (repositories surface).' },
 		agent: {
-			note: 'Classification/routing consumes the ProviderDetector + IssueRouter services of the agent context (IssueRouter drives ClassifyIssueAgent and applies the reply-quote / threshold / slug / clarify policy).',
+			note: 'The inbound path consumes the agent context ProviderDetector (which CLI a thread runs) and, since the orchestrator pivot, its MailboxRepository — an invocable message queues a turn in the SAME transaction as the transcript entry (§7.4).',
 		},
 	},
 	agent: {
@@ -37,7 +37,7 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 		ui: { note: NOTE_MCP_MANIFEST },
 		owner: { note: NOTE_MCP_MANIFEST },
 		thread: {
-			note: 'The severed-saga closer (RunIssueTurnOnClassification) resolves the run context — thread providers/workspaceId + the prompt from the transcript — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader), and IssueRouter takes its OpenIssueRef shape from the same reader (the ref is a THREAD concept and lives there).',
+			note: 'The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).',
 		},
 		workspace: { note: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).' },
 	},
@@ -164,7 +164,7 @@ export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, Cont
 	},
 	{
 		between: ['agent', 'thread'],
-		why: 'Partnership across the demux→execute seam, renamed with the context in Fase 5 (GOAL-agent-abstraction §5.1) — the EDGE is unchanged, only the name on one side of it. BC4 Thread & Routing consumes the agent context’s routing services (IssueRouter, which drives ClassifyIssueAgent, plus ProviderDetector) to make the routing decision, while the agent context’s saga-closer consumes BC4’s thread/transcript read seams to run the turn that decision triggers. Two halves of one classify→run boundary; integration events (message.classified / issue.opened) carry the runtime hand-off, the read seams only resolve context.',
+		why: 'Partnership across the ingest→run seam. BC4 queues a turn into the agent context mailbox in its own ingest transaction, and the agent context consumes BC4 thread/transcript read seams to resolve the run context for the turn it then runs. Two halves of one boundary; the mailbox row carries the runtime hand-off, the read seams only resolve context. (Before the orchestrator pivot the same edge existed for classify→run, with integration.message.classified as the carrier.)',
 	},
 ]
 

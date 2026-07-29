@@ -25,16 +25,21 @@ import {
 	outbox,
 	agentSessions,
 	terminalLines,
-	threadClarifications,
 	transcriptEntries,
 } from '@codedm/contracts/db'
-import { AgentModelId, ArtifactKind, ChannelKind, ChannelStatus, ProviderKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import {
+	AgentModelId,
+	ArtifactKind,
+	ChannelKind,
+	ChannelStatus,
+	ProviderKind,
+	TranscriptKind,
+} from '@codedm/contracts-typescript/wire/enums'
 import { ArtifactRepository } from '@artifact/repositories/ArtifactRepository'
 import { Artifact } from '@artifact/entities/Artifact'
 import { AgentSessionRepository } from '@agent/repositories/AgentSessionRepository'
 import { AgentSession } from '@agent/entities/AgentSession'
 import { TerminalLineRepository } from '@issue/repositories/TerminalLineRepository'
-import { ClarificationRepository } from '@thread/repositories/ClarificationRepository'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
 import { IdempotencyGuard } from '@codedm/core-typescript'
@@ -179,25 +184,6 @@ describe('insert-site audit — every db-generated id and notNull timestamp surv
 		await assertLanded('thread_consumed_messages', ['id', 'consumed_at'])
 	})
 
-	it('thread_thread_clarifications — via ClarificationRepository (id minted in the repository)', async () => {
-		const thread = await givenThread(testBed, { ownerId: OWNER })
-		const entry = await testBed.resolve(TranscriptRepository).append({
-			ownerId: OWNER,
-			threadId: thread.id.value,
-			kind: TranscriptKind.CONTACT,
-			text: 'which one?',
-		})
-		await testBed.resolve(ClarificationRepository).open({
-			ownerId: OWNER,
-			threadId: thread.id.value,
-			entryId: entry.entryId,
-			senderExternalId: 'contact-1',
-			question: 'which issue?',
-			candidateIssueIds: [],
-		})
-		await assertLanded('thread_thread_clarifications', ['id', 'asked_at'])
-	})
-
 	it('shared_events + shared_outbox — via DomainEventRepository', async () => {
 		const repo = testBed.resolve(DomainEventRepository)
 		await repo.save(new AuditProbeEvent({ entityId: crypto.randomUUID(), ownerId: OWNER, payload: { marker: 'x' } }))
@@ -238,7 +224,6 @@ describe('insert-site audit — every db-generated id and notNull timestamp surv
 			outbox,
 			agentSessions,
 			terminalLines,
-			threadClarifications,
 			transcriptEntries,
 		]
 		for (const table of declarations) {

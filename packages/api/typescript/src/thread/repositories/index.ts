@@ -12,10 +12,3 @@ export {
 	DrizzleTranscriptRepository,
 	MockTranscriptRepository,
 } from './TranscriptRepository'
-export {
-	ClarificationRepository,
-	type ClarificationRow,
-	type OpenClarificationInput,
-	DrizzleClarificationRepository,
-	MockClarificationRepository,
-} from './ClarificationRepository'
