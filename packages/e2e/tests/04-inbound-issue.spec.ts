@@ -82,7 +82,7 @@ test('inbound message → issue appears with slug label → session runs', async
 		.poll(
 			async () => {
 				const issues = await getSessionIssues(thread.threadId, { client: user.session.client })
-				const opened = issues.groups.flatMap(group => group.items).find(item => item.key === 'fix-the-login-bug-please')
+				const opened = issues.groups.flatMap(group => group.items).find(item => item.key === 'e2e-agent-fix-the-login-bug')
 				return opened?.status
 			},
 			{
@@ -95,7 +95,12 @@ test('inbound message → issue appears with slug label → session runs', async
 	// The persisted transcript carries the inbound message + the classification action.
 	const chat = await getSessionChat(thread.threadId, { client: user.session.client })
 	expect(chat.transcript.some(entry => entry.kind === 'CONTACT' && entry.text.includes('fix the login bug'))).toBe(true)
-	expect(chat.transcript.some(entry => entry.kind === 'ACTION')).toBe(true)
+	// NOT `ACTION` any more. That kind's only producer was `ClassifyMessage`, which the pivot deleted —
+	// spec §5 declares it an orphan to be DECLARED rather than repurposed. What the transcript carries
+	// instead is the orchestrator's own reply, written as SYSTEM by `DeliverOrchestratorReply`, which is
+	// the first producer of that kind and a strictly better proof: it means the agent SPOKE, not merely
+	// that a classifier annotated a row.
+	expect(chat.transcript.some(entry => entry.kind === 'SYSTEM')).toBe(true)
 	// Live session ⇒ the composer is in whisper (STEER) mode, not paused/direct.
 	expect(chat.composerMode).toBe('STEER')
 })
