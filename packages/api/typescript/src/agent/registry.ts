@@ -5,7 +5,14 @@ import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
-import { AgentSessionRepository, DrizzleAgentSessionRepository, MockAgentSessionRepository } from './repositories'
+import {
+	AgentSessionRepository,
+	DrizzleAgentSessionRepository,
+	DrizzleMailboxRepository,
+	MailboxRepository,
+	MockAgentSessionRepository,
+	MockMailboxRepository,
+} from './repositories'
 import { IssueRouter, DefaultIssueRouter } from './services/IssueRouter'
 import { ClassifyIssueAgent, ClassifyIssuePromptBuilder, IssueWorkAgent, IssueWorkPromptBuilder } from './agents'
 import { RunTokenService } from './services/RunTokenService'
@@ -55,6 +62,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: DrizzleAgentSessionRepository,
 		real: DrizzleAgentSessionRepository,
 	},
+	// The durable per-target turn queue. Producers enqueue inside their own transaction; the
+	// dispatcher is the single consumer and holds one lease per target.
+	{ token: MailboxRepository, mock: MockMailboxRepository, integration: DrizzleMailboxRepository, real: DrizzleMailboxRepository },
 	// ── The internal agents (§4.8) ────────────────────────────────────────────────────────────────
 	//
 	// CLASS TOKENS, same implementation in all three envs — an agent has no mock/real split because it
