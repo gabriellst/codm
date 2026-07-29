@@ -5,7 +5,7 @@ import type { GetSetupChecklistQueryResponse } from '@codedm/client-typescript/t
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { greeting } from '@/components/console/time'
+import { greetingKey } from '@/components/console/time'
 import type { FileRouteTypes } from '@/routeTree.gen'
 
 interface Step {
@@ -38,7 +38,7 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 	return (
 		<div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-6 pb-16 pt-24 text-center">
 			<div className="flex flex-col gap-3">
-				<p className="text-sm text-muted-foreground">{greeting()}</p>
+				<p className="text-sm text-muted-foreground">{t(greetingKey())}</p>
 				<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('home.welcome')}</h1>
 				<p className="text-muted-foreground">{t('home.welcomeSubtitle')}</p>
 			</div>

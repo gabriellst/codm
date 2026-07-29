@@ -42,7 +42,6 @@ get "status"(){
     "enabled": z.literal(true),
 "tag": z.string()
     })]),
-"autonomyCaption": z.string(),
 "activeStops": z.array(z.object({
     "stopId": z.uuid(),
 get "kind"(){

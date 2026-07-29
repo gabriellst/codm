@@ -43,8 +43,7 @@ get "status"(){
               },
 "meta": z.optional(z.string()),
 "archived": z.boolean()
-    })),
-"autoArchiveNote": z.string()
+    }))
     })
 
 export const getSessionIssuesQueryResponseSchema = z.lazy(() => getSessionIssues200Schema)

@@ -29,7 +29,11 @@ export const GetSessionChatOutputSchema = z.object({
 		z.object({ enabled: z.literal(false) }),
 		z.object({ enabled: z.literal(true), tag: z.string() }),
 	]),
-	autonomyCaption: z.string(),
+	/* D5 — there is deliberately no `autonomyCaption` here any more. It shipped a finished English
+	   SENTENCE ("Paused — won't reply until resumed") from the daemon into a Portuguese console, where
+	   no amount of frontend i18n could reach it. Nothing replaces it: the caption is derivable from
+	   `paused` + `mentionGate`, both already on this payload, so the browser composes it in the
+	   operator's own language. A read model ships STATE; prose is the view's job. */
 	activeStops: z.array(z.object({ stopId: z.uuid(), kind: z.enum(StopKind), title: z.string(), detail: z.string(), raisedAt: z.string() })),
 	transcript: z.array(
 		z.object({
@@ -75,13 +79,25 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const rows = await this.db.select().from(threads).where(eq(threads.id, input.threadId)).limit(1)
 		const thread = rows[0]
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
-		const [workspaceRow] = await this.db.select({ path: workspaces.path }).from(workspaces).where(eq(workspaces.id, thread.workspaceId)).limit(1)
+		const [workspaceRow] = await this.db
+			.select({ path: workspaces.path })
+			.from(workspaces)
+			.where(eq(workspaces.id, thread.workspaceId))
+			.limit(1)
 		const [channelRow] = await this.db.select({ kind: channels.platform }).from(channels).where(eq(channels.id, thread.channelId)).limit(1)
 
-		const entries = await this.db.select().from(transcriptEntries).where(eq(transcriptEntries.threadId, input.threadId)).orderBy(asc(transcriptEntries.at))
-		const stopRows = await this.db.select().from(stops).where(and(eq(stops.threadId, input.threadId), isNull(stops.resolvedAt)))
+		const entries = await this.db
+			.select()
+			.from(transcriptEntries)
+			.where(eq(transcriptEntries.threadId, input.threadId))
+			.orderBy(asc(transcriptEntries.at))
+		const stopRows = await this.db
+			.select()
+			.from(stops)
+			.where(and(eq(stops.threadId, input.threadId), isNull(stops.resolvedAt)))
 
 		const mentionGate = thread.mentionGateEnabled
 			? ({ enabled: true, tag: thread.mentionGateTag ?? '' } as const)
@@ -100,8 +116,13 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 			},
 			paused: thread.paused,
 			mentionGate,
-			autonomyCaption: this.autonomyCaption(thread.paused, mentionGate),
-			activeStops: stopRows.map(s => ({ stopId: s.id, kind: s.kind as StopKind, title: s.title, detail: s.detail, raisedAt: s.raisedAt.toISOString() })),
+			activeStops: stopRows.map(s => ({
+				stopId: s.id,
+				kind: s.kind as StopKind,
+				title: s.title,
+				detail: s.detail,
+				raisedAt: s.raisedAt.toISOString(),
+			})),
 			transcript: entries.map(e => ({
 				entryId: e.id,
 				kind: e.kind as TranscriptKind,
@@ -114,11 +135,5 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 			})),
 			composerMode: thread.paused ? 'STEER' : 'DIRECT',
 		}
-	}
-
-	private autonomyCaption(paused: boolean, gate: { enabled: boolean; tag?: string }): string {
-		if (paused) return "Paused — won't reply until resumed"
-		if (gate.enabled) return `Only replies when mentioned with ${gate.tag}`
-		return 'Autonomous — replies send without review'
 	}
 }

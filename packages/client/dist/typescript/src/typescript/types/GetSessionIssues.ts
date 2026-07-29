@@ -106,10 +106,6 @@ export type GetSessionIssues200 = {
         */
         archived: boolean;
     }[];
-    /**
-     * @type string
-    */
-    autoArchiveNote: string;
 };
 
 export type GetSessionIssuesQueryResponse = GetSessionIssues200;

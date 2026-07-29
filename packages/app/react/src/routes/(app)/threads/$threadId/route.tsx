@@ -12,7 +12,9 @@ function SessionLayout() {
 	// and a tab that is not currently mounted must still be fresh when the operator switches to it.
 	useThreadRealtime(threadId)
 	return (
-		<div className="mx-auto flex w-full max-w-3xl flex-col px-6 pb-8 pt-20">
+		// No `pt-*` here: the sticky SessionHeader owns the top clearance, so the band it reserves is
+		// the same scrolled or not, and `AgentsRunningPill` keeps floating in it rather than over it.
+		<div className="mx-auto flex w-full max-w-3xl flex-col px-6 pb-8">
 			<SessionHeader threadId={threadId} />
 			<Outlet />
 		</div>

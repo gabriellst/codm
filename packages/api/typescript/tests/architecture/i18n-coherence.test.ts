@@ -310,3 +310,71 @@ describe('i18n-coherence (pt/en parity, literal references resolve, unused keys 
 		}
 	})
 })
+
+/**
+ * (d) ENUM LABEL COVERAGE — D5, the half the three checks above structurally cannot see.
+ *
+ * `enumLabel('ThreadStatus', v)` reads `enums.ThreadStatus[v]` out of the bundle at runtime and
+ * silently FALLS BACK TO THE RAW VALUE when the key is absent — so a missing translation does not
+ * dangle (check (b) never sees a literal key), does not diverge (check (a) is happy while both
+ * catalogues omit it equally), and does not even look wrong in review. It shows up only in the
+ * product, as `NEEDS_ATTENTION` sitting in a Portuguese sentence — which is exactly the founder's
+ * report, and exactly why spot-fixing the two they happened to notice would not have been a sweep.
+ *
+ * The enum's VALUES come from the generated SDK, i.e. the same source the components render from,
+ * so adding a member to a contract enum fails here until both catalogues learn the word.
+ */
+const SDK_TYPES_DIR = join(APP_REACT_SRC, '..', '..', '..', 'client', 'dist', 'typescript', 'src', 'typescript', 'types')
+
+/** Enum names the console asks `enumLabel` for — excluding the helper's own tests and JSDoc. */
+function renderedEnumNames(srcRoot: string): string[] {
+	const names = new Set<string>()
+	for (const file of listSourceFiles(srcRoot)) {
+		if (relative(srcRoot, file).split('\\').join('/').startsWith('lib/enums')) continue
+		for (const match of readFileSync(file, 'utf8').matchAll(/enumLabel\(\s*'([A-Za-z0-9_]+)'/g)) names.add(match[1] as string)
+	}
+	return [...names].sort()
+}
+
+/** The members of a generated SDK enum object, or `[]` when no such enum is generated. */
+function sdkEnumValues(name: string): string[] {
+	const pattern = new RegExp(`export const ${name}(?:Enum)?\\s*=\\s*\\{([^}]*)\\}`, 'g')
+	const values = new Set<string>()
+	for (const file of readdirSync(SDK_TYPES_DIR)) {
+		if (!file.endsWith('.ts')) continue
+		for (const block of readFileSync(join(SDK_TYPES_DIR, file), 'utf8').matchAll(pattern)) {
+			for (const value of (block[1] as string).matchAll(/"([A-Za-z0-9_]+)"/g)) values.add(value[1] as string)
+		}
+	}
+	return [...values]
+}
+
+describe('i18n-coherence — enum labels (D5)', () => {
+	test('(d) every enum the console renders has EVERY value translated in both catalogues', () => {
+		const pt = (readLocale(join(LOCALES_DIR, 'pt.json')) as { enums?: Record<string, Record<string, string>> }).enums ?? {}
+		const en = (readLocale(join(LOCALES_DIR, 'en.json')) as { enums?: Record<string, Record<string, string>> }).enums ?? {}
+
+		const gaps: string[] = []
+		let checked = 0
+		for (const name of renderedEnumNames(APP_REACT_SRC)) {
+			const values = sdkEnumValues(name)
+			// No generated enum by that name — a doc example or a UI-local set, not a contract enum.
+			if (values.length === 0) continue
+			checked++
+			for (const value of values) {
+				if (!pt[name]?.[value]) gaps.push(`  pt.json  enums.${name}.${value}`)
+				if (!en[name]?.[value]) gaps.push(`  en.json  enums.${name}.${value}`)
+			}
+		}
+
+		// Guards the guard: if the scan stops finding enums (a rename of `enumLabel`, a moved SDK
+		// output dir), this rail would pass vacuously while covering nothing.
+		expect(checked, 'enum-label scan matched NO contract enums — the scan broke, it did not pass').toBeGreaterThan(5)
+		expect(
+			gaps.length,
+			`Enum value(s) with no label — \`enumLabel\` falls back to the RAW VALUE, so these render as ` +
+				`e.g. "NEEDS_ATTENTION" inside a translated sentence and no other rail can see it. Add the key to ` +
+				`BOTH catalogues under \`enums.<Enum>.<VALUE>\`:\n${gaps.join('\n')}`,
+		).toBe(0)
+	})
+})

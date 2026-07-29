@@ -18,11 +18,12 @@ export const GetSessionIssuesOutputSchema = z.object({
 	statsLine: z.object({ awaitingInput: z.number().int(), working: z.number().int(), completed: z.number().int() }),
 	groups: z.array(z.object({ status: z.enum(IssueStatus), items: z.array(IssueSummarySchema) })),
 	archived: z.array(IssueSummarySchema),
-	autoArchiveNote: z.string(),
+	/* D5 — no `autoArchiveNote`. It was a fixed English sentence carrying no server data, shipped on
+	   every read so the console could print it verbatim; the console owns that copy now, in the
+	   operator's language. Same removal as `GetSessionChat.autonomyCaption`. */
 })
 
-/** Read — SessionIssues (T11). One thread's issues grouped by status + archived list + the
- *  auto-archive note. */
+/** Read — SessionIssues (T11). One thread's issues grouped by status + the archived list. */
 @injectable()
 export class GetSessionIssues extends Handler<typeof GetSessionIssuesInputSchema, typeof GetSessionIssuesOutputSchema> {
 	readonly name = 'get_session_issues' as const
@@ -54,7 +55,6 @@ export class GetSessionIssues extends Handler<typeof GetSessionIssuesInputSchema
 			},
 			groups: [IssueStatus.NEEDS_INPUT, IssueStatus.WORKING, IssueStatus.COMPLETED].map(status => ({ status, items: byStatus(status) })),
 			archived: items.filter(i => i.archived),
-			autoArchiveNote: 'Completed issues auto-archive after 24 hours.',
 		}
 	}
 }

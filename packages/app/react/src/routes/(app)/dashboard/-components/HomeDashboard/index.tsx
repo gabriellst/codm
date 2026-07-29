@@ -4,12 +4,12 @@ import { Link } from '@tanstack/react-router'
 import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codedm/client-typescript/typescript'
 import type { GetHomeDashboardQueryResponse } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { enumLabel } from '@/lib'
 import { useServerEvents } from '@/hooks'
-import { greeting } from '@/components/console/time'
+import { greetingKey } from '@/components/console/time'
 import { channelGlyph } from '@/components/console/glyphs'
 import { Dot, ThreadStatusDot } from '@/components/console/StatusDot'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
@@ -34,7 +34,7 @@ export function HomeDashboard() {
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10">
 			<div className="flex flex-col gap-2">
-				<p className="text-sm text-muted-foreground">{greeting()}</p>
+				<p className="text-sm text-muted-foreground">{t(greetingKey())}</p>
 				<h1 className="heading-display text-4xl text-foreground md:text-5xl">{headline}</h1>
 			</div>
 
@@ -137,27 +137,43 @@ function LatestActivity({ items }: { items: Dashboard['latestActivity'] }) {
 	)
 }
 
+/**
+ * Today's numbers (D2/D4), in the design's own shape: a stat is a ROW — quiet label on the left, big
+ * value on the right, sharing a baseline — with a hairline between rows, not a stack of label-above-
+ * value blocks. The last row sits in `CardFooter` so the card visibly CLOSES; the footer is flush by
+ * construction (no rule, no tint) and drops the divider it would otherwise carry, which is what makes
+ * the run of rows read as one continuous list rather than a body with a lid.
+ */
 function TodayCard({ today }: { today: Dashboard['today'] }) {
 	const { t } = useTranslation()
 	const rows = [
 		{ label: t('dashboard.issuesOpened'), value: String(today.issuesOpened) },
 		{ label: t('dashboard.issuesClosed'), value: String(today.issuesClosed) },
-		{ label: t('dashboard.medianResponse'), value: `${Math.round(today.medianResponseSeconds)}s` },
 	]
+	const last = { label: t('dashboard.medianResponse'), value: `${Math.round(today.medianResponseSeconds)}s` }
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>{t('dashboard.today')}</CardTitle>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-5">
+			<CardContent className="flex flex-col">
 				{rows.map(row => (
-					<div key={row.label} className="flex flex-col gap-1">
-						<p className="label-eyebrow">{row.label}</p>
-						<span className="text-2xl font-bold tabular-nums text-foreground">{row.value}</span>
-					</div>
+					<StatRow key={row.label} label={row.label} value={row.value} />
 				))}
 			</CardContent>
+			<CardFooter>
+				<StatRow label={last.label} value={last.value} last />
+			</CardFooter>
 		</Card>
+	)
+}
+
+function StatRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+	return (
+		<div className={cn('flex items-baseline justify-between gap-3 py-2', !last && 'border-b border-border')}>
+			<span className="label-eyebrow">{label}</span>
+			<span className="text-2xl font-bold tabular-nums text-foreground">{value}</span>
+		</div>
 	)
 }
 

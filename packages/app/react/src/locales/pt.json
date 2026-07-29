@@ -488,6 +488,10 @@
 		"archived": "Arquivadas",
 		"artifactsEmptyDescription": "Deploys de preview, capturas de tela e arquivos produzidos pelos seus agentes aparecem aqui.",
 		"artifactsEmptyTitle": "Nenhum artefato ainda",
+		"autoArchiveNote": "Issues concluídas são arquivadas automaticamente após 24 horas.",
+		"autonomyFull": "Autônoma — as respostas saem sem revisão",
+		"autonomyMentionGated": "Só responde quando mencionada com {{tag}}",
+		"autonomyPaused": "Pausada — não responde até você retomar",
 		"back": "Voltar",
 		"canInvoke": "{{count}} podem invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
@@ -548,6 +552,15 @@
 		"stopCriteriaDescription": "Quando qualquer um desses ocorre, o agente para, a conversa é marcada como \"Precisa de você\" e a parada aparece na sessão até você resolvê-la.",
 		"title": "Configurações",
 		"operatorUnnamed": "Sem nome"
+	},
+	"time": {
+		"goodMorning": "Bom dia",
+		"goodAfternoon": "Boa tarde",
+		"goodEvening": "Boa noite",
+		"justNow": "agora mesmo",
+		"minutesAgo": "{{count}} min atrás",
+		"hoursAgo": "{{count}} h atrás",
+		"daysAgo": "{{count}} d atrás"
 	},
 	"workspaces": {
 		"addDescription": "Aponte para uma pasta de projeto neste Mac. Selos de Git e de projeto Claude são detectados automaticamente.",

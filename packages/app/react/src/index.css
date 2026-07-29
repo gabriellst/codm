@@ -88,6 +88,9 @@ body {
 	--color-popover: var(--popover);
 	--color-card-foreground: var(--card-foreground);
 	--color-card: var(--card);
+	/* The design's quietest text tier (#8a8a8a): timestamps and metadata sit one step below
+	   `muted-foreground` (#6a6a6a), which is body-secondary. Use as `text-caption-foreground`. */
+	--color-caption-foreground: var(--caption-foreground);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
 	--radius-sm: calc(var(--radius) - 4px);

@@ -87,10 +87,6 @@ export type GetSessionChat200 = {
         tag: string;
     });
     /**
-     * @type string
-    */
-    autonomyCaption: string;
-    /**
      * @type array
     */
     activeStops: {

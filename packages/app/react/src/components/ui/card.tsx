@@ -10,7 +10,13 @@ function Card({ className, size = 'default', ...props }: React.ComponentProps<'d
 			data-size={size}
 			className={cn(
 				surface,
-				'gap-4 overflow-hidden rounded-[1.25rem] pt-5 text-sm transition-all duration-150 ease-out has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-4 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-[1.25rem] *:[img:last-child]:rounded-b-[1.25rem] group/card flex flex-col',
+				// D2/D4 — SYMMETRIC padding. This used to be `pt-5` with no bottom rule at all, so every
+				// card in the console was padded on three sides and flush on the fourth: the founder's
+				// "o card sem a parte de baixo faltando", exactly. The design pads a card 20px on all four
+				// sides; on this workspace's scale (`--spacing: 0.3rem`, NOT the Tailwind default 0.25rem)
+				// `4` is 19.2px, so `py-4` + the sections' `px-4` is that 20px — do not "fix" it to `p-5`,
+				// which is 24px here.
+				'gap-4 overflow-hidden rounded-[1.25rem] py-4 text-sm transition-all duration-150 ease-out has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-[1.25rem] *:[img:last-child]:rounded-b-[1.25rem] group/card flex flex-col',
 				className,
 			)}
 			{...props}
@@ -55,12 +61,21 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
 	return <div data-slot="card-content" className={cn('px-4 group-data-[size=sm]/card:px-3', className)} {...props} />
 }
 
+/**
+ * The card's closing row — FLUSH with the body (D2, founder's call): no rule above it, no tint of its
+ * own. It had both, which made every footer read as a separate panel welded to the bottom of the card
+ * rather than as the end of the same one.
+ *
+ * It carries only the card's horizontal padding and its bottom padding — `Card` sets `pb-0` whenever a
+ * footer is present, so the bottom edge belongs to exactly one of them. Vertical separation from the
+ * content above comes from the card's own `gap-4`, which is what makes it continuous.
+ */
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot="card-footer"
 			className={cn(
-				'bg-muted/40 rounded-b-[1.25rem] border-t border-border p-4 group-data-[size=sm]/card:p-3 flex items-center',
+				'rounded-b-[1.25rem] px-4 pb-4 group-data-[size=sm]/card:px-3 group-data-[size=sm]/card:pb-3 flex items-center',
 				className,
 			)}
 			{...props}

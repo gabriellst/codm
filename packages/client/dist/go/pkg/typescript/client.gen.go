@@ -5394,11 +5394,10 @@ type GetSessionChatResponse struct {
 			StopId   openapi_types.UUID `json:"stopId"`
 			Title    string             `json:"title"`
 		} `json:"activeStops"`
-		AutonomyCaption string                                        `json:"autonomyCaption"`
-		ComposerMode    ThreadMode                                    `json:"composerMode"`
-		MentionGate     GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
-		Paused          bool                                          `json:"paused"`
-		Thread          struct {
+		ComposerMode ThreadMode                                    `json:"composerMode"`
+		MentionGate  GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
+		Paused       bool                                          `json:"paused"`
+		Thread       struct {
 			ChannelKind   ChannelKind        `json:"channelKind"`
 			DisplayName   string             `json:"displayName"`
 			LastActivity  string             `json:"lastActivity"`
@@ -5488,8 +5487,7 @@ type GetSessionIssuesResponse struct {
 			Status   IssueStatus        `json:"status"`
 			Title    string             `json:"title"`
 		} `json:"archived"`
-		AutoArchiveNote string `json:"autoArchiveNote"`
-		Groups          []struct {
+		Groups []struct {
 			Items []struct {
 				Archived bool               `json:"archived"`
 				IssueId  openapi_types.UUID `json:"issueId"`
@@ -7654,11 +7652,10 @@ func ParseGetSessionChatResponse(rsp *http.Response) (*GetSessionChatResponse, e
 				StopId   openapi_types.UUID `json:"stopId"`
 				Title    string             `json:"title"`
 			} `json:"activeStops"`
-			AutonomyCaption string                                        `json:"autonomyCaption"`
-			ComposerMode    ThreadMode                                    `json:"composerMode"`
-			MentionGate     GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
-			Paused          bool                                          `json:"paused"`
-			Thread          struct {
+			ComposerMode ThreadMode                                    `json:"composerMode"`
+			MentionGate  GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
+			Paused       bool                                          `json:"paused"`
+			Thread       struct {
 				ChannelKind   ChannelKind        `json:"channelKind"`
 				DisplayName   string             `json:"displayName"`
 				LastActivity  string             `json:"lastActivity"`
@@ -7740,8 +7737,7 @@ func ParseGetSessionIssuesResponse(rsp *http.Response) (*GetSessionIssuesRespons
 				Status   IssueStatus        `json:"status"`
 				Title    string             `json:"title"`
 			} `json:"archived"`
-			AutoArchiveNote string `json:"autoArchiveNote"`
-			Groups          []struct {
+			Groups []struct {
 				Items []struct {
 					Archived bool               `json:"archived"`
 					IssueId  openapi_types.UUID `json:"issueId"`

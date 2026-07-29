@@ -12,25 +12,31 @@
 
 :root {
 	/* ── Canvas & surfaces ───────────────────────────── */
-	--route-background: oklch(0.975 0 0); /* #f6f6f6 — light-gray page canvas */
-	--background: oklch(1 0 0); /* pure white surfaces/cards */
-	--foreground: oklch(0.18 0 0); /* #1a1a1a — near-black text */
-	--card: var(--background);
+	/* D1 — TAKEN FROM THE DESIGN, converted sRGB→OKLCH rather than eyeballed.
+	   The design INVERTS what this file used to say: the page is pure WHITE and a card is the
+	   light grey that sits ON it. Having it the other way round (grey page, white cards) is why
+	   the home screen read as "not the design at all" even though every hue was already neutral —
+	   the figure/ground was backwards, which no amount of tuning either grey could fix. */
+	--route-background: oklch(1 0 0); /* #ffffff — page canvas */
+	--background: oklch(1 0 0); /* #ffffff — base surface: dialogs, popovers, inputs */
+	--foreground: oklch(0.2 0 0); /* #161616 — near-black text AND the sole action colour */
+	--card: oklch(0.976 0 0); /* #f7f7f7 — DECOUPLED from --background on purpose (see above) */
 	--card-foreground: var(--foreground);
-	--popover: var(--background);
+	--popover: var(--background); /* modals stay white over the scrim, as in the design */
 	--popover-foreground: var(--foreground);
 
 	/* ── Action (the ONE color) ──────────────────────── */
-	--primary: oklch(0.16 0 0); /* #111 — black pills, sole action color */
+	--primary: oklch(0.2 0 0); /* #161616 — the design's single brand value, same as text */
 	--primary-foreground: oklch(1 0 0);
 
 	/* ── Neutral surfaces ────────────────────────────── */
-	--secondary: oklch(0.95 0 0); /* #ececec — soft chip / active nav pill */
-	--secondary-foreground: oklch(0.18 0 0);
-	--muted: oklch(0.966 0 0); /* #f2f2f2 — soft badge bg / hover */
-	--muted-foreground: oklch(0.556 0 0); /* #7d7d7d — secondary text */
+	--secondary: oklch(0.943 0 0); /* #ececec — soft chip / active nav pill */
+	--secondary-foreground: var(--foreground);
+	--muted: oklch(0.958 0 0); /* #f1f1f1 — soft badge bg / hover */
+	--muted-foreground: oklch(0.524 0 0); /* #6a6a6a — secondary text */
+	--caption-foreground: oklch(0.633 0 0); /* #8a8a8a — timestamps, metadata, the quietest tier */
 	--accent: oklch(0.955 0 0);
-	--accent-foreground: oklch(0.18 0 0);
+	--accent-foreground: var(--foreground);
 
 	/* ── Status hues — used ONLY as small dots / deltas ─ */
 	--success: oklch(0.62 0.15 149);
@@ -45,8 +51,8 @@
 	--info-foreground: oklch(0.99 0 0);
 
 	/* ── Lines & interaction ─────────────────────────── */
-	--border: oklch(0.912 0 0); /* #e5e5e5 — hairline */
-	--input: var(--border);
+	--border: oklch(0.94 0 0); /* #ebebeb — section divider hairline */
+	--input: oklch(0.894 0 0); /* #dcdcdc — the design draws control outlines a step darker */
 	--ring: oklch(from var(--foreground) l c h / 0.35);
 	--hover: oklch(from var(--foreground) l c h / 0.05);
 	--focus: oklch(from var(--foreground) l c h / 0.08);
@@ -62,10 +68,10 @@
 	--chart-5: oklch(0.86 0 0);
 
 	/* ── Radius — pill-heavy. Base tuned for cards; buttons/badges/inputs go full. ─ */
-	--radius: 1rem; /* 16px card base */
+	--radius: 1.25rem; /* 20px — the design's large content-card radius */
 
 	/* ── Sidebar (light — CodeDM chrome) ─────────────── */
-	--sidebar: oklch(0.975 0 0);
+	--sidebar: oklch(0.976 0 0);
 	--sidebar-foreground: oklch(0.18 0 0);
 	--sidebar-primary: oklch(0.16 0 0);
 	--sidebar-primary-foreground: oklch(1 0 0);
@@ -76,12 +82,16 @@
 }
 
 .dark {
-	/* Genuine dark inversion — canvas goes near-black, action pills go white. */
+	/* Genuine dark inversion — canvas goes near-black, action pills go white.
+	   The design ships LIGHT ONLY (no dark values exist to copy), so this half stays the product's
+	   own: what it mirrors from D1 is the STRUCTURE — the canvas is the base and a card is one step
+	   off it — not the light theme's greys. */
 	--route-background: oklch(0.145 0 0);
 	--background: oklch(0.185 0 0);
 	--foreground: oklch(0.97 0 0);
 	--card: oklch(0.205 0 0);
 	--card-foreground: var(--foreground);
+	--caption-foreground: oklch(0.58 0 0);
 	--popover: oklch(0.205 0 0);
 	--popover-foreground: var(--foreground);
 

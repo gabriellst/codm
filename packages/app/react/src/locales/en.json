@@ -488,6 +488,10 @@
 		"archived": "Archived",
 		"artifactsEmptyDescription": "Preview deploys, screenshots and files produced by your agents land here.",
 		"artifactsEmptyTitle": "No artifacts yet",
+		"autoArchiveNote": "Completed issues auto-archive after 24 hours.",
+		"autonomyFull": "Autonomous — replies send without review",
+		"autonomyMentionGated": "Only replies when mentioned with {{tag}}",
+		"autonomyPaused": "Paused — won't reply until you resume it",
 		"back": "Back",
 		"canInvoke": "{{count}} can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
@@ -548,6 +552,15 @@
 		"stopCriteriaDescription": "When any of these happen the agent stops, the thread is flagged \"Needs you\", and the stop shows up in the session until you resolve it.",
 		"title": "Settings",
 		"operatorUnnamed": "Unnamed"
+	},
+	"time": {
+		"goodMorning": "Good morning",
+		"goodAfternoon": "Good afternoon",
+		"goodEvening": "Good evening",
+		"justNow": "just now",
+		"minutesAgo": "{{count}} min ago",
+		"hoursAgo": "{{count}} h ago",
+		"daysAgo": "{{count}} d ago"
 	},
 	"workspaces": {
 		"addDescription": "Point at a project folder on this Mac. Git and Claude-project badges are detected automatically.",

@@ -62,7 +62,8 @@ export function SessionIssuesSection({ threadId }: { threadId: string }) {
 				</div>
 			)}
 
-			<p className="text-xs text-muted-foreground">{data.autoArchiveNote}</p>
+			{/* The copy lives here, not on the wire — the daemon used to ship this sentence in English (D5). */}
+			<p className="text-xs text-caption-foreground">{t('session.autoArchiveNote')}</p>
 		</div>
 	)
 }
