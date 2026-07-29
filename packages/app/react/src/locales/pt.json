@@ -504,8 +504,6 @@
 		"mentionTag": "Tag de menção",
 		"mentionTagPlaceholder": "@codedm",
 		"messagesRoutedHere": "Mensagens encaminhadas para cá",
-		"modeDirect": "Direto",
-		"modeWhisper": "Sussurro",
 		"needsYou": "Precisa de você",
 		"onlyWhenMentioned": "Responder apenas quando mencionado",
 		"onlyWhenMentionedHint": "Caso contrário, os agentes respondem a todas as mensagens da conversa.",

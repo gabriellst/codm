@@ -46,8 +46,22 @@ export const GetSessionChatOutputSchema = z.object({
 	composerMode: z.enum(['STEER', 'DIRECT']),
 })
 
-/** Read — SessionChat (T09). The full thread conversation + control-plane state + composed active
- *  stops (from BC5). Composer is DIRECT while paused, STEER while agents are live. */
+/**
+ * Read — SessionChat (T09). The full thread conversation + control-plane state + composed active
+ * stops (from BC5).
+ *
+ * ### `composerMode` is a STATE, not a preference (F4)
+ * The console used to render this as the SEED of a two-way toggle the operator could flip on every
+ * message, which made "what does Enter do" a question with no answer visible from the conversation.
+ * It is now the whole decision, and the rule is the founder's: **paused → STEER, running → DIRECT.**
+ *
+ * Read it as "who is my typing FOR". A paused thread answers nobody, so what the operator types is
+ * instruction for the agents — queued as a steer and acted on when the thread resumes. A running
+ * thread is a live conversation the orchestrator is already holding, so what the operator types is
+ * for the PEOPLE in it, and goes out as their own message.
+ *
+ * Note this INVERTS the previous mapping, which was `paused ? DIRECT : STEER`.
+ */
 @injectable()
 export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, typeof GetSessionChatOutputSchema> {
 	readonly name = 'get_session_chat' as const
@@ -98,7 +112,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				quotedEntryId: e.quotedEntryId ?? undefined,
 				classification: (e.classification ?? undefined) as ClassificationMethod | undefined,
 			})),
-			composerMode: thread.paused ? 'DIRECT' : 'STEER',
+			composerMode: thread.paused ? 'STEER' : 'DIRECT',
 		}
 	}
 

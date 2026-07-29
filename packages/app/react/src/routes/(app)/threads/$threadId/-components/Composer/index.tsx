@@ -6,25 +6,32 @@ import { getSessionChatQueryKey, useSendDirectMessage, useSteerThread } from '@c
 import type { ThreadMode } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
-
-const MODES: { value: ThreadMode; labelKey: string }[] = [
-	{ value: 'STEER', labelKey: 'session.modeWhisper' },
-	{ value: 'DIRECT', labelKey: 'session.modeDirect' },
-]
 
 /**
- * Mode-aware composer (T09). Whisper (STEER) reaches agents only via SteerThread;
- * Direct (DIRECT) sends the operator's own reply to the channel via SendDirectMessage.
- * Seeded from the read's `composerMode` but the operator can switch either way.
+ * The composer (T09). Whisper (STEER) reaches agents only, via `SteerThread`; Direct (DIRECT) sends
+ * the operator's own reply to the channel, via `SendDirectMessage`.
+ *
+ * ### F4 — THE SELECTOR IS GONE, and the state decides
+ * There used to be a two-way toggle here, seeded from `composerMode` and flippable per message. It
+ * asked the operator to answer, every time, a question the app already knew the answer to — and
+ * because it was local state seeded once, it could also drift out of step with a thread that paused
+ * or resumed underneath it, so Enter did one thing while the header said another.
+ *
+ * `composerMode` is now the whole decision, computed server-side in `GetSessionChat`: **paused →
+ * STEER, running → DIRECT**. A paused thread answers nobody, so what you type is instruction for the
+ * agents; a running thread is a live conversation, so what you type is for the people in it. The
+ * hint line under the box says which, in words, on every render — the state is still visible, it
+ * just is not a control any more.
  */
 export function Composer({ threadId, composerMode }: { threadId: string; composerMode: ThreadMode }) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
-	const [mode, setMode] = useState<ThreadMode>(composerMode)
 	const [text, setText] = useState('')
 	const steer = useSteerThread()
 	const direct = useSendDirectMessage()
+	// Read straight from the prop — no `useState` seed. The thread pausing while this box is focused
+	// must change what Enter does, and a seeded copy is exactly what stopped that from happening.
+	const mode = composerMode
 
 	const pending = steer.isPending || direct.isPending
 
@@ -40,22 +47,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 	}
 
 	return (
-		<div className="sticky bottom-0 z-10 flex flex-col gap-2 bg-route-background pb-2 pt-4">
-			<div className="inline-flex w-fit items-center gap-1 rounded-full bg-secondary p-1">
-				{MODES.map(m => (
-					<button
-						key={m.value}
-						type="button"
-						onClick={() => setMode(m.value)}
-						className={cn(
-							'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-							mode === m.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-						)}
-					>
-						{t(m.labelKey)}
-					</button>
-				))}
-			</div>
+		<div data-testid="composer" data-mode={mode} className="sticky bottom-0 z-10 flex flex-col gap-2 bg-route-background pb-2 pt-4">
 			<div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2">
 				<Textarea
 					value={text}

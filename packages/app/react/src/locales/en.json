@@ -504,8 +504,6 @@
 		"mentionTag": "Mention tag",
 		"mentionTagPlaceholder": "@codedm",
 		"messagesRoutedHere": "Messages routed here",
-		"modeDirect": "Direct",
-		"modeWhisper": "Whisper",
 		"needsYou": "Needs you",
 		"onlyWhenMentioned": "Only reply when mentioned",
 		"onlyWhenMentionedHint": "Otherwise agents respond to every message in the thread.",
