@@ -1,4 +1,5 @@
 import { injectable } from 'tsyringe-neo'
+import type { DependencyContainer } from 'tsyringe-neo'
 import { LoggingService } from '@codedm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
@@ -35,13 +36,38 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 
 	constructor(
 		private readonly mailbox: MailboxRepository,
-		private readonly runOrchestratorTurn: RunOrchestratorTurn,
-		private readonly runIssueTurn: RunIssueTurn,
 		private readonly threads: ThreadRepository,
 		private readonly workspaces: WorkspaceRepository,
 		private readonly logging: LoggingService,
 	) {
 		super()
+	}
+
+	private container: DependencyContainer | null = null
+
+	bind(container: DependencyContainer): this {
+		this.container = container
+		return this
+	}
+
+	/**
+	 * Resolve a use case AND BIND ITS CONTAINER — the shape `CommandQueue.registerCommandHandler` uses.
+	 *
+	 * A `Handler` needs `_container` to open transactions and reach the domain-event repository, and it
+	 * gets one in exactly two ways: the bounded-context pipeline binds registered handlers, or a caller
+	 * binds explicitly. `bindContainer` also CASCADES to child handlers — which is why the old
+	 * `RunIssueTurnOnClassification` could constructor-inject `RunIssueTurn` and have it work: the
+	 * event-handler pipeline bound the parent, and the parent bound the child.
+	 *
+	 * This dispatcher is NOT a handler, so nothing binds it and nothing cascades. Constructor-injecting
+	 * the use cases therefore produced instances that threw on their first transaction — every turn,
+	 * with the item retried to poison. Caught by a flow test; `tsc` and every unit test were green,
+	 * because a unit test constructs the use case itself and binds it.
+	 */
+	private handlerFor<T>(HandlerClass: new (...args: never[]) => T): T {
+		if (!this.container) throw new Error('MailboxDispatcher.bind(container) was never called — no turn can be resolved')
+		const c = this.container
+		return (c.resolve(HandlerClass as never) as { bindContainer: (x: DependencyContainer) => T }).bindContainer(c)
 	}
 
 	start(): void {
@@ -125,7 +151,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
 		const payload = item.payload as { entryId?: string }
-		await this.runOrchestratorTurn.execute({
+		await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
 			workspacePath: workspace.path,
@@ -146,7 +172,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		const workspace = await this.workspaces.findById(thread.workspaceId)
 		if (!workspace) return this.dropSilently(item, 'workspace no longer bound')
 
-		await this.runIssueTurn.execute({
+		await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
 			issueId: item.targetId,
 			threadId: payload.threadId,

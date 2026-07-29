@@ -46,6 +46,7 @@ import { migrateEmbeddedDatabase } from '@shared/registry'
 // removes. It is the FACTORY rather than the seam because `AgentRunner` is no longer a token — the
 // factory owns every runner it handed out, and is the only thing that can reach them to kill them.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
+import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
 import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.
@@ -90,6 +91,16 @@ async function start(): Promise<void> {
 	// Start HTTP server.
 	await mainRouter.start()
 
+	// THE MAILBOX DISPATCHER — the single consumer of queued turns (orchestrator pivot §7.4).
+	//
+	// Without this line the whole pivot is INERT in exactly the way that is hardest to notice: ingest
+	// still queues, tsc is green, every unit test passes, and the product simply never answers. It was
+	// caught by the e2e suite, not by any gate above it, which is the same shape as the bug that left
+	// this product dead for weeks. Its first act is the boot sweep, so a turn stranded by a crashed
+	// process is picked up here.
+	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
+	;(container.resolve(MailboxDispatcher as any) as MailboxDispatcher).bind(container).start()
+
 	// Start OpenTelemetry tracer (no-op when OTEL_COLLECTOR_TRACE_URL is empty).
 	await startTelemetry()
 
@@ -122,6 +133,8 @@ async function start(): Promise<void> {
 		// SINGLETON, so the runners it shuts down are the same instances it handed to the agents.
 		// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
 		await step('agent runs', () => (container.resolve(AgentRunnerFactory as any) as AgentRunnerFactory).shutdown())
+		// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
+		await step('mailbox dispatcher', () => (container.resolve(MailboxDispatcher as any) as MailboxDispatcher).stop())
 		await step('outbox dispatcher', () => (container.resolve(OutboxDispatcher as any) as OutboxDispatcher).stop())
 		await step('mediator listeners', () => {
 			;(container.resolve(InternalMediator as any) as InternalMediator).removeAllListeners()
