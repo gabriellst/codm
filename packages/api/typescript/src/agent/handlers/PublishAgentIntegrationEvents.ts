@@ -3,12 +3,14 @@ import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
 import {
 	IssueOpenedEvent,
 	IssueCreatedEvent,
+	OrchestratorRepliedEvent as OrchestratorRepliedIntegrationEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
 	AgentReplyDraftedEvent as AgentReplyDraftedIntegrationEvent,
 } from '@codedm/contracts-typescript/wire/events'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
+import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
@@ -31,6 +33,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 	readonly [
 		typeof AgentRunStartedEvent,
 		typeof IssueForkedEvent,
+		typeof OrchestratorRepliedEvent,
 		typeof AgentRunReplyDraftedEvent,
 		typeof AgentRunCompletedEvent,
 		typeof AgentRunStopRaisedEvent,
@@ -39,6 +42,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 	readonly event = [
 		AgentRunStartedEvent,
 		IssueForkedEvent,
+		OrchestratorRepliedEvent,
 		AgentRunReplyDraftedEvent,
 		AgentRunCompletedEvent,
 		AgentRunStopRaisedEvent,
@@ -63,6 +67,22 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						key: event.payload.key,
 						title: event.payload.title,
 						provider: event.payload.provider,
+					},
+				}),
+			)
+			return
+		}
+
+		// THE ORCHESTRATOR SPOKE (§7.5). The agent runtime knows WHAT was said; only the thread context
+		// knows WHO to say it to, which is why this crosses instead of being delivered here.
+		if (event instanceof OrchestratorRepliedEvent) {
+			await this.mediator.publish(
+				new OrchestratorRepliedIntegrationEvent({
+					ownerId,
+					payload: {
+						threadId: event.payload.threadId,
+						text: event.payload.text,
+						replyToEntryId: event.payload.replyToEntryId,
 					},
 				}),
 			)

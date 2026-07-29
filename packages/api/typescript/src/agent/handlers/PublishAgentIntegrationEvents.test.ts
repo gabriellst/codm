@@ -141,16 +141,19 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 	 * mapping with no fact is dead code. Both fail invisibly at runtime — nothing throws, a message
 	 * simply never arrives.
 	 *
-	 * `agent.issue_forked` joined in the orchestrator pivot (§7.2). It is NOT a `terminal.*` execution
-	 * fact: it says an issue was DECLARED, before any work exists. It maps to
-	 * `integration.issue.created`, deliberately not to `issue.opened` — that one still means
-	 * "`RunIssueTurn` is spawning a turn", which is a different moment (D1).
+	 * Two joined in the orchestrator pivot, and NEITHER is a `terminal.*` execution fact:
+	 *  - `agent.issue_forked` (§7.2) says an issue was DECLARED, before any work exists. It maps to
+	 *    `integration.issue.created`, deliberately not to `issue.opened` — that one still means
+	 *    "`RunIssueTurn` is spawning a turn", a different moment (D1).
+	 *  - `agent.orchestrator_replied` (§7.5) says the thread's orchestrator SPOKE. The runtime knows
+	 *    WHAT was said; only the thread context knows WHO to say it to, which is why it crosses.
 	 */
-	it('subscribes to exactly the four terminal.* facts plus the fork', () => {
+	it('subscribes to exactly the four terminal.* facts plus the fork and the reply', () => {
 		const { handler } = makeHandler()
 		expect(handler.events).toEqual([
 			'agent.run.started',
 			'agent.issue_forked',
+			'agent.orchestrator_replied',
 			'agent.run.reply_drafted',
 			'agent.run.completed',
 			'agent.run.stop_raised',

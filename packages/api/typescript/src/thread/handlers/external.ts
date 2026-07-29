@@ -9,3 +9,4 @@ export { DeliverChannelMessage } from './DeliverChannelMessage'
 // The agent context speaks in issues, the channel in conversations — only the thread knows which
 // contact an issue belongs to, so the reply→delivery translation lives here.
 export { RequestAgentReplyDelivery } from './RequestAgentReplyDelivery'
+export { DeliverOrchestratorReply } from './DeliverOrchestratorReply'
