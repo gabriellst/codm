@@ -59,7 +59,9 @@ function DialogContent({
 				{showCloseButton && (
 					<DialogPrimitive.Close
 						data-slot="dialog-close"
-						render={<Button variant="secondary" className="absolute top-4 right-4" size="icon" />}
+						// Circular, per the design — the whole system is pill-heavy (999px is its dominant radius),
+						// and a squared close button was the one control that read as a different vocabulary.
+						render={<Button variant="secondary" className="absolute top-4 right-4 rounded-full" size="icon" />}
 					>
 						<IconX />
 						<span className="sr-only">{t('common.close')}</span>

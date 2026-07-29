@@ -28,7 +28,7 @@ export function SessionChatSection({ threadId }: { threadId: string }) {
 	}
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex flex-col h-full">
 			<NeedsYouPanel threadId={threadId} />
 
 			{data.transcript.length === 0 ? (
@@ -37,7 +37,7 @@ export function SessionChatSection({ threadId }: { threadId: string }) {
 					<EmptyDescription>{t('session.chatEmptyDescription')}</EmptyDescription>
 				</Empty>
 			) : (
-				<div className="flex flex-col gap-4 py-2">
+				<div className="flex flex-col gap-4 py-2 h-full">
 					{data.transcript.map(entry => (
 						<TranscriptBubble key={entry.entryId} entry={entry} threadId={threadId} />
 					))}

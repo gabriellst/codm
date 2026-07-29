@@ -183,7 +183,7 @@ export class OrchestratorPromptBuilder {
 			'Work that changes code happens in an issue, and an issue runs elsewhere while you keep talking.',
 			'An issue is something the operator asks for OUT LOUD. You never infer one, never turn a remark into work, and ' +
 				'never suggest that something should become an issue unless you were asked.',
-			`To open one, call the ${createIssue} tool with the goal the operator gave you, in their words. It answers with ` + 'the issue key.',
+			`To open one, call the ${createIssue} tool with the goal the operator gave you, in their words. It answers with the issue key.`,
 			'Acknowledge in that same turn — name the key and say you will report back. One line. Then keep talking; the ' +
 				'work runs on its own, and you will be handed the result when it lands.',
 			'',

@@ -6151,9 +6151,9 @@ type GetHomeDashboardResponse struct {
 		} `json:"channels"`
 		LatestActivity []struct {
 			At       string             `json:"at"`
+			Kind     TranscriptKind     `json:"kind"`
 			Subtitle string             `json:"subtitle"`
 			ThreadId openapi_types.UUID `json:"threadId"`
-			Title    string             `json:"title"`
 		} `json:"latestActivity"`
 		NeedsYou *struct {
 			StopKinds         []StopKind         `json:"stopKinds"`
@@ -8320,9 +8320,9 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 			} `json:"channels"`
 			LatestActivity []struct {
 				At       string             `json:"at"`
+				Kind     TranscriptKind     `json:"kind"`
 				Subtitle string             `json:"subtitle"`
 				ThreadId openapi_types.UUID `json:"threadId"`
-				Title    string             `json:"title"`
 			} `json:"latestActivity"`
 			NeedsYou *struct {
 				StopKinds         []StopKind         `json:"stopKinds"`

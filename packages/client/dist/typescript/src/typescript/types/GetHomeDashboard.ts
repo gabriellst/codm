@@ -8,6 +8,7 @@ import type { ChannelStatus } from "./ChannelStatus.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { ThreadStatus } from "./ThreadStatus.ts";
+import type { TranscriptKind } from "./TranscriptKind.ts";
 
 /**
  * @description Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)
@@ -109,7 +110,7 @@ export type GetHomeDashboard200 = {
         /**
          * @type string
         */
-        title: string;
+        kind: TranscriptKind;
         /**
          * @type string
         */

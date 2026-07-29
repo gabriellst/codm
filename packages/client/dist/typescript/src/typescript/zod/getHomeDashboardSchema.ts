@@ -8,6 +8,7 @@ import { channelStatusSchema } from "./channelStatusSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { threadStatusSchema } from "./threadStatusSchema.ts";
+import { transcriptKindSchema } from "./transcriptKindSchema.ts";
 import { z } from "zod/v4";
 
 /**
@@ -53,7 +54,9 @@ get "status"(){
 "lastActivity": z.string()
     })),
 "latestActivity": z.array(z.object({
-    "title": z.string(),
+    get "kind"(){
+                return transcriptKindSchema
+              },
 "subtitle": z.string(),
 "threadId": z.uuid(),
 "at": z.string()

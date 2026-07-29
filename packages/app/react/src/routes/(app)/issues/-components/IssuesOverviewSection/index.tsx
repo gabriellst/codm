@@ -39,7 +39,13 @@ export function IssuesOverviewSection() {
 				title={t('issues.title')}
 				subtitle={subtitle ?? <Skeleton className="h-4 w-64" />}
 				action={
-					<Button variant={archived ? 'secondary' : 'outline'} size="sm" render={<Link to="/issues" search={{ archived: !archived }} />}>
+					// `nativeButton={false}` — this renders an <a>, not a <button>.
+					<Button
+						variant={archived ? 'secondary' : 'outline'}
+						size="sm"
+						nativeButton={false}
+						render={<Link to="/issues" search={{ archived: !archived }} />}
+					>
 						{archived ? t('issues.hideArchived') : t('issues.showArchived')}
 					</Button>
 				}

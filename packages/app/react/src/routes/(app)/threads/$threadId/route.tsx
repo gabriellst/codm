@@ -14,7 +14,7 @@ function SessionLayout() {
 	return (
 		// No `pt-*` here: the sticky SessionHeader owns the top clearance, so the band it reserves is
 		// the same scrolled or not, and `AgentsRunningPill` keeps floating in it rather than over it.
-		<div className="mx-auto flex w-full max-w-3xl flex-col px-6 pb-8">
+		<div className="mx-auto flex w-full flex-col px-6 gap-2">
 			<SessionHeader threadId={threadId} />
 			<Outlet />
 		</div>

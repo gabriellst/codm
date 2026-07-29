@@ -3861,8 +3861,8 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "title": {
-                            "type": "string"
+                          "kind": {
+                            "$ref": "#/components/schemas/TranscriptKind"
                           },
                           "subtitle": {
                             "type": "string"
@@ -3877,7 +3877,7 @@
                           }
                         },
                         "required": [
-                          "title",
+                          "kind",
                           "subtitle",
                           "threadId",
                           "at"

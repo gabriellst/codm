@@ -342,6 +342,13 @@
 			"PAUSED": "Paused",
 			"RUNNING": "Running"
 		},
+		"TranscriptKind": {
+			"CONTACT": "Contact",
+			"SYSTEM": "Agent",
+			"DIRECT": "You",
+			"WHISPER": "Whisper",
+			"ACTION": "Action"
+		},
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Claude project",
 			"GIT": "git"
@@ -493,7 +500,8 @@
 		"autonomyMentionGated": "Only replies when mentioned with {{tag}}",
 		"autonomyPaused": "Paused — won't reply until you resume it",
 		"back": "Back",
-		"canInvoke": "{{count}} can invoke",
+		"bufferMessages": "messages",
+		"canInvokeToggle": "Can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
 		"chatEmptyTitle": "No messages yet",
 		"composerDirectHint": "Direct replies are sent to the channel as you.",
@@ -501,7 +509,7 @@
 		"composerPlaceholderSteer": "Whisper a steer to the agents…",
 		"composerSteerHint": "Whispers reach agents only — never sent to the channel.",
 		"contextBuffer": "Context buffer",
-		"contextBufferHint": "How many recent messages agents see as context.",
+		"contextBufferHint": "Every message is kept in a rolling buffer the agents can read — including from people who can't invoke.",
 		"issuesEmptyDescription": "Routed messages that spawn work will show up here as issues.",
 		"issuesEmptyTitle": "No issues in this thread",
 		"issuesStats": "{{awaiting}} awaiting input · {{working}} working · {{completed}} completed",
@@ -512,11 +520,13 @@
 		"onlyWhenMentioned": "Only reply when mentioned",
 		"onlyWhenMentionedHint": "Otherwise agents respond to every message in the thread.",
 		"participants": "Participants",
+		"participantsWhoCanInvoke": "Participants — who can invoke",
 		"pause": "Pause",
 		"respondTrigger": "Respond trigger",
 		"resume": "Resume",
 		"send": "Send",
 		"settingsDescription": "Tune how agents behave in this thread.",
+		"settingsDescriptionNamed": "How agents behave in {{name}}.",
 		"settingsTitle": "Thread settings",
 		"steer": "Steer",
 		"steerHint": "Steers reach the agent working this issue only.",
@@ -545,13 +555,10 @@
 		"general": "General",
 		"generalAppVersion": "App version",
 		"generalDataDir": "Data directory",
-		"generalOperator": "Operator",
-		"generalTimezone": "Timezone",
 		"providerNotFound": "not found in PATH",
 		"stopCriteria": "Stop criteria",
 		"stopCriteriaDescription": "When any of these happen the agent stops, the thread is flagged \"Needs you\", and the stop shows up in the session until you resolve it.",
-		"title": "Settings",
-		"operatorUnnamed": "Unnamed"
+		"title": "Settings"
 	},
 	"time": {
 		"goodMorning": "Good morning",

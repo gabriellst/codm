@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import type { GetSessionChatQueryResponse } from '@codedm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
+import { enumLabel } from '@/lib'
 import { providerLabel } from '@/components/console/glyphs'
 import { Dot } from '@/components/console/StatusDot'
 
@@ -33,7 +34,12 @@ export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: 
 	}
 
 	const isWhisper = entry.kind === 'WHISPER'
-	const caption = entry.kind === 'SYSTEM' ? (entry.provider ? providerLabel[entry.provider] : 'Agent') : isWhisper ? 'Whisper' : 'You'
+	// The caption is WHO said this, and it comes from the SAME `TranscriptKind` vocabulary the home
+	// page's activity list uses — one set of words for one concept, translated in one place. It used to
+	// be three English literals ('Agent' / 'Whisper' / 'You') sitting in an otherwise translated screen.
+	// A SYSTEM line names the actual CLI when it knows it, which is more specific than "Agente".
+	const caption =
+		entry.kind === 'SYSTEM' && entry.provider ? providerLabel[entry.provider] : enumLabel('TranscriptKind', entry.kind)
 
 	return (
 		<div className="flex flex-col items-end gap-1">

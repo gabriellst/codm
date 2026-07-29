@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
 import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codedm/contracts/db'
-import { ThreadStatus, ChannelKind, ChannelStatus, IssueStatus, ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { ThreadStatus, ChannelKind, ChannelStatus, IssueStatus, ProviderKind, StopKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { deriveThreadStatus } from '@shared/services'
 
 const ThreadSummarySchema = z.object({
@@ -31,7 +31,13 @@ export const GetHomeDashboardOutputSchema = z.object({
 	 */
 	threads: z.array(ThreadSummarySchema),
 	activeSessions: z.array(ThreadSummarySchema),
-	latestActivity: z.array(z.object({ title: z.string(), subtitle: z.string(), threadId: z.uuid(), at: z.string() })),
+	/**
+	 * Recent transcript lines. `kind` is the ENUM, not a pre-rendered label — this used to ship as
+	 * `title: z.string()` carrying the raw `TranscriptKind`, which is how "CONTACT" and "SYSTEM" came
+	 * to be printed verbatim in a Portuguese list. Typed as the enum the browser runs it through
+	 * `enumLabel` and the i18n rail can see it; as a bare `string` it was invisible to both.
+	 */
+	latestActivity: z.array(z.object({ kind: z.enum(TranscriptKind), subtitle: z.string(), threadId: z.uuid(), at: z.string() })),
 	today: z.object({ issuesOpened: z.number().int(), issuesClosed: z.number().int(), medianResponseSeconds: z.number() }),
 	channels: z.array(z.object({ kind: z.enum(ChannelKind), status: z.enum(ChannelStatus) })),
 })
@@ -106,7 +112,12 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.where(eq(transcriptEntries.ownerId, input.ownerId))
 			.orderBy(desc(transcriptEntries.at))
 			.limit(8)
-		const latestActivity = recent.map(r => ({ title: r.kind, subtitle: r.text.slice(0, 120), threadId: r.threadId, at: r.at.toISOString() }))
+		const latestActivity = recent.map(r => ({
+			kind: r.kind as TranscriptKind,
+			subtitle: r.text.slice(0, 120),
+			threadId: r.threadId,
+			at: r.at.toISOString(),
+		}))
 
 		const dayStart = new Date(new Date().setHours(0, 0, 0, 0))
 		const issuesOpened = allIssues.filter(i => i.createdAt >= dayStart).length

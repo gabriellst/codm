@@ -43,9 +43,9 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 
 			<nav className="flex flex-col gap-1">
 				<NavItem to="/dashboard" icon={IconHome} label={t('nav.home')} />
+				<NavItem to="/workspaces" icon={IconFolder} label={t('nav.workspaces')} count={workspaceCount} />
 				<NavItem to="/issues" icon={IconListDetails} label={t('nav.issues')} count={issueCount} />
 				<NavItem to="/channels" icon={IconAntennaBars5} label={t('nav.channels')} count={channelCount} />
-				<NavItem to="/workspaces" icon={IconFolder} label={t('nav.workspaces')} count={workspaceCount} />
 				<NavItem to="/settings" icon={IconSettings} label={t('nav.settings')} />
 			</nav>
 

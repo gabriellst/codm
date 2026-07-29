@@ -48,7 +48,7 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 
 	return (
 		<div data-testid="composer" data-mode={mode} className="sticky bottom-0 z-10 flex flex-col gap-2 bg-route-background pb-2 pt-4">
-			<div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2">
+			<div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2">
 				<Textarea
 					value={text}
 					onChange={e => setText(e.target.value)}

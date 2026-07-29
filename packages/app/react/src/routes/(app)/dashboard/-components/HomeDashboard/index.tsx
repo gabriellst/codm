@@ -58,7 +58,7 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 	const detail = needsYou.stopKinds.map(k => enumLabel('StopKind', k)).join(' · ') || t('session.agentStopped')
 	return (
 		<Card className="border-warning/50">
-			<CardContent className="flex items-center gap-4 p-5">
+			<CardContent className="flex items-center gap-4">
 				<span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground text-lg font-bold text-background">
 					!
 				</span>
@@ -66,7 +66,8 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 					<span className="font-semibold text-foreground">{t('dashboard.needsYouName', { name: needsYou.threadDisplayName })}</span>
 					<span className="text-sm text-muted-foreground">{detail}</span>
 				</div>
-				<Button size="sm" render={<Link to="/threads/$threadId" params={{ threadId: needsYou.threadId }} />}>
+				{/* `nativeButton={false}` — this renders an <a>, not a <button>. */}
+				<Button size="sm" nativeButton={false} render={<Link to="/threads/$threadId" params={{ threadId: needsYou.threadId }} />}>
 					{t('dashboard.openSession')}
 				</Button>
 			</CardContent>
@@ -127,7 +128,7 @@ function LatestActivity({ items }: { items: Dashboard['latestActivity'] }) {
 					>
 						<Dot className="mt-1.5 bg-muted-foreground/40" />
 						<span className="flex-1">
-							<span className="font-medium text-foreground">{item.title}</span>{' '}
+							<span className="font-medium text-foreground">{enumLabel('TranscriptKind', item.kind)}</span>{' '}
 							<span className="text-muted-foreground">{item.subtitle}</span>
 						</span>
 					</Link>
@@ -160,10 +161,9 @@ function TodayCard({ today }: { today: Dashboard['today'] }) {
 				{rows.map(row => (
 					<StatRow key={row.label} label={row.label} value={row.value} />
 				))}
-			</CardContent>
-			<CardFooter>
 				<StatRow label={last.label} value={last.value} last />
-			</CardFooter>
+			</CardContent>
+			<CardFooter />
 		</Card>
 	)
 }

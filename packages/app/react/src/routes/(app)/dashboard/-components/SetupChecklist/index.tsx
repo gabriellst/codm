@@ -43,7 +43,7 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 				<p className="text-muted-foreground">{t('home.welcomeSubtitle')}</p>
 			</div>
 
-			<Card className="w-full text-left">
+			<Card className="w-full text-left bg-transparent">
 				<CardContent className="flex flex-col gap-1 p-2">
 					{steps.map(step => (
 						<div key={step.n} className="flex items-center gap-4 rounded-2xl p-3">
@@ -59,7 +59,9 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 								<span className="text-sm font-semibold text-foreground">{step.title}</span>
 								<span className="text-xs text-muted-foreground">{step.description}</span>
 							</div>
-							<Button size="sm" variant={step.done ? 'outline' : 'default'} render={<Link to={step.to} />}>
+							{/* `nativeButton={false}`: this renders an <a>, not a <button>. Base UI errors otherwise —
+							    it assumes native button semantics unless told the render target is something else. */}
+							<Button size="sm" nativeButton={false} variant={step.done ? 'outline' : 'default'} render={<Link to={step.to} />}>
 								{step.done ? t('home.setupDone') : t('home.setupCta')}
 							</Button>
 						</div>

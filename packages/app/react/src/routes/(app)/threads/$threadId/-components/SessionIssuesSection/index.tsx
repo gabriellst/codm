@@ -30,7 +30,7 @@ export function SessionIssuesSection({ threadId }: { threadId: string }) {
 	const empty = orderedGroups.length === 0 && data.archived.length === 0
 
 	return (
-		<div className="flex flex-col gap-6 py-2">
+		<div className="flex flex-col gap-6 py-2 h-full">
 			<p className="text-sm text-muted-foreground">
 				{t('session.issuesStats', { awaiting: stats.awaitingInput, working: stats.working, completed: stats.completed })}
 			</p>

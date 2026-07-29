@@ -25,7 +25,7 @@ function AuthLayout() {
 				<Sidebar />
 				<main className="relative flex flex-1 flex-col overflow-hidden">
 					{/* Persistent operating pulse, pinned above the scrolling content. */}
-					<div className="pointer-events-none absolute right-6 top-5 z-20">
+					<div className="pointer-events-none absolute right-10 top-4 z-20">
 						<div className="pointer-events-auto">
 							<AgentsRunningPill />
 						</div>

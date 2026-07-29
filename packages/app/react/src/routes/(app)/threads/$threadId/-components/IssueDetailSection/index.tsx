@@ -53,7 +53,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 	}
 
 	return (
-		<div className="flex flex-col gap-6 py-2">
+		<div className="flex flex-col py-2 gap-2">
 			<Link
 				to="/threads/$threadId/issues"
 				params={{ threadId }}
@@ -62,19 +62,30 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 				<IconChevronLeft className="size-4" /> {t('session.allIssues')}
 			</Link>
 
+			{/* An issue title is a SENTENCE the operator dictated ("me manda um resumo do que o Odisseu
+			    fez…"), not a label, so it routinely outruns the column. Truncating it needs the whole flex
+			    chain to be ALLOWED to shrink — `min-w-0` on every ancestor down to the text — because a
+			    flex item defaults to `min-width: auto` and refuses to go below its content, so the row
+			    grows instead and shoves the archive button off the edge. The badge and the button are
+			    `shrink-0` so the NAME is what gives way, which is what puts the ellipsis on it. */}
 			<div className="flex items-start justify-between gap-4">
-				<div className="flex flex-col gap-2">
-					<div className="flex items-center gap-3">
-						<h1 className="heading-display text-2xl text-foreground">{data.issue.title}</h1>
-						<Badge variant="outline">{enumLabel('IssueStatus', data.issue.status)}</Badge>
+				<div className="flex min-w-0 flex-1 flex-col gap-2">
+					<div className="flex min-w-0 items-center gap-3">
+						{/* `title` keeps the full text reachable on hover once it is visually cut. */}
+						<h1 className="heading-display truncate text-2xl text-foreground" title={data.issue.title}>
+							{data.issue.title}
+						</h1>
+						<Badge variant="outline" className="shrink-0">
+							{enumLabel('IssueStatus', data.issue.status)}
+						</Badge>
 					</div>
-					<p className="font-mono text-sm text-muted-foreground">
+					<p className="truncate font-mono text-sm text-muted-foreground">
 						{data.issue.key}
 						{data.issue.meta ? ` · ${data.issue.meta}` : ''}
 					</p>
 				</div>
 				{!data.issue.archived && (
-					<Button variant="outline" size="sm" disabled={archive.isPending} onClick={onArchive}>
+					<Button variant="outline" size="sm" className="shrink-0" disabled={archive.isPending} onClick={onArchive}>
 						{t('session.archive')}
 					</Button>
 				)}
@@ -115,7 +126,7 @@ function TerminalPanel({ issueId, lines }: { issueId: string; lines: Detail['ter
 	const empty = lines.length === 0 && frames.length === 0
 
 	return (
-		<section className="flex flex-col gap-3">
+		<section className="flex flex-col gap-3 g-">
 			<div className="flex items-center gap-2">
 				<h2 className="label-eyebrow">{t('session.terminalSession')}</h2>
 				{connected && (

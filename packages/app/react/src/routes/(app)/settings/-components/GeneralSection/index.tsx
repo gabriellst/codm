@@ -2,7 +2,14 @@ import { useTranslation } from 'react-i18next'
 import { useGetSettings } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** General preferences and environment facts (T08): operator, timezone, data dir, app version. */
+/**
+ * Environment facts (T08): where the data lives and which build is running.
+ *
+ * Operator and timezone were dropped (founder, 29-jul). Neither was actionable here: CodeDM runs as a
+ * single local operator with no account to name, so "Operador — Sem nome" was a row asking to be
+ * filled in by a screen that does not exist, and the timezone is the machine's. A settings list should
+ * only hold things you can act on or facts you would go looking for.
+ */
 export function GeneralSection() {
 	const { t } = useTranslation()
 	const { data, isLoading } = useGetSettings()
@@ -17,8 +24,6 @@ export function GeneralSection() {
 	}
 
 	const rows: { label: string; value: string; mono?: boolean }[] = [
-		{ label: t('settings.generalOperator'), value: data.general.operatorName || t('settings.operatorUnnamed') },
-		{ label: t('settings.generalTimezone'), value: data.general.timezone },
 		{ label: t('settings.generalDataDir'), value: data.general.dataDir, mono: true },
 		{ label: t('settings.generalAppVersion'), value: data.appVersion, mono: true },
 	]
