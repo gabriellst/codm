@@ -727,7 +727,10 @@ get "reason"(){
 "key": z.string(),
 "title": z.string(),
 "goal": z.string(),
-"originEntryId": z.string()
+"originEntryId": z.string(),
+get "provider"(){
+                return providerKindSchema
+              }
     })
     }), z.object({
     "ownerId": z.string(),

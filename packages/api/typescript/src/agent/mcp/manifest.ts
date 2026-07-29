@@ -1,6 +1,7 @@
 import type { Controller } from '@codedm/core-typescript'
 import { RecordArtifactController, ListArtifactsController } from '@artifact/controllers'
 import {
+	GetIssueStatusController,
 	GetIssueDetailController,
 	GetIssuesOverviewController,
 	GetNeedsYouPanelController,
@@ -34,6 +35,7 @@ import { CreateIssueController } from '../controllers/CreateIssue'
 import { TransitionIssueStatusController } from '../controllers/TransitionIssueStatus'
 import { RaiseStopController } from '../controllers/RaiseStop'
 import { AskOperatorController } from '../controllers/AskOperator'
+import { ForkIssueController } from '../controllers/ForkIssue'
 
 /**
  * THE MANIFEST — the single declaration of which HTTP operations are reachable as MCP tools, and
@@ -74,8 +76,8 @@ import { AskOperatorController } from '../controllers/AskOperator'
  * happens through the EMITTED SPEC. There is no third copy of this list anywhere.
  */
 
-/** The two audiences. They cut ACROSS the per-bounded-context tags, which is why a second axis exists at all. */
-export const MCP_SCOPE_NAMES = ['issue-handling', 'system'] as const
+/** The audiences. They cut ACROSS the per-bounded-context tags, which is why a second axis exists at all. */
+export const MCP_SCOPE_NAMES = ['issue-handling', 'orchestration', 'system'] as const
 export type McpScope = (typeof MCP_SCOPE_NAMES)[number]
 
 /**
@@ -86,12 +88,6 @@ export type McpScope = (typeof MCP_SCOPE_NAMES)[number]
  * always being there. The orchestrator breaks that premise — it is keyed by THREAD and structurally has
  * no issue (§6.1) — and the honest fix is to make confinement a DECLARED property of the scope rather
  * than an assumption baked into the mint site.
- *
- * THE MECHANISM LANDS BEFORE ITS USER, on purpose. Both scopes below are `'issue'`, so this record
- * changes no behaviour today: adding `orchestration` to `MCP_SCOPE_NAMES` cascades into three
- * `Record<McpScope, …>` sites (`MCP_SCOPES` here, `GENERATED_SERVERS` in `router.ts`) that cannot be
- * satisfied until that scope's controllers exist. Splitting the mechanism from the scope keeps every
- * commit green instead of forcing one commit that changes minting AND adds four controllers.
  *
  * A `Record<McpScope, …>` on purpose, exactly like `GENERATED_SERVERS` in `router.ts`: a scope added to
  * `MCP_SCOPE_NAMES` breaks `tsc` HERE until somebody states what its tokens are confined to. The
@@ -108,6 +104,13 @@ export type McpScope = (typeof MCP_SCOPE_NAMES)[number]
 export const SCOPE_CONFINEMENT = {
 	/** Six writes an agent performs ON ITS OWN ISSUE. The claim is what makes "its own" checkable. */
 	'issue-handling': 'issue',
+	/**
+	 * The orchestrator: ONE per thread, and no issue exists to confine it to (§6.1). Every tool in this
+	 * scope that accepts an `issueId` therefore verifies `issue.threadId === claims.threadId` in its own
+	 * handler — the generic walker SKIPS an absent claim rather than rejecting it, so it cannot help
+	 * here (§7.2.1).
+	 */
+	orchestration: 'thread',
 	/**
 	 * `'issue'` — the STRICTER of the two, and deliberately so despite `system` operations being
 	 * neither issue- nor thread-shaped (`owner/*`, `workspace/*`, ui reads).
@@ -152,6 +155,18 @@ export const MCP_SCOPES = {
 		SendDirectMessageController,
 		RecordArtifactController,
 	],
+	/**
+	 * WHAT THE ORCHESTRATOR MAY DO WHILE TALKING (§7.2) — fork an issue, and look at this thread's own.
+	 *
+	 * Deliberately NOT the six writes of `issue-handling`: this agent converses and decides, it never
+	 * does issue work (§3, "o orquestrador nunca executa trabalho de issue"). `issue/steer` joins in F4,
+	 * with the dispatcher branch that makes a queued STEER actually run — shipping the tool earlier
+	 * would be a write with no consumer, the dormancy D5 forbids.
+	 *
+	 * Every entry is thread-shaped: `ForkIssue` and `GetSessionIssues` take `threadId` (which the claims
+	 * confine), and `GetIssueStatus` takes both, checking ownership itself.
+	 */
+	orchestration: [ForkIssueController, GetSessionIssuesController, GetIssueStatusController],
 	/**
 	 * NAVIGATION AND OPERATION of the system. Generated and mounted, but NO internal agent declares it
 	 * in this phase — its consumer is an external MCP client (the operator's own agent, browsing the

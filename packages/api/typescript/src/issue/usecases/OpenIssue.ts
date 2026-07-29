@@ -12,6 +12,17 @@ export const OpenIssueInputSchema = z.object({
 	key: z.string().trim().min(1),
 	title: z.string().trim().min(1),
 	provider: z.enum(ProviderKind),
+	/**
+	 * Provenance, present ONLY on the fork path (§7.2): the entry that asked, and the words it asked in.
+	 *
+	 * Optional because this use case now has two callers with different knowledge.
+	 * `integration.issue.created` (the fork) carries both; `integration.issue.opened` (a worker
+	 * spawning a turn on work an agent separated out mid-run) carries neither and never will. The
+	 * early-return below, plus the repository leaving these two columns out of its upsert `set`, is what
+	 * keeps the second path from blanking what the first wrote (§6.2).
+	 */
+	originEntryId: z.uuid().optional(),
+	goal: z.string().trim().min(1).optional(),
 })
 
 export const OpenIssueOutputSchema = z.object({ issueId: z.uuid(), key: z.string() })
@@ -45,6 +56,8 @@ export class OpenIssue extends Handler<typeof OpenIssueInputSchema, typeof OpenI
 				status: IssueStatus.WORKING,
 				provider: input.provider,
 				archived: false,
+				originEntryId: input.originEntryId,
+				goal: input.goal,
 				id: input.issueId,
 			})
 			await this.issues.save(issue, tx)

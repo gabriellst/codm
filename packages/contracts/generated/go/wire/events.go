@@ -882,6 +882,7 @@ type IssueCreatedEvent struct {
 	Title string `json:"title"`
 	Goal string `json:"goal"`
 	OriginEntryID string `json:"originEntryId"`
+	Provider ProviderKind `json:"provider"`
 }
 
 func (e IssueCreatedEvent) EventName() string { return IssueCreatedEventName }
@@ -894,6 +895,7 @@ type IssueCreatedPayload struct {
 	Title string `json:"title" validate:"required"`
 	Goal string `json:"goal" validate:"required"`
 	OriginEntryID string `json:"originEntryId" validate:"required"`
+	Provider ProviderKind `json:"provider" validate:"required"`
 }
 
 // IssueOpenedEventName is the wire discriminator for IssueOpenedEvent.

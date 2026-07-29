@@ -2655,6 +2655,10 @@ export type ListenEvents200 = ({
          * @type string
         */
         originEntryId: string;
+        /**
+         * @type string
+        */
+        provider: ProviderKind;
     };
 } | {
     /**

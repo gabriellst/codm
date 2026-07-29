@@ -3,3 +3,4 @@ export { DeclareIssueOpen, DeclareIssueOpenInputSchema, DeclareIssueOpenOutputSc
 export { DeclareIssueComplete, DeclareIssueCompleteInputSchema, DeclareIssueCompleteOutputSchema } from './DeclareIssueComplete'
 export { DeclareStop, DeclareStopInputSchema, DeclareStopOutputSchema } from './DeclareStop'
 export { AskOperator, AskOperatorInputSchema, AskOperatorOutputSchema } from './AskOperator'
+export { ForkIssue, ForkIssueInputSchema, ForkIssueOutputSchema } from './ForkIssue'

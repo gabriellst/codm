@@ -1,5 +1,6 @@
 export { ArchiveIssueController } from './ArchiveIssue'
 export { GetIssueDetailController } from './GetIssueDetail'
+export { GetIssueStatusController } from './GetIssueStatus'
 export { GetIssuesOverviewController } from './GetIssuesOverview'
 export { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 export { GetSessionIssuesController } from './GetSessionIssues'

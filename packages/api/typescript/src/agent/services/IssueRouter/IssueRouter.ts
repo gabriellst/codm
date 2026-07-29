@@ -5,7 +5,7 @@ import type { OpenIssueRef } from '@thread/services/OpenIssuesReader'
 import { ClassifyIssueAgent, type LlmDecisionSchema } from '../../agents/ClassifyIssueAgent'
 import { ClassificationVerdict } from '../../enums'
 import { AgentRunnerFactory } from '../AgentRunnerFactory'
-import { uniqueSlugKey } from './slug'
+import { uniqueSlugKey } from '@shared/services'
 
 /** What the router is asked to route. The envelope fields it needs to run the agent are part of it. */
 export interface RouteMessageInput {

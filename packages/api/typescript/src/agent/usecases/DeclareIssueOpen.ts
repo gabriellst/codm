@@ -4,7 +4,7 @@ import { Handler, z } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
-import { slugify } from '../services/IssueRouter/slug'
+import { slugify } from '@shared/services'
 
 export const DeclareIssueOpenInputSchema = z.object({
 	ownerId: z.uuid(),

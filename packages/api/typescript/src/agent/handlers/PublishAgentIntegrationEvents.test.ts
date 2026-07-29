@@ -135,10 +135,22 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		})
 	})
 
-	it('subscribes to exactly the four terminal.* facts', () => {
+	/**
+	 * Asserted EXACTLY, in order, because this bridge is the only thing that turns a context-private
+	 * fact into something another service can see. A fact added here with no mapping is silence; a
+	 * mapping with no fact is dead code. Both fail invisibly at runtime — nothing throws, a message
+	 * simply never arrives.
+	 *
+	 * `agent.issue_forked` joined in the orchestrator pivot (§7.2). It is NOT a `terminal.*` execution
+	 * fact: it says an issue was DECLARED, before any work exists. It maps to
+	 * `integration.issue.created`, deliberately not to `issue.opened` — that one still means
+	 * "`RunIssueTurn` is spawning a turn", which is a different moment (D1).
+	 */
+	it('subscribes to exactly the four terminal.* facts plus the fork', () => {
 		const { handler } = makeHandler()
 		expect(handler.events).toEqual([
 			'agent.run.started',
+			'agent.issue_forked',
 			'agent.run.reply_drafted',
 			'agent.run.completed',
 			'agent.run.stop_raised',

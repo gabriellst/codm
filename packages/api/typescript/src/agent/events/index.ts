@@ -36,3 +36,4 @@ import type { AgentUsageEvent } from './AgentUsageEvent'
  * here would be the double-publish §4.3 rule 3 exists to prevent.
  */
 export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent | AgentUsageEvent
+export { IssueForkedEvent, IssueForkedEventSchema } from './IssueForkedEvent'

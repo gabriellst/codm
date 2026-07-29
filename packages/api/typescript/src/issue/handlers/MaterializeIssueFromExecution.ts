@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, EventHandler } from '@codedm/core-typescript'
-import { IssueOpenedEvent, IssueCompletedEvent, IssueStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
+import { IssueOpenedEvent, IssueCreatedEvent, IssueCompletedEvent, IssueStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
 import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { Id } from '@codedm/core-typescript'
 import { OpenIssue } from '../usecases/OpenIssue'
@@ -25,9 +25,9 @@ const STOP_TITLES: Record<StopKind, string> = {
  */
 @injectable()
 export class MaterializeIssueFromExecution extends EventHandler<
-	readonly [typeof IssueOpenedEvent, typeof IssueCompletedEvent, typeof IssueStopRaisedEvent]
+	readonly [typeof IssueOpenedEvent, typeof IssueCreatedEvent, typeof IssueCompletedEvent, typeof IssueStopRaisedEvent]
 > {
-	readonly event = [IssueOpenedEvent, IssueCompletedEvent, IssueStopRaisedEvent] as const
+	readonly event = [IssueOpenedEvent, IssueCreatedEvent, IssueCompletedEvent, IssueStopRaisedEvent] as const
 
 	constructor(
 		private readonly openIssue: OpenIssue,
@@ -39,6 +39,24 @@ export class MaterializeIssueFromExecution extends EventHandler<
 
 	async handle(event: this['input']): Promise<void> {
 		const ownerId = event.ownerId ?? ''
+
+		// THE FORK (§7.2) — an issue born because the operator asked for it, carrying the provenance the
+		// finished answer will quote. Routed to the SAME idempotent use case as `issue.opened`: the two
+		// paths can reconcile on one row (§6.2), and `OpenIssue` returns early when it already exists, so
+		// whichever arrives second cannot clobber the first.
+		if (event instanceof IssueCreatedEvent) {
+			await this.openIssue.execute({
+				issueId: event.payload.issueId,
+				ownerId,
+				threadId: event.payload.threadId,
+				key: event.payload.key,
+				title: event.payload.title,
+				provider: event.payload.provider,
+				originEntryId: event.payload.originEntryId,
+				goal: event.payload.goal,
+			})
+			return
+		}
 
 		if (event instanceof IssueOpenedEvent) {
 			await this.openIssue.execute({

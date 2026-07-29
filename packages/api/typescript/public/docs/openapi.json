@@ -701,6 +701,7 @@
       "get": {
         "tags": [
           "issue",
+          "mcp:orchestration",
           "mcp:system"
         ],
         "description": "Issues of one thread grouped by status + auto-archive note (T11)",
@@ -855,6 +856,7 @@
           }
         },
         "x-mcp-scope": [
+          "orchestration",
           "system"
         ]
       }
@@ -962,6 +964,99 @@
             }
           }
         }
+      }
+    },
+    "/v1/threads/{threadId}/issues/fork": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:orchestration"
+        ],
+        "description": "Fork a new issue out of the conversation, from the operator's own words",
+        "operationId": "ForkIssue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "goal": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "goal"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "goal": "põe um toggle de dark mode nas configurações"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fork a new issue out of the conversation, from the operator's own words",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issueId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "issueId",
+                    "key"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "key": "poe-um-toggle-de-dark-mode-nas"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "key": "poe-um-toggle-de-dark-mode-nas"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       }
     },
     "/v1/threads/{threadId}/issues/{issueId}/stops": {
@@ -1272,6 +1367,97 @@
         },
         "x-mcp-scope": [
           "issue-handling"
+        ]
+      },
+      "get": {
+        "tags": [
+          "issue",
+          "mcp:orchestration"
+        ],
+        "description": "Status of one issue of this thread",
+        "operationId": "GetIssueStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status of one issue of this thread",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issueId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "key": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/IssueStatus"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "issueId",
+                    "key",
+                    "title",
+                    "status",
+                    "archived"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "key": "dark-mode-toggle",
+                      "title": "põe um toggle de dark mode",
+                      "status": "WORKING",
+                      "archived": false
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                      "key": "dark-mode-toggle",
+                      "title": "põe um toggle de dark mode",
+                      "status": "WORKING",
+                      "archived": false
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "orchestration"
         ]
       }
     },
@@ -7015,6 +7201,9 @@
                             },
                             "originEntryId": {
                               "type": "string"
+                            },
+                            "provider": {
+                              "$ref": "#/components/schemas/ProviderKind"
                             }
                           },
                           "required": [
@@ -7023,7 +7212,8 @@
                             "key",
                             "title",
                             "goal",
-                            "originEntryId"
+                            "originEntryId",
+                            "provider"
                           ],
                           "additionalProperties": false
                         }
@@ -7864,6 +8054,11 @@
       "RecordArtifact",
       "SendDirectMessage",
       "TransitionIssueStatus"
+    ],
+    "orchestration": [
+      "ForkIssue",
+      "GetIssueStatus",
+      "GetSessionIssues"
     ],
     "system": [
       "AddWorkspace",

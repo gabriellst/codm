@@ -11,9 +11,11 @@ import {
 	detectProviders,
 	disableOwner,
 	enableOwner,
+	forkIssue,
 	getAttachThreadWizard,
 	getHomeDashboard,
 	getIssueDetail,
+	getIssueStatus,
 	getIssuesOverview,
 	getMyAccount,
 	getNeedsYouPanel,
@@ -102,6 +104,10 @@ export class TypescriptClient {
 		return (enableOwner as (...a: any[]) => ReturnType<typeof enableOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	forkIssue(...args: Parameters<typeof forkIssue>): ReturnType<typeof forkIssue> {
+		return (forkIssue as (...a: any[]) => ReturnType<typeof forkIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getAttachThreadWizard(...args: Parameters<typeof getAttachThreadWizard>): ReturnType<typeof getAttachThreadWizard> {
 		return (getAttachThreadWizard as (...a: any[]) => ReturnType<typeof getAttachThreadWizard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -112,6 +118,10 @@ export class TypescriptClient {
 
 	getIssueDetail(...args: Parameters<typeof getIssueDetail>): ReturnType<typeof getIssueDetail> {
 		return (getIssueDetail as (...a: any[]) => ReturnType<typeof getIssueDetail>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getIssueStatus(...args: Parameters<typeof getIssueStatus>): ReturnType<typeof getIssueStatus> {
+		return (getIssueStatus as (...a: any[]) => ReturnType<typeof getIssueStatus>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getIssuesOverview(...args: Parameters<typeof getIssuesOverview>): ReturnType<typeof getIssuesOverview> {

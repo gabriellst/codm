@@ -253,6 +253,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
  */
 const GENERATED_SERVERS: Record<McpScope, () => Promise<{ getServer: () => McpServer }>> = {
 	'issue-handling': () => import('@codedm/client-typescript/typescript/mcp/scopes/issue-handling/server'),
+	orchestration: () => import('@codedm/client-typescript/typescript/mcp/scopes/orchestration/server'),
 	system: () => import('@codedm/client-typescript/typescript/mcp/scopes/system/server'),
 }
 

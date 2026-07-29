@@ -1203,6 +1203,11 @@ type CreateIssueJSONBody struct {
 	Title    string       `json:"title"`
 }
 
+// ForkIssueJSONBody defines parameters for ForkIssue.
+type ForkIssueJSONBody struct {
+	Goal string `json:"goal"`
+}
+
 // AskOperatorJSONBody defines parameters for AskOperator.
 type AskOperatorJSONBody struct {
 	Question string `json:"question"`
@@ -1311,6 +1316,9 @@ type SendDirectMessageJSONRequestBody SendDirectMessageJSONBody
 
 // CreateIssueJSONRequestBody defines body for CreateIssue for application/json ContentType.
 type CreateIssueJSONRequestBody CreateIssueJSONBody
+
+// ForkIssueJSONRequestBody defines body for ForkIssue for application/json ContentType.
+type ForkIssueJSONRequestBody ForkIssueJSONBody
 
 // AskOperatorJSONRequestBody defines body for AskOperator for application/json ContentType.
 type AskOperatorJSONRequestBody AskOperatorJSONBody
@@ -1686,10 +1694,18 @@ type ClientInterface interface {
 
 	CreateIssue(ctx context.Context, threadId string, body CreateIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ForkIssueWithBody request with any body
+	ForkIssueWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ForkIssue(ctx context.Context, threadId string, body ForkIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// AskOperatorWithBody request with any body
 	AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	AskOperator(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetIssueStatus request
+	GetIssueStatus(ctx context.Context, threadId string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// TransitionIssueStatusWithBody request with any body
 	TransitionIssueStatusWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2181,6 +2197,30 @@ func (c *Client) CreateIssue(ctx context.Context, threadId string, body CreateIs
 	return c.Client.Do(req)
 }
 
+func (c *Client) ForkIssueWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForkIssueRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ForkIssue(ctx context.Context, threadId string, body ForkIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForkIssueRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAskOperatorRequestWithBody(c.Server, threadId, issueId, contentType, body)
 	if err != nil {
@@ -2195,6 +2235,18 @@ func (c *Client) AskOperatorWithBody(ctx context.Context, threadId string, issue
 
 func (c *Client) AskOperator(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAskOperatorRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetIssueStatus(ctx context.Context, threadId string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetIssueStatusRequest(c.Server, threadId, issueId)
 	if err != nil {
 		return nil, err
 	}
@@ -3448,6 +3500,53 @@ func NewCreateIssueRequestWithBody(server string, threadId string, contentType s
 	return req, nil
 }
 
+// NewForkIssueRequest calls the generic ForkIssue builder with application/json body
+func NewForkIssueRequest(server string, threadId string, body ForkIssueJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewForkIssueRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewForkIssueRequestWithBody generates requests for ForkIssue with any type of body
+func NewForkIssueRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues/fork", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewAskOperatorRequest calls the generic AskOperator builder with application/json body
 func NewAskOperatorRequest(server string, threadId string, issueId string, body AskOperatorJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -3498,6 +3597,47 @@ func NewAskOperatorRequestWithBody(server string, threadId string, issueId strin
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetIssueStatusRequest generates requests for GetIssueStatus
+func NewGetIssueStatusRequest(server string, threadId string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/status", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -4360,10 +4500,18 @@ type ClientWithResponsesInterface interface {
 
 	CreateIssueWithResponse(ctx context.Context, threadId string, body CreateIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateIssueResponse, error)
 
+	// ForkIssueWithBodyWithResponse request with any body
+	ForkIssueWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ForkIssueResponse, error)
+
+	ForkIssueWithResponse(ctx context.Context, threadId string, body ForkIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*ForkIssueResponse, error)
+
 	// AskOperatorWithBodyWithResponse request with any body
 	AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
 
 	AskOperatorWithResponse(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
+
+	// GetIssueStatusWithResponse request
+	GetIssueStatusWithResponse(ctx context.Context, threadId string, issueId string, reqEditors ...RequestEditorFn) (*GetIssueStatusResponse, error)
 
 	// TransitionIssueStatusWithBodyWithResponse request with any body
 	TransitionIssueStatusWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TransitionIssueStatusResponse, error)
@@ -5321,6 +5469,39 @@ func (r CreateIssueResponse) ContentType() string {
 	return ""
 }
 
+type ForkIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		IssueId openapi_types.UUID `json:"issueId"`
+		Key     string             `json:"key"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ForkIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ForkIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ForkIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type AskOperatorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5348,6 +5529,42 @@ func (r AskOperatorResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r AskOperatorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetIssueStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Archived bool               `json:"archived"`
+		IssueId  openapi_types.UUID `json:"issueId"`
+		Key      string             `json:"key"`
+		Status   IssueStatus        `json:"status"`
+		Title    string             `json:"title"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetIssueStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetIssueStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetIssueStatusResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -6382,6 +6599,23 @@ func (c *ClientWithResponses) CreateIssueWithResponse(ctx context.Context, threa
 	return ParseCreateIssueResponse(rsp)
 }
 
+// ForkIssueWithBodyWithResponse request with arbitrary body returning *ForkIssueResponse
+func (c *ClientWithResponses) ForkIssueWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ForkIssueResponse, error) {
+	rsp, err := c.ForkIssueWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForkIssueResponse(rsp)
+}
+
+func (c *ClientWithResponses) ForkIssueWithResponse(ctx context.Context, threadId string, body ForkIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*ForkIssueResponse, error) {
+	rsp, err := c.ForkIssue(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForkIssueResponse(rsp)
+}
+
 // AskOperatorWithBodyWithResponse request with arbitrary body returning *AskOperatorResponse
 func (c *ClientWithResponses) AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error) {
 	rsp, err := c.AskOperatorWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
@@ -6397,6 +6631,15 @@ func (c *ClientWithResponses) AskOperatorWithResponse(ctx context.Context, threa
 		return nil, err
 	}
 	return ParseAskOperatorResponse(rsp)
+}
+
+// GetIssueStatusWithResponse request returning *GetIssueStatusResponse
+func (c *ClientWithResponses) GetIssueStatusWithResponse(ctx context.Context, threadId string, issueId string, reqEditors ...RequestEditorFn) (*GetIssueStatusResponse, error) {
+	rsp, err := c.GetIssueStatus(ctx, threadId, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetIssueStatusResponse(rsp)
 }
 
 // TransitionIssueStatusWithBodyWithResponse request with arbitrary body returning *TransitionIssueStatusResponse
@@ -7399,6 +7642,35 @@ func ParseCreateIssueResponse(rsp *http.Response) (*CreateIssueResponse, error) 
 	return response, nil
 }
 
+// ParseForkIssueResponse parses an HTTP response from a ForkIssueWithResponse call
+func ParseForkIssueResponse(rsp *http.Response) (*ForkIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ForkIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			IssueId openapi_types.UUID `json:"issueId"`
+			Key     string             `json:"key"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseAskOperatorResponse parses an HTTP response from a AskOperatorWithResponse call
 func ParseAskOperatorResponse(rsp *http.Response) (*AskOperatorResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -7417,6 +7689,38 @@ func ParseAskOperatorResponse(rsp *http.Response) (*AskOperatorResponse, error) 
 		var dest struct {
 			Delivered bool               `json:"delivered"`
 			StopId    openapi_types.UUID `json:"stopId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetIssueStatusResponse parses an HTTP response from a GetIssueStatusWithResponse call
+func ParseGetIssueStatusResponse(rsp *http.Response) (*GetIssueStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetIssueStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Archived bool               `json:"archived"`
+			IssueId  openapi_types.UUID `json:"issueId"`
+			Key      string             `json:"key"`
+			Status   IssueStatus        `json:"status"`
+			Title    string             `json:"title"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

@@ -2,11 +2,13 @@ import { injectable } from 'tsyringe-neo'
 import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
 import {
 	IssueOpenedEvent,
+	IssueCreatedEvent,
 	IssueCompletedEvent,
 	IssueStopRaisedEvent,
 	AgentReplyDraftedEvent as AgentReplyDraftedIntegrationEvent,
 } from '@codedm/contracts-typescript/wire/events'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
+import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import { AgentRunReplyDraftedEvent } from '../events/AgentRunReplyDraftedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
@@ -26,9 +28,21 @@ import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
  */
 @injectable()
 export class PublishAgentIntegrationEvents extends EventHandler<
-	readonly [typeof AgentRunStartedEvent, typeof AgentRunReplyDraftedEvent, typeof AgentRunCompletedEvent, typeof AgentRunStopRaisedEvent]
+	readonly [
+		typeof AgentRunStartedEvent,
+		typeof IssueForkedEvent,
+		typeof AgentRunReplyDraftedEvent,
+		typeof AgentRunCompletedEvent,
+		typeof AgentRunStopRaisedEvent,
+	]
 > {
-	readonly event = [AgentRunStartedEvent, AgentRunReplyDraftedEvent, AgentRunCompletedEvent, AgentRunStopRaisedEvent] as const
+	readonly event = [
+		AgentRunStartedEvent,
+		IssueForkedEvent,
+		AgentRunReplyDraftedEvent,
+		AgentRunCompletedEvent,
+		AgentRunStopRaisedEvent,
+	] as const
 
 	constructor(private readonly mediator: ExternalMediator) {
 		super()
@@ -48,6 +62,28 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						threadId: event.payload.threadId,
 						key: event.payload.key,
 						title: event.payload.title,
+						provider: event.payload.provider,
+					},
+				}),
+			)
+			return
+		}
+
+		// THE FORK (§7.2). Deliberately NOT mapped to `issue.opened`: that fact means "a worker's first
+		// turn is spawning" and `RunIssueTurn` still raises it. This is the BIRTH — a different moment,
+		// and the distinction D1 exists to keep (an issue is a declared fork, not a side effect of
+		// something running).
+		if (event instanceof IssueForkedEvent) {
+			await this.mediator.publish(
+				new IssueCreatedEvent({
+					ownerId,
+					payload: {
+						issueId: event.payload.issueId,
+						threadId: event.payload.threadId,
+						key: event.payload.key,
+						title: event.payload.title,
+						goal: event.payload.goal,
+						originEntryId: event.payload.originEntryId,
 						provider: event.payload.provider,
 					},
 				}),

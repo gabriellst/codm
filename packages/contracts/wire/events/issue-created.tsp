@@ -11,4 +11,7 @@ model IssueCreatedEvent extends IntegrationEvent {
   title: string;
   goal: string;
   originEntryId: string;
+
+  @doc("Which CLI will work the issue — the THREAD's choice, resolved by the agent runtime at fork time. It rides the event because the issue context materialises the row from this fact alone and cannot read a thread: no `issue -> thread` edge is declared, and the row cannot be created without it.")
+  provider: ProviderKind;
 }
