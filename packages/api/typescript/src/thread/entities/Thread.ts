@@ -53,9 +53,9 @@ export type Participant = Z.infer<typeof ParticipantSchema>
 /**
  * `Thread` (BC4 Thread & Routing, Core) — the binding of a conversation to a workspace + providers,
  * and its control plane: pause/resume, mention gate, participant invocation rights, and the rolling
- * context-buffer size. Invariants with teeth: providers non-empty, at least one invoker must
- * remain, and the steer-vs-direct mode guard (whispers only while live, direct messages only while
- * paused) lives on the aggregate via assertCanSteer/assertCanSendDirect since Thread owns `paused`.
+ * context-buffer size. Invariants with teeth: providers non-empty and at least one invoker must
+ * remain. The steer-vs-direct mode guard that used to live here is gone — see the note where the two
+ * `assertCan*` methods stood.
  * The transcript + pending clarifications are separate entities/records, not embedded here.
  */
 export class Thread extends AggregateRoot<typeof ThreadSchema> {
@@ -124,11 +124,25 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		this.participants = [...this.participants]
 	}
 
-	/** Whether an inbound sender may invoke agents right now (pause + permission + mention gate). */
-	canInvoke(input: { senderExternalId: string; text: string }): boolean {
+	/**
+	 * Whether an inbound sender may invoke agents right now (pause + permission + mention gate).
+	 *
+	 * ### Replying to the agent IS addressing it
+	 * `repliesToAgent` bypasses the MENTION GATE and nothing else. The gate exists to answer one
+	 * question — "is this message for the agent?" — and a quote answers it better than a tag does:
+	 * typing `@codedm` is a convention someone has to remember, while replying to the agent's own
+	 * message is what everyone does by reflex in a group chat. Demanding the tag on a reply meant the
+	 * natural answer to the agent's own question fell on the floor, and the operator had to remember
+	 * that this one conversation needs a prefix its other participants never see.
+	 *
+	 * It deliberately does NOT bypass the two checks above it: a paused thread stays silent and a
+	 * read-only participant stays read-only. A quote is evidence of ADDRESS, never of permission.
+	 */
+	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		if (this.paused) return false
 		const participant = this.participants.find(p => p.participantId === input.senderExternalId)
 		if (participant && !participant.canInvoke) return false
+		if (input.repliesToAgent) return true
 		if (this.mentionGate.enabled && !mentionsTag(input.text, this.mentionGate.tag)) return false
 		return true
 	}
@@ -149,15 +163,23 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		return stripMentionTag(text, this.mentionGate.tag) || text
 	}
 
-	/** Whispers (steer) are only valid while the thread is live — a paused thread uses direct mode. */
-	assertCanSteer(): void {
-		if (this.paused) throw new BaseError<ApplicationErrors>('THREAD_PAUSED', 'a paused thread uses direct mode')
-	}
-
-	/** Direct (operator) messages are only valid while paused — the agents must be silenced first. */
-	assertCanSendDirect(): void {
-		if (!this.paused) throw new BaseError<ApplicationErrors>('THREAD_NOT_PAUSED', 'direct conversation requires the agents to be paused')
-	}
+	/*
+	 * `assertCanSteer` / `assertCanSendDirect` are GONE (founder, 29-jul).
+	 *
+	 * They were mirror-image locks — steering required the thread to be live, sending a direct message
+	 * required it to be paused — and between them the operator could only ever take ONE of the two
+	 * actions at any moment. That was tolerable while a selector let them pick, but F4 removed the
+	 * selector and made `composerMode` a function of pause state, at which point every message hit the
+	 * lock for the state it was in: composing while paused raised THREAD_PAUSED, composing while
+	 * running raised THREAD_NOT_PAUSED. Both halves of "não consigo mandar direct sem pausar e não
+	 * consigo steerar pausado" are these two methods.
+	 *
+	 * What replaces them is nothing: the composer already picks the action that fits the state, and the
+	 * operator typing into their own console is a deliberate act that does not need the aggregate's
+	 * permission. NOTE the consequence, which is a live design question and not settled here — pause is
+	 * enforced at INGEST only (`canInvoke` returns false), and the mailbox dispatcher does not consult
+	 * it, so a steer issued while paused RUNS rather than waiting for resume.
+	 */
 
 	setStatus(status: ThreadStatus): void {
 		this.status = status

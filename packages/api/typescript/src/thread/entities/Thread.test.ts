@@ -96,17 +96,44 @@ describe('Thread entity', () => {
 		expect(t.textWithoutMention('@base hi')).toBe('@base hi')
 	})
 
-	it('assertCanSteer: allowed while live, rejected once paused (THREAD_PAUSED)', () => {
-		const t = Thread.create(base)
-		expect(() => t.assertCanSteer()).not.toThrow()
-		t.pause()
-		expect(() => t.assertCanSteer()).toThrow(BaseError)
+	/**
+	 * The mirror-image locks are GONE (founder, 29-jul). They allowed steering only while live and
+	 * direct messages only while paused, so exactly one of the two actions was legal at any moment —
+	 * fine while a selector let the operator choose, fatal once F4 made the composer a function of
+	 * pause state, because then every message hit the lock for the state it was in.
+	 *
+	 * Asserted as an ABSENCE on the aggregate rather than by calling the removed methods (which would
+	 * not compile): the point is that the entity does not arbitrate this at all any more.
+	 */
+	it('neither mode is gated by pause any more — the aggregate carries no steer/direct lock', () => {
+		const t = Thread.create(base) as unknown as Record<string, unknown>
+
+		expect(t.assertCanSteer).toBeUndefined()
+		expect(t.assertCanSendDirect).toBeUndefined()
 	})
 
-	it('assertCanSendDirect: rejected while live (THREAD_NOT_PAUSED), allowed once paused', () => {
+	/**
+	 * A REPLY to the agent is addressing it, so the mention gate steps aside.
+	 *
+	 * The gate exists to ask "is this for the agent?", and quoting its message answers that better than
+	 * a typed tag does: replying is reflex, remembering `@codedm` is a convention. Untagged replies used
+	 * to fall on the floor — the operator answered the agent's own question and nothing happened.
+	 */
+	it('a reply to the agent invokes WITHOUT the mention tag, while the same text alone does not', () => {
 		const t = Thread.create(base)
-		expect(() => t.assertCanSendDirect()).toThrow(BaseError)
-		t.pause()
-		expect(() => t.assertCanSendDirect()).not.toThrow()
+		const untagged = { senderExternalId: 'operator', text: 'sim, pode fazer' }
+
+		expect(t.canInvoke(untagged)).toBe(false)
+		expect(t.canInvoke({ ...untagged, repliesToAgent: true })).toBe(true)
+	})
+
+	it('a reply does NOT buy permission — pause and read-only participants still win', () => {
+		const paused = Thread.create(base)
+		paused.pause()
+		expect(paused.canInvoke({ senderExternalId: 'operator', text: 'oi', repliesToAgent: true })).toBe(false)
+
+		// `c1` is read-only in the fixture. It may quote the agent all day: a quote is address, not rights.
+		const live = Thread.create(base)
+		expect(live.canInvoke({ senderExternalId: 'c1', text: 'oi', repliesToAgent: true })).toBe(false)
 	})
 })

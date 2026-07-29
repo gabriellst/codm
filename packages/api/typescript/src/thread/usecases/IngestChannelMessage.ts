@@ -60,7 +60,14 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				tx,
 			)
 
-			const invocable = thread.canInvoke({ senderExternalId: input.senderExternalId, text: input.text })
+			// Is this a REPLY to something the agent itself said? `SYSTEM` is the kind
+			// `DeliverOrchestratorReply` writes, so it is exactly "the agent's own words", and quoting
+			// those is addressing it — the mention gate stands down for that case (see `Thread.canInvoke`).
+			// A quote that resolves to anyone else's message, or does not resolve at all, is not one.
+			const quoted = input.quotedEntryId ? await this.transcript.findById(input.quotedEntryId, tx) : undefined
+			const repliesToAgent = quoted?.kind === TranscriptKind.SYSTEM
+
+			const invocable = thread.canInvoke({ senderExternalId: input.senderExternalId, text: input.text, repliesToAgent })
 
 			// THE REPOINT (orchestrator pivot §7.4). An invocable message schedules a turn of the thread's
 			// orchestrator, and the item is written IN THIS TRANSACTION — the same one that created the

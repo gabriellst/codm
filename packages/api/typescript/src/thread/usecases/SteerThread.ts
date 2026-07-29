@@ -35,7 +35,6 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
-		thread.assertCanSteer()
 
 		// Read BEFORE the transaction, not inside it. `OpenIssuesReader` is a read SEAM and takes no
 		// `tx`, and the tx-discipline rail is right to refuse an untethered `await this.*` in a

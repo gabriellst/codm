@@ -15,6 +15,9 @@
 //! `tauri::Builder` — `commands::specta_builder()` for the invoke handler,
 //! `sidecars::sidecars()` / `boot_sidecar()` in setup.
 
+use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
+
 use tauri::Manager;
 
 mod commands;
@@ -43,8 +46,16 @@ pub fn run() {
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.
             let resource_dir = app.path().resource_dir().expect("resource dir resolvable");
 
-            for sidecar in sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir) {
-                sidecars::boot_sidecar(app.handle(), sidecar);
+            // READINESS GATE — the main window is `"visible": false` in tauri.conf.json and is revealed
+            // by whichever sidecar finishes last (`sidecars::note_ready`). Painting the console before
+            // the daemon answered meant the operator's first sight of the app was a UI querying a port
+            // still applying migrations. EVERY exit path in `boot_sidecar` counts, failures included, so
+            // a sidecar that never comes up yields a visibly broken window rather than no window at all.
+            let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir);
+            let total = fleet.len();
+            let ready = Arc::new(AtomicUsize::new(0));
+            for sidecar in fleet {
+                sidecars::boot_sidecar(app.handle(), sidecar, ready.clone(), total);
             }
             Ok(())
         })

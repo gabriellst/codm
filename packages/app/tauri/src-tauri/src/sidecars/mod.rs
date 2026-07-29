@@ -11,6 +11,8 @@
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use tauri::Emitter;
@@ -115,10 +117,40 @@ fn probe(port: u16, path: &str) -> bool {
     attempt().unwrap_or(false)
 }
 
+/// Reveal the main window. Idempotent — `show()` on an already-visible window is a no-op, and the
+/// readiness path can reach this from either the success or the give-up branch.
+fn reveal_main_window(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    match app.get_webview_window("main") {
+        Some(window) => {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+        None => log::warn!("main window not found — nothing to reveal"),
+    }
+}
+
+/// READINESS GATE. The window starts hidden (`"visible": false` in tauri.conf.json) and is revealed
+/// only once every sidecar has answered its health probe.
+///
+/// Before this the shell painted the console the moment the webview existed, while the daemon was
+/// still applying migrations — so the first thing the operator saw was a UI firing queries at a port
+/// nobody was listening on yet: failed reads, a dead SSE stream, and a dashboard that filled in
+/// several seconds later, if at all. Waiting is both more honest and cheaper than the reconnect
+/// machinery the alternative would need.
+///
+/// `ready` counts the sidecars that have PASSED; `total` is how many must. Whoever arrives last
+/// opens the window.
+fn note_ready(app: &tauri::AppHandle, ready: &Arc<AtomicUsize>, total: usize) {
+    if ready.fetch_add(1, Ordering::SeqCst) + 1 >= total {
+        reveal_main_window(app);
+    }
+}
+
 /// Spawn one sidecar and poll its health URL until ready (or timeout). Emits
 /// `sidecar:ready` / `sidecar:error` to the webview so the console can render
 /// boot progress honestly instead of spinning forever.
-pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
+pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicUsize>, total: usize) {
     let command = match app.shell().sidecar(sidecar.name) {
         Ok(cmd) => {
             let cmd = cmd.envs(sidecar.env.clone());
@@ -130,6 +162,8 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
         }
         Err(e) => {
             let _ = app.emit("sidecar:error", format!("{}: spawn setup failed: {e}", sidecar.name));
+            // Count it, or the gate below never reaches `total` and the window stays hidden forever.
+            note_ready(app, &ready, total);
             return;
         }
     };
@@ -138,6 +172,8 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
         Ok(pair) => pair,
         Err(e) => {
             let _ = app.emit("sidecar:error", format!("{}: spawn failed: {e}", sidecar.name));
+            // Same reason as above: every exit from this function must advance the readiness count.
+            note_ready(app, &ready, total);
             return;
         }
     };
@@ -162,6 +198,7 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
             if probe(sidecar.port, sidecar.health_path) {
                 let _ = health_handle.emit("sidecar:ready", sidecar.name);
                 log::info!("[{}] ready on :{}{}", sidecar.name, sidecar.port, sidecar.health_path);
+                note_ready(&health_handle, &ready, total);
                 return;
             }
             if Instant::now() >= deadline {
@@ -169,6 +206,13 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar) {
                     "sidecar:error",
                     format!("{}: no 200 from :{}{} within 60s", sidecar.name, sidecar.port, sidecar.health_path),
                 );
+                // REVEAL ANYWAY. A sidecar that never comes up must not leave the operator staring at
+                // a dock icon with no window and no way to learn why — a visibly broken console beats
+                // an invisible one, and the `sidecar:error` event above is what the UI renders. This
+                // is why the gate counts through `note_ready` rather than waiting on every probe: the
+                // give-up path has to be able to open the window too.
+                log::warn!("[{}] never became healthy — revealing the window regardless", sidecar.name);
+                note_ready(&health_handle, &ready, total);
                 return;
             }
             std::thread::sleep(Duration::from_millis(500));

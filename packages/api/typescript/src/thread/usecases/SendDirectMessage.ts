@@ -34,7 +34,6 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
-		thread.assertCanSendDirect()
 		if (!(await this.connectivity.isConnected(thread.channelId))) {
 			throw new BaseError<ApplicationErrors>('CHANNEL_NOT_CONNECTED', 'the channel is not connected')
 		}

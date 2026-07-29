@@ -21,6 +21,16 @@ export const WINDOW = {
 	hiddenTitle: true,
 	// Nudge the traffic lights in/down so they vertically center in the taller custom header.
 	trafficLightPosition: { x: 19, y: 18 },
+	// BORN HIDDEN. The shell reveals the window only once every sidecar has answered its health probe
+	// (`src-tauri/src/sidecars/mod.rs` — `note_ready` / `reveal_main_window`). Without this the console
+	// painted the instant the webview existed, while the daemon was still applying migrations, so the
+	// first thing an operator saw was a UI querying a port nobody was listening on yet: failed reads, a
+	// dead SSE stream, and a dashboard that filled in seconds later if at all.
+	//
+	// A house standard rather than a per-product knob — every stamped app boots sidecars this way — and
+	// the reveal is FAIL-SAFE: a sidecar that never becomes healthy still opens the window (carrying its
+	// `sidecar:error` event), because an app with no window is the worse failure.
+	visible: false,
 } as const
 
 /** Window FRAME — size + label. Genuine shell decisions (defaults, no repo-fact source);
