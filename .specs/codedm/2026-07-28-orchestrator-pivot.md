@@ -1,9 +1,19 @@
 # Pivot: sessão-orquestrador por thread, issues como subagents
 
-**Status:** DESIGN v2 — pós-grill adversarial (3 críticos, 6 bloqueantes incorporados), pronto para ratificação
+**Status:** DESIGN v3 — v2 pós-grill + **emenda de faseamento D9** (fusão F2+F3), ratificada
 **Data:** 2026-07-28
-**Decisor:** founder (D1–D8 ratificadas em conversa nesta data)
+**Decisor:** founder (D1–D8 ratificadas em conversa nesta data; D9 ratificada na mesma data)
 **Base:** branch `agent-abstraction` @ `c13f8080`
+
+> v2 → v3: o faseamento da v2 era **inconstruível como escrito**. `RunIssueTurnOnClassification`
+> se descreve como "the one runtime caller of `RunIssueTurn`" (`handlers/RunIssueTurnOnClassification.ts:15`)
+> e a verificação confirma: o único outro chamador é `TestRunIssueTurnController`, atrás de
+> `CODEDM_E2E === 'true'` (`agent/index.ts:35`). Como a F2 matava a classificação inteira (§9) e
+> `issue/create` só nascia na F3, **nada em produção conseguiria invocar `RunIssueTurn` durante toda
+> a F2** — o produto conversaria e seria estruturalmente incapaz de trabalhar, regredindo abaixo do
+> que rodou de verdade no grupo real às 19:02 de 28-jul. A resposta é a **D9**: F2 e F3 viram UMA
+> fase. A D5 continua absoluta e fica mais forte — a classificação morre no PR em que o substituto
+> está **completo** (conversa **e** fork), não pela metade.
 
 > v1 → v2: o grill derrubou a mailbox ingênua (sem wakeup, sem boot sweep, corrida
 > check-then-act entre produtores), expôs que subagents rodariam INLINE no dispatcher do
@@ -45,6 +55,7 @@ Agente:   [reply citando "crie uma issue específica…"] resolvido: …
 | D6 | Resposta conversacional **pode** citar a mensagem que responde | permissão, não mandato — ver §7.6: o retorno de issue SEMPRE cita; na conversa o orquestrador decide (o exemplo canônico mostra conversa sem quote e retorno com quote) |
 | D7 | **Steer de subagent entra** | "o steer de subagent entra" — via mailbox da issue (§7.7); nota: `thread.steered` hoje tem ZERO consumidores — o steer atual é meia-aresta morta e ganha aqui seu primeiro consumidor real |
 | D8 | Recorte de sessão por **compaction**: análise de threshold + prompt de compactação | §7.8; o `usage` do frame terminal já dá o tamanho do contexto de graça |
+| D9 | **F2 e F3 são UMA fase.** A conversa e o fork entram juntos, no mesmo PR em que a classificação morre | v3; sem ela a F2 deixa `RunIssueTurn` órfão e o produto passa uma fase inteiro sem conseguir trabalhar — ver o bloco v2 → v3 acima |
 
 ## 3. O modelo de concorrência (a analogia Go, formalizada)
 
@@ -86,14 +97,14 @@ Morte é deleção no PR que ativa o substituto (D5). O inventário v2, corrigid
 
 | Artefato | Fase | Nota |
 |---|---|---|
-| `ClassifyMessage` (C17) | F2 | chamador único: ramo invocável do `ConsumeInboundMessage` |
-| `IssueRouter`/`Default`/`Mock` + `slug.ts` | F2 | `uniqueSlugKey` migra para o tool `issue/create` |
-| `ClassifyIssueAgent` + prompt + `LlmDecisionSchema` | F2 | some do registry §4.8 |
-| Fluxo CLARIFY: `ClarificationRepository`, `thread_clarifications`, `ClarificationRequestedEvent` | F2 | zero consumidores em console e BFF (verificado) |
-| `MessageClassifiedEvent` — **os DOIS**: domain `thread.message_classified` E wire `integration.message.classified` | F2 | o v1 listava só o wire |
-| `RunIssueTurnOnClassification` | F3 | morre sem rename: o spawn vem da mailbox, não de evento (§7.4) |
+| `ClassifyMessage` (C17) | F2+F3 | chamador único: ramo invocável do `ConsumeInboundMessage` (`ConsumeInboundMessage.ts:117`) |
+| `IssueRouter`/`Default`/`Mock` + `slug.ts` | F2+F3 | `uniqueSlugKey` migra para o tool `issue/create` |
+| `ClassifyIssueAgent` + prompt + `LlmDecisionSchema` | F2+F3 | some do registry §4.8 |
+| Fluxo CLARIFY: `ClarificationRepository`, `thread_clarifications`, `ClarificationRequestedEvent` | F2+F3 | zero consumidores em console e BFF (verificado) |
+| `MessageClassifiedEvent` — **os DOIS**: domain `thread.message_classified` E wire `integration.message.classified` | F2+F3 | o v1 listava só o wire |
+| `RunIssueTurnOnClassification` | F2+F3 | **a v2 dizia F3 e isso era impossível**: este handler é `EventHandler<typeof MessageClassifiedEvent>` (`:45`), então some no PR que deleta o evento — não há fase em que ele sobreviva ao próprio gatilho. É também "the one runtime caller of `RunIssueTurn`" (`:15`, verificado: o único outro é `TestRunIssueTurnController`, atrás de `CODEDM_E2E`), que é exatamente por que a D9 existe |
 | **`RequestAgentReplyDelivery` + `integration.agent.reply_drafted`** | F4 | **o buraco que os 3 críticos acharam**: vivo, entregaria a voz crua do worker direto no canal, em corrida com a composição — duas mensagens por conclusão. O texto do draft vira o carrier do `issue_result` (§7.4) e o wire event morre |
-| Bindings/barrels/registries dos mortos | F2/F4 | `thread/registry.ts`, `agent/registry.ts`, barrels de usecases/handlers, edges prosa do `context-map` |
+| Bindings/barrels/registries dos mortos | F2+F3 / F4 | `thread/registry.ts`, `agent/registry.ts`, barrels de usecases/handlers, edges prosa do `context-map` |
 
 Órfãos a declarar (não deletar): `TranscriptKind.ACTION` perde o único produtor
 (`ClassifyMessage.ts:162` — as linhas `classified:` viram história); `ClassificationMethod`
@@ -166,7 +177,7 @@ discriminado, janela de contexto (§7.5).
 ### 7.2 Escopo MCP `orchestration`
 
 MCP tools SÃO controllers HTTP neste repo (manifest → openapi → kubb) — o escopo custa
-controllers novos + manifest + `bun emit-openapi` + `bun sdk` (inventariado em F3):
+controllers novos + manifest + `bun emit-openapi` + `bun sdk` (inventariado na F2+F3):
 
 - `issue/create { goal }` → row (WORKING, `originEntryId`, `goal`, slug) + item `WORK` na
   mailbox da issue (mesma tx) + `integration.issue.created` (para console/SSE). Retorna
@@ -176,7 +187,39 @@ controllers novos + manifest + `bun emit-openapi` + `bun sdk` (inventariado em F
   do modelo, mesmo desenho AC-6.6 que já valida `ownerId/issueId/threadId`.
 - `issue/list {}` / `issue/status { issueId }` — leitura thread-scoped (claims), via
   `OpenIssuesReader` + issue repo.
-- `issue/steer { issueId, text }` (D7) → item `STEER` na mailbox da issue.
+- `issue/steer { issueId, text }` (D7) → item `STEER` na mailbox da issue. **Este fica para a F4**
+  (v3): o escopo nasce na F2+F3 com `issue/create` + `issue/list` + `issue/status`, e o steer entra
+  junto com o consumidor que o torna observável (§7.7). Um tool que enfileira `STEER` sem o ramo do
+  dispatcher que o agenda seria um write sem efeito — a dormência que a D5 proíbe.
+
+### 7.2.1 Run token com escopo de THREAD — o que o escopo `orchestration` exige (v3)
+
+O orquestrador é chaveado por thread e **não tem `issueId`** (§6.1). Isso colide com duas coisas
+que hoje assumem que todo agente com escopo tem uma issue, e ambas entram na F2+F3:
+
+1. **`Agent.buildMcpInvocation` recusa cunhar sem issue.** `types/Agent.ts:145` lança
+   `AGENT_TOOLS_UNSUPPORTED` — *"a run token must be confined to an issue"*. Enquanto isso valer,
+   um `OrchestratorAgent` que declare `mcpScope` **estoura em todo turno**, na cunhagem. A guarda
+   deixa de ser "declarou escopo ⇒ exige `issueId`" e passa a ser **por escopo**: `issue-handling`
+   continua exigindo, `orchestration` não. `RunTokenClaims.issueId` vira opcional e ganha
+   `entryId` (o item consumido), que é a claim de onde o router injeta `originEntryId`.
+
+2. **A confinação por issue some junto, e ISSO é o risco.** `mcp/identity.ts` compara identidade
+   com `if (claimed && value !== claimed)` — o comentário local já diz que uma claim vazia "cannot
+   confine anything, so it is not compared", e se dá por inalcançável exatamente por causa da
+   guarda acima. Removida a guarda, o caminho fica alcançável: **sem claim de `issueId`, o walker
+   PARA de checar `issueId` — não falha, ignora.** Um modelo dirigido por mensagem de terceiro em
+   grupo poderia então passar qualquer `issueId` para `issue/steer` (write que redireciona
+   trabalho vivo) ou `issue/status`, inclusive de outra thread.
+
+   A claim que ainda confina é `threadId`. Portanto: **todo tool de `orchestration` que aceite
+   `issueId` verifica `issue.threadId === claims.threadId` no próprio handler.** Isso é requisito
+   nomeado, não detalhe de implementação — a guarda genérica do §AC-6.6 não cobre.
+
+> É a mesma classe de buraco que o `mcpScope` nasceu para fechar, um nível abaixo. O manifest
+> registra que um token cunhado para os seis writes de `issue-handling` também abria `/mcp/system`
+> *"because the router verified the token and never asked what it was FOR"*. Aqui o router
+> verificaria o token e nunca perguntaria **de qual issue** ele era.
 
 ### 7.3 `RunOrchestratorTurn` (`agent/usecases/`)
 
@@ -289,19 +332,34 @@ follow-up.
   `delivery_requested` §6.4) + regen (contracts → sdk → react tsc), `findPlatformId`.
   Nada ativa. Custo Go: regen barato (decode union ganha os cases; goldens cobrem só
   eventos emitidos pelo gateway — verificado pelo grill).
-- **F2 — o orquestrador conversa.** `OrchestratorAgent` + `RunOrchestratorTurn` +
-  `MailboxDispatcher` + §7.5 + reaponte do ramo invocável. **Morte F2 da tabela §5 no mesmo
-  PR.** e2e 04/07 reescrevem aqui: o `E2eStubAgentRunner` passa a fingir um turno de
-  orquestrador que chama `issue/create` via MCP real (hoje ele discrimina por
-  `outputSchema`, que deixa de existir — achado do grill). Prova: conversa de ida e volta
-  no grupo real, sem issue.
-- **F3 — o fork.** Escopo `orchestration` (controllers + manifest + emit-openapi + sdk) com
-  claims `entryId`. Prova: "crie uma issue" → ack imediato ENQUANTO o subagent roda (isso
-  testa o desacoplamento do outbox), conversa segue livre.
-- **F4 — a volta + steer.** `DeliverOrchestratorReply`; **morte de
-  `RequestAgentReplyDelivery` + `integration.agent.reply_drafted` aqui**; `issue/steer` +
-  `SteerThread` repontado. Prova: o exemplo canônico literal, incluindo reply de humano
-  sobre a resposta citada e um steer no meio do trabalho.
+- **F2+F3 — o orquestrador conversa E forka.** UMA fase, UM PR (D9). Entram juntos:
+  `OrchestratorAgent` + `RunOrchestratorTurn` + `MailboxDispatcher` + §7.5 (perna
+  conversacional) + reaponte do ramo invocável + o escopo `orchestration` (controllers +
+  manifest + `bun emit-openapi` + `bun sdk`) + **tokens de run com escopo de THREAD** (§7.2.1).
+  **Morte da tabela §5 no mesmo PR** — e agora ela é honesta, porque o substituto está inteiro:
+  a conversa responde e o fork trabalha. e2e 04/07 reescrevem aqui: o `E2eStubAgentRunner` passa
+  a fingir um turno de orquestrador que chama `issue/create` via MCP real (hoje ele discrimina
+  por `outputSchema`, que deixa de existir — achado do grill); isso só é construível porque o
+  escopo nasce nesta fase, o que na v2 não era verdade.
+  Prova (RUNTIME, grupo real): o exemplo canônico do §1 até o ack — conversa de ida e volta,
+  depois "crie uma issue" → ack imediato ENQUANTO o subagent roda (o que testa o desacoplamento
+  do outbox), conversa segue livre.
+- **F4 — a volta + steer.** A perna de RESULTADO: o item `ISSUE_RESULT` (§6.3) chega na mailbox da
+  thread, o dispatcher agenda o turno de composição, e `DeliverOrchestratorReply` ganha o ramo que
+  cita `originEntryId` sempre (§7.6). **Morte de `RequestAgentReplyDelivery` +
+  `integration.agent.reply_drafted` aqui** — e é aqui mesmo, não antes: até a F2+F3 esse handler
+  escuta um evento que só `RunIssueTurn` levanta, e nada duplica; a partir do momento em que
+  resultados de issue voltam compostos, ele passaria a entregar a voz crua do worker EM PARALELO,
+  que é a dupla mensagem por conclusão que os 3 críticos acharam. Também: `issue/steer` (§7.2) +
+  `SteerThread` repontado (§7.7).
+  Prova: o exemplo canônico literal e completo, incluindo reply de humano sobre a resposta citada
+  e um steer no meio do trabalho.
+
+  > Nota de faseamento (v3): `DeliverOrchestratorReply` **nasce na F2+F3**, não aqui — sem ele a
+  > resposta do orquestrador não atravessa para o canal e a prova de aceite daquela fase ("conversa
+  > de ida e volta no grupo real") seria impossível. A F2+F3 entrega a perna CONVERSACIONAL; a F4
+  > estende o mesmo handler para a perna de RESULTADO. A v2 listava o artefato nas duas fases sem
+  > dizer qual metade cabia em cada uma.
 - **F5 — compaction + luto.** §7.8 com prova de gate (forçar threshold baixo e ver a
   compactação rodar e a sessão renascer semeada); varredura de mortos, contrato encolhido,
   flow-map e docs atualizados.
@@ -314,9 +372,9 @@ follow-up.
 - **R3 — janela de corrida da trava do laço** (herdada, documentada): claim pós-send;
   pre-mint do id no gateway fica mais urgente com o volume de fala do orquestrador.
 - **R4 — contrato:** morrem `integration.message.classified` e `integration.agent.reply_drafted`;
-  nascem `issue.created` e `orchestrator.replied`; confirmar no PR de F2/F4 que só o SSE
+  nascem `issue.created` e `orchestrator.replied`; confirmar no PR de F2+F3 / F4 que só o SSE
   os encaminhava (console não os lê — pré-verificado para o primeiro).
-- **R5 — custo por turno:** medir em F2 tokens por mensagem (conversa > classificação).
+- **R5 — custo por turno:** medir na F2+F3 tokens por mensagem (conversa > classificação).
 - **R6 — cwd compartilhado.** N subagents + orquestrador no MESMO diretório era
   inalcançável (tudo serializava no outbox — bug que o pivot conserta) e vira real.
   v1: **1 subagent ativo por thread** (lease do dispatcher) + orientação de prompt para o

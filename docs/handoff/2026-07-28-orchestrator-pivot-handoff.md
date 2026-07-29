@@ -9,7 +9,7 @@ em `packages/api/typescript/scripts/inject-own-message.ts`, junto com a verifica
 **não** se deve repetir.
 
 Depois disso o founder pivotou o modelo. O spec está ratificado, a F1 entregue, e a `main`
-avançada. A implementação continua na F2.
+avançada. A implementação continua na **F2+F3** (fases fundidas pela D9 — ver abaixo).
 
 ## Estado
 
@@ -60,8 +60,16 @@ concorrente, e o resultado volta como turno do orquestrador — que **compõe** 
 entrega citando a mensagem de origem.
 
 Spec completo e ratificado: `.specs/codedm/2026-07-28-orchestrator-pivot.md`.
-**Decisões D1–D8 não se rediscutem.** Elas sobreviveram a um grill de 3 críticos com 6
-bloqueantes; a v2 já incorpora todos.
+**Decisões D1–D9 não se rediscutem.** D1–D8 sobreviveram a um grill de 3 críticos com 6
+bloqueantes; a v2 incorpora todos.
+
+**D9 (emenda de faseamento, ratificada 28-jul — spec v3): F2 e F3 são UMA fase.** O faseamento da
+v2 era inconstruível: `RunIssueTurnOnClassification` é "the one runtime caller of `RunIssueTurn`"
+(`:15`, verificado — o único outro é `TestRunIssueTurnController`, atrás de `CODEDM_E2E`), e ele
+morre junto com a classificação porque é `EventHandler<typeof MessageClassifiedEvent>`. Como
+`issue/create` só nascia na F3, **nada em produção invocaria `RunIssueTurn` durante toda a F2**: o
+produto conversaria sem conseguir trabalhar, abaixo do que rodou às 19:02. Com a D9 a classificação
+morre no PR em que o substituto está inteiro — conversa **e** fork.
 
 ## Onde parei, e o que vem exatamente
 
@@ -73,30 +81,49 @@ parciais), `lastContextTokens`, `Issue.originEntryId`/`goal`, tabela `agent_mail
 **Mailbox pronta** (`58d83fbf`): port + Drizzle + Mock + 7 testes de semântica de lease,
 registrada no DI. **Inerte** — ninguém enfileira, ninguém consome.
 
-### O que falta na F2, e a ordem importa
+### O que falta na F2+F3, e a ordem importa
+
+Tudo abaixo é **uma fase, um PR** (D9). Os itens 1–5 são aditivos e podem ser construídos e
+testados isoladamente; o item 6 é o que liga tudo e mata a classificação, e é indivisível.
 
 1. **`OrchestratorPromptBuilder` — a voz do produto.** Deixado de propósito para sessão fresca:
    escrever isso apressado é pior que não escrever. Precisa cobrir conversar, saber quando chamar
    `issue/create`, compor resultado de subagent na voz da conversa, e a política de citação da D6
    (retorno de issue SEMPRE cita; na conversa é escolha dele — o exemplo canônico do founder
    mostra "sim, claro" sem quote e só o resultado com quote).
-2. **`OrchestratorAgent`** — espelha `IssueWorkAgent` (base `Agent`, sem `outputSchema`,
-   `mcpScope: 'orchestration'`). Aditivo.
-3. **`RunOrchestratorTurn`** — espelha `RunIssueTurn`; sessão chaveada por thread; persiste
+2. **Escopo MCP `orchestration` + run token de THREAD.** `issue/create` + `issue/list` +
+   `issue/status` (o `issue/steer` fica para a F4, §7.2). Controllers + manifest +
+   `bun emit-openapi` + `bun sdk`. **E o §7.2.1**: `RunTokenClaims.issueId` vira opcional, ganha
+   `entryId`, a guarda de `types/Agent.ts:145` passa a ser por escopo — e **todo tool que aceite
+   `issueId` verifica `issue.threadId === claims.threadId` no próprio handler**, porque sem claim
+   de issue o walker de `mcp/identity.ts` para de comparar `issueId` (não falha: ignora).
+3. **`OrchestratorAgent`** — espelha `IssueWorkAgent` (base `Agent`, sem `outputSchema`,
+   `mcpScope: 'orchestration'`). Aditivo, **mas só compila depois do item 2** — hoje
+   `MCP_SCOPE_NAMES` não tem `orchestration` e a cunhagem estouraria sem `issueId`.
+4. **`RunOrchestratorTurn`** — espelha `RunIssueTurn`; sessão chaveada por thread; persiste
    `OrchestratorRepliedEvent` (domain do contexto **agent**, por EVT-01).
-4. **`MailboxDispatcher`** — o poller. Modelo: `SqliteCommandQueue`. Precisa de **sweep no boot**
+5. **`MailboxDispatcher`** — o poller. Modelo: `SqliteCommandQueue`. Precisa de **sweep no boot**
    e **re-poll ao fim do turno** — a ausência disso foi bloqueante na v1 do spec.
-5. **O PR ATÔMICO.** Repoint do ramo invocável do `ConsumeInboundMessage` para enfileirar
+6. **`DeliverOrchestratorReply` (§7.5, perna conversacional).** Handler external no **thread**:
+   carrega a Thread (envelope), grava a entrada SYSTEM no transcript, resolve `quotedMessageId`
+   via `findPlatformId` quando há citação, publica `ChannelDeliveryRequestedEvent` com
+   `quotedMessageId` + `replyEntryId`. **Sem ele a resposta não chega no WhatsApp e a fase não tem
+   como ser provada.** Era o buraco da v1 deste handoff: o artefato não estava na lista.
+7. **O PR ATÔMICO.** Repoint do ramo invocável do `ConsumeInboundMessage` (`:117`) para enfileirar
    `OPERATOR_MESSAGE` **na mesma transação do ingest**, + morte de `ClassifyMessage`,
    `IssueRouter*`, `ClassifyIssueAgent`, fluxo CLARIFY, **ambos** os `MessageClassifiedEvent`
    (domain e wire) e `RunIssueTurnOnClassification`. **47 arquivos** tocam essa superfície
    (listada no spec §5). **Não pode ficar pela metade** — meia-classificação viva é o "duas
    fontes de decisão" que a D5 proíbe.
-6. **e2e 04/07**: o `E2eStubAgentRunner` precisa fingir um turno de orquestrador que dirige o
+8. **e2e 04/07**: o `E2eStubAgentRunner` precisa fingir um turno de orquestrador que dirige o
    `issue/create` via MCP real. Hoje ele discrimina por `outputSchema`, que deixa de existir.
+   (Só é construível porque o escopo entra nesta mesma fase — na v2 não era.)
 
-Depois: **F3** (escopo MCP `orchestration`; `originEntryId` NUNCA é argumento do modelo — o
-router injeta das claims do run token), **F4** (a volta + steer + **morte do
+**Prova de aceite, em runtime no grupo real:** o exemplo canônico do §1 até o ack — conversa de
+ida e volta, depois "crie uma issue" → ack imediato ENQUANTO o subagent roda.
+
+Depois: **F4** (a volta — `ISSUE_RESULT` compõe, `DeliverOrchestratorReply` ganha o ramo que cita
+`originEntryId`, `issue/steer` + `SteerThread` repontado, + **morte do
 `RequestAgentReplyDelivery`**, senão cada conclusão gera DUAS mensagens no grupo), **F5**
 (compaction + luto do código morto).
 
@@ -136,7 +163,7 @@ E para qualquer coisa que toque o caminho vivo: **suba o app e prove no grupo re
 `bun desktop:sidecars && bun desktop:dev`, depois
 `cd packages/api/typescript && bun scripts/inject-own-message.ts "sua mensagem"`.
 
-## Pendências que não são da F2
+## Pendências que não são da F2+F3
 
 - **Ninguém no grupo sabe qual é a tag de citação**, e o pivot tornou isso mais grave: o
   `@agente` virou a interface inteira. A máquina está quase pronta (`thread.attached` sem
