@@ -7,3 +7,4 @@
 // resolution key), which is what AC-5.3 greps for.
 export * from './ClassifyIssueAgent'
 export * from './IssueWorkAgent'
+export * from './OrchestratorAgent'
