@@ -6153,6 +6153,12 @@
                             },
                             "author": {
                               "$ref": "#/components/schemas/MessageAuthor"
+                            },
+                            "quotedMessageId": {
+                              "type": "string"
+                            },
+                            "replyEntryId": {
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -6987,6 +6993,57 @@
                         },
                         "name": {
                           "type": "string",
+                          "const": "integration.issue.created"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "properties": {
+                            "issueId": {
+                              "type": "string"
+                            },
+                            "threadId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "goal": {
+                              "type": "string"
+                            },
+                            "originEntryId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "issueId",
+                            "threadId",
+                            "key",
+                            "title",
+                            "goal",
+                            "originEntryId"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "ownerId",
+                        "name",
+                        "payload"
+                      ],
+                      "additionalProperties": false,
+                      "examples": []
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ownerId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
                           "const": "integration.issue.opened"
                         },
                         "payload": {
@@ -7142,6 +7199,47 @@
                             "threadId",
                             "entryId",
                             "method"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "ownerId",
+                        "name",
+                        "payload"
+                      ],
+                      "additionalProperties": false,
+                      "examples": []
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ownerId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
+                          "const": "integration.orchestrator.replied"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "properties": {
+                            "threadId": {
+                              "type": "string"
+                            },
+                            "text": {
+                              "type": "string"
+                            },
+                            "replyToEntryId": {
+                              "type": "string"
+                            },
+                            "issueId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "threadId",
+                            "text"
                           ],
                           "additionalProperties": false
                         }

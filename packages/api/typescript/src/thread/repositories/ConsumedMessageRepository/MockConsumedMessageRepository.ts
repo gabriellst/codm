@@ -25,6 +25,13 @@ export class MockConsumedMessageRepository extends ConsumedMessageRepository {
 		return this.links.get(this.key(channelId, platformMessageId))
 	}
 
+	async findPlatformId(entryId: string): Promise<string | undefined> {
+		for (const [key, link] of this.links) {
+			if (link.entryId === entryId) return key.slice(key.indexOf(':') + 1)
+		}
+		return undefined
+	}
+
 	async has(channelId: string, platformMessageId: string): Promise<boolean> {
 		return this.seen.has(this.key(channelId, platformMessageId))
 	}

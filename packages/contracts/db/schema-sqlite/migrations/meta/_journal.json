@@ -29,6 +29,20 @@
       "when": 1785271812771,
       "tag": "0003_stormy_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785284853559,
+      "tag": "0004_moaning_doomsday",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1785285141397,
+      "tag": "0005_tan_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

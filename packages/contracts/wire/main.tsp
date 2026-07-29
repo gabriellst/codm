@@ -46,6 +46,8 @@ import "./enums/stop-resolution.tsp";
 import "./enums/classification-method.tsp";
 import "./enums/artifact-kind.tsp";
 import "./enums/transcript-kind.tsp";
+import "./enums/mailbox-item-kind.tsp";
+import "./enums/mailbox-target-kind.tsp";
 import "./enums/message-author.tsp";
 import "./enums/buffer-size.tsp";
 import "./enums/attach-flow-style.tsp";

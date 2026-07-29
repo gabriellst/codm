@@ -31,15 +31,21 @@
 // `core/db/sqlite/store_test.go` TestConcurrentBoot, which spawns the same helper script.
 import { afterAll, describe, expect, it } from 'bun:test'
 import { mkdtempSync, readdirSync, rmSync, existsSync, writeFileSync } from 'node:fs'
+import { is } from 'drizzle-orm'
+import { SQLiteTable } from 'drizzle-orm/sqlite-core'
+import * as schema from '@codedm/contracts/db'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 /**
- * Drizzle tables standing after the FULL apply. 0000 creates 25; 0002 (the Fase-4 agent-session
- * rename) creates one and drops one, so the total is unchanged — which is worth asserting in its own
- * right, since a rename that forgot its DROP would surface here as 26.
+ * Drizzle tables standing after the FULL apply — DERIVED from the schema module, for the same reason
+ * as the migration count below: a literal turns "someone added a table" into a red race test.
+ *
+ * What it still asserts, and this is the point: the applied MIGRATIONS and the declared SCHEMA agree.
+ * A rename that forgot its DROP, or a table declared and never migrated, shows up here as a mismatch
+ * rather than as a number nobody remembers how to update.
  */
-const DRIZZLE_TABLE_COUNT = 25
+const DRIZZLE_TABLE_COUNT = Object.values(schema).filter(v => is(v, SQLiteTable)).length
 /**
  * Ledger rows after a full apply: one per `.sql` file — never 2× that, which is the bug this suite
  * exists for. DERIVED from the directory rather than hardcoded: a literal here turns "someone added

@@ -48,7 +48,10 @@ describe('sqlite migrations — contracts source vs //go:embed copy', () => {
 		for (const name of readdirSync(SOURCE_DIR).filter(f => f.endsWith('.sql'))) {
 			const bytes = readFileSync(join(SOURCE_DIR, name), 'utf8')
 			expect(bytes.trim().length).toBeGreaterThan(0)
-			expect(bytes).toMatch(/CREATE TABLE|ALTER TABLE/)
+			// Real DDL, not a placeholder. Deliberately broader than CREATE/ALTER TABLE: an
+			// index-only migration is legitimate (0005 adds one index and nothing else), and a rail
+			// that forces every migration to touch a table teaches people to pad them.
+			expect(bytes).toMatch(/\b(CREATE|ALTER|DROP)\s+(TABLE|INDEX|UNIQUE\s+INDEX|VIEW|TRIGGER)\b/i)
 		}
 	})
 })

@@ -18,14 +18,31 @@ FROM issue_issues
 WHERE id = ?1
 `
 
+type GetIssueByIDRow struct {
+	ID            string
+	OwnerID       string
+	ThreadID      string
+	Key           string
+	Title         string
+	Status        string
+	Provider      string
+	Meta          sql.NullString
+	Archived      int64
+	ArchiveReason sql.NullString
+	CompletedAt   sql.NullInt64
+	CreatedAt     int64
+	UpdatedAt     int64
+	Version       int64
+}
+
 // Issue (BC5 Issue Execution) context queries over the SQLite substrate. The Go
 // structs + typed methods are GENERATED from these (sqlc PULL); the domain repos
 // bind them to the shared SqliteStore, joining the caller's unit of work when a tx
 // is in context. Mirrors the TS Drizzle repositories in
 // packages/api/typescript/src/issue/repositories/*.
-func (q *Queries) GetIssueByID(ctx context.Context, id string) (IssueIssue, error) {
+func (q *Queries) GetIssueByID(ctx context.Context, id string) (GetIssueByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getIssueByID, id)
-	var i IssueIssue
+	var i GetIssueByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OwnerID,

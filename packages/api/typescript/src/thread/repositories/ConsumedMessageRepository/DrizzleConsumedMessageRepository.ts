@@ -61,6 +61,16 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 		return { threadId: row.threadId, entryId: row.entryId }
 	}
 
+	async findPlatformId(entryId: string, tx?: DrizzleClient): Promise<string | undefined> {
+		const dbc = tx ?? this.db
+		const rows = await dbc
+			.select({ platformMessageId: consumedMessages.platformMessageId })
+			.from(consumedMessages)
+			.where(eq(consumedMessages.entryId, entryId))
+			.limit(1)
+		return rows[0]?.platformMessageId
+	}
+
 	async has(channelId: string, platformMessageId: string, tx?: DrizzleClient): Promise<boolean> {
 		const dbc = tx ?? this.db
 		const rows = await dbc

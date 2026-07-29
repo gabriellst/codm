@@ -38,10 +38,12 @@ import {
 	ChannelSyncStartedEventSchema,
 	IssueArchivedEventSchema,
 	IssueCompletedEventSchema,
+	IssueCreatedEventSchema,
 	IssueOpenedEventSchema,
 	IssueStopRaisedEventSchema,
 	IssueStopResolvedEventSchema,
 	MessageClassifiedEventSchema,
+	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
 	WorkspaceRemovedEventSchema,
@@ -77,10 +79,12 @@ export const ChannelSyncProgressEventMaterializedSchema = ChannelSyncProgressEve
 export const ChannelSyncStartedEventMaterializedSchema = ChannelSyncStartedEventSchema
 export const IssueArchivedEventMaterializedSchema = IssueArchivedEventSchema
 export const IssueCompletedEventMaterializedSchema = IssueCompletedEventSchema
+export const IssueCreatedEventMaterializedSchema = IssueCreatedEventSchema
 export const IssueOpenedEventMaterializedSchema = IssueOpenedEventSchema
 export const IssueStopRaisedEventMaterializedSchema = IssueStopRaisedEventSchema
 export const IssueStopResolvedEventMaterializedSchema = IssueStopResolvedEventSchema
 export const MessageClassifiedEventMaterializedSchema = MessageClassifiedEventSchema
+export const OrchestratorRepliedEventMaterializedSchema = OrchestratorRepliedEventSchema
 export const SubscriptionChangedEventMaterializedSchema = SubscriptionChangedEventSchema
 export const ThreadAttachedEventMaterializedSchema = ThreadAttachedEventSchema
 export const WorkspaceRemovedEventMaterializedSchema = WorkspaceRemovedEventSchema
@@ -117,10 +121,12 @@ export const materializedIntegrationEventSchemas = [
 	ChannelSyncStartedEventMaterializedSchema,
 	IssueArchivedEventMaterializedSchema,
 	IssueCompletedEventMaterializedSchema,
+	IssueCreatedEventMaterializedSchema,
 	IssueOpenedEventMaterializedSchema,
 	IssueStopRaisedEventMaterializedSchema,
 	IssueStopResolvedEventMaterializedSchema,
 	MessageClassifiedEventMaterializedSchema,
+	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
 	WorkspaceRemovedEventMaterializedSchema,
 ] as const
@@ -156,10 +162,12 @@ export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [
 	ChannelSyncStartedEventMaterializedSchema,
 	IssueArchivedEventMaterializedSchema,
 	IssueCompletedEventMaterializedSchema,
+	IssueCreatedEventMaterializedSchema,
 	IssueOpenedEventMaterializedSchema,
 	IssueStopRaisedEventMaterializedSchema,
 	IssueStopResolvedEventMaterializedSchema,
 	MessageClassifiedEventMaterializedSchema,
+	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
 	WorkspaceRemovedEventMaterializedSchema,
 ])

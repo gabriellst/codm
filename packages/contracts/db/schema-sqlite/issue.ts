@@ -25,6 +25,26 @@ export const issues = sqliteTable(
 		provider: text('provider').$type<ProviderKind>().notNull(),
 		meta: text('meta'),
 
+		/**
+		 * The transcript entry whose message asked for this issue — the anchor the orchestrator's
+		 * answer quotes when the work finishes (orchestrator pivot, 28-jul).
+		 *
+		 * NULLABLE, and deliberately so: an issue can also be born without a message behind it —
+		 * `DeclareIssueOpen` when a worker splits off separable work mid-run, or the console creating
+		 * one through the SDK. Making it NOT NULL would reject both. Required only on the path that
+		 * has one, which is the orchestrator's `issue/create`.
+		 */
+		originEntryId: text('origin_entry_id'),
+		/**
+		 * What the operator asked for, in their words — the subagent's prompt.
+		 *
+		 * Distinct from `title`, which is a label for the console. Before the pivot the prompt was the
+		 * raw inbound text, re-read from the transcript at spawn time; now the issue OWNS its goal,
+		 * because the orchestrator restates the intent from a conversation the raw message alone does
+		 * not carry. Nullable for the same two paths as `origin_entry_id`.
+		 */
+		goal: text('goal'),
+
 		archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
 		// IssueArchiveReason (MANUAL | THREAD_DETACHED) — set only when archived.
 		archiveReason: text('archive_reason').$type<IssueArchiveReason>(),

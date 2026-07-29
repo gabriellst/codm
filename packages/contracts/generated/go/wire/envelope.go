@@ -195,6 +195,12 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 			return nil, err
 		}
 		return v, nil
+	case "integration.issue.created":
+		var v IssueCreatedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
 	case "integration.issue.opened":
 		var v IssueOpenedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
@@ -215,6 +221,12 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 		return v, nil
 	case "integration.message.classified":
 		var v MessageClassifiedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.orchestrator.replied":
+		var v OrchestratorRepliedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}

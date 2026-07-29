@@ -31,10 +31,12 @@ import {
 	ChannelSyncStartedEventSchema,
 	IssueArchivedEventSchema,
 	IssueCompletedEventSchema,
+	IssueCreatedEventSchema,
 	IssueOpenedEventSchema,
 	IssueStopRaisedEventSchema,
 	IssueStopResolvedEventSchema,
 	MessageClassifiedEventSchema,
+	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
 	WorkspaceRemovedEventSchema,
@@ -70,11 +72,13 @@ export * from './channel-sync-started'
 export * from './in-process'
 export * from './issue-archived'
 export * from './issue-completed'
+export * from './issue-created'
 export * from './issue-opened'
 export * from './issue-stop-raised'
 export * from './issue-stop-resolved'
 export * from './materialized'
 export * from './message-classified'
+export * from './orchestrator-replied'
 export * from './subscription-changed'
 export * from './thread-attached'
 export * from './workspace-removed'
@@ -109,10 +113,12 @@ export const IntegrationEventSchema = z.discriminatedUnion('name', [
 	ChannelSyncStartedEventSchema,
 	IssueArchivedEventSchema,
 	IssueCompletedEventSchema,
+	IssueCreatedEventSchema,
 	IssueOpenedEventSchema,
 	IssueStopRaisedEventSchema,
 	IssueStopResolvedEventSchema,
 	MessageClassifiedEventSchema,
+	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
 	WorkspaceRemovedEventSchema,

@@ -180,4 +180,21 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
 		expect(entries.some(e => e.text === 'just chatting')).toBe(true)
 	})
+
+	/**
+	 * The ledger resolves in BOTH directions, and the second one is what the orchestrator pivot needs:
+	 * to quote the message that opened an issue, you start from OUR entry id and need the platform id
+	 * the channel assigned. `findEntry` only ever answers the inbound question.
+	 */
+	it('findPlatformId resolves the reverse direction, and is undefined for an entry that never shipped', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const handler = testBed.resolve(ConsumeInboundMessage)
+		const ledger = testBed.resolve(ConsumedMessageRepository)
+
+		await handler.handle(buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-anchor') as never)
+		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+
+		expect(await ledger.findPlatformId(entry!.entryId)).toBe('wamid-anchor')
+		expect(await ledger.findPlatformId('00000000-0000-4000-8000-00000000dead')).toBeUndefined()
+	})
 })

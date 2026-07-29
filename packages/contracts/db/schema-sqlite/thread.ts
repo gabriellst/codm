@@ -126,7 +126,12 @@ export const consumedMessages = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	t => [uniqueIndex('consumed_messages_channel_message_unq').on(t.channelId, t.platformMessageId)],
+	t => [
+		uniqueIndex('consumed_messages_channel_message_unq').on(t.channelId, t.platformMessageId),
+		// The REVERSE lookup: a transcript entry → the platform id it became. Quoting the message that
+		// opened an issue reads this way; the unique index above only serves the inbound direction.
+		index('consumed_messages_entry_idx').on(t.entryId),
+	],
 )
 
 export const threadClarifications = sqliteTable(

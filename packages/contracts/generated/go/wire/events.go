@@ -137,6 +137,8 @@ type ChannelDeliveryRequestedEvent struct {
 	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
 	LabelThreadID *string `json:"labelThreadId,omitempty"`
 	Author MessageAuthor `json:"author"`
+	QuotedMessageID *string `json:"quotedMessageId,omitempty"`
+	ReplyEntryID *string `json:"replyEntryId,omitempty"`
 }
 
 func (e ChannelDeliveryRequestedEvent) EventName() string { return ChannelDeliveryRequestedEventName }
@@ -151,6 +153,8 @@ type ChannelDeliveryRequestedPayload struct {
 	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
 	LabelThreadID *string `json:"labelThreadId,omitempty"`
 	Author MessageAuthor `json:"author" validate:"required"`
+	QuotedMessageID *string `json:"quotedMessageId,omitempty"`
+	ReplyEntryID *string `json:"replyEntryId,omitempty"`
 }
 
 // ChannelDisconnectedEventName is the wire discriminator for ChannelDisconnectedEvent.
@@ -862,6 +866,36 @@ type IssueCompletedPayload struct {
 	CompletedAt time.Time `json:"completedAt" validate:"required"`
 }
 
+// IssueCreatedEventName is the wire discriminator for IssueCreatedEvent.
+const IssueCreatedEventName = "integration.issue.created"
+
+// IssueCreatedEvent — wire shape of integration.issue.created.
+// BC5 Agent Runtime -> console/SSE. An issue was FORKED from a conversation: the operator asked for it in words and the orchestrator declared it through the `issue/create` tool. Distinct from `issue.opened`, which the worker raises when its first turn spawns — this one is the birth, that one is the start of work. `originEntryId` is the transcript entry whose message asked, and it is the anchor the composed answer quotes when the work finishes; it travels here so a consumer can render the thread of it without joining.
+type IssueCreatedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	Key string `json:"key"`
+	Title string `json:"title"`
+	Goal string `json:"goal"`
+	OriginEntryID string `json:"originEntryId"`
+}
+
+func (e IssueCreatedEvent) EventName() string { return IssueCreatedEventName }
+
+// IssueCreatedPayload — payload of integration.issue.created, generated from the contract declaration.
+type IssueCreatedPayload struct {
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Key string `json:"key" validate:"required"`
+	Title string `json:"title" validate:"required"`
+	Goal string `json:"goal" validate:"required"`
+	OriginEntryID string `json:"originEntryId" validate:"required"`
+}
+
 // IssueOpenedEventName is the wire discriminator for IssueOpenedEvent.
 const IssueOpenedEventName = "integration.issue.opened"
 
@@ -965,6 +999,32 @@ type MessageClassifiedPayload struct {
 	ThreadID string `json:"threadId" validate:"required"`
 	EntryID string `json:"entryId" validate:"required"`
 	Method ClassificationMethod `json:"method" validate:"required"`
+	IssueID *string `json:"issueId,omitempty"`
+}
+
+// OrchestratorRepliedEventName is the wire discriminator for OrchestratorRepliedEvent.
+const OrchestratorRepliedEventName = "integration.orchestrator.replied"
+
+// OrchestratorRepliedEvent — wire shape of integration.orchestrator.replied.
+// BC5 Agent Runtime -> BC4 Thread & Routing. The thread's orchestrator produced a reply for the operator — either answering them directly or composing the outcome of a finished subagent into the voice of the conversation. BC4 owns what happens next (transcript entry, channel delivery) because only it holds the contact the thread is bound to. `replyToEntryId` is present when the reply should QUOTE a specific message: always for a composed issue result (anchored on the issue's origin), optionally in conversation.
+type OrchestratorRepliedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ThreadID string `json:"threadId"`
+	Text string `json:"text"`
+	ReplyToEntryID *string `json:"replyToEntryId,omitempty"`
+	IssueID *string `json:"issueId,omitempty"`
+}
+
+func (e OrchestratorRepliedEvent) EventName() string { return OrchestratorRepliedEventName }
+
+// OrchestratorRepliedPayload — payload of integration.orchestrator.replied, generated from the contract declaration.
+type OrchestratorRepliedPayload struct {
+	ThreadID string `json:"threadId" validate:"required"`
+	Text string `json:"text" validate:"required"`
+	ReplyToEntryID *string `json:"replyToEntryId,omitempty"`
 	IssueID *string `json:"issueId,omitempty"`
 }
 

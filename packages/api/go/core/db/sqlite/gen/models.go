@@ -9,19 +9,37 @@ import (
 )
 
 type AgentAgentSession struct {
-	ID             string
-	OwnerID        string
-	IssueID        string
-	ThreadID       string
-	Provider       string
-	Cwd            string
-	AgentSessionID string
-	Model          string
-	LastMessageID  sql.NullString
-	LastTurnAt     int64
-	CreatedAt      int64
-	UpdatedAt      int64
-	Version        int64
+	ID                string
+	OwnerID           string
+	IssueID           sql.NullString
+	ThreadID          string
+	Provider          string
+	Cwd               string
+	AgentSessionID    string
+	Model             string
+	LastMessageID     sql.NullString
+	LastContextTokens sql.NullInt64
+	LastTurnAt        int64
+	CreatedAt         int64
+	UpdatedAt         int64
+	Version           int64
+}
+
+type AgentMailbox struct {
+	ID         string
+	OwnerID    string
+	TargetKind string
+	TargetID   string
+	Kind       string
+	Payload    string
+	DedupKey   string
+	ClaimedBy  sql.NullString
+	LeaseUntil sql.NullInt64
+	Attempts   int64
+	LastError  sql.NullString
+	DeadAt     sql.NullInt64
+	ConsumedAt sql.NullInt64
+	CreatedAt  int64
 }
 
 type ArtifactArtifact struct {
@@ -167,6 +185,8 @@ type IssueIssue struct {
 	CreatedAt     int64
 	UpdatedAt     int64
 	Version       int64
+	OriginEntryID sql.NullString
+	Goal          sql.NullString
 }
 
 type IssueStop struct {
@@ -245,9 +265,9 @@ type SharedOutbox struct {
 	ProcessedAt sql.NullInt64
 	Attempts    int64
 	LastError   sql.NullString
+	CreatedAt   int64
 	ClaimedBy   sql.NullString
 	LeaseUntil  sql.NullInt64
-	CreatedAt   int64
 }
 
 type SharedScheduledCommand struct {

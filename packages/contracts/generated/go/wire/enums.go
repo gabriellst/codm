@@ -374,6 +374,40 @@ func ParseLanguage(s string) (Language, error) {
 	}
 }
 
+type MailboxItemKind string
+
+const (
+	MailboxItemKindOPERATOR_MESSAGE MailboxItemKind = "OPERATOR_MESSAGE"
+	MailboxItemKindISSUE_RESULT MailboxItemKind = "ISSUE_RESULT"
+	MailboxItemKindWORK MailboxItemKind = "WORK"
+	MailboxItemKindSTEER MailboxItemKind = "STEER"
+)
+
+func ParseMailboxItemKind(s string) (MailboxItemKind, error) {
+	switch MailboxItemKind(s) {
+	case MailboxItemKindOPERATOR_MESSAGE, MailboxItemKindISSUE_RESULT, MailboxItemKindWORK, MailboxItemKindSTEER:
+		return MailboxItemKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid MailboxItemKind: %q", s)
+	}
+}
+
+type MailboxTargetKind string
+
+const (
+	MailboxTargetKindTHREAD MailboxTargetKind = "THREAD"
+	MailboxTargetKindISSUE MailboxTargetKind = "ISSUE"
+)
+
+func ParseMailboxTargetKind(s string) (MailboxTargetKind, error) {
+	switch MailboxTargetKind(s) {
+	case MailboxTargetKindTHREAD, MailboxTargetKindISSUE:
+		return MailboxTargetKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid MailboxTargetKind: %q", s)
+	}
+}
+
 type MembershipAction string
 
 const (

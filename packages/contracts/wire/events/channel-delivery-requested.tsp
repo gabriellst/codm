@@ -13,4 +13,8 @@ model ChannelDeliveryRequestedEvent extends IntegrationEvent {
   labelIssueKey?: string;
   labelThreadId?: string;
   author: MessageAuthor;
+  @doc("Platform id of the message this one replies to. The gateway turns it into a real WhatsApp quote (waE2E.ContextInfo.StanzaID).")
+  quotedMessageId?: string;
+  @doc("The transcript entry this outbound message IS. Carried so the delivery leg can link the sent platform id back to it in the consumed ledger — without that link, a human quoting our own reply resolves to nothing and the reply-quote shortcut cannot route.")
+  replyEntryId?: string;
 }

@@ -13,6 +13,8 @@ export const ChannelDeliveryRequestedEventSchema = z.integrationEvent('integrati
 	labelIssueKey: z.string().optional(),
 	labelThreadId: z.string().optional(),
 	author: z.enum(MessageAuthor),
+	quotedMessageId: z.string().optional(),
+	replyEntryId: z.string().optional(),
 })
 
 export class ChannelDeliveryRequestedEvent extends BaseIntegrationEvent<typeof ChannelDeliveryRequestedEventSchema> {

@@ -11,13 +11,19 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
-import { sql } from 'drizzle-orm'
+import { is, sql } from 'drizzle-orm'
+import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import * as schema from '@codedm/contracts/db'
 import { migrationsDir } from '@codedm/contracts/db/migrations'
 import { events } from '@codedm/contracts/db'
 import { LibsqlDriver } from './LibsqlDriver'
 
-const TABLES_IN_SCHEMA = 25
+/**
+ * DERIVED from the schema module, not hardcoded — the assertion is that the applied MIGRATIONS and
+ * the declared SCHEMA agree, which is what a literal here quietly stops testing the moment someone
+ * bumps it to make the suite green.
+ */
+const TABLES_IN_SCHEMA = Object.values(schema).filter(v => is(v, SQLiteTable)).length
 
 describe('LibsqlDriver', () => {
 	let dir: string

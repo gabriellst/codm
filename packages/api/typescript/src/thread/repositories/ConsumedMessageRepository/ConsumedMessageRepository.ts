@@ -44,4 +44,13 @@ export abstract class ConsumedMessageRepository {
 		platformMessageId: string,
 		tx?: Transaction,
 	): Promise<{ threadId: string; entryId: string } | undefined>
+
+	/**
+	 * The REVERSE direction: a transcript entry → the platform message it became.
+	 *
+	 * This is what lets an outbound reply QUOTE a specific earlier message — the orchestrator
+	 * answering a finished issue anchors on the message that asked for it. `undefined` when the entry
+	 * never reached the channel (a whisper, an audit line) or predates the ledger link.
+	 */
+	abstract findPlatformId(entryId: string, tx?: Transaction): Promise<string | undefined>
 }

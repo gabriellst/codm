@@ -13,4 +13,12 @@
 export enum AgentName {
 	CLASSIFY_ISSUE = 'CLASSIFY_ISSUE',
 	ISSUE_WORK = 'ISSUE_WORK',
+	/**
+	 * The thread's resident conversationalist (orchestrator pivot, 28-jul). One per thread, with a
+	 * persistent session: it talks to the operator, forks issues on request, and composes a finished
+	 * subagent's outcome into an answer in the voice of the conversation. It never does issue work
+	 * itself — conversing is deciding, not acting, the same split the Fase-4.5 critique drew between
+	 * the classifier agent and the routing policy.
+	 */
+	ORCHESTRATOR = 'ORCHESTRATOR',
 }
