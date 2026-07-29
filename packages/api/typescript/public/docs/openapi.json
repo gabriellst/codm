@@ -3776,6 +3776,50 @@
                       ],
                       "additionalProperties": false
                     },
+                    "threads": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "threadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "channelKind": {
+                            "$ref": "#/components/schemas/ChannelKind"
+                          },
+                          "workspacePath": {
+                            "type": "string"
+                          },
+                          "providers": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/ProviderKind"
+                            }
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/ThreadStatus"
+                          },
+                          "lastActivity": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "threadId",
+                          "displayName",
+                          "channelKind",
+                          "workspacePath",
+                          "providers",
+                          "status",
+                          "lastActivity"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "activeSessions": {
                       "type": "array",
                       "items": {
@@ -3895,6 +3939,7 @@
                   },
                   "required": [
                     "agentsRunningNow",
+                    "threads",
                     "activeSessions",
                     "latestActivity",
                     "today",

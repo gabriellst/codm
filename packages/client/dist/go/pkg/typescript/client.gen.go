@@ -6162,6 +6162,15 @@ type GetHomeDashboardResponse struct {
 			ThreadDisplayName string             `json:"threadDisplayName"`
 			ThreadId          openapi_types.UUID `json:"threadId"`
 		} `json:"needsYou,omitempty"`
+		Threads []struct {
+			ChannelKind   ChannelKind        `json:"channelKind"`
+			DisplayName   string             `json:"displayName"`
+			LastActivity  string             `json:"lastActivity"`
+			Providers     []ProviderKind     `json:"providers"`
+			Status        ThreadStatus       `json:"status"`
+			ThreadId      openapi_types.UUID `json:"threadId"`
+			WorkspacePath string             `json:"workspacePath"`
+		} `json:"threads"`
 		Today struct {
 			IssuesClosed          int     `json:"issuesClosed"`
 			IssuesOpened          int     `json:"issuesOpened"`
@@ -8324,6 +8333,15 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 				ThreadDisplayName string             `json:"threadDisplayName"`
 				ThreadId          openapi_types.UUID `json:"threadId"`
 			} `json:"needsYou,omitempty"`
+			Threads []struct {
+				ChannelKind   ChannelKind        `json:"channelKind"`
+				DisplayName   string             `json:"displayName"`
+				LastActivity  string             `json:"lastActivity"`
+				Providers     []ProviderKind     `json:"providers"`
+				Status        ThreadStatus       `json:"status"`
+				ThreadId      openapi_types.UUID `json:"threadId"`
+				WorkspacePath string             `json:"workspacePath"`
+			} `json:"threads"`
 			Today struct {
 				IssuesClosed          int     `json:"issuesClosed"`
 				IssuesOpened          int     `json:"issuesOpened"`

@@ -20,6 +20,15 @@ export const GetHomeDashboardOutputSchema = z.object({
 	needsYou: z
 		.object({ threadId: z.uuid(), threadDisplayName: z.string(), stopKinds: z.array(z.enum(StopKind)) })
 		.optional(),
+	/**
+	 * EVERY thread of the owner — the sidebar's conversation list (F1).
+	 *
+	 * Distinct from `activeSessions`, which answers a different question and filters to
+	 * `RUNNING | NEEDS_ATTENTION`. The sidebar read that filtered list, so a thread sitting `IDLE` —
+	 * the normal state of a conversation nobody is currently being answered in — showed as "Nenhuma
+	 * conversa ainda" while the row plainly existed. Two questions, two fields; the home page shows both.
+	 */
+	threads: z.array(ThreadSummarySchema),
 	activeSessions: z.array(ThreadSummarySchema),
 	latestActivity: z.array(z.object({ title: z.string(), subtitle: z.string(), threadId: z.uuid(), at: z.string() })),
 	today: z.object({ issuesOpened: z.number().int(), issuesClosed: z.number().int(), medianResponseSeconds: z.number() }),
@@ -60,17 +69,22 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.leftJoin(channels, eq(threads.channelId, channels.id))
 			.where(eq(threads.ownerId, input.ownerId))
 
+		const toSummary = (t: (typeof threadRows)[number]) => ({
+			threadId: t.threadId,
+			displayName: t.displayName,
+			channelKind: (t.channelKind ?? ChannelKind.WHATSAPP) as ChannelKind,
+			workspacePath: t.workspacePath ?? '',
+			providers: t.providers as ProviderKind[],
+			status: t.status as ThreadStatus,
+			lastActivity: t.updatedAt.toISOString(),
+		})
+
+		// Most recently active first: the sidebar is a conversation list, and a conversation list that
+		// does not surface the one you were just in is a list you have to search.
+		const allThreads = [...threadRows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).map(toSummary)
 		const activeSessions = threadRows
 			.filter(t => t.status === ThreadStatus.RUNNING || t.status === ThreadStatus.NEEDS_ATTENTION)
-			.map(t => ({
-				threadId: t.threadId,
-				displayName: t.displayName,
-				channelKind: (t.channelKind ?? ChannelKind.WHATSAPP) as ChannelKind,
-				workspacePath: t.workspacePath ?? '',
-				providers: t.providers as ProviderKind[],
-				status: t.status as ThreadStatus,
-				lastActivity: t.updatedAt.toISOString(),
-			}))
+			.map(toSummary)
 
 		const openStops = await this.db.select().from(stops).where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
 		const needsYou = this.buildNeedsYou(openStops, threadRows)
@@ -92,6 +106,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		return {
 			agentsRunningNow,
 			needsYou,
+			threads: allThreads,
 			activeSessions,
 			latestActivity,
 			today: { issuesOpened, issuesClosed, medianResponseSeconds: 0 },

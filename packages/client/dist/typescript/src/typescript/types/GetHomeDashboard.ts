@@ -39,6 +39,39 @@ export type GetHomeDashboard200 = {
     /**
      * @type array
     */
+    threads: {
+        /**
+         * @type string, uuid
+        */
+        threadId: string;
+        /**
+         * @type string
+        */
+        displayName: string;
+        /**
+         * @type string
+        */
+        channelKind: ChannelKind;
+        /**
+         * @type string
+        */
+        workspacePath: string;
+        /**
+         * @type array
+        */
+        providers: ProviderKind[];
+        /**
+         * @type string
+        */
+        status: ThreadStatus;
+        /**
+         * @type string
+        */
+        lastActivity: string;
+    }[];
+    /**
+     * @type array
+    */
     activeSessions: {
         /**
          * @type string, uuid

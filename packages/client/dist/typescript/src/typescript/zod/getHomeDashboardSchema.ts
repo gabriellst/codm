@@ -22,6 +22,21 @@ get "stopKinds"(){
                 return z.array(stopKindSchema)
               }
     })),
+"threads": z.array(z.object({
+    "threadId": z.uuid(),
+"displayName": z.string(),
+get "channelKind"(){
+                return channelKindSchema
+              },
+"workspacePath": z.string(),
+get "providers"(){
+                return z.array(providerKindSchema)
+              },
+get "status"(){
+                return threadStatusSchema
+              },
+"lastActivity": z.string()
+    })),
 "activeSessions": z.array(z.object({
     "threadId": z.uuid(),
 "displayName": z.string(),

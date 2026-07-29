@@ -30,7 +30,10 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 	const issueCount = issues ? issues.statsLine.awaitingInput + issues.statsLine.working + issues.statsLine.completed : undefined
 	const channelCount = dashboard?.channels.filter(c => c.status === 'CONNECTED').length
 	const workspaceCount = workspaces?.workspaces.length
-	const threads = dashboard?.activeSessions ?? []
+	// EVERY conversation, not just the ones with a running agent. This read `activeSessions` — which
+	// filters to RUNNING | NEEDS_ATTENTION — so an IDLE thread, the normal state of a conversation
+	// nobody is being answered in right now, rendered as "Nenhuma conversa ainda" while the row existed.
+	const threads = dashboard?.threads ?? []
 
 	return (
 		<aside className={cn('bg-sidebar flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border px-4 py-6', className)}>
