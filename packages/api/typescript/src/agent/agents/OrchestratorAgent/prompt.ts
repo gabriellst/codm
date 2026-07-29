@@ -22,18 +22,23 @@ type WindowEntry = OrchestratorInput['window']['entries'][number]
  * those into text is RENDERING. `buildRequest` is not allowed to render — it assembles. So this
  * follows `ClassifyIssuePromptBuilder`'s shape, which split for the same reason.
  *
- * ### WHY THE FILE-EDITING RULE IS A PROHIBITION AND NOT A CLAIM OF INCAPABILITY
- * R6 (§10) asks for "orientação de prompt para o orquestrador não editar arquivos" — the v1
- * mitigation for N agents sharing one cwd. The tempting phrasing is "you have no tools". It would be
- * FALSE, and falsifiable by the model on its first call: `--allowedTools` is pushed only inside
- * `if (mcp)` (ClaudeAgentRunner.ts:247-250) while `--permission-mode auto` is pushed unconditionally
- * (:254), and that method's own MEASURED note (:214-219) records "Write + Read both executed" under
- * `auto`. The orchestrator therefore spawns with the CLI's full native Read/Write/Edit/Bash surface,
- * in a directory that holds real work. A model that catches the prompt lying about its own
- * capabilities has no reason to believe the next sentence either — so the paragraph forbids, names
- * the classes beyond editing, and gives the reason. Reading is explicitly ALLOWED, because the
- * founder's canonical beat 2 ("o código está da maneira tal?" → "está dessa forma: …") is
- * unperformable without it.
+ * ### FILE EDITING: ALLOWED, WITH A STRONG PREFERENCE FOR FORKING (B4, founder 29-jul)
+ * The first version FORBADE writing outright — R6's v1 mitigation for N agents sharing one cwd. The
+ * founder rejected that after using it: the orchestrator refused a trivial edit with a flat "No.", and
+ * being unable to touch the repository at all is worse than the contention it was avoiding.
+ *
+ * What replaces it is not permission-plus-silence but permission-plus-a-reason. The real cost of the
+ * orchestrator doing work is not the write — it is that a thread's turns are SERIALIZED (one lease per
+ * target, §3), so while it edits, nobody in that conversation is answered. Forking is how the work
+ * happens without the conversation going quiet, and that is what the paragraph tells it.
+ *
+ * The prohibition it does keep is narrow and about blast radius rather than busyness: no `git` history
+ * rewriting, no dependency installs. Those are not "work", they are changes to the ground everyone
+ * else is standing on, and a subagent in its own turn is the right place for them too.
+ *
+ * (The structural fix remains R6's worktree-per-issue. This is the instruction; that is the isolation.
+ * Recorded as a follow-up rather than built here — it changes how concurrent work is isolated, which
+ * is the founder's call, not a side effect of a prompt edit.)
  *
  * ### WHY TOOL NAMES ARE NEVER TYPED OUT
  * Same rule as `IssueWorkPromptBuilder`: read from the manifest, so the scope and the sentence that
@@ -70,10 +75,14 @@ export class OrchestratorPromptBuilder {
 			`You are the agent who lives in this conversation. One of you per conversation, and you have been here the whole time.`,
 			`The repository this conversation is about is at ${input.cwd}.`,
 			'',
-			'You talk. You may READ that repository to answer a question about it. You change NOTHING there: no edits, ' +
-				'no writes, no file moves, no git commands, no generators, no installs. Not because you lack the tools — you ' +
-				'have them, and other work runs in this same directory. Reading answers the question; writing breaks somebody ' +
-				"else's turn.",
+			'You talk, and you can read and edit that repository. But this conversation is SERIALIZED: while you ' +
+				'work, nobody here gets an answer — so the default for anything beyond a trivial edit is to FORK AN ISSUE ' +
+				'and keep talking. Prefer forking whenever the work has more than one step, needs to be verified, or would ' +
+				'take you more than a moment.',
+			'Do it yourself when it is genuinely small and the operator is plainly asking YOU to: a one-line fix, a file ' +
+				'they want written now, a quick correction. Say what you changed, in one line.',
+			'Two things stay off-limits whoever asks, because they change the ground everyone else is standing on: ' +
+				'rewriting git history, and installing dependencies. Fork an issue for those.',
 		]
 	}
 

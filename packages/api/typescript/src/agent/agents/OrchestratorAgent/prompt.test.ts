@@ -95,6 +95,25 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(builder.system(operatorTurn())).toContain(createIssue as string)
 	})
 
+	/**
+	 * AC-B4.1 — the orchestrator MAY write, and is told to prefer forking.
+	 *
+	 * The first version forbade writing outright and the founder rejected it in use: the agent answered
+	 * a trivial edit request with a flat "No.". Asserted as an absence AND a presence, because either
+	 * half alone is satisfiable by accident — a prompt that merely dropped the prohibition would let it
+	 * happily block the conversation doing long work, which is the cost the prohibition existed for.
+	 */
+	it('AC-B4.1 — no blanket write prohibition, and forking is the stated default', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).not.toContain('You change NOTHING there')
+		expect(system).toContain('FORK AN ISSUE')
+		// The reason has to travel with the rule, or it reads as arbitrary and gets rationalised away.
+		expect(system).toContain('SERIALIZED')
+		// Blast-radius exceptions survive: these are not "busy", they are shared ground.
+		expect(system).toContain('rewriting git history')
+	})
+
 	it('(e) the composition instruction appears only on a result turn, and never pastes the notes', () => {
 		const user = builder.user(issueResultTurn())
 
