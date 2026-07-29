@@ -6,7 +6,7 @@ import type { AgentRunner } from '../services/AgentRunner'
 import type { RunTokenService } from '../services/RunTokenService'
 import type { AgentMcpInvocation } from './AgentMcpInvocation'
 import type { ProviderCapabilities } from './ProviderCapabilities'
-import type { McpScope } from '../mcp/manifest'
+import { SCOPE_CONFINEMENT, type McpScope } from '../mcp/manifest'
 import { MCP_ROUTE_PREFIX } from '../mcp/route'
 import type { AgentApplicationErrors } from '../errors'
 
@@ -142,10 +142,16 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 				`agent ${(this.constructor as typeof Agent).NAME} requires the '${this.mcpScope}' tool scope, but this CLI build cannot take an MCP config`,
 			)
 		}
-		if (!input.issueId) {
+		// CONFINEMENT IS A PROPERTY OF THE SCOPE, not of every scoped agent (orchestrator pivot §7.2.1).
+		// This used to read `if (!input.issueId) throw`, which was right while the only scope-declaring
+		// agent worked an issue. The orchestrator is keyed by THREAD and structurally has none (§6.1),
+		// so an unconditional demand here would make every orchestrator turn die at mint time — the
+		// blocker that gated the whole pivot. The requirement did not go away, it became per-scope, and
+		// it is declared in the manifest so adding a scope forces the question.
+		if (SCOPE_CONFINEMENT[scope] === 'issue' && !input.issueId) {
 			throw new BaseError<AgentApplicationErrors>(
 				'AGENT_TOOLS_UNSUPPORTED',
-				`agent ${(this.constructor as typeof Agent).NAME} declares a tool scope but received no issueId — a run token must be confined to an issue`,
+				`agent ${(this.constructor as typeof Agent).NAME} declares the '${scope}' tool scope, whose tokens are confined to an issue, but received no issueId`,
 			)
 		}
 
@@ -153,6 +159,9 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 			ownerId: input.ownerId,
 			issueId: input.issueId,
 			threadId: input.threadId,
+			// Carried so the router can inject `originEntryId` on `issue/create` — the reason that tool
+			// does not take it as an argument (§7.2). Absent on runs no message triggered.
+			entryId: input.entryId,
 			agentName: (this.constructor as typeof Agent).NAME,
 			// AUTHORIZATION, not decoration (D6-8). Without this field a token minted for the six writes of
 			// `issue-handling` also opened `/mcp/system` — `CreateOwner`, `DisableOwner`, `AddWorkspace`,

@@ -79,6 +79,50 @@ export const MCP_SCOPE_NAMES = ['issue-handling', 'system'] as const
 export type McpScope = (typeof MCP_SCOPE_NAMES)[number]
 
 /**
+ * WHAT A TOKEN OF THIS SCOPE IS CONFINED TO — `'issue'` or `'thread'` (orchestrator pivot §7.2.1).
+ *
+ * Until the pivot this was not a question: every scope-declaring agent worked an issue, so the base
+ * `Agent` could hard-require an `issueId` before minting and `mcp/identity.ts` could rely on the claim
+ * always being there. The orchestrator breaks that premise — it is keyed by THREAD and structurally has
+ * no issue (§6.1) — and the honest fix is to make confinement a DECLARED property of the scope rather
+ * than an assumption baked into the mint site.
+ *
+ * THE MECHANISM LANDS BEFORE ITS USER, on purpose. Both scopes below are `'issue'`, so this record
+ * changes no behaviour today: adding `orchestration` to `MCP_SCOPE_NAMES` cascades into three
+ * `Record<McpScope, …>` sites (`MCP_SCOPES` here, `GENERATED_SERVERS` in `router.ts`) that cannot be
+ * satisfied until that scope's controllers exist. Splitting the mechanism from the scope keeps every
+ * commit green instead of forcing one commit that changes minting AND adds four controllers.
+ *
+ * A `Record<McpScope, …>` on purpose, exactly like `GENERATED_SERVERS` in `router.ts`: a scope added to
+ * `MCP_SCOPE_NAMES` breaks `tsc` HERE until somebody states what its tokens are confined to. The
+ * alternative — a list of the scopes that need an issue, with everything else falling through to
+ * "thread" — would make the weaker confinement the SILENT default, and a new scope would ship
+ * unconfined because nobody remembered to add it to a list.
+ *
+ * ### `'thread'` is strictly weaker, and the weakness has a name
+ * `assertIdentityMatchesClaims` skips any identity key whose claim is absent — it does not reject.
+ * So a `'thread'`-confined token gets NO generic protection on an `issueId` argument, and every tool
+ * in such a scope that accepts one MUST check `issue.threadId === claims.threadId` itself. That is
+ * why `orchestration` carries read/`create` operations and NOT the six writes of `issue-handling`.
+ */
+export const SCOPE_CONFINEMENT = {
+	/** Six writes an agent performs ON ITS OWN ISSUE. The claim is what makes "its own" checkable. */
+	'issue-handling': 'issue',
+	/**
+	 * `'issue'` — the STRICTER of the two, and deliberately so despite `system` operations being
+	 * neither issue- nor thread-shaped (`owner/*`, `workspace/*`, ui reads).
+	 *
+	 * No internal agent declares this scope, so nothing mints such a token today and the value has no
+	 * runtime effect. It is a choice about what the NEXT person inherits: `system` is the scope that
+	 * opens account administration, so an agent that wants it should have to state an identity as
+	 * specific as the surface is dangerous — and if a thread-confined `system` token ever turns out to
+	 * be the right thing, that is a decision someone makes explicitly, by editing this line, rather
+	 * than one they get by default from a list they forgot to update.
+	 */
+	system: 'issue',
+} as const satisfies Record<McpScope, 'issue' | 'thread'>
+
+/**
  * Structural type of a controller class.
  *
  * It constrains the INSTANCE shape (`path` + `description` are what makes something an HTTP door)

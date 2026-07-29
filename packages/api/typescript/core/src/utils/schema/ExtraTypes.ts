@@ -66,6 +66,22 @@ export const BaseAgentInputSchema = z.object({
 	issueId: z.uuid().optional(),
 	threadId: z.uuid(),
 	cwd: z.string(),
+	/**
+	 * The transcript entry that TRIGGERED this run, when one did (orchestrator pivot §7.2).
+	 *
+	 * It lives on the envelope rather than on one agent's input because it becomes a RUN TOKEN CLAIM,
+	 * and the single mint site (`agent/types/Agent.ts`) is generic over the input — a field only the
+	 * orchestrator's schema declared would be invisible there under constraint erasure, which is the
+	 * whole reason this envelope exists (§4.6).
+	 *
+	 * It is what makes `originEntryId` un-forgeable: the `issue/create` tool does NOT take it as an
+	 * argument, the router injects it from the claims. A model that could name the entry it was
+	 * "replying to" could attribute its issue to any message in the conversation.
+	 *
+	 * Optional because most runs have no triggering entry: a subagent's turn is triggered by a mailbox
+	 * item, not by a message.
+	 */
+	entryId: z.uuid().optional(),
 	context: z.record(z.string(), z.unknown()).optional(),
 })
 

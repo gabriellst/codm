@@ -11,8 +11,33 @@ import type { McpScope } from '../../mcp/manifest'
  */
 export interface RunTokenClaims {
 	ownerId: string
-	issueId: string
+	/**
+	 * The issue this run is confined to — OPTIONAL since the orchestrator pivot (§7.2.1).
+	 *
+	 * Present for every `issue-handling` run, ABSENT for every `orchestration` one: the orchestrator is
+	 * keyed by THREAD (§6.1 — a session with `issue_id IS NULL`) and has no issue to be confined to.
+	 * `Agent.buildMcpInvocation` enforces the pairing PER SCOPE, so "a token that can call issue-work
+	 * tools always names its issue" still holds by construction.
+	 *
+	 * ### What weakens when it is absent — said out loud, because it does not announce itself
+	 * `assertIdentityMatchesClaims` compares an argument only when the matching claim is non-empty. With
+	 * no `issueId` claim it stops checking `issueId` ENTIRELY: it does not reject, it SKIPS. So an
+	 * `orchestration` tool that accepts an `issueId` gets no protection from the generic walker and must
+	 * verify ownership itself (`issue.threadId === claims.threadId`). That is the named requirement of
+	 * §7.2.1, and it is not optional — the model driving these runs reads messages written by third
+	 * parties in a group chat.
+	 */
+	issueId?: string
 	threadId: string
+	/**
+	 * The transcript entry that TRIGGERED this run, when one did (§7.2).
+	 *
+	 * The router injects it as `originEntryId` when `issue/create` is called, which is exactly why that
+	 * tool does not accept it as an argument: a model able to name the message it was "answering" could
+	 * attribute its issue to any line in the conversation, and the reply would then quote a message
+	 * nobody wrote it about.
+	 */
+	entryId?: string
 	agentName: AgentName
 	/**
 	 * WHICH declared tool surface this credential opens — the AUTHORIZATION half of the claims, added
