@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useServerEvents } from '@/hooks'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 import { enumLabel } from '@/lib'
 import { Dot } from '@/components/console/StatusDot'
@@ -35,10 +34,9 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 	const pause = usePauseThread()
 	const resume = useResumeThread()
 
-	useServerEvents('browser.thread_status_changed', event => {
-		if (event.threadId === threadId) queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
-	})
-
+	// Server-driven freshness belongs to `useThreadRealtime` (the layout mounts it). What stays here is
+	// the OPTIMISTIC path: pause/resume is a local mutation whose result the operator expects to see at
+	// once, without waiting for a round trip through the event stream.
 	const invalidate = () => {
 		queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
 		queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })

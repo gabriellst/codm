@@ -7655,6 +7655,23 @@
                         "stopKind"
                       ],
                       "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "const": "browser.thread_message_ingested"
+                        },
+                        "threadId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "threadId"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }

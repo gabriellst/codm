@@ -29,6 +29,6 @@
 		/* Type resolution - use root node_modules for shared types */
 		"typeRoots": ["../node_modules/@types", "./node_modules/@types"]
 	},
-	"include": ["src"],
+	"include": ["src", "tests"],
 	"exclude": ["node_modules", "dist", "storybook-static", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }

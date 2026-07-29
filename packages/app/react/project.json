@@ -69,6 +69,21 @@
 				"cwd": "packages/app/react"
 			}
 		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"inputs": ["{projectRoot}/src/**/*", "{projectRoot}/tests/**/*", "{projectRoot}/bunfig.toml"],
+			"options": {
+				"command": "bun test",
+				"cwd": "packages/app/react"
+			}
+		},
 		"lint": {
 			"executor": "nx:run-commands",
 			"cache": true,

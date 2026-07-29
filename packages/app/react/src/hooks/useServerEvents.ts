@@ -54,7 +54,7 @@ export function useServerEventSource() {
  *   queryClient.invalidateQueries({ queryKey: listPlansQueryKey() })
  * })
  */
-export function useServerEvents<K extends ServerEventName>(name: K | K[], callback: (event: ServerEventByName<K>) => void) {
+export function useServerEvents<K extends ServerEventName>(name: K | readonly K[], callback: (event: ServerEventByName<K>) => void) {
 	const callbackRef = useRef(callback)
 	callbackRef.current = callback
 

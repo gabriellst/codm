@@ -322,6 +322,12 @@ export const ListenEvents200NameEnum38 = {
 
 export type ListenEvents200NameEnum38Key = (typeof ListenEvents200NameEnum38)[keyof typeof ListenEvents200NameEnum38];
 
+export const ListenEvents200NameEnum39 = {
+    "browser.thread_message_ingested": "browser.thread_message_ingested"
+} as const;
+
+export type ListenEvents200NameEnum39Key = (typeof ListenEvents200NameEnum39)[keyof typeof ListenEvents200NameEnum39];
+
 /**
  * @description Owner-scoped real-time integration events via SSE
 */
@@ -2849,6 +2855,15 @@ export type ListenEvents200 = ({
      * @type string
     */
     stopKind: StopKind;
+} | {
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnum39Key;
+    /**
+     * @type string
+    */
+    threadId: string;
 });
 
 export type ListenEventsQueryResponse = ListenEvents200;

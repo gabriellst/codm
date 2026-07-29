@@ -11,7 +11,6 @@ import type { GetNeedsYouPanelQueryResponse } from '@codedm/client-typescript/ty
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { useServerEvents } from '@/hooks'
 import { enumLabel } from '@/lib'
 import { resolutionIsPrimary } from '@/components/console/glyphs'
 
@@ -20,13 +19,12 @@ type Stop = GetNeedsYouPanelQueryResponse['stops'][number]
 /** Active stops on a thread with per-kind resolution actions (T14). Renders nothing when clear. */
 export function NeedsYouPanel({ threadId }: { threadId: string }) {
 	const { t } = useTranslation()
-	const queryClient = useQueryClient()
 	const { data } = useGetNeedsYouPanel(threadId)
 
-	useServerEvents('browser.stop_raised', event => {
-		if (event.threadId === threadId) queryClient.invalidateQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
-	})
-
+	// The stop-raised subscription moved to `useThreadRealtime`. This panel only knew how to APPEAR
+	// (`stop_raised`) and never how to disappear: a resolution publishes `stop_resolved`, which carries
+	// no `threadId` and so was nobody's frame. The layout hook invalidates on the RECOMPUTED status
+	// frame the enricher synthesizes for exactly that case.
 	const stops = data?.stops ?? []
 	if (stops.length === 0) return null
 

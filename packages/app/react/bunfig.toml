@@ -1,0 +1,3 @@
+[test]
+# Registers happy-dom globals BEFORE any module loads — React reads `document` at import time.
+preload = ["./tests/setup.ts"]

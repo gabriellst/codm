@@ -49,6 +49,27 @@ export function deliveryOwnerId(event: BaseIntegrationEvent): string | undefined
 	return event.ownerId || undefined
 }
 
+/**
+ * Is this callback payload an integration event the browser may receive?
+ *
+ * STRUCTURAL, and that is the whole point. The obvious gate — `event instanceof BaseIntegrationEvent`
+ * — is true ONLY for facts a TypeScript handler published as `new SomeEvent({...})`. Everything that
+ * arrives through the INGRESS lane (the Go gateway's rows in the shared outbox) reaches
+ * `notifyCallbacks` as the PLAIN OBJECT `adaptWireEnvelope` returns — JSON never carries a prototype.
+ * So an `instanceof` gate here silently drops the entire Go-originated surface: every
+ * `integration.channel.*` and `integration.channel_message.*` fact, which is to say every inbound
+ * WhatsApp message, from a stream whose docblock promises "EVERY integration event is forwarded".
+ *
+ * The name prefix is the real admission rule — this mediator carries nothing else — and it holds for
+ * both shapes, which is what makes the promise true for the half of the surface that crosses a
+ * process boundary.
+ */
+export function isBroadcastableIntegrationEvent(event: unknown): event is BaseIntegrationEvent {
+	if (!event || typeof event !== 'object') return false
+	const candidate = event as { name?: unknown; payload?: unknown }
+	return typeof candidate.name === 'string' && candidate.name.startsWith('integration.') && typeof candidate.payload === 'object'
+}
+
 interface SSEClient {
 	ownerId: string
 	// Sends any pre-shaped SSE frame — the raw `integration.*` envelope OR an enriched `browser.*`
@@ -96,7 +117,7 @@ export class ListenEventsController extends Controller<
 		if (this.broadcasterRegistered) return
 		this.broadcasterRegistered = true
 		this.externalMediator.registerCallback(async event => {
-			if (!(event instanceof BaseIntegrationEvent)) return
+			if (!isBroadcastableIntegrationEvent(event)) return
 			const targetOwnerId = deliveryOwnerId(event)
 			if (!targetOwnerId) return
 			const recipients = [...this.clients].filter(client => client.ownerId === targetOwnerId)

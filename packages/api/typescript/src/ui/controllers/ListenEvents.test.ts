@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodLiteral, ZodObject } from 'zod'
-import type { BaseIntegrationEvent } from '@codedm/core-typescript'
+import { BaseIntegrationEvent } from '@codedm/core-typescript'
 import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import * as WireEvents from '@codedm/contracts-typescript/wire/events'
 import { IssueStopRaisedEvent, ChannelMessageDeliveredEvent, ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
-import { deliveryOwnerId, ListenEventsControllerOutputSchema } from './ListenEvents'
+import { deliveryOwnerId, isBroadcastableIntegrationEvent, ListenEventsControllerOutputSchema } from './ListenEvents'
 
 const OWNER_A = '00000000-0000-4000-8000-00000000000a'
 const OWNER_B = '00000000-0000-4000-8000-00000000000b'
@@ -50,6 +50,43 @@ describe('ListenEvents SSE broadcaster filtering', () => {
 		expect(fanOut(previouslyFiltered, [OWNER_A, OWNER_B])).toEqual([OWNER_A])
 	})
 
+	/**
+	 * AC-F2.2 — THE GO HALF OF THE SURFACE REACHES THE BROWSER.
+	 *
+	 * The broadcaster used to admit an event with `event instanceof BaseIntegrationEvent`, and that gate
+	 * is true for exactly one of the two shapes this callback receives. A fact THIS daemon published is
+	 * a class instance. A fact the Go gateway published travels as an outbox row, is read back as TEXT,
+	 * and reaches `notifyCallbacks` as whatever `JSON.parse` returned — a prototype-less object. So the
+	 * gate silently withheld every `integration.channel*` fact, which is every inbound WhatsApp message:
+	 * the console could not learn about a message except by someone reloading the page.
+	 *
+	 * The round-trip below is not a stand-in for the ingress — it is the same operation the ingress
+	 * performs (`JSON.parse(row.payload)`), and losing the prototype is the whole of what it does.
+	 *
+	 * FALSIFIER: restore `instanceof BaseIntegrationEvent` as the admission gate in `ListenEvents.ts`
+	 * and this test goes red while every other test in this file stays green.
+	 */
+	it('AC-F2.2 — an INGRESS envelope (plain object, no prototype) is admitted, exactly like a published instance', () => {
+		const published = new ChannelMessageReceivedEvent({
+			ownerId: OWNER_A,
+			payload: { channelId: 'ch-1', remoteId: '5511999999999@s.whatsapp.net', messageType: 'TEXT' } as never,
+		})
+		const fromIngress: unknown = JSON.parse(JSON.stringify(published))
+
+		// The precondition that made the old gate wrong — stated, so the test explains itself when it fails.
+		expect(fromIngress instanceof BaseIntegrationEvent).toBe(false)
+
+		expect(isBroadcastableIntegrationEvent(fromIngress)).toBe(true)
+		expect(isBroadcastableIntegrationEvent(published)).toBe(true)
+		expect(deliveryOwnerId(fromIngress as BaseIntegrationEvent)).toBe(OWNER_A)
+	})
+
+	it('the admission gate still refuses what is not an integration event', () => {
+		expect(isBroadcastableIntegrationEvent(null)).toBe(false)
+		expect(isBroadcastableIntegrationEvent({ name: 'thread.steered', payload: {} })).toBe(false)
+		expect(isBroadcastableIntegrationEvent({ name: 'integration.issue.opened' })).toBe(false)
+	})
+
 	it('an event without an envelope owner is withheld (nothing to scope it to)', () => {
 		const noOwner = new IssueStopRaisedEvent({
 			ownerId: '',
@@ -77,9 +114,12 @@ describe('ListenEvents declarative output union (the contract is the single sour
 		}
 	})
 
-	it('carries the two enriched browser.* frames alongside the contract surface', () => {
+	it('carries the enriched browser.* frames alongside the contract surface', () => {
 		expect(arms).toContain('browser.thread_status_changed')
 		expect(arms).toContain('browser.stop_raised')
+		// F2 — without an arm here the frame exists on the wire but not in the SDK's `ServerEventName`
+		// union, so `useServerEvents('browser.thread_message_ingested', …)` would not type-check.
+		expect(arms).toContain('browser.thread_message_ingested')
 	})
 
 	it('materializes union-slot payloads from the owner client (never the opaque contract slots)', () => {

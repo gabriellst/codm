@@ -1,22 +1,21 @@
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
-import { getSessionChatQueryKey, useGetSessionChat } from '@codedm/client-typescript/typescript'
+import { useGetSessionChat } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
-import { useServerEvents } from '@/hooks'
 import { NeedsYouPanel } from '../NeedsYouPanel'
 import { TranscriptBubble } from '../TranscriptBubble'
 import { Composer } from '../Composer'
 
-/** The full thread conversation (T09): needs-you panel, transcript, and the mode-aware composer. */
+/**
+ * The full thread conversation (T09): needs-you panel, transcript, and the mode-aware composer.
+ *
+ * Owns its query, not its freshness — `useThreadRealtime`, mounted by the `$threadId` layout, holds
+ * the whole thread's invalidation policy. This section used to subscribe to `thread_status_changed`
+ * alone, which is why a new message never appeared: a message changes no status.
+ */
 export function SessionChatSection({ threadId }: { threadId: string }) {
 	const { t } = useTranslation()
-	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetSessionChat(threadId)
-
-	useServerEvents('browser.thread_status_changed', event => {
-		if (event.threadId === threadId) queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
-	})
 
 	if (isLoading || !data) {
 		return (

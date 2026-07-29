@@ -217,6 +217,21 @@ useServerEvents('integration.billing.subscription_changed', event => {
 - One shared handler for sibling events is canon
   (`useServerEvents(['x.updated', 'x.deleted'], invalidateList)`).
 - Never poll (`refetchInterval`) for data that has a server event — subscribe instead.
-- New events become subscribable by adding them to the curated `BROWSER_EVENTS` list in
-  `ListenEventsController` (they MUST carry a direct `ownerId` — the broadcaster tenancy
-  filter depends on it) and running `bun sdk`.
+- **Every** `integration.*` event is already on the stream — there is no allowlist to join (the
+  `BROWSER_EVENTS` list this bullet used to describe is gone). A new contract event becomes
+  subscribable by running `bun sdk`; it MUST carry an envelope `ownerId`, which is the
+  broadcaster's only filter.
+- A `browser.*` frame is added to `BrowserFrameEnricher` ONLY when the browser cannot scope the
+  raw fact by itself — `integration.channel_message.received` is addressed by WhatsApp JID, so
+  the enricher resolves it to `browser.thread_message_ingested { threadId }`. A fact that
+  already carries `threadId` is subscribed to raw; a `browser.*` twin would be a second name
+  for the same thing.
+- **Page-scoped freshness may live in ONE hook.** `useThreadRealtime`, mounted by the
+  `$threadId` layout, owns that thread's whole invalidation map: the three tabs are one
+  conversation, and a tab that is not mounted still has to be fresh when the operator switches
+  to it. Components keep owning their queries — just not the policy for when those go stale.
+- **A subscription to the wrong fact fails silently.** The thread page subscribed only to
+  `browser.thread_status_changed`, and a new message changes no status — so it never updated and
+  no test was red. Prove the WIRING by mounting the hook and dispatching the CustomEvent
+  (`tests/setup.ts` registers happy-dom for exactly this); a test of the mapping function alone
+  cannot see a subscription that never fires.

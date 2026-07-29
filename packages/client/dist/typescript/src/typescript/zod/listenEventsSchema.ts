@@ -804,6 +804,9 @@ get "status"(){
 get "stopKind"(){
                 return stopKindSchema
               }
+    }), z.object({
+    "name": z.enum(["browser.thread_message_ingested"]),
+"threadId": z.string()
     })])
 
 export const listenEventsQueryResponseSchema = z.lazy(() => listenEvents200Schema)
