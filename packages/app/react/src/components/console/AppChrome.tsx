@@ -20,7 +20,7 @@ export function AppChrome() {
 	return (
 		<header
 			data-tauri-drag-region
-			className="grid h-11 shrink-0 grid-cols-[auto_1fr_auto] items-center border-b border-border/60 bg-route-background/70 backdrop-blur"
+			className="grid h-8 shrink-0 grid-cols-[auto_1fr_auto] items-center border-b border-border/60 bg-route-background/70 backdrop-blur"
 		>
 			<div data-tauri-drag-region className={trafficLightBand} />
 			<div data-tauri-drag-region className="flex justify-center">
