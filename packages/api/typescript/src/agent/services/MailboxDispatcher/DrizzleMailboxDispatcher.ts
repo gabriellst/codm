@@ -14,8 +14,25 @@ const LEASE_MS = 10 * 60 * 1000
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
 const POLL_MIN_MS = 250
-const POLL_MAX_MS = 15_000
+/**
+ * The idle ceiling — deliberately LOW for a conversational product.
+ *
+ * This is the worst-case wait between an item being queued and a turn starting, and a human is on the
+ * other end of it. The outbox dispatcher next door backs off to 30s because nobody is watching a
+ * projection catch up; here, 15s of silence after "@agente ..." reads as the product being broken.
+ * Measured, not guessed: at 15s an e2e spec that polls for 20s went to 24s and timed out under
+ * contention — the turn was correct and simply late.
+ */
+const POLL_MAX_MS = 2_000
 const POLL_BACKOFF_FACTOR = 2
+/**
+ * How many turns may be in flight AT ONCE, across DIFFERENT targets.
+ *
+ * Per-target exclusion is the queue's job (`claimNext` skips a target that already has a lease), so
+ * this only bounds how many CONVERSATIONS advance simultaneously — each one spawns a provider CLI,
+ * which is the real resource.
+ */
+const MAX_CONCURRENT_TURNS = 4
 
 /**
  * The concrete scheduler (§7.4). See `MailboxDispatcher` for WHY each property exists.
@@ -76,6 +93,15 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		// THE BOOT SWEEP. Not a special code path — the ordinary drain already claims anything whose
 		// lease has expired, and a process that died mid-turn left exactly that. Saying it out loud
 		// because "recover orphaned work on startup" reads like a missing feature otherwise.
+		// Logged for the same reason the OutboxDispatcher logs its own start: the ONLY symptom of this
+		// never being called is a product that queues turns and answers nothing. A boot line makes "is
+		// the consumer alive?" answerable from a log rather than from a debugger. Via `LoggingService`
+		// and not `console` — the sibling gets away with the latter only because it lives in `core/`,
+		// outside the reach of the console-discipline rail, which is a quirk of scope rather than a
+		// licence.
+		this.logging.info({
+			content: { message: 'MailboxDispatcher started', pollMinMs: POLL_MIN_MS, pollMaxMs: POLL_MAX_MS, leaseMs: LEASE_MS, maxAttempts: MAX_ATTEMPTS },
+		})
 		void this.tick()
 	}
 
@@ -99,16 +125,42 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		return this.draining
 	}
 
+	/**
+	 * Claim and run until nothing is claimable and nothing is in flight.
+	 *
+	 * ### Turns for DIFFERENT targets overlap — and getting this wrong re-created the bug the pivot exists to fix
+	 * The first version awaited each turn before claiming the next. Per-target exclusion still held, so
+	 * every test passed and the property looked satisfied — but it serialized ALL targets behind one
+	 * another, which is precisely what §3 says the old outbox dispatcher did wrong and what the mailbox
+	 * was introduced to stop. Two conversations could not advance at once; the second waited for the
+	 * first CLI to finish. It surfaced as two e2e specs passing alone and failing together.
+	 *
+	 * `claimNext` already refuses a target that holds a lease, so overlapping claims can only ever
+	 * return DIFFERENT targets — the exclusion is the queue's, not this loop's.
+	 *
+	 * ### The end-of-turn re-poll (AC-T5.3) is the `continue` after a completion
+	 * When a turn settles, its target is free and the loop immediately tries to claim again — so a
+	 * second message that arrived mid-turn is answered at once rather than at the next tick.
+	 */
 	private async drainLoop(): Promise<number> {
 		let handled = 0
+		const inflight = new Set<Promise<void>>()
+
 		for (;;) {
-			const item = await this.mailbox.claimNext(this.workerId, LEASE_MS)
-			if (!item) return handled
-			await this.runTurn(item)
-			handled++
-			// The loop continues, which IS the end-of-turn re-poll (AC-T5.3): the next item for the SAME
-			// target is now unblocked because this one is consumed, so it runs immediately instead of
-			// waiting for the next tick.
+			const item = inflight.size < MAX_CONCURRENT_TURNS ? await this.mailbox.claimNext(this.workerId, LEASE_MS) : undefined
+
+			if (item) {
+				handled++
+				const turn = this.runTurn(item).finally(() => inflight.delete(turn))
+				inflight.add(turn)
+				continue
+			}
+
+			// Nothing claimable. If nothing is running either, the queue is drained.
+			if (inflight.size === 0) return handled
+			// Otherwise wait for ONE turn to settle — which frees its target and may unblock its own
+			// next item — then try again. This is both the concurrency cap and the re-poll.
+			await Promise.race(inflight)
 		}
 	}
 

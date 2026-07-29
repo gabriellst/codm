@@ -6,9 +6,9 @@ import { givenAttachedThread, injectInboundMessage } from '../utils/given'
  * Canonical flow (b) — inbound message → issue appears with its slug label → the agent session runs.
  *
  * Drives the REAL stack end to end: the gateway ingress seam publishes a normalized inbound message,
- * `ConsumeInboundMessage` dedups + ingests + classifies it, the classifier stub routes it to a
- * NEW_ISSUE, and `RunIssueTurnOnClassification` opens the issue and runs the (stubbed) agent
- * session. Assertions are scoped to THIS spec's own thread (the daemon is single-operator with a
+ * `ConsumeInboundMessage` dedups and ingests it, and the SAME TRANSACTION queues a turn of the
+ * thread's orchestrator; the `MailboxDispatcher` claims it, `RunOrchestratorTurn` runs the (stubbed)
+ * agent, and that agent FORKS an issue through the real `issue/create` tool. Assertions are scoped to THIS spec's own thread (the daemon is single-operator with a
  * shared DB, so global counts are not spec-isolated — a thread id is).
  *
  * The streamed agent reply is SSE-only in this build (a documented phase-6 deferral: terminal output
@@ -46,7 +46,9 @@ test('inbound message → issue appears with slug label → session runs', async
 		text: `${thread.mentionTag} fix the login bug please`,
 	})
 
-	// The classified NEW_ISSUE materializes with a slug key derived from the message.
+	// The FORKED issue materializes with a slug key derived from the GOAL the orchestrator chose —
+	// no longer from the inbound text. That is the pivot in one assertion: an issue exists because the
+	// agent asked for one out loud (D1), not because a classifier inferred one from a message.
 	await expect
 		.poll(
 			async () => {
@@ -55,9 +57,10 @@ test('inbound message → issue appears with slug label → session runs', async
 			},
 			{ timeout: 20_000, message: 'issue with slug key never materialized' },
 		)
-		// The citation is STRIPPED before the title and slug are derived (`Thread.textWithoutMention`) —
-		// addressing is not content, so the key is unchanged by gating the thread.
-		.toContain('fix-the-login-bug-please')
+		// `E2eStubAgentRunner.FORK_GOAL` slugged — the deterministic stand-in for what a model would pass
+		// to the tool. Before the pivot this was the slug of the MESSAGE, because the classifier derived
+		// it there.
+		.toContain('e2e-agent-fix-the-login-bug')
 
 	// AC-6.2, the artifact leg — read through `ListArtifacts`, the SAME query the console's thread view
 	// uses. It is in the `system` scope, not `issue-handling`, so this read cannot be satisfied by the

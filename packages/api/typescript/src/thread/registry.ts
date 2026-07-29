@@ -3,6 +3,9 @@ import './errors' // Side-effect: registers this context's error codes with the 
 
 import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { ChannelSender, GatewayChannelSender, MockChannelSender } from './services/ChannelSender'
+
+/** The Playwright harness boots the real daemon with no gateway behind it — see the ChannelSender binding. */
+const E2E = process.env.CODEDM_E2E === 'true'
 import { ThreadRepository, DrizzleThreadRepository, MockThreadRepository } from './repositories/ThreadRepository'
 import {
 	ConsumedMessageRepository,
@@ -18,7 +21,16 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
 	// S2S, permitted between services). Bound to the double outside `real` so no test depends on the
 	// Go gateway being up, which is the operational half of the S2S rule.
-	{ token: ChannelSender, mock: MockChannelSender, integration: MockChannelSender, real: GatewayChannelSender },
+	// Hermetic under CODEDM_E2E, same rule the agent registry uses for its runner: the Playwright
+	// harness boots the REAL daemon but there is no Go gateway behind it, so a real send fails with
+	// GATEWAY_UNAVAILABLE.
+	//
+	// That failure is not confined to the send. The outbox is ORDERED PER OWNER and skips everything
+	// behind a failed predecessor, so one dead delivery took `agent.issue_forked` down with it —
+	// "skipped: predecessor failed" — and the issue never materialized. The pivot is what surfaced it:
+	// the orchestrator now replies on EVERY turn, so `agent.orchestrator_replied` is emitted before
+	// the fork instead of after an issue already existed.
+	{ token: ChannelSender, mock: MockChannelSender, integration: MockChannelSender, real: E2E ? MockChannelSender : GatewayChannelSender },
 	{ token: ThreadRepository, mock: MockThreadRepository, real: DrizzleThreadRepository },
 	// The exactly-once inbound ledger — real (unique-constraint ON CONFLICT DO NOTHING) in real +
 	// integration so the dedup is exercised against a real DB; in-memory set in mock.

@@ -3,7 +3,6 @@ import { BaseError, Controller, HttpStatusCode, z } from '@codedm/core-typescrip
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ThreadRepository } from '@thread/repositories'
 import { RunTokenMiddleware } from '../middlewares'
-import type { RunTokenClaims } from '../services/RunTokenService'
 import { ForkIssue, ForkIssueOutputSchema } from '../usecases/ForkIssue'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
@@ -15,9 +14,23 @@ import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
  * is a path param the MCP router already walks against the claims (AC-6.6). What remains is the one
  * value only the operator's own words can supply.
  */
+/**
+ * The run's identity, as `RunTokenMiddleware` stamps it onto `ctx`.
+ *
+ * IT MUST BE DECLARED HERE. The controller base validates the whole request against `inputSchema`,
+ * and zod objects STRIP unknown keys — so a value a middleware injected but the schema never named is
+ * silently removed before `handle` ever sees it. That is not a hypothetical: it cost a 500 on every
+ * fork, `claims` arriving `undefined` and `claims.threadId` throwing, with the middleware itself
+ * provably correct. Nothing warned; the key was simply gone.
+ */
+const RunClaimsCtxSchema = z.object({
+	threadId: z.uuid(),
+	entryId: z.uuid().optional(),
+})
+
 export const ForkIssueControllerInputSchema = z
 	.object({
-		ctx: z.object({ ownerId: z.uuid() }),
+		ctx: z.object({ ownerId: z.uuid(), runClaims: RunClaimsCtxSchema }),
 		params: z.object({ threadId: z.uuid() }),
 		body: z.object({
 			/** What the operator asked for, in their words. Becomes the subagent's prompt and the issue title. */
@@ -26,7 +39,10 @@ export const ForkIssueControllerInputSchema = z
 	})
 	.example([
 		{
-			ctx: { ownerId: '00000000-0000-4000-8000-000000000001' },
+			ctx: {
+				ownerId: '00000000-0000-4000-8000-000000000001',
+				runClaims: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae', entryId: '019e4d24-6524-7041-9e1c-8108180cddb0' },
+			},
 			params: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 			body: { goal: 'põe um toggle de dark mode nas configurações' },
 		},
@@ -67,7 +83,7 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 	}
 
 	async handle(request: this['input']): Promise<this['output']> {
-		const claims = request.ctx.runClaims as RunTokenClaims
+		const claims = request.ctx.runClaims
 		const threadId = request.params.threadId
 
 		// T2f — THREAD OWNERSHIP, asserted HERE because the generic guard structurally cannot.
