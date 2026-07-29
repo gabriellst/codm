@@ -233,17 +233,58 @@ async function writeServiceHttp(plan: Plan): Promise<void> {
  * MEASURED before this line existed: `resolveURL` fell through to the bare path and every tool call
  * died with `Failed to parse URL from /v1/threads/…/artifacts`.
  */
+/**
+ * THE MCP OUTPUT LAYOUT — declared ONCE, here, and derived everywhere else.
+ *
+ * Everything MCP a service emits lives under a single `mcp/` folder: the per-scope tool surfaces under
+ * `mcp/scopes/<scope>/`, and the run context they all share under `mcp/context/`. Before this, the
+ * three sat in three unrelated places — `<service>/mcp-<scope>/` beside `client/`, `hooks/`, `types/`
+ * and `zod/`, with the run context stranded at the DIST ROOT as a sibling of the services themselves.
+ * Reading the tree gave no hint that they were one subsystem.
+ *
+ * The four call sites that need a path (the kubb plugin's output, the hand-written auth shim, the
+ * post-generation fixup, and the package specifier the generated tools import each other by) all read
+ * it from here, so the layout cannot drift between the directory that is WRITTEN and the specifier
+ * that is IMPORTED — a drift that does not fail codegen, only resolution, and only at runtime inside
+ * a tool call.
+ */
+const MCP_DIR = 'mcp'
+const MCP_SCOPES_DIR = 'scopes'
+const MCP_CONTEXT_DIR = 'context'
+
+/** Where a scope's generated tools + auth shim are written. */
+function mcpScopeDir(plan: Plan, scope: string): string {
+	return path.join(plan.outputRoot, MCP_DIR, MCP_SCOPES_DIR, scope)
+}
+
+/** Where the run context shared by every scope of this service lives. */
+function mcpContextDir(plan: Plan): string {
+	return path.join(plan.outputRoot, MCP_DIR, MCP_CONTEXT_DIR)
+}
+
+/** The package subpath a scope's artifacts are addressed by — the specifier half of the layout. */
+function mcpScopeSubpath(plan: Plan, scope: string): string {
+	return `${REPO.sdkPackage}/${plan.source.service}/${MCP_DIR}/${MCP_SCOPES_DIR}/${scope}`
+}
+
+/** A POSIX relative specifier from `from` to `to` — never hand-counted `../..`, which drifts silently. */
+function relativeSpecifier(from: string, to: string): string {
+	return path.relative(from, to).split(path.sep).join('/')
+}
+
 async function writeMcpScopeHttp(plan: Plan, scope: string): Promise<void> {
-	const dir = path.join(plan.outputRoot, `mcp-${scope}`)
+	const dir = mcpScopeDir(plan, scope)
 	await mkdir(dir, { recursive: true })
+	const httpImport = relativeSpecifier(dir, path.join(distRoot, 'http'))
+	const contextImport = relativeSpecifier(dir, mcpContextDir(plan))
 	const body = `// AUTO-GENERATED — do not edit. MCP scope '${scope}' of the '${plan.source.service}' service.
 //
 // THE ONLY AUTH SEAM a generated tool has: the handlers take no config parameter, so this module is
 // the single place a run token can be attached. It THROWS outside a router-established context rather
 // than degrading to an anonymous request the daemon would serve with full operator authority.
-import { createClient } from '../../http'
-import { requireMcpRunContext, MCP_RUN_TOKEN_HEADER } from '../../mcp-run-context'
-import type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig } from '../../http'
+import { createClient } from '${httpImport}'
+import { requireMcpRunContext, MCP_RUN_TOKEN_HEADER } from '${contextImport}'
+import type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig } from '${httpImport}'
 
 const core = createClient('${plan.source.service}')
 
@@ -294,7 +335,7 @@ export type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig }
  */
 async function fixupAndVerifyMcpOutput(plan: Plan): Promise<void> {
 	for (const [scope, operationIds] of plan.mcpScopes) {
-		const dir = path.join(plan.outputRoot, `mcp-${scope}`)
+		const dir = mcpScopeDir(plan, scope)
 		const serverFile = path.join(dir, 'server.ts')
 		if (!existsSync(serverFile)) throw new Error(`[${plan.source.service}] mcp scope '${scope}' emitted no server.ts`)
 
@@ -371,9 +412,9 @@ function buildKubbConfig(plan: Plan) {
 		// and the repo's `resolveURL` registry stops deciding.
 		...[...plan.mcpScopes.keys()].map(scope =>
 			pluginMcp({
-				output: { path: path.join(plan.outputRoot, `mcp-${scope}`), barrelType: false },
+				output: { path: mcpScopeDir(plan, scope), barrelType: false },
 				include: [{ type: 'tag', pattern: new RegExp(`^mcp:${escapeRegExp(scope)}$`) }],
-				client: { importPath: `${REPO.sdkPackage}/${plan.source.service}/mcp-${scope}/_http` },
+				client: { importPath: `${mcpScopeSubpath(plan, scope)}/_http` },
 			}),
 		),
 	]

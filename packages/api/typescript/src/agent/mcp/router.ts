@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Config, Controller, HttpStatusCode, MimeTypes, z, BaseError } from '@codedm/core-typescript'
 import type { HttpMethod } from '@codedm/core-typescript'
-import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/mcp-run-context'
+import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { RunTokenService, type RunTokenClaims } from '../services/RunTokenService'
@@ -232,12 +232,12 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  * WHY NOT ONE TEMPLATE-LITERAL IMPORT, which is what this was. MEASURED: the daemon ships as a Node
  * bundle (`scripts/build.ts` → `dist/server.js`, which is what the Playwright harness and the Docker
- * image both boot), and a bundler cannot resolve `import(\`…/mcp-${scope}/server\`)` — the specifier
+ * image both boot), and a bundler cannot resolve `import(\`…/mcp/scopes/${scope}/server\`)` — the specifier
  * survives into the output verbatim and is resolved by Node AT RUNTIME, from `dist/`, against a
  * workspace package whose export map points at TypeScript SOURCE. The literal failure:
  *
  *     ERR_UNSUPPORTED_DIR_IMPORT — Directory import '…/client/dist/typescript/src/http' is not
- *     supported resolving ES modules imported from '…/mcp-issue-handling/_http.ts'
+ *     supported resolving ES modules imported from '…/mcp/scopes/issue-handling/_http.ts'
  *
  * So `getServer()` could never load in the artifact we ship, and every tool call would have failed
  * with a 500 the moment a real agent made one. `bun test` hid it completely: it resolves TypeScript
@@ -252,8 +252,8 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
 const GENERATED_SERVERS: Record<McpScope, () => Promise<{ getServer: () => McpServer }>> = {
-	'issue-handling': () => import('@codedm/client-typescript/typescript/mcp-issue-handling/server'),
-	system: () => import('@codedm/client-typescript/typescript/mcp-system/server'),
+	'issue-handling': () => import('@codedm/client-typescript/typescript/mcp/scopes/issue-handling/server'),
+	system: () => import('@codedm/client-typescript/typescript/mcp/scopes/system/server'),
 }
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/mcp-run-context'
+import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
 import { MCP_SCOPE_NAMES, scopeOperationIds, type McpScope } from './manifest'
 import { loadGeneratedServer } from './router'
 

@@ -6,7 +6,7 @@ import { BaseError } from '@codedm/core-typescript'
 import { RunTokenService } from '../services/RunTokenService'
 import type { AgentMcpInvocation } from '../types/AgentMcpInvocation'
 import type { AgentApplicationErrors } from '../errors'
-import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/mcp-run-context'
+import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
 import { ISSUE_HANDLING_OPERATION } from './manifest'
 
 /** One tool call the driver actually made — enough for the caller to render a frame pair. */
