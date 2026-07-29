@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
 import { agentSessions } from '@codedm/contracts/db'
 import type { AgentModelId, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
@@ -26,6 +26,28 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 		const dbc = tx ?? this.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(agentSessions).where(eq(agentSessions.issueId, issueId)).limit(1)
+			return rows[0]
+		})
+		if (!result.success || !result.data) return undefined
+		return this.toDomain(result.data)
+	}
+
+	/**
+	 * The orchestrator's session: keyed by thread, and identified by the ABSENCE of an issue.
+	 *
+	 * `isNull` rather than a sentinel value, because that is what the partial unique
+	 * `agent_sessions_orchestrator_unq ... WHERE issue_id IS NULL` indexes. A magic issueId would have
+	 * needed its own uniqueness story and would have made every `findByIssueId` caller responsible for
+	 * not matching it by accident.
+	 */
+	async findOrchestratorByThreadId(threadId: string, tx?: DrizzleClient): Promise<AgentSession | undefined> {
+		const dbc = tx ?? this.db
+		const result = await tryCatchAsync(async () => {
+			const rows = await dbc
+				.select()
+				.from(agentSessions)
+				.where(and(eq(agentSessions.threadId, threadId), isNull(agentSessions.issueId)))
+				.limit(1)
 			return rows[0]
 		})
 		if (!result.success || !result.data) return undefined
@@ -75,7 +97,8 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 	private toDomain(row: typeof agentSessions.$inferSelect): AgentSession {
 		const parsed = AgentSessionSchema.parse({
 			ownerId: row.ownerId,
-			issueId: row.issueId,
+			issueId: row.issueId ?? undefined,
+			lastContextTokens: row.lastContextTokens ?? undefined,
 			threadId: row.threadId,
 			provider: row.provider as ProviderKind,
 			cwd: row.cwd,
@@ -93,7 +116,8 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 		return {
 			id: entity.id.value,
 			ownerId: entity.ownerId,
-			issueId: entity.issueId,
+			issueId: entity.issueId ?? null,
+			lastContextTokens: entity.lastContextTokens ?? null,
 			threadId: entity.threadId,
 			provider: entity.provider,
 			cwd: entity.cwd,

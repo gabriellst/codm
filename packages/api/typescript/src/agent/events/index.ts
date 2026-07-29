@@ -37,3 +37,4 @@ import type { AgentUsageEvent } from './AgentUsageEvent'
  */
 export type AgentTurnFact = AgentMessageEvent | AgentToolCallEvent | AgentUsageEvent
 export { IssueForkedEvent, IssueForkedEventSchema } from './IssueForkedEvent'
+export { OrchestratorRepliedEvent, OrchestratorRepliedEventSchema } from './OrchestratorRepliedEvent'

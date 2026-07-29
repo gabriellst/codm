@@ -5,8 +5,16 @@ import { ResumeInvalidationReason } from '../enums'
 
 export const AgentSessionSchema = z.object({
 	ownerId: z.uuid(),
-	// Fork B: session identity = issue. One durable session row per issue.
-	issueId: z.uuid(),
+	/**
+	 * The issue this session works — ABSENT for the orchestrator's session (§6.1).
+	 *
+	 * Two kinds share this table, distinguished by exactly this field, and the DB enforces the pairing
+	 * with two PARTIAL uniques: one on `issue_id` where it is NOT NULL (one session per issue), one on
+	 * `thread_id` where it IS NULL (one orchestrator per thread). Modelling it as two tables was the
+	 * alternative and it would have duplicated the whole resume machinery — `resumeDecision`, the cwd
+	 * and model premises, `lastContextTokens` — for two rows that differ only in what they are keyed by.
+	 */
+	issueId: z.uuid().optional(),
 	threadId: z.uuid(),
 	provider: z.enum(ProviderKind),
 	// Absolute workspace path the session runs in — stored so a later turn can prove the session was
@@ -26,6 +34,13 @@ export const AgentSessionSchema = z.object({
 	 */
 	lastMessageId: z.string().trim().min(1).optional(),
 	lastTurnAt: z.date(),
+	/**
+	 * Size of the CLI's context after the last turn — `inputTokens + cacheCreation + cacheRead` off the
+	 * terminal frame (D8). Nullable because a session that has not finished a turn has no measurement,
+	 * and because a provider that does not report usage never will. Read by the compaction check in F5;
+	 * written from the frame that already carries it, which is why D8 costs nothing to collect.
+	 */
+	lastContextTokens: z.number().int().nonnegative().optional(),
 })
 
 export type AgentSessionProps = Z.infer<typeof AgentSessionSchema>
@@ -62,7 +77,7 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 
 	static create(data: {
 		ownerId: string
-		issueId: string
+		issueId?: string
 		threadId: string
 		provider: ProviderKind
 		cwd: string

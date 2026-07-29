@@ -18,6 +18,14 @@ export class MockAgentSessionRepository extends AgentSessionRepository {
 		return undefined
 	}
 
+	/** Mirrors the partial unique the Drizzle side queries: keyed by thread, identified by NO issue. */
+	async findOrchestratorByThreadId(threadId: string, _tx?: Transaction): Promise<AgentSession | undefined> {
+		for (const s of this.store.values()) {
+			if (s.threadId === threadId && s.issueId === undefined) return s
+		}
+		return undefined
+	}
+
 	async save(entity: AgentSession, _tx?: Transaction): Promise<AgentSession> {
 		entity.incrementVersion()
 		this.store.set(entity.id.value, entity)
