@@ -5,6 +5,7 @@ import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
+import { MailboxDispatcher, DrizzleMailboxDispatcher } from './services/MailboxDispatcher'
 import {
 	AgentSessionRepository,
 	DrizzleAgentSessionRepository,
@@ -65,6 +66,10 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The durable per-target turn queue. Producers enqueue inside their own transaction; the
 	// dispatcher is the single consumer and holds one lease per target.
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: DrizzleMailboxRepository, real: DrizzleMailboxRepository },
+	// The SINGLE consumer of the mailbox (§7.4). Bound in all three envs so a test can `drain()` on
+	// demand; only `real` ever has `start()` called on it, from the boot sequence — a poller running
+	// under a test suite would race every assertion in it.
+	{ token: MailboxDispatcher, mock: DrizzleMailboxDispatcher, integration: DrizzleMailboxDispatcher, real: DrizzleMailboxDispatcher },
 	// ── The internal agents (§4.8) ────────────────────────────────────────────────────────────────
 	//
 	// CLASS TOKENS, same implementation in all three envs — an agent has no mock/real split because it

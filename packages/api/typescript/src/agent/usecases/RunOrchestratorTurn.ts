@@ -11,7 +11,7 @@ import {
 	TranscriptKind,
 } from '@codedm/contracts-typescript/wire/enums'
 import { ThreadRepository, TranscriptRepository } from '@thread/repositories'
-import { OrchestratorAgent } from '../agents/OrchestratorAgent'
+import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
@@ -26,8 +26,16 @@ export const RunOrchestratorTurnInputSchema = z.object({
 	threadId: z.uuid(),
 	workspacePath: z.string().trim().min(1),
 	provider: z.enum(ProviderKind),
-	/** The mailbox item this turn consumes, already narrowed to the two THREAD-facing kinds. */
-	item: OrchestratorAgent.prototype.inputSchema.shape.item,
+	/**
+	 * The mailbox item this turn consumes, already narrowed to the two THREAD-facing kinds.
+	 *
+	 * Reuses the AGENT's schema rather than restating the union — one declaration, and a kind added
+	 * there cannot be silently un-handled here. Read off `OrchestratorInputSchema` and NOT off
+	 * `OrchestratorAgent.prototype.inputSchema`: that spelling type-checks and is `undefined` at
+	 * module-load, because `inputSchema` is an instance field. It threw on import, and an architecture
+	 * rail caught it — `tsc` had nothing to say.
+	 */
+	item: OrchestratorInputSchema.shape.item,
 	/** The entry that triggered the turn, when the item carries one — becomes a run-token claim. */
 	entryId: z.uuid().optional(),
 	model: z.enum(AgentModelId).optional(),
