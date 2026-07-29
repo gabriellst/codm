@@ -11,6 +11,7 @@ import {
 	IssueStopResolvedEvent,
 	ChannelMessageReceivedEvent,
 } from '@codedm/contracts-typescript/wire/events'
+import { deriveThreadStatus } from '@shared/services'
 
 /**
  * The `browser.*` SSE frames — DECLARED HERE, at their synthesizer. These are UI-only enriched views
@@ -186,26 +187,30 @@ export class BrowserFrameEnricher {
 		return { name: 'browser.thread_status_changed', threadId, status, agentsRunningNow }
 	}
 
+	/**
+	 * The precedence itself lives in `deriveThreadStatus` (shared) — this method's job is only to
+	 * gather the three facts, and to gather them EXCLUDING the issue/stop the current event just
+	 * resolved, so the frame reflects the transition without waiting on a read-after-write.
+	 */
 	private async deriveStatus(threadId: string, exclude: { excludeIssueId?: string; excludeStopId?: string }): Promise<ThreadStatus> {
-		if (await this.isPaused(threadId)) return ThreadStatus.PAUSED
-
 		const openStops = await tryCatchAsync(async () =>
 			this.db
 				.select({ id: stops.id })
 				.from(stops)
 				.where(and(eq(stops.threadId, threadId), isNull(stops.resolvedAt))),
 		)
-		if (openStops.success && openStops.data.some(s => s.id !== exclude.excludeStopId)) return ThreadStatus.NEEDS_ATTENTION
-
 		const working = await tryCatchAsync(async () =>
 			this.db
 				.select({ id: issues.id })
 				.from(issues)
 				.where(and(eq(issues.threadId, threadId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false))),
 		)
-		if (working.success && working.data.some(i => i.id !== exclude.excludeIssueId)) return ThreadStatus.RUNNING
 
-		return ThreadStatus.IDLE
+		return deriveThreadStatus({
+			paused: await this.isPaused(threadId),
+			hasOpenStop: openStops.success && openStops.data.some(s => s.id !== exclude.excludeStopId),
+			hasWorkingIssue: working.success && working.data.some(i => i.id !== exclude.excludeIssueId),
+		})
 	}
 
 	private async agentsRunningNow(ownerId: string, excludeIssueId?: string): Promise<number> {

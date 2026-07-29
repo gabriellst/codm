@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
 import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codedm/contracts/db'
 import { ThreadStatus, ChannelKind, ChannelStatus, IssueStatus, ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { deriveThreadStatus } from '@shared/services'
 
 const ThreadSummarySchema = z.object({
 	threadId: z.uuid(),
@@ -61,7 +62,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 				workspacePath: workspaces.path,
 				channelKind: channels.platform,
 				providers: threads.providers,
-				status: threads.status,
+				paused: threads.paused,
 				updatedAt: threads.updatedAt,
 			})
 			.from(threads)
@@ -69,24 +70,34 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.leftJoin(channels, eq(threads.channelId, channels.id))
 			.where(eq(threads.ownerId, input.ownerId))
 
+		const openStops = await this.db.select().from(stops).where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
+
+		// Status is DERIVED, never read from `threads.status` — that column only ever holds IDLE or
+		// PAUSED (nothing stamps it when work starts), so filtering it for RUNNING/NEEDS_ATTENTION
+		// matched nothing and "active sessions" was permanently empty while the headline right above it
+		// counted a working agent. Both facts come from queries this handler already makes.
+		const threadsWithWork = new Set(allIssues.filter(i => i.status === IssueStatus.WORKING && !i.archived).map(i => i.threadId))
+		const threadsWithStop = new Set(openStops.map(s => s.threadId))
+
 		const toSummary = (t: (typeof threadRows)[number]) => ({
 			threadId: t.threadId,
 			displayName: t.displayName,
 			channelKind: (t.channelKind ?? ChannelKind.WHATSAPP) as ChannelKind,
 			workspacePath: t.workspacePath ?? '',
 			providers: t.providers as ProviderKind[],
-			status: t.status as ThreadStatus,
+			status: deriveThreadStatus({
+				paused: t.paused,
+				hasOpenStop: threadsWithStop.has(t.threadId),
+				hasWorkingIssue: threadsWithWork.has(t.threadId),
+			}),
 			lastActivity: t.updatedAt.toISOString(),
 		})
 
 		// Most recently active first: the sidebar is a conversation list, and a conversation list that
 		// does not surface the one you were just in is a list you have to search.
 		const allThreads = [...threadRows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).map(toSummary)
-		const activeSessions = threadRows
-			.filter(t => t.status === ThreadStatus.RUNNING || t.status === ThreadStatus.NEEDS_ATTENTION)
-			.map(toSummary)
+		const activeSessions = allThreads.filter(t => t.status === ThreadStatus.RUNNING || t.status === ThreadStatus.NEEDS_ATTENTION)
 
-		const openStops = await this.db.select().from(stops).where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
 		const needsYou = this.buildNeedsYou(openStops, threadRows)
 
 		const recent = await this.db

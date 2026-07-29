@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull } from 'drizzle-orm'
 import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
-import { threads, transcriptEntries, workspaces, channels, stops } from '@codedm/contracts/db'
+import { threads, transcriptEntries, workspaces, channels, stops, issues } from '@codedm/contracts/db'
+import { deriveThreadStatus } from '@shared/services'
 import {
 	ThreadStatus,
 	ChannelKind,
@@ -9,6 +10,7 @@ import {
 	TranscriptKind,
 	ClassificationMethod,
 	StopKind,
+	IssueStatus,
 } from '@codedm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 
@@ -99,6 +101,13 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 			.from(stops)
 			.where(and(eq(stops.threadId, input.threadId), isNull(stops.resolvedAt)))
 
+		// The header's status is DERIVED, like the dashboard's — `threads.status` only ever holds IDLE
+		// or PAUSED, so reading it made a thread with an agent mid-run present itself as idle.
+		const workingIssues = await this.db
+			.select({ id: issues.id })
+			.from(issues)
+			.where(and(eq(issues.threadId, input.threadId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false)))
+
 		const mentionGate = thread.mentionGateEnabled
 			? ({ enabled: true, tag: thread.mentionGateTag ?? '' } as const)
 			: ({ enabled: false } as const)
@@ -111,7 +120,11 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				channelKind: (channelRow?.kind ?? ChannelKind.WHATSAPP) as ChannelKind,
 				workspacePath: workspaceRow?.path ?? '',
 				providers: thread.providers as ProviderKind[],
-				status: thread.status as ThreadStatus,
+				status: deriveThreadStatus({
+					paused: thread.paused,
+					hasOpenStop: stopRows.length > 0,
+					hasWorkingIssue: workingIssues.length > 0,
+				}),
 				lastActivity: lastActivity.toISOString(),
 			},
 			paused: thread.paused,
