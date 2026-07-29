@@ -536,7 +536,9 @@ get "contactKind"(){
 "labelThreadId": z.optional(z.string()),
 get "author"(){
                 return messageAuthorSchema
-              }
+              },
+"quotedMessageId": z.optional(z.string()),
+"replyEntryId": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),
@@ -718,6 +720,17 @@ get "reason"(){
     })
     }), z.object({
     "ownerId": z.string(),
+"name": z.enum(["integration.issue.created"]),
+"payload": z.object({
+    "issueId": z.string(),
+"threadId": z.string(),
+"key": z.string(),
+"title": z.string(),
+"goal": z.string(),
+"originEntryId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
 "name": z.enum(["integration.issue.opened"]),
 "payload": z.object({
     "issueId": z.string(),
@@ -759,6 +772,15 @@ get "resolution"(){
 get "method"(){
                 return classificationMethodSchema
               },
+"issueId": z.optional(z.string())
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.orchestrator.replied"]),
+"payload": z.object({
+    "threadId": z.string(),
+"text": z.string(),
+"replyToEntryId": z.optional(z.string()),
 "issueId": z.optional(z.string())
     })
     }), z.object({

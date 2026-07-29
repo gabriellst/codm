@@ -857,6 +857,48 @@ func (e LogLevel) Valid() bool {
 	}
 }
 
+// Defines values for MailboxItemKind.
+const (
+	MailboxItemKindISSUERESULT     MailboxItemKind = "ISSUE_RESULT"
+	MailboxItemKindOPERATORMESSAGE MailboxItemKind = "OPERATOR_MESSAGE"
+	MailboxItemKindSTEER           MailboxItemKind = "STEER"
+	MailboxItemKindWORK            MailboxItemKind = "WORK"
+)
+
+// Valid indicates whether the value is a known member of the MailboxItemKind enum.
+func (e MailboxItemKind) Valid() bool {
+	switch e {
+	case MailboxItemKindISSUERESULT:
+		return true
+	case MailboxItemKindOPERATORMESSAGE:
+		return true
+	case MailboxItemKindSTEER:
+		return true
+	case MailboxItemKindWORK:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MailboxTargetKind.
+const (
+	MailboxTargetKindISSUE  MailboxTargetKind = "ISSUE"
+	MailboxTargetKindTHREAD MailboxTargetKind = "THREAD"
+)
+
+// Valid indicates whether the value is a known member of the MailboxTargetKind enum.
+func (e MailboxTargetKind) Valid() bool {
+	switch e {
+	case MailboxTargetKindISSUE:
+		return true
+	case MailboxTargetKindTHREAD:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MembershipAction.
 const (
 	MembershipActionDemoted  MembershipAction = "demoted"
@@ -3607,6 +3649,12 @@ type LogoutChannelOutput struct {
 	Id    string `json:"id"`
 	State string `json:"state"`
 }
+
+// MailboxItemKind defines model for MailboxItemKind.
+type MailboxItemKind string
+
+// MailboxTargetKind defines model for MailboxTargetKind.
+type MailboxTargetKind string
 
 // MembershipAction defines model for MembershipAction.
 type MembershipAction string
