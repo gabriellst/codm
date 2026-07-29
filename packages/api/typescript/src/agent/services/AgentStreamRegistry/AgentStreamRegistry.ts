@@ -68,8 +68,15 @@ interface StreamEntry {
  *
  *   1. OBSERVER channel — at most one live SSE writer per issue (`register`/`send`/`unregister`).
  *      Double-register throws `SESSION_ALREADY_STREAMING`; a per-owner soft cap throws
- *      `TOO_MANY_TERMINAL_STREAMS`; `send` drops silently when no observer is attached and
+ *      `TOO_MANY_TERMINAL_STREAMS`; `send` delivers nothing when no observer is attached and
  *      force-unregisters a writer that throws.
+ *
+ *   1b. REPLAY buffer (F3) — every frame `send` handles is also RECORDED, attached observer or not,
+ *      and `historyFor` hands the tail to an observer the moment it takes the slot. Without it this
+ *      channel was a pure live tail: opening a panel mid-run showed a blank terminal that filled from
+ *      wherever the run happened to be, and leaving the screen discarded everything said meanwhile.
+ *      Bounded twice — frames per issue, and issues holding a buffer — so neither a long run nor a
+ *      busy day can grow the daemon without limit.
  *
  *   2. SINGLE-ACTIVE-RUN guard — `beginSession`/`endSession` enforce one run per issue
  *      independent of whether a browser is observing. `RunIssueTurn` brackets its run with
@@ -85,9 +92,21 @@ export class AgentStreamRegistry {
 	/** Soft cap on concurrent SSE streams per owner. Prevents trivial DoS. */
 	static readonly MAX_STREAMS_PER_OWNER = 5
 
+	/**
+	 * Replay depth per issue. Matches the browser panel's own `MAX_FRAMES` on purpose: retaining more
+	 * than the client will keep would only be memory nobody can see.
+	 */
+	static readonly MAX_HISTORY_FRAMES = 500
+
+	/** How many issues keep a replay buffer at once. Least-recently-written is evicted first. */
+	static readonly MAX_HISTORY_ISSUES = 50
+
 	private writers = new Map<string, StreamEntry>()
 	private ownerCounts = new Map<string, number>()
 	private activeSessions = new Set<string>()
+	// Insertion-ordered by design: a `Map` iterates in insertion order, and `record` re-inserts the
+	// issue it touches, so the FIRST key is always the least-recently-written one to evict.
+	private history = new Map<string, TerminalSseFrame[]>()
 
 	// ── Observer channel (whatscode AgentStreamRegistry, verbatim in spirit) ────────────────────
 
@@ -150,12 +169,51 @@ export class AgentStreamRegistry {
 	 * failure is terminal for that observer.
 	 */
 	async send(issueId: string, frame: TerminalSseFrame): Promise<void> {
+		// RECORDED FIRST, and unconditionally — this is the half F3 was missing. A run whose observer
+		// has not attached yet (the panel is opened seconds after the turn starts) or has gone away (the
+		// operator navigated to another screen) still produces the output that explains what happened;
+		// dropping it because nobody happened to be looking is what made the panel show a run already in
+		// progress as if it had just begun.
+		this.record(issueId, frame)
+
 		const writer = this.writers.get(issueId)?.writer
 		if (!writer) return
 
 		const result = await tryCatchAsync(async () => writer(frame))
 		if (!result.success) {
 			this.unregister(issueId)
+		}
+	}
+
+	/**
+	 * What this issue has emitted so far, oldest first — replayed to an observer the moment it attaches.
+	 *
+	 * DELIBERATELY IN MEMORY. These are transport frames: the two-stream split says they ride no outbox
+	 * and cross no service, and the durable account of what an agent did is the `AgentMessageEvent` /
+	 * `AgentToolCallEvent` facts, which do. Persisting every frame would also put a SELECT+INSERT inside
+	 * the run's hot streaming loop to buy something nobody asked for (surviving a daemon restart). If
+	 * that is wanted later, `issue_terminal_lines` already exists for it.
+	 */
+	historyFor(issueId: string): readonly TerminalSseFrame[] {
+		return this.history.get(issueId) ?? []
+	}
+
+	/** Bounded append: cap the frames per issue, then cap the issues that hold frames at all. */
+	private record(issueId: string, frame: TerminalSseFrame): void {
+		const frames = this.history.get(issueId) ?? []
+		frames.push(frame)
+		if (frames.length > AgentStreamRegistry.MAX_HISTORY_FRAMES) {
+			frames.splice(0, frames.length - AgentStreamRegistry.MAX_HISTORY_FRAMES)
+		}
+
+		// Re-insert so this issue becomes the most recent key — see the field's note on Map ordering.
+		this.history.delete(issueId)
+		this.history.set(issueId, frames)
+
+		while (this.history.size > AgentStreamRegistry.MAX_HISTORY_ISSUES) {
+			const oldest = this.history.keys().next()
+			if (oldest.done) break
+			this.history.delete(oldest.value)
 		}
 	}
 

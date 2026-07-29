@@ -29,10 +29,15 @@ const RETRY_MS = 500
  * This is a SECOND, issue-scoped SSE connection, deliberately separate from the owner-scoped
  * `useServerEventSource`: the frames here are TRANSPORT (what the CLI is doing, right now) and never
  * touch the outbox, so they carry no `ownerId` envelope and nothing invalidates a query cache. They
- * are rendered and forgotten. The daemon admits exactly one observer per issue and drops frames when
- * none is attached, which is why `connected` is part of the return type rather than an internal
- * detail — a panel that has not yet been accepted is a panel that is missing frames, and it should be
- * able to say so.
+ * are rendered and forgotten by the browser. The daemon admits exactly one observer per issue, which
+ * is why `connected` is part of the return type rather than an internal detail — a panel that has not
+ * been accepted is a panel that is missing frames, and it should be able to say so.
+ *
+ * Since F3 the daemon KEEPS a bounded per-issue buffer and replays it right after the connected
+ * frame, so opening a panel mid-run shows what already happened rather than starting blank, and
+ * leaving the screen and coming back restores the tail. The consequence for this hook is that an open
+ * is authoritative: every `onopen` clears `frames`, because the replay that follows is the complete
+ * history and anything kept from a previous connection would be a duplicate of it.
  *
  * Frame identity is the SDK's, not a hand-written mirror: `StreamTerminalSessionQueryResponse` is
  * generated from the same OpenAPI the controller emits, so re-keying the action frame onto the real
@@ -66,9 +71,15 @@ export function useTerminalStream(issueId: string): TerminalStream {
 			// TRANSIENT — retrying gets it — and swallowing it here instead would leave a permanently
 			// dead panel showing nothing, with no error to explain why.
 			onopen: async response => {
-				if (!response.ok) throw new Error(`terminal stream refused with ${response.status}`)
-				if (alive.current) setConnected(true)
-			},
+					if (!response.ok) throw new Error(`terminal stream refused with ${response.status}`)
+					if (!alive.current) return
+					// CLEARED ON EVERY OPEN, not just on mount (F3). The daemon replays the issue's whole
+					// buffer immediately after the connected frame, so an open delivers the complete history —
+					// keeping what a previous connection accumulated would show every earlier frame twice. The
+					// server's buffer is the ordering authority; this hook only mirrors it.
+					setFrames([])
+					setConnected(true)
+				},
 			onmessage(message) {
 				if (!message.data) return
 				const result = tryCatch(() => JSON.parse(message.data) as TerminalStreamFrame)

@@ -71,6 +71,17 @@ export class StreamTerminalSessionController extends Controller<
 						return undefined
 					}
 					handle.send(SSE_CONNECTED_FRAME)
+
+					// REPLAY, then live (F3). Registration happens FIRST so nothing emitted during the
+					// replay is lost: a frame arriving now is appended by `send` to the very buffer being
+					// read here, and also reaches the writer. It cannot be seen twice — `record` and this
+					// loop both run on the one JS thread with no await between them.
+					//
+					// The client clears its list on every `onopen`, so a reconnect replaying the whole
+					// buffer REPLACES rather than appends: the buffer is the ordering authority, not the
+					// client's accumulated state.
+					for (const frame of this.registry.historyFor(issueId)) handle.send(encodeSSEFrame(frame))
+
 					return unregister
 				},
 			}),
