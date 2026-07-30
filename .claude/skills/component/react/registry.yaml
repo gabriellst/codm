@@ -520,6 +520,19 @@ registry:
         				</div>
         			</header>
         			{/* Implement section */}
+    live-settings:
+      blocks: [element, skeleton]
+      defaultElement: div
+      requiresI18n: true
+      host: |-
+        			{/* save-on-change: cada controle chama a mutation no proprio onChange/onBlur — esta tela NAO tem botao Salvar */}
+        			<h3 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">{t('{{i18nPrefix}}.section')}</h3>
+        			<section className="flex flex-col gap-3">
+        				<label className="flex items-center gap-3">
+        					<Switch checked={enabled} onCheckedChange={value => save(value)} />
+        					<span className="flex-1 text-sm font-medium text-foreground">{t('{{i18nPrefix}}.toggle')}</span>
+        				</label>
+        			</section>
 
   canonical_snippet: |
     import { getRouteApi } from '@tanstack/react-router'

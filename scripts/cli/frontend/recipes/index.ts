@@ -59,10 +59,12 @@ import { plain } from './plain'
 import { section } from './section'
 import { card } from './card'
 import { emptyState } from './empty-state'
+import { liveSettings } from './live-settings'
 
 export const recipes: Record<string, Recipe> = {
 	plain,
 	section,
 	card,
 	'empty-state': emptyState,
+	'live-settings': liveSettings,
 }

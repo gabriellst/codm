@@ -5,7 +5,7 @@ import { elementBlock } from './element'
 import { skeletonBlock } from './skeleton'
 import { queryBlock } from './query'
 import { composerBlock } from './composer'
-import { loadRecipe } from '../recipes'
+import { loadRecipe, recipes } from '../recipes'
 
 const ctx = (over: Partial<Parameters<typeof queryBlock>[0]> = {}) => ({
 	pascal: 'Order',
@@ -201,5 +201,38 @@ describe('recipe = fragment-refs + host body', () => {
 		const r = loadRecipe('section', 'react')
 		expect(r.blocks).toEqual(['element', 'skeleton'])
 		expect(r.host).toContain("t('{{i18nPrefix}}.title')")
+	})
+})
+
+describe('live-settings recipe', () => {
+	it('composes the existing blocks and its host saves in the control itself', () => {
+		const r = loadRecipe('live-settings', 'react')
+		expect(r.blocks).toEqual(['element', 'skeleton'])
+		expect(r.defaultElement).toBe('div')
+		expect(r.requiresI18n).toBe(true)
+		expect(r.host).toContain('onCheckedChange')
+		expect(r.host).not.toContain('type="submit"')
+		expect(r.host).not.toContain('handleSubmit')
+	})
+
+	// FALSEADOR de AC-4. The assert above is about SHAPE and a recipe that emitted a Save button would
+	// still satisfy it as long as the button were spelled differently. This one generates for real and
+	// asks the emitted body the behavioural question: does anything here submit?
+	it('the generated component saves on change and has no submit control at all', async () => {
+		const [file] = await componentGenerator(['(app)/threads/$threadId', 'ThreadPrefs'], {
+			recipe: 'live-settings',
+			i18n: 'session.prefs',
+			'no-i18n-write': 'true',
+			print: 'true',
+		})
+		const body = file!.content
+		expect(body).toContain('<Switch')
+		expect(body).toContain('onCheckedChange')
+		expect(body).not.toContain('submit')
+		expect(body).not.toContain('<form')
+	})
+
+	it('is registered under its name — the CLI can be asked for it', () => {
+		expect(Object.keys(recipes)).toContain('live-settings')
 	})
 })
