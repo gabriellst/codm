@@ -22,7 +22,7 @@ import { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript
  * → `ClassifyMessage` emits `integration.message.classified`; the phase-6b closer
  * `RunIssueTurnOnClassification` consumes it → `RunIssueTurn` → the terminal facts bridge
  * to `integration.issue.opened` / completed; `MaterializeIssueFromExecution` materializes the Issue
- * row and the `BrowserFrameEnricher` synthesizes the `browser.*` SSE frame.
+ * row and the raw facts reach the console via the SSE re-emit (B5: `BrowserFrameEnricher` is gone).
  *
  * Reply-quote / context-match DB resolution stays in the ClassifyMessage use-case + OpenIssuesReader
  * repository specs (integration) — a flow spec asserts the cross-context hand-offs, not DB reads.

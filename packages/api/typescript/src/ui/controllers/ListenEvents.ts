@@ -16,7 +16,6 @@ import {
 // this controller only COMPOSES and re-emits, medscall-style.
 import { materializedIntegrationEventSchemas } from '@codedm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { BrowserFrameEnricher, BrowserSseFrameSchema } from '../services/BrowserFrameEnricher'
 
 export const ListenEventsControllerInputSchema = z.object({
 	ctx: z.object({ session: z.object({ ownerId: z.uuid() }) }),
@@ -24,18 +23,14 @@ export const ListenEventsControllerInputSchema = z.object({
 
 /**
  * The endpoint's SSE frame union — the SDK derives the typed `ServerEventName` union from this for
- * the frontend `useServerEvents` hook. Two surfaces coexist, both DECLARED elsewhere and only
- * COMPOSED here:
- *   - every `integration.*` event of the contract barrel (all of them — the broadcaster forwards the
- *     whole surface, filtered only by envelope-`ownerId` tenancy), each arm the generated
- *     MATERIALIZED schema (wire-name-sorted, baked-in literal `name`, union-slot payloads
- *     materialized at the wire layer — never here);
- *   - the enriched `browser.*` frames, declared at their synthesizer (`BrowserFrameEnricher`).
+ * the frontend `useServerEvents` hook. ONE surface (B5: the enriched `browser.*` frames — and the
+ * `BrowserFrameEnricher` that synthesized them — are gone; the broadcaster re-emits the raw envelope
+ * and nothing else): every `integration.*` event of the contract barrel (all of them — the
+ * broadcaster forwards the whole surface, filtered only by envelope-`ownerId` tenancy), each arm the
+ * generated MATERIALIZED schema (wire-name-sorted, baked-in literal `name`, union-slot payloads
+ * materialized at the wire layer — never here).
  */
-export const ListenEventsControllerOutputSchema = z.discriminatedUnion('name', [
-	...materializedIntegrationEventSchemas,
-	...BrowserSseFrameSchema.options,
-])
+export const ListenEventsControllerOutputSchema = z.discriminatedUnion('name', [...materializedIntegrationEventSchemas])
 
 /**
  * The owner an integration event fans out to on the browser SSE surface. ALL integration events are
@@ -72,8 +67,7 @@ export function isBroadcastableIntegrationEvent(event: unknown): event is BaseIn
 
 interface SSEClient {
 	ownerId: string
-	// Sends any pre-shaped SSE frame — the raw `integration.*` envelope OR an enriched `browser.*`
-	// frame (which carries no envelope `ownerId`; tenancy is already filtered before send).
+	// Sends the raw `integration.*` envelope — the only frame shape this stream carries since B5.
 	send: (frame: unknown) => void
 }
 
@@ -96,22 +90,16 @@ export class ListenEventsController extends Controller<
 	private clients = new Set<SSEClient>()
 	private broadcasterRegistered = false
 
-	constructor(
-		private externalMediator: ExternalMediator,
-		private enricher: BrowserFrameEnricher,
-	) {
+	constructor(private externalMediator: ExternalMediator) {
 		super()
 	}
 
 	/**
 	 * One mediator callback per process, fanned out to every connected client. EVERY integration
 	 * event is forwarded — the only filter is tenancy (`deliveryOwnerId`: envelope owner must match
-	 * the client's session owner).
-	 *
-	 * Two frames coexist on the wire: the raw `integration.*` envelope is re-emitted for every fact
-	 * (unchanged), and the `BrowserFrameEnricher` synthesizes the enriched `browser.*` frames from
-	 * the facts it maps (needs-you / stop raised / live status) — ADDITIVE, so no consumer loses its
-	 * envelope.
+	 * the client's session owner). Re-emits the raw `integration.*` envelope, unchanged — the
+	 * `BrowserFrameEnricher` that used to synthesize an ADDITIVE `browser.*` frame per fact is gone
+	 * (B5): every consumer now scopes itself off the raw wire fact.
 	 */
 	private ensureBroadcaster(): void {
 		if (this.broadcasterRegistered) return
@@ -124,11 +112,7 @@ export class ListenEventsController extends Controller<
 			if (recipients.length === 0) return
 
 			const rawFrame = { name: event.name, ownerId: event.ownerId, payload: event.payload }
-			const enriched = await this.enricher.enrich(event)
-			for (const client of recipients) {
-				client.send(rawFrame)
-				for (const frame of enriched) client.send(frame)
-			}
+			for (const client of recipients) client.send(rawFrame)
 		})
 	}
 

@@ -14,7 +14,6 @@ import type { MessageType } from "./MessageType.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
-import type { ThreadStatus } from "./ThreadStatus.ts";
 
 export const ListenEvents200NameEnum = {
     "integration.artifact.recorded": "integration.artifact.recorded"
@@ -309,24 +308,6 @@ export const ListenEvents200NameEnum36 = {
 } as const;
 
 export type ListenEvents200NameEnum36Key = (typeof ListenEvents200NameEnum36)[keyof typeof ListenEvents200NameEnum36];
-
-export const ListenEvents200NameEnum37 = {
-    "browser.thread_status_changed": "browser.thread_status_changed"
-} as const;
-
-export type ListenEvents200NameEnum37Key = (typeof ListenEvents200NameEnum37)[keyof typeof ListenEvents200NameEnum37];
-
-export const ListenEvents200NameEnum38 = {
-    "browser.stop_raised": "browser.stop_raised"
-} as const;
-
-export type ListenEvents200NameEnum38Key = (typeof ListenEvents200NameEnum38)[keyof typeof ListenEvents200NameEnum38];
-
-export const ListenEvents200NameEnum39 = {
-    "browser.thread_message_ingested": "browser.thread_message_ingested"
-} as const;
-
-export type ListenEvents200NameEnum39Key = (typeof ListenEvents200NameEnum39)[keyof typeof ListenEvents200NameEnum39];
 
 /**
  * @description Owner-scoped real-time integration events via SSE
@@ -2779,59 +2760,6 @@ export type ListenEvents200 = ({
         */
         path: string;
     };
-} | {
-    /**
-     * @type string
-    */
-    name: ListenEvents200NameEnum37Key;
-    /**
-     * @type string
-    */
-    threadId: string;
-    /**
-     * @type string
-    */
-    status: ThreadStatus;
-    /**
-     * @minLength -9007199254740991
-     * @maxLength 9007199254740991
-     * @type integer
-    */
-    agentsRunningNow: number;
-} | {
-    /**
-     * @type string
-    */
-    name: ListenEvents200NameEnum38Key;
-    /**
-     * @type string
-    */
-    threadId: string;
-    /**
-     * @type string
-    */
-    threadDisplayName: string;
-    /**
-     * @type string
-    */
-    issueId: string;
-    /**
-     * @type string
-    */
-    issueKey: string;
-    /**
-     * @type string
-    */
-    stopKind: StopKind;
-} | {
-    /**
-     * @type string
-    */
-    name: ListenEvents200NameEnum39Key;
-    /**
-     * @type string
-    */
-    threadId: string;
 });
 
 export type ListenEventsQueryResponse = ListenEvents200;

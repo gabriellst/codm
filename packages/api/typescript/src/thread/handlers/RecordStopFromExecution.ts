@@ -21,8 +21,8 @@ const STOP_TITLES: Record<StopKind, string> = {
  * the state the fact changes, and stops are `Thread`'s children now. `MaterializeIssueFromExecution`
  * keeps `opened` / `created` / `completed`, which really are issue facts.
  *
- * `threadId` comes off the payload — the fact has always carried it (that is how `BrowserFrameEnricher`
- * resolves the frame) — so a stop with no `issueId` routes exactly as well as one with.
+ * `threadId` comes off the payload — the fact has always carried it (that is how thread-scoped SSE
+ * consumers key off it directly) — so a stop with no `issueId` routes exactly as well as one with.
  */
 @injectable()
 export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaisedEvent> {

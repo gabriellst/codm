@@ -22,9 +22,12 @@ export function HomeDashboard() {
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetHomeDashboard()
 
-	useServerEvents(['browser.thread_status_changed', 'browser.stop_raised'], () => {
-		queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
-	})
+	useServerEvents(
+		['integration.issue.opened', 'integration.issue.completed', 'integration.thread.stop_raised', 'integration.thread.stop_resolved'],
+		() => {
+			queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
+		},
+	)
 
 	if (isLoading || !data) return <DashboardSkeleton />
 

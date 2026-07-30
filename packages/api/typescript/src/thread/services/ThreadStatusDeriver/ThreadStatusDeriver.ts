@@ -35,11 +35,11 @@ export interface ThreadOperatingFacts {
  * while the REST read said IDLE). The seam owns both halves now — the reads, per-thread and batched per
  * owner, and the precedence — following the shape `ChannelConnectivity` already uses in this context.
  *
- * `derive` stays PUBLIC and concrete on the abstract class: it is language-level, not env-swapped, and
- * the one caller that cannot use the reads needs it. `BrowserFrameEnricher` computes its facts with an
- * EXCLUSION (the issue/stop the event being enriched just closed) so the frame reflects the transition
- * without waiting on a read-after-write; no read method can express that, so it gathers its own facts
- * and applies the precedence through here.
+ * `derive` stays PUBLIC and concrete on the abstract class: it is language-level, not env-swapped, so a
+ * caller that already holds the three facts under its OWN exclusion (an issue/stop the caller's own
+ * event just resolved, so the frame reflects the transition without waiting on a read-after-write) can
+ * apply the precedence directly — no read method can express that, so it gathers its own facts and
+ * applies the precedence through here.
  */
 export abstract class ThreadStatusDeriver {
 	/** One thread. Three reads: the pause flag, an open stop, a WORKING non-archived issue. */

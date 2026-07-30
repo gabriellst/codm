@@ -92,7 +92,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextModule; schema: strin
 		note: 'ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116).',
 	},
 	{ consumer: 'ui', schema: 'thread', note: 'BFF read models (dashboard/wizard/checklist) — query-side by design.' },
-	{ consumer: 'ui', schema: 'issue', note: 'BFF read models + BrowserFrameEnricher status derivation.' },
+	{ consumer: 'ui', schema: 'issue', note: 'BFF read models — GetHomeDashboard reads issues/stops for the operating-status rollup.' },
 	{ consumer: 'ui', schema: 'workspace', note: 'BFF read models (dashboard/wizard/checklist).' },
 	{ consumer: 'ui', schema: 'owner', note: 'GetSettings reads the owner row (timezone/language).' },
 	{ consumer: 'ui', schema: 'gateway', note: 'BFF wizard/dashboard read the gateway sync tables (channels/remotes/memberships).' },

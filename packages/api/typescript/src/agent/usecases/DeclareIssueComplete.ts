@@ -21,10 +21,11 @@ export const DeclareIssueCompleteInputSchema = z.object({
 	/**
 	 * The issue's thread-unique slug key. OPTIONAL, and deliberately so: the frozen
 	 * `integration.issue.completed` carries `key` but VERIFIED to have no consumer that reads it
-	 * (`MaterializeIssueFromExecution` forwards only `issueId` to `CompleteIssue`;
-	 * `BrowserFrameEnricher` destructures only `threadId`/`issueId`). It is a LABEL, not identity —
-	 * identity is `issueId`, which the MCP router validates against the run token's claims. A caller
-	 * that knows the key passes it; one that does not passes nothing rather than inventing one.
+	 * (`MaterializeIssueFromExecution` forwards only `issueId` to `CompleteIssue`; the SSE broadcaster
+	 * re-emits the raw envelope since B5, with no consumer destructuring `key` out of it). It is a
+	 * LABEL, not identity — identity is `issueId`, which the MCP router validates against the run
+	 * token's claims. A caller that knows the key passes it; one that does not passes nothing rather
+	 * than inventing one.
 	 */
 	key: z.string().trim().default(''),
 })

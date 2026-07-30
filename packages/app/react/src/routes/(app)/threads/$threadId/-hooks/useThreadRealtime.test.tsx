@@ -25,6 +25,10 @@ import { THREAD_REALTIME_EVENTS, threadInvalidations, useThreadRealtime, type Th
  *     dispatches (`useServerEventSource` re-emits every frame on `document` under its own name), then
  *     reading which query keys React Query actually marked stale;
  *   - the MAP, exhaustively, as a pure function — cheap enough to cover every frame and every guard.
+ *
+ * B5: every frame is now a wire fact (`{ name, ownerId, payload }`) — the enriched `browser.*` shape
+ * (`{ name, threadId, ... }` at the top level, no `payload`) is gone, so `wireFact` is the only factory
+ * this file needs.
  */
 const THREAD = '019e4d24-6524-7041-9e1c-8108180cddae'
 const OTHER_THREAD = '019e4d24-6524-7041-9e1c-8108180cddbb'
@@ -36,9 +40,6 @@ function arrive(event: ThreadRealtimeEvent): void {
 		document.dispatchEvent(new CustomEvent(event.name, { detail: event }))
 	})
 }
-
-const browserFrame = (name: 'browser.thread_message_ingested' | 'browser.thread_status_changed', threadId = THREAD) =>
-	({ name, threadId, status: 'RUNNING', agentsRunningNow: 1 }) as unknown as ThreadRealtimeEvent
 
 const wireFact = (name: ThreadRealtimeEvent['name'], payload: Record<string, unknown>) =>
 	({ name, ownerId: 'owner-1', payload }) as unknown as ThreadRealtimeEvent
@@ -84,23 +85,17 @@ describe('useThreadRealtime — the wiring', () => {
 	it('AC-F2.1 — an arriving message frame invalidates the thread chat query', () => {
 		const invalidated = mount(THREAD)
 
-		arrive(browserFrame('browser.thread_message_ingested'))
+		arrive(wireFact('integration.thread.message_ingested', { threadId: THREAD }))
 
 		expect(invalidated).toEqual([getSessionChatQueryKey(THREAD)])
 	})
 
-	/**
-	 * THE ONE THE OLD CODE WOULD HAVE PASSED. The page was already subscribed to the status frame, so a
-	 * test using only that frame proves nothing about the bug. It is here to show the subscription is
-	 * not merely REPLACED by a narrower one.
-	 */
-	it('a status change still invalidates chat, issues and the dashboard', () => {
+	it('a stop being resolved clears the needs-you panel and stales the chat + issues', () => {
 		const invalidated = mount(THREAD)
 
-		arrive(browserFrame('browser.thread_status_changed'))
+		arrive(wireFact('integration.thread.stop_resolved', { threadId: THREAD, issueId: ISSUE }))
 
-		expect(invalidated).toContainEqual(getSessionChatQueryKey(THREAD))
-		expect(invalidated).toContainEqual(getSessionIssuesQueryKey(THREAD))
+		expect(invalidated).toEqual([getNeedsYouPanelQueryKey(THREAD), getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD)])
 	})
 
 	it('the orchestrator replying invalidates the chat — the reply is written BEFORE the frame is sent', () => {
@@ -118,7 +113,7 @@ describe('useThreadRealtime — the wiring', () => {
 	it('a frame for ANOTHER thread invalidates nothing on this one', () => {
 		const invalidated = mount(THREAD)
 
-		arrive(browserFrame('browser.thread_message_ingested', OTHER_THREAD))
+		arrive(wireFact('integration.thread.message_ingested', { threadId: OTHER_THREAD }))
 		arrive(wireFact('integration.issue.created', { threadId: OTHER_THREAD, issueId: ISSUE }))
 
 		expect(invalidated).toEqual([])
@@ -129,7 +124,7 @@ describe('useThreadRealtime — the wiring', () => {
 		act(() => root?.unmount())
 		root = null
 
-		arrive(browserFrame('browser.thread_message_ingested'))
+		arrive(wireFact('integration.thread.message_ingested', { threadId: THREAD }))
 
 		expect(invalidated).toEqual([])
 	})
@@ -142,10 +137,18 @@ describe('threadInvalidations — the map', () => {
 		expect(keys).toEqual([getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD), getIssueDetailQueryKey(ISSUE)])
 	})
 
-	it('a stop stales the needs-you panel', () => {
+	it('a stop being raised stales the needs-you panel', () => {
 		const keys = threadInvalidations(wireFact('integration.thread.stop_raised', { threadId: THREAD, issueId: ISSUE }), THREAD)
 
-		expect(keys).toContainEqual(getNeedsYouPanelQueryKey(THREAD))
+		expect(keys).toEqual([getNeedsYouPanelQueryKey(THREAD), getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD)])
+	})
+
+	/** The half the enricher never wired (see G-C in the plan): before B5 nothing invalidated the panel
+	 *  on RESOLVE, so a cleared stop stayed on screen until something else refreshed the page. */
+	it('a stop being resolved stales the SAME three keys — the panel must clear, not just fill', () => {
+		const keys = threadInvalidations(wireFact('integration.thread.stop_resolved', { threadId: THREAD, issueId: ISSUE }), THREAD)
+
+		expect(keys).toEqual([getNeedsYouPanelQueryKey(THREAD), getSessionChatQueryKey(THREAD), getSessionIssuesQueryKey(THREAD)])
 	})
 
 	it('an artifact stales only the artifacts list', () => {
@@ -161,9 +164,7 @@ describe('threadInvalidations — the map', () => {
 	 */
 	it('every subscribed frame stales something — no dead subscriptions', () => {
 		for (const name of THREAD_REALTIME_EVENTS) {
-			const event = name.startsWith('browser.')
-				? ({ name, threadId: THREAD } as unknown as ThreadRealtimeEvent)
-				: wireFact(name, { threadId: THREAD, issueId: ISSUE })
+			const event = wireFact(name, { threadId: THREAD, issueId: ISSUE })
 
 			expect(threadInvalidations(event, THREAD).length, `${name} maps to no query`).toBeGreaterThan(0)
 		}

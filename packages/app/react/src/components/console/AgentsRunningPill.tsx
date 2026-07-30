@@ -6,18 +6,23 @@ import { Dot } from './StatusDot'
 
 /**
  * The persistent operating pulse in the top-right of every console page: how many
- * agents are running right now. Owns its own data and stays live — the SSE
- * `browser.thread_status_changed` frame carries a fresh count, so we invalidate the
- * dashboard read (never hand-mutate the cache) whenever a thread flips state.
+ * agents are running right now. Owns its own data and stays live — invalidates the
+ * dashboard read (never hand-mutate the cache) on the raw facts that change it: an
+ * issue starting or finishing work, or a stop raising/clearing NEEDS_ATTENTION.
+ * Direct wire events since B5 — the synthesized `browser.thread_status_changed`
+ * frame (and the `BrowserFrameEnricher` that computed it) are gone.
  */
 export function AgentsRunningPill() {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data } = useGetHomeDashboard()
 
-	useServerEvents('browser.thread_status_changed', () => {
-		queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
-	})
+	useServerEvents(
+		['integration.issue.opened', 'integration.issue.completed', 'integration.thread.stop_raised', 'integration.thread.stop_resolved'],
+		() => {
+			queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
+		},
+	)
 
 	const count = data?.agentsRunningNow ?? 0
 	const running = count > 0

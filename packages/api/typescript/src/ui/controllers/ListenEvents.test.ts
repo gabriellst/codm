@@ -114,14 +114,6 @@ describe('ListenEvents declarative output union (the contract is the single sour
 		}
 	})
 
-	it('carries the enriched browser.* frames alongside the contract surface', () => {
-		expect(arms).toContain('browser.thread_status_changed')
-		expect(arms).toContain('browser.stop_raised')
-		// F2 — without an arm here the frame exists on the wire but not in the SDK's `ServerEventName`
-		// union, so `useServerEvents('browser.thread_message_ingested', …)` would not type-check.
-		expect(arms).toContain('browser.thread_message_ingested')
-	})
-
 	it('materializes union-slot payloads from the owner client (never the opaque contract slots)', () => {
 		const received = (ListenEventsControllerOutputSchema.options as ZodObject[]).find(
 			arm => armName(arm) === ChannelMessageReceivedEvent.name,

@@ -21,11 +21,10 @@ export function NeedsYouPanel({ threadId }: { threadId: string }) {
 	const { t } = useTranslation()
 	const { data } = useGetNeedsYouPanel(threadId)
 
-	// The stop-raised subscription moved to `useThreadRealtime`. This panel only knew how to APPEAR
-	// (`stop_raised`) and never how to disappear: a resolution publishes `stop_resolved`, which since B4
-	// DOES carry `threadId` — so it is this thread's frame and no longer needs the enricher's recomputed
-	// status frame to stand in for it. The layout hook still invalidates on the status frame; wiring the
-	// raw fact into the subscription is B5's call, not a silent change here.
+	// The subscription lives in `useThreadRealtime`, mounted once by the `$threadId` layout: both
+	// `integration.thread.stop_raised` (this panel fills) and `integration.thread.stop_resolved` (this
+	// panel clears) invalidate `getNeedsYouPanelQueryKey` directly off the raw wire fact (B5) — no
+	// enriched `browser.*` frame, no server-side status recompute standing in for either direction.
 	const stops = data?.stops ?? []
 	if (stops.length === 0) return null
 

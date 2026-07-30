@@ -14,7 +14,6 @@ import { messageTypeSchema } from "./messageTypeSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
-import { threadStatusSchema } from "./threadStatusSchema.ts";
 import { z } from "zod/v4";
 
 /**
@@ -776,25 +775,6 @@ get "resolution"(){
     "workspaceId": z.string(),
 "path": z.string()
     })
-    }), z.object({
-    "name": z.enum(["browser.thread_status_changed"]),
-"threadId": z.string(),
-get "status"(){
-                return threadStatusSchema
-              },
-"agentsRunningNow": z.int().min(-9007199254740991).max(9007199254740991)
-    }), z.object({
-    "name": z.enum(["browser.stop_raised"]),
-"threadId": z.string(),
-"threadDisplayName": z.string(),
-"issueId": z.string(),
-"issueKey": z.string(),
-get "stopKind"(){
-                return stopKindSchema
-              }
-    }), z.object({
-    "name": z.enum(["browser.thread_message_ingested"]),
-"threadId": z.string()
     })])
 
 export const listenEventsQueryResponseSchema = z.lazy(() => listenEvents200Schema)

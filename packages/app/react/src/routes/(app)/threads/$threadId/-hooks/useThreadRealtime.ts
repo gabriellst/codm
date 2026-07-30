@@ -1,6 +1,5 @@
 import { useQueryClient, type QueryKey } from '@tanstack/react-query'
 import {
-	getHomeDashboardQueryKey,
 	getIssueDetailQueryKey,
 	getNeedsYouPanelQueryKey,
 	getSessionChatQueryKey,
@@ -16,20 +15,21 @@ import { useServerEvents, type ServerEventName } from '@/hooks'
  * name added to one without the other is a tsc error rather than a subscription that fires into a
  * function with no case for it.
  *
- * Everything here carries a thread scope the browser can check for itself: either `threadId` in the
- * payload, or (for the inbound message, which is addressed by WhatsApp JID) a `browser.*` frame the
- * `BrowserFrameEnricher` already resolved to a thread.
+ * Every frame here carries `threadId` directly on its wire payload (B5: the enriched `browser.*`
+ * frames — synthesized by a `BrowserFrameEnricher` that resolved a thread scope the raw fact could not
+ * express on its own — are gone). `integration.thread.message_ingested` replaces
+ * `browser.thread_message_ingested`; `integration.thread.stop_resolved` replaces the half of
+ * `browser.thread_status_changed` this page actually needed (clearing the needs-you panel).
  */
 export const THREAD_REALTIME_EVENTS = [
-	'browser.thread_message_ingested',
-	'browser.thread_status_changed',
-	'browser.stop_raised',
+	'integration.thread.message_ingested',
 	'integration.orchestrator.replied',
+	'integration.thread.stop_raised',
+	'integration.thread.stop_resolved',
 	'integration.issue.created',
 	'integration.issue.opened',
 	'integration.issue.completed',
 	'integration.issue.archived',
-	'integration.thread.stop_raised',
 	'integration.artifact.recorded',
 ] as const satisfies readonly ServerEventName[]
 
@@ -48,21 +48,19 @@ export function threadInvalidations(event: ThreadRealtimeEvent, threadId: string
 	if (threadIdOf(event) !== threadId) return []
 
 	switch (event.name) {
-		// A message landed — inbound (enriched, because only the server can resolve a JID to a thread)
-		// or the orchestrator's own reply. Both write a transcript row BEFORE the browser is notified:
-		// the mediator awaits every handler and only then runs the callbacks the SSE broadcaster is one
-		// of, so a refetch triggered here can never read the transcript from before the write.
-		case 'browser.thread_message_ingested':
+		// A message landed — inbound or the orchestrator's own reply. Both write a transcript row
+		// BEFORE the browser is notified: the mediator awaits every handler and only then runs the
+		// callbacks the SSE broadcaster is one of, so a refetch triggered here can never read the
+		// transcript from before the write.
+		case 'integration.thread.message_ingested':
 		case 'integration.orchestrator.replied':
 			return [getSessionChatQueryKey(threadId)]
 
-		// The composer's mode and the header's status live in the chat payload, so a status change is a
-		// chat change too — this is the frame that used to be the page's only subscription.
-		case 'browser.thread_status_changed':
-			return [getSessionChatQueryKey(threadId), getSessionIssuesQueryKey(threadId), getHomeDashboardQueryKey()]
-
-		case 'browser.stop_raised':
+		// A stop raising OR resolving both change what the needs-you panel and the chat/issues tabs
+		// show — the panel must FILL on raise and CLEAR on resolve, so both facts invalidate the same
+		// three keys.
 		case 'integration.thread.stop_raised':
+		case 'integration.thread.stop_resolved':
 			return [getNeedsYouPanelQueryKey(threadId), getSessionChatQueryKey(threadId), getSessionIssuesQueryKey(threadId)]
 
 		// An issue's birth and death both show up in the conversation (the ack, then the composed
@@ -87,10 +85,10 @@ export function threadInvalidations(event: ThreadRealtimeEvent, threadId: string
 	}
 }
 
-/** The thread a frame belongs to — `threadId` sits on the payload for wire facts and at the top level
- *  for the enriched `browser.*` frames, which are UI shapes and carry no envelope. */
+/** The thread a frame belongs to — every frame carries `threadId` on its wire `payload` since B5 (the
+ *  enriched `browser.*` frames, which put it at the top level instead, are gone). */
 function threadIdOf(event: ThreadRealtimeEvent): string {
-	return 'payload' in event ? event.payload.threadId : event.threadId
+	return event.payload.threadId
 }
 
 /**
