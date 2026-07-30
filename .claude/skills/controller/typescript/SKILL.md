@@ -361,6 +361,28 @@ export const ForkIssueControllerInputSchema = z.object({
 
 See `/middleware` MID-C06/MID-C07 for the middleware side of this pair. Never declare exposure in a central `MCP_SCOPES` record or similar — see `bp-23` in registry.yaml.
 
+## Public Controllers — the empty middleware chain is a decision [CTRL-C18, bp-24]
+
+A controller with no `override middlewares` and no `static mcpScopes` genuinely ships with an empty middleware chain — `Controller.effectiveMiddlewares` (core/src/types/Controller.ts) only auto-appends `AgentIdentityMiddleware` when `mcpScopes` is non-empty, and there is no context-default injection at this layer for a root-level controller. That absence is indistinguishable, by the compiler, from a controller nobody got around to protecting — so the ONE sanctioned way to ship one is to document why on the class.
+
+```typescript
+/**
+ * O PRIMEIRO CONTROLLER PUBLICO DO REPO, e a ausencia de `middlewares` e a decisao, nao um
+ * esquecimento. Quem pergunta se o daemon subiu e o supervisor da shell, ANTES de existir
+ * qualquer sessao — exigir identidade para responder "eu terminei de subir" e exigir que o
+ * app esteja pronto para descobrir se ele esta pronto.
+ */
+@injectable()
+export class HealthController extends Controller<typeof HealthInputSchema, typeof HealthOutputSchema> {
+  readonly path = '/health'
+  readonly method = 'get' as const
+  // no `override middlewares`, no `static mcpScopes`
+  constructor(private readonly health: HealthService) { super() }
+}
+```
+
+The only legitimate case today is process readiness (`shared/controllers/Health.ts`) — a caller (the shell supervisor) that structurally cannot hold a session yet. Review rejects a controller shipped with an empty chain and no docblock: see `bp-24` in registry.yaml for the wrong/right pattern. Do not invent a `PublicMiddleware` marker or `static mcpScopes = []` to signal this — the framework already treats absence as the mechanism.
+
 ## Schema Patterns [CTRL-C04, CTRL-C09, CTRL-P02, CTRL-P03, CTRL-P14]
 
 ### Schema Import Hierarchy
@@ -584,8 +606,8 @@ Never use `z.string()` for a field with fixed values — the frontend won't know
 ## Checklist
 
 - [ ] All `when: always` patterns present (CTRL-01 through CTRL-06 — verify against registry.yaml)
-- [ ] Each conditional pattern evaluated (CTRL-C01 through CTRL-C17 — check which apply)
-- [ ] No `bad_practices` violations (bp-02 through bp-23 — verify against registry.yaml)
+- [ ] Each conditional pattern evaluated (CTRL-C01 through CTRL-C18 — check which apply)
+- [ ] No `bad_practices` violations (bp-02 through bp-24 — verify against registry.yaml)
 - [ ] Controller exported in `controllers/index.ts`
 
 ## Next Steps

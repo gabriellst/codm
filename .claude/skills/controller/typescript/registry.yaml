@@ -146,6 +146,25 @@ registry:
       rule: "`static override readonly mcpScopes = [McpScope.X]`, right above `readonly path`, with `McpScope` from `@codedm/contracts-typescript/wire/enums`. ABSENT is the default and absent means NOT EXPOSED — measured: with no filter, `@kubb/plugin-mcp` turns every operation in the spec into a tool, so the security property comes entirely from this being opt-in. A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` mandatory (appended by `Controller.executeMiddlewares`, see `/middleware` MID-C06) — WITHOUT a line in `middlewares`."
       wrong: "adding the controller class to a central `MCP_SCOPES` record, or declaring the scope as a bare string literal instead of the contracts enum."
 
+    - id: CTRL-C18
+      name: "Public controller — the empty middleware chain is a decision, documented on the class"
+      when: "the endpoint must answer a caller that cannot hold a session/identity yet (process readiness/health is the only case today)"
+      reason: "`HealthController` (shared/controllers/Health.ts) is asked by the shell supervisor BEFORE any session exists — requiring identity to answer 'did the process finish booting?' would make readiness undiscoverable. `Controller.effectiveMiddlewares` (core/src/types/Controller.ts) only auto-appends `AgentIdentityMiddleware` when `static mcpScopes` is non-empty, so a class declaring neither `override middlewares` nor `mcpScopes` genuinely ships with an empty chain — the same absence a controller could carry by oversight."
+      rule: "`middlewares` stays at the inherited `[]` default (never declared) AND the class declares NO `static mcpScopes`. Because the framework treats this absence as meaningful, the class MUST carry a docblock stating why no middleware applies — review rejects a public controller without one, since a bare class with no `override middlewares` line is otherwise indistinguishable from a context default nobody wired yet."
+      snippet: |
+        /**
+         * O PRIMEIRO CONTROLLER PUBLICO DO REPO, e a ausencia de `middlewares` e a decisao, nao um
+         * esquecimento. Quem pergunta se o daemon subiu e o supervisor da shell, ANTES de existir
+         * qualquer sessao — exigir identidade para responder "eu terminei de subir" e exigir que o
+         * app esteja pronto para descobrir se ele esta pronto.
+         */
+        @injectable()
+        export class HealthController extends Controller<typeof HealthInputSchema, typeof HealthOutputSchema> {
+          readonly path = '/health'
+          // no `override middlewares`, no `static mcpScopes`
+        }
+      wrong: "omitting `override middlewares`/leaving the class undocumented and hoping the empty default reads as intentional; or reaching for `static mcpScopes = []` / a dedicated `PublicMiddleware` marker to signal it — the framework already treats absence as public, a marker would be a second idiom for the same fact."
+
     # ── Code patterns extracted from implementations ──────────────────
     - id: CTRL-P01
       name: "ctx.session for actor/owner injection"
@@ -741,6 +760,34 @@ registry:
           static override readonly mcpScopes = [McpScope.ISSUE_HANDLING, McpScope.ORCHESTRATION]
           readonly path = '/threads/:threadId/issues/:issueId/stops'
           // …
+        }
+
+    - id: bp-24
+      name: "Public controller (empty middlewares, no mcpScopes) without a docblock explaining why"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // No `override middlewares`, no `static mcpScopes`, no docblock — a reviewer
+        // cannot tell "deliberately public" from "forgot the context default".
+        @injectable()
+        export class ListPlansController extends Controller<typeof ListPlansInputSchema, typeof ListPlansOutputSchema> {
+          readonly path = '/plans'
+          readonly method = 'get'
+          // ...
+        }
+      right: |
+        // shared/controllers/Health.ts — the one legitimate case today: the shell supervisor
+        // asks this BEFORE any session exists, so requiring identity to answer "did the process
+        // finish booting?" would make readiness undiscoverable.
+        /**
+         * O PRIMEIRO CONTROLLER PUBLICO DO REPO, e a ausencia de `middlewares` e a decisao, nao um
+         * esquecimento. Mecanicamente: `middlewares` fica no default `[]` herdado, e a classe NAO
+         * declara `static mcpScopes`.
+         */
+        @injectable()
+        export class HealthController extends Controller<typeof HealthInputSchema, typeof HealthOutputSchema> {
+          readonly path = '/health'
+          // ...
         }
 
   snippet:

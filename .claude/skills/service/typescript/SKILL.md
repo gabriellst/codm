@@ -465,7 +465,7 @@ export class MockPaymentGateway extends PaymentGateway {
 - [ ] Service exposes both `MockXService` and a true concrete implementation
 - [ ] Context services are registered in `packages/api/typescript/src/<context>/registry.ts`
 - [ ] Shared services are registered in `packages/api/typescript/src/shared/registry.ts`
-- [ ] No `bad_practices` violations (bp-01 through bp-04 — verify against registry.yaml)
+- [ ] No `bad_practices` violations (bp-01 through bp-06 — verify against registry.yaml)
 
 ## References
 

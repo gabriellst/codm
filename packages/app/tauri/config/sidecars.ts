@@ -11,6 +11,13 @@
  * (`src-tauri/src/sidecars/mod.rs`), because boot-env values are runtime paths (`data_dir`,
  * `resource_dir/migrations`) and shell-decision literals the supervisor computes — not a
  * cross-boundary contract, and never worth an env DSL.
+ *
+ * Also NOT here (since B1/E1): each sidecar's health PATH. It used to be a `healthPath` field on
+ * this manifest, hand-kept in sync with the two backends' endpoints. It has had zero readers since
+ * the supervisor's `probe()` stopped writing raw HTTP and started calling the typed SDK
+ * (`api.client.<service>.health()`, generated from each backend's OpenAPI) — the path now travels
+ * inside the client method itself. A path field here would be exactly the kind of manifest drift
+ * this file exists to avoid; `config/generate.test.ts` (DSK-03) asserts it never comes back.
  */
 import type { WorkspaceId } from '../../../../template.config'
 

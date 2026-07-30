@@ -324,3 +324,31 @@ registry:
           }
         }
       mechanical: false
+
+    - id: bp-06
+      name: "Service with a lifecycle (start/stop) bound in `real` without a matching HealthCheck"
+      severity: critical
+      rule: "A service with `start()`/`stop()` bound in the `real` environment (a poller, a dispatcher, anything with a background timer) must have a corresponding `HEALTH_CHECKS` declaration wrapping a `PollingHealthCheck` (or an equivalent `HealthCheck`) around it — otherwise `/health` can report `ok` while the background loop that does the actual work never started. The signal the check reads must be the SMALLEST existing TRUE-at-rest field already on the class — never a new `started`/`isRunning` field invented just to satisfy the check. Worked examples in `@codedm/core-typescript`: `DrizzleOutboxDispatcher.running` reads `this.timer !== null` (the field `scheduleNext()` already sets and never nulls mid-poll); `SqlExternalMediator.running` reads `!this.stopped` (`stopped` already starts `true`); `DrizzleMailboxDispatcher.running` reads `this.timer !== null || this.draining !== null` (covers the window between `start()` and the first `drain()`). All three ship with zero new fields."
+      wrong: |
+        // A poller wired in `real`, no HEALTH_CHECKS entry anywhere — /health can say "ok"
+        // while this dispatcher's timer never got past construction.
+        export class ReconciliationDispatcher {
+          private timer: NodeJS.Timeout | null = null
+          start() { this.timer = setInterval(() => this.poll(), 5_000) }
+          stop() { if (this.timer) clearInterval(this.timer); this.timer = null }
+        }
+        // registry.ts — no HEALTH_CHECKS binding for ReconciliationDispatcher anywhere
+      right: |
+        // The getter reads the field that ALREADY proves "start ran and stop didn't" — no new
+        // state, just a name for what was already true. Implements the core's structural
+        // PollingService port (no abstract-class member — mocks/spies stay untouched).
+        export class ReconciliationDispatcher implements PollingService {
+          private timer: NodeJS.Timeout | null = null
+          get running(): boolean { return this.timer !== null }
+          start() { this.timer = setInterval(() => this.poll(), 5_000) }
+          stop() { if (this.timer) clearInterval(this.timer); this.timer = null }
+        }
+        // registry.ts — mock/integration declare ABSENCE, real binds the check
+        { token: HEALTH_CHECKS, mock: null, integration: null,
+          real: { useFactory: c => new PollingHealthCheck('reconciliationDispatcher', c.resolve(ReconciliationDispatcher as any)) } },
+      mechanical: false

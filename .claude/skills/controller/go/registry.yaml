@@ -169,6 +169,23 @@ registry:
         ingest endpoint. The agent owns the webhook URL registered with the provider, so
         the canonical event name can be embedded at registration time.
 
+    - id: CTRL-GO-11
+      when: "the endpoint must answer a caller that cannot hold a session/API key yet (process readiness/health is the only case today)"
+      title: Metadata().Public is the ONLY sanctioned way to skip the global middleware chain
+      description: >
+        RegisterControllers (core/services/httprouter/http_router.go) applies the app's global
+        middlewares — the "app_middlewares" fx value group, Session -> APIKey in codedm — to
+        EVERY controller route, then applies the controller's OWN Metadata().Middlewares on top.
+        Setting Public: true on ControllerMetadata skips ONLY the global chain; the controller's
+        own Middlewares still run. This is the Go twin of the TS side's "public controller"
+        (see /controller typescript CTRL-C18): there, an empty chain falls out of the default;
+        here, the global chain applies unconditionally unless a controller opts out through this
+        field. Registering a route straight on the underlying mux (the way RegisterDocsRoutes
+        exposes /api/openapi.json today) is NOT this mechanism — it is an accident of
+        registration that happens to bypass auth, undiscoverable by reading ControllerMetadata
+        and untested by the httprouter suite. A new route that needs to be public MUST go
+        through RegisterControllers with Public: true, never through a second registration path.
+
   bad_practices:
     - id: BP-GO-CTRL-01
       severity: error
@@ -322,3 +339,27 @@ registry:
       detect:
         - 'strings\.Split\(\w+,\s*"/"\)'
         - 'parts\[len\(parts\)-1\]'
+
+    - id: BP-GO-CTRL-09
+      severity: error
+      title: Registering a route straight on the mux to skip auth, instead of Metadata().Public
+      wrong: |
+        // RegisterDocsRoutes-style: bypasses the global middleware chain by never going
+        // through RegisterControllers at all — undiscoverable by reading ControllerMetadata,
+        // and untested by the httprouter suite that proves Public's behavior.
+        func (r *HttpRouter) RegisterHealthRoute(db *sql.DB) {
+            r.mux.HandleFunc("GET /api/health", NewHealthController(db).Handle)
+        }
+      right: |
+        // Goes through the SAME RegisterControllers path as every other controller;
+        // Public: true skips only the global chain, never the controller's own Middlewares.
+        func (c *HealthController) Metadata() types.ControllerMetadata {
+            return types.ControllerMetadata{
+                Path:   "/health",
+                Method: "GET",
+                Public: true,
+            }
+        }
+      mechanical: true
+      detect:
+        - 'r\.mux\.(Handle|HandleFunc)\('

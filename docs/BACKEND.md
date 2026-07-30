@@ -122,12 +122,34 @@ These are the building blocks the codebase is composed of. Each has a correspond
 | **OutboxDispatcher** | `@codedm/core-typescript` | Polls `outbox`, fans out via `InternalMediator`, finalizes | `DrizzleOutboxDispatcher` in integration/real |
 | **DomainEventRepository** | `@codedm/core-typescript` | Persists events to `events` (audit) + `outbox` (dispatch) atomically; `save` / `saveMany` / `saveIntegrationEvent` / `saveIfNotExists` | Called by use cases + handlers |
 | **IdempotencyGuard** | `@codedm/core-typescript` | `claim(scope, key, tx)` — the at-least-once dedup used at every ingest / event boundary | `DrizzleIdempotencyGuard` in integration/real |
+| **HealthCheck** | `@codedm/core-typescript` | Abstract: `name`, `gate` (`true` fails readiness, `false` is diagnostic-only), `check(): Promise<HealthComponentReport>` | Multi-injected into `HealthService` via the `HEALTH_CHECKS` token; concrete checks (`DatabaseHealthCheck`, `MigrationsHealthCheck`, `PollingHealthCheck`) live beside `Controller`/`OutboxDispatcher` as core citizens |
+| **HealthService** | `@codedm/core-typescript` | Aggregates every registered `HealthCheck` into one `HealthReport` (`ready` + a `components` map); a check that throws becomes a `down` component, never an escaped exception | Consumed by `HealthController`/`GET /v1/health` (TS) and its Go twin `GET /api/health`; `ready` is `false` only when a `gate: true` component is `down` |
 
 > Note: use cases and event handlers **both** extend the same core `Handler<Input, Output>` base —
 > a use case is a `Handler` with a `name`, `inputSchema`, `outputSchema`, and a `handle(input, tx?)`;
 > an `EventHandler<E>` is a `Handler` whose input is the event instance and whose `event` field
 > declares the class(es) it subscribes to. The base supplies `withTransaction`, `domainEventRepository`,
 > `unitOfWorkFactory`, and `internalMediator`, lazily resolved from the bound DI container.
+
+> Note — `HealthCheck` is the repo's first use of tsyringe-neo **multi-inject**, and it shipped only
+> after three findings were proven by an espiga (throwaway `bun -e` script, kept as
+> `HealthService.test.ts`'s first `describe`):
+> 1. **The token is the STRING `'HealthCheck'`, never the abstract class.** `resolveAll` on a token
+>    that is a class does not throw when nothing is registered — it *constructs the abstract class*
+>    and hands back a methodless instance, silently. The same string token, unregistered, throws
+>    naming itself. A footgun this repo had already been bitten by once (`shared/registry.ts`
+>    documents an unbound-abstract boot failure) — string tokens fail loud instead of quiet.
+> 2. **A child container SHADOWS its parent on a multi-inject token, it does not merge.** `N`
+>    registrations on the root plus `M` on a child container make `child.resolveAll(TOKEN)` return
+>    only the child's `M` — the root's `N` never appear. Every `HealthCheck` must therefore land in
+>    the SAME container; `BoundedContext.create` already sends every context's registry to the
+>    single `rootContainer`, which is what makes this work across bounded contexts.
+> 3. **`resolve()` (singular) on a multi-inject token returns the LAST registration, silently** —
+>    another reason nothing resolves `HealthCheck` by single-instance injection; only `resolveAll`
+>    (via the `healthChecksFrom(container)` guard, which returns `[]` when the token was never
+>    registered — `mock`/`integration` declare absence on purpose) is a safe read of the token.
+
+
 
 ---
 
