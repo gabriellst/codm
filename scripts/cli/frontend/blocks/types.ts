@@ -10,6 +10,9 @@ export interface BlockContext {
 	kebab: string
 	routePath: string
 	sdk?: string
+	// The SDK mutation hook a block fires (`--mutation=useSteerThread`). Distinct from `sdk`, which is
+	// a type/query identifier — a single component legitimately reads one and writes with the other.
+	mutationHook?: string
 	storeName?: string
 	i18nPrefix?: string
 }

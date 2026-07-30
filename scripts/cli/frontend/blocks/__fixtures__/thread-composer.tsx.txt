@@ -1,0 +1,50 @@
+import { useState } from 'react'
+import { IconArrowUp } from '@tabler/icons-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { useTranslation } from 'react-i18next'
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { useSteerThread } from '@codedm/client-typescript/typescript'
+
+interface ThreadComposerProps extends React.ComponentProps<'div'> {}
+
+export function ThreadComposer({ className, ...props }: ThreadComposerProps) {
+	const [text, setText] = useState('')
+	const steerThread = useSteerThread()
+	const { t } = useTranslation()
+	const send = () => {
+		const trimmed = text.trim()
+		if (!trimmed || steerThread.isPending) return
+		steerThread.mutate(
+			{ /* TODO: request */ },
+			{ onSuccess: () => { setText(''); /* TODO: invalidate */ } },
+		)
+	}
+
+	return (
+		<div
+			className={cn('', className)}
+			{...props}
+		>
+			{/* Implement */}
+			<div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2">
+				<Textarea
+					value={text}
+					onChange={e => setText(e.target.value)}
+					onKeyDown={e => {
+						if (e.key === 'Enter' && !e.shiftKey) {
+							e.preventDefault()
+							send()
+						}
+					}}
+					placeholder={t('session.placeholder')}
+					className="min-h-10 flex-1 resize-none border-0 bg-transparent focus-visible:ring-0"
+				/>
+				<Button size="icon" aria-label={t('session.send')} disabled={!text.trim() || steerThread.isPending} onClick={send}>
+					<IconArrowUp />
+				</Button>
+			</div>
+		</div>
+	)
+}

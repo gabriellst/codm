@@ -452,6 +452,44 @@ registry:
         - "import { Route } from '../../route'"
       hookCalls:
         - "const search = Route.useSearch()"
+    composer:
+      imports:
+        - "import { useState } from 'react'"
+        - "import { IconArrowUp } from '@tabler/icons-react'"
+        - "import { {{mutationHook}} } from '{{sdkPackage}}'"
+        - "import { Button } from '@/components/ui/button'"
+        - "import { Textarea } from '@/components/ui/textarea'"
+      hookCalls:
+        - "const [text, setText] = useState('')"
+        - "const {{mutationVar}} = {{mutationHook}}()"
+      jsxBefore: |
+        	const send = () => {
+        		const trimmed = text.trim()
+        		if (!trimmed || {{mutationVar}}.isPending) return
+        		{{mutationVar}}.mutate(
+        			{ /* TODO: request */ },
+        			{ onSuccess: () => { setText(''); /* TODO: invalidate */ } },
+        		)
+        	}
+      jsxBody: |-
+        			<div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2">
+        				<Textarea
+        					value={text}
+        					onChange={e => setText(e.target.value)}
+        					onKeyDown={e => {
+        						if (e.key === 'Enter' && !e.shiftKey) {
+        							e.preventDefault()
+        							send()
+        						}
+        					}}
+        					placeholder={t('{{i18nPrefix}}.placeholder')}
+        					className="min-h-10 flex-1 resize-none border-0 bg-transparent focus-visible:ring-0"
+        				/>
+        				<Button size="icon" aria-label={t('{{i18nPrefix}}.send')} disabled={!text.trim() || {{mutationVar}}.isPending} onClick={send}>
+        					<IconArrowUp />
+        				</Button>
+        			</div>
+      i18nSlots: [placeholder, send]
     labels:
       imports:
         - "import { useTranslation } from 'react-i18next'"

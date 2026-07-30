@@ -210,6 +210,7 @@ function IssueSteerComposer({ issueId }: { issueId: string }) {
 
 	return (
 		<div className="flex flex-col gap-2">
+			{/* Shape owned by the CLI's `composer` block: bun cli component <route> <Name> --mutation=<Hook> */}
 			<div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2">
 				<Textarea
 					value={text}

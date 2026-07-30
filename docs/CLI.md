@@ -137,6 +137,7 @@ bun cli component <route> <Name> [flags]
 | `--recipe=<plain\|section\|card\|empty-state>` | Default `plain`. See §7. |
 | `--as=<section\|div\|article\|aside\|button\|a>` | Root element. Defaults per recipe. |
 | `--sdk=<Identifier>` | SDK type/hook reference. Auto-imports `useList<X>s` when paired with `--state=query`. |
+| `--mutation=<Hook>` | SDK mutation hook. Activates the `composer` block AND feeds it: textarea + Enter-to-send (Shift+Enter breaks a line) + a `send()` that dies on empty text **or** on the in-flight mutation. Independent of `--sdk` — a component may read a type with one and write with the other. `--no-composer` opts out. |
 | `--state=<csv>` | Multi: `query`, `store`, `search`. Wires the matching blocks. |
 | `--store=<StoreName>` | Required when `--state=store`. Imports `use<StoreName>Store`. |
 | `--variants=<spec>` | CVA variants (`name:v1,v2\|name:v1,v2`). Emits empty class strings; fill in after. |

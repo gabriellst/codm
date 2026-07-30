@@ -7,6 +7,7 @@ import { variantsBlock } from './variants'
 import { queryBlock } from './query'
 import { storeBlock } from './store'
 import { searchBlock } from './search'
+import { composerBlock } from './composer'
 import { labelsBlock } from './labels'
 import { constsBlock } from './consts'
 import { i18nBlock } from './i18n'
@@ -19,6 +20,7 @@ export const blocks: Record<string, BlockFn> = {
 	query: queryBlock,
 	store: storeBlock,
 	search: searchBlock,
+	composer: composerBlock,
 	labels: labelsBlock,
 	consts: constsBlock,
 	i18n: i18nBlock,

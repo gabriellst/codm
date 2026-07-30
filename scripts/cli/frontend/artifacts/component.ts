@@ -37,7 +37,9 @@ async function resolveSdkEnumValues(enumName: string): Promise<string[] | null> 
 // into a single combined import, preserving type-only markers. Other modules
 // are passed through unchanged.
 function mergeSdkImports(lines: string[]): string[] {
-	const sdkRegex = new RegExp(String.raw`^import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]${REPO.sdkSpecifier.replaceAll('/', String.raw`\/`)}['"]\s*$`)
+	const sdkRegex = new RegExp(
+		String.raw`^import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]${REPO.sdkSpecifier.replaceAll('/', String.raw`\/`)}['"]\s*$`,
+	)
 	const sdkSymbols = new Set<string>()
 	const passthrough: string[] = []
 	for (const line of lines) {
@@ -67,6 +69,7 @@ export const componentGenerator: Generator = async (pos, flags) => {
 				'  --recipe=<plain|section|card|empty-state>  (default: plain)',
 				'  --as=<section|div|article|aside|button|a>  (default: per recipe, else div)',
 				'  --sdk=<Identifier>                         SDK type/hook reference',
+				'  --mutation=<Hook>                          SDK mutation hook — wires the composer block (textarea + Enter-to-send)',
 				'  --state=<csv>                              query|store|search (multi-value)',
 				'  --store=<StoreName>                        required when --state includes store',
 				'  --variants=<spec>                          CVA variants (size:sm,md|tone:default,muted)',
@@ -94,6 +97,7 @@ export const componentGenerator: Generator = async (pos, flags) => {
 		kebab: toKebabCase(rawName),
 		routePath,
 		sdk: readValue(flags, 'sdk'),
+		mutationHook: readValue(flags, 'mutation'),
 		storeName: readValue(flags, 'store'),
 		i18nPrefix: readValue(flags, 'i18n'),
 	}
@@ -117,6 +121,9 @@ export const componentGenerator: Generator = async (pos, flags) => {
 	if (flags.variants) active.add('variants')
 	if (flags.labels === 'true') active.add('labels')
 	if (flags.consts) active.add('consts')
+	// `--mutation=<Hook>` both activates the composer block and feeds it — the same single-flag idiom
+	// as `--sdk`/`--variants`/`--consts`. `--no-composer` still opts out.
+	if (ctx.mutationHook) active.add('composer')
 	if (ctx.i18nPrefix) active.add('i18n')
 	if (flags.skeleton === 'true') active.add('skeleton')
 	// The labels block imports the enum type itself — the bare sdk import would be unused.
@@ -158,6 +165,7 @@ export const componentGenerator: Generator = async (pos, flags) => {
 	const i18nSlots = new Set<string>()
 	const additionalExports: string[] = []
 	let jsxBefore = ''
+	const jsxBodies: string[] = []
 
 	for (const o of outputs) {
 		o.imports?.forEach(i => {
@@ -178,6 +186,7 @@ export const componentGenerator: Generator = async (pos, flags) => {
 			i18nSlots.add(s)
 		})
 		if (o.jsxBefore) jsxBefore += o.jsxBefore
+		if (o.jsxBody) jsxBodies.push(o.jsxBody)
 	}
 	// Recipe-contributed slots
 	recipe.i18nSlots?.forEach(s => {
@@ -205,9 +214,13 @@ export const componentGenerator: Generator = async (pos, flags) => {
 
 	const propsDestructure = hasVariants ? `({ className, ...props }: ${ctx.pascal}Props)` : `({ className, ...props }: ${ctx.pascal}Props)`
 
-	const recipeBody = recipe.renderBody
-		? recipe.renderBody({ i18nPrefix: ctx.i18nPrefix, pascal: ctx.pascal })
-		: `\t\t\t{/* Implement ${ctx.pascal} */}`
+	// The recipe owns the shape of the body; blocks that contribute JSX (composer) append after it.
+	// `BlockOutput.jsxBody` was declared from day one but never reached the emitted file — a block
+	// could render a perfect fragment that landed nowhere.
+	const recipeBody = [
+		recipe.renderBody ? recipe.renderBody({ i18nPrefix: ctx.i18nPrefix, pascal: ctx.pascal }) : `\t\t\t{/* Implement ${ctx.pascal} */}`,
+		...jsxBodies,
+	].join('\n')
 
 	const componentFn = `export function ${ctx.pascal}${propsDestructure} {
 ${hooks.map(h => `\t${h}`).join('\n')}${hooks.length ? '\n' : ''}${jsxBefore}

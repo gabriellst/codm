@@ -12,7 +12,8 @@ export interface Recipe {
 	// When true, `--i18n=<prefix>` is required for this recipe (visible text guaranteed).
 	requiresI18n?: boolean
 	// Render the JSX body inside the root element. Receives the i18n prefix
-	// (only when --i18n is passed) and the block-aggregated jsxBody string.
+	// (only when --i18n is passed). Block-contributed `jsxBody` chunks are appended
+	// after this by the assembler.
 	renderBody?: (args: { i18nPrefix?: string; pascal: string }) => string
 	// Slots the recipe emits beyond what the i18n block defaults to (added to
 	// auto-trigger keys).
