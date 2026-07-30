@@ -303,7 +303,7 @@ Rodados nesta sessão de fechamento, contra HEAD `d0b4bc77` (pós-T9, pré-commi
 | e2e | `cd packages/e2e && bun run test` | **0** | `6 passed / 2 skipped` (14.9s) — `08-stop-resolve.spec.ts` e `09-sse-pill.spec.ts` seguem `test.skip` (mesmos motivos do B4/B5, não tocados por B2); `10-terminal-tool-frame.spec.ts` PASSOU — é o caso que assevera `mcp__codedm__TransitionIssueStatus` e `mcp__codedm__RecordArtifact`, os dois nomes de wire que o snapshot do T6 também lista |
 | react tsc | `cd packages/app/react && bun x tsc --noEmit` | **0** | limpo, sem output |
 | react test | `cd packages/app/react && bun test` | **0** | `32 pass / 0 fail`, 61 expect() calls, 32 testes em 6 arquivos |
-| check:generated (pós-commit) | `bun check:generated` | ver nota | Rodado DEPOIS do commit deste artefato, conforme a ordem que o próprio T10 prescreve — saída registrada em §(d-bônus) abaixo, adicionada por edição após o commit |
+| check:generated (pós-commit) | `bun check:generated` | **0** | Rodado DEPOIS do commit `3e757cea`, conforme a ordem que o próprio T10 prescreve. `✓ generated output in sync (contracts bindings, SDK dist, openapi.json)`. O regen imprime as 3 superfícies MCP com a contagem exata do snapshot dourado do T6: `'issue-handling': 6 tools`, `'orchestration': 5 tools`, `'system': 23 tools` (6/5/23). `git status` confirma zero drift pós-regen — nenhum arquivo gerado mudou |
 
 Bônus (não pedidos explicitamente na lista, rodados por completude — mesmo padrão do artefato do B4):
 
