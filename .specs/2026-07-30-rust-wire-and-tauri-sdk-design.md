@@ -631,6 +631,16 @@ proíbe `pub enum <NomeDeEnumDeContrato>`.
 >    kubb/oapi-codegen seguem consumindo `default`; o preprocess compartilhado não muda.
 > 3. `regress = "0.10"` é dep obrigatória do dist: progenitor emite `::regress::Regex` para
 >    strings com `pattern` (o spec do daemon TS tem).
+> 4. **`const` → `enum` de 1 valor (defeito real, provado e corrigido em 2026-07-30):** a
+>    convenção da casa pina discriminadores com `const` — keyword 3.1 que o parser
+>    `openapiv3` (3.0) do progenitor DESCARTA em silêncio. Sem os pins, os braços do oneOf
+>    do `ChannelMessageReceivedPayload` degradavam para `String` e o untagged casava por
+>    ESTRUTURA: IMAGE+content parseava como `WhatsappContact`, IMAGE sem content e
+>    INTERNAL TEXT caíam no primeiro braço (`WhatsappText`). O transform
+>    `constToSingleEnum` (rust-local) reescreve `const: X` → `enum: [X]` (3.0-legal,
+>    idêntico semanticamente) e o typify volta a gerar o enum de 1 valor que discrimina.
+>    Rail permanente: `dist/rust/tests/message_received_union.rs` (4 regressões +
+>    forward-compat via `Slot`).
 
 ### F5 — Suíte vermelha + testes extensivos (corrige §2.4 e entrega §4)
 
