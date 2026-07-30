@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetIssuesOverview, GetIssuesOverviewOutputSchema } from '../usecases/GetIssuesOverview'
 
@@ -19,6 +20,8 @@ export class GetIssuesOverviewController extends Controller<
 	typeof GetIssuesOverviewControllerInputSchema,
 	typeof GetIssuesOverviewControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/issues'
 	readonly method = 'get' as const
 	readonly description = 'All issues across every thread, grouped by status (T04)'

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { DeclareStop, DeclareStopInputSchema, DeclareStopOutputSchema } from '../usecases/DeclareStop'
 
@@ -30,6 +30,8 @@ export const RaiseStopControllerOutputSchema = DeclareStopOutputSchema.example([
  */
 @injectable()
 export class RaiseStopController extends Controller<typeof RaiseStopControllerInputSchema, typeof RaiseStopControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING, McpScope.orchestration]
 	readonly path = '/threads/:threadId/issues/:issueId/stops'
 	readonly method = 'post' as const
 	readonly description = 'Declare that the agent is blocked and needs the human (approval, classification, …)'

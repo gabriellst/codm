@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetThreadSettings, GetThreadSettingsOutputSchema } from '../usecases/GetThreadSettings'
 import { ThreadParam } from '../schemas'
@@ -15,6 +16,8 @@ export class GetThreadSettingsController extends Controller<
 	typeof GetThreadSettingsControllerInputSchema,
 	typeof GetThreadSettingsControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/threads/:threadId/settings'
 	readonly method = 'get' as const
 	readonly description = 'Per-thread behavior: mention gate, participants + invocation, buffer size (T10)'

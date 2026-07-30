@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetMyAccount, GetMyAccountOutputSchema } from '../usecases/GetMyAccount'
 
@@ -26,6 +27,8 @@ export class GetMyAccountController extends Controller<
 	typeof GetMyAccountControllerInputSchema,
 	typeof GetMyAccountControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/ui/account'
 	readonly method = 'get' as const
 	readonly description = 'Account settings read'

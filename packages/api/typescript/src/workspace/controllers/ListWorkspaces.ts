@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ListWorkspaces, ListWorkspacesOutputSchema } from '../usecases/ListWorkspaces'
 
@@ -16,6 +17,8 @@ export class ListWorkspacesController extends Controller<
 	typeof ListWorkspacesControllerInputSchema,
 	typeof ListWorkspacesControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/workspaces'
 	readonly method = 'get' as const
 	readonly description = 'List registered workspaces with badges and thread counts (T07)'

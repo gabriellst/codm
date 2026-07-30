@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { ContactKind, MailboxItemKind } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
-import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
+import { toolNameOf, ForkIssueController } from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'
 
 /**
@@ -84,15 +84,20 @@ describe('OrchestratorPromptBuilder', () => {
 	})
 
 	/**
-	 * THE FALSIFIER FOR (d): replace `TOOLS_IN_SCOPE.orchestration[0]` in `prompt.ts` with a string
-	 * literal and this goes red. The rule it protects is the house one — a tool name is read from the
-	 * manifest so a rename follows the symbol and the scope cannot drift from the sentence naming it.
+	 * THE FALSIFIER FOR (d): replace `toolNameOf(ForkIssueController)` in `prompt.ts` with a string
+	 * literal and this goes red. The rule it protects is the house one — a tool name is DERIVED from
+	 * the controller class so a rename follows the symbol and the class cannot drift from the sentence
+	 * naming it.
+	 *
+	 * It names the controller NOMINALLY rather than taking `[0]` off a scope list: the predecessor list
+	 * was hand-ordered, the scan orders alphabetically, and a positional read would have changed
+	 * meaning SILENTLY.
 	 */
-	it('(d) the tool name comes from the manifest, not from a literal', () => {
-		const [createIssue] = TOOLS_IN_SCOPE.orchestration
+	it('(d) the tool name is derived from the controller class, not from a literal', () => {
+		const createIssue = toolNameOf(ForkIssueController)
 
 		expect(createIssue).toBeDefined()
-		expect(builder.system(operatorTurn())).toContain(createIssue as string)
+		expect(builder.system(operatorTurn())).toContain(createIssue)
 	})
 
 	/**

@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import {
 	ConfigureMentionGate,
@@ -25,6 +26,8 @@ export class ConfigureMentionGateController extends Controller<
 	typeof ConfigureMentionGateControllerInputSchema,
 	typeof ConfigureMentionGateControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/threads/:threadId/mention-gate'
 	readonly method = 'put' as const
 	readonly description = 'Configure the mention gate (respond only when a @tag is written) (C12)'

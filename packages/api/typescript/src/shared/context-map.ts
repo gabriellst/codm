@@ -1,11 +1,11 @@
 import type { ContextModule } from './contexts'
 
 /**
- * Why the MCP manifest imports another context's controllers — written once and cited by both the
+ * Why the MCP exposure scan imports another context's controllers — written once and cited by both the
  * declared edges and the named policy exceptions below, so the two can never drift apart.
  */
-const NOTE_MCP_MANIFEST =
-	"The MCP manifest (agent/mcp/manifest.ts) names the CONTROLLER CLASSES this context exposes as MCP tools. It is a DECLARATION, not a call: nothing is constructed, nothing is invoked, no state crosses. The founder decision behind it is that a controller is an HTTP door and who consumes it is not its business, so the audience is declared in one reviewable screen instead of a flag scattered over 40 controllers — and it is TYPED by class rather than by operationId string so a rename follows and a deletion breaks the build. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case."
+const NOTE_MCP_EXPOSURE =
+	"The MCP exposure scan (agent/mcp/exposure.ts) imports each context's `controllers/index.ts` BARREL in order to READ each class's `static mcpScopes` — discovery, not declaration. Nothing is constructed, nothing is invoked, no state crosses; the association scope↔controller lives on the controller itself, which is the founder amendment this replaced the manifest with. The barrel is the whole set because WIRE-03 already requires every Controller subclass to be exported from it. It is confined to ONE file so a prompt builder never has to import another context's barrel to name a tool. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case."
 
 /**
  * CONTEXT MAP — the DECLARED (intent-first) map of who may depend on whom, and the global policy of
@@ -35,10 +35,10 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 		},
 	},
 	agent: {
-		artifact: { note: NOTE_MCP_MANIFEST },
-		issue: { note: NOTE_MCP_MANIFEST },
-		ui: { note: NOTE_MCP_MANIFEST },
-		owner: { note: NOTE_MCP_MANIFEST },
+		artifact: { note: NOTE_MCP_EXPOSURE },
+		issue: { note: NOTE_MCP_EXPOSURE },
+		ui: { note: NOTE_MCP_EXPOSURE },
+		owner: { note: NOTE_MCP_EXPOSURE },
 		thread: {
 			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).",
 		},
@@ -138,10 +138,11 @@ export const AMBIENT: Partial<Record<ContextModule, readonly string[] | '*'>> = 
 export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: string }[] = [
 	// GOAL-agent-abstraction Fase 6, AC-6.11(e) — the LADDER, descended in order and stopped at the
 	// first rung that passed:
-	//   degrau 1 (compose from a BOOTSTRAP_FILE) — NOT APPLICABLE. The manifest is not a composition
-	//     root: it is a typed declaration the OPENAPI EMITTER reads at module load, and moving it into
-	//     `routers.ts` would put a security-relevant allowlist inside a file whose job is wiring, where
-	//     no reviewer looks for it.
+	//   degrau 1 (compose from a BOOTSTRAP_FILE) — NOT APPLICABLE. The scan is not a composition root:
+	//     it is a pure read of each controller class's own `static mcpScopes`, and moving it into
+	//     `routers.ts` would put a security-relevant scan inside a file whose job is wiring, where no
+	//     reviewer looks for it — and would put a barrel import cycle between `routers.ts` and the
+	//     agents that need their `--allowedTools` before any HTTP exists.
 	//   degrau 2 (declared edge + NAMED per-file exception) — TAKEN. Four edges in CONTEXT_MAP plus the
 	//     six entries below, per-file and liveness-gated. Preferred over widening
 	//     CROSS_CONTEXT_POLICY.allowed with 'controllers', which would license EVERY context to import
@@ -152,9 +153,9 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 	// No cycle is created: `artifact`, `issue`, `ui`, `owner` and `workspace` do not depend on `agent`
 	// except for the already-annotated `agent ↔ thread` partnership.
 	...(['artifact', 'issue', 'thread', 'ui', 'workspace', 'owner'] as const).map(context => ({
-		file: 'agent/mcp/manifest.ts',
+		file: 'agent/mcp/exposure.ts',
 		imports: `${context}/controllers`,
-		why: NOTE_MCP_MANIFEST,
+		why: NOTE_MCP_EXPOSURE,
 	})),
 ]
 
@@ -165,7 +166,7 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 export const ANNOTATED_CYCLES: readonly { between: readonly [ContextModule, ContextModule]; why: string }[] = [
 	{
 		between: ['agent', 'ui'],
-		why: "ASYMMETRIC BY NATURE, and only one half is a runtime dependency. ui → agent is real code calling real code: the BFF Settings/AttachWizard queries resolve provider availability through ProviderDetector. agent → ui is the MCP manifest NAMING ui's read controllers as `system`-scope tools — a DECLARATION evaluated once at module load, which constructs nothing and calls nothing. Breaking it would mean either moving the allowlist into a wiring file where no reviewer looks for it, or dropping the console's own read surface from the scope an external MCP client uses to navigate the system, which is the scope's entire purpose. Recorded rather than hidden: if the manifest ever starts INVOKING a ui controller, this annotation stops being true and the edge must be re-argued.",
+		why: "ASYMMETRIC BY NATURE, and only one half is a runtime dependency. ui → agent is real code calling real code: the BFF Settings/AttachWizard queries resolve provider availability through ProviderDetector. agent → ui is the MCP exposure scan READING the `static mcpScopes` of the classes ui's barrel exports — a static-metadata read evaluated once at module load, which constructs nothing and calls nothing. Breaking it would mean either moving the scan into a wiring file where no reviewer looks for it, or dropping the console's own read surface from the scope an external MCP client uses to navigate the system, which is the scope's entire purpose. Recorded rather than hidden: if the scan ever starts INVOKING a ui controller, this annotation stops being true and the edge must be re-argued.",
 	},
 	{
 		between: ['agent', 'thread'],

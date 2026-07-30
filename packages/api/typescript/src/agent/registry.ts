@@ -15,10 +15,6 @@ import {
 	MockAgentSessionRepository,
 	MockMailboxRepository,
 } from './repositories'
-// Side-effect: publishes the MCP manifest to the core registry the OpenAPI emitter reads. It has to
-// happen before `generateSpecification()`, which the composition root guarantees by importing every
-// context router first — the same ordering `x-error-codes` already relies on.
-import './mcp/register'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the `real`

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { OpenIssuesReader } from '@thread/services'
 import { RunTokenMiddleware } from '../middlewares'
@@ -36,9 +36,9 @@ export const SteerIssueTurnControllerInputSchema = z
 		},
 	])
 
-export const SteerIssueTurnControllerOutputSchema = z.object({ issueId: z.uuid(), queued: z.boolean() }).example([
-	{ issueId: '019e4d24-6524-7041-9e1c-8108180cddaf', queued: true },
-])
+export const SteerIssueTurnControllerOutputSchema = z
+	.object({ issueId: z.uuid(), queued: z.boolean() })
+	.example([{ issueId: '019e4d24-6524-7041-9e1c-8108180cddaf', queued: true }])
 
 /**
  * `SteerIssueTurn` — the orchestrator redirects work already in flight (D7, §7.7).
@@ -60,6 +60,8 @@ export class SteerIssueTurnController extends Controller<
 	typeof SteerIssueTurnControllerInputSchema,
 	typeof SteerIssueTurnControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/issues/:issueId/steer'
 	readonly method = 'post' as const
 	readonly description = 'Redirect an issue that is already being worked, mid-flight'

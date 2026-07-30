@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { RemoveWorkspace } from '../usecases/RemoveWorkspace'
 
@@ -17,6 +18,8 @@ export class RemoveWorkspaceController extends Controller<
 	typeof RemoveWorkspaceControllerInputSchema,
 	typeof RemoveWorkspaceControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/workspaces/:workspaceId'
 	readonly method = 'delete' as const
 	readonly description = 'Remove a registered workspace (refused while an issue is WORKING on it)'

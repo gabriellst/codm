@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { EnableOwner, EnableOwnerOutputSchema } from '../usecases/EnableOwner'
 
@@ -22,6 +23,8 @@ export const EnableOwnerControllerOutputSchema = EnableOwnerOutputSchema.example
 
 @injectable()
 export class EnableOwnerController extends Controller<typeof EnableOwnerControllerInputSchema, typeof EnableOwnerControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/owners/enable'
 	readonly method = 'post' as const
 	readonly description = 'Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)'

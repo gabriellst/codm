@@ -94,8 +94,8 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * WHICH declared scope this agent's `tools` came from — the MCP endpoint it is pointed at.
 	 *
 	 * Undefined means NO tools, and the two must agree: `tools` is always the derived expansion
-	 * `TOOLS_IN_SCOPE[mcpScope]`, never a hand-written list (AC-6.5's falsifier adds a seventh entry to
-	 * the manifest and requires the argv to change with no edit to a runner or a test). Keeping the
+	 * `toolsInScope(mcpScope)`, never a hand-written list (AC-6.5's falsifier declares the scope on a
+	 * seventh controller and requires the argv to change with no edit to a runner or a test). Keeping the
 	 * scope NAME rather than only the expansion is what lets the base build the endpoint URL without a
 	 * second mapping table.
 	 */

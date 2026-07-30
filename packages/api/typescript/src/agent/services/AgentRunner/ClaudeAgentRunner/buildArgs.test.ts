@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
-// Tool names come from the MANIFEST, never typed as literals: the whole point of AC-6.17 is that the
-// Fase-1 tool-name spellings are unreachable under generated tools, and a literal here would be the
-// second source of truth this phase deletes.
-import { wireToolName } from '../../../mcp/manifest'
+// Tool names are DERIVED, never typed as literals: the whole point of AC-6.17 is that the Fase-1
+// tool-name spellings are unreachable under generated tools, and a literal here would be the second
+// source of truth this phase deletes. The spelling has always been owned by `mcp/wire.ts`; the
+// manifest only re-exported it.
+import { wireToolName } from '../../../mcp/wire'
 import type { AgentToolName } from '../../../enums'
 import type { AgentMcpInvocation } from '../../../types'
 import { ClaudeAgentRunner, type ClaudeBuildArgsOptions } from './ClaudeAgentRunner'
@@ -31,7 +32,9 @@ const opts = (overrides: Partial<ClaudeBuildArgsOptions> = {}): ClaudeBuildArgsO
 	...overrides,
 })
 
-const mcp = (allowedTools: readonly AgentToolName[] = [wireToolName('TransitionIssueStatus'), wireToolName('RaiseStop')]): AgentMcpInvocation => ({
+const mcp = (
+	allowedTools: readonly AgentToolName[] = [wireToolName('TransitionIssueStatus'), wireToolName('RaiseStop')],
+): AgentMcpInvocation => ({
 	transport: 'http',
 	endpoint: 'http://127.0.0.1:3030/mcp',
 	token: 'run-token-opaque',

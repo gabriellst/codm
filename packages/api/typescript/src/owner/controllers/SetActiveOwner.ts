@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { SetActiveOwner, SetActiveOwnerOutputSchema } from '../usecases/SetActiveOwner'
 
@@ -32,6 +33,8 @@ export class SetActiveOwnerController extends Controller<
 	typeof SetActiveOwnerControllerInputSchema,
 	typeof SetActiveOwnerControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/owners/:ownerId/activate'
 	readonly method = 'post' as const
 	readonly description = 'Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)'

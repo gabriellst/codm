@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStatus, McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { IssueRepository } from '../repositories/IssueRepository'
 import type { IssueApplicationErrors } from '../errors'
@@ -60,6 +60,8 @@ export class GetIssueStatusController extends Controller<
 	typeof GetIssueStatusControllerInputSchema,
 	typeof GetIssueStatusControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/issues/:issueId/status'
 	readonly method = 'get' as const
 	readonly description = 'Status of one issue of this thread'

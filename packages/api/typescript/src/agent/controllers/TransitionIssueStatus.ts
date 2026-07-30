@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStatus, McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { DeclareIssueComplete, DeclareIssueCompleteInputSchema, DeclareIssueCompleteOutputSchema } from '../usecases/DeclareIssueComplete'
 
@@ -36,6 +36,8 @@ export class TransitionIssueStatusController extends Controller<
 	typeof TransitionIssueStatusControllerInputSchema,
 	typeof TransitionIssueStatusControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING]
 	readonly path = '/threads/:threadId/issues/:issueId/status'
 	readonly method = 'post' as const
 	readonly description = 'Declare the lifecycle status of an issue (done / needs input)'

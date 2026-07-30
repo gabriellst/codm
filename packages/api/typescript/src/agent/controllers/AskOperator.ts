@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { AskOperator, AskOperatorInputSchema, AskOperatorOutputSchema } from '../usecases/AskOperator'
 
@@ -35,6 +36,8 @@ export const AskOperatorControllerOutputSchema = AskOperatorOutputSchema.example
  */
 @injectable()
 export class AskOperatorController extends Controller<typeof AskOperatorControllerInputSchema, typeof AskOperatorControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING]
 	readonly path = '/threads/:threadId/issues/:issueId/operator-questions'
 	readonly method = 'post' as const
 	readonly description = 'Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)'

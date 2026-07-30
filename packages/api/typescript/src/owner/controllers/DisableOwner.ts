@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { DisableOwner, DisableOwnerInputSchema, DisableOwnerOutputSchema } from '../usecases/DisableOwner'
 
@@ -28,6 +29,8 @@ export class DisableOwnerController extends Controller<
 	typeof DisableOwnerControllerInputSchema,
 	typeof DisableOwnerControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/owners/disable'
 	readonly method = 'post' as const
 	readonly description = 'Disable a owner (C19 DisableOwner; OWNER only)'

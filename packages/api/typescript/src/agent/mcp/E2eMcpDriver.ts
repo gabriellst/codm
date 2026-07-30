@@ -8,8 +8,7 @@ import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentMcpInvocation } from '../types/AgentMcpInvocation'
 import type { AgentApplicationErrors } from '../errors'
 import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
-import { ISSUE_HANDLING_OPERATION, operationIdOf } from './manifest'
-import { ForkIssueController } from '../controllers/ForkIssue'
+import { operationIdOf, ForkIssueController, RecordArtifactController, TransitionIssueStatusController } from './exposure'
 
 /** One tool call the driver actually made — enough for the caller to render a frame pair. */
 export interface DeclaredToolCall {
@@ -104,7 +103,7 @@ export class E2eMcpDriver {
 	async declareIssueWorkComplete(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
 		return this.call(mcp, identity => [
 			{
-				tool: ISSUE_HANDLING_OPERATION.recordArtifact,
+				tool: operationIdOf(RecordArtifactController),
 				// NO `issueId`: the use case validates the issue EXISTS when one is supplied, and the issue
 				// is materialized asynchronously. Naming the thread only is sufficient and race-free.
 				input: {
@@ -114,7 +113,7 @@ export class E2eMcpDriver {
 				summary: 'artifact recorded',
 			},
 			{
-				tool: ISSUE_HANDLING_OPERATION.transitionIssueStatus,
+				tool: operationIdOf(TransitionIssueStatusController),
 				input: {
 					threadId: identity.threadId,
 					issueId: identity.issueId,

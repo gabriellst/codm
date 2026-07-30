@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { ContactKind, MailboxItemKind } from '@codedm/contracts-typescript/wire/enums'
 import type Z from 'zod'
-import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
+import { toolNameOf, ForkIssueController } from '../../mcp/exposure'
 import { AgentRunOutcome } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import type { OrchestratorInputSchema } from './types'
@@ -173,11 +173,13 @@ export class OrchestratorPromptBuilder {
 	 * rather than kept "just in case": a dead branch in the voice of the product is a sentence nobody
 	 * will ever read and everybody will keep maintaining.
 	 *
-	 * The tool NAME is still read from the manifest and never typed out — a rename follows the symbol,
-	 * and the scope and the sentence naming it cannot drift apart.
+	 * The tool NAME is still DERIVED and never typed out — a rename follows the symbol, and the class
+	 * and the sentence naming it cannot drift apart. It is named NOMINALLY (`toolNameOf(<class>)`)
+	 * rather than taken positionally off a scope list: the list used to be hand-ordered, the scan
+	 * orders alphabetically, and `[0]` would have changed meaning SILENTLY.
 	 */
 	private issues(): string[] {
-		const [createIssue] = TOOLS_IN_SCOPE.orchestration
+		const createIssue = toolNameOf(ForkIssueController)
 		return [
 			'ISSUES',
 			'Work that changes code happens in an issue, and an issue runs elsewhere while you keep talking.',

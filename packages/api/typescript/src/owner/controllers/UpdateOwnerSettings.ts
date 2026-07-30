@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { UpdateOwnerSettings, UpdateOwnerSettingsInputSchema } from '../usecases/UpdateOwnerSettings'
 
@@ -29,6 +30,8 @@ export class UpdateOwnerSettingsController extends Controller<
 	typeof UpdateOwnerSettingsControllerInputSchema,
 	typeof UpdateOwnerSettingsControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/owners/settings'
 	readonly method = 'patch' as const
 	readonly description = 'Update owner profile settings (name / picture / timezone)'

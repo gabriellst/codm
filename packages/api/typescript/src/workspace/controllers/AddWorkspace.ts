@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope, WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { AddWorkspace, AddWorkspaceInputSchema, AddWorkspaceOutputSchema } from '../usecases/AddWorkspace'
 
@@ -21,6 +21,8 @@ export class AddWorkspaceController extends Controller<
 	typeof AddWorkspaceControllerInputSchema,
 	typeof AddWorkspaceControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/workspaces'
 	readonly method = 'post' as const
 	readonly description = 'Register a local project folder; auto-detects git / Claude-project badges'

@@ -1,6 +1,12 @@
 import { injectable } from 'tsyringe-neo'
 import type Z from 'zod'
-import { ISSUE_HANDLING_OPERATION } from '../../mcp/manifest'
+import {
+	operationIdOf,
+	TransitionIssueStatusController,
+	RaiseStopController,
+	AskOperatorController,
+	RecordArtifactController,
+} from '../../mcp/exposure'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import type { IssueWorkInputSchema } from './types'
 
@@ -42,8 +48,8 @@ export class IssueWorkPromptBuilder {
 	}
 
 	/**
-	 * How this turn REPORTS what happened. Tool names are read from the manifest, never typed out: the
-	 * scope and the sentence that names it cannot drift apart, and a rename follows the symbol.
+	 * How this turn REPORTS what happened. Tool names are DERIVED from the controller class, never typed
+	 * out: the sentence naming a tool cannot drift from it, and a rename follows the symbol.
 	 *
 	 * `issueId` is optional on the envelope because the CLASSIFIER runs before an issue exists. It is
 	 * always present by the time this agent runs — the base `Agent` refuses to mint a run token without
@@ -54,10 +60,10 @@ export class IssueWorkPromptBuilder {
 		if (!input.issueId) return []
 		return [
 			'HOW TO REPORT THE RESULT — do not just describe it in prose, DECLARE it:',
-			`  · finished → call the ${ISSUE_HANDLING_OPERATION.transitionIssueStatus} tool with status COMPLETED and a short summary.`,
-			`  · blocked and you need the operator to decide or approve → call the ${ISSUE_HANDLING_OPERATION.raiseStop} tool.`,
-			`  · you need one specific answer to keep going → call the ${ISSUE_HANDLING_OPERATION.askOperator} tool.`,
-			`  · produced a link, image or file worth keeping → call the ${ISSUE_HANDLING_OPERATION.recordArtifact} tool.`,
+			`  · finished → call the ${operationIdOf(TransitionIssueStatusController)} tool with status COMPLETED and a short summary.`,
+			`  · blocked and you need the operator to decide or approve → call the ${operationIdOf(RaiseStopController)} tool.`,
+			`  · you need one specific answer to keep going → call the ${operationIdOf(AskOperatorController)} tool.`,
+			`  · produced a link, image or file worth keeping → call the ${operationIdOf(RecordArtifactController)} tool.`,
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,

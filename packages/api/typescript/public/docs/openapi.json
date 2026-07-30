@@ -1059,7 +1059,8 @@
       "post": {
         "tags": [
           "agent",
-          "mcp:issue-handling"
+          "mcp:issue-handling",
+          "mcp:orchestration"
         ],
         "description": "Declare that the agent is blocked and needs the human (approval, classification, …)",
         "operationId": "RaiseStop",
@@ -1152,7 +1153,8 @@
           }
         },
         "x-mcp-scope": [
-          "issue-handling"
+          "issue-handling",
+          "orchestration"
         ]
       }
     },
@@ -8030,6 +8032,7 @@
       "ForkIssue",
       "GetIssueStatus",
       "GetSessionIssues",
+      "RaiseStop",
       "SteerIssueTurn"
     ],
     "system": [

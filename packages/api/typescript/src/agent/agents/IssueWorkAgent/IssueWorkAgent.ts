@@ -4,7 +4,7 @@ import { AgentIdentityService, z } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
 import { Agent } from '../../types/Agent'
 import { AgentRunIdentitySchema, type AgentRunIdentity } from '../../types/AgentRunIdentity'
-import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
+import { toolsInScope } from '../../mcp/exposure'
 import type { AgentRunRequest } from '../../types'
 import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkInputSchema } from './types'
@@ -29,7 +29,7 @@ import { IssueWorkInputSchema } from './types'
  * resolves it from `AgentRunnerFactory`; the agent itself holds no I/O.
  *
  * ### `tools` is the DERIVED expansion of ONE declared scope (Fase 6)
- * `issue-handling`, read from `mcp/manifest.ts` and never typed out here. The base's template-method
+ * `issue-handling`, expanded by the scan in `mcp/exposure.ts` and never typed out here. The base's template-method
  * `run()` is what turns that scope into an `AgentMcpInvocation` — minting the run token and pointing
  * the CLI at this daemon's MCP door — so the invariant §4.3 rule 7 states holds by construction:
  * `request.mcp` present ⟺ `tools.length > 0`.
@@ -48,8 +48,8 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 	 * written by someone who is not the operator. Handing it those operations would put account
 	 * administration one prompt injection away from a stranger.
 	 *
-	 * `tools` is the DERIVED expansion, never a hand-written list — add a seventh entry to the manifest
-	 * and the argv changes with no edit here (AC-6.5's falsifier).
+	 * `tools` is the DERIVED expansion, never a hand-written list — declare `static mcpScopes` on a
+	 * seventh controller and the argv changes with no edit here (AC-6.5's falsifier).
 	 */
 	/**
 	 * `issueId` is REQUIRED — the security half, stated where the agent lives.
@@ -64,7 +64,7 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 	static override readonly IdentitySchema = AgentRunIdentitySchema.extend({ issueId: z.uuid() })
 
 	override readonly mcpScope = McpScope.ISSUE_HANDLING
-	override readonly tools = TOOLS_IN_SCOPE[McpScope.ISSUE_HANDLING]
+	override readonly tools = toolsInScope(McpScope.ISSUE_HANDLING)
 
 	constructor(
 		identities: AgentIdentityService<AgentRunIdentity>,

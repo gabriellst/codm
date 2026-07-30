@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope, OwnerKind } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { CreateOwner, CreateOwnerInputSchema } from '../usecases/CreateOwner'
 
@@ -32,6 +32,8 @@ export const CreateOwnerControllerOutputSchema = z
 
 @injectable()
 export class CreateOwnerController extends Controller<typeof CreateOwnerControllerInputSchema, typeof CreateOwnerControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/owners'
 	readonly method = 'post' as const
 	readonly description = 'Create a new owner (tenant); the creator becomes the responsible user'

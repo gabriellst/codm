@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetNeedsYouPanel, GetNeedsYouPanelOutputSchema } from '../usecases/GetNeedsYouPanel'
 
@@ -14,6 +15,8 @@ export class GetNeedsYouPanelController extends Controller<
 	typeof GetNeedsYouPanelControllerInputSchema,
 	typeof GetNeedsYouPanelControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/threads/:threadId/needs-you'
 	readonly method = 'get' as const
 	readonly description = 'Active stops on a thread with per-kind resolution actions (T14)'

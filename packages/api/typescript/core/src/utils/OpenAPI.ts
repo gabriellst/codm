@@ -7,8 +7,7 @@ import { join } from 'node:path'
 import { z, type ZodType } from 'zod'
 import { OpenAPIV3 } from 'openapi-types'
 import { AllErrors, GlobalErrorMapper } from './GlobalErrorMapper'
-import { mcpScopeRegistrySnapshot, mcpScopesFor } from './McpScopeRegistry'
-import { operationIdOf } from './McpExposure'
+import { McpExposure, operationIdOf } from './McpExposure'
 import { API_PUBLIC } from './paths'
 
 const SPECIFICATION_OUTPUT_DIR = join(API_PUBLIC, 'docs')
@@ -346,6 +345,14 @@ export class OpenAPI {
 	private readonly registeredZodSchemas = new Map<string, ZodType>()
 
 	/**
+	 * The MCP exposure of THIS emission — built from the routers handed to `generateSpecification` and
+	 * discarded with it. Its predecessor was a module-level `Map` in `utils/McpScopeRegistry.ts`,
+	 * populated by a side-effect import from the api package; the `static mcpScopes` on the controller
+	 * removes the crossing entirely, so there is nothing to register and nothing to order at boot.
+	 */
+	private mcpExposure = McpExposure.fromClasses([])
+
+	/**
 	 * Register enums from all contexts so OpenAPI can name them correctly.
 	 * Uses the same barrel export pattern as controllers/middlewares/use cases.
 	 *
@@ -481,6 +488,8 @@ export class OpenAPI {
 
 	async generateSpecification(routers: Router[]): Promise<void> {
 		this.registerErrorSchemas()
+		// BEFORE the walk: `buildOperation` reads it per operation.
+		this.mcpExposure = McpExposure.fromRouters(routers)
 
 		for (const router of routers) {
 			for (const controller of router.controllers ?? []) {
@@ -507,13 +516,9 @@ export class OpenAPI {
 		// matched nothing would then emit zero tools with a green build, silently degrading the agent
 		// onto the INFERRED path that AC-6.4/AC-6.7 exist to distinguish from the declared one.
 		//
-		// Emitted only when something registered, so a service with no MCP surface stays byte-identical.
-		const mcpByScope = new Map<string, string[]>()
-		for (const [operationId, scopes] of mcpScopeRegistrySnapshot()) {
-			for (const scope of scopes) mcpByScope.set(scope, [...(mcpByScope.get(scope) ?? []), operationId])
-		}
-		if (mcpByScope.size > 0) {
-			const manifest = Object.fromEntries([...mcpByScope].map(([scope, operationIds]) => [scope, operationIds.sort()]))
+		// Emitted only when something declared, so a service with no MCP surface stays byte-identical.
+		const manifest = this.mcpExposure.manifest()
+		if (Object.keys(manifest).length > 0) {
 			;(this.spec as OpenAPIV3.Document & { 'x-mcp-scopes'?: Record<string, string[]> })['x-mcp-scopes'] = manifest
 		}
 
@@ -846,13 +851,13 @@ export class OpenAPI {
 
 	private buildOperation(controller: Controller, router: Router, method: string): OpenAPIV3.OperationObject {
 		const operationId = this.buildOperationId(controller, method)
-		// THE MCP CROSSING (GOAL-agent-abstraction Fase 6). The declaration itself lives in the api
-		// package (`src/agent/mcp/manifest.ts`, typed by controller CLASS); it reaches here through the
-		// same load-time registry seam `x-error-codes` uses, because `core` must not import from `src`.
+		// THE MCP CROSSING. The declaration is the controller's OWN `static mcpScopes` — read here off
+		// the class during the same walk that builds the path, with no registry and no side-effect
+		// module in between.
 		//
 		// Empty for every operation nobody declared — THE DEFAULT IS NOT EXPOSED, and that is the whole
 		// security property: an endpoint born tomorrow is not a model-callable tool tomorrow.
-		const mcpScopes = mcpScopesFor(operationId)
+		const mcpScopes = this.mcpExposure.scopesFor(operationId)
 		return {
 			tags: this.buildTags(router, mcpScopes),
 			description: controller.description,

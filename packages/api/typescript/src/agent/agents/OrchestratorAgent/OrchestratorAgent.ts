@@ -4,7 +4,7 @@ import { AgentIdentityService } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
 import { Agent } from '../../types/Agent'
 import { AgentRunIdentitySchema, type AgentRunIdentity } from '../../types/AgentRunIdentity'
-import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
+import { toolsInScope } from '../../mcp/exposure'
 import type { AgentRunRequest } from '../../types'
 import { OrchestratorPromptBuilder } from './prompt'
 import { OrchestratorInputSchema } from './types'
@@ -53,8 +53,8 @@ export class OrchestratorAgent extends Agent<typeof OrchestratorInputSchema> {
 	static override readonly IdentitySchema = AgentRunIdentitySchema.omit({ issueId: true })
 
 	override readonly mcpScope = McpScope.orchestration
-	/** DERIVED, never hand-written — add a tool to the manifest and the argv follows with no edit here. */
-	override readonly tools = TOOLS_IN_SCOPE[McpScope.orchestration]
+	/** DERIVED, never hand-written — a controller declaring this scope joins the argv with no edit here. */
+	override readonly tools = toolsInScope(McpScope.orchestration)
 
 	constructor(
 		identities: AgentIdentityService<AgentRunIdentity>,

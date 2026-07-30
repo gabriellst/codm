@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { DeclareIssueOpen, DeclareIssueOpenInputSchema, DeclareIssueOpenOutputSchema } from '../usecases/DeclareIssueOpen'
 
@@ -30,11 +30,13 @@ export const CreateIssueControllerOutputSchema = DeclareIssueOpenOutputSchema.ex
  * to say so, and neither did the console.
  *
  * It is an ORDINARY controller: it enters the SDK and the emitted spec like any other. That it is also
- * an MCP tool is declared once, in `agent/mcp/manifest.ts`, and is none of this file's business — the
- * founder decision that keeps "what can a model call?" answerable from one screen.
+ * an MCP tool is declared by its OWN `static mcpScopes` right below — the founder amendment that put
+ * "what can a model call?" in the file a reviewer is already reading, in the idiom `middlewares` uses.
  */
 @injectable()
 export class CreateIssueController extends Controller<typeof CreateIssueControllerInputSchema, typeof CreateIssueControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING]
 	readonly path = '/threads/:threadId/issues'
 	readonly method = 'post' as const
 	readonly description = 'Open a new issue on a thread'

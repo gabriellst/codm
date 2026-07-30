@@ -40,15 +40,27 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { container } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { Config, MainRouter, openapi, Controller, HttpRouter, Middleware, Router, traceClass, OutboxDispatcher } from '@codedm/core-typescript'
+import {
+	Config,
+	MainRouter,
+	openapi,
+	Controller,
+	HttpRouter,
+	Middleware,
+	Router,
+	traceClass,
+	OutboxDispatcher,
+} from '@codedm/core-typescript'
 import { migrateEmbeddedDatabase } from '@shared/registry'
 import { ProviderKind, IssueStatus } from '@codedm/contracts-typescript/wire/enums'
 import { Issue } from '@issue/entities/Issue'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { OPERATOR_ID } from '@auth/operator'
-import { RunTokenService } from '@agent/services/RunTokenService'
+import { AgentIdentityService } from '@codedm/core-typescript'
+import type { AgentRunIdentity } from '@agent/types/AgentRunIdentity'
 import { AgentName } from '@agent/enums'
-import { wireToolName, ISSUE_HANDLING_OPERATION } from '@agent/mcp/manifest'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { wireToolName, operationIdOf, TransitionIssueStatusController } from '@agent/mcp/exposure'
 import { MCP_ROUTE_PREFIX } from '@agent/mcp/route'
 
 const BIN = process.env.CODEDM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
@@ -57,7 +69,7 @@ const RAW_PATH = join(SPEC_DIR, 'raw', 'smoke.jsonl')
 const REPORT_PATH = join(SPEC_DIR, 'raw', 'report.json')
 const TIMEOUT_MS = 240_000
 
-const TOOL_OPERATION = ISSUE_HANDLING_OPERATION.transitionIssueStatus // 'TransitionIssueStatus', derived — never a literal
+const TOOL_OPERATION = operationIdOf(TransitionIssueStatusController) // 'TransitionIssueStatus', derived — never a literal
 const TOOL_WIRE = wireToolName(TOOL_OPERATION) // WIRE(C) = mcp__codedm__TransitionIssueStatus, computed, never typed
 
 interface Report {
@@ -100,7 +112,11 @@ async function main(): Promise<Report> {
 	const { ALL_ROUTERS } = await import('../src/routers')
 	await openapi.generateSpecification(ALL_ROUTERS)
 	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
-	const mainRouter = new MainRouter({ httpRouter: container.resolve(HttpRouter as any) as HttpRouter, version: Config.version, routers: ALL_ROUTERS })
+	const mainRouter = new MainRouter({
+		httpRouter: container.resolve(HttpRouter as any) as HttpRouter,
+		version: Config.version,
+		routers: ALL_ROUTERS,
+	})
 	await mainRouter.start()
 
 	// ── Seed a real Issue directly via the repository (given*-helper pattern, never a use case) ──
@@ -117,15 +133,15 @@ async function main(): Promise<Report> {
 	await issueRepo.save(issue)
 	const issueId = issue.id.value
 
-	// ── Mint a run token — the SAME RunTokenService singleton instance the router verifies against,
-	// because this script and the HTTP listener share one process. ─────────────────────────────
-	const runTokens = container.resolve(RunTokenService)
-	const token = runTokens.mint({
+	// ── Issue a run credential — the SAME AgentIdentityService singleton instance the router resolves
+	// against, because this script and the HTTP listener share one process. ────────────────────
+	const identities = container.resolve<AgentIdentityService<AgentRunIdentity>>(AgentIdentityService)
+	const token = identities.issue({
 		ownerId: OPERATOR_ID,
 		issueId,
 		threadId,
 		agentName: AgentName.ISSUE_WORK,
-		scope: 'issue-handling',
+		scope: McpScope.ISSUE_HANDLING,
 		expiresAt: new Date(Date.now() + 60 * 60 * 1000),
 	})
 
@@ -180,7 +196,13 @@ async function main(): Promise<Report> {
 
 	try {
 		const { exitCode, signal } = await new Promise<{ exitCode: number | null; signal: string | null }>((resolve, reject) => {
-			const child = spawn(BIN, args, { cwd, env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'], shell: false, detached: process.platform !== 'win32' })
+			const child = spawn(BIN, args, {
+				cwd,
+				env: childEnv(),
+				stdio: ['pipe', 'pipe', 'pipe'],
+				shell: false,
+				detached: process.platform !== 'win32',
+			})
 
 			child.on('error', reject)
 
@@ -273,7 +295,8 @@ async function main(): Promise<Report> {
 	}
 	report.issueStatusAfter = after?.status
 
-	report.verdict = report.measuredToolNames.includes(TOOL_WIRE) && report.issueStatusAfter === IssueStatus.COMPLETED ? 'OK' : 'ATTEMPT-FAILED'
+	report.verdict =
+		report.measuredToolNames.includes(TOOL_WIRE) && report.issueStatusAfter === IssueStatus.COMPLETED ? 'OK' : 'ATTEMPT-FAILED'
 
 	await mainRouter.stop()
 	return report

@@ -16,8 +16,8 @@
  * class of defect this phase exists to eliminate.
  *
  * So the name is now DERIVED. There is no list here to keep in step with anything: a tool name is
- * whatever the emitter derived from a controller class in `mcp/manifest.ts`, and the manifest is the
- * single place a scope is declared.
+ * whatever the emitter derived from the controller class, and that class's own `static mcpScopes` is
+ * the single place its scope is declared.
  *
  * THE AC-1.6 INVARIANT DID NOT DIE — IT CHANGED CARRIER, and that transfer is the design amendment's
  * conscious regression, recorded here because this is where AC-1.6 is read. It used to be "no tool

@@ -6,7 +6,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { AgentIdentityService } from '@codedm/core-typescript'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
-import { MCP_SCOPE_NAMES, type McpScope } from './manifest'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { assertIdentityMatches } from './identity'
 import type { AgentInterfaceErrors } from '../errors'
 
@@ -121,12 +121,12 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 	}
 
 	/**
-	 * A scope that is not in the manifest is not a typo to be guessed at — it is a request for a tool
-	 * surface that was never declared, and answering it with the wrong scope's tools would be exactly
-	 * the accidental exposure the allowlist exists to prevent.
+	 * A scope that is not in the declared vocabulary is not a typo to be guessed at — it is a request
+	 * for a tool surface that was never declared, and answering it with the wrong scope's tools would
+	 * be exactly the accidental exposure the allowlist exists to prevent.
 	 */
 	private resolveScope(candidate: string): McpScope {
-		const scope = MCP_SCOPE_NAMES.find(name => name === candidate)
+		const scope = Object.values(McpScope).find(name => name === candidate)
 		if (!scope) throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', `unknown MCP scope '${candidate}'`)
 		return scope
 	}
@@ -246,8 +246,8 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
  * cannot take. This is the SAME lesson as AC-6.16's extensionless-import defect, one layer out —
  * "it loads under the test runner" is not evidence that it loads.
  *
- * A `Record<McpScope, …>` rather than a lookup by string: adding a scope to the manifest breaks THIS
- * FILE at `tsc` until its module is named, which is the only way a bundler-visible list can be kept
+ * A `Record<McpScope, …>` rather than a lookup by string: adding a member to the `McpScope` enum breaks
+ * THIS FILE at `tsc` until its module is named, which is the only way a bundler-visible list can be kept
  * honest. The specifiers are static, so the generated servers are compiled INTO the bundle and no
  * resolution happens at runtime at all.
  * ─────────────────────────────────────────────────────────────────────────────────────────────────

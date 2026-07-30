@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetSettings, GetSettingsOutputSchema } from '../usecases/GetSettings'
 
@@ -10,6 +11,8 @@ export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema
 
 @injectable()
 export class GetSettingsController extends Controller<typeof GetSettingsControllerInputSchema, typeof GetSettingsControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/ui/settings'
 	readonly method = 'get' as const
 	readonly description = 'Settings — providers, stop criteria, general, app version (T08)'

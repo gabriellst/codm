@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ListArtifacts, ListArtifactsOutputSchema } from '../usecases/ListArtifacts'
 
@@ -14,6 +15,8 @@ export class ListArtifactsController extends Controller<
 	typeof ListArtifactsControllerInputSchema,
 	typeof ListArtifactsControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/threads/:threadId/artifacts'
 	readonly method = 'get' as const
 	readonly description = 'The non-code outputs of a thread (T13)'

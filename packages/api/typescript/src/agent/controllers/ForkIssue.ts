@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ThreadRepository } from '@thread/repositories'
 import { RunTokenMiddleware } from '../middlewares'
@@ -68,6 +69,8 @@ export const ForkIssueControllerOutputSchema = ForkIssueOutputSchema.example([
  */
 @injectable()
 export class ForkIssueController extends Controller<typeof ForkIssueControllerInputSchema, typeof ForkIssueControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/issues/fork'
 	readonly method = 'post' as const
 	readonly description = "Fork a new issue out of the conversation, from the operator's own words"

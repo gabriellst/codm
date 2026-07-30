@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
+import { ArtifactKind, McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { RecordArtifact, RecordArtifactInputSchema, RecordArtifactOutputSchema } from '../usecases/RecordArtifact'
 
@@ -29,6 +29,8 @@ export class RecordArtifactController extends Controller<
 	typeof RecordArtifactControllerInputSchema,
 	typeof RecordArtifactControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.ISSUE_HANDLING]
 	readonly path = '/threads/:threadId/artifacts'
 	readonly method = 'post' as const
 	readonly description = 'Record a non-code agent output (image / file / link) (C30)'

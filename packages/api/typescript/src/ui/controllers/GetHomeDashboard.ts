@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetHomeDashboard, GetHomeDashboardOutputSchema } from '../usecases/GetHomeDashboard'
 
@@ -13,6 +14,8 @@ export class GetHomeDashboardController extends Controller<
 	typeof GetHomeDashboardControllerInputSchema,
 	typeof GetHomeDashboardControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/ui/home'
 	readonly method = 'get' as const
 	readonly description = 'Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)'

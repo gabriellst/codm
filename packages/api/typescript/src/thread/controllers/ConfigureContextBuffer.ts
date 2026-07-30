@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode } from '@codedm/core-typescript'
-import { BufferSize } from '@codedm/contracts-typescript/wire/enums'
+import { BufferSize, McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import {
 	ConfigureContextBuffer,
@@ -26,6 +26,8 @@ export class ConfigureContextBufferController extends Controller<
 	typeof ConfigureContextBufferControllerInputSchema,
 	typeof ConfigureContextBufferControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/threads/:threadId/buffer'
 	readonly method = 'put' as const
 	readonly description = 'Set the rolling context-buffer size {25,50,100,200} (C14)'

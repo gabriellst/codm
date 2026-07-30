@@ -35,10 +35,10 @@ interface Plan {
 	 * MCP scope → the operationIds declared under it, read from the ROOT `x-mcp-scopes` extension: the
 	 * MANIFEST AS PUBLISHED. Empty for every service that declares none (today: the Go gateway).
 	 *
-	 * THE SPEC IS THE CROSSING. The declaration is a TYPED MANIFEST in the api package
-	 * (`src/agent/mcp/manifest.ts`, keyed by controller CLASS), and `packages/contracts` cannot import
-	 * from `api/src` — so the manifest reaches Kubb through the emitted spec, written by the same
-	 * emitter seam that already writes `x-error-codes`. There is no second list here: this is a READ.
+	 * THE SPEC IS THE CROSSING. The declaration is each controller class's own `static mcpScopes` in the
+	 * api package, scanned by the emitter, and `packages/contracts` cannot import from `api/src` — so
+	 * the declaration reaches Kubb through the emitted spec, written by the same emitter seam that
+	 * already writes `x-error-codes`. There is no second list here: this is a READ.
 	 *
 	 * It is deliberately NOT the per-operation `x-mcp-scope` stamps. Those are the INPUT to the tag
 	 * filter this file drives; checking the emitted tools against them would be checking the pipeline

@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetSessionIssues, GetSessionIssuesOutputSchema } from '../usecases/GetSessionIssues'
 
@@ -14,6 +15,8 @@ export class GetSessionIssuesController extends Controller<
 	typeof GetSessionIssuesControllerInputSchema,
 	typeof GetSessionIssuesControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.orchestration, McpScope.system]
 	readonly path = '/threads/:threadId/issues'
 	readonly method = 'get' as const
 	readonly description = 'Issues of one thread grouped by status + auto-archive note (T11)'

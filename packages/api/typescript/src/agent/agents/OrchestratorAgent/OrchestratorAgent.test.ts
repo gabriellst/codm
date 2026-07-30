@@ -7,7 +7,7 @@ import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
 import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
-import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
+import { toolsInScope } from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'
 import { OrchestratorAgent } from './OrchestratorAgent'
 
@@ -81,7 +81,7 @@ describe('OrchestratorAgent', () => {
 
 		const mcp = runner.requests[0]?.mcp
 		expect(mcp?.endpoint).toContain('/mcp/orchestration')
-		expect(mcp?.allowedTools).toEqual(TOOLS_IN_SCOPE.orchestration)
+		expect(mcp?.allowedTools).toEqual(toolsInScope(McpScope.orchestration))
 	})
 
 	/**

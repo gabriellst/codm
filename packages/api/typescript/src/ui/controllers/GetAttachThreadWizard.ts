@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetAttachThreadWizard, GetAttachThreadWizardOutputSchema } from '../usecases/GetAttachThreadWizard'
 
@@ -21,6 +22,8 @@ export class GetAttachThreadWizardController extends Controller<
 	typeof GetAttachThreadWizardControllerInputSchema,
 	typeof GetAttachThreadWizardControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/ui/attach-thread-wizard'
 	readonly method = 'get' as const
 	readonly description = 'Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)'

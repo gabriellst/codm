@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetIssueDetail, GetIssueDetailOutputSchema } from '../usecases/GetIssueDetail'
 import { IssueParam } from '../schemas'
@@ -15,6 +16,8 @@ export class GetIssueDetailController extends Controller<
 	typeof GetIssueDetailControllerInputSchema,
 	typeof GetIssueDetailControllerOutputSchema
 > {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.system]
 	readonly path = '/issues/:issueId'
 	readonly method = 'get' as const
 	readonly description = 'One issue drill-down: terminal log, routed messages, stops (T12)'

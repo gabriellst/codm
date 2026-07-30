@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import type { BaseError } from '@codedm/core-typescript'
-import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent, ProviderCapabilities } from '../../types'
@@ -11,7 +11,7 @@ import { IssueWorkAgent } from './IssueWorkAgent'
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
 import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
-import { TOOLS_IN_SCOPE, MCP_SCOPES } from '../../mcp/manifest'
+import { operationIdsInScope, toolsInScope } from '../../mcp/exposure'
 
 /**
  * The BASE's contract, exercised through the agent that has no `outputSchema` (§4.5/AC-5.8).
@@ -88,12 +88,13 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 			// drain
 		}
 
-		// Compared against the DERIVED constant, never against a literal list. A literal here would be
+		// Compared against the DERIVED expansion, never against a literal list. A literal here would be
 		// exactly the second source of truth this phase exists to kill — and the falsifier is cheap:
-		// add a seventh entry to `MCP_SCOPES['issue-handling']` and this assertion follows with no edit.
-		expect(agent.tools).toEqual(TOOLS_IN_SCOPE['issue-handling'])
-		expect(agent.tools).toHaveLength(MCP_SCOPES['issue-handling'].length)
-		expect(runner.requests[0]?.mcp?.allowedTools).toEqual(TOOLS_IN_SCOPE['issue-handling'])
+		// declare `static mcpScopes = [McpScope.ISSUE_HANDLING]` on a seventh controller and this
+		// assertion follows with no edit.
+		expect(agent.tools).toEqual(toolsInScope(McpScope.ISSUE_HANDLING))
+		expect(agent.tools).toHaveLength(operationIdsInScope(McpScope.ISSUE_HANDLING).length)
+		expect(runner.requests[0]?.mcp?.allowedTools).toEqual(toolsInScope(McpScope.ISSUE_HANDLING))
 	})
 
 	it('carries NO operation of the `system` scope — owner/* and workspace/* stay out of reach (AC-6.5(c))', async () => {
@@ -107,7 +108,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		// operator. `system` carries account administration; a single overlapping entry would put it one
 		// prompt injection away from a stranger.
 		const declared = new Set(runner.requests[0]?.mcp?.allowedTools ?? [])
-		for (const systemTool of TOOLS_IN_SCOPE.system) expect(declared.has(systemTool)).toBe(false)
+		for (const systemTool of toolsInScope(McpScope.system)) expect(declared.has(systemTool)).toBe(false)
 	})
 
 	it('the BASE issues the run credential and points the CLI at this scope endpoint — the subclass sets no `mcp`', async () => {

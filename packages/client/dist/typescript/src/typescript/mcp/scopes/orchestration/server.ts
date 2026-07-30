@@ -6,10 +6,12 @@
 import { forkIssueHandler } from "./forkIssue.ts";
 import { getIssueStatusHandler } from "./getIssueStatus.ts";
 import { getSessionIssuesHandler } from "./getSessionIssues.ts";
+import { raiseStopHandler } from "./raiseStop.ts";
 import { steerIssueTurnHandler } from "./steerIssueTurn.ts";
 import { forkIssueMutationRequestSchema, forkIssueMutationResponseSchema } from "../../../zod/forkIssueSchema.ts";
 import { getIssueStatusQueryResponseSchema } from "../../../zod/getIssueStatusSchema.ts";
 import { getSessionIssuesQueryResponseSchema } from "../../../zod/getSessionIssuesSchema.ts";
+import { raiseStopMutationRequestSchema, raiseStopMutationResponseSchema } from "../../../zod/raiseStopSchema.ts";
 import { steerIssueTurnMutationRequestSchema, steerIssueTurnMutationResponseSchema } from "../../../zod/steerIssueTurnSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -36,6 +38,15 @@ server.registerTool("ForkIssue", {
   inputSchema: { threadId: z.string(), data: forkIssueMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return forkIssueHandler({ threadId, data })
+})
+          
+
+server.registerTool("RaiseStop", {
+  description: "Declare that the agent is blocked and needs the human (approval, classification, …)",
+  outputSchema: { data: raiseStopMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: raiseStopMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return raiseStopHandler({ threadId, issueId, data })
 })
           
 
