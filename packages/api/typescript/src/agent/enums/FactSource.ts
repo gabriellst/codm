@@ -12,7 +12,7 @@
  * "how many issues closed by inference?" is a `SELECT` over `shared_events`, not a promise.
  *
  * Context-private (not a contracts enum): it never crosses a service boundary. The bridge to
- * `integration.issue.completed` / `integration.issue.stop_raised` deliberately does NOT forward it.
+ * `integration.issue.completed` / `integration.thread.stop_raised` deliberately does NOT forward it.
  */
 export enum FactSource {
 	DECLARED = 'DECLARED',

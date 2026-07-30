@@ -717,28 +717,6 @@ get "provider"(){
     })
     }), z.object({
     "ownerId": z.string(),
-"name": z.enum(["integration.issue.stop_raised"]),
-"payload": z.object({
-    "stopId": z.string(),
-"issueId": z.string(),
-"threadId": z.string(),
-get "kind"(){
-                return stopKindSchema
-              },
-"detail": z.string()
-    })
-    }), z.object({
-    "ownerId": z.string(),
-"name": z.enum(["integration.issue.stop_resolved"]),
-"payload": z.object({
-    "stopId": z.string(),
-"issueId": z.string(),
-get "resolution"(){
-                return stopResolutionSchema
-              }
-    })
-    }), z.object({
-    "ownerId": z.string(),
 "name": z.enum(["integration.orchestrator.replied"]),
 "payload": z.object({
     "threadId": z.string(),
@@ -760,6 +738,29 @@ get "contactKind"(){
 "workspaceId": z.string(),
 get "providers"(){
                 return z.array(providerKindSchema)
+              }
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.thread.stop_raised"]),
+"payload": z.object({
+    "stopId": z.string(),
+"issueId": z.optional(z.string()),
+"threadId": z.string(),
+get "kind"(){
+                return stopKindSchema
+              },
+"detail": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
+"name": z.enum(["integration.thread.stop_resolved"]),
+"payload": z.object({
+    "stopId": z.string(),
+"issueId": z.optional(z.string()),
+"threadId": z.string(),
+get "resolution"(){
+                return stopResolutionSchema
               }
     })
     }), z.object({

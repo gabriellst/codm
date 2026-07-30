@@ -1,12 +1,7 @@
 import { testId } from '@test/support'
 import { describe, expect, it, mock } from 'bun:test'
 import type { ExternalMediator } from '@codedm/core-typescript'
-import {
-	IssueOpenedEvent,
-	IssueCompletedEvent,
-	IssueStopRaisedEvent,
-	AgentReplyDraftedEvent,
-} from '@codedm/contracts-typescript/wire/events'
+import { IssueOpenedEvent, IssueCompletedEvent, ThreadStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
 import { ProviderKind, StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { PublishAgentIntegrationEvents } from './PublishAgentIntegrationEvents'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
@@ -52,7 +47,6 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		})
 	})
 
-
 	/**
 	 * `source` GOES IN AND DOES NOT COME OUT — the contract-cost claim of §4.3 rule 6, asserted.
 	 *
@@ -86,7 +80,7 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 	 * the "Needs you" card falls back to a generic title. So this test pins the asymmetry in one place —
 	 * `detail` crosses, `source` does not.
 	 */
-	it('agent.run.stop_raised → integration.issue.stop_raised: `detail` crosses, `source` does not', async () => {
+	it('agent.run.stop_raised → integration.thread.stop_raised: `detail` crosses, `source` does not', async () => {
 		const { handler, published } = makeHandler()
 		await handler.handle(
 			new AgentRunStopRaisedEvent({
@@ -102,9 +96,9 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 				},
 			}) as never,
 		)
-		const event = published[0] as IssueStopRaisedEvent
-		expect(event).toBeInstanceOf(IssueStopRaisedEvent)
-		expect(event.name).toBe('integration.issue.stop_raised')
+		const event = published[0] as ThreadStopRaisedEvent
+		expect(event).toBeInstanceOf(ThreadStopRaisedEvent)
+		expect(event.name).toBe('integration.thread.stop_raised')
 		expect(event.payload).toEqual({
 			stopId: 'stop-1',
 			issueId: 'issue-1',

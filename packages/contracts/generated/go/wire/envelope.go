@@ -195,18 +195,6 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 			return nil, err
 		}
 		return v, nil
-	case "integration.issue.stop_raised":
-		var v IssueStopRaisedEvent
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
-	case "integration.issue.stop_resolved":
-		var v IssueStopResolvedEvent
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
 	case "integration.orchestrator.replied":
 		var v OrchestratorRepliedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
@@ -221,6 +209,18 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 		return v, nil
 	case "integration.thread.attached":
 		var v ThreadAttachedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.thread.stop_raised":
+		var v ThreadStopRaisedEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case "integration.thread.stop_resolved":
+		var v ThreadStopResolvedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}
@@ -422,18 +422,6 @@ func UnmarshalPayload(name string, data []byte) (any, error) {
 			return nil, err
 		}
 		return v, nil
-	case IssueStopRaisedEventName:
-		var v IssueStopRaisedPayload
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
-	case IssueStopResolvedEventName:
-		var v IssueStopResolvedPayload
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
 	case OrchestratorRepliedEventName:
 		var v OrchestratorRepliedPayload
 		if err := json.Unmarshal(data, &v); err != nil {
@@ -448,6 +436,18 @@ func UnmarshalPayload(name string, data []byte) (any, error) {
 		return v, nil
 	case ThreadAttachedEventName:
 		var v ThreadAttachedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ThreadStopRaisedEventName:
+		var v ThreadStopRaisedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ThreadStopResolvedEventName:
+		var v ThreadStopResolvedPayload
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}

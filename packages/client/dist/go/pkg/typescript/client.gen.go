@@ -21,6 +21,7 @@ import (
 
 // Defines values for ApiErrors.
 const (
+	AGENTENTRYFORBIDSSENDER         ApiErrors = "AGENT_ENTRY_FORBIDS_SENDER"
 	AGENTRUNSCOPEMISMATCH           ApiErrors = "AGENT_RUN_SCOPE_MISMATCH"
 	AGENTRUNTOKENINVALID            ApiErrors = "AGENT_RUN_TOKEN_INVALID"
 	AGENTTOOLSUNSUPPORTED           ApiErrors = "AGENT_TOOLS_UNSUPPORTED"
@@ -31,6 +32,7 @@ const (
 	CLASSIFICATIONFAILED            ApiErrors = "CLASSIFICATION_FAILED"
 	COMMANDHANDLERNOTFOUND          ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
 	COMMANDQUEUENOTFOUND            ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
+	CONTACTENTRYREQUIRESSENDER      ApiErrors = "CONTACT_ENTRY_REQUIRES_SENDER"
 	CREDENTIALDECRYPTFAILED         ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
 	EMAILALREADYREGISTERED          ApiErrors = "EMAIL_ALREADY_REGISTERED"
 	ENTITYNOTFOUNDWHILESAVING       ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
@@ -76,11 +78,14 @@ const (
 	PATHNOTADIRECTORY               ApiErrors = "PATH_NOT_A_DIRECTORY"
 	PATHNOTFOUND                    ApiErrors = "PATH_NOT_FOUND"
 	PROVIDERNOTDETECTED             ApiErrors = "PROVIDER_NOT_DETECTED"
+	QUOTEDENTRYNOTINTHREAD          ApiErrors = "QUOTED_ENTRY_NOT_IN_THREAD"
 	RATELIMITED                     ApiErrors = "RATE_LIMITED"
 	RESOLUTIONNOTAPPLICABLE         ApiErrors = "RESOLUTION_NOT_APPLICABLE"
 	SESSIONALREADYSTREAMING         ApiErrors = "SESSION_ALREADY_STREAMING"
+	STOPALREADYRESOLVED             ApiErrors = "STOP_ALREADY_RESOLVED"
 	STOPCRITERIONDISABLED           ApiErrors = "STOP_CRITERION_DISABLED"
 	STOPNOTFOUND                    ApiErrors = "STOP_NOT_FOUND"
+	STOPNOTINTHREAD                 ApiErrors = "STOP_NOT_IN_THREAD"
 	TERMINALALREADYRUNNING          ApiErrors = "TERMINAL_ALREADY_RUNNING"
 	TERMINALSPAWNFAILED             ApiErrors = "TERMINAL_SPAWN_FAILED"
 	THREADALREADYATTACHED           ApiErrors = "THREAD_ALREADY_ATTACHED"
@@ -100,6 +105,8 @@ const (
 // Valid indicates whether the value is a known member of the ApiErrors enum.
 func (e ApiErrors) Valid() bool {
 	switch e {
+	case AGENTENTRYFORBIDSSENDER:
+		return true
 	case AGENTRUNSCOPEMISMATCH:
 		return true
 	case AGENTRUNTOKENINVALID:
@@ -119,6 +126,8 @@ func (e ApiErrors) Valid() bool {
 	case COMMANDHANDLERNOTFOUND:
 		return true
 	case COMMANDQUEUENOTFOUND:
+		return true
+	case CONTACTENTRYREQUIRESSENDER:
 		return true
 	case CREDENTIALDECRYPTFAILED:
 		return true
@@ -210,15 +219,21 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case PROVIDERNOTDETECTED:
 		return true
+	case QUOTEDENTRYNOTINTHREAD:
+		return true
 	case RATELIMITED:
 		return true
 	case RESOLUTIONNOTAPPLICABLE:
 		return true
 	case SESSIONALREADYSTREAMING:
 		return true
+	case STOPALREADYRESOLVED:
+		return true
 	case STOPCRITERIONDISABLED:
 		return true
 	case STOPNOTFOUND:
+		return true
+	case STOPNOTINTHREAD:
 		return true
 	case TERMINALALREADYRUNNING:
 		return true
@@ -5798,14 +5813,14 @@ type GetNeedsYouPanelResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Stops []struct {
-			AvailableResolutions []StopResolution   `json:"availableResolutions"`
-			Detail               string             `json:"detail"`
-			IssueId              openapi_types.UUID `json:"issueId"`
-			IssueKey             string             `json:"issueKey"`
-			Kind                 StopKind           `json:"kind"`
-			RaisedAt             string             `json:"raisedAt"`
-			StopId               openapi_types.UUID `json:"stopId"`
-			Title                string             `json:"title"`
+			AvailableResolutions []StopResolution    `json:"availableResolutions"`
+			Detail               string              `json:"detail"`
+			IssueId              *openapi_types.UUID `json:"issueId,omitempty"`
+			IssueKey             *string             `json:"issueKey,omitempty"`
+			Kind                 StopKind            `json:"kind"`
+			RaisedAt             string              `json:"raisedAt"`
+			StopId               openapi_types.UUID  `json:"stopId"`
+			Title                string              `json:"title"`
 		} `json:"stops"`
 	}
 }
@@ -8012,14 +8027,14 @@ func ParseGetNeedsYouPanelResponse(rsp *http.Response) (*GetNeedsYouPanelRespons
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Stops []struct {
-				AvailableResolutions []StopResolution   `json:"availableResolutions"`
-				Detail               string             `json:"detail"`
-				IssueId              openapi_types.UUID `json:"issueId"`
-				IssueKey             string             `json:"issueKey"`
-				Kind                 StopKind           `json:"kind"`
-				RaisedAt             string             `json:"raisedAt"`
-				StopId               openapi_types.UUID `json:"stopId"`
-				Title                string             `json:"title"`
+				AvailableResolutions []StopResolution    `json:"availableResolutions"`
+				Detail               string              `json:"detail"`
+				IssueId              *openapi_types.UUID `json:"issueId,omitempty"`
+				IssueKey             *string             `json:"issueKey,omitempty"`
+				Kind                 StopKind            `json:"kind"`
+				RaisedAt             string              `json:"raisedAt"`
+				StopId               openapi_types.UUID  `json:"stopId"`
+				Title                string              `json:"title"`
 			} `json:"stops"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

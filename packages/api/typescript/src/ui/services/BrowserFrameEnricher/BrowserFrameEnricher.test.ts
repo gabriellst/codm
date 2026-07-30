@@ -4,7 +4,7 @@ import { TestBed, givenThread, givenIssue } from '@test/support'
 import { StopKind, ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
 import {
 	IssueOpenedEvent,
-	IssueStopRaisedEvent,
+	ThreadStopRaisedEvent,
 	IssueCompletedEvent,
 	ChannelMessageReceivedEvent,
 } from '@codedm/contracts-typescript/wire/events'
@@ -41,7 +41,7 @@ describe('BrowserFrameEnricher', () => {
 		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID, threadId: thread.id.value, key: 'coupon-focus' })
 
 		const frames = await testBed.resolve(BrowserFrameEnricher).enrich(
-			new IssueStopRaisedEvent({
+			new ThreadStopRaisedEvent({
 				ownerId: OPERATOR_ID,
 				payload: { stopId: 'stop-1', issueId: issue.id.value, threadId: thread.id.value, kind: StopKind.HUMAN_REQUESTED },
 			}) as never,

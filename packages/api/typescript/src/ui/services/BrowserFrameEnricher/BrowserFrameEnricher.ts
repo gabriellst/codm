@@ -7,8 +7,8 @@ import { IssueStatus, StopKind, ThreadStatus } from '@codedm/contracts-typescrip
 import {
 	IssueOpenedEvent,
 	IssueCompletedEvent,
-	IssueStopRaisedEvent,
-	IssueStopResolvedEvent,
+	ThreadStopRaisedEvent,
+	ThreadStopResolvedEvent,
 	ChannelMessageReceivedEvent,
 } from '@codedm/contracts-typescript/wire/events'
 import { deriveThreadStatus } from '@shared/services'
@@ -71,11 +71,11 @@ export type BrowserFrame = ThreadStatusChangedFrame | StopRaisedFrame | ThreadMe
  * to neither). The broadcaster keeps its raw-envelope re-emit for everything else.
  *
  * Synthesis map (needs-you + live status, denormalized with display fields the raw envelope lacks):
- *   integration.issue.stop_raised        → browser.stop_raised (threadDisplayName + issueKey) AND
+ *   integration.thread.stop_raised       → browser.stop_raised (threadDisplayName + issueKey) AND
  *                                           browser.thread_status_changed(NEEDS_ATTENTION)  [needs-you]
  *   integration.issue.opened             → browser.thread_status_changed(RUNNING)           [agent live]
  *   integration.issue.completed          → browser.thread_status_changed(recomputed)
- *   integration.issue.stop_resolved      → browser.thread_status_changed(recomputed)    [needs-you cleared]
+ *   integration.thread.stop_resolved     → browser.thread_status_changed(recomputed)    [needs-you cleared]
  *   integration.channel_message.received → browser.thread_message_ingested               [the thread JOIN]
  *
  * A fact is enriched here — rather than left for the browser to consume raw — for exactly one reason:
@@ -110,7 +110,7 @@ export class BrowserFrameEnricher {
 		// answer to, and it is read from the contract class (never typed as a literal) so a renamed event
 		// is a compile error rather than a branch that stops firing.
 		switch (event.name) {
-			case IssueStopRaisedEvent.name: {
+			case ThreadStopRaisedEvent.name: {
 				const { threadId, issueId, kind } = this.payload<{ threadId: string; issueId: string; kind: StopKind }>(event)
 				const [displayName, issueKey, agentsRunningNow] = await Promise.all([
 					this.threadDisplayName(threadId),
@@ -135,7 +135,7 @@ export class BrowserFrameEnricher {
 				return [await this.statusFrame(ownerId, threadId, { excludeIssueId: issueId })]
 			}
 
-			case IssueStopResolvedEvent.name: {
+			case ThreadStopResolvedEvent.name: {
 				const { issueId, stopId } = this.payload<{ issueId: string; stopId: string }>(event)
 				const threadId = await this.threadIdForIssue(issueId)
 				if (!threadId) return []

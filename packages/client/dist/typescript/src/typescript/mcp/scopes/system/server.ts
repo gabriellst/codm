@@ -156,6 +156,15 @@ server.registerTool("ConfigureMentionGate", {
 })
           
 
+server.registerTool("GetNeedsYouPanel", {
+  description: "Active stops on a thread with per-kind resolution actions (T14)",
+  outputSchema: { data: getNeedsYouPanelQueryResponseSchema },
+  inputSchema: { threadId: z.string() },
+}, async ({ threadId }) => {
+  return getNeedsYouPanelHandler({ threadId })
+})
+          
+
 server.registerTool("GetSessionChat", {
   description: "Full thread conversation + control-plane state + active stops (T09)",
   outputSchema: { data: getSessionChatQueryResponseSchema },
@@ -189,15 +198,6 @@ server.registerTool("GetIssuesOverview", {
   inputSchema: { params: getIssuesOverviewQueryParamsSchema },
 }, async ({ params }) => {
   return getIssuesOverviewHandler({ params })
-})
-          
-
-server.registerTool("GetNeedsYouPanel", {
-  description: "Active stops on a thread with per-kind resolution actions (T14)",
-  outputSchema: { data: getNeedsYouPanelQueryResponseSchema },
-  inputSchema: { threadId: z.string() },
-}, async ({ threadId }) => {
-  return getNeedsYouPanelHandler({ threadId })
 })
           
 

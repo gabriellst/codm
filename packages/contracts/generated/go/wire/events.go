@@ -862,58 +862,6 @@ type IssueOpenedPayload struct {
 	Provider ProviderKind `json:"provider" validate:"required"`
 }
 
-// IssueStopRaisedEventName is the wire discriminator for IssueStopRaisedEvent.
-const IssueStopRaisedEventName = "integration.issue.stop_raised"
-
-// IssueStopRaisedEvent — wire shape of integration.issue.stop_raised.
-// BC5 Issue Execution -> BC4 Thread & Routing. An agent stopped and needs the human; flips the thread to NEEDS_ATTENTION, lights the dock badge and the Home callout.
-type IssueStopRaisedEvent struct {
-	Name       string    `json:"name"`
-	EntityID   string    `json:"entityId"`
-	OwnerID    string    `json:"ownerId"`
-	OccurredAt time.Time `json:"occurredAt"`
-	StopID string `json:"stopId"`
-	IssueID string `json:"issueId"`
-	ThreadID string `json:"threadId"`
-	Kind StopKind `json:"kind"`
-	Detail string `json:"detail"`
-}
-
-func (e IssueStopRaisedEvent) EventName() string { return IssueStopRaisedEventName }
-
-// IssueStopRaisedPayload — payload of integration.issue.stop_raised, generated from the contract declaration.
-type IssueStopRaisedPayload struct {
-	StopID string `json:"stopId" validate:"required"`
-	IssueID string `json:"issueId" validate:"required"`
-	ThreadID string `json:"threadId" validate:"required"`
-	Kind StopKind `json:"kind" validate:"required"`
-	Detail string `json:"detail" validate:"required"`
-}
-
-// IssueStopResolvedEventName is the wire discriminator for IssueStopResolvedEvent.
-const IssueStopResolvedEventName = "integration.issue.stop_resolved"
-
-// IssueStopResolvedEvent — wire shape of integration.issue.stop_resolved.
-// BC5 Issue Execution -> BC4 Thread & Routing. A stop was resolved by the operator. TAKE_OVER additionally pauses the thread (the consumer looks up issue -> thread). Payload kept exactly as the frozen draft: stopId, issueId, resolution.
-type IssueStopResolvedEvent struct {
-	Name       string    `json:"name"`
-	EntityID   string    `json:"entityId"`
-	OwnerID    string    `json:"ownerId"`
-	OccurredAt time.Time `json:"occurredAt"`
-	StopID string `json:"stopId"`
-	IssueID string `json:"issueId"`
-	Resolution StopResolution `json:"resolution"`
-}
-
-func (e IssueStopResolvedEvent) EventName() string { return IssueStopResolvedEventName }
-
-// IssueStopResolvedPayload — payload of integration.issue.stop_resolved, generated from the contract declaration.
-type IssueStopResolvedPayload struct {
-	StopID string `json:"stopId" validate:"required"`
-	IssueID string `json:"issueId" validate:"required"`
-	Resolution StopResolution `json:"resolution" validate:"required"`
-}
-
 // OrchestratorRepliedEventName is the wire discriminator for OrchestratorRepliedEvent.
 const OrchestratorRepliedEventName = "integration.orchestrator.replied"
 
@@ -988,6 +936,60 @@ type ThreadAttachedPayload struct {
 	ContactKind ContactKind `json:"contactKind" validate:"required"`
 	WorkspaceID string `json:"workspaceId" validate:"required"`
 	Providers []ProviderKind `json:"providers" validate:"required"`
+}
+
+// ThreadStopRaisedEventName is the wire discriminator for ThreadStopRaisedEvent.
+const ThreadStopRaisedEventName = "integration.thread.stop_raised"
+
+// ThreadStopRaisedEvent — wire shape of integration.thread.stop_raised.
+// BC6 Terminal -> BC4 Thread & Routing. An agent stopped and needs the human; flips the thread to NEEDS_ATTENTION, lights the dock badge and the Home callout. Renamed from integration.issue.stop_raised in B4: the Stop is a child of the THREAD aggregate, and a contract is named after its owner.
+type ThreadStopRaisedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	StopID string `json:"stopId"`
+	IssueID *string `json:"issueId,omitempty"`
+	ThreadID string `json:"threadId"`
+	Kind StopKind `json:"kind"`
+	Detail string `json:"detail"`
+}
+
+func (e ThreadStopRaisedEvent) EventName() string { return ThreadStopRaisedEventName }
+
+// ThreadStopRaisedPayload — payload of integration.thread.stop_raised, generated from the contract declaration.
+type ThreadStopRaisedPayload struct {
+	StopID string `json:"stopId" validate:"required"`
+	IssueID *string `json:"issueId,omitempty"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Kind StopKind `json:"kind" validate:"required"`
+	Detail string `json:"detail" validate:"required"`
+}
+
+// ThreadStopResolvedEventName is the wire discriminator for ThreadStopResolvedEvent.
+const ThreadStopResolvedEventName = "integration.thread.stop_resolved"
+
+// ThreadStopResolvedEvent — wire shape of integration.thread.stop_resolved.
+// BC4 Thread & Routing -> consumers. A stop was resolved by the operator. TAKE_OVER additionally pauses the thread. Renamed from integration.issue.stop_resolved in B4 along with its owner; the payload gained `threadId` (which stop_raised always carried) so a consumer no longer has to look up issue -> thread to know which conversation changed, and `issueId` became optional because a thread-level stop has none.
+type ThreadStopResolvedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	StopID string `json:"stopId"`
+	IssueID *string `json:"issueId,omitempty"`
+	ThreadID string `json:"threadId"`
+	Resolution StopResolution `json:"resolution"`
+}
+
+func (e ThreadStopResolvedEvent) EventName() string { return ThreadStopResolvedEventName }
+
+// ThreadStopResolvedPayload — payload of integration.thread.stop_resolved, generated from the contract declaration.
+type ThreadStopResolvedPayload struct {
+	StopID string `json:"stopId" validate:"required"`
+	IssueID *string `json:"issueId,omitempty"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Resolution StopResolution `json:"resolution" validate:"required"`
 }
 
 // WorkspaceRemovedEventName is the wire discriminator for WorkspaceRemovedEvent.

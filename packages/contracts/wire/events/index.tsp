@@ -50,12 +50,12 @@ import "./channel-special-platform-event-received.tsp";
 
 // Core <-> Terminal (BC4 <-> BC5 <-> BC6) — routing, issue lifecycle, artifacts, workspace refs
 import "./thread-attached.tsp";
+import "./thread-stop-raised.tsp";
+import "./thread-stop-resolved.tsp";
 import "./issue-created.tsp";
 import "./issue-opened.tsp";
 import "./orchestrator-replied.tsp";
 import "./issue-completed.tsp";
-import "./issue-stop-raised.tsp";
-import "./issue-stop-resolved.tsp";
 import "./issue-archived.tsp";
 import "./artifact-recorded.tsp";
 import "./workspace-removed.tsp";

@@ -264,7 +264,7 @@ describe('applyStamp — the miniature pipeline', () => {
 		const pkg = JSON.parse(destRead('packages/contracts/package.json')) as { scripts: Record<string, string> }
 		expect(pkg.scripts['codegen:wire:go']).toBeUndefined()
 		expect(pkg.scripts['codegen:wire']).toBe('bun run codegen:wire:typescript')
-		expect(pkg.scripts.all).toBe('bun run tsp:compile && bun run codegen:wire && bun run drizzle:generate')
+		expect(pkg.scripts.all).toBe('bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate')
 	})
 
 	it('strips the CLAUDE.md rows of dropped workspaces only', () => {

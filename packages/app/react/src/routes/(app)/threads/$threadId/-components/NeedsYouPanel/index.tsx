@@ -22,9 +22,10 @@ export function NeedsYouPanel({ threadId }: { threadId: string }) {
 	const { data } = useGetNeedsYouPanel(threadId)
 
 	// The stop-raised subscription moved to `useThreadRealtime`. This panel only knew how to APPEAR
-	// (`stop_raised`) and never how to disappear: a resolution publishes `stop_resolved`, which carries
-	// no `threadId` and so was nobody's frame. The layout hook invalidates on the RECOMPUTED status
-	// frame the enricher synthesizes for exactly that case.
+	// (`stop_raised`) and never how to disappear: a resolution publishes `stop_resolved`, which since B4
+	// DOES carry `threadId` — so it is this thread's frame and no longer needs the enricher's recomputed
+	// status frame to stand in for it. The layout hook still invalidates on the status frame; wiring the
+	// raw fact into the subscription is B5's call, not a silent change here.
 	const stops = data?.stops ?? []
 	if (stops.length === 0) return null
 

@@ -26,13 +26,13 @@ export type GetNeedsYouPanel200 = {
         */
         stopId: string;
         /**
-         * @type string, uuid
+         * @type string | undefined, uuid
         */
-        issueId: string;
+        issueId?: string;
         /**
-         * @type string
+         * @type string | undefined
         */
-        issueKey: string;
+        issueKey?: string;
         /**
          * @type string
         */

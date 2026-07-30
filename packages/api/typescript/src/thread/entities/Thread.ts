@@ -330,7 +330,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * and `threadId` are stamped from the aggregate, which is exactly the bug the re-parenting fixes —
 	 * `RaiseStop` derived `ownerId` from `issue.ownerId`, and a stop with no issue had nowhere to get it.
 	 *
-	 * It raises NO domain event. The fact `integration.issue.stop_raised` is the CAUSE of this call, not
+	 * It raises NO domain event. The fact `integration.thread.stop_raised` is the CAUSE of this call, not
 	 * its effect: it is published upstream by `PublishAgentIntegrationEvents` from
 	 * `AgentRunStopRaisedEvent`, and this is the consumer materializing it. Re-announcing it here would
 	 * be a loop.

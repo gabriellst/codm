@@ -29,7 +29,7 @@ export const THREAD_REALTIME_EVENTS = [
 	'integration.issue.opened',
 	'integration.issue.completed',
 	'integration.issue.archived',
-	'integration.issue.stop_raised',
+	'integration.thread.stop_raised',
 	'integration.artifact.recorded',
 ] as const satisfies readonly ServerEventName[]
 
@@ -62,7 +62,7 @@ export function threadInvalidations(event: ThreadRealtimeEvent, threadId: string
 			return [getSessionChatQueryKey(threadId), getSessionIssuesQueryKey(threadId), getHomeDashboardQueryKey()]
 
 		case 'browser.stop_raised':
-		case 'integration.issue.stop_raised':
+		case 'integration.thread.stop_raised':
 			return [getNeedsYouPanelQueryKey(threadId), getSessionChatQueryKey(threadId), getSessionIssuesQueryKey(threadId)]
 
 		// An issue's birth and death both show up in the conversation (the ack, then the composed

@@ -275,25 +275,25 @@ export const ListenEvents200NameEnum30 = {
 export type ListenEvents200NameEnum30Key = (typeof ListenEvents200NameEnum30)[keyof typeof ListenEvents200NameEnum30];
 
 export const ListenEvents200NameEnum31 = {
-    "integration.issue.stop_raised": "integration.issue.stop_raised"
+    "integration.orchestrator.replied": "integration.orchestrator.replied"
 } as const;
 
 export type ListenEvents200NameEnum31Key = (typeof ListenEvents200NameEnum31)[keyof typeof ListenEvents200NameEnum31];
 
 export const ListenEvents200NameEnum32 = {
-    "integration.issue.stop_resolved": "integration.issue.stop_resolved"
+    "integration.thread.attached": "integration.thread.attached"
 } as const;
 
 export type ListenEvents200NameEnum32Key = (typeof ListenEvents200NameEnum32)[keyof typeof ListenEvents200NameEnum32];
 
 export const ListenEvents200NameEnum33 = {
-    "integration.orchestrator.replied": "integration.orchestrator.replied"
+    "integration.thread.stop_raised": "integration.thread.stop_raised"
 } as const;
 
 export type ListenEvents200NameEnum33Key = (typeof ListenEvents200NameEnum33)[keyof typeof ListenEvents200NameEnum33];
 
 export const ListenEvents200NameEnum34 = {
-    "integration.thread.attached": "integration.thread.attached"
+    "integration.thread.stop_resolved": "integration.thread.stop_resolved"
 } as const;
 
 export type ListenEvents200NameEnum34Key = (typeof ListenEvents200NameEnum34)[keyof typeof ListenEvents200NameEnum34];
@@ -2613,66 +2613,6 @@ export type ListenEvents200 = ({
         /**
          * @type string
         */
-        stopId: string;
-        /**
-         * @type string
-        */
-        issueId: string;
-        /**
-         * @type string
-        */
-        threadId: string;
-        /**
-         * @type string
-        */
-        kind: StopKind;
-        /**
-         * @type string
-        */
-        detail: string;
-    };
-} | {
-    /**
-     * @type string
-    */
-    ownerId: string;
-    /**
-     * @type string
-    */
-    name: ListenEvents200NameEnum32Key;
-    /**
-     * @type object
-    */
-    payload: {
-        /**
-         * @type string
-        */
-        stopId: string;
-        /**
-         * @type string
-        */
-        issueId: string;
-        /**
-         * @type string
-        */
-        resolution: StopResolution;
-    };
-} | {
-    /**
-     * @type string
-    */
-    ownerId: string;
-    /**
-     * @type string
-    */
-    name: ListenEvents200NameEnum33Key;
-    /**
-     * @type object
-    */
-    payload: {
-        /**
-         * @type string
-        */
         threadId: string;
         /**
          * @type string
@@ -2695,7 +2635,7 @@ export type ListenEvents200 = ({
     /**
      * @type string
     */
-    name: ListenEvents200NameEnum34Key;
+    name: ListenEvents200NameEnum32Key;
     /**
      * @type object
     */
@@ -2728,6 +2668,70 @@ export type ListenEvents200 = ({
          * @type array
         */
         providers: ProviderKind[];
+    };
+} | {
+    /**
+     * @type string
+    */
+    ownerId: string;
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnum33Key;
+    /**
+     * @type object
+    */
+    payload: {
+        /**
+         * @type string
+        */
+        stopId: string;
+        /**
+         * @type string | undefined
+        */
+        issueId?: string;
+        /**
+         * @type string
+        */
+        threadId: string;
+        /**
+         * @type string
+        */
+        kind: StopKind;
+        /**
+         * @type string
+        */
+        detail: string;
+    };
+} | {
+    /**
+     * @type string
+    */
+    ownerId: string;
+    /**
+     * @type string
+    */
+    name: ListenEvents200NameEnum34Key;
+    /**
+     * @type object
+    */
+    payload: {
+        /**
+         * @type string
+        */
+        stopId: string;
+        /**
+         * @type string | undefined
+        */
+        issueId?: string;
+        /**
+         * @type string
+        */
+        threadId: string;
+        /**
+         * @type string
+        */
+        resolution: StopResolution;
     };
 } | {
     /**

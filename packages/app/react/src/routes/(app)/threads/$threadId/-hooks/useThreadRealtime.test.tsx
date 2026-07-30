@@ -143,7 +143,7 @@ describe('threadInvalidations — the map', () => {
 	})
 
 	it('a stop stales the needs-you panel', () => {
-		const keys = threadInvalidations(wireFact('integration.issue.stop_raised', { threadId: THREAD, issueId: ISSUE }), THREAD)
+		const keys = threadInvalidations(wireFact('integration.thread.stop_raised', { threadId: THREAD, issueId: ISSUE }), THREAD)
 
 		expect(keys).toContainEqual(getNeedsYouPanelQueryKey(THREAD))
 	})

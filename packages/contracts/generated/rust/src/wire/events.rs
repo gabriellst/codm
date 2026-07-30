@@ -606,41 +606,6 @@ pub struct IssueOpenedPayload {
 /// `integration.issue.opened` in the canonical transport envelope.
 pub type IssueOpenedEvent = super::envelope::Envelope<IssueOpenedPayload>;
 
-/// Wire discriminator for [`IssueStopRaisedPayload`].
-pub const ISSUE_STOP_RAISED_EVENT_NAME: &str = "integration.issue.stop_raised";
-
-/// BC5 Issue Execution -> BC4 Thread & Routing. An agent stopped and needs the human; flips the thread to NEEDS_ATTENTION, lights the dock badge and the Home callout.
-/// Payload of `integration.issue.stop_raised`, generated from the contract declaration.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IssueStopRaisedPayload {
-	pub stop_id: String,
-	pub issue_id: String,
-	pub thread_id: String,
-	pub kind: StopKind,
-	/// The human-readable reason the agent gave. ADDITIVE field (GOAL-agent-abstraction Fase 6, §4.4 item (i)): without it the text of `RaiseStop(kind, detail)` and the question of `AskOperator(question)` die at the bridge and the Needs-you card is born empty. Empty string when the fact carries no text — required rather than optional so no producer can omit it silently.
-	pub detail: String,
-}
-
-/// `integration.issue.stop_raised` in the canonical transport envelope.
-pub type IssueStopRaisedEvent = super::envelope::Envelope<IssueStopRaisedPayload>;
-
-/// Wire discriminator for [`IssueStopResolvedPayload`].
-pub const ISSUE_STOP_RESOLVED_EVENT_NAME: &str = "integration.issue.stop_resolved";
-
-/// BC5 Issue Execution -> BC4 Thread & Routing. A stop was resolved by the operator. TAKE_OVER additionally pauses the thread (the consumer looks up issue -> thread). Payload kept exactly as the frozen draft: stopId, issueId, resolution.
-/// Payload of `integration.issue.stop_resolved`, generated from the contract declaration.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IssueStopResolvedPayload {
-	pub stop_id: String,
-	pub issue_id: String,
-	pub resolution: StopResolution,
-}
-
-/// `integration.issue.stop_resolved` in the canonical transport envelope.
-pub type IssueStopResolvedEvent = super::envelope::Envelope<IssueStopResolvedPayload>;
-
 /// Wire discriminator for [`OrchestratorRepliedPayload`].
 pub const ORCHESTRATOR_REPLIED_EVENT_NAME: &str = "integration.orchestrator.replied";
 
@@ -693,6 +658,45 @@ pub struct ThreadAttachedPayload {
 
 /// `integration.thread.attached` in the canonical transport envelope.
 pub type ThreadAttachedEvent = super::envelope::Envelope<ThreadAttachedPayload>;
+
+/// Wire discriminator for [`ThreadStopRaisedPayload`].
+pub const THREAD_STOP_RAISED_EVENT_NAME: &str = "integration.thread.stop_raised";
+
+/// BC6 Terminal -> BC4 Thread & Routing. An agent stopped and needs the human; flips the thread to NEEDS_ATTENTION, lights the dock badge and the Home callout. Renamed from integration.issue.stop_raised in B4: the Stop is a child of the THREAD aggregate, and a contract is named after its owner.
+/// Payload of `integration.thread.stop_raised`, generated from the contract declaration.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadStopRaisedPayload {
+	pub stop_id: String,
+	/// OPTIONAL since B4 (aggregate-boundaries spec, decision 4). A thread-level stop — the orchestrator asking for approval before any issue exists — has none, and while this key was required that case was unreachable no matter what the aggregate allowed.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub issue_id: Option<String>,
+	pub thread_id: String,
+	pub kind: StopKind,
+	/// The human-readable reason the agent gave. ADDITIVE field (GOAL-agent-abstraction Fase 6, §4.4 item (i)): without it the text of `RaiseStop(kind, detail)` and the question of `AskOperator(question)` die at the bridge and the Needs-you card is born empty. Empty string when the fact carries no text — required rather than optional so no producer can omit it silently.
+	pub detail: String,
+}
+
+/// `integration.thread.stop_raised` in the canonical transport envelope.
+pub type ThreadStopRaisedEvent = super::envelope::Envelope<ThreadStopRaisedPayload>;
+
+/// Wire discriminator for [`ThreadStopResolvedPayload`].
+pub const THREAD_STOP_RESOLVED_EVENT_NAME: &str = "integration.thread.stop_resolved";
+
+/// BC4 Thread & Routing -> consumers. A stop was resolved by the operator. TAKE_OVER additionally pauses the thread. Renamed from integration.issue.stop_resolved in B4 along with its owner; the payload gained `threadId` (which stop_raised always carried) so a consumer no longer has to look up issue -> thread to know which conversation changed, and `issueId` became optional because a thread-level stop has none.
+/// Payload of `integration.thread.stop_resolved`, generated from the contract declaration.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadStopResolvedPayload {
+	pub stop_id: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub issue_id: Option<String>,
+	pub thread_id: String,
+	pub resolution: StopResolution,
+}
+
+/// `integration.thread.stop_resolved` in the canonical transport envelope.
+pub type ThreadStopResolvedEvent = super::envelope::Envelope<ThreadStopResolvedPayload>;
 
 /// Wire discriminator for [`WorkspaceRemovedPayload`].
 pub const WORKSPACE_REMOVED_EVENT_NAME: &str = "integration.workspace.removed";

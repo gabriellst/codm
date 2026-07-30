@@ -223,20 +223,6 @@ pub enum IntegrationEvent {
 		time: chrono::DateTime<chrono::Utc>,
 		payload: super::events::IssueOpenedPayload,
 	},
-	#[serde(rename = "integration.issue.stop_raised", rename_all = "camelCase")]
-	IssueStopRaised {
-		id: uuid::Uuid,
-		owner_id: String,
-		time: chrono::DateTime<chrono::Utc>,
-		payload: super::events::IssueStopRaisedPayload,
-	},
-	#[serde(rename = "integration.issue.stop_resolved", rename_all = "camelCase")]
-	IssueStopResolved {
-		id: uuid::Uuid,
-		owner_id: String,
-		time: chrono::DateTime<chrono::Utc>,
-		payload: super::events::IssueStopResolvedPayload,
-	},
 	#[serde(rename = "integration.orchestrator.replied", rename_all = "camelCase")]
 	OrchestratorReplied {
 		id: uuid::Uuid,
@@ -257,6 +243,20 @@ pub enum IntegrationEvent {
 		owner_id: String,
 		time: chrono::DateTime<chrono::Utc>,
 		payload: super::events::ThreadAttachedPayload,
+	},
+	#[serde(rename = "integration.thread.stop_raised", rename_all = "camelCase")]
+	ThreadStopRaised {
+		id: uuid::Uuid,
+		owner_id: String,
+		time: chrono::DateTime<chrono::Utc>,
+		payload: super::events::ThreadStopRaisedPayload,
+	},
+	#[serde(rename = "integration.thread.stop_resolved", rename_all = "camelCase")]
+	ThreadStopResolved {
+		id: uuid::Uuid,
+		owner_id: String,
+		time: chrono::DateTime<chrono::Utc>,
+		payload: super::events::ThreadStopResolvedPayload,
 	},
 	#[serde(rename = "integration.workspace.removed", rename_all = "camelCase")]
 	WorkspaceRemoved {
@@ -300,11 +300,11 @@ impl IntegrationEvent {
 			Self::IssueCompleted { .. } => super::events::ISSUE_COMPLETED_EVENT_NAME,
 			Self::IssueCreated { .. } => super::events::ISSUE_CREATED_EVENT_NAME,
 			Self::IssueOpened { .. } => super::events::ISSUE_OPENED_EVENT_NAME,
-			Self::IssueStopRaised { .. } => super::events::ISSUE_STOP_RAISED_EVENT_NAME,
-			Self::IssueStopResolved { .. } => super::events::ISSUE_STOP_RESOLVED_EVENT_NAME,
 			Self::OrchestratorReplied { .. } => super::events::ORCHESTRATOR_REPLIED_EVENT_NAME,
 			Self::SubscriptionChanged { .. } => super::events::SUBSCRIPTION_CHANGED_EVENT_NAME,
 			Self::ThreadAttached { .. } => super::events::THREAD_ATTACHED_EVENT_NAME,
+			Self::ThreadStopRaised { .. } => super::events::THREAD_STOP_RAISED_EVENT_NAME,
+			Self::ThreadStopResolved { .. } => super::events::THREAD_STOP_RESOLVED_EVENT_NAME,
 			Self::WorkspaceRemoved { .. } => super::events::WORKSPACE_REMOVED_EVENT_NAME,
 		}
 	}
@@ -341,11 +341,11 @@ impl IntegrationEvent {
 			Self::IssueCompleted { owner_id, .. } => owner_id,
 			Self::IssueCreated { owner_id, .. } => owner_id,
 			Self::IssueOpened { owner_id, .. } => owner_id,
-			Self::IssueStopRaised { owner_id, .. } => owner_id,
-			Self::IssueStopResolved { owner_id, .. } => owner_id,
 			Self::OrchestratorReplied { owner_id, .. } => owner_id,
 			Self::SubscriptionChanged { owner_id, .. } => owner_id,
 			Self::ThreadAttached { owner_id, .. } => owner_id,
+			Self::ThreadStopRaised { owner_id, .. } => owner_id,
+			Self::ThreadStopResolved { owner_id, .. } => owner_id,
 			Self::WorkspaceRemoved { owner_id, .. } => owner_id,
 		}
 	}

@@ -5,7 +5,7 @@ import {
 	IssueCreatedEvent,
 	OrchestratorRepliedEvent as OrchestratorRepliedIntegrationEvent,
 	IssueCompletedEvent,
-	IssueStopRaisedEvent,
+	ThreadStopRaisedEvent,
 } from '@codedm/contracts-typescript/wire/events'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
@@ -21,9 +21,9 @@ import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
  * are BORN in `packages/contracts` and only mapped here — nothing new is authored api-side.
  *
  * One multi-event handler, one 1:1 map:
- *   agent.run.started    → integration.issue.opened        (BC5 → BC4, triggers transcript/status)
- *   agent.run.completed  → integration.issue.completed     (BC5 → BC4, starts the 24h clock)
- *   agent.run.stop_raised        → integration.issue.stop_raised   (BC5 → BC4, NEEDS_ATTENTION)
+ *   agent.run.started    → integration.issue.opened          (BC5 → BC4, triggers transcript/status)
+ *   agent.run.completed  → integration.issue.completed       (BC5 → BC4, starts the 24h clock)
+ *   agent.run.stop_raised → integration.thread.stop_raised   (BC6 → BC4, NEEDS_ATTENTION)
  */
 @injectable()
 export class PublishAgentIntegrationEvents extends EventHandler<
@@ -106,7 +106,6 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 			return
 		}
 
-
 		if (event instanceof AgentRunCompletedEvent) {
 			await this.mediator.publish(
 				new IssueCompletedEvent({
@@ -125,7 +124,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 
 		if (event instanceof AgentRunStopRaisedEvent) {
 			await this.mediator.publish(
-				new IssueStopRaisedEvent({
+				new ThreadStopRaisedEvent({
 					ownerId,
 					payload: {
 						stopId: event.payload.stopId,

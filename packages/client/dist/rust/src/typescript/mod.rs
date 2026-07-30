@@ -205,6 +205,7 @@ pub mod types {
     ///  "description": "All possible error codes",
     ///  "type": "string",
     ///  "enum": [
+    ///    "AGENT_ENTRY_FORBIDS_SENDER",
     ///    "AGENT_RUN_SCOPE_MISMATCH",
     ///    "AGENT_RUN_TOKEN_INVALID",
     ///    "AGENT_TOOLS_UNSUPPORTED",
@@ -215,6 +216,7 @@ pub mod types {
     ///    "CLASSIFICATION_FAILED",
     ///    "COMMAND_HANDLER_NOT_FOUND",
     ///    "COMMAND_QUEUE_NOT_FOUND",
+    ///    "CONTACT_ENTRY_REQUIRES_SENDER",
     ///    "CREDENTIAL_DECRYPT_FAILED",
     ///    "EMAIL_ALREADY_REGISTERED",
     ///    "ENTITY_NOT_FOUND_WHILE_SAVING",
@@ -260,11 +262,14 @@ pub mod types {
     ///    "PATH_NOT_A_DIRECTORY",
     ///    "PATH_NOT_FOUND",
     ///    "PROVIDER_NOT_DETECTED",
+    ///    "QUOTED_ENTRY_NOT_IN_THREAD",
     ///    "RATE_LIMITED",
     ///    "RESOLUTION_NOT_APPLICABLE",
     ///    "SESSION_ALREADY_STREAMING",
+    ///    "STOP_ALREADY_RESOLVED",
     ///    "STOP_CRITERION_DISABLED",
     ///    "STOP_NOT_FOUND",
+    ///    "STOP_NOT_IN_THREAD",
     ///    "TERMINAL_ALREADY_RUNNING",
     ///    "TERMINAL_SPAWN_FAILED",
     ///    "THREAD_ALREADY_ATTACHED",
@@ -296,6 +301,8 @@ pub mod types {
         PartialOrd
     )]
     pub enum ApiErrors {
+        #[serde(rename = "AGENT_ENTRY_FORBIDS_SENDER")]
+        AgentEntryForbidsSender,
         #[serde(rename = "AGENT_RUN_SCOPE_MISMATCH")]
         AgentRunScopeMismatch,
         #[serde(rename = "AGENT_RUN_TOKEN_INVALID")]
@@ -316,6 +323,8 @@ pub mod types {
         CommandHandlerNotFound,
         #[serde(rename = "COMMAND_QUEUE_NOT_FOUND")]
         CommandQueueNotFound,
+        #[serde(rename = "CONTACT_ENTRY_REQUIRES_SENDER")]
+        ContactEntryRequiresSender,
         #[serde(rename = "CREDENTIAL_DECRYPT_FAILED")]
         CredentialDecryptFailed,
         #[serde(rename = "EMAIL_ALREADY_REGISTERED")]
@@ -406,16 +415,22 @@ pub mod types {
         PathNotFound,
         #[serde(rename = "PROVIDER_NOT_DETECTED")]
         ProviderNotDetected,
+        #[serde(rename = "QUOTED_ENTRY_NOT_IN_THREAD")]
+        QuotedEntryNotInThread,
         #[serde(rename = "RATE_LIMITED")]
         RateLimited,
         #[serde(rename = "RESOLUTION_NOT_APPLICABLE")]
         ResolutionNotApplicable,
         #[serde(rename = "SESSION_ALREADY_STREAMING")]
         SessionAlreadyStreaming,
+        #[serde(rename = "STOP_ALREADY_RESOLVED")]
+        StopAlreadyResolved,
         #[serde(rename = "STOP_CRITERION_DISABLED")]
         StopCriterionDisabled,
         #[serde(rename = "STOP_NOT_FOUND")]
         StopNotFound,
+        #[serde(rename = "STOP_NOT_IN_THREAD")]
+        StopNotInThread,
         #[serde(rename = "TERMINAL_ALREADY_RUNNING")]
         TerminalAlreadyRunning,
         #[serde(rename = "TERMINAL_SPAWN_FAILED")]
@@ -453,6 +468,9 @@ pub mod types {
     impl ::std::fmt::Display for ApiErrors {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
             match *self {
+                Self::AgentEntryForbidsSender => {
+                    f.write_str("AGENT_ENTRY_FORBIDS_SENDER")
+                }
                 Self::AgentRunScopeMismatch => f.write_str("AGENT_RUN_SCOPE_MISMATCH"),
                 Self::AgentRunTokenInvalid => f.write_str("AGENT_RUN_TOKEN_INVALID"),
                 Self::AgentToolsUnsupported => f.write_str("AGENT_TOOLS_UNSUPPORTED"),
@@ -467,6 +485,9 @@ pub mod types {
                 Self::ClassificationFailed => f.write_str("CLASSIFICATION_FAILED"),
                 Self::CommandHandlerNotFound => f.write_str("COMMAND_HANDLER_NOT_FOUND"),
                 Self::CommandQueueNotFound => f.write_str("COMMAND_QUEUE_NOT_FOUND"),
+                Self::ContactEntryRequiresSender => {
+                    f.write_str("CONTACT_ENTRY_REQUIRES_SENDER")
+                }
                 Self::CredentialDecryptFailed => f.write_str("CREDENTIAL_DECRYPT_FAILED"),
                 Self::EmailAlreadyRegistered => f.write_str("EMAIL_ALREADY_REGISTERED"),
                 Self::EntityNotFoundWhileSaving => {
@@ -518,11 +539,14 @@ pub mod types {
                 Self::PathNotADirectory => f.write_str("PATH_NOT_A_DIRECTORY"),
                 Self::PathNotFound => f.write_str("PATH_NOT_FOUND"),
                 Self::ProviderNotDetected => f.write_str("PROVIDER_NOT_DETECTED"),
+                Self::QuotedEntryNotInThread => f.write_str("QUOTED_ENTRY_NOT_IN_THREAD"),
                 Self::RateLimited => f.write_str("RATE_LIMITED"),
                 Self::ResolutionNotApplicable => f.write_str("RESOLUTION_NOT_APPLICABLE"),
                 Self::SessionAlreadyStreaming => f.write_str("SESSION_ALREADY_STREAMING"),
+                Self::StopAlreadyResolved => f.write_str("STOP_ALREADY_RESOLVED"),
                 Self::StopCriterionDisabled => f.write_str("STOP_CRITERION_DISABLED"),
                 Self::StopNotFound => f.write_str("STOP_NOT_FOUND"),
+                Self::StopNotInThread => f.write_str("STOP_NOT_IN_THREAD"),
                 Self::TerminalAlreadyRunning => f.write_str("TERMINAL_ALREADY_RUNNING"),
                 Self::TerminalSpawnFailed => f.write_str("TERMINAL_SPAWN_FAILED"),
                 Self::ThreadAlreadyAttached => f.write_str("THREAD_ALREADY_ATTACHED"),
@@ -548,6 +572,7 @@ pub mod types {
             value: &str,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             match value {
+                "AGENT_ENTRY_FORBIDS_SENDER" => Ok(Self::AgentEntryForbidsSender),
                 "AGENT_RUN_SCOPE_MISMATCH" => Ok(Self::AgentRunScopeMismatch),
                 "AGENT_RUN_TOKEN_INVALID" => Ok(Self::AgentRunTokenInvalid),
                 "AGENT_TOOLS_UNSUPPORTED" => Ok(Self::AgentToolsUnsupported),
@@ -560,6 +585,7 @@ pub mod types {
                 "CLASSIFICATION_FAILED" => Ok(Self::ClassificationFailed),
                 "COMMAND_HANDLER_NOT_FOUND" => Ok(Self::CommandHandlerNotFound),
                 "COMMAND_QUEUE_NOT_FOUND" => Ok(Self::CommandQueueNotFound),
+                "CONTACT_ENTRY_REQUIRES_SENDER" => Ok(Self::ContactEntryRequiresSender),
                 "CREDENTIAL_DECRYPT_FAILED" => Ok(Self::CredentialDecryptFailed),
                 "EMAIL_ALREADY_REGISTERED" => Ok(Self::EmailAlreadyRegistered),
                 "ENTITY_NOT_FOUND_WHILE_SAVING" => Ok(Self::EntityNotFoundWhileSaving),
@@ -605,11 +631,14 @@ pub mod types {
                 "PATH_NOT_A_DIRECTORY" => Ok(Self::PathNotADirectory),
                 "PATH_NOT_FOUND" => Ok(Self::PathNotFound),
                 "PROVIDER_NOT_DETECTED" => Ok(Self::ProviderNotDetected),
+                "QUOTED_ENTRY_NOT_IN_THREAD" => Ok(Self::QuotedEntryNotInThread),
                 "RATE_LIMITED" => Ok(Self::RateLimited),
                 "RESOLUTION_NOT_APPLICABLE" => Ok(Self::ResolutionNotApplicable),
                 "SESSION_ALREADY_STREAMING" => Ok(Self::SessionAlreadyStreaming),
+                "STOP_ALREADY_RESOLVED" => Ok(Self::StopAlreadyResolved),
                 "STOP_CRITERION_DISABLED" => Ok(Self::StopCriterionDisabled),
                 "STOP_NOT_FOUND" => Ok(Self::StopNotFound),
+                "STOP_NOT_IN_THREAD" => Ok(Self::StopNotInThread),
                 "TERMINAL_ALREADY_RUNNING" => Ok(Self::TerminalAlreadyRunning),
                 "TERMINAL_SPAWN_FAILED" => Ok(Self::TerminalSpawnFailed),
                 "THREAD_ALREADY_ATTACHED" => Ok(Self::ThreadAlreadyAttached),
@@ -4260,8 +4289,6 @@ pub mod types {
     ///        "required": [
     ///          "availableResolutions",
     ///          "detail",
-    ///          "issueId",
-    ///          "issueKey",
     ///          "kind",
     ///          "raisedAt",
     ///          "stopId",
@@ -4328,8 +4355,6 @@ pub mod types {
     ///  "required": [
     ///    "availableResolutions",
     ///    "detail",
-    ///    "issueId",
-    ///    "issueKey",
     ///    "kind",
     ///    "raisedAt",
     ///    "stopId",
@@ -4380,10 +4405,18 @@ pub mod types {
             ::codedm_contracts_rust::wire::enums::StopResolution,
         >,
         pub detail: ::std::string::String,
-        #[serde(rename = "issueId")]
-        pub issue_id: ::uuid::Uuid,
-        #[serde(rename = "issueKey")]
-        pub issue_key: ::std::string::String,
+        #[serde(
+            rename = "issueId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub issue_id: ::std::option::Option<::uuid::Uuid>,
+        #[serde(
+            rename = "issueKey",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub issue_key: ::std::option::Option<::std::string::String>,
         pub kind: ::codedm_contracts_rust::wire::enums::StopKind,
         #[serde(rename = "raisedAt")]
         pub raised_at: ::std::string::String,

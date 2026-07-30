@@ -2,10 +2,10 @@
 	"id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
 	"ownerId": "fixture-tenant",
 	"time": "2026-07-30T12:00:00Z",
-	"name": "integration.issue.stop_resolved",
+	"name": "integration.thread.stop_resolved",
 	"payload": {
 		"stopId": "stopId-sample",
-		"issueId": "issueId-sample",
+		"threadId": "threadId-sample",
 		"resolution": "RETRY"
 	}
 }

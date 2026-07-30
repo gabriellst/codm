@@ -34,7 +34,7 @@ export const AskOperatorOutputSchema = z.object({ delivered: z.literal(true), st
  *
  * ### It mints no new vocabulary
  * The same `AgentRunStopRaisedEvent`, the same bridge, the same frozen
- * `integration.issue.stop_raised`. The question travels as `detail`, and `MaterializeIssueFromExecution`
+ * `integration.thread.stop_raised`. The question travels as `detail`, and `MaterializeIssueFromExecution`
  * promotes it to the Needs-you card's TITLE because `kind === HUMAN_REQUESTED` — so the operator reads
  * the question itself rather than a generic "A participant asked for a human". Without the additive
  * `detail` field this phase adds to the frozen event, that whole paragraph would be an empty promise.

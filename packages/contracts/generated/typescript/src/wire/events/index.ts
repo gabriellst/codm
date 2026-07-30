@@ -31,11 +31,11 @@ import {
 	IssueCompletedEventSchema,
 	IssueCreatedEventSchema,
 	IssueOpenedEventSchema,
-	IssueStopRaisedEventSchema,
-	IssueStopResolvedEventSchema,
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
+	ThreadStopRaisedEventSchema,
+	ThreadStopResolvedEventSchema,
 	WorkspaceRemovedEventSchema,
 } from './_imports'
 
@@ -69,12 +69,12 @@ export * from './issue-archived'
 export * from './issue-completed'
 export * from './issue-created'
 export * from './issue-opened'
-export * from './issue-stop-raised'
-export * from './issue-stop-resolved'
 export * from './materialized'
 export * from './orchestrator-replied'
 export * from './subscription-changed'
 export * from './thread-attached'
+export * from './thread-stop-raised'
+export * from './thread-stop-resolved'
 export * from './workspace-removed'
 
 export const IntegrationEventSchema = z.discriminatedUnion('name', [
@@ -107,11 +107,11 @@ export const IntegrationEventSchema = z.discriminatedUnion('name', [
 	IssueCompletedEventSchema,
 	IssueCreatedEventSchema,
 	IssueOpenedEventSchema,
-	IssueStopRaisedEventSchema,
-	IssueStopResolvedEventSchema,
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
+	ThreadStopRaisedEventSchema,
+	ThreadStopResolvedEventSchema,
 	WorkspaceRemovedEventSchema,
 ])
 export type IntegrationEvent = Z.infer<typeof IntegrationEventSchema>

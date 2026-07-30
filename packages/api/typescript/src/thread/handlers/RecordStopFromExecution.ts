@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, EventHandler } from '@codedm/core-typescript'
-import { IssueStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
+import { ThreadStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
 import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import { Id } from '@codedm/core-typescript'
 import { RaiseStop } from '../usecases/RaiseStop'
@@ -25,8 +25,8 @@ const STOP_TITLES: Record<StopKind, string> = {
  * resolves the frame) — so a stop with no `issueId` routes exactly as well as one with.
  */
 @injectable()
-export class RecordStopFromExecution extends EventHandler<typeof IssueStopRaisedEvent> {
-	readonly event = IssueStopRaisedEvent
+export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaisedEvent> {
+	readonly event = ThreadStopRaisedEvent
 
 	constructor(private readonly raiseStop: RaiseStop) {
 		super()
@@ -51,7 +51,7 @@ export class RecordStopFromExecution extends EventHandler<typeof IssueStopRaised
 			await this.raiseStop.execute({
 				stopId: event.payload.stopId || Id.value(),
 				threadId: event.payload.threadId,
-				issueId: event.payload.issueId || undefined,
+				issueId: event.payload.issueId,
 				kind: event.payload.kind,
 				title,
 				detail,

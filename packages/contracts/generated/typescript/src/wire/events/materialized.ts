@@ -38,11 +38,11 @@ import {
 	IssueCompletedEventSchema,
 	IssueCreatedEventSchema,
 	IssueOpenedEventSchema,
-	IssueStopRaisedEventSchema,
-	IssueStopResolvedEventSchema,
 	OrchestratorRepliedEventSchema,
 	SubscriptionChangedEventSchema,
 	ThreadAttachedEventSchema,
+	ThreadStopRaisedEventSchema,
+	ThreadStopResolvedEventSchema,
 	WorkspaceRemovedEventSchema,
 } from './_imports'
 import { channelMessageReceivedPayloadSchema, channelSpecialPlatformEventReceivedPayloadSchema } from '@codedm/client-typescript/go'
@@ -76,11 +76,11 @@ export const IssueArchivedEventMaterializedSchema = IssueArchivedEventSchema
 export const IssueCompletedEventMaterializedSchema = IssueCompletedEventSchema
 export const IssueCreatedEventMaterializedSchema = IssueCreatedEventSchema
 export const IssueOpenedEventMaterializedSchema = IssueOpenedEventSchema
-export const IssueStopRaisedEventMaterializedSchema = IssueStopRaisedEventSchema
-export const IssueStopResolvedEventMaterializedSchema = IssueStopResolvedEventSchema
 export const OrchestratorRepliedEventMaterializedSchema = OrchestratorRepliedEventSchema
 export const SubscriptionChangedEventMaterializedSchema = SubscriptionChangedEventSchema
 export const ThreadAttachedEventMaterializedSchema = ThreadAttachedEventSchema
+export const ThreadStopRaisedEventMaterializedSchema = ThreadStopRaisedEventSchema
+export const ThreadStopResolvedEventMaterializedSchema = ThreadStopResolvedEventSchema
 export const WorkspaceRemovedEventMaterializedSchema = WorkspaceRemovedEventSchema
 
 /** Every materialized event schema, sorted by wire name (deterministic emission order). */
@@ -115,10 +115,10 @@ export const materializedIntegrationEventSchemas = [
 	IssueCompletedEventMaterializedSchema,
 	IssueCreatedEventMaterializedSchema,
 	IssueOpenedEventMaterializedSchema,
-	IssueStopRaisedEventMaterializedSchema,
-	IssueStopResolvedEventMaterializedSchema,
 	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
+	ThreadStopRaisedEventMaterializedSchema,
+	ThreadStopResolvedEventMaterializedSchema,
 	WorkspaceRemovedEventMaterializedSchema,
 ] as const
 
@@ -153,10 +153,10 @@ export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [
 	IssueCompletedEventMaterializedSchema,
 	IssueCreatedEventMaterializedSchema,
 	IssueOpenedEventMaterializedSchema,
-	IssueStopRaisedEventMaterializedSchema,
-	IssueStopResolvedEventMaterializedSchema,
 	OrchestratorRepliedEventMaterializedSchema,
 	ThreadAttachedEventMaterializedSchema,
+	ThreadStopRaisedEventMaterializedSchema,
+	ThreadStopResolvedEventMaterializedSchema,
 	WorkspaceRemovedEventMaterializedSchema,
 ])
 export type MaterializedIntegrationEvent = Z.infer<typeof MaterializedIntegrationEventSchema>

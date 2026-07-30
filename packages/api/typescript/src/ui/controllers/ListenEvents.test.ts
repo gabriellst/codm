@@ -3,7 +3,7 @@ import type { ZodLiteral, ZodObject } from 'zod'
 import { BaseIntegrationEvent } from '@codedm/core-typescript'
 import { StopKind } from '@codedm/contracts-typescript/wire/enums'
 import * as WireEvents from '@codedm/contracts-typescript/wire/events'
-import { IssueStopRaisedEvent, ChannelMessageDeliveredEvent, ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
+import { ThreadStopRaisedEvent, ChannelMessageDeliveredEvent, ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
 import { deliveryOwnerId, isBroadcastableIntegrationEvent, ListenEventsControllerOutputSchema } from './ListenEvents'
 
 const OWNER_A = '00000000-0000-4000-8000-00000000000a'
@@ -18,7 +18,7 @@ function fanOut(event: BaseIntegrationEvent, clientOwnerIds: string[]): string[]
 
 describe('ListenEvents SSE broadcaster filtering', () => {
 	const stopRaised = (ownerId: string) =>
-		new IssueStopRaisedEvent({
+		new ThreadStopRaisedEvent({
 			ownerId,
 			payload: { stopId: 'stop-1', issueId: 'issue-1', threadId: 'thread-1', kind: StopKind.HUMAN_REQUESTED },
 		}) as unknown as BaseIntegrationEvent
@@ -88,7 +88,7 @@ describe('ListenEvents SSE broadcaster filtering', () => {
 	})
 
 	it('an event without an envelope owner is withheld (nothing to scope it to)', () => {
-		const noOwner = new IssueStopRaisedEvent({
+		const noOwner = new ThreadStopRaisedEvent({
 			ownerId: '',
 			payload: { stopId: 'stop-1', issueId: 'issue-1', threadId: 'thread-1', kind: StopKind.HUMAN_REQUESTED },
 		}) as unknown as BaseIntegrationEvent

@@ -14,7 +14,7 @@ import { FactSource } from '../enums'
  * `AgentRunStopRaisedEvent`, which proves the bridge/card leg but neither (a) the fire-and-forget
  * `{delivered:true}` return without an external signal, nor (b) that `AskOperator` emits EXACTLY ONE
  * `AgentRunStopRaisedEvent` with `detail === question` — the domain event
- * `PublishAgentIntegrationEvents.test.ts` already proves maps 1:1 to `integration.issue.stop_raised`,
+ * `PublishAgentIntegrationEvents.test.ts` already proves maps 1:1 to `integration.thread.stop_raised`,
  * `detail` included. This file closes both, colocated, per AC-6.10.
  */
 const COUNTED = ['events', 'outbox'] as const

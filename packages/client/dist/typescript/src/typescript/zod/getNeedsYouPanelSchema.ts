@@ -17,8 +17,8 @@ export const getNeedsYouPanelPathParamsSchema = z.object({
 export const getNeedsYouPanel200Schema = z.object({
     "stops": z.array(z.object({
     "stopId": z.uuid(),
-"issueId": z.uuid(),
-"issueKey": z.string(),
+"issueId": z.optional(z.uuid()),
+"issueKey": z.optional(z.string()),
 get "kind"(){
                 return stopKindSchema
               },

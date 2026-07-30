@@ -314,12 +314,14 @@ export function planStamp(repo: RepoLike, selection: StampSelection): StampPlan 
 		if (!layerAlive[layer]) for (const s of scripts) rootEdits.push({ op: 'delete', path: ['scripts', s] })
 	}
 
-	// ── contracts package.json — wire codegen keyed by kept backend LANGS ──
-	const backendLangs = (from: readonly [string, Workspace][]): string[] => [
-		...new Set(from.filter(([, w]) => w.kind === 'backend').map(([, w]) => w.lang)),
+	// ── contracts package.json — wire codegen keyed by kept backend + SHELL langs ──
+	// The Tauri shell (kind 'shell', lang 'rust') consumes the Rust wire crate, so its lang joins the
+	// wire aggregate; a stamp that drops the shell (any hosted workspace gone) drops rust wire with it.
+	const wireLangs = (from: readonly [string, Workspace][]): string[] => [
+		...new Set(from.filter(([, w]) => w.kind === 'backend' || w.kind === 'shell').map(([, w]) => w.lang)),
 	]
-	const keptLangs = backendLangs(keptEntries)
-	const droppedLangs = backendLangs(droppedEntries).filter(lang => !keptLangs.includes(lang))
+	const keptLangs = wireLangs(keptEntries)
+	const droppedLangs = wireLangs(droppedEntries).filter(lang => !keptLangs.includes(lang))
 	const contractsEdits: JsonEdit[] = [
 		...droppedLangs.map((lang): JsonEdit => ({ op: 'delete', path: ['scripts', WIRE_SCRIPT.replace('{lang}', lang)] })),
 		{
@@ -327,7 +329,11 @@ export function planStamp(repo: RepoLike, selection: StampSelection): StampPlan 
 			path: ['scripts', 'codegen:wire'],
 			value: keptLangs.map(lang => `bun run ${WIRE_SCRIPT.replace('{lang}', lang)}`).join(' && ') || WIRE_AGGREGATE_EMPTY,
 		},
-		{ op: 'set', path: ['scripts', 'all'], value: 'bun run tsp:compile && bun run codegen:wire && bun run drizzle:generate' },
+		{
+			op: 'set',
+			path: ['scripts', 'all'],
+			value: 'bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate',
+		},
 	]
 	const jsonPatches: JsonPatch[] = [
 		{ file: 'package.json', edits: rootEdits },
