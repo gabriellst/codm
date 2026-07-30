@@ -82,10 +82,19 @@ export class E2eMcpDriver {
 	 * this driver could supply it, so could a model.
 	 */
 	async forkIssue(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
-		return this.call(mcp, claims => [
+		// A run with no triggering transcript entry CANNOT fork: the router injects `originEntryId`
+		// from this very claim, and `ForkIssue` rejects the attribution gap by design (§7.2). Such
+		// turns exist — a whisper queues an orchestrator turn with no origin — and the real
+		// orchestrator answers them by replying, not by forking. Declaring nothing is that behavior
+		// (AC-5: return [] WITHOUT entering `call`); forcing the call would turn a designed rejection
+		// into 3 mailbox retries per whisper. An INVALID token still falls through to `call`, whose
+		// fail-loudly path reports it — that guard is for drift on turns that CAN fork and stays.
+		const claims = this.runTokens.verify(mcp.token)
+		if (claims && !claims.entryId) return []
+		return this.call(mcp, verified => [
 			{
 				tool: operationIdOf(ForkIssueController),
-				input: { threadId: claims.threadId, data: { goal: E2eMcpDriver.FORK_GOAL } },
+				input: { threadId: verified.threadId, data: { goal: E2eMcpDriver.FORK_GOAL } },
 				summary: 'issue forked from the conversation',
 			},
 		])

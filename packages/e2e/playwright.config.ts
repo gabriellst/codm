@@ -4,10 +4,13 @@ export default defineConfig({
 	testDir: './tests',
 	timeout: 30_000,
 	retries: 0,
-	// Constrain parallelism — Better Auth sign-up endpoints can throw 500s when
-	// many specs sign up simultaneously. Two workers keeps things moving without
-	// overwhelming the dev backend.
-	workers: 2,
+	// ONE worker, measured (C8, 29-jul). Two workers ran two specs against the SAME embedded
+	// SQLite (TS daemon + Go gateway on one file): under 05's post-unlock traffic the issue
+	// materialization upsert (`issue_issues ... on conflict`) failed transiently 3/3 runs, and
+	// the outbox dispatcher's 30s retry backoff outlives the specs' 20s polls — a deterministic
+	// timeout. Serialized, the suite is GREEN and FASTER (14.9s vs ~26s): contention was costing
+	// more than parallelism bought. Raise this only with a measurement proving otherwise.
+	workers: 1,
 	use: {
 		baseURL: 'http://localhost:5173',
 		viewport: { width: 1512, height: 982 },
