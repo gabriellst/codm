@@ -2,7 +2,14 @@ import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
 import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
 
 // Domain errors — Thread aggregate invariants (raised by entity methods).
-export type ThreadDomainErrors = 'NO_PROVIDER_SELECTED' | 'LAST_INVOKER' | 'PARTICIPANT_NOT_FOUND'
+export type ThreadDomainErrors =
+	| 'NO_PROVIDER_SELECTED'
+	| 'LAST_INVOKER'
+	| 'PARTICIPANT_NOT_FOUND'
+	// Transcript invariants (B4, decision 2) — the thread owns who may cite what and who needs a sender.
+	| 'QUOTED_ENTRY_NOT_IN_THREAD'
+	| 'CONTACT_ENTRY_REQUIRES_SENDER'
+	| 'AGENT_ENTRY_FORBIDS_SENDER'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
 // Application errors — orchestration in the thread use cases + routing pipeline.
@@ -35,6 +42,9 @@ registerErrorCodes({
 	NO_PROVIDER_SELECTED: HttpStatusCode.BAD_REQUEST,
 	LAST_INVOKER: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	PARTICIPANT_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+	QUOTED_ENTRY_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	CONTACT_ENTRY_REQUIRES_SENDER: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	AGENT_ENTRY_FORBIDS_SENDER: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	THREAD_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_ALREADY_ATTACHED: HttpStatusCode.CONFLICT,
 	THREAD_PAUSED: HttpStatusCode.UNPROCESSABLE_ENTITY,

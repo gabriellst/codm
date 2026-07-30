@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { BaseError } from '@codedm/core-typescript'
-import { ProviderKind, ContactKind } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind, ContactKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { Thread } from './Thread'
 
 const base = {
@@ -135,5 +135,120 @@ describe('Thread entity', () => {
 		// `c1` is read-only in the fixture. It may quote the agent all day: a quote is address, not rights.
 		const live = Thread.create(base)
 		expect(live.canInvoke({ senderExternalId: 'c1', text: 'oi', repliesToAgent: true })).toBe(false)
+	})
+})
+
+/**
+ * B4 decision 2 — the two invariants nobody enforced before. Pure entity, no DB (AC-1/AC-2).
+ *
+ * THE FALSIFIER, and it is the reason this Task exists at all: `TranscriptRepository.append()` accepted
+ * every one of the four cases below and inserted the row. So each case is written to FAIL if the guard
+ * is deleted — comment out the corresponding `throw` in `recordEntry` and the matching `it` goes red
+ * with a useful message, rather than passing because nothing was asserted.
+ */
+describe('Thread.recordEntry — the thread owns who may cite what, and who needs a sender', () => {
+	const threadOf = (mentionTag = '@ws') =>
+		Thread.create({
+			ownerId: base.ownerId,
+			channelId: base.channelId,
+			contactRef: { externalId: 'contact-1', displayName: 'Contact', kind: ContactKind.USER },
+			workspaceId: base.workspaceId,
+			providers: [ProviderKind.CLAUDE_CODE],
+			mentionTag,
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true }],
+		})
+
+	// ── AC-1: quotedEntry must belong to THIS thread ───────────────────────────────────────────────
+
+	it('AC-1 FALSEADOR — a citation of an entry from ANOTHER thread is rejected and nothing is accumulated', () => {
+		const threadA = threadOf()
+		const threadB = threadOf()
+		const e1 = threadA.recordEntry({ kind: TranscriptKind.CONTACT, text: 'olá', senderExternalId: 'contact-1' })
+
+		expect(() =>
+			threadB.recordEntry({
+				kind: TranscriptKind.CONTACT,
+				text: 'respondendo',
+				senderExternalId: 'contact-1',
+				quotedEntry: { entryId: e1.entryId, threadId: threadA.id.value },
+			}),
+		).toThrow(expect.objectContaining({ name: 'QUOTED_ENTRY_NOT_IN_THREAD' }))
+
+		// The REJECTION half: a thrown invariant must leave the aggregate untouched. Without this the
+		// guard could throw AFTER pushing and the test above would still pass.
+		expect(threadB.pullPendingWrites().entries).toHaveLength(0)
+	})
+
+	it('a citation of an entry of the SAME thread is accepted, including one recorded in this same unit of work', () => {
+		const thread = threadOf()
+		const first = thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'pergunta', senderExternalId: 'contact-1' })
+
+		const second = thread.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: 'resposta',
+			quotedEntry: { entryId: first.entryId, threadId: thread.id.value },
+		})
+
+		expect(second.quotedEntryId).toBe(first.entryId)
+		expect(thread.pullPendingWrites().entries).toHaveLength(2)
+	})
+
+	// ── AC-2: the kind × sender matrix ────────────────────────────────────────────────────────────
+
+	it('AC-2 FALSEADOR — CONTACT without a sender is rejected', () => {
+		const thread = threadOf()
+
+		expect(() => thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'quem falou?' })).toThrow(
+			expect.objectContaining({ name: 'CONTACT_ENTRY_REQUIRES_SENDER' }),
+		)
+		expect(thread.pullPendingWrites().entries).toHaveLength(0)
+	})
+
+	it('AC-2 FALSEADOR — SYSTEM and WHISPER carrying a contact sender are both rejected', () => {
+		const thread = threadOf()
+
+		expect(() => thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'pronto', senderExternalId: 'contact-1' })).toThrow(
+			expect.objectContaining({ name: 'AGENT_ENTRY_FORBIDS_SENDER' }),
+		)
+		expect(() => thread.recordEntry({ kind: TranscriptKind.WHISPER, text: 'pergunte de novo', senderExternalId: 'contact-1' })).toThrow(
+			expect.objectContaining({ name: 'AGENT_ENTRY_FORBIDS_SENDER' }),
+		)
+		expect(thread.pullPendingWrites().entries).toHaveLength(0)
+	})
+
+	it('the four production shapes all pass — CONTACT with sender, SYSTEM/WHISPER without, DIRECT unconstrained', () => {
+		const thread = threadOf()
+
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'oi', senderExternalId: 'contact-1' })
+		thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'oi de volta' })
+		thread.recordEntry({ kind: TranscriptKind.WHISPER, text: 'seja breve' })
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'eu mesmo respondo' })
+
+		expect(thread.pullPendingWrites().entries.map(e => e.kind)).toEqual([
+			TranscriptKind.CONTACT,
+			TranscriptKind.SYSTEM,
+			TranscriptKind.WHISPER,
+			TranscriptKind.DIRECT,
+		])
+	})
+
+	// ── The record the callers depend on ──────────────────────────────────────────────────────────
+
+	it('mints the id SYNCHRONOUSLY and stamps owner + thread from the aggregate', () => {
+		const thread = threadOf()
+
+		const entry = thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'texto' })
+
+		expect(entry.entryId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+		expect(entry.ownerId).toBe(thread.ownerId)
+		expect(entry.threadId).toBe(thread.id.value)
+	})
+
+	it('pullPendingWrites DRAINS — a second call returns nothing, so a re-saved instance cannot double-insert', () => {
+		const thread = threadOf()
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'uma vez' })
+
+		expect(thread.pullPendingWrites().entries).toHaveLength(1)
+		expect(thread.pullPendingWrites().entries).toHaveLength(0)
 	})
 })

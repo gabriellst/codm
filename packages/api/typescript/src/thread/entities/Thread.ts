@@ -1,7 +1,14 @@
-import { AggregateRoot, BaseError, z } from '@codedm/core-typescript'
+import { AggregateRoot, BaseError, Id, z } from '@codedm/core-typescript'
 import type Z from 'zod'
-import { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
-import type { ApplicationErrors, DomainErrors } from '../errors'
+import {
+	ProviderKind,
+	ContactKind,
+	ThreadStatus,
+	BufferSize,
+	TranscriptKind,
+	ClassificationMethod,
+} from '@codedm/contracts-typescript/wire/enums'
+import type { DomainErrors } from '../errors'
 import { mentionsTag, stripMentionTag, MentionGateSchema } from '../schemas'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
@@ -20,16 +27,42 @@ export const ParticipantSchema = z.object({
 })
 
 /**
- * The roster id the OWNER always occupies — seeded by `AttachThread`, always `canInvoke: true`.
+ * A transcript entry — a CHILD RECORD of `Thread`, not an entity (B4, decision 1).
  *
- * The roster is about OTHER PEOPLE: it exists so the operator can mute specific participants, and
- * muting yourself is meaningless. So a message the owner typed is attributed to THIS id whichever
- * device it came from — the phone, another web client, or the console — rather than to their own
- * phone-number JID, which the gateway snapshot also puts in the roster with `canInvoke: false`
- * (it enumerates every group participant with no self filter). Without this, the owner's own message
- * is denied by the participant check BEFORE the mention gate is ever consulted.
+ * No class, no identity of its own beyond `entryId`, no lifecycle: it is written once and never
+ * transitions. What it does have is invariants, and those belong to the thread that owns it — which is
+ * the whole point of the change. Before B4 this shape lived on `TranscriptRepository` as
+ * `TranscriptEntryRow` and its id was minted inside `DrizzleTranscriptRepository.append()`, with no
+ * aggregate anywhere in the path to reject a foreign citation or a `CONTACT` line with no sender.
  */
-export const OPERATOR_PARTICIPANT_ID = 'operator'
+export const TranscriptEntrySchema = z.object({
+	entryId: z.uuid(),
+	ownerId: z.uuid(),
+	threadId: z.uuid(),
+	kind: z.enum(TranscriptKind),
+	text: z.string(),
+	issueId: z.string().optional(),
+	quotedEntryId: z.string().optional(),
+	senderExternalId: z.string().optional(),
+	provider: z.enum(ProviderKind).optional(),
+	classification: z.enum(ClassificationMethod).optional(),
+	at: z.date(),
+})
+
+/**
+ * A citation, RESOLVED (B4, decision D-B).
+ *
+ * `recordEntry` takes the quoted entry's `threadId` alongside its id rather than the id alone, because
+ * the entity does no I/O and the invariant is about PROVABLE membership: you may cite an entry you can
+ * show belongs to this thread. The caller is the one holding a transaction, and the caller that
+ * actually needs this — `IngestChannelMessage` — already reads the quoted row inside its transaction to
+ * decide `repliesToAgent`, so the proof costs nothing new. A citation that cannot be resolved degrades
+ * to no citation at the call site; it is never written blind.
+ */
+export const QuotedEntryRefSchema = z.object({
+	entryId: z.string().min(1),
+	threadId: z.string().min(1),
+})
 
 export const ThreadSchema = z.object({
 	ownerId: z.uuid(),
@@ -49,6 +82,25 @@ export type ThreadProps = Z.infer<typeof ThreadSchema>
 export type ContactRef = Z.infer<typeof ContactRefSchema>
 export type MentionGate = Z.infer<typeof MentionGateSchema>
 export type Participant = Z.infer<typeof ParticipantSchema>
+export type TranscriptEntry = Z.infer<typeof TranscriptEntrySchema>
+export type QuotedEntryRef = Z.infer<typeof QuotedEntryRefSchema>
+
+/** What `ThreadRepository.save` drains and writes in the SAME transaction as the thread row. */
+export interface PendingThreadWrites {
+	entries: TranscriptEntry[]
+}
+
+/**
+ * The roster id the OWNER always occupies — seeded by `AttachThread`, always `canInvoke: true`.
+ *
+ * The roster is about OTHER PEOPLE: it exists so the operator can mute specific participants, and
+ * muting yourself is meaningless. So a message the owner typed is attributed to THIS id whichever
+ * device it came from — the phone, another web client, or the console — rather than to their own
+ * phone-number JID, which the gateway snapshot also puts in the roster with `canInvoke: false`
+ * (it enumerates every group participant with no self filter). Without this, the owner's own message
+ * is denied by the participant check BEFORE the mention gate is ever consulted.
+ */
+export const OPERATOR_PARTICIPANT_ID = 'operator'
 
 /**
  * `Thread` (BC4 Thread & Routing, Core) — the binding of a conversation to a workspace + providers,
@@ -56,10 +108,33 @@ export type Participant = Z.infer<typeof ParticipantSchema>
  * context-buffer size. Invariants with teeth: providers non-empty and at least one invoker must
  * remain. The steer-vs-direct mode guard that used to live here is gone — see the note where the two
  * `assertCan*` methods stood.
- * The transcript + pending clarifications are separate entities/records, not embedded here.
+ *
+ * ### The transcript is PART of this aggregate (B4, decision 1)
+ * It used to say "the transcript is a separate entity/record, not embedded here", and it said so as a
+ * statement of fact with no reason attached — which is exactly the shape the new template rule calls
+ * out: a child table with no aggregate in front of it and no lifecycle/scale justification in the
+ * parent. There was no `TranscriptEntry` entity to make it true either; `TranscriptRepository` minted
+ * ids in `DrizzleTranscriptRepository.append()` and inserted whatever it was handed. Now the WRITE goes
+ * through `recordEntry`, which owns the two invariants nobody enforced before (a citation must belong
+ * to this thread; `CONTACT` needs a sender and the system's own lines must not carry one), and
+ * `ThreadRepository.save` persists the accumulated entries in the same transaction as the thread row.
+ *
+ * READS deliberately stay outside the aggregate: `findById` does NOT hydrate history — loading a
+ * thread stays one row, forever — and the query use cases keep reading Drizzle directly (BFF). The
+ * agent's context window reads `ThreadRepository.recentEntries`, which is the aggregate's persistence
+ * surface, not a second child-table repository.
  */
 export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	static override schema = ThreadSchema
+
+	/**
+	 * Entries recorded in THIS unit of work and not yet written.
+	 *
+	 * A subclass field initializer runs after `super(props)`, so the `Object.assign(this, …)` in
+	 * `BaseEntity`'s constructor cannot clobber it, and `ThreadSchema` strips unknown keys so
+	 * `validate()` cannot either. Same mechanism `BaseEntity.domainEvents` already uses.
+	 */
+	private pendingEntries: TranscriptEntry[] = []
 
 	static create(data: {
 		ownerId: string
@@ -122,6 +197,84 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		participant.canInvoke = canInvoke
 		// Reassign to trigger the embedded-array persistence path.
 		this.participants = [...this.participants]
+	}
+
+	/**
+	 * Record a line of the conversation (B4, decision 1) — the ONLY way a transcript entry comes to be.
+	 *
+	 * Returns the record so the caller has the id SYNCHRONOUSLY, before any write: three of the four
+	 * call sites use it as the dedup key of something they enqueue in the same transaction
+	 * (`mailbox.enqueue({ dedupKey: entry.entryId })`, `enqueueCommand(..., { jobId: entry.entryId })`)
+	 * and two return it in their output schema. That is why the id is minted HERE and not by the
+	 * repository: an id that only exists after `save` cannot be referenced by the rows that commit with
+	 * it.
+	 *
+	 * Nothing is written. The entry is accumulated, and `ThreadRepository.save(thread, tx)` persists it
+	 * in the same transaction as the thread row — which is also how the one non-transactional writer got
+	 * fixed: before B3/B4, `DeliverOrchestratorReply` appended outside any transaction.
+	 *
+	 * ### Invariant (a) — a citation belongs to THIS thread
+	 * Enforced against a RESOLVED reference, not an id (see `QuotedEntryRefSchema`). Nobody checked this
+	 * before, and the failure it admits is not abstract: the reply-quote path resolves ids that come off
+	 * the wire, and an id from another conversation would have been written into this one's history.
+	 *
+	 * ### Invariant (b) — the kind×sender matrix
+	 * `CONTACT` is somebody else speaking, so it MUST carry the JID that spoke; `SYSTEM` (the agent) and
+	 * `WHISPER` (the operator instructing the agent) are this system's own words and must NOT borrow a
+	 * contact's identity — a `SYSTEM` line with a sender reads, everywhere downstream, as if a human
+	 * said what the model said. `DIRECT` and `ACTION` are deliberately unconstrained: the matrix the
+	 * decision names covers three kinds, and inventing rules for the other two would be over-building.
+	 */
+	recordEntry(input: {
+		kind: TranscriptKind
+		text: string
+		senderExternalId?: string
+		quotedEntry?: QuotedEntryRef
+		issueId?: string
+		provider?: ProviderKind
+		classification?: ClassificationMethod
+		at?: Date
+	}): TranscriptEntry {
+		if (input.kind === TranscriptKind.CONTACT && !input.senderExternalId) {
+			throw new BaseError<DomainErrors>('CONTACT_ENTRY_REQUIRES_SENDER', 'a CONTACT entry must carry the sender that spoke')
+		}
+		if ((input.kind === TranscriptKind.SYSTEM || input.kind === TranscriptKind.WHISPER) && input.senderExternalId) {
+			throw new BaseError<DomainErrors>('AGENT_ENTRY_FORBIDS_SENDER', `a ${input.kind} entry must not carry a contact sender`)
+		}
+		if (input.quotedEntry && input.quotedEntry.threadId !== this.id.value) {
+			throw new BaseError<DomainErrors>(
+				'QUOTED_ENTRY_NOT_IN_THREAD',
+				`entry ${input.quotedEntry.entryId} belongs to thread ${input.quotedEntry.threadId}`,
+			)
+		}
+
+		const entry: TranscriptEntry = {
+			entryId: Id.value(),
+			ownerId: this.ownerId,
+			threadId: this.id.value,
+			kind: input.kind,
+			text: input.text,
+			issueId: input.issueId,
+			quotedEntryId: input.quotedEntry?.entryId,
+			senderExternalId: input.senderExternalId,
+			provider: input.provider,
+			classification: input.classification,
+			at: input.at ?? new Date(),
+		}
+		this.pendingEntries.push(entry)
+		return entry
+	}
+
+	/**
+	 * Drain the writes accumulated in this unit of work. Called by `ThreadRepository.save` only.
+	 *
+	 * Mirrors `pullDomainEvents()`: one drain, clears the buffer, so a second `save` of the same
+	 * instance cannot re-insert what already committed.
+	 */
+	pullPendingWrites(): PendingThreadWrites {
+		const entries = this.pendingEntries
+		this.pendingEntries = []
+		return { entries }
 	}
 
 	/**
