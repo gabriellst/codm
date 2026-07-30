@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test'
-import { LoggingService } from '@codedm/core-typescript'
+import { LoggingService } from '@codm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../../enums'
 import { nodeAgentProcessSpawner, type AgentProcess } from './AgentProcess'
 import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
-import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import { InMemoryAgentIdentityService } from '@codm/core-typescript'
 
 /**
  * AC-3.3 — CANCELLATION KILLS THE WHOLE PROCESS GROUP, not just the direct child.

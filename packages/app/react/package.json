@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/app-react",
+	"name": "@codm/app-react",
 	"description": "Template Frontend (React + TanStack Start)",
 	"version": "1.0.0",
 	"private": true,
@@ -14,9 +14,9 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.0.0",
-		"@codedm/app-styles": "workspace:*",
-		"@codedm/app-tauri": "workspace:*",
-		"@codedm/client-typescript": "workspace:*",
+		"@codm/app-styles": "workspace:*",
+		"@codm/app-tauri": "workspace:*",
+		"@codm/client-typescript": "workspace:*",
 		"@dnd-kit/core": "^6.3.1",
 		"@maskito/core": "^5.0.1",
 		"@maskito/kit": "^5.0.1",

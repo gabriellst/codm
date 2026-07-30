@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
+import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 import { WorkspaceDetector, type WorkspaceInspection } from './WorkspaceDetector'
 
 /**

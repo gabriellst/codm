@@ -102,7 +102,7 @@ import {
   createItemMutationRequestSchema,
   listItemsQueryKey,
   type CreateItemMutationRequest,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { DeepPartial } from '@/lib'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -203,7 +203,7 @@ export function CreateItemForm({ onSuccess, onCancel, className, ...props }: Cre
 Edit forms receive the **entity typed from the SDK read query** (never a hand-rolled interface), and map it to `DeepPartial<WriteDto>` for `defaultValues`. Two shapes, one mapping — no invented third type.
 
 ```typescript
-import type { GetItemQueryResponse, UpdateItemMutationRequest } from '@codedm/client-typescript/typescript'
+import type { GetItemQueryResponse, UpdateItemMutationRequest } from '@codm/client-typescript/typescript'
 
 // A14: props = read DTO (what the parent already has from its list/detail query)
 type EditItemFormProps = React.ComponentProps<'form'> & {
@@ -475,7 +475,7 @@ Each step extracts its sub-schema from the **complete/strict** SDK mutation sche
 > when the contract reorders members (registry FRM-P44).
 
 ```typescript
-import { completeWizardMutationRequestSchema } from '@codedm/client-typescript/typescript'
+import { completeWizardMutationRequestSchema } from '@codm/client-typescript/typescript'
 import { pickUnionVariantField, pickUnionVariant } from '@/lib/union'
 import { type DeepPartial } from '@/lib'
 import { useForm } from '@tanstack/react-form'
@@ -913,7 +913,7 @@ The compound children API of `<Select>` / `<Combobox>` / `<ToggleGroup>` is **un
 import { Select } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import { ToggleGroup } from '@/components/ui/toggle-group'
-import { TaxTypeEnum, CurrencyCode, OperationalCostFlowEnum } from '@codedm/client-typescript/typescript'
+import { TaxTypeEnum, CurrencyCode, OperationalCostFlowEnum } from '@codm/client-typescript/typescript'
 
 // Dropdown — Select in enum mode
 <form.Field name="type">

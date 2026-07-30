@@ -14,7 +14,7 @@
  *    reads the flag: it binds an in-process ExternalMediator (silently severing the Go gateway)
  *    and mounts the unauthenticated test-ingress endpoint — hermetic-test-only seams.
  */
-import { Config, acquireDataDirLock, resolveDataDir } from '@codedm/core-typescript'
+import { Config, acquireDataDirLock, resolveDataDir } from '@codm/core-typescript'
 
 if (process.env.EMIT_OPENAPI !== 'true') {
 	acquireDataDirLock(resolveDataDir(Config.env.CODEDM_DATA_DIR))

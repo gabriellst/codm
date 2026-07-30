@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { ContactKind, MailboxItemKind } from '@codedm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import { toolNameOf, ForkIssueController } from '../../mcp/exposure'
 import { AgentRunOutcome } from '../../enums'

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { AgentModelId, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { AgentSession } from '../../entities/AgentSession'
 import { AgentSessionRepository } from './AgentSessionRepository'

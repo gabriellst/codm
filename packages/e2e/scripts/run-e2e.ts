@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { lockPathFor } from '@codedm/core-typescript/db/lock'
+import { lockPathFor } from '@codm/core-typescript/db/lock'
 
 const E2E_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const API_TS_ROOT = resolve(E2E_ROOT, '../api/typescript')

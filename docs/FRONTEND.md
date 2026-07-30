@@ -9,11 +9,11 @@
 | **react** | `packages/app/react/` | React 19 + Vite + **TanStack Start** + Router/Query/Form + Zustand + Base UI + Tailwind 4 | `/app/...` (basepath) | The app — auth, dashboards, mutations, anything stateful |
 | **astro** | `packages/app/astro/` | Astro 5 + MDX + Tailwind 4 + `@astrojs/sitemap` + content collections | `/`, `/pt`, `/en`, `/blog/...` | Public-facing landing + blog + SEO |
 
-A third workspace, **`packages/app/styles/`**, ships `@codedm/app-styles/tokens.css` — design tokens consumed by `react` and `astro` so the landing page and the app look identical. A fourth, **`packages/app/tauri/`**, is the desktop shell: a Tauri v2 host that serves the react console as its webview and supervises the TS daemon + Go gateway sidecars (see `.claude/skills/desktop-shell/SKILL.md`).
+A third workspace, **`packages/app/styles/`**, ships `@codm/app-styles/tokens.css` — design tokens consumed by `react` and `astro` so the landing page and the app look identical. A fourth, **`packages/app/tauri/`**, is the desktop shell: a Tauri v2 host that serves the react console as its webview and supervises the TS daemon + Go gateway sidecars (see `.claude/skills/desktop-shell/SKILL.md`).
 
 **Routing handoff.** In production, nginx splits the request: `/` and `/blog/...` go to the astro build; `/app/...` goes to the TanStack Start server (with SSR on auth routes, hydrated app otherwise). Locally, `bun dev` runs both servers in parallel and you switch by URL prefix.
 
-The **react app** is a **composition pipeline**: routes are thin shells that declare the URL contract and layout; every component owns its own data through React Query; URL state is shareable through search params; interactive state lives in Zustand. The typed SDK (`@codedm/client-typescript`) feeds it all.
+The **react app** is a **composition pipeline**: routes are thin shells that declare the URL contract and layout; every component owns its own data through React Query; URL state is shareable through search params; interactive state lives in Zustand. The typed SDK (`@codm/client-typescript`) feeds it all.
 
 The **astro app** is **render-time**: pages and components run at build/SSR time, emit zero JavaScript by default, and reach for React islands (`client:*`) only when interactivity is genuinely needed. The styles workspace ensures dark mode / theme tokens line up with the react app.
 
@@ -210,7 +210,7 @@ import {
   CreateExampleMutationRequest,
   ExampleStatus,
   listExampleQueryKey,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 ```
 
 ### Type inference
@@ -230,7 +230,7 @@ Method-discriminated payloads (e.g. `payInvoice` — `CARD` vs `PIX`) arrive as 
 import {
   payInvoiceMutationRequestSchema,
   PayInvoiceMutationRequestMethodEnum,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 
 // options[0] = CARD variant, options[1] = PIX variant
 payInvoiceMutationRequestSchema.def.options[0].shape.paymentMethodId

@@ -4,8 +4,8 @@
  * Money on the wire is always single-currency (converted server-side).
  */
 // Money is the SDK's type (cents + CurrencyCode) — the single source of truth. Consumers
-// import it straight from '@codedm/client-typescript/typescript', not from here.
-import type { Money } from '@codedm/client-typescript/typescript'
+// import it straight from '@codm/client-typescript/typescript', not from here.
+import type { Money } from '@codm/client-typescript/typescript'
 import { type Locale, DEFAULT_LOCALE } from './locale'
 
 /** Format a single-currency money value (cents) in the given locale: {1234,'BRL'} -> "R$ 12,34". */

@@ -61,7 +61,7 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 
 /**
  * TABLE-READ EDGES — cross-context dependencies that ride the DATABASE (drizzle tables imported
- * from @codedm/contracts/db) instead of code imports. The import-edge rail above cannot see them
+ * from @codm/contracts/db) instead of code imports. The import-edge rail above cannot see them
  * (the audit's blind spot: sub-reported coupling erodes the "writing the map IS the audit"
  * guarantee), so they are DECLARED here and enforced by the table-read leg of
  * tests/architecture/context-map.test.ts, which resolves every imported table symbol to its owning

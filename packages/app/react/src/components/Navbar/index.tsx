@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { IconAntennaBars5, IconFolder, IconHome, IconListDetails, IconPlus, IconSettings } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { useGetHomeDashboard, useGetIssuesOverview, useListWorkspaces } from '@codedm/client-typescript/typescript'
+import { useGetHomeDashboard, useGetIssuesOverview, useListWorkspaces } from '@codm/client-typescript/typescript'
 
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/console/Logo'

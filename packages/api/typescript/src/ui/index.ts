@@ -1,4 +1,4 @@
-import { BoundedContext } from '@codedm/core-typescript'
+import { BoundedContext } from '@codm/core-typescript'
 import { CONTEXT_NAMES } from '@shared/contexts'
 import * as controllers from './controllers'
 import * as internalHandlers from './handlers/internal'

@@ -13,7 +13,7 @@ prompt: >
   src/routes/(app)/notifications/ with an index.tsx, like every existing page.
   The backend surface already exists in the SDK: useListNotifications,
   useMarkNotificationRead and the NotificationCategory enum from
-  @codedm/client-typescript — read the generated surface under
+  @codm/client-typescript — read the generated surface under
   packages/client/dist/typescript/src/typescript/{hooks,types} FIRST for the
   exact params and response shapes. This is a frontend-only task: do not touch
   the backend and do not regenerate the SDK. The page shows a paginated list

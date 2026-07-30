@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/app-tauri",
+	"name": "@codm/app-tauri",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",

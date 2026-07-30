@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { Language } from '@codedm/contracts-typescript/wire/enums'
+import { Language } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages, resolveLanguage, DEFAULT_LANGUAGE } from './messages'
 
 describe('resolveLanguage', () => {

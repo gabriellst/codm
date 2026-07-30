@@ -13,9 +13,9 @@ import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { is, sql } from 'drizzle-orm'
 import { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import * as schema from '@codedm/contracts/db'
-import { migrationsDir } from '@codedm/contracts/db/migrations'
-import { events } from '@codedm/contracts/db'
+import * as schema from '@codm/contracts/db'
+import { migrationsDir } from '@codm/contracts/db/migrations'
+import { events } from '@codm/contracts/db'
 import { LibsqlDriver } from './LibsqlDriver'
 
 /**

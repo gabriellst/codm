@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import type { HttpControllerRequest } from '@codedm/core-typescript'
-import { HealthCheck, HealthService, type HealthComponentReport } from '@codedm/core-typescript'
+import type { HttpControllerRequest } from '@codm/core-typescript'
+import { HealthCheck, HealthService, type HealthComponentReport } from '@codm/core-typescript'
 import { HealthController } from './Health'
 
 class StubCheck extends HealthCheck {

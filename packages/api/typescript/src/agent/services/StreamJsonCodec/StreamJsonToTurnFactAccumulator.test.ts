@@ -10,7 +10,7 @@
  * so they are assertable without a CLI.
  */
 import { describe, it, expect } from 'bun:test'
-import { AgentStopReason } from '@codedm/contracts-typescript/wire/enums'
+import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentToolCallStatus } from '../../enums'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from '../../events'
 import type { AgentFrame, AgentTurnUsage } from '../../types'
@@ -42,10 +42,31 @@ function fold(accumulator: StreamJsonToTurnFactAccumulator, frames: AgentFrame[]
 	return facts
 }
 
-const textFrame = (messageId: string, text: string, parentToolUseId: string | null = null): AgentFrame => ({ kind: 'assistant_text', messageId, text, parentToolUseId })
-const toolUse = (toolUseId: string, tool: string, parentToolUseId: string | null = null): AgentFrame => ({ kind: 'tool_use', toolUseId, tool, input: { a: 1 }, parentToolUseId })
-const toolResult = (toolUseId: string, ok: boolean, parentToolUseId: string | null = null): AgentFrame => ({ kind: 'tool_result', toolUseId, ok, summary: ok ? 'done' : 'ENOENT', parentToolUseId })
-const resultFrame = (usage: AgentTurnUsage = MEASURED_USAGE): AgentFrame => ({ kind: 'result', stopReason: AgentStopReason.END_TURN, usage })
+const textFrame = (messageId: string, text: string, parentToolUseId: string | null = null): AgentFrame => ({
+	kind: 'assistant_text',
+	messageId,
+	text,
+	parentToolUseId,
+})
+const toolUse = (toolUseId: string, tool: string, parentToolUseId: string | null = null): AgentFrame => ({
+	kind: 'tool_use',
+	toolUseId,
+	tool,
+	input: { a: 1 },
+	parentToolUseId,
+})
+const toolResult = (toolUseId: string, ok: boolean, parentToolUseId: string | null = null): AgentFrame => ({
+	kind: 'tool_result',
+	toolUseId,
+	ok,
+	summary: ok ? 'done' : 'ENOENT',
+	parentToolUseId,
+})
+const resultFrame = (usage: AgentTurnUsage = MEASURED_USAGE): AgentFrame => ({
+	kind: 'result',
+	stopReason: AgentStopReason.END_TURN,
+	usage,
+})
 
 describe('StreamJsonToTurnFactAccumulator — transcript and tool lifecycle', () => {
 	it('mints a transcript event per assistant text block and nothing for transport-only frames', () => {
@@ -123,10 +144,7 @@ describe('StreamJsonToTurnFactAccumulator — sub-agent SCOPE, keyed by parent_t
 	it('does not let a sub-agent transcript contaminate the main transcript', () => {
 		const accumulator = makeAccumulator()
 
-		const facts = fold(accumulator, [
-			textFrame('msg_sub', 'inner chatter', SUB),
-			textFrame('msg_main', 'the answer', null),
-		])
+		const facts = fold(accumulator, [textFrame('msg_sub', 'inner chatter', SUB), textFrame('msg_main', 'the answer', null)])
 
 		expect(facts).toHaveLength(1)
 		expect(facts[0]?.payload).toMatchObject({ messageId: 'msg_main', text: 'the answer' })
@@ -155,7 +173,11 @@ describe('StreamJsonToTurnFactAccumulator — sub-agent SCOPE, keyed by parent_t
 		// `system/init.tools` announces `Task` while the emitted block is named `Agent` (divergence D5):
 		// the two DISAGREE in this build, so nothing may switch on either literal. Here the dispatching
 		// tool is called `Task`, and scoping must be unaffected.
-		const facts = fold(accumulator, [toolUse('toolu_p', 'Task', null), toolResult('toolu_p', true, null), textFrame('m', 'inner', 'toolu_p')])
+		const facts = fold(accumulator, [
+			toolUse('toolu_p', 'Task', null),
+			toolResult('toolu_p', true, null),
+			textFrame('m', 'inner', 'toolu_p'),
+		])
 
 		expect(facts).toHaveLength(1)
 		expect(facts[0]).toBeInstanceOf(AgentToolCallEvent)
@@ -264,9 +286,9 @@ describe('StreamJsonToTurnFactAccumulator — usage is minted ONCE and is not lo
 	it('records zeroes for a provider that does not cache, rather than treating them as unknown', () => {
 		const accumulator = makeAccumulator()
 
-		const usage = fold(accumulator, [resultFrame({ inputTokens: 500, outputTokens: 42, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 })]).find(
-			f => f instanceof AgentUsageEvent,
-		)
+		const usage = fold(accumulator, [
+			resultFrame({ inputTokens: 500, outputTokens: 42, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 }),
+		]).find(f => f instanceof AgentUsageEvent)
 
 		// Arithmetically CORRECT, not missing: with no cache all input lands in `inputTokens` and the
 		// sum still holds. This is why the four fields are required rather than optional.
@@ -277,7 +299,11 @@ describe('StreamJsonToTurnFactAccumulator — usage is minted ONCE and is not lo
 		const accumulator = makeAccumulator()
 		accumulator.apply(toolUse('toolu_1', 'Read'))
 
-		const facts = [accumulator.apply(textFrame('m', 'hi')), accumulator.apply(toolResult('toolu_1', true)), accumulator.apply(resultFrame())]
+		const facts = [
+			accumulator.apply(textFrame('m', 'hi')),
+			accumulator.apply(toolResult('toolu_1', true)),
+			accumulator.apply(resultFrame()),
+		]
 
 		// Every member of the union is a BaseDomainEvent subclass — a POJO would reach the mediator
 		// with no class to be rehydrated into.

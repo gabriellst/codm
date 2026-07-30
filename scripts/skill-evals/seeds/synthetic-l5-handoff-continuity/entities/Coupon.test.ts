@@ -7,7 +7,7 @@
 //
 // Pure unit test: direct instantiation, no TestBed/DI (test SKILL.md quick rule).
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { testId } from '@test/support'
 import { Coupon, CouponSchema } from './Coupon'
 import { CouponStatus, CouponType } from '../enums'
@@ -38,8 +38,10 @@ function expectCouponError(fn: () => unknown, code: string): void {
 	} catch (error) {
 		thrown = error
 	}
+	// biome-ignore lint/suspicious/noMisplacedAssertion: shared assertion helper (pre-existing pattern, unrelated to A T4 scope rename); called from inside it() blocks below
 	expect(thrown).toBeInstanceOf(BaseError)
 	const err = thrown as BaseError
+	// biome-ignore lint/suspicious/noMisplacedAssertion: shared assertion helper (pre-existing pattern, unrelated to A T4 scope rename); called from inside it() blocks below
 	expect([err.name, err.message]).toContain(code)
 }
 

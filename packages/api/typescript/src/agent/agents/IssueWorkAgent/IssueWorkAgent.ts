@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { AgentModelId, McpScope } from '@codedm/contracts-typescript/wire/enums'
-import { AgentIdentityService, z } from '@codedm/core-typescript'
+import { AgentModelId, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { AgentIdentityService, z } from '@codm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
 import { Agent } from '../../types/Agent'
 import { AgentRunIdentitySchema, type AgentRunIdentity } from '../../types/AgentRunIdentity'

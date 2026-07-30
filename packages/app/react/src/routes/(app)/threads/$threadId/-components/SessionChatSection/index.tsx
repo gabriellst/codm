@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGetSessionChat } from '@codedm/client-typescript/typescript'
+import { useGetSessionChat } from '@codm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'

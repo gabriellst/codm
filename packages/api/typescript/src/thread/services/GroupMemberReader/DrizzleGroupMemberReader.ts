@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { remoteMemberships } from '@codedm/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { remoteMemberships } from '@codm/contracts/db'
 import { GroupMemberReader, type GroupMember } from './GroupMemberReader'
 
 @injectable()

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError } from '@codedm/core-typescript'
-import type { BaseInfrastructureErrors } from '@codedm/core-typescript'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { BaseError } from '@codm/core-typescript'
+import type { BaseInfrastructureErrors } from '@codm/core-typescript'
+import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner, ClaudeAgentRunner } from '../AgentRunner'
 
 /**

@@ -13,7 +13,7 @@ Creates a new domain context with the complete folder structure following DDD pa
 
 ## Architecture
 
-Every bounded context is bootstrapped via `BoundedContext.create()` — a shared abstraction in `@codedm/core-typescript` that encapsulates child container creation, tracing, mediator wiring, job scheduling, and router instantiation.
+Every bounded context is bootstrapped via `BoundedContext.create()` — a shared abstraction in `@codm/core-typescript` that encapsulates child container creation, tracing, mediator wiring, job scheduling, and router instantiation.
 
 The **shared context** (`packages/api/typescript/src/shared/index.ts`) is special: it uses `root: true` to register on the root container and passes `ALL_REGISTRIES` (shared services + all repository bindings). Other contexts create child containers that inherit from root.
 
@@ -97,7 +97,7 @@ import * as internalHandlers from './handlers/internal'
 import * as externalHandlers from './handlers/external'
 import middlewares from './middlewares'
 
-import { BoundedContext } from '@codedm/core-typescript'
+import { BoundedContext } from '@codm/core-typescript'
 
 const ctx = await BoundedContext.create({
   name: '<context>',
@@ -125,7 +125,7 @@ Every bounded context must have a flat `registry.ts` file (not a folder) exporti
 
 ```typescript
 // packages/api/typescript/src/<context>/registry.ts
-import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
 import { ExampleRepository, MockExampleRepository, DrizzleExampleRepository } from './repositories'
 
 // One declaration per token — `integration` omitted mirrors `real`; `null` = declared absence.
@@ -184,7 +184,7 @@ openapi.registerEnums({ ...enums, ..., ...newContextEnums })
 Edit `<context>/errors/index.ts` to add initial error types and the `Errors` union:
 
 ```typescript
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
 export type <Context>DomainErrors = '<CONTEXT>_NOT_FOUND'
 export type DomainErrors = BaseDomainErrors | <Context>DomainErrors

@@ -50,16 +50,16 @@ import {
 	Router,
 	traceClass,
 	OutboxDispatcher,
-} from '@codedm/core-typescript'
+} from '@codm/core-typescript'
 import { migrateEmbeddedDatabase } from '@shared/registry'
-import { ProviderKind, IssueStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind, IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { Issue } from '@issue/entities/Issue'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { OPERATOR_ID } from '@auth/operator'
-import { AgentIdentityService } from '@codedm/core-typescript'
+import { AgentIdentityService } from '@codm/core-typescript'
 import type { AgentRunIdentity } from '@agent/types/AgentRunIdentity'
 import { AgentName } from '@agent/enums'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { wireToolName, operationIdOf, TransitionIssueStatusController } from '@agent/mcp/exposure'
 import { MCP_ROUTE_PREFIX } from '@agent/mcp/route'
 

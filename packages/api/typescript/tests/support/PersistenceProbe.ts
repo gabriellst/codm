@@ -1,7 +1,7 @@
 import { and, getTableColumns, is, sql, type SQL } from 'drizzle-orm'
 import { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import { DrizzleClient } from '@codedm/core-typescript'
-import * as schema from '@codedm/contracts/db'
+import { DrizzleClient } from '@codm/core-typescript'
+import * as schema from '@codm/contracts/db'
 
 export type PersistedEventRow = typeof schema.events.$inferSelect
 export type OutboxRow = typeof schema.outbox.$inferSelect
@@ -21,7 +21,7 @@ type SchemaBarrel = typeof schema
 
 /**
  * Central table registry — TEST-INFRA ONLY. Every `SQLiteTable` exported by the
- * `@codedm/contracts/db` barrel is a valid probe key, and the key is simply the EXPORT NAME
+ * `@codm/contracts/db` barrel is a valid probe key, and the key is simply the EXPORT NAME
  * (`'events'`, `'outbox'`, `'users'`...).
  *
  * The keys used to be namespaced `<pgSchema>.<export>`, because the pg schema put every table in a
@@ -34,7 +34,7 @@ type SchemaBarrel = typeof schema
  * and therefore `count()`/`snapshot()` — for free; no change to this file.
  *
  * Why the barrel and not one `import * as` per schema module (as the medscall origin did): in this
- * template the schema lives in a SEPARATE package (`@codedm/contracts`) while `api/typescript` is a
+ * template the schema lives in a SEPARATE package (`@codm/contracts`) while `api/typescript` is a
  * `composite` TS project. A relative import into `packages/contracts/db/schema/*.ts` pulls those
  * source files into this composite project and trips `TS6307` (file not in the project's `include`),
  * and the package only publishes the flat `./db` barrel in its `exports` map — so per-module imports

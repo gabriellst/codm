@@ -40,11 +40,11 @@ import {
 	DatabaseHealthCheck,
 	MigrationsHealthCheck,
 	PollingHealthCheck,
-} from '@codedm/core-typescript'
+} from '@codm/core-typescript'
 import { ChannelStatusHealthCheck } from './services'
 import { join } from 'node:path'
-import * as schema from '@codedm/contracts/db'
-import { migrationsDir } from '@codedm/contracts/db/migrations'
+import * as schema from '@codm/contracts/db'
+import { migrationsDir } from '@codm/contracts/db/migrations'
 
 import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'

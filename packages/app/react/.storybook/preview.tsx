@@ -1,7 +1,7 @@
 // packages/app/react/.storybook/preview.tsx — COMPLETE final file.
 import React from 'react'
 import type { Preview } from '@storybook/react'
-import { configureClient } from '@codedm/client-typescript/http'
+import { configureClient } from '@codm/client-typescript/http'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 import i18n from '../src/lib/i18n'
 import { serviceBaseUrls } from '../src/lib/config'

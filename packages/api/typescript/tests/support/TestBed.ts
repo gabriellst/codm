@@ -16,7 +16,7 @@ import {
 	DomainEventRepository,
 	OutboxAwareMockDomainEventRepository,
 	Handler,
-} from '@codedm/core-typescript'
+} from '@codm/core-typescript'
 import { ALL_REGISTRIES } from '@shared/registry'
 import { GivenHelpers, createGivenHelpers } from './given'
 import { PersistenceProbe } from './PersistenceProbe'

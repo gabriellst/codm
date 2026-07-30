@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
-import { OrchestratorRepliedEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler } from '@codm/core-typescript'
+import { OrchestratorRepliedEvent } from '@codm/contracts-typescript/wire/events'
 import { RecordOrchestratorReply } from '../usecases/RecordOrchestratorReply'
 
 /**

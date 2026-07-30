@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe-neo'
-import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codedm/core-typescript'
+import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codm/core-typescript'
 import { OPERATOR_ID, OPERATOR_SESSION } from '@auth/operator'
 
 /**

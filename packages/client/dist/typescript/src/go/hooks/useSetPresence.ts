@@ -4,7 +4,7 @@
 */
 
 import type { SetPresenceMutationRequest, SetPresenceMutationResponse, SetPresencePathParams } from "../types/SetPresence.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { setPresence } from "../client/setPresence.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

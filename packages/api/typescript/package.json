@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/api-typescript",
+	"name": "@codm/api-typescript",
 	"description": "TypeScript backend — auth, reads, projections, BFF queries",
 	"version": "0.0.1",
 	"private": true,
@@ -12,10 +12,10 @@
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@codedm/client-typescript": "workspace:*",
-		"@codedm/contracts": "workspace:*",
-		"@codedm/contracts-typescript": "workspace:*",
-		"@codedm/core-typescript": "workspace:*",
+		"@codm/client-typescript": "workspace:*",
+		"@codm/contracts": "workspace:*",
+		"@codm/contracts-typescript": "workspace:*",
+		"@codm/core-typescript": "workspace:*",
 		"@faker-js/faker": "^10.4.0",
 		"@modelcontextprotocol/sdk": "^1.30.0",
 		"@react-email/components": "^1.0.12",

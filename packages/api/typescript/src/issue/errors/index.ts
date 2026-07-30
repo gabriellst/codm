@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
 // Domain errors — Issue aggregate invariants.
 export type IssueDomainErrors = 'ISSUE_ARCHIVED' | 'ISSUE_NOT_ARCHIVED' | 'ISSUE_ALREADY_ARCHIVED' | 'ISSUE_ALREADY_COMPLETED'

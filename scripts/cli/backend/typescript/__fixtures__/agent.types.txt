@@ -1,4 +1,4 @@
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 
 /**
  * What `ClassifyIssueAgent` is asked. `z.agentInput()` carries the run envelope

@@ -143,7 +143,7 @@ registry:
       name: "MCP exposure is a static on the controller, not a list elsewhere"
       when: "the endpoint should be callable by a model as an MCP tool"
       reason: "It used to live in a central manifest with seven parallel structures kept in sync by hand, so 'what exactly can a model call?' was un-answerable without leaving the file. `middlewares` already established the idiom: a cross-cutting property of an endpoint is declared ON the endpoint. The OpenAPI emitter reads the static during the same walk that builds the path — no registry, no side-effect module."
-      rule: "`static override readonly mcpScopes = [McpScope.X]`, right above `readonly path`, with `McpScope` from `@codedm/contracts-typescript/wire/enums`. ABSENT is the default and absent means NOT EXPOSED — measured: with no filter, `@kubb/plugin-mcp` turns every operation in the spec into a tool, so the security property comes entirely from this being opt-in. A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` mandatory (appended by `Controller.executeMiddlewares`, see `/middleware` MID-C06) — WITHOUT a line in `middlewares`."
+      rule: "`static override readonly mcpScopes = [McpScope.X]`, right above `readonly path`, with `McpScope` from `@codm/contracts-typescript/wire/enums`. ABSENT is the default and absent means NOT EXPOSED — measured: with no filter, `@kubb/plugin-mcp` turns every operation in the spec into a tool, so the security property comes entirely from this being opt-in. A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` mandatory (appended by `Controller.executeMiddlewares`, see `/middleware` MID-C06) — WITHOUT a line in `middlewares`."
       wrong: "adding the controller class to a central `MCP_SCOPES` record, or declaring the scope as a bare string literal instead of the contracts enum."
 
     - id: CTRL-C18
@@ -387,7 +387,7 @@ registry:
       reason: "Authorization is enforced at the middleware layer. RequireOwner is declared in `override middlewares` — the controller itself just reads ctx.user.id and ctx.session.ownerId, injected by AuthAccountMiddleware + RequireOwner."
       rule: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
         import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
         import { RequireOwner } from '@owner/middlewares'
 
@@ -485,7 +485,7 @@ registry:
         status: z.nativeEnum(OrderStatus)
       right: |
         // Always use z.enum() with TypeScript enum reference — SDK generates type-safe enum
-        import { OrderStatus } from '@codedm/contracts-typescript/wire/enums'
+        import { OrderStatus } from '@codm/contracts-typescript/wire/enums'
         status: z.enum(OrderStatus)
 
     - id: bp-05
@@ -793,7 +793,7 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+      import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
       export const {{Name}}InputSchema = z.object({
       	ctx: z.object({ user: z.object({ id: z.string() }) }),
@@ -814,7 +814,7 @@ registry:
     skeletons:
       list: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -844,7 +844,7 @@ registry:
         }
       get: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -874,7 +874,7 @@ registry:
         }
       create: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -906,7 +906,7 @@ registry:
         }
       update: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -932,7 +932,7 @@ registry:
         }
       delete: |
         import { injectable } from 'tsyringe-neo'
-        import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
         export const {{Name}}InputSchema = z
         	.object({
@@ -967,7 +967,7 @@ registry:
       mock: "	override mockController = true"
     exemplar: |
       import { injectable } from 'tsyringe-neo'
-      import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+      import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
       import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
       import { RequireOwner } from '@owner/middlewares'
       import { UpdateXInputSchema, UpdateXOutputSchema } from '@context/usecases/UpdateX'

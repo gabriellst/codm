@@ -25,7 +25,7 @@
  * That absence is the other half of the AC, and it is mechanically checkable.
  */
 import type Z from 'zod'
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 import type { AgentInputEnvelope, AgentInputSchemaConstraint } from '@agent/types'
 
 // ── CONCRETE: an agent declares its input with the verb, and gets the envelope for free ──────────
@@ -49,7 +49,11 @@ type ClassifyIssueInput = Z.output<typeof ClassifyIssueInputSchema>
  * without a cast, which they are. The reason it is optional is structural — `ClassifyIssueAgent` runs
  * BEFORE an issue exists, so the id is its output, never its input (see `BaseAgentInputSchema`).
  */
-export function readEnvelopeFromConcreteInput(input: ClassifyIssueInput): { cwdLength: number; ownerId: string; issueId: string | undefined } {
+export function readEnvelopeFromConcreteInput(input: ClassifyIssueInput): {
+	cwdLength: number
+	ownerId: string
+	issueId: string | undefined
+} {
 	return {
 		cwdLength: input.cwd.length, // ← AC-1.4: `input.cwd.length`
 		ownerId: input.ownerId, // ← AC-1.4: `input.ownerId`

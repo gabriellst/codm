@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
-import type { ProviderKind } from '@codedm/client-typescript/typescript'
+import type { ProviderKind } from '@codm/client-typescript/typescript'
 import { CHANNEL_KINDS, channelGlyph, providerGlyph } from '@/components/console/glyphs'
 import { cn } from '@/lib/utils'
 

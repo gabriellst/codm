@@ -1,5 +1,5 @@
 # Standalone wire-binding crate — the Rust sibling of generated/go (module template/contracts-go)
-# and generated/typescript (@codedm/contracts-typescript). NOT a member of any Cargo workspace:
+# and generated/typescript (@codm/contracts-typescript). NOT a member of any Cargo workspace:
 # consumers (the Tauri shell) take it as a path dependency inside THEIR workspace, exactly like
 # Go consumers resolve contracts-go via a `replace` directive. `cargo test` runs with cwd here.
 #

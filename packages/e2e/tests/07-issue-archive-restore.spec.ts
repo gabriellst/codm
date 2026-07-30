@@ -1,5 +1,5 @@
 import { test, expect } from '../utils/test'
-import { getSessionIssues, archiveIssue, restoreIssue } from '@codedm/client-typescript/typescript'
+import { getSessionIssues, archiveIssue, restoreIssue } from '@codm/client-typescript/typescript'
 import { givenAttachedThread, injectInboundMessage, type ApiSession } from '../utils/given'
 
 /**

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
-import { DomainEventRepository } from '@codedm/core-typescript'
+import { DomainEventRepository } from '@codm/core-typescript'
 import { OPERATOR_ID } from '@auth/operator'
 import { IngestChannelMessage } from '../usecases/IngestChannelMessage'
 import { MessageIngestedEvent } from '../events'

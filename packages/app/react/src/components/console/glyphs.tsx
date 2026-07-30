@@ -1,12 +1,6 @@
-import {
-	IconBrandWhatsapp,
-	IconHexagon,
-	IconMessageDots,
-	IconSparkles,
-	IconTerminal2,
-} from '@tabler/icons-react'
+import { IconBrandWhatsapp, IconHexagon, IconMessageDots, IconSparkles, IconTerminal2 } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
-import type { ChannelKind, IssueStatus, ProviderKind, StopResolution } from '@codedm/client-typescript/typescript'
+import type { ChannelKind, IssueStatus, ProviderKind, StopResolution } from '@codm/client-typescript/typescript'
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
@@ -14,7 +8,6 @@ export const channelGlyph: Record<ChannelKind, Icon> = {
 	WHATSAPP: IconBrandWhatsapp,
 	INTERNAL: IconTerminal2,
 }
-
 
 /**
  * User-connectable channel kinds in display order — used to render the connectivity list.

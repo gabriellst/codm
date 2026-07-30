@@ -15,12 +15,12 @@ describe('R1 controller-no-repositories-no-drizzleclient', () => {
 	})
 
 	test('fires on DrizzleClient symbol import from core', () => {
-		const r = checkFile(path, `import { DrizzleClient } from '@codedm/core-typescript'\n`)
+		const r = checkFile(path, `import { DrizzleClient } from '@codm/core-typescript'\n`)
 		expect(ruleIds(r)).toEqual(['R1'])
 	})
 
 	test('fires on Repository symbol in a multi-line import (joined statement)', () => {
-		const content = `import {\n\tDrizzleClient,\n} from '@codedm/core-typescript'\n`
+		const content = `import {\n\tDrizzleClient,\n} from '@codm/core-typescript'\n`
 		const r = checkFile(path, content)
 		expect(ruleIds(r)).toEqual(['R1'])
 		expect(r.findings[0]?.line).toBe(1)
@@ -132,7 +132,7 @@ describe('R4 usecase-no-direct-mediator-publish-outbox-only', () => {
 
 	test('fires on ExternalMediator import and on the publish call-site', () => {
 		const content = [
-			`import { BaseError, ExternalMediator, z } from '@codedm/core-typescript'`,
+			`import { BaseError, ExternalMediator, z } from '@codm/core-typescript'`,
 			`export class SomeOtherUseCase {`,
 			`\tasync execute() {`,
 			`\t\tawait this.externalMediator.publish(event)`,
@@ -147,28 +147,27 @@ describe('R4 usecase-no-direct-mediator-publish-outbox-only', () => {
 	test('clean: handler publishing (outside usecases glob)', () => {
 		const r = checkFile(
 			'packages/api/typescript/src/billing/handlers/internal.ts',
-			`import { ExternalMediator } from '@codedm/core-typescript'\nawait this.externalMediator.publish(event)\n`,
+			`import { ExternalMediator } from '@codm/core-typescript'\nawait this.externalMediator.publish(event)\n`,
 		)
 		expect(r.findings).toEqual([])
 	})
 
 	test('clean: use case raising domain events (no mediator)', () => {
-		const r = checkFile(path, `import { BaseError, z } from '@codedm/core-typescript'\nentity.raiseEvent(event)\n`)
+		const r = checkFile(path, `import { BaseError, z } from '@codm/core-typescript'\nentity.raiseEvent(event)\n`)
 		expect(r.findings).toEqual([])
 	})
-
 })
 
 describe('R5 react-no-backend-package-imports', () => {
 	const path = 'packages/app/react/src/lib/whatever.ts'
 
-	test('fires on @codedm/api-typescript import', () => {
-		const r = checkFile(path, `import { something } from '@codedm/api-typescript'\n`)
+	test('fires on @codm/api-typescript import', () => {
+		const r = checkFile(path, `import { something } from '@codm/api-typescript'\n`)
 		expect(ruleIds(r)).toEqual(['R5'])
 	})
 
-	test('fires on @codedm/core-typescript subpath import', () => {
-		const r = checkFile(path, `import { z } from '@codedm/core-typescript/zod'\n`)
+	test('fires on @codm/core-typescript subpath import', () => {
+		const r = checkFile(path, `import { z } from '@codm/core-typescript/zod'\n`)
 		expect(ruleIds(r)).toEqual(['R5'])
 	})
 
@@ -178,12 +177,12 @@ describe('R5 react-no-backend-package-imports', () => {
 	})
 
 	test('fires even in stories/tests (no glob exclusions)', () => {
-		const r = checkFile('packages/app/react/src/lib/whatever.stories.tsx', `import { x } from '@codedm/core-typescript'\n`)
+		const r = checkFile('packages/app/react/src/lib/whatever.stories.tsx', `import { x } from '@codm/core-typescript'\n`)
 		expect(ruleIds(r)).toEqual(['R5'])
 	})
 
 	test('clean: SDK import is the sanctioned wire surface', () => {
-		const r = checkFile(path, `import type { Money } from '@codedm/client-typescript/typescript'\n`)
+		const r = checkFile(path, `import type { Money } from '@codm/client-typescript/typescript'\n`)
 		expect(r.findings).toEqual([])
 	})
 })
@@ -192,7 +191,7 @@ describe('R6 middleware-no-drizzleclient-injection', () => {
 	const path = 'packages/api/typescript/src/tenancy/middlewares/RequireStoreMember.ts'
 
 	test('fires on DrizzleClient import from core', () => {
-		const r = checkFile(path, `import { DrizzleClient } from '@codedm/core-typescript'\n`)
+		const r = checkFile(path, `import { DrizzleClient } from '@codm/core-typescript'\n`)
 		expect(ruleIds(r)).toEqual(['R6'])
 	})
 
@@ -210,10 +209,7 @@ describe('glob + extraction mechanics', () => {
 	})
 
 	test('one finding per line even when the joined statement and physical line both match', () => {
-		const r = checkFile(
-			'packages/api/typescript/src/billing/usecases/X.ts',
-			`import { ExternalMediator } from '@codedm/core-typescript'\n`,
-		)
+		const r = checkFile('packages/api/typescript/src/billing/usecases/X.ts', `import { ExternalMediator } from '@codm/core-typescript'\n`)
 		expect(r.findings.length).toBe(1)
 	})
 

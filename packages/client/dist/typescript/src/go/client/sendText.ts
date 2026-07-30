@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/go/_http";
+import fetch from "@codm/client-typescript/go/_http";
 import type { SendTextMutationRequest, SendTextMutationResponse } from "../types/SendText.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 
 function getSendTextUrl() {
   const res = { method: 'POST', url: `/messaging/messages/text` as const }

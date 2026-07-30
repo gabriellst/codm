@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 
 /** Context-private fact: a non-code output was catalogued. Bridged to the frozen
  *  `integration.artifact.recorded` (BC6 → dashboard SSE / artifacts tab). */

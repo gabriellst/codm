@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
-import { issues, threads } from '@codedm/contracts/db'
-import { IssueStatus } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { issues, threads } from '@codm/contracts/db'
+import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 
 const IssueItemSchema = z.object({
 	issueId: z.uuid(),
@@ -17,7 +17,12 @@ const IssueItemSchema = z.object({
 
 export const GetIssuesOverviewInputSchema = z.object({ ownerId: z.uuid(), includeArchived: z.boolean().default(false) })
 export const GetIssuesOverviewOutputSchema = z.object({
-	statsLine: z.object({ awaitingInput: z.number().int(), working: z.number().int(), completed: z.number().int(), archived: z.number().int() }),
+	statsLine: z.object({
+		awaitingInput: z.number().int(),
+		working: z.number().int(),
+		completed: z.number().int(),
+		archived: z.number().int(),
+	}),
 	groups: z.array(z.object({ status: z.enum(IssueStatus), items: z.array(IssueItemSchema) })),
 	archived: z.array(IssueItemSchema),
 })

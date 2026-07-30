@@ -23,7 +23,7 @@ prompt: >
   window), useGetGoal + useCreateGoal + getGoalQueryKey +
   createGoalMutationRequestSchema (the period target), and the
   AnalyticsFrequencyEnum / GoalTypeEnum enums — all importable from
-  @codedm/client-typescript/typescript. This is a frontend-only task: do not
+  @codm/client-typescript/typescript. This is a frontend-only task: do not
   touch the backend and do not regenerate the SDK. The page is a revenue
   deep-dive report with three regions sharing one period: (1) a revenue-trend
   chart (the income recorte only — do not build the other recortes) with a

@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { TransitionIssueStatusMutationRequest, TransitionIssueStatusMutationResponse, TransitionIssueStatusPathParams } from "../types/TransitionIssueStatus.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getTransitionIssueStatusUrl(threadId: TransitionIssueStatusPathParams["threadId"], issueId: TransitionIssueStatusPathParams["issueId"]) {
   const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/status` as const }

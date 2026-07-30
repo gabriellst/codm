@@ -1,6 +1,6 @@
-import { AggregateRoot, z } from '@codedm/core-typescript'
+import { AggregateRoot, z } from '@codm/core-typescript'
 import type Z from 'zod'
-import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
+import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 
 export const ArtifactSchema = z.object({
 	ownerId: z.uuid(),
@@ -21,7 +21,15 @@ export type ArtifactProps = Z.infer<typeof ArtifactSchema>
 export class Artifact extends AggregateRoot<typeof ArtifactSchema> {
 	static override schema = ArtifactSchema
 
-	static create(data: { ownerId: string; threadId: string; issueId?: string; kind: ArtifactKind; name: string; ref: string; meta: string }): Artifact {
+	static create(data: {
+		ownerId: string
+		threadId: string
+		issueId?: string
+		kind: ArtifactKind
+		name: string
+		ref: string
+		meta: string
+	}): Artifact {
 		return new Artifact({
 			ownerId: data.ownerId,
 			threadId: data.threadId,

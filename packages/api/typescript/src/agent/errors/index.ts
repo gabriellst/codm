@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
 // Domain Errors — invariants of the agent runtime (single-active RUN per issue, single SSE observer
 // per issue). Descend from whatscode's AgentStreamRegistry error vocabulary

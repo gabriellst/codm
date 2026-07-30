@@ -84,7 +84,7 @@ Use plain unit tests for artifacts whose behavior is fully in-memory.
 
 ```ts
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { Patient } from './Patient'
 
 describe('Patient', () => {
@@ -486,7 +486,7 @@ Rules:
 Prefer these imports:
 
 - `@test/support` for `TestBed`
-- the `@codedm/core-typescript` barrel (BaseError, tryCatchAsync, z, Handler, Transaction)
+- the `@codm/core-typescript` barrel (BaseError, tryCatchAsync, z, Handler, Transaction)
 - direct artifact-relative imports for colocated tests
 
 Do not use removed or outdated test paths like:

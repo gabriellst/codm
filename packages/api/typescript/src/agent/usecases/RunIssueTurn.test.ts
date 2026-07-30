@@ -2,7 +2,7 @@ import { testId } from '@test/support'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codedm/core-typescript'
+import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codm/core-typescript'
 import {
 	IssueStatus,
 	MailboxItemKind,
@@ -10,7 +10,7 @@ import {
 	ProviderKind,
 	ProviderStatus,
 	StopKind,
-} from '@codedm/contracts-typescript/wire/enums'
+} from '@codm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { DeclareIssueComplete } from './DeclareIssueComplete'
@@ -18,7 +18,7 @@ import { AgentRunner } from '../services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
-import { AgentIdentityService } from '@codedm/core-typescript'
+import { AgentIdentityService } from '@codm/core-typescript'
 import { AgentSessionRepository, MailboxRepository } from '../repositories'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from '../agents/IssueWorkAgent'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'

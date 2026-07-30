@@ -1,4 +1,4 @@
-import { AggregateRoot, BaseError, Id, z } from '@codedm/core-typescript'
+import { AggregateRoot, BaseError, Id, z } from '@codm/core-typescript'
 import type Z from 'zod'
 import {
 	ProviderKind,
@@ -9,7 +9,7 @@ import {
 	ClassificationMethod,
 	StopKind,
 	StopResolution,
-} from '@codedm/contracts-typescript/wire/enums'
+} from '@codm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
 import { mentionsTag, stripMentionTag, MentionGateSchema } from '../schemas'
 import { isResolutionApplicable } from '../objects/StopResolutions'

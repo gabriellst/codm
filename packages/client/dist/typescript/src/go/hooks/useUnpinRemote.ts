@@ -4,7 +4,7 @@
 */
 
 import type { UnpinRemoteMutationRequest, UnpinRemoteMutationResponse } from "../types/UnpinRemote.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { unpinRemote } from "../client/unpinRemote.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

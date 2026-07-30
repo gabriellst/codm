@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@codedm/core-typescript'
+import { Handler, z } from '@codm/core-typescript'
 import { OwnerRepository } from '@owner/repositories'
 
 const OwnerRefSchema = z.object({

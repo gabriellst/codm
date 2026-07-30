@@ -84,14 +84,14 @@ registry:
           private doctorAssignmentRepository: DoctorAssignmentRepository,
         ) { super() }
     - id: UC-P02
-      name: "Imports from @codedm/core-typescript"
+      name: "Imports from @codm/core-typescript"
       when: always
-      rule: "import { Handler, BaseError, z } from '@codedm/core-typescript'; import type { Transaction } from '@codedm/core-typescript'; import { injectable } from 'tsyringe-neo'"
+      rule: "import { Handler, BaseError, z } from '@codm/core-typescript'; import type { Transaction } from '@codm/core-typescript'; import { injectable } from 'tsyringe-neo'"
       wrong: "import { Handler } from '@shared/types/Handler'; import { BaseError } from '@shared/types/BaseError'; import type { Transaction } from '@shared/types/UnitOfWork'; import { z } from '@shared/utils/schema' — all @shared/types/* and @shared/utils/* paths are dead"
     - id: UC-P03
-      name: "z from @codedm/core-typescript"
+      name: "z from @codm/core-typescript"
       when: always
-      rule: "import { z } from '@codedm/core-typescript'"
+      rule: "import { z } from '@codm/core-typescript'"
       wrong: "import { z } from 'zod' or import { z } from '@shared/utils/schema' — always use the project's re-export from core"
     - id: UC-P04
       name: "Optional tx + withTransaction"
@@ -243,8 +243,8 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import { Handler, z } from '@codedm/core-typescript'
-      import type { Transaction } from '@codedm/core-typescript'
+      import { Handler, z } from '@codm/core-typescript'
+      import type { Transaction } from '@codm/core-typescript'
 
       export const {{Name}}InputSchema = z.object({
       	// Define input schema
@@ -272,8 +272,8 @@ registry:
       	}
       }
     exemplar: |
-      import { Handler, BaseError, z } from '@codedm/core-typescript'
-      import type { Transaction } from '@codedm/core-typescript'
+      import { Handler, BaseError, z } from '@codm/core-typescript'
+      import type { Transaction } from '@codm/core-typescript'
       import { injectable } from 'tsyringe-neo'
       import { EmailSchema } from '@shared/objects'
       import { PriceRangeSchema } from '@context/objects'
@@ -453,7 +453,7 @@ registry:
       detect_skip: 'db\??:\s*DrizzleClient\b'
       wrong: |
         // Command use case names the infra type — orchestration shouldn't know Drizzle
-        import { DrizzleClient } from '@codedm/core-typescript'
+        import { DrizzleClient } from '@codm/core-typescript'
         protected async handle(input: this['input'], tx?: DrizzleClient): Promise<this['output']> {
           await this.withTransaction(tx, async tx => {
             await this.orders.save(order, tx)
@@ -461,7 +461,7 @@ registry:
         }
       right: |
         // Command use case speaks Transaction; repos accept it, only Drizzle repos cast.
-        import type { Transaction } from '@codedm/core-typescript'
+        import type { Transaction } from '@codm/core-typescript'
         protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
           await this.withTransaction(tx, async tx => {
             await this.orders.save(order, tx)

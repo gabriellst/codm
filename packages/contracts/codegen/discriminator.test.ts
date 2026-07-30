@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { IntegrationEventSchema } from '@codedm/contracts-typescript/wire'
+import { IntegrationEventSchema } from '@codm/contracts-typescript/wire'
 
 // The base template ships a single integration event (billing subscription-changed) since W3 moved
 // the membership event to examples/slices/tenant-membership. The discriminator machinery is still exercised:

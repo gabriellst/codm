@@ -1,5 +1,5 @@
 import { test, expect } from '../utils/test'
-import { getSessionIssues, getSessionChat, listArtifacts } from '@codedm/client-typescript/typescript'
+import { getSessionIssues, getSessionChat, listArtifacts } from '@codm/client-typescript/typescript'
 import { givenAttachedThread, injectInboundMessage } from '../utils/given'
 
 /**

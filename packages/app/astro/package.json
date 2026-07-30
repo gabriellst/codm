@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/app-astro",
+	"name": "@codm/app-astro",
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
@@ -15,7 +15,7 @@
 		"@astrojs/react": "^4.0.0",
 		"@astrojs/rss": "^4.0.0",
 		"@astrojs/sitemap": "^3.2.0",
-		"@codedm/app-styles": "workspace:*",
+		"@codm/app-styles": "workspace:*",
 		"@fontsource/ibm-plex-mono": "^5.2.5",
 		"@fontsource/poppins": "^5.2.5",
 		"@tailwindcss/vite": "^4.1.16",

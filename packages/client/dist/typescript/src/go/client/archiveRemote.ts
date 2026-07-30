@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/go/_http";
+import fetch from "@codm/client-typescript/go/_http";
 import type { ArchiveRemoteMutationRequest, ArchiveRemoteMutationResponse } from "../types/ArchiveRemote.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 
 function getArchiveRemoteUrl() {
   const res = { method: 'POST', url: `/channel/remotes/archive` as const }

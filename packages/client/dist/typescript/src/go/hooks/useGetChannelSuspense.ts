@@ -4,7 +4,7 @@
 */
 
 import type { GetChannelQueryResponse, GetChannelPathParams } from "../types/GetChannel.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
 import { getChannel } from "../client/getChannel.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";

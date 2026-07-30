@@ -8,8 +8,8 @@ import {
 	useGetSessionChat,
 	useGetThreadSettings,
 	useSetParticipantInvocation,
-} from '@codedm/client-typescript/typescript'
-import type { BufferSize } from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
+import type { BufferSize } from '@codm/client-typescript/typescript'
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'

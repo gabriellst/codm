@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 
 /**
  * OBSERVED FACT: token accounting for one agent turn (GOAL-agent-abstraction §4.3).

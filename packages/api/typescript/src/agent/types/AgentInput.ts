@@ -1,4 +1,4 @@
-import { BaseAgentInputSchema } from '@codedm/core-typescript'
+import { BaseAgentInputSchema } from '@codm/core-typescript'
 import type { z as Z, ZodObject, ZodRawShape } from 'zod'
 
 /**

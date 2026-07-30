@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import * as React from 'react'
 import { CurrencyInput } from '../currency-input'
-import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@codm/client-typescript/typescript'
 
 const meta: Meta<typeof CurrencyInput> = {
 	title: 'UI/CurrencyInput',

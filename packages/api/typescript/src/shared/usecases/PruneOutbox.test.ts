@@ -6,8 +6,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { DrizzleDatabaseDriver } from '@codedm/core-typescript'
-import { outbox } from '@codedm/contracts/db'
+import { DrizzleDatabaseDriver } from '@codm/core-typescript'
+import { outbox } from '@codm/contracts/db'
 import { PruneOutbox } from './PruneOutbox'
 
 const DAY_MS = 24 * 60 * 60 * 1000

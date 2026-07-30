@@ -2,8 +2,8 @@
 // Adapted: uses contracts/db schema; accounts table has no version column.
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { accounts } from '@codedm/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { accounts } from '@codm/contracts/db'
 import { Account } from '../../entities'
 import { AccountRepository } from './AccountRepository'
 

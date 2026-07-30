@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { channelGlyph } from './glyphs'
-import type { ChannelKind } from '@codedm/client-typescript/typescript'
+import type { ChannelKind } from '@codm/client-typescript/typescript'
 
 /** Two-letter initials from a display name ("Rafa Lima" → "RL", "@caio.dev" → "CA"). */
 export function initials(name: string): string {

@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z, DrizzleDatabaseDriver } from '@codedm/core-typescript'
-import { channels, outbox } from '@codedm/contracts/db'
-import { ChannelKind, ContactKind, ChannelStatus, MessageType, MessageAuthor } from '@codedm/contracts-typescript/wire/enums'
-import { ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
+import { Controller, HttpStatusCode, z, DrizzleDatabaseDriver } from '@codm/core-typescript'
+import { channels, outbox } from '@codm/contracts/db'
+import { ChannelKind, ContactKind, ChannelStatus, MessageType, MessageAuthor } from '@codm/contracts-typescript/wire/enums'
+import { ChannelMessageReceivedEvent } from '@codm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
 
 /**

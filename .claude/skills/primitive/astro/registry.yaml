@@ -40,12 +40,12 @@ bad_practices:
   - id: BP-AP-004
     severity: medium
     when: always
-    summary: Primitive imports from `@codedm/app-react`.
+    summary: Primitive imports from `@codm/app-react`.
     why: Each app workspace is independent; styles are the only shared surface.
-    fix: Recreate the primitive locally; share design tokens via `@codedm/app-styles`.
+    fix: Recreate the primitive locally; share design tokens via `@codm/app-styles`.
     mechanical: true
     detect:
-      - '@codedm/app-react'
+      - '@codm/app-react'
 
   - id: BP-AP-005
     severity: medium

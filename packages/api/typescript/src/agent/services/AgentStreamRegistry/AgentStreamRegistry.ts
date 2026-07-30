@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, tryCatchAsync, z } from '@codedm/core-typescript'
+import { BaseError, tryCatchAsync, z } from '@codm/core-typescript'
 import type Z from 'zod'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 

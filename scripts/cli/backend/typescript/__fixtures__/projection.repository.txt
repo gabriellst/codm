@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
-// import { messageProjection } from '@codedm/contracts/db'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
+// import { messageProjection } from '@codm/contracts/db'
 import { MessageProjection, type MessageProjectionProps } from './Message'
 
 /**

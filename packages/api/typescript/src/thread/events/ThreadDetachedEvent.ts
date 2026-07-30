@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 
 /** Context-private thread control-plane fact (no cross-context consumer today; kept for the audit
  *  trail + a future live-status SSE surface). */

@@ -1,7 +1,7 @@
 // Owner given helpers — set up Owners via the repository directly.
-import { Id } from '@codedm/core-typescript'
+import { Id } from '@codm/core-typescript'
 import type { TestBed } from '../TestBed'
-import { OwnerKind } from '@codedm/contracts-typescript/wire/enums'
+import { OwnerKind } from '@codm/contracts-typescript/wire/enums'
 import { Owner } from '@owner/entities/Owner'
 import { OwnerRepository } from '@owner/repositories/OwnerRepository'
 import { givenUserWithAccount } from './users'

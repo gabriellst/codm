@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { Config, McpAdapter, BaseError, AgentIdentityService, type McpRefusal } from '@codedm/core-typescript'
-import { withMcpRunContext } from '@codedm/client-typescript/typescript/mcp/context'
+import { Config, McpAdapter, BaseError, AgentIdentityService, type McpRefusal } from '@codm/core-typescript'
+import { withMcpRunContext } from '@codm/client-typescript/typescript/mcp/context'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
 
@@ -151,9 +151,9 @@ export class McpDoorController extends McpAdapter {
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
 const GENERATED_SERVERS: Record<McpScope, () => Promise<{ getServer: () => McpServer }>> = {
-	'issue-handling': () => import('@codedm/client-typescript/typescript/mcp/scopes/issue-handling/server'),
-	orchestration: () => import('@codedm/client-typescript/typescript/mcp/scopes/orchestration/server'),
-	system: () => import('@codedm/client-typescript/typescript/mcp/scopes/system/server'),
+	'issue-handling': () => import('@codm/client-typescript/typescript/mcp/scopes/issue-handling/server'),
+	orchestration: () => import('@codm/client-typescript/typescript/mcp/scopes/orchestration/server'),
+	system: () => import('@codm/client-typescript/typescript/mcp/scopes/system/server'),
 }
 
 /**

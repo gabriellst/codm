@@ -1,5 +1,5 @@
-import { z } from '@codedm/core-typescript'
-import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
+import { z } from '@codm/core-typescript'
+import { AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 
 /**

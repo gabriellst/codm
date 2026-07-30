@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/go/_http";
+import fetch from "@codm/client-typescript/go/_http";
 import type { LogoutChannelMutationResponse, LogoutChannelPathParams } from "../types/LogoutChannel.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 
 function getLogoutChannelUrl(id: LogoutChannelPathParams["id"]) {
   const res = { method: 'DELETE', url: `/channel/channels/${id}/logout` as const }

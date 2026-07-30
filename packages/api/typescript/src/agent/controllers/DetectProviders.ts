@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ProviderDetector } from '../services/ProviderDetector'
 

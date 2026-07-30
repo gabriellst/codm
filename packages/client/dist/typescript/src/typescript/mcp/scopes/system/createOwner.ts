@@ -1,6 +1,6 @@
-import fetch from "@codedm/client-typescript/typescript/mcp/scopes/system/_http";
+import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CreateOwnerMutationRequest, CreateOwnerMutationResponse } from "../../../types/CreateOwner.ts";
-import type { ResponseErrorConfig } from "@codedm/client-typescript/typescript/mcp/scopes/system/_http";
+import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**

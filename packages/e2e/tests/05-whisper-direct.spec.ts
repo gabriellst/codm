@@ -1,5 +1,5 @@
 import { test, expect } from '../utils/test'
-import { getSessionChat, steerThread, sendDirectMessage, pauseThread, resumeThread } from '@codedm/client-typescript/typescript'
+import { getSessionChat, steerThread, sendDirectMessage, pauseThread, resumeThread } from '@codm/client-typescript/typescript'
 import { givenAttachedThread } from '../utils/given'
 
 /**

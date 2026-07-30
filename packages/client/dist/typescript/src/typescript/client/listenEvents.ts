@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getListenEventsUrl() {
   const res = { method: 'GET', url: `/v1/ui/events` as const }

@@ -2,10 +2,10 @@ import { DomainEventRepository, type DomainEventConstructor } from './DomainEven
 import { BaseDomainEvent } from '../types/BaseDomainEvent'
 import type { AnyIntegrationEvent } from '../types/BaseIntegrationEvent'
 import { DrizzleClient } from '../db'
-import { events, outbox } from '@codedm/contracts/db'
+import { events, outbox } from '@codm/contracts/db'
 // The lane literal comes from the FROZEN cross-boundary enum, not a retyped string —
 // the Go side discriminates on these exact values.
-import { OutboxSource } from '@codedm/contracts-typescript/wire/enums'
+import { OutboxSource } from '@codm/contracts-typescript/wire/enums'
 import { and, asc, desc, eq, gte, like, sql } from 'drizzle-orm'
 import { injectable } from 'tsyringe-neo'
 import { tryCatchAsync } from '../utils/TryCatch'

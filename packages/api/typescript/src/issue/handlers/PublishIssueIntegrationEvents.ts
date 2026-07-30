@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-import { IssueArchivedEvent as IssueArchivedIntegrationEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codm/core-typescript'
+import { IssueArchivedEvent as IssueArchivedIntegrationEvent } from '@codm/contracts-typescript/wire/events'
 import { IssueArchivedEvent } from '../events'
 
 /**

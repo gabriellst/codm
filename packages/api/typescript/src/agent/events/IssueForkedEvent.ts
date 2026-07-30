@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 
 export const IssueForkedEventSchema = z.domainEvent({
 	issueId: z.string(),

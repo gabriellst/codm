@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { asc, eq, sql } from 'drizzle-orm'
-import { DrizzleClient, Id } from '@codedm/core-typescript'
-import { terminalLines } from '@codedm/contracts/db'
+import { DrizzleClient, Id } from '@codm/core-typescript'
+import { terminalLines } from '@codm/contracts/db'
 import { TerminalLineRepository, type TerminalLineRow } from './TerminalLineRepository'
 
 @injectable()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { AgentStopReason, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentStopReason, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { TerminalOutputAccumulator } from './TerminalOutputAccumulator'
 import { AgentMessageRole, AgentRunOutcome, type TransportStopKind } from '../../enums'
 import { AgentMessageEvent } from '../../events'

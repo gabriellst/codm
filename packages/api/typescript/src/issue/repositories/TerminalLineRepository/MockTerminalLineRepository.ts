@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Id } from '@codedm/core-typescript'
+import { Id } from '@codm/core-typescript'
 import { TerminalLineRepository, type TerminalLineRow } from './TerminalLineRepository'
 
 @injectable()

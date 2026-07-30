@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { AGENT_RUN_TOKEN_HEADER } from '@codedm/core-typescript'
-import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { AGENT_RUN_TOKEN_HEADER } from '@codm/core-typescript'
+import { MCP_RUN_TOKEN_HEADER } from '@codm/client-typescript/typescript/mcp/context'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { mcpExposure, operationIdsInScope, toolsInScope } from '@agent/mcp/exposure'
 
 /**
@@ -130,7 +130,7 @@ describe('the scan and the emitted spec describe the same surface, in both direc
 
 describe('D-E — the run-token header has one spelling on both sides of the wire', () => {
 	test('core (server side) and the SDK (shim side) agree byte for byte', () => {
-		// `core` cannot import `@codedm/client-typescript` (the api depends on the SDK, so the edge would
+		// `core` cannot import `@codm/client-typescript` (the api depends on the SDK, so the edge would
 		// be a cycle), and the generated `_http.ts` shims send THIS header and no `authorization`
 		// fallback. This file is the one place allowed to import both, which makes it the one place the
 		// pair can be pinned.

@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { Transaction } from '@codedm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { OwnerDirectory, type OwnerTenancy } from '@shared/services'
 import { OwnerRepository } from '@owner/repositories'
 

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient } from '@codedm/core-typescript'
-import { stopPolicyConfig } from '@codedm/contracts/db'
+import { DrizzleClient } from '@codm/core-typescript'
+import { stopPolicyConfig } from '@codm/contracts/db'
 import { StopPolicyConfigRepository, type StopPolicy, DEFAULT_STOP_POLICY } from './StopPolicyConfigRepository'
 
 @injectable()

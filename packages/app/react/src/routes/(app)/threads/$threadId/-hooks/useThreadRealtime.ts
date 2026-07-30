@@ -6,7 +6,7 @@ import {
 	getSessionIssuesQueryKey,
 	listArtifactsQueryKey,
 	type ListenEventsQueryResponse,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 import { useServerEvents, type ServerEventName } from '@/hooks'
 
 /**

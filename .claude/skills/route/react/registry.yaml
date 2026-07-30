@@ -245,7 +245,7 @@ registry:
     import { createFileRoute } from '@tanstack/react-router'
     import { zodValidator } from '@/lib/zod-validator'
     import { z } from 'zod'
-    import { listResourcesQueryOptions, listResourcesQueryParamsSchema, type ListResourcesQueryResponse } from '@codedm/client-typescript/typescript'
+    import { listResourcesQueryOptions, listResourcesQueryParamsSchema, type ListResourcesQueryResponse } from '@codm/client-typescript/typescript'
     import { RouteError } from '@/components/RouteError'
     import { ResourceList } from './-components/ResourceList'
     import { ResourceFilters } from './-components/ResourceFilters'
@@ -436,7 +436,7 @@ registry:
     - id: bp-12
       name: "Raw HTTP from a route/loader instead of the SDK (Non-Negotiable #2)"
       severity: critical
-      rule: "Route loaders and route files consume backend data only via @codedm/client-typescript. Never fetch()/axios/ky directly."
+      rule: "Route loaders and route files consume backend data only via @codm/client-typescript. Never fetch()/axios/ky directly."
       wrong: |
         loader: async () => (await fetch('/api/dashboard')).json()
       right: |

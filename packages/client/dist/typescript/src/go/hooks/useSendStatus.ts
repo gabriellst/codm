@@ -4,7 +4,7 @@
 */
 
 import type { SendStatusMutationRequest, SendStatusMutationResponse } from "../types/SendStatus.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { sendStatus } from "../client/sendStatus.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

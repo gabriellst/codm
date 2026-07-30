@@ -1,6 +1,6 @@
-import { z } from '@codedm/core-typescript'
-import type { AgentIdentity } from '@codedm/core-typescript'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { z } from '@codm/core-typescript'
+import type { AgentIdentity } from '@codm/core-typescript'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import type { AgentName } from '../enums'
 

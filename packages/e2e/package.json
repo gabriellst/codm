@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/e2e",
+	"name": "@codm/e2e",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -11,13 +11,13 @@
 		"build:extension": "bun extension/build.ts"
 	},
 	"devDependencies": {
-		"@codedm/core-typescript": "workspace:*",
+		"@codm/core-typescript": "workspace:*",
 		"@playwright/test": "^1.59.1",
 		"@types/bun": "^1.3.11",
 		"@types/node": "^25.6.0",
 		"playwright": "^1.59.1"
 	},
 	"dependencies": {
-		"@codedm/client-typescript": "workspace:*"
+		"@codm/client-typescript": "workspace:*"
 	}
 }

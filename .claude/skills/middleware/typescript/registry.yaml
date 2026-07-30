@@ -106,8 +106,8 @@ registry:
       reason: "@singleton() ensures a single instance per process; implements Middleware enforces the execute signature; Zod parses ctx; BaseError is the wire contract."
       rule: |
         import { singleton } from 'tsyringe-neo'
-        import { BaseError, z } from '@codedm/core-typescript'
-        import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codedm/core-typescript'
+        import { BaseError, z } from '@codm/core-typescript'
+        import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codm/core-typescript'
         import { ApplicationErrors } from '@<ctx>/errors'
 
         const CtxSchema = z.object({ /* slice of ctx this middleware reads */ })
@@ -314,8 +314,8 @@ registry:
   snippet:
     skeleton: |
       import { singleton } from 'tsyringe-neo'
-      import { BaseError, z } from '@codedm/core-typescript'
-      import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware, BaseInterfaceErrors } from '@codedm/core-typescript'
+      import { BaseError, z } from '@codm/core-typescript'
+      import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware, BaseInterfaceErrors } from '@codm/core-typescript'
 
       // Shape of request.ctx that this middleware expects downstream
       const CtxSchema = z.object({
@@ -340,8 +340,8 @@ registry:
     exemplar: |
       // packages/api/typescript/src/<ctx>/middlewares/<Name>Middleware.ts
       import { singleton } from 'tsyringe-neo'
-      import { BaseError, z } from '@codedm/core-typescript'
-      import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codedm/core-typescript'
+      import { BaseError, z } from '@codm/core-typescript'
+      import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codm/core-typescript'
       import { ApplicationErrors } from '@<ctx>/errors'
 
       const CtxSchema = z.object({

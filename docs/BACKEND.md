@@ -10,7 +10,7 @@ bounded contexts independent so the system can evolve without rewrites.
 
 The two backends share **one Postgres** and a **single source of truth** for cross-boundary
 contracts — `packages/contracts` (TypeSpec wire enums + integration events, Drizzle DB schema),
-codegen'd into per-language bindings (`@codedm/contracts-typescript`, `template/core-go`
+codegen'd into per-language bindings (`@codm/contracts-typescript`, `template/core-go`
 imports). Between the two services, transport is **Redis streams** (an `ExternalMediator` over an
 outbox) — there is no Kafka.
 
@@ -83,7 +83,7 @@ adds its own `fx.Module` here (e.g. `sync.Module`) as it is created.
 | Unit of work | `services/unitofwork/` | `services/UnitOfWork/*` |
 | Controller / Handler | `types/{controller,handler,events}.go` | `types/{Controller,Handler,BaseEvent}.ts` |
 | Error mapper | `errors/{mapper,codes}.go` | `utils/GlobalErrorMapper.ts` + `errors/codes.ts` |
-| SDK client to TS | `services/tsclient/provider.go` | (SDK `@codedm/client-typescript`) |
+| SDK client to TS | `services/tsclient/provider.go` | (SDK `@codm/client-typescript`) |
 
 DI is **uber-go/fx** modules (`core/module.go`) rather than tsyringe. The Go `redis_mediator.go` is
 the mirror of `RedisExternalMediator` — the two services meet on the same Redis streams.
@@ -109,21 +109,21 @@ These are the building blocks the codebase is composed of. Each has a correspond
 | **Repository** | `<ctx>/repositories/<Name>Repository/` | `<Name>Repository` interface + `Drizzle<Name>Repository` + `Mock<Name>Repository`; loads/saves aggregates, accepts a `tx` | Receives entity; returns entity |
 | **Service** | `<ctx>/services/` | Logic that spans aggregates or fronts an external port (payment providers, webhook mappers/verifiers, derivers) | Composed by use cases + handlers |
 | **Domain Event** | `<ctx>/events/` | Past-tense fact **within** this context; raised by entities / seeded by use cases; `name = '<ctx>.<fact>'` | Dispatched by `InternalMediator`; never crosses a service |
-| **Integration Event** | `contracts/wire/events` → `@codedm/contracts-typescript/wire/events` | Cross-context / cross-service contract; `name = 'integration.<ctx>.<fact>'` | Published via `saveIntegrationEvent`; consumed by `handlers/external.ts` |
+| **Integration Event** | `contracts/wire/events` → `@codm/contracts-typescript/wire/events` | Cross-context / cross-service contract; `name = 'integration.<ctx>.<fact>'` | Published via `saveIntegrationEvent`; consumed by `handlers/external.ts` |
 | **Handler (internal)** | `<ctx>/handlers/internal.ts` | Reacts to **this** context's domain events; write-side side-effects; may publish integration events | Registered on the `InternalMediator` |
 | **Handler (external)** | `<ctx>/handlers/external.ts` | Reacts to integration events from other contexts/services | Registered on the `ExternalMediator` |
 | **Projector** | `<ctx>/projections/projectors/` | Read-side counterpart of a handler — one per projection, subscribes to an event union, mutates a read model via `find → applyEvent → save`. An **available core primitive** (`BoundedContext.create({ projectors })`); the stock contexts maintain read models with ordinary handlers + BFF queries instead | Only knows its `ProjectionRepository` |
 | **Job** | `<ctx>/jobs/` | A repeatable command (`{ handler, repeat }`) enqueued through the `CommandQueue` at boot | `BillingClockJob`, `DunningRetryJob`, reconcilers |
 | **Middleware** | `<ctx>/middlewares/` | HTTP cross-cutting (auth, tenancy); throws typed `BaseError` codes | Wired in `BoundedContext.create` |
 | **Registry** | `<ctx>/registry.ts` | `INSTANCE_REGISTRY` — `expandBindings([{ token, mock, real, integration? }])`, expanded per env (`mock` / `integration` / `real`) | Composed via `CONTEXT_REGISTRIES` in `shared/registry.ts` into `ALL_REGISTRIES` |
-| **UnitOfWorkFactory** | `@codedm/core-typescript` | Transaction boundary; `Handler.withTransaction(tx, fn)` opens one when none is passed | Used inside command use cases + handlers |
-| **InternalMediator** | `@codedm/core-typescript` | In-process fan-out of domain events (EventEmitter2) | Drained by the `OutboxDispatcher` |
-| **ExternalMediator** | `@codedm/core-typescript` | Cross-service transport for integration events — Redis streams in prod, in-process otherwise | Consumed by external handlers |
-| **OutboxDispatcher** | `@codedm/core-typescript` | Polls `outbox`, fans out via `InternalMediator`, finalizes | `DrizzleOutboxDispatcher` in integration/real |
-| **DomainEventRepository** | `@codedm/core-typescript` | Persists events to `events` (audit) + `outbox` (dispatch) atomically; `save` / `saveMany` / `saveIntegrationEvent` / `saveIfNotExists` | Called by use cases + handlers |
-| **IdempotencyGuard** | `@codedm/core-typescript` | `claim(scope, key, tx)` — the at-least-once dedup used at every ingest / event boundary | `DrizzleIdempotencyGuard` in integration/real |
-| **HealthCheck** | `@codedm/core-typescript` | Abstract: `name`, `gate` (`true` fails readiness, `false` is diagnostic-only), `check(): Promise<HealthComponentReport>` | Multi-injected into `HealthService` via the `HEALTH_CHECKS` token; concrete checks (`DatabaseHealthCheck`, `MigrationsHealthCheck`, `PollingHealthCheck`) live beside `Controller`/`OutboxDispatcher` as core citizens |
-| **HealthService** | `@codedm/core-typescript` | Aggregates every registered `HealthCheck` into one `HealthReport` (`ready` + a `components` map); a check that throws becomes a `down` component, never an escaped exception | Consumed by `HealthController`/`GET /v1/health` (TS) and its Go twin `GET /api/health`; `ready` is `false` only when a `gate: true` component is `down` |
+| **UnitOfWorkFactory** | `@codm/core-typescript` | Transaction boundary; `Handler.withTransaction(tx, fn)` opens one when none is passed | Used inside command use cases + handlers |
+| **InternalMediator** | `@codm/core-typescript` | In-process fan-out of domain events (EventEmitter2) | Drained by the `OutboxDispatcher` |
+| **ExternalMediator** | `@codm/core-typescript` | Cross-service transport for integration events — Redis streams in prod, in-process otherwise | Consumed by external handlers |
+| **OutboxDispatcher** | `@codm/core-typescript` | Polls `outbox`, fans out via `InternalMediator`, finalizes | `DrizzleOutboxDispatcher` in integration/real |
+| **DomainEventRepository** | `@codm/core-typescript` | Persists events to `events` (audit) + `outbox` (dispatch) atomically; `save` / `saveMany` / `saveIntegrationEvent` / `saveIfNotExists` | Called by use cases + handlers |
+| **IdempotencyGuard** | `@codm/core-typescript` | `claim(scope, key, tx)` — the at-least-once dedup used at every ingest / event boundary | `DrizzleIdempotencyGuard` in integration/real |
+| **HealthCheck** | `@codm/core-typescript` | Abstract: `name`, `gate` (`true` fails readiness, `false` is diagnostic-only), `check(): Promise<HealthComponentReport>` | Multi-injected into `HealthService` via the `HEALTH_CHECKS` token; concrete checks (`DatabaseHealthCheck`, `MigrationsHealthCheck`, `PollingHealthCheck`) live beside `Controller`/`OutboxDispatcher` as core citizens |
+| **HealthService** | `@codm/core-typescript` | Aggregates every registered `HealthCheck` into one `HealthReport` (`ready` + a `components` map); a check that throws becomes a `down` component, never an escaped exception | Consumed by `HealthController`/`GET /v1/health` (TS) and its Go twin `GET /api/health`; `ready` is `false` only when a `gate: true` component is `down` |
 
 > Note: use cases and event handlers **both** extend the same core `Handler<Input, Output>` base —
 > a use case is a `Handler` with a `name`, `inputSchema`, `outputSchema`, and a `handle(input, tx?)`;
@@ -399,7 +399,7 @@ export class Subscription extends AggregateRoot<typeof SubscriptionSchema> {
 
 ### The `z.instance` vs `z.uuid` boundary
 
-The custom `z` (`@codedm/core-typescript`) adds an `z.instance(VO)` builder. The rule is a **layer
+The custom `z` (`@codm/core-typescript`) adds an `z.instance(VO)` builder. The rule is a **layer
 boundary**:
 
 - **Entity + Value Object schemas** carry `z.instance(Id)`, `z.instance(Money)`, `z.instance(Mandate)` — a VO field is a *constructed* value, so an invalid one can't exist (`billing/entities/Invoice.ts`: `ownerId: z.instance(Id)`; `auth/entities/UserProfile.ts`: `userId: z.instance(Id)`).
@@ -577,13 +577,13 @@ Tests **always resolve from a child container** (`container.createChildContainer
 
 - `DrizzleClient` — the query client.
 - `DrizzleDatabaseDriver` — the environment wrapper exposing `db`, `unitOfWorkFactory`, `reset()`, `runMigrations()`, `readMigrations()`, `close()`.
-- Every environment uses `LibsqlDriver` (`@libsql/client` + `drizzle-orm/libsql`). Production opens the shared file at `$CODEDM_DATA_DIR/codedm.db`; integration + flow tests open `:memory:` and run the **same** migrations as production (from `@codedm/contracts/db/migrations`), so what passes in a test passes against the real store.
+- Every environment uses `LibsqlDriver` (`@libsql/client` + `drizzle-orm/libsql`). Production opens the shared file at `$CODEDM_DATA_DIR/codedm.db`; integration + flow tests open `:memory:` and run the **same** migrations as production (from `@codm/contracts/db/migrations`), so what passes in a test passes against the real store.
 - There is **no Postgres**. The TS daemon and the Go gateway open **one** SQLite file, and each applies the migrations at boot, idempotently, over the same `_sqlite_migrations` ledger — whoever boots first applies, the second no-ops.
 
 The schema itself is owned by `packages/contracts` (`db/schema/` + its migrations) — the directory
 name carries no dialect suffix: dialect is a property of `drizzle.config.ts`, not of the folder, so
 swapping SQLite for Postgres means editing the config, not moving files. Both backends consume it —
-TS via `@codedm/contracts/db`, Go via sqlc bindings over a byte-identical `//go:embed` copy of the
+TS via `@codm/contracts/db`, Go via sqlc bindings over a byte-identical `//go:embed` copy of the
 same SQL.
 
 ---
@@ -597,9 +597,9 @@ Both backends emit an OpenAPI spec (TS: 3.1, Go: 3.0.3 — the Kubb pipeline val
 
 Pipeline: `bun sdk` (`nx run client:generate`) depends on both `emit-openapi` targets, then runs
 the generators in `packages/client` (`generators/typescript.ts` + `generators/go.ts`, Kubb-based)
-to produce the committed `@codedm/client-typescript` at `packages/client/dist/typescript`. Wire
+to produce the committed `@codm/client-typescript` at `packages/client/dist/typescript`. Wire
 enums + integration events flow through the **separate** contracts codegen (`bun contracts`) into
-`@codedm/contracts-typescript` / `template/core-go`.
+`@codm/contracts-typescript` / `template/core-go`.
 
 What the SDK exports to the frontend: React Query hooks, Zod schemas for TanStack Form, TS types,
 the error-code enum, and query keys.

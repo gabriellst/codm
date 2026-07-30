@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseDomainEvent } from '@codedm/core-typescript'
+import { BaseDomainEvent } from '@codm/core-typescript'
 import { AgentMessageRole, AgentToolCallStatus } from '../enums'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from './index'
 

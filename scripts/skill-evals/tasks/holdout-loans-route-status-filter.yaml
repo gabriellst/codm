@@ -98,7 +98,7 @@ graders:
     id: locale#use-locale
   - kind: grep-must
     spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::from
-      '@codedm/client-typescript
+      '@codm/client-typescript
     id: sdk#consume-via-sdk
   - kind: grep-must
     spec: packages/app/react/src/locales/pt.json::LoanStatus

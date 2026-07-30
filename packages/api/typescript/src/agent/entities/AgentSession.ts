@@ -1,6 +1,6 @@
-import { AggregateRoot, z } from '@codedm/core-typescript'
+import { AggregateRoot, z } from '@codm/core-typescript'
 import type Z from 'zod'
-import { AgentModelId, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { ResumeInvalidationReason } from '../enums'
 
 export const AgentSessionSchema = z.object({

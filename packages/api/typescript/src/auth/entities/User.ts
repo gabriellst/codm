@@ -1,6 +1,6 @@
 // Recipe: dev:packages/api/src/auth/entities/User.ts
-import { AggregateRoot } from '@codedm/core-typescript'
-import { z } from '@codedm/core-typescript'
+import { AggregateRoot } from '@codm/core-typescript'
+import { z } from '@codm/core-typescript'
 import Z from 'zod'
 
 const UserSchema = z.object({

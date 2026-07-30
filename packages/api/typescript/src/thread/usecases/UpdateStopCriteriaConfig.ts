@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import { Handler, z } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { StopPolicyConfigRepository } from '../repositories/StopPolicyConfigRepository'
 
 export const UpdateStopCriteriaConfigInputSchema = z.object({

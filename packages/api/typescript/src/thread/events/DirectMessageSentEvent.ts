@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { ContactKind } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { ContactKind } from '@codm/contracts-typescript/wire/enums'
 
 /** Context-private fact: the operator spoke directly on the channel. An AUDIT RECORD with NO consumer
  *  (B3, decision 3) — the delivery is a durable `deliver_channel_message` command enqueued by

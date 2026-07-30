@@ -1,7 +1,7 @@
 // Issue given helper — sets up an Issue via the repository directly (never the use case).
 import type { TestBed } from '../TestBed'
-import { Id } from '@codedm/core-typescript'
-import { IssueStatus, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { Id } from '@codm/core-typescript'
+import { IssueStatus, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { Issue } from '@issue/entities/Issue'
 import { IssueRepository } from '@issue/repositories/IssueRepository'

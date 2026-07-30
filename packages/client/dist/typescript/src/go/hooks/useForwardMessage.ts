@@ -4,7 +4,7 @@
 */
 
 import type { ForwardMessageMutationRequest, ForwardMessageMutationResponse } from "../types/ForwardMessage.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { forwardMessage } from "../client/forwardMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

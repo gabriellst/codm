@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { KNOWN_PROVIDERS, ProviderDetector, type ProviderDetection } from './ProviderDetector'
 
 /**

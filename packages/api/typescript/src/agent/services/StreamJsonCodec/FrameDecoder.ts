@@ -1,4 +1,4 @@
-import { AgentStopReason } from '@codedm/contracts-typescript/wire/enums'
+import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 import type { AgentFrame, AgentTurnUsage } from '../../types'
 
 /**
@@ -81,9 +81,7 @@ function readUsage(raw: unknown): AgentTurnUsage {
 function renderToolResult(content: unknown): string {
 	if (typeof content === 'string') return content
 	if (Array.isArray(content)) {
-		return content
-			.map(block => (isRecord(block) ? (str(block.text) ?? JSON.stringify(block)) : String(block)))
-			.join('\n')
+		return content.map(block => (isRecord(block) ? (str(block.text) ?? JSON.stringify(block)) : String(block))).join('\n')
 	}
 	return content === undefined ? '' : JSON.stringify(content)
 }

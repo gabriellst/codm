@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
-import { channels, workspaces, threads } from '@codedm/contracts/db'
-import { ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { channels, workspaces, threads } from '@codm/contracts/db'
+import { ChannelStatus } from '@codm/contracts-typescript/wire/enums'
 
 export const GetSetupChecklistInputSchema = z.object({ ownerId: z.uuid() })
 export const GetSetupChecklistOutputSchema = z.object({

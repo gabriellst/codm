@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ContactKind, MailboxItemKind } from '@codedm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
 import { toolNameOf, ForkIssueController } from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'

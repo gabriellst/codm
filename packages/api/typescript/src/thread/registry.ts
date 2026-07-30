@@ -1,7 +1,7 @@
 // Per-env DI bindings for the thread (BC4 Thread & Routing) context.
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
-import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
+import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
 import { ChannelSender, GatewayChannelSender, MockChannelSender } from './services/ChannelSender'
 
 /** The Playwright harness boots the real daemon with no gateway behind it — see the ChannelSender binding. */

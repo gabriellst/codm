@@ -1,6 +1,6 @@
 import { testId } from '@test/support'
 import { describe, expect, it } from 'bun:test'
-import { AgentModelId, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { ResumeInvalidationReason } from '../enums'
 import { AgentSession } from './AgentSession'
 

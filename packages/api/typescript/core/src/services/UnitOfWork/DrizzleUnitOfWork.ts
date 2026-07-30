@@ -1,5 +1,5 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import type * as schema from '@codedm/contracts/db'
+import type * as schema from '@codm/contracts/db'
 import { UnitOfWork, UnitOfWorkFactory } from './UnitOfWork'
 import { DrizzleDatabaseDriver } from '../../db/drivers/DrizzleDatabaseDriver'
 import { injectable } from 'tsyringe-neo'

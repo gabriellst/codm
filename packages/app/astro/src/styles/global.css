@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "@codedm/app-styles/tokens.css";
-@import "@codedm/app-styles/web-utilities.css";
+@import "@codm/app-styles/tokens.css";
+@import "@codm/app-styles/web-utilities.css";
 @import "@fontsource/poppins/300.css";
 @import "@fontsource/poppins/400.css";
 @import "@fontsource/poppins/500.css";

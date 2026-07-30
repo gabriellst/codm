@@ -1,4 +1,4 @@
-import type { Transaction } from '@codedm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 
 export interface TerminalLineRow {
 	/** The row's real identity (terminal_lines.id) — returned so callers never mint phantom ids. */

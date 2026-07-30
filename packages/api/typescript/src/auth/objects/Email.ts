@@ -1,5 +1,5 @@
-import { BasePrimitiveValueObject } from '@codedm/core-typescript'
-import { z } from '@codedm/core-typescript'
+import { BasePrimitiveValueObject } from '@codm/core-typescript'
+import { z } from '@codm/core-typescript'
 import type { DomainErrors } from '@auth/errors'
 
 export const EmailSchema = z

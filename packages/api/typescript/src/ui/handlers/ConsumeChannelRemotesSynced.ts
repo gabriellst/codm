@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
-import { ChannelRemotesSyncedEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler } from '@codm/core-typescript'
+import { ChannelRemotesSyncedEvent } from '@codm/contracts-typescript/wire/events'
 
 /**
  * BC1 → console. Subscribes to the gateway's `integration.channel.remotes_synced` (a bootstrap

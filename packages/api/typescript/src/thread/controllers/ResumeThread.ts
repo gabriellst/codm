@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode } from '@codedm/core-typescript'
+import { Controller, HttpStatusCode } from '@codm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ResumeThread, ResumeThreadOutputSchema } from '../usecases/ResumeThread'
 import { ThreadParam } from '../schemas'

@@ -25,7 +25,7 @@
  * `type Probe = StopKind` turns all three directives into `TS2578` and `bun tsc` exits 1.
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { TRANSPORT_STOP_KINDS, isTransportStopKind, type TransportStopKind } from '@agent/enums/TransportStopKind'
 import type { AgentRunResult } from '@agent/types'
 

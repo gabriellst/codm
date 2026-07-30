@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { desc } from 'drizzle-orm'
-import { DrizzleClient, HealthCheck, type HealthComponentReport, tryCatchAsync } from '@codedm/core-typescript'
-import { channels } from '@codedm/contracts/db'
+import { DrizzleClient, HealthCheck, type HealthComponentReport, tryCatchAsync } from '@codm/core-typescript'
+import { channels } from '@codm/contracts/db'
 
 /**
  * DIAGNÓSTICO — nunca gate. O WhatsApp conecta PELO app (QR na mão do operador), então "canal

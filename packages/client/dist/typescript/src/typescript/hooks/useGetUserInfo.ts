@@ -4,7 +4,7 @@
 */
 
 import type { GetUserInfoQueryResponse } from "../types/GetUserInfo.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { getUserInfo } from "../client/getUserInfo.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";

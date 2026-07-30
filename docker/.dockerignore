@@ -7,7 +7,7 @@ dist
 **/dist
 # …except the committed SDK output — packages/client/dist/ is generated but
 # checked in (per .specs/2026-05-14-polyglot-client-sdk-design.md Decision 13)
-# and the api image imports @codedm/client-typescript from it.
+# and the api image imports @codm/client-typescript from it.
 !packages/client/dist
 !packages/client/dist/**
 

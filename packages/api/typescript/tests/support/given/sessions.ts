@@ -1,6 +1,6 @@
 // Creates a session row directly in the database for testing auth endpoints.
-import { DrizzleClient } from '@codedm/core-typescript'
-import { sessions } from '@codedm/contracts/db'
+import { DrizzleClient } from '@codm/core-typescript'
+import { sessions } from '@codm/contracts/db'
 import type { TestBed } from '../TestBed'
 import { uniqueId } from './sequence'
 

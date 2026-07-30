@@ -37,9 +37,7 @@ import { CONTEXTS } from '@shared/contexts'
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
 
 /** App locale roots measured (not gated) for the `errors.<code>` translation convention. */
-const LOCALE_DIRS = [
-	join(import.meta.dir, '..', '..', '..', '..', 'app', 'react', 'src', 'locales'),
-]
+const LOCALE_DIRS = [join(import.meta.dir, '..', '..', '..', '..', 'app', 'react', 'src', 'locales')]
 
 /** Strip block + line comments so quoted codes (or apostrophes) inside prose never reach the
  *  matchers. Error files contain no string literal with `//` or `/*` in it — SCREAMING_SNAKE codes
@@ -155,7 +153,7 @@ describe('error-coherence (*Errors union literals === registerErrorCodes keys, p
 			}
 			for (const file of readdirSync(dir).filter(f => f.endsWith('.json'))) {
 				const parsed = JSON.parse(readFileSync(join(dir, file), 'utf8')) as Record<string, unknown>
-				const errors = parsed['errors']
+				const errors = parsed.errors
 				if (typeof errors !== 'object' || errors === null) {
 					console.warn(`[error-coherence] ${join(dir, file)} has NO top-level "errors" object — errors.<code> convention absent`)
 					continue
@@ -183,8 +181,8 @@ describe('error-coherence (*Errors union literals === registerErrorCodes keys, p
 			writeFileSync(
 				join(errorsDir, 'index.ts'),
 				[
-					`import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'`,
-					`import type { BaseDomainErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'`,
+					`import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'`,
+					`import type { BaseDomainErrors, BaseInfrastructureErrors } from '@codm/core-typescript'`,
 					``,
 					`// prose with an apostrophe: this file isn't allowed to confuse the literal matcher`,
 					`export type TenancyDomainErrors =`,

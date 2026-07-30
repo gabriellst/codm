@@ -1,8 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenWorkspace, GIVEN_MENTION_TAG } from '@test/support'
-import { ChannelKind, MessageType } from '@codedm/contracts-typescript/wire/enums'
-import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
+import { ChannelKind, MessageType } from '@codm/contracts-typescript/wire/enums'
+import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
@@ -60,9 +60,7 @@ describe('Flow (integration): inbound → mailbox → dispatcher → orchestrato
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
 
 		// 1. Inbound → the ingest transaction queues an OPERATOR_MESSAGE.
-		await testBed
-			.resolve(ConsumeInboundMessage)
-			.handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-flow-1') as never)
+		await testBed.resolve(ConsumeInboundMessage).handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-flow-1') as never)
 
 		// 2. The dispatcher claims it and runs the turn. `drain` rather than `start` so the assertion
 		//    does not race a timer — a test that slept to observe a turn would fail on a slow machine.
@@ -92,9 +90,7 @@ describe('Flow (integration): inbound → mailbox → dispatcher → orchestrato
 		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
 
-		await testBed
-			.resolve(ConsumeInboundMessage)
-			.handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-flow-2') as never)
+		await testBed.resolve(ConsumeInboundMessage).handle(inbound(thread.channelId, thread.contactRef.externalId, 'wamid-flow-2') as never)
 
 		const dispatcher = testBed.resolve(MailboxDispatcher).bind(testContainer)
 		expect(await dispatcher.drain()).toBe(1)

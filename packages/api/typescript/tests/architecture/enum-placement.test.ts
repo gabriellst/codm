@@ -8,7 +8,7 @@ import { join, relative } from 'node:path'
  *
  * A CROSS-BOUNDARY enum (one the DB schema persists, or the wire carries, or the Go side reads) is
  * DEFINED ONCE, in `packages/contracts` TypeSpec, and consumed everywhere from the generated binding
- * (`@codedm/contracts-typescript/wire/enums`). It must NOT exist a second time as:
+ * (`@codm/contracts-typescript/wire/enums`). It must NOT exist a second time as:
  *   - an inline string-literal union inside `contracts/db/schema/*.ts` (the drift-prone "mirror" —
  *     `type BillingPlatform = 'PAGARME' | 'STRIPE' | …` kept "in sync by hand"), nor
  *   - an `export enum X` inside `src/**\/enums` (which would let the API define its own copy of a
@@ -31,7 +31,7 @@ import { join, relative } from 'node:path'
 // in contracts" IS the definition of cross-boundary, so the guard can never lag the contract (the
 // old hand list guarded 15 of 24 wire enums; an api-side `export enum Role` passed clean). A new
 // contracts enum is guarded in the same commit that generates it, with zero list maintenance.
-import * as WireEnums from '@codedm/contracts-typescript/wire/enums'
+import * as WireEnums from '@codm/contracts-typescript/wire/enums'
 const CROSS_BOUNDARY_ENUMS = Object.keys(WireEnums).filter(k => /^[A-Z]/.test(k))
 
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
@@ -124,7 +124,7 @@ describe('enum-placement (cross-boundary enums live only in contracts, never mir
 		expect(
 			violations.length,
 			`Contracts DB schema mirrors an enum as an inline string-literal union — import the enum from the ` +
-				`generated binding ('@codedm/contracts-typescript/wire/enums') and bind the value-set ON THE COLUMN ` +
+				`generated binding ('@codm/contracts-typescript/wire/enums') and bind the value-set ON THE COLUMN ` +
 				`with text() + .$type<Enum>() + enumCheck(...) (a CHECK constraint), never with a hand-written ` +
 				`literal union. .$type<>() alone types the TS side and leaves the database unconstrained:\n${report}`,
 		).toBe(0)
@@ -137,7 +137,7 @@ describe('enum-placement (cross-boundary enums live only in contracts, never mir
 			violations.length,
 			`A cross-boundary enum (persisted by the DB schema / carried on the wire) is defined in src — ` +
 				`it must live ONLY in packages/contracts TypeSpec and be imported from ` +
-				`'@codedm/contracts-typescript/wire/enums'. Move it to contracts (bun contracts) and delete the ` +
+				`'@codm/contracts-typescript/wire/enums'. Move it to contracts (bun contracts) and delete the ` +
 				`src copy:\n${report}`,
 		).toBe(0)
 	})

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { MockLoggingService } from '@codedm/core-typescript'
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { MockLoggingService } from '@codm/core-typescript'
+import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import type { ProviderCapabilities } from '../../types'
 import { PROVIDER_BINARIES } from './ProviderDetector'
 import { SystemProviderDetector } from './SystemProviderDetector'

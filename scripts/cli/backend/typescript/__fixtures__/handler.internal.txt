@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
+import { EventHandler } from '@codm/core-typescript'
 import { OrderCreatedEvent } from '@sales/events'
 
 @injectable()

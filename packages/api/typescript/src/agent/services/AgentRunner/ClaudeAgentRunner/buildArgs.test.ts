@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId } from '@codm/contracts-typescript/wire/enums'
 // Tool names are DERIVED, never typed as literals: the whole point of AC-6.17 is that the Fase-1
 // tool-name spellings are unreachable under generated tools, and a literal here would be the second
 // source of truth this phase deletes. The spelling has always been owned by `mcp/wire.ts`; the

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode } from '@codedm/core-typescript'
-import { IssueArchiveReason } from '@codedm/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode } from '@codm/core-typescript'
+import { IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ArchiveIssue, ArchiveIssueOutputSchema } from '../usecases/ArchiveIssue'
 import { IssueParam } from '../schemas'

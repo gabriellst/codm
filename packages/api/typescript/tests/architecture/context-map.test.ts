@@ -215,7 +215,7 @@ describe('context-map (declared intent map + global surface policy over real imp
 
 describe('context-map — TABLE-READ leg (drizzle tables resolved to their owning pgSchema)', () => {
 	// The import-edge leg above cannot see coupling that rides the DATABASE: a context importing a
-	// foreign table symbol from @codedm/contracts/db depends on the owning schema exactly as if it
+	// foreign table symbol from @codm/contracts/db depends on the owning schema exactly as if it
 	// imported the owner's repository. This leg resolves every imported table symbol → owning
 	// pgSchema (parsed from the contracts schema sources — zero hand lists) and enforces
 	// TABLE_READ_EDGES the same intent-first way.
@@ -249,7 +249,7 @@ describe('context-map — TABLE-READ leg (drizzle tables resolved to their ownin
 			if (!MODULES.includes(consumer)) continue
 			const lines = readFileSync(file, 'utf8').split('\n')
 			lines.forEach((lineText, idx) => {
-				const m = lineText.match(/import \{([^}]*)\} from '@codedm\/contracts\/db'/)
+				const m = lineText.match(/import \{([^}]*)\} from '@codm\/contracts\/db'/)
 				if (!m) return
 				for (const raw of (m[1] ?? '').split(',')) {
 					const table = raw.trim().split(' ').at(-1) ?? ''

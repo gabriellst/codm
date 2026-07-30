@@ -71,7 +71,7 @@ const Tag = href ? 'a' : 'button';
 
 ## Tokens & styling
 
-- All colors come from `@codedm/app-styles/tokens.css` via CSS variables.
+- All colors come from `@codm/app-styles/tokens.css` via CSS variables.
 - Tailwind utility classes mapped to those variables (`bg-primary`, `text-foreground`, etc.) — same convention as the react app.
 - No hardcoded hex/rgb anywhere.
 - If a token doesn't exist, add it to `tokens.css`, do not fork inline.
@@ -107,7 +107,7 @@ Otherwise, keep it static.
 - [ ] Single file per primitive; PascalCase name.
 - [ ] Forwards `<slot />` for content.
 - [ ] Accessibility props (`aria-label`) where icon-only.
-- [ ] No imports from `@codedm/app-react`.
+- [ ] No imports from `@codm/app-react`.
 
 ## References
 

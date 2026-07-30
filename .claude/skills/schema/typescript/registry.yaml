@@ -219,7 +219,7 @@ registry:
 
   snippet:
     skeleton: |
-      import { z } from '@codedm/core-typescript'
+      import { z } from '@codm/core-typescript'
       import Z from 'zod'
 
       export const {{Name}}Schema = z.object({
@@ -228,10 +228,10 @@ registry:
 
       export type {{Name}}Type = Z.infer<typeof {{Name}}Schema>
     exemplar: |
-      import { z } from '@codedm/core-typescript'
+      import { z } from '@codm/core-typescript'
       import Z from 'zod'
       import { MonetaryAmountSchema } from '@shared/objects'
-      import { ProductStatus } from '@codedm/contracts-typescript/wire/enums'
+      import { ProductStatus } from '@codm/contracts-typescript/wire/enums'
       export const CreateProductSchema = z.object({
         name: z.string().min(1).max(255),
         price: MonetaryAmountSchema.input(),

@@ -1,11 +1,11 @@
 import { describe, expect, it, beforeEach } from 'bun:test'
-import { GlobalErrorMapper, HttpStatusCode } from '@codedm/core-typescript'
+import { GlobalErrorMapper, HttpStatusCode } from '@codm/core-typescript'
 // Side-effect import: registers this context's codes in the GlobalErrorMapper. Without it the status
 // assertions below read `undefined` — the union alone does not perform the registration.
 import '../errors'
 import { AgentName } from '../enums'
-import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { InMemoryAgentIdentityService } from '@codm/core-typescript'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import { McpDoorController } from './door'
 import { wireToolName } from './wire'

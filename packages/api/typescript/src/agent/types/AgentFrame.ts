@@ -1,4 +1,4 @@
-import type { AgentStopReason } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * The token aggregate of ONE turn, carried BY the terminal `result` frame — it is not a frame of

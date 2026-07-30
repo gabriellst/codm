@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
-import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codedm/client-typescript/typescript'
+import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { useServerEvents } from '@/hooks'
 import { Dot } from './StatusDot'

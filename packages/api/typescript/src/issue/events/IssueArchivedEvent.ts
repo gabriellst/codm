@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { IssueArchiveReason } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
 
 /** Bridged to `integration.issue.archived` (BC5 → BC4 issue-list projections). */
 export const IssueArchivedEventSchema = z.domainEvent({

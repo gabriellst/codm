@@ -103,7 +103,7 @@ Examples:
 
 ```typescript
 // <context>/events/CollaboratorInvitedEvent.ts
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 import { RoleType } from '@shared/objects'
 
 // Define the event payload schema using z.domainEvent()
@@ -230,7 +230,7 @@ For *Created / *Updated events, embed the entity via `EntitySchema.input()` (wir
 
 ```typescript
 // customer/events/CustomerCreatedEvent.ts
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 import { CustomerSchema } from '../entities/Customer'
 
 // Embed full entity via .input() — serializes Id/VO instances to plain strings
@@ -353,7 +353,7 @@ private externalMediator: ExternalMediator
 
 ```typescript
 // collaborator/events/CollaboratorInvitedEvent.ts
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 import { RoleType } from '@shared/objects'
 
 const CollaboratorInvitedEventSchema = z.domainEvent({
@@ -383,7 +383,7 @@ export { InvitationRevokedEvent } from './InvitationRevokedEvent'
 
 ```typescript
 // @shared/events/OrganizationCreatedEvent.ts
-import { BaseIntegrationEvent, z } from '@codedm/core-typescript'
+import { BaseIntegrationEvent, z } from '@codm/core-typescript'
 
 const OrganizationCreatedEventSchema = z.integrationEvent({
   organizationId: z.string(),
@@ -400,7 +400,7 @@ export class OrganizationCreatedEvent extends BaseIntegrationEvent<typeof Organi
 
 ```typescript
 // @shared/events/UserRegisteredEvent.ts
-import { BaseIntegrationEvent, z } from '@codedm/core-typescript'
+import { BaseIntegrationEvent, z } from '@codm/core-typescript'
 
 const UserRegisteredEventSchema = z.integrationEvent({
   userId: z.uuid(),
@@ -465,7 +465,7 @@ export class OrganizationCreatedHandler extends EventHandler<typeof Organization
 
 ```typescript
 // collaborator/handlers/OnOrganizationCreated.ts
-import { EventHandler } from '@codedm/core-typescript'
+import { EventHandler } from '@codm/core-typescript'
 import { OrganizationCreatedEvent } from '@shared/events'
 
 @injectable()

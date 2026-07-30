@@ -1,4 +1,4 @@
-# @codedm/app-tauri — desktop shell
+# @codm/app-tauri — desktop shell
 
 Tauri v2 host for the CodeDM desktop app. The shell does three things and nothing else:
 

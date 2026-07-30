@@ -13,7 +13,7 @@
 // this file as their source of truth (see packages/api/go/core/pkg/openapi/walker.go
 // `modulePrefix`). Keep them in lockstep when editing here.
 
-const scope = '@codedm'
+const scope = '@codm'
 const brand = 'codedm'
 
 /**

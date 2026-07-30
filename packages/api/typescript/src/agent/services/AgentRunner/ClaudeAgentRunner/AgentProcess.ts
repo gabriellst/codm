@@ -1,5 +1,5 @@
 import { spawn as spawnChild } from 'node:child_process'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import type { AgentApplicationErrors } from '../../../errors'
 
 export interface AgentProcessSpec {

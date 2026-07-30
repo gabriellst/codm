@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { AgentStreamRegistry, type TerminalOutputFrame } from './AgentStreamRegistry'
 import type { ApplicationErrors, DomainErrors } from '../../errors'
 
@@ -114,7 +114,9 @@ describe('AgentStreamRegistry — absorbed single-active-run guard (one session 
 		const registry = new AgentStreamRegistry()
 		registry.beginSession('issue-1')
 
-		expect(() => registry.beginSession('issue-1')).toThrow(expect.objectContaining({ name: 'TERMINAL_ALREADY_RUNNING' }) as BaseError<DomainErrors>)
+		expect(() => registry.beginSession('issue-1')).toThrow(
+			expect.objectContaining({ name: 'TERMINAL_ALREADY_RUNNING' }) as BaseError<DomainErrors>,
+		)
 	})
 
 	it('allows re-running an issue after its session ended', () => {

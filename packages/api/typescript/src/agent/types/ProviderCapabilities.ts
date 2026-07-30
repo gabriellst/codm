@@ -1,5 +1,5 @@
 import type Z from 'zod'
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 
 /**
  * What a probe discovered a provider binary can actually DO (GOAL-agent-abstraction §4.7, as amended

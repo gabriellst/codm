@@ -1,6 +1,6 @@
-import { DrizzleClient } from '@codedm/core-typescript'
-import { remotes } from '@codedm/contracts/db'
-import { ChannelKind, ContactKind } from '@codedm/contracts-typescript/wire/enums'
+import { DrizzleClient } from '@codm/core-typescript'
+import { remotes } from '@codm/contracts/db'
+import { ChannelKind, ContactKind } from '@codm/contracts-typescript/wire/enums'
 import type { TestBed } from '../TestBed'
 
 export interface RemoteOverrides {

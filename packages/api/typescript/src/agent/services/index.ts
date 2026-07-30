@@ -7,5 +7,5 @@ export * from './AgentRunnerFactory'
 export * from './StreamJsonCodec'
 export * from './ProviderDetector'
 // The run-credential seam (issue/resolve/revoke) is NOT here: it is `AgentIdentityService` in
-// `@codedm/core-typescript`, a core service bound at the ROOT container in `shared/registry.ts`.
+// `@codm/core-typescript`, a core service bound at the ROOT container in `shared/registry.ts`.
 export { MailboxDispatcher, DrizzleMailboxDispatcher } from './MailboxDispatcher'

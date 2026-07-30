@@ -8,8 +8,8 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { adaptWireEnvelope, reviveIsoDates } from '@codedm/core-typescript'
-import { IntegrationEventSchema } from '@codedm/contracts-typescript/wire'
+import { adaptWireEnvelope, reviveIsoDates } from '@codm/core-typescript'
+import { IntegrationEventSchema } from '@codm/contracts-typescript/wire'
 
 const FIXTURES = join(import.meta.dir, '../fixtures/events')
 

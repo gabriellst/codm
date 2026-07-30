@@ -1,4 +1,4 @@
-import { BaseValueObject, z } from '@codedm/core-typescript'
+import { BaseValueObject, z } from '@codm/core-typescript'
 import Z from 'zod'
 import { DomainErrors } from '../errors'
 

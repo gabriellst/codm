@@ -31,7 +31,7 @@ A primitive is:
 2. **One primitive per family.** A button family is **one** `Button` with `variant: 'chrome' | 'ghost' | 'destructive' | 'link' | ...`. Same for `Card`, `Sheet`/`Dialog`, `Input`, `Pill`.
 3. **Named exports, no dot-notation.** Subcomponents export individually (`export { Card, CardHeader, CardBody }`) — never `Card.Header`.
 4. **PascalCase** for component names and (on astro) file names.
-5. **Tokens come from the design system.** Colors / spacing / radius / type scales come from `@codedm/app-styles/tokens.css` (react + astro). Never hardcode hex values or arbitrary pixel sizes.
+5. **Tokens come from the design system.** Colors / spacing / radius / type scales come from `@codm/app-styles/tokens.css` (react + astro). Never hardcode hex values or arbitrary pixel sizes.
 6. **`cn()` everywhere a className is composed** — react imports from `@/lib/utils`; astro authors the same helper inline or imports from a local `lib/utils.ts`.
 
 ## When to use this skill

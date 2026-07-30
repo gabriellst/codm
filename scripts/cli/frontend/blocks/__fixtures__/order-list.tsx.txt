@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import {
 	useListOrders,
 	type Order,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 
 interface OrderListProps extends React.ComponentProps<'section'> {}
 

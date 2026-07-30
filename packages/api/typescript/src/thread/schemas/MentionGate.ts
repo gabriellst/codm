@@ -1,5 +1,5 @@
 import { basename } from 'node:path'
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 
 /** MentionGate discriminated-union VO — a tag is required exactly when the gate is enabled. */
 export const MentionGateSchema = z.discriminatedUnion('enabled', [
@@ -36,9 +36,9 @@ export function mintMentionTag(workspacePath: string): string {
  * cosmetic.
  *
  * The tag is derived from a folder name, so it collides with the vocabulary of the very project it
- * names. This repo's own packages are `@codedm/core-typescript`, `@codedm/contracts-typescript`,
- * `@codedm/client-typescript`, and its live thread is bound to `/…/pessoal/codedm` — so under
- * `includes`, "bump @codedm/core-typescript to 2.0" summons the agent. The `/` in the right-hand
+ * names. This repo's own packages are `@codm/core-typescript`, `@codm/contracts-typescript`,
+ * `@codm/client-typescript`, and its live thread is bound to `/…/pessoal/codedm` — so under
+ * `includes`, "bump @codm/core-typescript to 2.0" summons the agent. The `/` in the right-hand
  * class is the character that stops it; the `.` handles `codedm.ts`.
  *
  * Case-insensitive because the mint lowercases while every UI surface renders the raw path: an

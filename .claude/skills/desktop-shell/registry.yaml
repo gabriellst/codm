@@ -38,7 +38,7 @@ registry:
     - id: DSK-07
       name: "Ports stay platform-pure (future expo home)"
       when: always
-      rule: "Each services/<Cap>Service/<Cap>Service.ts port holds pure types only — no platform SDK, no react, no DOM globals. The ports are the future @codedm/native-contract package: an expo host implements the same ports (colocated Expo<Cap>Service + a registry/expo.ts record) against identical types."
+      rule: "Each services/<Cap>Service/<Cap>Service.ts port holds pure types only — no platform SDK, no react, no DOM globals. The ports are the future @codm/native-contract package: an expo host implements the same ports (colocated Expo<Cap>Service + a registry/expo.ts record) against identical types."
       wrong: "importing @tauri-apps types (or react) inside a port file, or leaking a platform type through a port signature"
 
   bad_practices:

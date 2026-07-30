@@ -183,7 +183,7 @@ registry:
       name: "Enum options derived at module level — labels via i18n, never a lib map"
       when: "component renders select/filter with SDK enum values"
       rule: |
-        import { SpecialtyEnum } from '@codedm/client-typescript/typescript'
+        import { SpecialtyEnum } from '@codm/client-typescript/typescript'
 
         const SPECIALTIES = Object.values(SpecialtyEnum)
         // Labels NEVER come from a @/lib map (lib/labels.ts is dead — see enum skill).
@@ -351,7 +351,7 @@ registry:
     import { useQueryClient } from '@tanstack/react-query'
     import { toast } from 'sonner'
     import { cn } from '@/lib/utils'
-    import { useListProducts, useDeleteProduct, listProductsQueryKey } from '@codedm/client-typescript/typescript'
+    import { useListProducts, useDeleteProduct, listProductsQueryKey } from '@codm/client-typescript/typescript'
     import { Skeleton } from '@/components/ui/skeleton'
     import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 
@@ -544,7 +544,7 @@ registry:
       wrong: |
         // packages/app/react/src/enums/appointmentStatus.ts
       right: |
-        import { AppointmentStatusEnum } from '@codedm/client-typescript/typescript'
+        import { AppointmentStatusEnum } from '@codm/client-typescript/typescript'
 
     - id: bp-11
       name: "Using native HTML elements when project primitives exist"

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, MimeTypes, z, BaseError } from '@codedm/core-typescript'
-import type { HttpMethod } from '@codedm/core-typescript'
+import { Controller, MimeTypes, z, BaseError } from '@codm/core-typescript'
+import type { HttpMethod } from '@codm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { forwardToChannel } from '../utils/forwardToChannel'
 import type { ApplicationErrors } from '../errors'
@@ -14,7 +14,7 @@ const ChannelProxyOutputSchema = z.any()
 /**
  * Catch-all reverse proxy — forwards every request under `/v1/external/channel/**` to the Go
  * channel gateway (medscall's `external` ChannelProxy pattern, founder-ratified 22-jul). The
- * browser NEVER talks to the gateway directly: the gateway SDK (`@codedm/client-typescript/go`)
+ * browser NEVER talks to the gateway directly: the gateway SDK (`@codm/client-typescript/go`)
  * is pointed at this route, so pairing (resolve → connect → QR), channel reads and the gateway
  * SSE `/events` stream all ride the api-ts origin — no gateway CORS, no identity in the browser.
  *

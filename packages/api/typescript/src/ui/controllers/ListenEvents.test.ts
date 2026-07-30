@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodLiteral, ZodObject } from 'zod'
-import { BaseIntegrationEvent } from '@codedm/core-typescript'
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
-import * as WireEvents from '@codedm/contracts-typescript/wire/events'
-import { ThreadStopRaisedEvent, ChannelMessageDeliveredEvent, ChannelMessageReceivedEvent } from '@codedm/contracts-typescript/wire/events'
+import { BaseIntegrationEvent } from '@codm/core-typescript'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
+import * as WireEvents from '@codm/contracts-typescript/wire/events'
+import { ThreadStopRaisedEvent, ChannelMessageDeliveredEvent, ChannelMessageReceivedEvent } from '@codm/contracts-typescript/wire/events'
 import { deliveryOwnerId, isBroadcastableIntegrationEvent, ListenEventsControllerOutputSchema } from './ListenEvents'
 
 const OWNER_A = '00000000-0000-4000-8000-00000000000a'

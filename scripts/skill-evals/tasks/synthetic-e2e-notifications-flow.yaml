@@ -179,7 +179,7 @@ graders:
     spec: "packages/e2e/utils/given/notifications.ts::session\\.client"
     id: e2e#E2E-04
   - kind: grep-must
-    spec: "packages/e2e/utils/given/notifications.ts::from\\s+['\"]@codedm/client-typescript/typescript['\"]"
+    spec: "packages/e2e/utils/given/notifications.ts::from\\s+['\"]@codm/client-typescript/typescript['\"]"
     id: e2e#sdk-import
   - kind: grep-must-not
     spec: "packages/e2e/**/*.ts::from\\s+['\"]tsyringe|from\\s+['\"][^'\"]*api/src"

@@ -1,5 +1,5 @@
-import type { Transaction } from '@codedm/core-typescript'
-import type { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
+import type { Transaction } from '@codm/core-typescript'
+import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
-import { IssueStatus, ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
+import { IssueStatus, ThreadStatus } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories'
 import { GetHomeDashboard } from './GetHomeDashboard'

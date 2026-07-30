@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { BaseError, Controller, HttpStatusCode, z } from '@codm/core-typescript'
+import { MailboxItemKind, MailboxTargetKind, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { OpenIssuesReader } from '@thread/services'
 import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'

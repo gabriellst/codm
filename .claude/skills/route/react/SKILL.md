@@ -35,7 +35,7 @@ Creates a new frontend page with proper TanStack Router configuration, search pa
 ## Prerequisites
 
 - SDK must be generated (use `/sdk` first)
-- Hooks available in `@codedm/client-typescript/typescript`
+- Hooks available in `@codm/client-typescript/typescript`
 
 ## Key Principles [RTE-01, RTE-02, RTE-03, RTE-04]
 
@@ -69,7 +69,7 @@ The route defines URL contract and renders layout. Components fetch their own da
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@/lib/zod-validator'
 import { z } from 'zod'
-import { listCustomersQueryParamsSchema, type ListCustomersQueryResponse } from '@codedm/client-typescript/typescript'
+import { listCustomersQueryParamsSchema, type ListCustomersQueryResponse } from '@codm/client-typescript/typescript'
 import { RouteError } from '@/components/RouteError'
 import { Button } from '@/components/ui/button'
 import { Link } from '@tanstack/react-router'
@@ -115,7 +115,7 @@ function RouteComponent() {
 
 ```typescript
 // In route index.tsx
-import type { ListCustomersQueryResponse } from '@codedm/client-typescript/typescript'
+import type { ListCustomersQueryResponse } from '@codm/client-typescript/typescript'
 
 export type CustomerItem = ListCustomersQueryResponse['items'][number]
 export type CustomerStats = ListCustomersQueryResponse['stats']
@@ -198,7 +198,7 @@ function RouteComponent() {
 When a layout route needs to resolve data for child routes (e.g., resolving an instance ID):
 
 ```typescript
-import { getChannelChannelsResolveQueryOptions, PlatformEnum } from '@codedm/client-typescript/channel/app'
+import { getChannelChannelsResolveQueryOptions, PlatformEnum } from '@codm/client-typescript/channel/app'
 
 export const Route = createFileRoute('/(app)/channel')({
   loader: async ({ context }) => {

@@ -8,13 +8,13 @@ import {
 	createSSEResponse,
 	encodeSSEFrame,
 	BaseIntegrationEvent,
-} from '@codedm/core-typescript'
+} from '@codm/core-typescript'
 // The event surface, imported WHOLESALE from the contract bindings (founder ratification 23-jul:
 // the contract is the single source — no allowlist, no hand-rolled per-event schemas). The
 // MATERIALIZED surface arrives pre-joined from the generated wire layer (wire/events/materialized —
 // union-slot payloads already swapped for the owner client's aggregate schemas, union-slots §2.4);
 // this controller only COMPOSES and re-emits, medscall-style.
-import { materializedIntegrationEventSchemas } from '@codedm/contracts-typescript/wire/events'
+import { materializedIntegrationEventSchemas } from '@codm/contracts-typescript/wire/events'
 import { OperatorMiddleware } from '@auth/middlewares'
 
 export const ListenEventsControllerInputSchema = z.object({

@@ -41,8 +41,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { LoggingService } from '@codedm/core-typescript'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { LoggingService } from '@codm/core-typescript'
+import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { StreamJsonAgentRunner } from '../src/agent/services/AgentRunner/StreamJsonAgentRunner/StreamJsonAgentRunner'
 import { IssueClassifier } from '../src/agent/services/IssueClassifier/IssueClassifier'
 import { TerminalOutputAccumulator } from '../src/agent/services/TerminalOutputAccumulator/TerminalOutputAccumulator'
@@ -50,7 +50,7 @@ import { AgentMessageRole, AgentName } from '../src/agent/enums'
 
 const BIN = process.env.CODEDM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
 // The RECORD lives with the other phase artifacts in `.specs/`; the SCRIPT lives here because it
-// imports workspace packages (`reflect-metadata`, `@codedm/core-typescript`) that only resolve from
+// imports workspace packages (`reflect-metadata`, `@codm/core-typescript`) that only resolve from
 // inside this package's `node_modules` — the Fase-2 smoke could sit under `.specs/` only because it
 // imported nothing but `node:*` and spawned the binary directly.
 const OUT = join(

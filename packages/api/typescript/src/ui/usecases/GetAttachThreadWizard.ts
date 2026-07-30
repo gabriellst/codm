@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, like, inArray, isNull, sql } from 'drizzle-orm'
-import { Handler, z, DrizzleClient, BaseError } from '@codedm/core-typescript'
-import type { BaseInterfaceErrors } from '@codedm/core-typescript'
+import { Handler, z, DrizzleClient, BaseError } from '@codm/core-typescript'
+import type { BaseInterfaceErrors } from '@codm/core-typescript'
 import type { z as zt } from 'zod'
-import { channels, workspaces, threads, remotes, remoteMemberships } from '@codedm/contracts/db'
+import { channels, workspaces, threads, remotes, remoteMemberships } from '@codm/contracts/db'
 import {
 	ChannelKind,
 	ChannelStatus,
@@ -11,7 +11,7 @@ import {
 	ProviderKind,
 	ProviderStatus,
 	WorkspaceBadge,
-} from '@codedm/contracts-typescript/wire/enums'
+} from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
 
 // One page of the contact directory. The picker paginates the gateway's remote read model by

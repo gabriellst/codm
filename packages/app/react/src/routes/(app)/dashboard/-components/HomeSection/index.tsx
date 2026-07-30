@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { useGetSetupChecklist } from '@codedm/client-typescript/typescript'
+import { useGetSetupChecklist } from '@codm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { SetupChecklist } from '../SetupChecklist'

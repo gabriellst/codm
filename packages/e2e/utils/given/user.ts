@@ -1,4 +1,4 @@
-import { configureClient } from '@codedm/client-typescript/http'
+import { configureClient } from '@codm/client-typescript/http'
 import { generateEmail } from '../generators'
 import { apiOperatorSession, type ApiSession } from './api'
 

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
-import type { ThreadStatus } from '@codedm/client-typescript/typescript'
+import type { ThreadStatus } from '@codm/client-typescript/typescript'
 
 // Style map only — the human ThreadStatus label lives in the typed i18n catalog
 // (`enums.ThreadStatus.<VALUE>`), rendered via `enumLabel(...)` at the call site (bp-23).

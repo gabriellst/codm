@@ -13,7 +13,7 @@
  *     package (`@libsql/darwin-arm64`, `@libsql/linux-x64-gnu`, …). A bundler cannot inline a `.node`
  *     binary, so the module has to stay external and be resolved from `node_modules` at runtime — but
  *     in this workspace it is only symlinked under `core/node_modules` (a transitive dep of
- *     `@codedm/core-typescript`), which is NOT on the walk-up path from `dist/server.js`, so a bare
+ *     `@codm/core-typescript`), which is NOT on the walk-up path from `dist/server.js`, so a bare
  *     external would die with `ERR_MODULE_NOT_FOUND`. We therefore copy the whole runtime closure of
  *     `@libsql/client` — itself, `@libsql/core`, `@libsql/hrana-client`, `libsql`, `@neon-rs/load`,
  *     the host-triple prebuild and their deps — FLAT into `dist/node_modules/<name>`, so the walk-up
@@ -21,7 +21,7 @@
  *     `dist/` as a unit makes the Docker image self-contained too.
  *
  *  2. **The migrations directory is COPIED to `dist/schema/migrations`.**
- *     `@codedm/contracts/db/migrations` exports `migrationsDir` derived from `import.meta.url` with a
+ *     `@codm/contracts/db/migrations` exports `migrationsDir` derived from `import.meta.url` with a
  *     `schema/migrations` suffix; the bundler rewrites `import.meta.url` to the OUTPUT file, so
  *     at runtime it resolves to `dist/schema/migrations`. Staging the drizzle-kit output at
  *     exactly that path makes the fallback correct without any env override — the destination is not

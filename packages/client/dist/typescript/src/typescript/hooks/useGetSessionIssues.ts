@@ -4,7 +4,7 @@
 */
 
 import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "../types/GetSessionIssues.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { getSessionIssues } from "../client/getSessionIssues.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";

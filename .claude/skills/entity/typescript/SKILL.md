@@ -103,7 +103,7 @@ export { Product } from './Product'
 Entities inherit from `BaseEntity<T>` (or `AggregateRoot<T>` which extends it). **Aggregate roots** (top-level entities with their own transactional boundary) extend `AggregateRoot`. **Child entities** (entities owned by an aggregate root, with no independent lifecycle) extend `BaseEntity` directly. For example, `ChatSession` extends `BaseEntity` because it is owned by the `Chat` aggregate root.
 
 ```typescript
-// From @codedm/core-typescript (BaseEntity/AggregateRoot)
+// From @codm/core-typescript (BaseEntity/AggregateRoot)
 export interface BaseEntityProps {
   id?: Id | string
   createdAt?: Date
@@ -294,7 +294,7 @@ Entity schemas must use `DomainErrors` only, never `ApplicationErrors`. All erro
 For business rule violations that aren't structural validation (e.g., state machine checks), use `BaseError`:
 
 ```typescript
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { DomainErrors } from '../errors'
 
 // WRONG
@@ -364,7 +364,7 @@ static create(data: CreateProductInput): Product {
 Entity schemas use `z.instance(VO)` to handle VO creation from primitives. `z.instance()` reads the VO's static schema and constructor automatically — it works for both primitive VOs (Id, Email, CPF) and composite VOs (Address, CRM, WeeklySchedule). This means `create()` and `toDomain()` pass raw primitives — the schema handles VO creation:
 
 ```typescript
-import { AggregateRoot, Id, z } from '@codedm/core-typescript'
+import { AggregateRoot, Id, z } from '@codm/core-typescript'
 import { Email, Phone, Address, CPF, RG, BirthDate, PersonName } from '@shared/objects'
 import Z from 'zod'
 
@@ -419,7 +419,7 @@ export interface Patient extends Z.infer<typeof PatientSchema> {}
 ### With Status Enum [ENT-C03, ENT-P02]
 
 ```typescript
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 import Z from 'zod'
 import { RoleType } from '@clinic/enums'
 
@@ -519,7 +519,7 @@ Entity schemas are internal domain objects, not OpenAPI-exposed. Only controller
 
 ```typescript
 // organization/entities/Organization.ts
-import { AggregateRoot, BaseError, Id, z } from '@codedm/core-typescript'
+import { AggregateRoot, BaseError, Id, z } from '@codm/core-typescript'
 import Z from 'zod'
 import { DomainErrors } from '../errors'
 import { OrganizationStatus } from '@organization/enums'

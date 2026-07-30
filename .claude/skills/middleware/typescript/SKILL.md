@@ -57,7 +57,7 @@ touch packages/api/typescript/src/<context>/middlewares/<Name>Middleware.ts
 
 ### Step 2: Implement the Class
 
-The signature is fixed by `Middleware` in `@codedm/core-typescript`:
+The signature is fixed by `Middleware` in `@codm/core-typescript`:
 
 ```ts
 export abstract class Middleware {
@@ -70,9 +70,9 @@ A guard middleware (validates and may attach to `ctx`):
 ```ts
 // packages/api/typescript/src/ui/middlewares/OnboardingMiddleware.ts
 import { singleton } from 'tsyringe-neo'
-import { BaseError } from '@codedm/core-typescript'
-import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codedm/core-typescript'
-import { z } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
+import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codm/core-typescript'
+import { z } from '@codm/core-typescript'
 import { OnboardingRepository } from '@ui/repositories'
 import { ApplicationErrors } from '@ui/errors'
 
@@ -182,7 +182,7 @@ override skipMiddlewares: (Middleware | MiddlewareClass)[] = [
 
 Not every middleware is opted into per controller or wired into a context's default chain. When the danger a middleware guards against is already IMPLIED by something the controller declared, the base `Controller` can append the middleware itself — with no line in `override middlewares` at all.
 
-`AgentIdentityMiddleware` (`@codedm/core-typescript`) is the first case of this shape: any controller with a non-empty `static mcpScopes` (see `/controller` CTRL-C17) has already said "a model can call this", and `Controller.executeMiddlewares` appends `AgentIdentityMiddleware` LAST — after `OperatorMiddleware` has stamped `ctx.ownerId` — unless the controller already lists it explicitly (same dedup rule the router uses). This is the general shape, not a one-off: a future capability whose danger is declared by a static on the controller can reuse the same predicate.
+`AgentIdentityMiddleware` (`@codm/core-typescript`) is the first case of this shape: any controller with a non-empty `static mcpScopes` (see `/controller` CTRL-C17) has already said "a model can call this", and `Controller.executeMiddlewares` appends `AgentIdentityMiddleware` LAST — after `OperatorMiddleware` has stamped `ctx.ownerId` — unless the controller already lists it explicitly (same dedup rule the router uses). This is the general shape, not a one-off: a future capability whose danger is declared by a static on the controller can reuse the same predicate.
 
 ```typescript
 // core/src/types/Controller.ts — NOT MainRouter, because MainRouter is skippable (spec emission

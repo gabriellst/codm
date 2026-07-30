@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Config, BaseError } from '@codedm/core-typescript'
-import { sendText } from '@codedm/client-typescript/go'
+import { Config, BaseError } from '@codm/core-typescript'
+import { sendText } from '@codm/client-typescript/go'
 import { ChannelSender, type SendChannelMessageInput } from './ChannelSender'
 import type { ApplicationErrors } from '../../errors'
 

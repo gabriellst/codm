@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@codedm/core-typescript'
-import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z } from '@codm/core-typescript'
+import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 import { ArtifactRepository } from '../repositories/ArtifactRepository'
 
 export const ListArtifactsInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })

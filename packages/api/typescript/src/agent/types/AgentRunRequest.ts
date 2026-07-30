@@ -1,5 +1,5 @@
 import type { ZodType } from 'zod'
-import type { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import type { AgentMessageRole, AgentName } from '../enums'
 import type { ProviderCapabilities } from './ProviderCapabilities'
 import type { AgentMcpInvocation } from './AgentMcpInvocation'

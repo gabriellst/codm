@@ -16,7 +16,7 @@ prompt: >-
   same (currency, country) accumulates duplicate/overlapping slices. The shared
   `z.historical` window combinator and the `Timeline<T>` interval-paint value
   object (shared/objects) are already shipped, as is the `Country` wire enum
-  (`@codedm/contracts-typescript/wire/enums`).
+  (`@codm/contracts-typescript/wire/enums`).
 
 
   Requirements:

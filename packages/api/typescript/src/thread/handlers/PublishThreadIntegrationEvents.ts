@@ -1,10 +1,10 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
+import { EventHandler, ExternalMediator } from '@codm/core-typescript'
 import {
 	ThreadAttachedEvent as ThreadAttachedIntegrationEvent,
 	ThreadStopResolvedEvent as StopResolvedIntegrationEvent,
 	ThreadMessageIngestedEvent,
-} from '@codedm/contracts-typescript/wire/events'
+} from '@codm/contracts-typescript/wire/events'
 import { ThreadAttachedEvent } from '../events/ThreadAttachedEvent'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'

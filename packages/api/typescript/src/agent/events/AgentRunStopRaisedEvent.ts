@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { FactSource } from '../enums/FactSource'
 
 /**

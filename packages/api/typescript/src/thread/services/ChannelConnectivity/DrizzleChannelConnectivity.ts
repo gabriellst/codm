@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { channels } from '@codedm/contracts/db'
-import { ChannelStatus } from '@codedm/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { channels } from '@codm/contracts/db'
+import { ChannelStatus } from '@codm/contracts-typescript/wire/enums'
 import { ChannelConnectivity } from './ChannelConnectivity'
 
 @injectable()

@@ -2,7 +2,7 @@
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
 import type { DependencyContainer } from 'tsyringe-neo'
-import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthCheck } from '@codedm/core-typescript'
+import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthCheck } from '@codm/core-typescript'
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'

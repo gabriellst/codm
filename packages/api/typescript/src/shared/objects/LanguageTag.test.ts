@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { LanguageTag } from './LanguageTag'
 
 describe('LanguageTag value object', () => {

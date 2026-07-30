@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { ArchiveIssueMutationResponse, ArchiveIssuePathParams } from "../types/ArchiveIssue.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getArchiveIssueUrl(issueId: ArchiveIssuePathParams["issueId"]) {
   const res = { method: 'POST', url: `/v1/issues/${issueId}/archive` as const }

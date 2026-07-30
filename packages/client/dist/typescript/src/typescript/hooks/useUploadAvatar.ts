@@ -4,7 +4,7 @@
 */
 
 import type { UploadAvatarMutationResponse } from "../types/UploadAvatar.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { uploadAvatar } from "../client/uploadAvatar.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

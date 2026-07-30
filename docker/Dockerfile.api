@@ -3,8 +3,8 @@
 # api-typescript image — the TS backend (auth, reads, projections, BFF).
 #
 # Self-contained: the server bundles from packages/api/typescript and its
-# workspace deps (@codedm/contracts, @codedm/contracts-typescript,
-# @codedm/core-typescript, and the committed SDK @codedm/client-typescript
+# workspace deps (@codm/contracts, @codm/contracts-typescript,
+# @codm/core-typescript, and the committed SDK @codm/client-typescript
 # which src/shared/registry.ts imports). No Go / OpenAPI codegen is needed —
 # contracts bindings and the client SDK are committed generated output.
 #
@@ -23,9 +23,9 @@ WORKDIR /app
 COPY package.json bun.lock tsconfig.json tsconfig.base.json ./
 
 # Full source for the backend and everything it imports at build time.
-#   packages/contracts            → @codedm/contracts + generated @codedm/contracts-typescript
-#   packages/api/typescript       → @codedm/api-typescript + nested @codedm/core-typescript
-#   packages/client/dist/typescript → committed SDK @codedm/client-typescript (ky is its only runtime dep)
+#   packages/contracts            → @codm/contracts + generated @codm/contracts-typescript
+#   packages/api/typescript       → @codm/api-typescript + nested @codm/core-typescript
+#   packages/client/dist/typescript → committed SDK @codm/client-typescript (ky is its only runtime dep)
 COPY ./packages/contracts ./packages/contracts
 COPY ./packages/api/typescript ./packages/api/typescript
 COPY ./packages/client/dist/typescript ./packages/client/dist/typescript

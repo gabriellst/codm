@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { UpdateOwnerSettingsMutationRequest, UpdateOwnerSettingsMutationResponse } from "../types/UpdateOwnerSettings.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getUpdateOwnerSettingsUrl() {
   const res = { method: 'PATCH', url: `/v1/owners/settings` as const }

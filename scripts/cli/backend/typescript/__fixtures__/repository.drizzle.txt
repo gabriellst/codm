@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
 import { OrderRepository } from './OrderRepository'
 import { Order } from '@sales/entities'
-// import { order } from '@codedm/contracts/db'
+// import { order } from '@codm/contracts/db'
 
 @injectable()
 export class DrizzleOrderRepository extends OrderRepository {

@@ -4,7 +4,7 @@
 // Since B4 the Stop is a child of `Thread` (spec decision 4), so the helper needs a thread: it nests
 // `givenThread` when the caller passes none, which is the documented shape for exactly this.
 import type { TestBed } from '../TestBed'
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import type { Stop } from '@thread/entities/Thread'

@@ -1,5 +1,5 @@
 //! Keychain-backed `secret_*` commands — the custom native surface the react
-//! console's `TauriSecretsService` invokes (via `@codedm/app-tauri/commands`).
+//! console's `TauriSecretsService` invokes (via `@codm/app-tauri/commands`).
 //!
 //! Each command is `#[specta::specta]` in addition to `#[tauri::command]` so its
 //! name, args, and Result type are collected into the `tauri_specta::Builder`

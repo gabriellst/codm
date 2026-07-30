@@ -1,4 +1,4 @@
-import { StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
+import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * The per-kind resolution vocabulary — which `StopResolution`s are applicable to which `StopKind`.

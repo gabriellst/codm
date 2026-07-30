@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { Id } from '@codedm/core-typescript'
+import { Id } from '@codm/core-typescript'
 
 /**
  * Deterministic-ID parity lock between TS and Go.

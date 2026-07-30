@@ -5,7 +5,7 @@
  * decision gate (`bf217a2a`) proved wrong in eight places.
  */
 import { describe, it, expect } from 'bun:test'
-import { AgentStopReason } from '@codedm/contracts-typescript/wire/enums'
+import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 import type { AgentFrame } from '../../types'
 import { StreamJsonCodec } from './StreamJsonCodec'
 import { LineBuffer } from './LineBuffer'
@@ -21,7 +21,13 @@ function decodeAll(codec: StreamJsonCodec, text: string): { frames: AgentFrame[]
 /** `raw/s1-text.jsonl` — the plain text turn. */
 const ASSISTANT_TEXT = JSON.stringify({
 	type: 'assistant',
-	message: { model: 'claude-opus-5', id: 'msg_011CdSnJ7J1bHQf7Q4ztPNW8', role: 'assistant', content: [{ type: 'text', text: 'SMOKE-OK' }], stop_reason: null },
+	message: {
+		model: 'claude-opus-5',
+		id: 'msg_011CdSnJ7J1bHQf7Q4ztPNW8',
+		role: 'assistant',
+		content: [{ type: 'text', text: 'SMOKE-OK' }],
+		stop_reason: null,
+	},
 	parent_tool_use_id: null,
 	session_id: '2e564f1b-2b2a-4929-83c1-e2e84a9290f4',
 })
@@ -39,7 +45,12 @@ const RESULT_SUCCESS = JSON.stringify({
 })
 
 /** `raw/s1-text.jsonl` — ambient noise from the USER's own SessionStart hooks. Present in all four captures. */
-const HOOK_RESPONSE = JSON.stringify({ type: 'system', subtype: 'hook_response', hook_name: 'SessionStart:startup', output: '{"hookSpecificOutput":{}}' })
+const HOOK_RESPONSE = JSON.stringify({
+	type: 'system',
+	subtype: 'hook_response',
+	hook_name: 'SessionStart:startup',
+	output: '{"hookSpecificOutput":{}}',
+})
 const RATE_LIMIT = JSON.stringify({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'five_hour' } })
 
 describe('StreamJsonCodec — line reassembly and parse failures never abort the drain (AC-2.2)', () => {
@@ -140,14 +151,23 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 		// `is_error !== true`; `!is_error` would coincidentally work, `is_error === false` would not.
 		const toolResult = JSON.stringify({
 			type: 'user',
-			message: { role: 'user', content: [{ tool_use_id: 'toolu_014gZzVmz9aD3PJw93yUXYWy', type: 'tool_result', content: '1\tSMOKE-TOOL-OK\n2\t' }] },
+			message: {
+				role: 'user',
+				content: [{ tool_use_id: 'toolu_014gZzVmz9aD3PJw93yUXYWy', type: 'tool_result', content: '1\tSMOKE-TOOL-OK\n2\t' }],
+			},
 			parent_tool_use_id: null,
 		})
 
 		const { frames } = decodeAll(codec, `${toolResult}\n`)
 
 		expect(frames).toEqual([
-			{ kind: 'tool_result', toolUseId: 'toolu_014gZzVmz9aD3PJw93yUXYWy', ok: true, summary: '1\tSMOKE-TOOL-OK\n2\t', parentToolUseId: null },
+			{
+				kind: 'tool_result',
+				toolUseId: 'toolu_014gZzVmz9aD3PJw93yUXYWy',
+				ok: true,
+				summary: '1\tSMOKE-TOOL-OK\n2\t',
+				parentToolUseId: null,
+			},
 		])
 	})
 
@@ -156,7 +176,19 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 		// `raw/s3-subagent.jsonl` carries the sub-agent's rolled-up answer as an array of {type,text}.
 		const arrayResult = JSON.stringify({
 			type: 'user',
-			message: { role: 'user', content: [{ tool_use_id: 'toolu_2', type: 'tool_result', content: [{ type: 'text', text: 'SMOKE' }, { type: 'text', text: 'OK' }] }] },
+			message: {
+				role: 'user',
+				content: [
+					{
+						tool_use_id: 'toolu_2',
+						type: 'tool_result',
+						content: [
+							{ type: 'text', text: 'SMOKE' },
+							{ type: 'text', text: 'OK' },
+						],
+					},
+				],
+			},
 			parent_tool_use_id: null,
 		})
 
@@ -234,13 +266,26 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 
 		const { frames } = decodeAll(codec, `${odd}\n`)
 
-		expect(frames).toEqual([{ kind: 'result', stopReason: AgentStopReason.UNKNOWN, usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 } }])
+		expect(frames).toEqual([
+			{
+				kind: 'result',
+				stopReason: AgentStopReason.UNKNOWN,
+				usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
+			},
+		])
 		expect(warns).toHaveLength(1)
 	})
 
 	it('emits an error frame BEFORE the result frame when the CLI itself reports a failed run', () => {
 		const codec = new StreamJsonCodec()
-		const errored = JSON.stringify({ type: 'result', subtype: 'error_during_execution', is_error: true, stop_reason: 'end_turn', result: 'boom', usage: {} })
+		const errored = JSON.stringify({
+			type: 'result',
+			subtype: 'error_during_execution',
+			is_error: true,
+			stop_reason: 'end_turn',
+			result: 'boom',
+			usage: {},
+		})
 
 		const { frames } = decodeAll(codec, `${errored}\n`)
 
@@ -252,8 +297,14 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 	it('turns stream_event partial deltas into text_delta frames carrying the id from message_start', () => {
 		const codec = new StreamJsonCodec()
 		// `raw/s4-partial.jsonl` — the delta frames carry NO message id; it was announced earlier.
-		const start = JSON.stringify({ type: 'stream_event', event: { type: 'message_start', message: { id: 'msg_011CdSnLLFRZ5pTQ22nZEFX5', role: 'assistant', content: [] } } })
-		const delta = JSON.stringify({ type: 'stream_event', event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'part' } } })
+		const start = JSON.stringify({
+			type: 'stream_event',
+			event: { type: 'message_start', message: { id: 'msg_011CdSnLLFRZ5pTQ22nZEFX5', role: 'assistant', content: [] } },
+		})
+		const delta = JSON.stringify({
+			type: 'stream_event',
+			event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'part' } },
+		})
 
 		const { frames } = decodeAll(codec, `${start}\n${delta}\n`)
 

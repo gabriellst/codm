@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { givenWorkspace } from '@test/support'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { OPERATOR_ID } from '@auth/operator'
 import { RemoveWorkspace } from './RemoveWorkspace'
 import { WorkspaceRepository } from '../repositories/WorkspaceRepository'
@@ -34,9 +34,7 @@ describe('RemoveWorkspace use case', () => {
 
 	it('rejects an unknown workspace (WORKSPACE_NOT_FOUND)', async () => {
 		const useCase = testBed.resolve(RemoveWorkspace)
-		await expect(
-			useCase.execute({ ownerId: OPERATOR_ID, workspaceId: '00000000-0000-4000-8000-0000000000ff' }),
-		).rejects.toThrow(BaseError)
+		await expect(useCase.execute({ ownerId: OPERATOR_ID, workspaceId: '00000000-0000-4000-8000-0000000000ff' })).rejects.toThrow(BaseError)
 	})
 
 	it('refuses removal while an issue is WORKING on it (WORKSPACE_IN_USE)', async () => {

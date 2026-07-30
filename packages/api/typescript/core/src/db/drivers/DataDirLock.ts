@@ -40,7 +40,7 @@ export class DataDirLockedError extends Error {
  *
  * EXPORTED because the lock-cleanup call sites (the e2e runner, the node smoke script) must import
  * this rule instead of re-typing the path in three places. Both of them are SCRIPTS, so this module
- * is ALSO published as its own `@codedm/core-typescript/db/lock` subpath: it imports node builtins
+ * is ALSO published as its own `@codm/core-typescript/db/lock` subpath: it imports node builtins
  * only, and reaching it through the package root would drag the DI container and the fastify graph
  * into a runner that only wants to delete a file.
  */

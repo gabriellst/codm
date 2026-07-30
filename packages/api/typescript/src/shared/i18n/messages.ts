@@ -1,4 +1,4 @@
-import { Language } from '@codedm/contracts-typescript/wire/enums'
+import { Language } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * Server-side i18n for surfaces the FRONTEND cannot translate: emails, hosted-checkout line

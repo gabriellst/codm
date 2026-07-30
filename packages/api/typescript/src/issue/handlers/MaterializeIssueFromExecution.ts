@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
-import { IssueOpenedEvent, IssueCreatedEvent, IssueCompletedEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler } from '@codm/core-typescript'
+import { IssueOpenedEvent, IssueCreatedEvent, IssueCompletedEvent } from '@codm/contracts-typescript/wire/events'
 import { OpenIssue } from '../usecases/OpenIssue'
 import { CompleteIssue } from '../usecases/CompleteIssue'
 

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
-import { threads, transcriptEntries, workspaces, channels, stops } from '@codedm/contracts/db'
+import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { threads, transcriptEntries, workspaces, channels, stops } from '@codm/contracts/db'
 import { ThreadStatusDeriver } from '../services/ThreadStatusDeriver'
 import {
 	ThreadStatus,
@@ -10,7 +10,7 @@ import {
 	TranscriptKind,
 	ClassificationMethod,
 	StopKind,
-} from '@codedm/contracts-typescript/wire/enums'
+} from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 
 export const GetSessionChatInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })

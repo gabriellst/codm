@@ -70,7 +70,7 @@ Edit the controller file with proper Zod schema. **CRITICAL: Use `.example([...]
 
 ```typescript
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { CreateProductInputSchema, CreateProductOutputSchema } from '@product/usecases/CreateProduct'
 
 // Option 1: Import from use case (preferred when use case has schemas)
@@ -335,7 +335,7 @@ Controller.execute()
 A controller becomes callable by a model as an MCP tool by declaring `static override readonly mcpScopes`, right above `readonly path` — the same idiom `middlewares` already established: a cross-cutting property of an endpoint lives ON the endpoint, not in a list somewhere else.
 
 ```typescript
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 
 @injectable()
 export class ForkIssueController extends Controller<typeof ForkIssueControllerInputSchema, typeof ForkIssueControllerOutputSchema> {
@@ -346,7 +346,7 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 }
 ```
 
-**ABSENT is the default and absent means NOT EXPOSED.** With no filter, `@kubb/plugin-mcp` turns every operation in the OpenAPI spec into a tool — the security property comes entirely from this being opt-in, per class, in the file a reviewer is already reading. Never a bare string literal: `McpScope` always comes from `@codedm/contracts-typescript/wire/enums`.
+**ABSENT is the default and absent means NOT EXPOSED.** With no filter, `@kubb/plugin-mcp` turns every operation in the OpenAPI spec into a tool — the security property comes entirely from this being opt-in, per class, in the file a reviewer is already reading. Never a bare string literal: `McpScope` always comes from `@codm/contracts-typescript/wire/enums`.
 
 A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` **mandatory** — appended automatically by `Controller.executeMiddlewares` (core), WITHOUT a line in `override middlewares`. It resolves the caller's run identity, compares it against `params`/`body`, and stamps `ctx.agentIdentity`. Controllers that read the stamped identity compose the shared schema instead of re-declaring it:
 
@@ -535,7 +535,7 @@ export const ListProductCostsInputSchema = z
 
 // ❌ WRONG — a list-screen filter living in packages/contracts/wire/enums.
 //    Cross-language bindings + a Phase-0-frozen global for a single-screen toggle.
-import { ProductCostListFilter } from '@codedm/contracts-typescript/wire/enums'
+import { ProductCostListFilter } from '@codm/contracts-typescript/wire/enums'
 filters: z.array(z.enum(ProductCostListFilter)).optional()
 ```
 
@@ -620,7 +620,7 @@ After creating controllers:
 
 ## References
 
-- `@codedm/core-typescript` — Controller, HttpStatusCode, z, BaseError (all framework types)
+- `@codm/core-typescript` — Controller, HttpStatusCode, z, BaseError (all framework types)
 - `docs/BACKEND.md` - Architecture principles (why)
 - `/usecase` skill - For implementing the business logic
 - `/errors` skill - For defining and registering errors

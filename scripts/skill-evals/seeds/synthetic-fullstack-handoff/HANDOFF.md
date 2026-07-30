@@ -24,9 +24,9 @@ what is already on disk. Trust the SDK, not your memory of how these shapes "sho
 - **Go consumer.** `PurchaseOrderRecordedHandler` under `internal/sync/handlers/` writes the audit
   row. Out of your scope.
 - **SDK.** Regenerated and committed — the hooks/schemas/keys below are importable right now from
-  `@codedm/client-typescript/typescript`.
+  `@codm/client-typescript/typescript`.
 
-### The SDK surface you build against (exact names — import from `@codedm/client-typescript/typescript`)
+### The SDK surface you build against (exact names — import from `@codm/client-typescript/typescript`)
 
 | Need | Identifier |
 |---|---|

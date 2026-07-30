@@ -177,7 +177,7 @@ beforeAll(async () => {
 		'packages/contracts/package.json',
 		`${JSON.stringify(
 			{
-				name: '@codedm/contracts',
+				name: '@codm/contracts',
 				scripts: {
 					'codegen:wire:typescript': 'bun codegen/emit-wire-ts.ts',
 					'codegen:wire:go': 'bun codegen/emit-wire-go.ts',
@@ -199,13 +199,13 @@ beforeAll(async () => {
 	write('.claude/worktrees/wip/file.ts', 'x\n')
 	write('.nx/cache/hash', 'x\n')
 	write('packages/api/typescript/src/index.ts', 'export {}\n')
-	write('packages/api/typescript/core/package.json', '{ "name": "@codedm/core-typescript" }\n')
+	write('packages/api/typescript/core/package.json', '{ "name": "@codm/core-typescript" }\n')
 	write('packages/api/go/main.go', 'package main\n')
 	write('packages/app/react/src/main.tsx', 'export {}\n')
 	write('packages/app/styles/tokens.css', ':root {}\n')
-	write('packages/client/dist/typescript/package.json', '{ "name": "@codedm/client-typescript" }\n')
+	write('packages/client/dist/typescript/package.json', '{ "name": "@codm/client-typescript" }\n')
 	write('packages/client/dist/go/client.go', 'package client\n')
-	write('packages/contracts/generated/typescript/package.json', '{ "name": "@codedm/contracts-typescript" }\n')
+	write('packages/contracts/generated/typescript/package.json', '{ "name": "@codm/contracts-typescript" }\n')
 	write('packages/contracts/generated/go/wire.go', 'package wire\n')
 	write('packages/app/react/dist/bundle.js', 'built\n')
 

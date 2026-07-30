@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDetectProviders } from '@codedm/client-typescript/typescript'
+import { useDetectProviders } from '@codm/client-typescript/typescript'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'

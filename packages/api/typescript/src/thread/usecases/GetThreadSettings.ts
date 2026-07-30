@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, inArray } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
-import { threads, remotes } from '@codedm/contracts/db'
-import { BufferSize } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { threads, remotes } from '@codm/contracts/db'
+import { BufferSize } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_PARTICIPANT_ID, type Participant } from '../entities/Thread'
 import type { ApplicationErrors } from '../errors'
 
@@ -32,7 +32,8 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const [thread] = await this.db.select().from(threads).where(eq(threads.id, input.threadId)).limit(1)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
 		const participants = thread.participants as Participant[]
 

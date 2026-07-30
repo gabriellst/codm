@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/core-typescript",
+	"name": "@codm/core-typescript",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
@@ -18,7 +18,7 @@
 		"zod": "^4.0.0"
 	},
 	"dependencies": {
-		"@codedm/contracts": "workspace:*",
+		"@codm/contracts": "workspace:*",
 		"@libsql/client": "^0.17.4",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/api-logs": "^0.218.0",

@@ -4,7 +4,7 @@
 */
 
 import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
 import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";

@@ -1,4 +1,4 @@
-import { AggregateRoot, BaseError, Id, z } from '@codedm/core-typescript'
+import { AggregateRoot, BaseError, Id, z } from '@codm/core-typescript'
 import Z from 'zod'
 import { CouponStatus, CouponType } from '../enums'
 import type { SalesDomainErrors } from '../errors'

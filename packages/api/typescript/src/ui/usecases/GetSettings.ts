@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient, Config } from '@codedm/core-typescript'
-import { owners } from '@codedm/contracts/db'
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z, DrizzleClient, Config } from '@codm/core-typescript'
+import { owners } from '@codm/contracts/db'
+import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
 import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 

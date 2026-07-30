@@ -2,8 +2,8 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getRouteApi } from '@tanstack/react-router'
-import { PaymentStatusEnum, type PaymentStatus } from '@codedm/client-typescript/typescript'
-import type { ListOrders200 } from '@codedm/client-typescript/typescript'
+import { PaymentStatusEnum, type PaymentStatus } from '@codm/client-typescript/typescript'
+import type { ListOrders200 } from '@codm/client-typescript/typescript'
 // VIOLATION (component bp-03): mixing icon libraries — Tabler is the only sanctioned set.
 import { Trash } from 'lucide-react'
 

@@ -65,17 +65,17 @@ only ever do three jobs:
 ## Typed commands (native calls are typed end-to-end)
 
 There is **no stringly `invoke<T>(command: string)`** — that touchpoint is retired. The react
-console reaches the host through two typed channels, both owned by `@codedm/app-tauri`:
+console reaches the host through two typed channels, both owned by `@codm/app-tauri`:
 
 1. **Custom Rust commands → tauri-specta.** The shell's own `#[tauri::command]`s
    (`secret_get/set/delete`) are annotated `#[specta::specta]`, collected in a
    `tauri_specta::Builder` in `src-tauri/src/lib.rs`, and exported as typed TS bindings to
    `packages/app/tauri/bindings.ts` by an export test that runs on `cargo test` (committed +
    drift-checked). The name, args, and return type all flow from the Rust — one source of
-   truth. `TauriSecretsService` imports `{ commands } from '@codedm/app-tauri/commands'` and
+   truth. `TauriSecretsService` imports `{ commands } from '@codm/app-tauri/commands'` and
    calls `commands.secretGet(key)` — no hand-typed `invoke<string|null>('secret_get',…)`.
    *Fallback (if specta v2 / tauri-specta v2 version-compat blocks the Rust build): a
-   hand-written typed `commands.ts` in `@codedm/app-tauri` with the same shape — react imports
+   hand-written typed `commands.ts` in `@codm/app-tauri` with the same shape — react imports
    `commands.secretGet` identically, types hand-synced. This build did NOT need the fallback.*
 2. **Plugin / core capabilities → typed npm APIs directly.** Each `Tauri<Cap>Service` imports
    the typed `@tauri-apps/plugin-*` / `@tauri-apps/api/*` API — no re-wrapping façade:
@@ -83,7 +83,7 @@ console reaches the host through two typed channels, both owned by `@codedm/app-
    - `TauriNotificationService` → `@tauri-apps/plugin-notification`
    - `TauriAutostartService` → `@tauri-apps/plugin-autostart`
    - `TauriBadgeService` → `getCurrentWindow().setBadgeCount()` from `@tauri-apps/api/window`
-   - `TauriSecretsService` → `@codedm/app-tauri/commands` (channel 1)
+   - `TauriSecretsService` → `@codm/app-tauri/commands` (channel 1)
 
    `@tauri-apps/*` imports are lint-allowed ONLY inside `Tauri*Service.ts` (the
    `no-restricted-imports` allowlist). Invariant: `@tauri-apps/*` must never resolve into the
@@ -121,7 +121,7 @@ services/
 │   ├── test.ts          #   default export: Bindings of Fake*Service + the Fake classes (backend `mock`-env analogue)
 │   └── index.ts         #   Environment, ENVIRONMENTS (import('./browser'|'./tauri') → default), detectEnvironment
 ├── utils/tauri/         # isTauri.ts (env probe) — the stringly invoke.ts is RETIRED;
-│   │                    #   typed calls go through @codedm/app-tauri/commands + @tauri-apps/*
+│   │                    #   typed calls go through @codm/app-tauri/commands + @tauri-apps/*
 ├── providers/
 │   └── ServicesProvider.tsx  # owns the Container; detect → dynamic-import env record → container.load → context (splash while loading)
 ├── hooks/index.ts       # useService(Token) + typed hooks (useFilePicker, useNotification, …)
@@ -129,13 +129,13 @@ services/
 ```
 
 - **Ports**: each `<Cap>Service/<Cap>Service.ts` holds pure types only — no platform SDK, no
-  react. The ports are the future `@codedm/native-contract` package: an **expo app implements
+  react. The ports are the future `@codm/native-contract` package: an **expo app implements
   the same ports** (colocated `Expo<Cap>Service` + a `registry/expo.ts`) against identical
   types; extraction is a verbatim move once a second consumer exists.
 - **Services**: one concrete class per port per platform, constructed ONLY by the Container.
   A service with a dependency declares `static deps = [OtherToken] as const` and the Container
   resolves + injects it recursively — no factory closures, no `new` in the registry. Tauri
-  services call the host through **typed** channels — `@codedm/app-tauri/commands` (specta
+  services call the host through **typed** channels — `@codm/app-tauri/commands` (specta
   bindings) for custom commands, `@tauri-apps/plugin-*`/`@tauri-apps/api/*` for plugin/core (see
   "Typed commands" above); the capability each needs is listed in `CAPABILITIES` and mapped to
   permissions in `CAPABILITY_PERMISSIONS` — both in `packages/app/tauri/config/capabilities.ts`
@@ -154,7 +154,7 @@ services/
   `app-react:build-spa`). The shell never imports console source.
 - **react → tauri**: only through the tauri touchpoints — `services/**/Tauri*Service.ts`,
   `services/registry/tauri.ts`, `services/utils/tauri/`. `@tauri-apps/*`,
-  `@codedm/app-tauri/commands` (or `window.__TAURI__`) anywhere else — including the ports and
+  `@codm/app-tauri/commands` (or `window.__TAURI__`) anywhere else — including the ports and
   the browser services — is an eslint error (`no-restricted-imports` block in the root
   `eslint.config.ts`).
 - **`new <Something>Service` appears NOWHERE by hand** — the registry is declarative class
@@ -181,7 +181,7 @@ are the two readiness URLs + platform service bindings; the console does not mov
    `@tauri-apps/plugin-*` / `@tauri-apps/api/*` API directly, or (for a NEW custom command)
    add `#[tauri::command] #[specta::specta]` in `src-tauri/src/lib.rs`, register it in the
    `tauri_specta::Builder` (regen `bindings.ts` via `cargo test`), and import
-   `{ commands } from '@codedm/app-tauri/commands'`. Add the abstract key to `CAPABILITIES` AND
+   `{ commands } from '@codm/app-tauri/commands'`. Add the abstract key to `CAPABILITIES` AND
    its permission list to `CAPABILITY_PERMISSIONS` — both in
    `packages/app/tauri/config/capabilities.ts` — then `bun desktop:generate` (+ plugin in
    `Cargo.toml`/`lib.rs` if new).

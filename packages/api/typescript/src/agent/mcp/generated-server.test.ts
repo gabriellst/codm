@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codm/client-typescript/typescript/mcp/context'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { loadGeneratedServer } from './door'
 
 /**

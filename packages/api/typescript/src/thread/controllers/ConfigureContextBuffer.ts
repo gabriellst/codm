@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode } from '@codedm/core-typescript'
-import { BufferSize, McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode } from '@codm/core-typescript'
+import { BufferSize, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import {
 	ConfigureContextBuffer,

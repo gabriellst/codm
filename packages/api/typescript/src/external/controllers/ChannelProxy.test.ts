@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
-import { BaseError, Config, GlobalErrorMapper, HttpStatusCode } from '@codedm/core-typescript'
+import { BaseError, Config, GlobalErrorMapper, HttpStatusCode } from '@codm/core-typescript'
 // Side-effect import: registers GATEWAY_UNAVAILABLE → 502 in the GlobalErrorMapper (the
 // controller itself only `import type`s the error union, which does not run the registration).
 import '../errors'

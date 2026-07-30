@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import * as React from 'react'
-import { CurrencyCodeEnum } from '@codedm/client-typescript/typescript'
-import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
+import { CurrencyCodeEnum } from '@codm/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@codm/client-typescript/typescript'
 
 import { ToggleGroup, ToggleGroupItem } from '../toggle-group'
 
@@ -29,12 +29,7 @@ export const Enum: Story = {
 		const [value, setValue] = React.useState<CurrencyCodeEnumKey | undefined>(undefined)
 		return (
 			<div className="flex flex-col gap-3">
-				<ToggleGroup
-					enum={CurrencyCodeEnum}
-					i18nPrefix="enums.CurrencyCode"
-					value={value}
-					onValueChange={setValue}
-				/>
+				<ToggleGroup enum={CurrencyCodeEnum} i18nPrefix="enums.CurrencyCode" value={value} onValueChange={setValue} />
 				<p className="text-muted-foreground text-xs">Selected: {value ?? '—'}</p>
 			</div>
 		)
@@ -47,12 +42,7 @@ export const EnumPreselected: Story = {
 		const [value, setValue] = React.useState<CurrencyCodeEnumKey | undefined>(CurrencyCodeEnum.USD)
 		return (
 			<div className="flex flex-col gap-3">
-				<ToggleGroup
-					enum={CurrencyCodeEnum}
-					i18nPrefix="enums.CurrencyCode"
-					value={value}
-					onValueChange={setValue}
-				/>
+				<ToggleGroup enum={CurrencyCodeEnum} i18nPrefix="enums.CurrencyCode" value={value} onValueChange={setValue} />
 				<p className="text-muted-foreground text-xs">Selected: {value ?? '—'}</p>
 			</div>
 		)
@@ -62,12 +52,6 @@ export const EnumPreselected: Story = {
 export const EnumDisabled: Story = {
 	name: 'Enum mode disabled',
 	render: () => (
-		<ToggleGroup
-			enum={CurrencyCodeEnum}
-			i18nPrefix="enums.CurrencyCode"
-			value={CurrencyCodeEnum.EUR}
-			onValueChange={() => {}}
-			disabled
-		/>
+		<ToggleGroup enum={CurrencyCodeEnum} i18nPrefix="enums.CurrencyCode" value={CurrencyCodeEnum.EUR} onValueChange={() => {}} disabled />
 	),
 }

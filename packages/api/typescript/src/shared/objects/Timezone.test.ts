@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { Timezone } from './Timezone'
 
 describe('Timezone value object', () => {

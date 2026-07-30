@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, testId, givenOwner } from '@test/support'
-import { DomainEventRepository } from '@codedm/core-typescript'
+import { DomainEventRepository } from '@codm/core-typescript'
 import { DisableOwner } from './DisableOwner'
 import { EnableOwner } from './EnableOwner'
 import { OwnerRepository } from '../repositories/OwnerRepository'

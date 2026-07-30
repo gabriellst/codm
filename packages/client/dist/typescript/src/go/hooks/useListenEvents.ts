@@ -4,7 +4,7 @@
 */
 
 import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { listenEvents } from "../client/listenEvents.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";

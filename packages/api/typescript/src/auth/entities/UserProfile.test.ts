@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
+import { BaseError } from '@codm/core-typescript'
 import { LanguageTag, Timezone } from '@shared/objects'
 import { UserProfile } from './UserProfile'
 

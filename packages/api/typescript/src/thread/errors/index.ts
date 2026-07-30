@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
 // Domain errors — Thread aggregate invariants (raised by entity methods).
 export type ThreadDomainErrors =

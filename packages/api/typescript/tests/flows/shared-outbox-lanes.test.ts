@@ -20,9 +20,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq, sql } from 'drizzle-orm'
-import * as schema from '@codedm/contracts/db'
-import { outbox } from '@codedm/contracts/db'
-import { migrationsDir } from '@codedm/contracts/db/migrations'
+import * as schema from '@codm/contracts/db'
+import { outbox } from '@codm/contracts/db'
+import { migrationsDir } from '@codm/contracts/db/migrations'
 import {
 	DrizzleDomainEventRepository,
 	DrizzleOutboxDispatcher,
@@ -34,7 +34,7 @@ import {
 	type EventCallback,
 	type Handler,
 	type Unsubscribe,
-} from '@codedm/core-typescript'
+} from '@codm/core-typescript'
 
 const API_EVENT = 'thread.message.appended'
 const GATEWAY_EVENT = 'channel.message.received'

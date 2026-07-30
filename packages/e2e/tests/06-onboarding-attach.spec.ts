@@ -1,5 +1,5 @@
 import { test, expect } from '../utils/test'
-import { getSetupChecklist, getAttachThreadWizard } from '@codedm/client-typescript/typescript'
+import { getSetupChecklist, getAttachThreadWizard } from '@codm/client-typescript/typescript'
 import { givenAttachedThread } from '../utils/given'
 
 /**

@@ -37,8 +37,8 @@ describe('mentionsTag — a standalone token, not a substring', () => {
 
 	it('does NOT match inside a longer token — the reason this is not String.includes', () => {
 		// The tag is derived from a folder name, so it collides with the vocabulary of the project it
-		// names. This repo's packages are literally `@codedm/*` and its live thread mints `@codedm`.
-		expect(mentionsTag('bump @codedm/core-typescript to 2.0', '@codedm')).toBe(false)
+		// names. This repo's packages are literally `@codm/*` and its live thread mints `@codedm`.
+		expect(mentionsTag('bump @codm/core-typescript to 2.0', '@codedm')).toBe(false)
 		expect(mentionsTag('see codedm.ts', '@codedm')).toBe(false)
 		expect(mentionsTag('@codedmx is someone else', '@codedm')).toBe(false)
 		expect(mentionsTag('mail me at a@codedm.dev', '@codedm')).toBe(false)
@@ -64,7 +64,7 @@ describe('stripMentionTag — addressing is not content', () => {
 	})
 
 	it('leaves a non-citation occurrence alone', () => {
-		expect(stripMentionTag('bump @codedm/core to 2.0', '@codedm')).toBe('bump @codedm/core to 2.0')
+		expect(stripMentionTag('bump @codm/core to 2.0', '@codedm')).toBe('bump @codm/core to 2.0')
 	})
 
 	it('CAN empty a bare summon — the caller is responsible for that', () => {

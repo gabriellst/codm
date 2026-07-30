@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { SetActiveOwnerMutationResponse, SetActiveOwnerPathParams } from "../types/SetActiveOwner.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSetActiveOwnerUrl(ownerId: SetActiveOwnerPathParams["ownerId"]) {
   const res = { method: 'POST', url: `/v1/owners/${ownerId}/activate` as const }

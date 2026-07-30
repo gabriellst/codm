@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { idempotencyKeys } from '@codedm/contracts/db'
+import { idempotencyKeys } from '@codm/contracts/db'
 import { DrizzleClient } from '../../db'
 import type { Transaction } from '../UnitOfWork/UnitOfWork'
 import { IdempotencyGuard } from './IdempotencyGuard'

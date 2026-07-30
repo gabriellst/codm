@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
-import { AgentModelId, AgentStopReason, StopKind } from '@codedm/contracts-typescript/wire/enums'
-import { LoggingService } from '@codedm/core-typescript'
+import { AgentModelId, AgentStopReason, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { LoggingService } from '@codm/core-typescript'
 import { AgentRunOutcome, type TransportStopKind } from '../../../enums'
 import type {
 	AgentMcpInvocation,
@@ -18,7 +18,7 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // manifest and the turn-fact accumulator all need the same spelling and routing them through one
 // another would drag a subprocess-spawning module into a pure state machine.
 import { MCP_SERVER_KEY } from '../../../mcp/wire'
-import { AgentIdentityService } from '@codedm/core-typescript'
+import { AgentIdentityService } from '@codm/core-typescript'
 
 /** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
 const DEFAULT_INACTIVITY_MS = 180_000

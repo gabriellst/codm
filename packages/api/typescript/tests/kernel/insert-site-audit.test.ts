@@ -15,7 +15,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq, sql } from 'drizzle-orm'
 import { givenIssue, givenOwner, givenStop, givenThread, givenWorkspace, TestBed } from '@test/support'
-import { DrizzleClient, DrizzleDatabaseDriver } from '@codedm/core-typescript'
+import { DrizzleClient, DrizzleDatabaseDriver } from '@codm/core-typescript'
 import {
 	artifacts,
 	channels,
@@ -26,15 +26,8 @@ import {
 	agentSessions,
 	terminalLines,
 	transcriptEntries,
-} from '@codedm/contracts/db'
-import {
-	AgentModelId,
-	ArtifactKind,
-	ChannelKind,
-	ChannelStatus,
-	ProviderKind,
-	TranscriptKind,
-} from '@codedm/contracts-typescript/wire/enums'
+} from '@codm/contracts/db'
+import { AgentModelId, ArtifactKind, ChannelKind, ChannelStatus, ProviderKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { ArtifactRepository } from '@artifact/repositories/ArtifactRepository'
 import { Artifact } from '@artifact/entities/Artifact'
 import { AgentSessionRepository } from '@agent/repositories/AgentSessionRepository'
@@ -42,9 +35,9 @@ import { AgentSession } from '@agent/entities/AgentSession'
 import { TerminalLineRepository } from '@issue/repositories/TerminalLineRepository'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
-import { IdempotencyGuard } from '@codedm/core-typescript'
-import { DomainEventRepository } from '@codedm/core-typescript'
-import { BaseDomainEvent } from '@codedm/core-typescript'
+import { IdempotencyGuard } from '@codm/core-typescript'
+import { DomainEventRepository } from '@codm/core-typescript'
+import { BaseDomainEvent } from '@codm/core-typescript'
 
 const OWNER = '44444444-4444-4444-8444-444444444444'
 

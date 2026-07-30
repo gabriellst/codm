@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import { Handler, z, BaseError } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ThreadPausedEvent } from '../events'
 import type { ApplicationErrors } from '../errors'
@@ -21,7 +21,8 @@ export class PauseThread extends Handler<typeof PauseThreadInputSchema, typeof P
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.pause()
 		await this.withTransaction(tx, async tx => {
 			await this.threads.save(thread, tx)

@@ -1,6 +1,6 @@
 import { IconAsterisk, IconChevronRight } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import type { IssueStatus } from '@codedm/client-typescript/typescript'
+import type { IssueStatus } from '@codm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { Dot } from './StatusDot'
 import { ThreadAvatar } from './ThreadAvatar'

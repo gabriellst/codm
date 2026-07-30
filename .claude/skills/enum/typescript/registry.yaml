@@ -102,10 +102,10 @@ registry:
     - id: ENUM-P06
       name: "Central enum registration in shared/index.ts"
       when: "always — after creating any new enum"
-      reason: "All enums must be registered centrally via openapi.registerEnums() in shared/index.ts. This ensures OpenAPI schema uses the correct enum name. In this template, wire enums come from @codedm/contracts-typescript/wire/enums."
+      reason: "All enums must be registered centrally via openapi.registerEnums() in shared/index.ts. This ensures OpenAPI schema uses the correct enum name. In this template, wire enums come from @codm/contracts-typescript/wire/enums."
       rule: |
         // packages/api/typescript/src/shared/index.ts
-        import * as wireEnums from '@codedm/contracts-typescript/wire/enums'
+        import * as wireEnums from '@codm/contracts-typescript/wire/enums'
         // ...
         openapi.registerEnums(wireEnums)
 
@@ -175,7 +175,7 @@ registry:
       when: "form field uses <Select> with an enum value"
       reason: "Base UI <Select.Value> does NOT auto-resolve the label from the matching <Select.Item> children. If you only pass `placeholder=`, the trigger renders the raw value (e.g. 'ACTION') after selection. You MUST pass children that compute the translated label."
       rule: |
-        import type { GameGenreEnum } from '@codedm/client-typescript/typescript'
+        import type { GameGenreEnum } from '@codm/client-typescript/typescript'
         const selectedGenre = field.state.value as GameGenreEnum | undefined
         <Select value={selectedGenre} onValueChange={v => field.handleChange(v as GameGenreEnum)}>
           <SelectTrigger>
@@ -304,7 +304,7 @@ registry:
         const STATUS_OPTIONS = ['PENDING', 'CONFIRMED', 'CANCELLED']
       right: |
         // Derive from SDK enum
-        import { AppointmentStatusEnum } from '@codedm/client-typescript/typescript'
+        import { AppointmentStatusEnum } from '@codm/client-typescript/typescript'
         const STATUS_OPTIONS = Object.values(AppointmentStatusEnum)
 
     - id: bp-05
@@ -347,7 +347,7 @@ registry:
         openapi.registerEnums(clinicEnums)
       right: |
         // shared/index.ts — CORRECT: all enums registered centrally
-        import * as wireEnums from '@codedm/contracts-typescript/wire/enums'
+        import * as wireEnums from '@codm/contracts-typescript/wire/enums'
         openapi.registerEnums(wireEnums)
 
     - id: bp-07

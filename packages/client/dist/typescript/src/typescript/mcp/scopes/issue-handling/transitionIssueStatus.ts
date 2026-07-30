@@ -1,6 +1,6 @@
-import fetch from "@codedm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
+import fetch from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
 import type { TransitionIssueStatusMutationRequest, TransitionIssueStatusMutationResponse, TransitionIssueStatusPathParams } from "../../../types/TransitionIssueStatus.ts";
-import type { ResponseErrorConfig } from "@codedm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
+import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**

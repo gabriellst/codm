@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, LoggingService, z } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
-import { MessageAuthor } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, LoggingService, z } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
+import { MessageAuthor } from '@codm/contracts-typescript/wire/enums'
 import { ChannelSender } from '../services/ChannelSender'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 

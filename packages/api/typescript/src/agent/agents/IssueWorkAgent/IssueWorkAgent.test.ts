@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
-import type { BaseError } from '@codedm/core-typescript'
-import { AgentModelId, McpScope } from '@codedm/contracts-typescript/wire/enums'
+import type { BaseError } from '@codm/core-typescript'
+import { AgentModelId, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent, ProviderCapabilities } from '../../types'
@@ -9,7 +9,7 @@ import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkAgent } from './IssueWorkAgent'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
-import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import { InMemoryAgentIdentityService } from '@codm/core-typescript'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { operationIdsInScope, toolsInScope } from '../../mcp/exposure'
 

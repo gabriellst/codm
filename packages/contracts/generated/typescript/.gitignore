@@ -1,5 +1,5 @@
 # Bun materializes a node_modules here once this generated package declares a
-# workspace dependency (@codedm/core-typescript, imported by src/wire/events).
+# workspace dependency (@codm/core-typescript, imported by src/wire/events).
 # The symlinked deps are not generated output — keep them out of the tree so the
 # check:generated gate (git status --porcelain on this root) stays green.
 /node_modules/

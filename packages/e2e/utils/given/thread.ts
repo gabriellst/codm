@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { addWorkspace, attachThread, getThreadSettings } from '@codedm/client-typescript/typescript'
+import { addWorkspace, attachThread, getThreadSettings } from '@codm/client-typescript/typescript'
 import type { ApiSession } from './api'
 import { seedConnectedChannel } from './gateway'
 

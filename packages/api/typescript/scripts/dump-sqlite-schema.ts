@@ -24,11 +24,11 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Database } from 'bun:sqlite'
-import { migrationsDir } from '@codedm/contracts/db/migrations'
-import * as schema from '@codedm/contracts/db'
-import { LibsqlDriver } from '@codedm/core-typescript'
+import { migrationsDir } from '@codm/contracts/db/migrations'
+import * as schema from '@codm/contracts/db'
+import { LibsqlDriver } from '@codm/core-typescript'
 
-// Lives inside the api-ts workspace, not scripts/, because bun resolves the @codedm/* workspace
+// Lives inside the api-ts workspace, not scripts/, because bun resolves the @codm/* workspace
 // specifiers relative to the importing file — from the repo root they do not resolve at all.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
 const TARGET = join(ROOT, 'packages/api/go/core/db/sqlite/schema.sql')

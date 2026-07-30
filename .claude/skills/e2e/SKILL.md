@@ -167,8 +167,8 @@ await field(page, 'Preço mínimo (centavos)').getByRole('spinbutton').fill('200
 import type { Page } from 'playwright'
 import { test, expect } from '../utils/test'
 import { mockRoute, mockSSE } from '../utils/mock'
-import { listNotificationsQueryKey, type ListNotificationsQueryResponse } from '@codedm/client-typescript/typescript'
-import { listenEventsQueryKey } from '@codedm/client-typescript/typescript'
+import { listNotificationsQueryKey, type ListNotificationsQueryResponse } from '@codm/client-typescript/typescript'
+import { listenEventsQueryKey } from '@codm/client-typescript/typescript'
 
 // Type-safe mock data — must satisfy SDK response type
 const mockNotifications: ListNotificationsQueryResponse = {
@@ -247,7 +247,7 @@ E2E givens call real endpoints — if the SDK works in tests, it works in the ap
 6. Add to the `given` fixture in `e2e/utils/test.ts`
 
 ```ts
-import { createOwner, type CreateOwnerMutationRequest } from '@codedm/client-typescript/typescript'
+import { createOwner, type CreateOwnerMutationRequest } from '@codm/client-typescript/typescript'
 import { givenOnboardedUser, type OnboardedUser } from './user'
 
 export async function givenUserWithSomething(context: BrowserContext, params?: {...}): Promise<...> {
@@ -291,7 +291,7 @@ Skipping steps causes `INVALID_STEP_TRANSITION`. Check `VALID_TRANSITIONS` in `p
 - **Use SDK enums for values** — when filling or selecting enum values (states, statuses, currencies), import the SDK enum instead of hardcoding strings. The enum value IS the visible option text for selects/comboboxes.
 
 ```ts
-import { PlanNameEnum, NotificationCategoryEnum } from '@codedm/client-typescript/typescript'
+import { PlanNameEnum, NotificationCategoryEnum } from '@codm/client-typescript/typescript'
 import { enumLabel } from '../../app/src/lib/enums'
 
 // Enum values that ARE the visible text (plans, statuses)

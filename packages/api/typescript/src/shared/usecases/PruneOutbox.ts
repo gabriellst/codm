@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, isNotNull, lt } from 'drizzle-orm'
-import { Handler, z, DrizzleDatabaseDriver } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
-import { outbox } from '@codedm/contracts/db'
+import { Handler, z, DrizzleDatabaseDriver } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
+import { outbox } from '@codm/contracts/db'
 
 export const PruneOutboxInputSchema = z.object({})
 export const PruneOutboxOutputSchema = z.object({ deleted: z.number().int().nonnegative() })

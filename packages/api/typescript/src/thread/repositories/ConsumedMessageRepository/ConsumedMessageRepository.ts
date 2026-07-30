@@ -1,4 +1,4 @@
-import type { Transaction } from '@codedm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 
 export interface ConsumeInput {
 	ownerId: string

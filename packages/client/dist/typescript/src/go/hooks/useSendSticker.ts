@@ -4,7 +4,7 @@
 */
 
 import type { SendStickerMutationRequest, SendStickerMutationResponse } from "../types/SendSticker.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { sendSticker } from "../client/sendSticker.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

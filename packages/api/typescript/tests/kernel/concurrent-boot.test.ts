@@ -33,7 +33,7 @@ import { afterAll, describe, expect, it } from 'bun:test'
 import { mkdtempSync, readdirSync, rmSync, existsSync, writeFileSync } from 'node:fs'
 import { is } from 'drizzle-orm'
 import { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import * as schema from '@codedm/contracts/db'
+import * as schema from '@codm/contracts/db'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 

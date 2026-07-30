@@ -28,8 +28,8 @@
 import { Database } from 'bun:sqlite'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
-import { ChannelKind, MessageAuthor, MessageType } from '@codedm/contracts-typescript/wire/enums'
+import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
+import { ChannelKind, MessageAuthor, MessageType } from '@codm/contracts-typescript/wire/enums'
 
 const DB = join(homedir(), 'Library', 'Application Support', 'app.codedm.desktop', 'data', 'codedm.db')
 const OWNER = '00000000-0000-4000-8000-000000000001'

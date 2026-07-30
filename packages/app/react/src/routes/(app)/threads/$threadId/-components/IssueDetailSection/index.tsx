@@ -10,8 +10,8 @@ import {
 	useArchiveIssue,
 	useGetIssueDetail,
 	useSteerIssue,
-} from '@codedm/client-typescript/typescript'
-import type { GetIssueDetailQueryResponse } from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
+import type { GetIssueDetailQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'

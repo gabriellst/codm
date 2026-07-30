@@ -229,7 +229,7 @@ describe('emitTsEvents — union-slot manifest + verbatim payload', () => {
 
 describe('emitTsMaterialized — the manifest×aggregate join at the wire layer (union-slots §2.4)', () => {
 	const workspaces = { apiGo: { alias: 'go' }, apiTs: { alias: 'typescript' } }
-	const sdkPackage = '@codedm/client-typescript'
+	const sdkPackage = '@codm/client-typescript'
 
 	const plain: ParsedEvent = withDerived({
 		modelName: 'VideoUploadedEvent',
@@ -258,7 +258,7 @@ describe('emitTsMaterialized — the manifest×aggregate join at the wire layer 
 
 	test('manifest event → payload swapped for the OWNER aggregate schema from the owner client subpath', () => {
 		const out = emitTsMaterialized([slotted], workspaces, sdkPackage)
-		expect(out).toContain("import { channelMessageReceivedPayloadSchema } from '@codedm/client-typescript/go'")
+		expect(out).toContain("import { channelMessageReceivedPayloadSchema } from '@codm/client-typescript/go'")
 		expect(out).toContain(
 			'export const ChannelMessageReceivedEventMaterializedSchema = ChannelMessageReceivedEventSchema.extend({ payload: channelMessageReceivedPayloadSchema })',
 		)
@@ -267,7 +267,7 @@ describe('emitTsMaterialized — the manifest×aggregate join at the wire layer 
 	test('manifest-less event → the pure contract schema, aliased (no client import)', () => {
 		const out = emitTsMaterialized([plain], workspaces, sdkPackage)
 		expect(out).toContain('export const VideoUploadedEventMaterializedSchema = VideoUploadedEventSchema')
-		expect(out).not.toContain("from '@codedm/client-typescript")
+		expect(out).not.toContain("from '@codm/client-typescript")
 	})
 
 	test('tuple + union are wire-name sorted (deterministic openapi emission)', () => {
@@ -321,7 +321,7 @@ describe('emitTsMaterialized — the manifest×aggregate join at the wire layer 
  */
 describe('emitTsInProcess — the in-process materialization', () => {
 	const workspaces = { apiGo: { alias: 'go' }, apiTs: { alias: 'typescript' } }
-	const sdkPackage = '@codedm/client-typescript'
+	const sdkPackage = '@codm/client-typescript'
 
 	/** Two slots with DIFFERENT discriminator arity — the shape the pilot actually has. */
 	const twoSlot = (slots: ParsedEvent['unionSlots']): ParsedEvent =>
@@ -436,7 +436,7 @@ describe('emitTsInProcess — the in-process materialization', () => {
 	test('a contract with NO union slots emits an empty module and imports no client', () => {
 		const out = emitTsInProcess([slotless], workspaces, sdkPackage)
 		expect(out).toContain('export {}')
-		expect(out).not.toContain("from '@codedm/client-typescript")
+		expect(out).not.toContain("from '@codm/client-typescript")
 	})
 
 	test('an unknown @variant owner fails LOUD', () => {

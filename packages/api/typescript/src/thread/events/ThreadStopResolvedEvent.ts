@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { StopResolution } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { StopResolution } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * A stop was resolved by the operator. Raised by `Thread.resolveStop` and bridged to

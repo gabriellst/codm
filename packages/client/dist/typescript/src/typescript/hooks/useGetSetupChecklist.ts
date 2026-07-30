@@ -4,7 +4,7 @@
 */
 
 import type { GetSetupChecklistQueryResponse } from "../types/GetSetupChecklist.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { getSetupChecklist } from "../client/getSetupChecklist.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";

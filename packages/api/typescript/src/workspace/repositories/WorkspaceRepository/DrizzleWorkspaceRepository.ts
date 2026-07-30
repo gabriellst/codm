@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { workspaces } from '@codedm/contracts/db'
-import type { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { workspaces } from '@codm/contracts/db'
+import type { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 import { Workspace, WorkspaceSchema } from '../../entities/Workspace'
 import { WorkspaceRepository } from './WorkspaceRepository'
 

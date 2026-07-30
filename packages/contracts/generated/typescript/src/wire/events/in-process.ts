@@ -9,14 +9,14 @@
 // handler the wire surface fails on the first Date field, which is exactly the intent.
 // The arm set mirrors packages/api/go/pkg/openapi/schema.go (primary = argmax by variant count;
 // secondary slots narrowed by equality on the INTERSECTION of discriminator keys).
-import { z } from '@codedm/core-typescript/schema'
-import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
+import { z } from '@codm/core-typescript/schema'
+import { BaseIntegrationEvent } from '@codm/core-typescript/events'
 import {
 	ChannelMessageReceivedEventSchema,
 	ChannelSpecialPlatformEventReceivedEventSchema,
 } from './_imports'
 import { MessageType, SpecialPlatformEventType } from '../enums'
-import { internalChannelMessageReceivedPlatformDataSchema, internalTextContentSchema, whatsAppAudioContentSchema, whatsAppChannelMessageReceivedPlatformDataSchema, whatsAppContactContentSchema, whatsAppDocumentContentSchema, whatsAppImageContentSchema, whatsAppLocationContentSchema, whatsAppPollContentSchema, whatsAppQRCodeUpdatedSchema, whatsAppReactionContentSchema, whatsAppStickerContentSchema, whatsAppTextContentSchema, whatsAppVideoContentSchema } from '@codedm/client-typescript/go'
+import { internalChannelMessageReceivedPlatformDataSchema, internalTextContentSchema, whatsAppAudioContentSchema, whatsAppChannelMessageReceivedPlatformDataSchema, whatsAppContactContentSchema, whatsAppDocumentContentSchema, whatsAppImageContentSchema, whatsAppLocationContentSchema, whatsAppPollContentSchema, whatsAppQRCodeUpdatedSchema, whatsAppReactionContentSchema, whatsAppStickerContentSchema, whatsAppTextContentSchema, whatsAppVideoContentSchema } from '@codm/client-typescript/go'
 
 export const ChannelMessageReceivedInProcessEventSchema = ChannelMessageReceivedEventSchema.extend({
 	payload: z.union([

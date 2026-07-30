@@ -66,7 +66,7 @@ Examples:
 
 ```typescript
 // <context>/handlers/UserCreatedHandler.ts
-import { EventHandler } from '@codedm/core-typescript'
+import { EventHandler } from '@codm/core-typescript'
 import { injectable } from 'tsyringe-neo'
 import { UserCreatedEvent } from '@auth/events'
 import { MailSender } from '@<ctx>/services/MailSender'
@@ -138,7 +138,7 @@ Handling events from another context:
 ```typescript
 // collaborator/handlers/OrganizationCreatedHandler.ts
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
+import { EventHandler } from '@codm/core-typescript'
 import { CollaboratorRepository } from '@collaborator/repositories'
 import { Collaborator } from '@collaborator/entities'
 import { RoleType } from '@shared/objects'
@@ -270,11 +270,11 @@ When a domain event needs to trigger a cross-context integration event, create a
 
 ```typescript
 // clinic/handlers/ClinicCreatedHandler.ts
-import { EventHandler } from '@codedm/core-typescript'
+import { EventHandler } from '@codm/core-typescript'
 import { injectable } from 'tsyringe-neo'
 import { ClinicCreatedDomainEvent } from '@clinic/events'
 import { ClinicCreatedEvent } from '@shared/events'
-import { ExternalMediator } from '@codedm/core-typescript'
+import { ExternalMediator } from '@codm/core-typescript'
 
 @injectable()
 export class ClinicCreatedHandler extends EventHandler<typeof ClinicCreatedDomainEvent> {
@@ -371,7 +371,7 @@ async handle(event: this['input']): Promise<void> {
   // WRONG - pass-through use case for simple lookup
   // import { GetCustomer } from '@customer/usecases'
   // WRONG - SDK inside api
-  // import { getCustomer } from '@codedm/client-typescript/http'
+  // import { getCustomer } from '@codm/client-typescript/http'
 
   // CORRECT - repository read
   const customer = await this.customerRepository.findById(event.payload.customerId)
@@ -416,7 +416,7 @@ export * from './OrganizationCreatedHandler'
 
 ```typescript
 // auth/handlers/UserCreatedHandler.ts
-import { EventHandler } from '@codedm/core-typescript'
+import { EventHandler } from '@codm/core-typescript'
 import { injectable } from 'tsyringe-neo'
 import { UserCreatedEvent } from '@auth/events'
 import { MailSender } from '@<ctx>/services/MailSender'

@@ -6,8 +6,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
-import { DrizzleClient, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, type Handler } from '@codedm/core-typescript'
-import { scheduledCommands } from '@codedm/contracts/db'
+import { DrizzleClient, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, type Handler } from '@codm/core-typescript'
+import { scheduledCommands } from '@codm/contracts/db'
 
 describe('SqliteCommandQueue (integration)', () => {
 	let testBed: TestBed

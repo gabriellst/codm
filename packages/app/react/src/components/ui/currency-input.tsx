@@ -1,6 +1,6 @@
 import * as React from 'react'
 import type { Locale } from '@/lib/locale'
-import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@codm/client-typescript/typescript'
 
 import { cn } from '@/lib/utils'
 import { useLocale } from '@/hooks/useLocale'

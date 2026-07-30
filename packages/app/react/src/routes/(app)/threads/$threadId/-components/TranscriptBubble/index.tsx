@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import type { GetSessionChatQueryResponse } from '@codedm/client-typescript/typescript'
+import type { GetSessionChatQueryResponse } from '@codm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { enumLabel } from '@/lib'
 import { providerLabel } from '@/components/console/glyphs'

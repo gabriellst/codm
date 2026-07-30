@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenWorkspace, givenIssue } from '@test/support'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { MailboxRepository } from '@agent/repositories'
 import { SteerIssueTurnController } from '@agent/controllers/SteerIssueTurn'

@@ -1,5 +1,5 @@
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
-import * as schema from '@codedm/contracts/db'
+import * as schema from '@codm/contracts/db'
 
 /**
  * The tsyringe token for the app-facing drizzle handle — and, since the SQLite flip, the READ

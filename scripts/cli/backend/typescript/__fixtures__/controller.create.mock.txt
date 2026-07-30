@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 
 export const CreateOrderInputSchema = z
 	.object({

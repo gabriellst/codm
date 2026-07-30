@@ -19,7 +19,7 @@
  */
 import { join } from 'node:path'
 import { Database } from 'bun:sqlite'
-import { Config, resolveDataDir } from '@codedm/core-typescript'
+import { Config, resolveDataDir } from '@codm/core-typescript'
 import { migrateEmbeddedDatabase } from '@shared/registry'
 
 const dataDir = resolveDataDir(Config.env.CODEDM_DATA_DIR)

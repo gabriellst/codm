@@ -22,9 +22,9 @@
  */
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import * as schema from '@codedm/contracts/db'
-import { migrationsDir } from '@codedm/contracts/db/migrations'
-import { LibsqlDriver } from '@codedm/core-typescript'
+import * as schema from '@codm/contracts/db'
+import { migrationsDir } from '@codm/contracts/db/migrations'
+import { LibsqlDriver } from '@codm/core-typescript'
 
 function flag(name: string): string | undefined {
 	const index = process.argv.indexOf(`--${name}`)

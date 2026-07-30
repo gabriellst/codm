@@ -5,7 +5,7 @@ import { join } from 'node:path'
 /**
  * Union-parity rail (union-slots spec §3) — three MECHANICAL checks over the @unionSlot/@variant
  * declarations, driven entirely by the generated union MANIFESTS (`<Event>Unions` exports in
- * `@codedm/contracts-typescript/wire/events`, emitted from the x-union-slots contract extensions).
+ * `@codm/contracts-typescript/wire/events`, emitted from the x-union-slots contract extensions).
  * Zero hand lists: declaring a new slot/variant in the contract auto-extends every check.
  *
  *   1. RESOLUTION IN THE OWNER — every `@variant` type name resolves to a real type in its owner
@@ -26,12 +26,12 @@ import { join } from 'node:path'
  *
  *   3. NO REDECLARATION — no non-owner workspace declares a type with a foreign variant name, and
  *      cross-service consumption of variant schemas goes through the generated client bindings
- *      (`@codedm/client-typescript/<service>`) — import-grep, not convention.
+ *      (`@codm/client-typescript/<service>`) — import-grep, not convention.
  *
  * Lives in `tests/architecture/` (the shared home for repo-wide mechanical detectors) AND is wired
  * into the root `test:tooling` sweep (spec §5.5 mandates both).
  */
-import * as WireEvents from '@codedm/contracts-typescript/wire/events'
+import * as WireEvents from '@codm/contracts-typescript/wire/events'
 
 const ROOT = join(import.meta.dir, '..', '..', '..', '..', '..')
 
@@ -300,7 +300,7 @@ describe('union-parity check 2.5 — the WIRE layer pre-materializes the union (
 			expect(materializedSrc).toContain(
 				`export const ${m.eventModel}MaterializedSchema = ${m.eventModel}Schema.extend({ payload: ${camel(model)}PayloadSchema })`,
 			)
-			expect(materializedSrc).toContain(`from '@codedm/client-typescript/${ownerAlias}'`)
+			expect(materializedSrc).toContain(`from '@codm/client-typescript/${ownerAlias}'`)
 		})
 	}
 
@@ -309,7 +309,7 @@ describe('union-parity check 2.5 — the WIRE layer pre-materializes the union (
 		expect(listenEvents).toContain('materializedIntegrationEventSchemas')
 		// The join primitives must not reappear at the controller layer.
 		expect(listenEvents).not.toContain('PayloadSchema')
-		expect(listenEvents).not.toContain("from '@codedm/client-typescript")
+		expect(listenEvents).not.toContain("from '@codm/client-typescript")
 	})
 })
 
@@ -411,7 +411,7 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 		})
 	})
 
-	test('non-owner TS sources referencing variant schemas import them from @codedm/client-typescript', () => {
+	test('non-owner TS sources referencing variant schemas import them from @codm/client-typescript', () => {
 		// Import-grep: any api-ts source line mentioning a generated variant schema identifier must be
 		// backed by an import from the generated client subpath — never a local redeclaration/copy.
 		const variantSchemaIds = new Set(
@@ -423,8 +423,8 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 			const used = [...variantSchemaIds].filter(id => new RegExp(`\\b${id}\\b`).test(src))
 			if (used.length === 0) continue
 			expect(
-				/from '@codedm\/client-typescript\//.test(src),
-				`${f.replace(`${ROOT}/`, '')} references ${used.join(', ')} but does not import from @codedm/client-typescript/*`,
+				/from '@codm\/client-typescript\//.test(src),
+				`${f.replace(`${ROOT}/`, '')} references ${used.join(', ')} but does not import from @codm/client-typescript/*`,
 			).toBe(true)
 		}
 	})

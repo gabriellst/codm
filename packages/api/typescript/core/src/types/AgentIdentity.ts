@@ -88,7 +88,7 @@ export function compareIdentity(identity: AgentIdentity, candidate: Readonly<Rec
  * The header an agent run token travels in.
  *
  * SINGLE-SOURCED HERE because core is the SERVER side of it (`AgentIdentityMiddleware` reads it) and
- * core cannot import from `@codedm/client-typescript` — the api depends on the SDK, so the edge would
+ * core cannot import from `@codm/client-typescript` — the api depends on the SDK, so the edge would
  * be a cycle. The generated per-scope `_http.ts` shims send this and ONLY this (no `authorization`
  * fallback), and the SDK's own `MCP_RUN_TOKEN_HEADER` must agree byte for byte; the api-side rail in
  * `tests/architecture/mcp-exposure.test.ts` pins the pair, because it is the one place that may

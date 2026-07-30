@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull, lt, notExists, or, sql } from 'drizzle-orm'
-import { DrizzleClient } from '@codedm/core-typescript'
-import { agentMailbox } from '@codedm/contracts/db'
-import type { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
+import { DrizzleClient } from '@codm/core-typescript'
+import { agentMailbox } from '@codm/contracts/db'
+import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 /** Runnable = not consumed, not poisoned. */

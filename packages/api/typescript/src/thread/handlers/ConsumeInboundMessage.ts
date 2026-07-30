@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
-import { MessageType } from '@codedm/contracts-typescript/wire/enums'
+import { EventHandler } from '@codm/core-typescript'
+import { MessageType } from '@codm/contracts-typescript/wire/enums'
 // The IN-PROCESS materialization (wire/events/in-process): the same event, with `content` and
 // `platformData` already joined into per-(platform, messageType) arms and every scalar still
 // carrying its CONTRACT type. Binding to it is what lets this handler read `content?.text` instead
 // of hand-parsing the slot — and what keeps `occurredAt` a `Date` for `IngestChannelMessage`.
-import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
+import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'

@@ -4,7 +4,7 @@
 */
 
 import type { GetIssuesOverviewQueryResponse, GetIssuesOverviewQueryParams } from "../types/GetIssuesOverview.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { getIssuesOverview } from "../client/getIssuesOverview.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";

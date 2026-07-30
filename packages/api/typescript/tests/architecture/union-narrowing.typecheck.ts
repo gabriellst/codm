@@ -24,10 +24,10 @@
  * extended to catch; verified red by hand before it was written.
  */
 import type Z from 'zod'
-import type { ServerEvent } from '@codedm/client-typescript/go'
-import type { ListenEvents200 } from '@codedm/client-typescript/typescript'
-import type { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
-import { MessageType } from '@codedm/contracts-typescript/wire/enums'
+import type { ServerEvent } from '@codm/client-typescript/go'
+import type { ListenEvents200 } from '@codm/client-typescript/typescript'
+import type { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
+import { MessageType } from '@codm/contracts-typescript/wire/enums'
 
 export interface NarrowedInboundText {
 	text: string | undefined

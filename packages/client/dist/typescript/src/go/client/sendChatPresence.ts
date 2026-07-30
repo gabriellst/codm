@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/go/_http";
+import fetch from "@codm/client-typescript/go/_http";
 import type { SendChatPresenceMutationRequest, SendChatPresenceMutationResponse } from "../types/SendChatPresence.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/go/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 
 function getSendChatPresenceUrl() {
   const res = { method: 'POST', url: `/messaging/messages/presence` as const }

@@ -88,8 +88,8 @@ one-file change. These reads go through `testBed.probe()` (`PersistenceProbe`, i
 
 ```ts
 // WRONG — resolving DrizzleClient + raw schema tables in a test
-import { DrizzleClient } from '@codedm/core-typescript'
-import { events } from '@codedm/contracts/db'
+import { DrizzleClient } from '@codm/core-typescript'
+import { events } from '@codm/contracts/db'
 const rows = await testBed.resolve(DrizzleClient).select().from(events).where(eq(events.name, SomeEvent.name))
 
 // CORRECT — via the probe
@@ -97,7 +97,7 @@ const rows = await testBed.probe().persistedEvents({ name: SomeEvent.name })
 ```
 
 `PersistenceProbe` is context-agnostic — its table registry (`PROBE_TABLES` in
-`tests/support/PersistenceProbe.ts`) is DERIVED from the `@codedm/contracts/db` schema barrel
+`tests/support/PersistenceProbe.ts`) is DERIVED from the `@codm/contracts/db` schema barrel
 (every `PgTable` export, filtered via `is(x, PgTable)`), so it covers every table in the codebase,
 not a curated list. Keys are namespaced `<pgSchema>.<export>` — the Postgres schema each table lives
 in, read off its Drizzle type at compile time and `getTableConfig(...).schema` at runtime

@@ -4,7 +4,7 @@
 */
 
 import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../types/ListArtifacts.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 import { listArtifacts } from "../client/listArtifacts.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";

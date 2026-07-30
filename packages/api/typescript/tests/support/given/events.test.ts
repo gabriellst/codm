@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { DomainEventRepository } from '@codedm/core-typescript'
+import { DomainEventRepository } from '@codm/core-typescript'
 import { OwnerCreatedEvent } from '@owner/events'
 import { TestBed } from '../TestBed'
 import { givenDomainEvent } from './events'

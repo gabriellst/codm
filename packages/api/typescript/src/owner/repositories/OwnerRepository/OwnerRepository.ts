@@ -1,5 +1,5 @@
-import { Repository } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import { Repository } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { Owner } from '../../entities/Owner'
 
 export abstract class OwnerRepository extends Repository<Owner> {

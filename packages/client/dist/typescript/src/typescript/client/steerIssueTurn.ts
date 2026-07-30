@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { SteerIssueTurnMutationRequest, SteerIssueTurnMutationResponse, SteerIssueTurnPathParams } from "../types/SteerIssueTurn.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSteerIssueTurnUrl(threadId: SteerIssueTurnPathParams["threadId"], issueId: SteerIssueTurnPathParams["issueId"]) {
   const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/steer` as const }

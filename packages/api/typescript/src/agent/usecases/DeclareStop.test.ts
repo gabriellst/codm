@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, testId } from '@test/support'
-import { DomainEventRepository, type BaseError } from '@codedm/core-typescript'
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { DomainEventRepository, type BaseError } from '@codm/core-typescript'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { DeclareStop } from './DeclareStop'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
@@ -85,12 +85,10 @@ describe('DeclareStop — a model may only declare a DOMAIN stop (D6-4)', () => 
 			const eventRepo = testBed.resolve(DomainEventRepository)
 			const before = await testBed.probe().snapshot(COUNTED)
 
-			const failure = await useCase
-				.execute({ ownerId, issueId, threadId, kind, detail: 'the CLI says I need to log in again' })
-				.then(
-					() => undefined,
-					(error: unknown) => error,
-				)
+			const failure = await useCase.execute({ ownerId, issueId, threadId, kind, detail: 'the CLI says I need to log in again' }).then(
+				() => undefined,
+				(error: unknown) => error,
+			)
 
 			// Asserted on the CODE, never the message (§ error vocabulary): the code is the public
 			// contract the mapper turns into 422 and the frontend turns into an i18n key.

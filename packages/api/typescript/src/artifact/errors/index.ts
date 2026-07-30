@@ -1,5 +1,5 @@
-import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
-import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
+import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
 export type ArtifactDomainErrors = never
 export type DomainErrors = BaseDomainErrors | ArtifactDomainErrors

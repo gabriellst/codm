@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import type { HttpControllerRequest } from '@codedm/core-typescript'
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import type { HttpControllerRequest } from '@codm/core-typescript'
+import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { MockProviderDetector } from '../services/ProviderDetector/MockProviderDetector'
 import { DetectProvidersController } from './DetectProviders'
 

@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { AskOperatorMutationRequest, AskOperatorMutationResponse, AskOperatorPathParams } from "../types/AskOperator.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getAskOperatorUrl(threadId: AskOperatorPathParams["threadId"], issueId: AskOperatorPathParams["issueId"]) {
   const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/operator-questions` as const }

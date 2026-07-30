@@ -3,8 +3,8 @@
 // This is repo-direct (never the outbox / givenEvent — that's bp-16, cross-process only).
 // NOTE: events carry no createdAt; the table assigns it at insert. For ordering,
 // assert set membership/count — do NOT setTimeout between saves (bp-22).
-import type { BaseDomainEvent } from '@codedm/core-typescript'
-import { DomainEventRepository } from '@codedm/core-typescript'
+import type { BaseDomainEvent } from '@codm/core-typescript'
+import { DomainEventRepository } from '@codm/core-typescript'
 import type { TestBed } from '../TestBed'
 
 export async function givenDomainEvent(testBed: TestBed, event: BaseDomainEvent): Promise<void> {

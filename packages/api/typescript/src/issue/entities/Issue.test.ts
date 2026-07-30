@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
-import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codedm/contracts-typescript/wire/enums'
+import { BaseError } from '@codm/core-typescript'
+import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
 import { Issue } from './Issue'
 
 const base = {

@@ -660,7 +660,7 @@ index 000000000..ee50a0257
 +++ b/packages/api/typescript/src/procurement/controllers/CancelPurchaseOrder.ts
 @@ -0,0 +1,42 @@
 +import { injectable } from 'tsyringe-neo'
-+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
++import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 +import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 +import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
 +import {
@@ -708,7 +708,7 @@ index 000000000..4f1311886
 +++ b/packages/api/typescript/src/procurement/controllers/CreatePurchaseOrder.ts
 @@ -0,0 +1,44 @@
 +import { injectable } from 'tsyringe-neo'
-+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
++import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 +import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 +import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
 +import {
@@ -766,7 +766,7 @@ index 000000000..d10096052
 +++ b/packages/api/typescript/src/procurement/entities/PurchaseOrder.test.ts
 @@ -0,0 +1,36 @@
 +import { describe, it, expect } from 'bun:test'
-+import { CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
++import { CurrencyCode } from '@codm/contracts-typescript/wire/enums'
 +import { PurchaseOrder } from './PurchaseOrder'
 +
 +const seed = () =>
@@ -807,9 +807,9 @@ index 000000000..a5ff9ea53
 --- /dev/null
 +++ b/packages/api/typescript/src/procurement/entities/PurchaseOrder.ts
 @@ -0,0 +1,47 @@
-+import { AggregateRoot, BaseError, Id, z } from '@codedm/core-typescript'
++import { AggregateRoot, BaseError, Id, z } from '@codm/core-typescript'
 +import Z from 'zod'
-+import { PurchaseOrderStatus, type CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
++import { PurchaseOrderStatus, type CurrencyCode } from '@codm/contracts-typescript/wire/enums'
 +import { Money } from '../../shared/objects'
 +import type { ProcurementDomainErrors } from '../errors'
 +
@@ -860,8 +860,8 @@ index 000000000..174d77711
 --- /dev/null
 +++ b/packages/api/typescript/src/procurement/errors/index.ts
 @@ -0,0 +1,24 @@
-+import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
-+import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
++import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
++import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 +
 +export type ProcurementDomainErrors = 'PURCHASE_ORDER_ALREADY_CANCELLED' | 'PURCHASE_ORDER_ALREADY_PLACED'
 +export type DomainErrors = BaseDomainErrors | ProcurementDomainErrors
@@ -890,7 +890,7 @@ index 000000000..daba44afa
 --- /dev/null
 +++ b/packages/api/typescript/src/procurement/events/PurchaseOrderCancelledEvent.ts
 @@ -0,0 +1,11 @@
-+import { BaseDomainEvent, z } from '@codedm/core-typescript'
++import { BaseDomainEvent, z } from '@codm/core-typescript'
 +import { PurchaseOrderSchema } from '../entities/PurchaseOrder'
 +
 +export const PurchaseOrderCancelledEventSchema = z.domainEvent({
@@ -907,7 +907,7 @@ index 000000000..c1ed00758
 --- /dev/null
 +++ b/packages/api/typescript/src/procurement/events/PurchaseOrderCreatedEvent.ts
 @@ -0,0 +1,11 @@
-+import { BaseDomainEvent, z } from '@codedm/core-typescript'
++import { BaseDomainEvent, z } from '@codm/core-typescript'
 +import { PurchaseOrderSchema } from '../entities/PurchaseOrder'
 +
 +export const PurchaseOrderCreatedEventSchema = z.domainEvent({
@@ -933,9 +933,9 @@ index 000000000..f0f72b075
 +++ b/packages/api/typescript/src/procurement/handlers/internal.ts
 @@ -0,0 +1,62 @@
 +import { injectable } from 'tsyringe-neo'
-+import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-+import { PurchaseOrderRecordedEvent } from '@codedm/contracts-typescript/wire/events'
-+import type { PurchaseOrderStatus, CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
++import { EventHandler, ExternalMediator } from '@codm/core-typescript'
++import { PurchaseOrderRecordedEvent } from '@codm/contracts-typescript/wire/events'
++import type { PurchaseOrderStatus, CurrencyCode } from '@codm/contracts-typescript/wire/enums'
 +import { PurchaseOrderCreatedEvent, PurchaseOrderCancelledEvent } from '../events'
 +
 +type AnyPOEventInput = {
@@ -1000,7 +1000,7 @@ index 000000000..2bd766ae2
 --- /dev/null
 +++ b/packages/api/typescript/src/procurement/index.ts
 @@ -0,0 +1,17 @@
-+import { BoundedContext } from '@codedm/core-typescript'
++import { BoundedContext } from '@codm/core-typescript'
 +import * as controllers from './controllers'
 +import { INSTANCE_REGISTRY } from './registry'
 +import { PurchaseOrderCreatedRecordedHandler, PurchaseOrderCancelledRecordedHandler } from './handlers/internal'
@@ -1024,7 +1024,7 @@ index 000000000..ccf6dfb88
 +++ b/packages/api/typescript/src/procurement/registry.ts
 @@ -0,0 +1,13 @@
 +import './errors'
-+import type { InstanceRegistry } from '@codedm/core-typescript'
++import type { InstanceRegistry } from '@codm/core-typescript'
 +import {
 +	PurchaseOrderRepository,
 +	MockPurchaseOrderRepository,
@@ -1044,9 +1044,9 @@ index 000000000..666973cb1
 @@ -0,0 +1,86 @@
 +import { injectable } from 'tsyringe-neo'
 +import { eq } from 'drizzle-orm'
-+import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-+import { purchaseOrders } from '@codedm/contracts/db'
-+import { PurchaseOrderStatus } from '@codedm/contracts-typescript/wire/enums'
++import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
++import { purchaseOrders } from '@codm/contracts/db'
++import { PurchaseOrderStatus } from '@codm/contracts-typescript/wire/enums'
 +import { PurchaseOrder, PurchaseOrderSchema } from '../../entities/PurchaseOrder'
 +import { PurchaseOrderRepository } from './PurchaseOrderRepository'
 +
@@ -1135,7 +1135,7 @@ index 000000000..150e3e869
 +++ b/packages/api/typescript/src/procurement/repositories/PurchaseOrderRepository/MockPurchaseOrderRepository.ts
 @@ -0,0 +1,31 @@
 +import { injectable } from 'tsyringe-neo'
-+import type { Transaction } from '@codedm/core-typescript'
++import type { Transaction } from '@codm/core-typescript'
 +import { PurchaseOrder } from '../../entities/PurchaseOrder'
 +import { PurchaseOrderRepository } from './PurchaseOrderRepository'
 +
@@ -1171,8 +1171,8 @@ index 000000000..d368f68f9
 --- /dev/null
 +++ b/packages/api/typescript/src/procurement/repositories/PurchaseOrderRepository/PurchaseOrderRepository.ts
 @@ -0,0 +1,7 @@
-+import { Repository } from '@codedm/core-typescript'
-+import type { Transaction } from '@codedm/core-typescript'
++import { Repository } from '@codm/core-typescript'
++import type { Transaction } from '@codm/core-typescript'
 +import { PurchaseOrder } from '../../entities/PurchaseOrder'
 +
 +export abstract class PurchaseOrderRepository extends Repository<PurchaseOrder> {
@@ -1194,7 +1194,7 @@ index 000000000..addc14406
 +++ b/packages/api/typescript/src/procurement/usecases/CancelPurchaseOrder.ts
 @@ -0,0 +1,49 @@
 +import { injectable } from 'tsyringe-neo'
-+import { BaseError, Handler, z, type Transaction } from '@codedm/core-typescript'
++import { BaseError, Handler, z, type Transaction } from '@codm/core-typescript'
 +import { PurchaseOrderRepository } from '../repositories/PurchaseOrderRepository'
 +import { PurchaseOrderCancelledEvent } from '../events'
 +import type { ProcurementApplicationErrors } from '../errors'
@@ -1251,8 +1251,8 @@ index 000000000..b4f1e2ff8
 +import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 +import { container, type DependencyContainer } from 'tsyringe-neo'
 +import { TestBed, testId } from '@test/support'
-+import { DomainEventRepository } from '@codedm/core-typescript'
-+import { CurrencyCode } from '@codedm/contracts-typescript/wire/enums'
++import { DomainEventRepository } from '@codm/core-typescript'
++import { CurrencyCode } from '@codm/contracts-typescript/wire/enums'
 +import { CreatePurchaseOrder } from './CreatePurchaseOrder'
 +import { CancelPurchaseOrder } from './CancelPurchaseOrder'
 +import { PurchaseOrderRepository } from '../repositories/PurchaseOrderRepository'
@@ -1341,7 +1341,7 @@ index 000000000..a66215947
 +++ b/packages/api/typescript/src/procurement/usecases/CreatePurchaseOrder.ts
 @@ -0,0 +1,50 @@
 +import { injectable } from 'tsyringe-neo'
-+import { Handler, z, type Transaction } from '@codedm/core-typescript'
++import { Handler, z, type Transaction } from '@codm/core-typescript'
 +import { MoneySchema } from '../../shared/objects'
 +import { PurchaseOrder } from '../entities/PurchaseOrder'
 +import { PurchaseOrderRepository } from '../repositories/PurchaseOrderRepository'
@@ -1432,10 +1432,10 @@ index 000000000..2b9c6eb69
 +++ b/packages/api/typescript/src/ui/controllers/ListPurchaseOrders.ts
 @@ -0,0 +1,46 @@
 +import { injectable } from 'tsyringe-neo'
-+import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
++import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 +import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
 +import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
-+import { PurchaseOrderStatus } from '@codedm/contracts-typescript/wire/enums'
++import { PurchaseOrderStatus } from '@codm/contracts-typescript/wire/enums'
 +import { ListPurchaseOrders, ListPurchaseOrdersOutputSchema } from '../usecases/ListPurchaseOrders'
 +
 +export const ListPurchaseOrdersControllerInputSchema = z.object({
@@ -1486,7 +1486,7 @@ index c6e923748..b39b05f81 100644
  	WarrantyReserveDeletedEvent,
  	WarrantyReserveUpdatedEvent,
 +	PurchaseOrderRecordedEvent,
- } from '@codedm/contracts-typescript/wire/events'
+ } from '@codm/contracts-typescript/wire/events'
  import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
  import { RequireStoreMember } from '@tenancy/middlewares/RequireStoreMember'
 @@ -60,6 +61,7 @@ const BROWSER_EVENTS = [
@@ -1522,9 +1522,9 @@ index 000000000..b36ddde23
 @@ -0,0 +1,87 @@
 +import { injectable } from 'tsyringe-neo'
 +import { and, count, desc, eq, ilike } from 'drizzle-orm'
-+import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
-+import { CurrencyCode, PurchaseOrderStatus } from '@codedm/contracts-typescript/wire/enums'
-+import { purchaseOrders } from '@codedm/contracts/db'
++import { Handler, z, DrizzleClient } from '@codm/core-typescript'
++import { CurrencyCode, PurchaseOrderStatus } from '@codm/contracts-typescript/wire/enums'
++import { purchaseOrders } from '@codm/contracts/db'
 +
 +// ---------------------------------------------------------------------------
 +// Input — store-scoped paginated purchase orders read. page/limit/search mirror
@@ -2487,9 +2487,9 @@ index 000000000..6d4c2b2a7
 +* Do not edit manually.
 +*/
 +
-+import fetch from "@codedm/client-typescript/typescript/_http";
++import fetch from "@codm/client-typescript/typescript/_http";
 +import type { CancelPurchaseOrderMutationResponse, CancelPurchaseOrderPathParams } from "../types/CancelPurchaseOrder.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +
 +function getCancelPurchaseOrderUrl(purchaseOrderId: CancelPurchaseOrderPathParams["purchaseOrderId"]) {
 +  const res = { method: 'POST', url: `/v1/procurement/purchase-orders/${purchaseOrderId}/cancel` as const }
@@ -2520,9 +2520,9 @@ index 000000000..5544bd32a
 +* Do not edit manually.
 +*/
 +
-+import fetch from "@codedm/client-typescript/typescript/_http";
++import fetch from "@codm/client-typescript/typescript/_http";
 +import type { CreatePurchaseOrderMutationRequest, CreatePurchaseOrderMutationResponse } from "../types/CreatePurchaseOrder.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +
 +function getCreatePurchaseOrderUrl() {
 +  const res = { method: 'POST', url: `/v1/procurement/purchase-orders` as const }
@@ -2581,9 +2581,9 @@ index 000000000..fd7ad5261
 +* Do not edit manually.
 +*/
 +
-+import fetch from "@codedm/client-typescript/typescript/_http";
++import fetch from "@codm/client-typescript/typescript/_http";
 +import type { ListPurchaseOrdersQueryResponse, ListPurchaseOrdersQueryParams } from "../types/ListPurchaseOrders.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +
 +function getListPurchaseOrdersUrl() {
 +  const res = { method: 'GET', url: `/v1/ui/purchase-orders` as const }
@@ -2615,7 +2615,7 @@ index 000000000..1679b7ac1
 +*/
 +
 +import type { CancelPurchaseOrderMutationResponse, CancelPurchaseOrderPathParams } from "../types/CancelPurchaseOrder.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 +import { cancelPurchaseOrder } from "../client/cancelPurchaseOrder.ts";
 +import { mutationOptions, useMutation } from "@tanstack/react-query";
@@ -2674,7 +2674,7 @@ index 000000000..294142d04
 +*/
 +
 +import type { CreatePurchaseOrderMutationRequest, CreatePurchaseOrderMutationResponse } from "../types/CreatePurchaseOrder.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 +import { createPurchaseOrder } from "../client/createPurchaseOrder.ts";
 +import { mutationOptions, useMutation } from "@tanstack/react-query";
@@ -2733,7 +2733,7 @@ index 000000000..95dae9b58
 +*/
 +
 +import type { ListPurchaseOrdersQueryResponse, ListPurchaseOrdersQueryParams } from "../types/ListPurchaseOrders.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
 +import { listPurchaseOrders } from "../client/listPurchaseOrders.ts";
 +import { queryOptions, useQuery } from "@tanstack/react-query";
@@ -2795,7 +2795,7 @@ index 000000000..e0694eb78
 +*/
 +
 +import type { ListPurchaseOrdersQueryResponse, ListPurchaseOrdersQueryParams } from "../types/ListPurchaseOrders.ts";
-+import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
++import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 +import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
 +import { listPurchaseOrders } from "../client/listPurchaseOrders.ts";
 +import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
@@ -10071,8 +10071,8 @@ index 000000000..32cdde391
 +++ b/packages/contracts/generated/typescript/src/wire/events/purchase-order-recorded.ts
 @@ -0,0 +1,19 @@
 +// AUTO-GENERATED by packages/contracts/codegen/emit-wire-ts.ts — do not edit.
-+import { z } from '@codedm/core-typescript/schema'
-+import { BaseIntegrationEvent } from '@codedm/core-typescript/events'
++import { z } from '@codm/core-typescript/schema'
++import { BaseIntegrationEvent } from '@codm/core-typescript/events'
 +import { CurrencyCode, PurchaseOrderStatus } from '../enums'
 +
 +/** Published by TS Procurement after `CreatePurchaseOrder` or `CancelPurchaseOrder` mutates a PurchaseOrder aggregate. Go sync consumer persists an audit row; the React list live-updates via SSE invalidation. */

@@ -1,5 +1,5 @@
 {
-	"name": "@codedm/contracts-typescript",
+	"name": "@codm/contracts-typescript",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
@@ -11,8 +11,8 @@
 		"./wire/events": "./src/wire/events/index.ts"
 	},
 	"dependencies": {
-		"@codedm/core-typescript": "workspace:*",
+		"@codm/core-typescript": "workspace:*",
 		"zod": "^4.0.0",
-		"@codedm/client-typescript": "workspace:*"
+		"@codm/client-typescript": "workspace:*"
 	}
 }

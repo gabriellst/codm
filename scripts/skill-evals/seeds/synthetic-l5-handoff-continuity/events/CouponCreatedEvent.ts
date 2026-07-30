@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 import { CouponType } from '../enums'
 
 export const CouponCreatedEventSchema = z.domainEvent({

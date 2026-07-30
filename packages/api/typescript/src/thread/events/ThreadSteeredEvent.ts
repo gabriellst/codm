@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 
 /** Context-private fact: the operator whispered a steer (never delivered to the channel). Fanned out
  *  to every active issue's agent context downstream (BC5). */

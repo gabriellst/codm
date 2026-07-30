@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import { streamTerminalSessionQueryKey, type StreamTerminalSessionQueryResponse } from '@codedm/client-typescript/typescript'
+import { streamTerminalSessionQueryKey, type StreamTerminalSessionQueryResponse } from '@codm/client-typescript/typescript'
 import { Config } from '@/lib/config'
 import { tryCatch } from '@/lib/utils'
 
@@ -71,15 +71,15 @@ export function useTerminalStream(issueId: string): TerminalStream {
 			// TRANSIENT — retrying gets it — and swallowing it here instead would leave a permanently
 			// dead panel showing nothing, with no error to explain why.
 			onopen: async response => {
-					if (!response.ok) throw new Error(`terminal stream refused with ${response.status}`)
-					if (!alive.current) return
-					// CLEARED ON EVERY OPEN, not just on mount (F3). The daemon replays the issue's whole
-					// buffer immediately after the connected frame, so an open delivers the complete history —
-					// keeping what a previous connection accumulated would show every earlier frame twice. The
-					// server's buffer is the ordering authority; this hook only mirrors it.
-					setFrames([])
-					setConnected(true)
-				},
+				if (!response.ok) throw new Error(`terminal stream refused with ${response.status}`)
+				if (!alive.current) return
+				// CLEARED ON EVERY OPEN, not just on mount (F3). The daemon replays the issue's whole
+				// buffer immediately after the connected frame, so an open delivers the complete history —
+				// keeping what a previous connection accumulated would show every earlier frame twice. The
+				// server's buffer is the ordering authority; this hook only mirrors it.
+				setFrames([])
+				setConnected(true)
+			},
 			onmessage(message) {
 				if (!message.data) return
 				const result = tryCatch(() => JSON.parse(message.data) as TerminalStreamFrame)

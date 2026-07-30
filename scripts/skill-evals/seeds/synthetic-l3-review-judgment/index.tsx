@@ -7,8 +7,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@/lib/zod-validator'
 import { z } from 'zod'
-import { listOrdersQueryParamsSchema } from '@codedm/client-typescript/typescript'
-import { useListOrders } from '@codedm/client-typescript/typescript'
+import { listOrdersQueryParamsSchema } from '@codm/client-typescript/typescript'
+import { useListOrders } from '@codm/client-typescript/typescript'
 
 import { RefundTableSection } from './-components/RefundTableSection'
 

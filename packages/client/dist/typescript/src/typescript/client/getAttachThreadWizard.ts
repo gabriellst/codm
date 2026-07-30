@@ -3,9 +3,9 @@
 * Do not edit manually.
 */
 
-import fetch from "@codedm/client-typescript/typescript/_http";
+import fetch from "@codm/client-typescript/typescript/_http";
 import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../types/GetAttachThreadWizard.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetAttachThreadWizardUrl() {
   const res = { method: 'GET', url: `/v1/ui/attach-thread-wizard` as const }

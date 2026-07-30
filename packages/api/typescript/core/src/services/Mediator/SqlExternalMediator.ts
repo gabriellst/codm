@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { eq, inArray, sql } from 'drizzle-orm'
-import { outbox } from '@codedm/contracts/db'
+import { outbox } from '@codm/contracts/db'
 import { BaseInfrastructureErrors } from '../../errors/codes'
 import { BaseEvent } from '../../types/BaseEvent'
 import { BaseError } from '../../types/BaseError'

@@ -3,13 +3,13 @@
  * per-scope `_http.ts` shims (which READ it).
  *
  * ### Why it lives in the SDK package and not in the api
- * The generated tool handlers are emitted into `@codedm/client-typescript`, and that package cannot
+ * The generated tool handlers are emitted into `@codm/client-typescript`, and that package cannot
  * import from `packages/api` — the api depends on it, so the edge would be a cycle. The shims can only
  * import from their own package, so the seam has to live here. Nothing domain-shaped does: this module
  * knows about an opaque string and nothing else.
  *
  * ### Why it is NOT re-exported from `./http`
- * `@codedm/client-typescript/http` is what the BROWSER bundles. This module imports
+ * `@codm/client-typescript/http` is what the BROWSER bundles. This module imports
  * `node:async_hooks`, which would break that bundle the moment it was pulled in transitively. It is
  * its own subpath on purpose, reachable only from the mcp scopes and from the api.
  *

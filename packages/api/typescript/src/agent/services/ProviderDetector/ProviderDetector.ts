@@ -1,4 +1,4 @@
-import { ProviderKind, ProviderStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import type { ProviderBinarySpec, ProviderCapabilities } from '../../types'
 import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
 

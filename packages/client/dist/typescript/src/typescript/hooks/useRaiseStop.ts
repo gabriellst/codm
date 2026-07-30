@@ -4,7 +4,7 @@
 */
 
 import type { RaiseStopMutationRequest, RaiseStopMutationResponse, RaiseStopPathParams } from "../types/RaiseStop.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { raiseStop } from "../client/raiseStop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

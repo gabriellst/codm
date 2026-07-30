@@ -57,9 +57,9 @@ registry:
       rule: "File has 4 commented sections: '// Domain Errors', '// Application Errors', '// Interface Errors', '// Infrastructure Errors' — each with a context-prefixed type + a composed DomainErrors/ApplicationErrors/etc. type"
       wrong: "flat file without section separators or missing one of the four layers; using verbose '// ===' separator blocks instead of simple '// Category Errors' comments"
     - id: ERR-P04
-      name: "Base imports from @codedm/core-typescript"
+      name: "Base imports from @codm/core-typescript"
       when: always
-      rule: "import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'; import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'"
+      rule: "import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'; import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'"
       wrong: "importing base error types from relative paths, from '@shared/errors', or from individual files; runtime imports of HttpStatusCode/registerErrorCodes mixed with the type imports under one statement"
     - id: ERR-P05
       name: "Context errors/index.ts exports Errors union"
@@ -94,8 +94,8 @@ registry:
 
   snippet:
     skeleton: |
-      import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
-      import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codedm/core-typescript'
+      import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+      import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
       // Domain Errors
       export type {{Name}}DomainErrors = never
@@ -120,13 +120,13 @@ registry:
       	// SOME_ERROR: HttpStatusCode.BAD_REQUEST,
       })
     exemplar: |
-      import { HttpStatusCode, registerErrorCodes } from '@codedm/core-typescript'
+      import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
       import type {
         BaseDomainErrors,
         BaseApplicationErrors,
         BaseInterfaceErrors,
         BaseInfrastructureErrors,
-      } from '@codedm/core-typescript'
+      } from '@codm/core-typescript'
 
       // Domain Errors
       export type BillingDomainErrors = 'INVALID_INVOICE_TOTAL' | 'INVOICE_ALREADY_PAID'

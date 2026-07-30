@@ -4,8 +4,8 @@
 // rejects free-form strings. INVALID_LANGUAGE is registered with the runtime error registry in
 // @auth/errors (the consumer context); LanguageTag lives in shared/, so the code is cast to the
 // core base type for the compile-time signature.
-import { BasePrimitiveValueObject, tryCatch, z } from '@codedm/core-typescript'
-import type { BaseDomainErrors } from '@codedm/core-typescript'
+import { BasePrimitiveValueObject, tryCatch, z } from '@codm/core-typescript'
+import type { BaseDomainErrors } from '@codm/core-typescript'
 
 const INVALID_LANGUAGE = 'INVALID_LANGUAGE' as BaseDomainErrors
 

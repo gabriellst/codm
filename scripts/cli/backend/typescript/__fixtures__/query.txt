@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, DrizzleClient, z } from '@codedm/core-typescript'
+import { Handler, DrizzleClient, z } from '@codm/core-typescript'
 
 export const ListDashboardOrdersInputSchema = z.object({
 	// Define input (e.g., userId, filters)

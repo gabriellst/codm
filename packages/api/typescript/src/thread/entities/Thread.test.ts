@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { BaseError } from '@codedm/core-typescript'
-import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
+import { BaseError } from '@codm/core-typescript'
+import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { Thread } from './Thread'
 
@@ -80,7 +80,7 @@ describe('Thread entity', () => {
 		// operator reading `/Users/x/MyApp` tells the group to type `@MyApp`.
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @BOT go' })).toBe(true)
 		// THE REASON THIS IS NOT `String.includes`. The tag is derived from a folder name, so it collides
-		// with the vocabulary of the project it names — this repo's own packages are `@codedm/*` and its
+		// with the vocabulary of the project it names — this repo's own packages are `@codm/*` and its
 		// live thread mints `@codedm`. A scoped package name must NOT summon the agent.
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'bump @bot/core to 2.0' })).toBe(false)
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'see bot.ts and @botanical' })).toBe(false)

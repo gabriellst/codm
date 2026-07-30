@@ -9,8 +9,8 @@ import {
 	usePauseThread,
 	useResumeThread,
 	useGetSessionChat,
-} from '@codedm/client-typescript/typescript'
-import type { GetSessionChatQueryResponse } from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
+import type { GetSessionChatQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'

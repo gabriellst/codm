@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
+import type { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 interface Row extends EnqueueMailboxItem {

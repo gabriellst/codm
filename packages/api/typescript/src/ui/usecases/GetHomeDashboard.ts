@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, desc, eq, isNull } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
-import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codedm/contracts/db'
+import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codm/contracts/db'
 import {
 	ThreadStatus,
 	ChannelKind,
@@ -10,7 +10,7 @@ import {
 	ProviderKind,
 	StopKind,
 	TranscriptKind,
-} from '@codedm/contracts-typescript/wire/enums'
+} from '@codm/contracts-typescript/wire/enums'
 import { ThreadStatusDeriver } from '@thread/services/ThreadStatusDeriver'
 
 const ThreadSummarySchema = z.object({

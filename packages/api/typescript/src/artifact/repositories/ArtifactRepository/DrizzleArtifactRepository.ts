@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { desc, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { artifacts } from '@codedm/contracts/db'
-import type { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
+import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { artifacts } from '@codm/contracts/db'
+import type { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 import { Artifact, ArtifactSchema } from '../../entities/Artifact'
 import { ArtifactRepository } from './ArtifactRepository'
 

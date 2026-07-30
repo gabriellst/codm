@@ -1,6 +1,6 @@
 // Recipe: dev:packages/api/src/auth/repositories/UserRepository/UserRepository.ts
-import { Repository } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import { Repository } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { User } from '../../entities'
 
 export abstract class UserRepository extends Repository<User> {

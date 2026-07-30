@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { KERNEL_ENV_KEYS } from '@codedm/core-typescript'
+import { KERNEL_ENV_KEYS } from '@codm/core-typescript'
 import { PRODUCT_ENV_KEYS } from '@shared/config'
 
 // Root files are OUTSIDE this tsconfig project — load them at runtime via computed paths (bun

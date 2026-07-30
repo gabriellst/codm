@@ -9,9 +9,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
-import { DrizzleDatabaseDriver } from '@codedm/core-typescript'
-import { channels, remotes } from '@codedm/contracts/db'
-import { ChannelKind, ChannelStatus, ContactKind } from '@codedm/contracts-typescript/wire/enums'
+import { DrizzleDatabaseDriver } from '@codm/core-typescript'
+import { channels, remotes } from '@codm/contracts/db'
+import { ChannelKind, ChannelStatus, ContactKind } from '@codm/contracts-typescript/wire/enums'
 import { GetAttachThreadWizard } from './GetAttachThreadWizard'
 
 const OWNER = '11111111-1111-4111-8111-111111111111'

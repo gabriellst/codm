@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ThreadStatus } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStatusDeriver } from './ThreadStatusDeriver'
 
 /** Test double — every thread reads IDLE by default. Suites exercising RUNNING / NEEDS_ATTENTION /

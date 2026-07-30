@@ -62,7 +62,7 @@ registry:
     - id: STR-P06
       name: "SDK type imports"
       when: "state uses domain types"
-      rule: "import type { XType } from '@codedm/client-typescript/typescript' for typing state fields"
+      rule: "import type { XType } from '@codm/client-typescript/typescript' for typing state fields"
       source: "useOnboardingStore.ts"
     - id: STR-P07
       name: "Boolean dialog state pattern (use sparingly)"

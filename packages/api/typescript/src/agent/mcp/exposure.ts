@@ -1,5 +1,5 @@
-import { McpExposure, operationIdOf, type McpExposedControllerClass } from '@codedm/core-typescript'
-import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { McpExposure, operationIdOf, type McpExposedControllerClass } from '@codm/core-typescript'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import * as artifactControllers from '@artifact/controllers'
 import * as issueControllers from '@issue/controllers'
 import * as threadControllers from '@thread/controllers'

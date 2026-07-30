@@ -1,4 +1,4 @@
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
 import type { AgentFrame, AgentRunResult, AgentRuntimeEvent } from '../../types'
 import type { TerminalSseFrame } from '../AgentStreamRegistry'

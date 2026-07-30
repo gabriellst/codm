@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'bun:test'
 import { z } from 'zod'
-import { MockLoggingService } from '@codedm/core-typescript'
+import { MockLoggingService } from '@codm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../../enums'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent } from '../../../events'
 import { AgentRunOutcome } from '../../../enums'
@@ -17,7 +17,7 @@ import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
 import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
-import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import { InMemoryAgentIdentityService } from '@codm/core-typescript'
 
 // ── A fake process: canned stdout, observable stdin ───────────────────────────────────────────────
 

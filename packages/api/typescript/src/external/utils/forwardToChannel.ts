@@ -1,4 +1,4 @@
-import { Config, forwardRequest } from '@codedm/core-typescript'
+import { Config, forwardRequest } from '@codm/core-typescript'
 
 /**
  * Forward a request to the Go channel gateway, injecting the operator identity as `X-Owner-Id`.

@@ -214,7 +214,7 @@ The astro app and the react app run under a single nginx/Start deployment. From 
 - [ ] No React hooks in the frontmatter; islands are explicit and minimal.
 - [ ] Output mode left as `static` unless SSR is genuinely required.
 - [ ] Sitemap includes the route (no `filter` opt-out unless intentional).
-- [ ] No imports from `@codedm/app-react`.
+- [ ] No imports from `@codm/app-react`.
 
 ## References
 

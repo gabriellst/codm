@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HealthService, HttpStatusCode, z } from '@codedm/core-typescript'
+import { Controller, HealthService, HttpStatusCode, z } from '@codm/core-typescript'
 
 export const HealthInputSchema = z.object({})
 

@@ -53,7 +53,7 @@ Create `packages/api/typescript/src/ui/usecases/<Name>.ts`. Follow `snake_case` 
 Shape the output to match exactly what the frontend component needs:
 
 ```typescript
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 import { MemberRoleType, UnitStatus } from '@clinic/enums'
 
 const UnitSchema = z.object({
@@ -91,10 +91,10 @@ Keep sub-schemas (like `UnitSchema`) **inline in the same file** unless reused 3
 ### Step 3: Implement with Direct Drizzle Queries (Complete Example)
 
 ```typescript
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
+import { Handler, z, DrizzleClient } from '@codm/core-typescript'
 import { injectable } from 'tsyringe-neo'
-import { clinics } from '@codedm/contracts/db'
-import { memberships, units } from '@codedm/contracts/db'
+import { clinics } from '@codm/contracts/db'
+import { memberships, units } from '@codm/contracts/db'
 import { eq, and } from 'drizzle-orm'
 
 @injectable()
@@ -282,14 +282,14 @@ protected async handle(input: this['input']): Promise<this['output']> {
 
 ```typescript
 // Drizzle client
-import { DrizzleClient } from '@codedm/core-typescript'
+import { DrizzleClient } from '@codm/core-typescript'
 
 // Tables (import from the contracts package)
-import { clinics } from '@codedm/contracts/db'
-import { memberships, units } from '@codedm/contracts/db'
-import { patients } from '@codedm/contracts/db'
-import { appointments } from '@codedm/contracts/db'
-import { onboarding } from '@codedm/contracts/db'
+import { clinics } from '@codm/contracts/db'
+import { memberships, units } from '@codm/contracts/db'
+import { patients } from '@codm/contracts/db'
+import { appointments } from '@codm/contracts/db'
+import { onboarding } from '@codm/contracts/db'
 
 // Drizzle operators
 import { eq, and, or, ilike, desc, asc, sql, count } from 'drizzle-orm'

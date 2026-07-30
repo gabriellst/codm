@@ -86,7 +86,7 @@ registry:
       name: "The identity service is AgentIdentityService, with issue/resolve/revoke"
       when: always
       reason: "`RunTokenClaims` named an ENVELOPE that does not exist — the token is 32 random bytes and the identity never leaves the process. What travels is a lookup key. The abstract + the InMemory implementation live in `core` (they are a template capability); the product only narrows the type."
-      rule: "`AgentIdentityService<AgentRunIdentity>` from `@codedm/core-typescript`, injected into the base `Agent`. `issue` is called ONLY by the base at spawn; `resolve` by the destination controller's middleware and by the MCP adapter's scope match; `revoke` by the runner at run end."
+      rule: "`AgentIdentityService<AgentRunIdentity>` from `@codm/core-typescript`, injected into the base `Agent`. `issue` is called ONLY by the base at spawn; `resolve` by the destination controller's middleware and by the MCP adapter's scope match; `revoke` by the runner at run end."
       wrong: "`RunTokenService`, `RunTokenClaims`, `.mint(`, `.verify(` — all dead names. A runner that issues is the named bad practice: it would have to be handed the identity the seam exists to keep out of it."
       exception: >
         No `MockAgentIdentityService`, and this is deliberate, not a gap. `AgentIdentityService` binds
@@ -159,7 +159,7 @@ registry:
         	}
         }
       types: |
-        import { z } from '@codedm/core-typescript'
+        import { z } from '@codm/core-typescript'
 
         /**
          * What `{{Name}}Agent` is asked. `z.agentInput()` carries the run envelope

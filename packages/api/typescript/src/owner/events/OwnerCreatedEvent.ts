@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 
 export const OwnerCreatedEventSchema = z.domainEvent({
 	ownerId: z.string(),

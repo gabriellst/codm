@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ThreadMode } from '@codedm/client-typescript/typescript'
+import type { ThreadMode } from '@codm/client-typescript/typescript'
 import { Composer } from './index'
 
 /**

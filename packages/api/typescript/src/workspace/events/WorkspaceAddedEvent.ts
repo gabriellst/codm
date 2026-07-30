@@ -1,5 +1,5 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
-import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
+import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * Context-private fact: a project folder was registered. Stays internal to BC2 (no downstream

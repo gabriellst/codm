@@ -1,4 +1,4 @@
-import { commands } from '@codedm/app-tauri/commands'
+import { commands } from '@codm/app-tauri/commands'
 import type { SecretsService } from './SecretsService'
 
 /** OS keychain via the shell's custom `secret_*` commands, typed end-to-end by

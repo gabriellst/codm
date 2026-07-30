@@ -1,4 +1,4 @@
-import { BaseDomainEvent, z } from '@codedm/core-typescript'
+import { BaseDomainEvent, z } from '@codm/core-typescript'
 
 /** Context-private fact: an inbound message was appended to the buffer + transcript; `invocable`
  *  records whether the pause/permission/mention gates let it reach classification. */

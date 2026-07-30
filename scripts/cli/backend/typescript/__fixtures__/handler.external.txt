@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler } from '@codedm/core-typescript'
-import { OrderCreatedEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler } from '@codm/core-typescript'
+import { OrderCreatedEvent } from '@codm/contracts-typescript/wire/events'
 
 @injectable()
 export class OrderCreatedHandler extends EventHandler<typeof OrderCreatedEvent> {

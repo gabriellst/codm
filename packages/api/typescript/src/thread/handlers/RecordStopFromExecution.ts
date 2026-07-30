@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, EventHandler } from '@codedm/core-typescript'
-import { ThreadStopRaisedEvent } from '@codedm/contracts-typescript/wire/events'
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
-import { Id } from '@codedm/core-typescript'
+import { BaseError, EventHandler } from '@codm/core-typescript'
+import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
+import { Id } from '@codm/core-typescript'
 import { RaiseStop } from '../usecases/RaiseStop'
 
 const STOP_TITLES: Record<StopKind, string> = {

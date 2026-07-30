@@ -4,7 +4,7 @@
 */
 
 import type { ArchiveIssueMutationResponse, ArchiveIssuePathParams } from "../types/ArchiveIssue.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { archiveIssue } from "../client/archiveIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

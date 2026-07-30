@@ -1,4 +1,4 @@
-/* Web-only Tailwind 4 utilities — shared by @codedm/app-react and @codedm/app-astro.
+/* Web-only Tailwind 4 utilities — shared by @codm/app-react and @codm/app-astro.
    NOT for React Native targets (uniwind): they have no CSS gradients / background-clip / @property.
    Import AFTER `@import "tailwindcss"` so the @utility directives register with the engine. */
 

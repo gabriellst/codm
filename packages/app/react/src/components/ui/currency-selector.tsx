@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
 import { useTranslation } from 'react-i18next'
 import { IconChevronDown } from '@tabler/icons-react'
-import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@codm/client-typescript/typescript'
 
 import { cn } from '@/lib/utils'
 import { trigger } from './surfaces'

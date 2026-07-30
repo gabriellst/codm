@@ -1,7 +1,7 @@
 /**
  * Single shared registry of every dedup scope in the system (SCREAMING_SNAKE keys + values).
  *
- * This is the PRODUCT-owned vocabulary for the kernel's `IdempotencyGuard` (`@codedm/core-typescript`):
+ * This is the PRODUCT-owned vocabulary for the kernel's `IdempotencyGuard` (`@codm/core-typescript`):
  * the core ships the mechanism (`claim`/`release` on `shared.idempotency_keys`, typed over a plain
  * `string`), and a product plugs the scopes here. Add a value when a new exactly-once effect/webhook is
  * introduced — always here, never a per-context enum (the guard's whole point is one flat registry so

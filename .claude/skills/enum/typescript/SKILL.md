@@ -62,7 +62,7 @@ export { PaymentType } from './PaymentType'
 ### Step 3: Use in Zod Schemas
 
 ```typescript
-import { z } from '@codedm/core-typescript'
+import { z } from '@codm/core-typescript'
 import { OrderStatus } from '../enums'
 
 // In controller InputSchema
@@ -106,7 +106,7 @@ See `ENUM-01` in registry.yaml for the wrong/right pattern.
 ## Usage in Entities
 
 ```typescript
-import { AggregateRoot, z } from '@codedm/core-typescript'
+import { AggregateRoot, z } from '@codm/core-typescript'
 import Z from 'zod'
 import { OrderStatus } from '../enums'
 import { DomainErrors } from '../errors'
@@ -267,7 +267,7 @@ export enum CalendarView { DAY = 'day', WEEK = 'week', MONTH = 'month' }
 
 For enums that exist in the backend, the frontend should always import from the SDK:
 ```typescript
-import { GameGenreEnum } from '@codedm/client-typescript/typescript'
+import { GameGenreEnum } from '@codm/client-typescript/typescript'
 ```
 
 ## Frontend Enum Labels via i18n [ENUM-P11, ENUM-P12, bp-09]
@@ -298,7 +298,7 @@ in this project — that pattern is dead. Two payoffs:
 
 ```tsx
 import { useTranslation } from 'react-i18next'
-import type { GameGenreEnum } from '@codedm/client-typescript/typescript'
+import type { GameGenreEnum } from '@codm/client-typescript/typescript'
 
 const { t } = useTranslation()
 <TableCell>{t(`enums.GameGenre.${game.genre as GameGenreEnum}`)}</TableCell>

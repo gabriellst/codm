@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode, z } from '@codedm/core-typescript'
-import { ContactKind, ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+import { ContactKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { AttachThread, AttachThreadInputSchema, AttachThreadOutputSchema } from '../usecases/AttachThread'
 

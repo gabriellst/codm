@@ -31,7 +31,7 @@ import {
 	HttpRouter,
 	Middleware,
 	Router,
-} from '@codedm/core-typescript'
+} from '@codm/core-typescript'
 
 // The embedded-database migration step — a plain function, NOT a side-effect import: it must run
 // BEFORE the composition root, and awaiting a top-level-await side-effect module does NOT serialize

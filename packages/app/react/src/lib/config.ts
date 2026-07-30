@@ -3,7 +3,7 @@ const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3030'
 export const Config = {
 	baseUrl,
 	/**
-	 * Base URL for the GATEWAY SDK (`@codedm/client-typescript/go`) — the api-ts
+	 * Base URL for the GATEWAY SDK (`@codm/client-typescript/go`) — the api-ts
 	 * external/ChannelProxy wildcard, NOT the Go service itself. The browser never talks to the
 	 * gateway (:3032): every gateway op (pairing resolve/connect, channel reads, the SSE `/events`
 	 * stream) rides the api-ts origin, which strips this prefix, stamps the operator identity as

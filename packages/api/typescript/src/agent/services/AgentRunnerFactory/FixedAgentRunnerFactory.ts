@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { ProviderKind } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunner } from '../AgentRunner'
 import { E2eStubAgentRunner, StubAgentRunner } from '../AgentRunner'
 import { AgentRunnerFactory } from './AgentRunnerFactory'

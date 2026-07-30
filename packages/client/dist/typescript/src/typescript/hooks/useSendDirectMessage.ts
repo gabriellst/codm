@@ -4,7 +4,7 @@
 */
 
 import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../types/SendDirectMessage.ts";
-import type { Client, RequestConfig, ResponseErrorConfig } from "@codedm/client-typescript/typescript/_http";
+import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
 import { sendDirectMessage } from "../client/sendDirectMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";

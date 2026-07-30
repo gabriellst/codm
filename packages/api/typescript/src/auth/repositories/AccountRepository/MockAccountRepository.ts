@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import type { Transaction } from '@codedm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { Account } from '../../entities'
 import { AccountRepository } from './AccountRepository'
 

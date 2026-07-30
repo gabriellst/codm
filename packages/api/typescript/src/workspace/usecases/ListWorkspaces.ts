@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { eq, sql } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
-import { workspaces, threads } from '@codedm/contracts/db'
-import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { workspaces, threads } from '@codm/contracts/db'
+import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 
 export const ListWorkspacesInputSchema = z.object({
 	ownerId: z.uuid(),

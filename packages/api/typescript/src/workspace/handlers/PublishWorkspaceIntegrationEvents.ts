@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-import { WorkspaceRemovedEvent as WorkspaceRemovedIntegrationEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codm/core-typescript'
+import { WorkspaceRemovedEvent as WorkspaceRemovedIntegrationEvent } from '@codm/contracts-typescript/wire/events'
 import { WorkspaceRemovedEvent } from '../events/WorkspaceRemovedEvent'
 
 /**

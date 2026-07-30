@@ -70,7 +70,7 @@ This replaced `SCOPE_CONFINEMENT`, a `Record<McpScope, 'issue' | 'thread'>` in a
 
 The base's `buildMcpInvocation` (`Agent.ts`) reads `(this.constructor as typeof Agent).IdentitySchema` and `.safeParse()`s it **before** calling `AgentIdentityService.issue(...)` — never after. The order is the property, not a detail: an identity that fails to parse never becomes a credential, and `runner.run` is never reached. A test that only asserts the throw would stay green against a broken implementation that issued first and validated second — that is exactly why the falsifier checks the order, not just the outcome.
 
-The identity service is `AgentIdentityService<AgentRunIdentity>` (`@codedm/core-typescript`), injected into the base `Agent`'s constructor — never `RunTokenService`. `RunTokenClaims` named an ENVELOPE that never existed (the token is 32 random bytes; nothing but a lookup key ever leaves the process), so the type is `AgentRunIdentity` and the verbs are `issue` / `resolve` / `revoke`:
+The identity service is `AgentIdentityService<AgentRunIdentity>` (`@codm/core-typescript`), injected into the base `Agent`'s constructor — never `RunTokenService`. `RunTokenClaims` named an ENVELOPE that never existed (the token is 32 random bytes; nothing but a lookup key ever leaves the process), so the type is `AgentRunIdentity` and the verbs are `issue` / `resolve` / `revoke`:
 
 - `issue` — called ONLY here, in `buildMcpInvocation`. AC-6.12 greps for exactly one call site.
 - `resolve` — called by the destination controller's `AgentIdentityMiddleware` (see `/middleware` MID-C06) and by the MCP adapter's scope match.

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-import { ArtifactRecordedEvent as ArtifactRecordedIntegrationEvent } from '@codedm/contracts-typescript/wire/events'
+import { EventHandler, ExternalMediator } from '@codm/core-typescript'
+import { ArtifactRecordedEvent as ArtifactRecordedIntegrationEvent } from '@codm/contracts-typescript/wire/events'
 import { ArtifactRecordedEvent } from '../events'
 
 /** Write-side bridge: `artifact.recorded` → frozen `integration.artifact.recorded` (dashboard SSE). */

@@ -4,8 +4,8 @@ import { describe, expect, test } from 'bun:test'
  * regression pin) lives in union-narrowing.typecheck.ts, which the authoritative `tsc` gate
  * type-checks (bun strips types, so a .test.ts alone would never fail on a narrowing regression).
  */
-import type { ListenEvents200 } from '@codedm/client-typescript/typescript'
-import type { ServerEvent } from '@codedm/client-typescript/go'
+import type { ListenEvents200 } from '@codm/client-typescript/typescript'
+import type { ServerEvent } from '@codm/client-typescript/go'
 import { narrowDaemonOrigin, narrowGatewayOrigin } from './union-narrowing.typecheck'
 
 describe('union-slots narrowing parity (compile-time pin in union-narrowing.typecheck.ts)', () => {

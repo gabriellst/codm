@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import { Handler, z, BaseError } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { WorkspaceRepository } from '../repositories/WorkspaceRepository'
 import { WorkspaceUsageQuery } from '../services/WorkspaceUsageQuery'
 import { WorkspaceRemovedEvent } from '../events'

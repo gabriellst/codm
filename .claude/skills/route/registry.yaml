@@ -212,7 +212,7 @@ registry:
     import { createFileRoute } from '@tanstack/react-router'
     import { zodValidator } from '@/lib/zod-validator'
     import { z } from 'zod'
-    import { listResourcesQueryParamsSchema, type ListResourcesQueryResponse } from '@codedm/client-typescript/typescript'
+    import { listResourcesQueryParamsSchema, type ListResourcesQueryResponse } from '@codm/client-typescript/typescript'
     import { RouteError } from '@/components/RouteError'
     import { ResourceList } from './-components/ResourceList'
     import { ResourceFilters } from './-components/ResourceFilters'

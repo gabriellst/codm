@@ -3,7 +3,7 @@
    status is expressed only through small colored dots. Pill-heavy radii, hairline
    borders, heavy uppercase display type, generous whitespace, subtle/no shadows.
 
-   Consumed by @codedm/app-react (index.css) and @codedm/app-astro (global.css).
+   Consumed by @codm/app-react (index.css) and @codm/app-astro (global.css).
    Fonts are system/open stacks (declared in index.css @theme inline) — no external fetch. */
 
 @theme {

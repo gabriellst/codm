@@ -29,7 +29,7 @@ pub fn specta_builder() -> tauri_specta::Builder {
 // `cargo test` writes the specta-generated TS bindings to
 // `packages/app/tauri/commands/bindings.ts` (committed, drift-checkable). The
 // react `TauriSecretsService` imports `commands.secretGet(key)` from
-// `@codedm/app-tauri/commands` — name + args + return type are the Rust
+// `@codm/app-tauri/commands` — name + args + return type are the Rust
 // signature, verbatim. Re-run `cargo test` after touching any `secret_*`
 // command and commit the regenerated file.
 #[cfg(test)]

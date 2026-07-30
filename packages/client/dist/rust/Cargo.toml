@@ -1,4 +1,4 @@
-# Standalone Rust SDK crate — the Rust sibling of dist/typescript (@codedm/client-typescript)
+# Standalone Rust SDK crate — the Rust sibling of dist/typescript (@codm/client-typescript)
 # and dist/go. NOT a member of any Cargo workspace (rust-wire spec §F6): consumers (the
 # Tauri shell) take it as a path dependency inside THEIR workspace. `cargo test` runs with
 # cwd here. src/ is emitted by packages/client/generators/rust/index.ts — do not edit.

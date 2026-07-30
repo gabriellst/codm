@@ -38,7 +38,7 @@ registry:
       when: "creating any event handler (not a BullMQ job handler)"
       reason: "EventHandler derives name, inputSchema, and outputSchema from the event class — only declare the event and handle()."
       rule: |
-        import { EventHandler } from '@codedm/core-typescript'
+        import { EventHandler } from '@codm/core-typescript'
         import { injectable } from 'tsyringe-neo'
         import { SomeEvent } from '@context/events'
 
@@ -208,7 +208,7 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import { EventHandler } from '@codedm/core-typescript'
+      import { EventHandler } from '@codm/core-typescript'
       import { {{Name}}Event } from '@{{contextName}}/events'
 
       @injectable()
@@ -222,8 +222,8 @@ registry:
     skeletons:
       external: |
         import { injectable } from 'tsyringe-neo'
-        import { EventHandler } from '@codedm/core-typescript'
-        import { {{Name}}Event } from '@codedm/contracts-typescript/wire/events'
+        import { EventHandler } from '@codm/core-typescript'
+        import { {{Name}}Event } from '@codm/contracts-typescript/wire/events'
 
         @injectable()
         export class {{Name}}Handler extends EventHandler<typeof {{Name}}Event> {
@@ -288,7 +288,7 @@ registry:
         - 'tx\??:\s*DrizzleClient'
       wrong: |
         // Handler names the infra type — Drizzle leaks into the write-side flow
-        import { DrizzleClient } from '@codedm/core-typescript'
+        import { DrizzleClient } from '@codm/core-typescript'
         protected async handle(event: this['input'], tx?: DrizzleClient): Promise<void> {
           await this.withTransaction(tx, async tx => {
             await this.applyCancelled(event, tx) // private method also typed DrizzleClient
@@ -298,7 +298,7 @@ registry:
       right: |
         // Handler speaks Transaction (the EventHandler base contract); repos accept it,
         // and only the Drizzle repo impl narrows to DrizzleClient.
-        import type { Transaction } from '@codedm/core-typescript'
+        import type { Transaction } from '@codm/core-typescript'
         protected async handle(event: this['input'], tx?: Transaction): Promise<void> {
           await this.withTransaction(tx, async tx => {
             await this.applyCancelled(event, tx)

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import * as React from 'react'
-import { CurrencyCodeEnum } from '@codedm/client-typescript/typescript'
-import type { CurrencyCodeEnumKey } from '@codedm/client-typescript/typescript'
+import { CurrencyCodeEnum } from '@codm/client-typescript/typescript'
+import type { CurrencyCodeEnumKey } from '@codm/client-typescript/typescript'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../select'
 
 const meta: Meta<typeof Select> = {
@@ -144,12 +144,7 @@ export const EnumPreselected: Story = {
 		const [value, setValue] = React.useState<CurrencyCodeEnumKey | undefined>(CurrencyCodeEnum.USD)
 		return (
 			<div className="flex flex-col gap-3 w-64">
-				<Select
-					enum={CurrencyCodeEnum}
-					i18nPrefix="enums.CurrencyCode"
-					value={value}
-					onValueChange={setValue}
-				/>
+				<Select enum={CurrencyCodeEnum} i18nPrefix="enums.CurrencyCode" value={value} onValueChange={setValue} />
 				<p className="text-muted-foreground text-xs">Selected: {value ?? '—'}</p>
 			</div>
 		)

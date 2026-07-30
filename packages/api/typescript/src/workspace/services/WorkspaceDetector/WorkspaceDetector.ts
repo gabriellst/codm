@@ -1,4 +1,4 @@
-import { WorkspaceBadge } from '@codedm/contracts-typescript/wire/enums'
+import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * The result of probing a candidate folder: whether it exists, whether it is a directory, and the

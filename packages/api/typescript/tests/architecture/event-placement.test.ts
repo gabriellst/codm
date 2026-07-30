@@ -11,7 +11,7 @@ import { join, relative, resolve, dirname } from 'node:path'
  *     CONTEXT-PRIVATE. They never cross a bounded-context boundary — a context that needs to react
  *     to another context's fact listens to an INTEGRATION event instead.
  *   - INTEGRATION events are born in `packages/contracts` (TypeSpec, `wire/events/*.tsp`) and
- *     consumed from the generated binding (`@codedm/contracts-typescript/wire/events`). They are
+ *     consumed from the generated binding (`@codm/contracts-typescript/wire/events`). They are
  *     never authored in `src` — contracts is the source of truth for everything that crosses
  *     contexts or services (same rule as cross-boundary enums).
  *
@@ -110,7 +110,7 @@ describe('event-placement (domain events are context-private; integration events
 			`A context imports another context's DOMAIN events — domain events are context-private. ` +
 				`React to a cross-context fact via an INTEGRATION event: author it in packages/contracts ` +
 				`(wire/events/*.tsp), regen (bun contracts), and consume it from ` +
-				`'@codedm/contracts-typescript/wire/events':\n${report}`,
+				`'@codm/contracts-typescript/wire/events':\n${report}`,
 		).toBe(0)
 	})
 
@@ -146,7 +146,7 @@ describe('event-placement (domain events are context-private; integration events
 				join(tmpRoot, 'billing', 'handlers', 'GoodHandler.ts'),
 				`import { InvoicePaidEvent } from '@billing/events'\n` +
 					`import { InvoicePaidEvent as E2 } from '../events/InvoicePaidEvent'\n` +
-					`import { SubscriptionChangedEvent } from '@codedm/contracts-typescript/wire/events'\n`,
+					`import { SubscriptionChangedEvent } from '@codm/contracts-typescript/wire/events'\n`,
 			)
 			const crossHits = scanCrossContextEventImports(tmpRoot)
 			expect(crossHits.map(v => v.file).sort()).toEqual(['quota/handlers/BadAliasHandler.ts', 'quota/handlers/BadRelativeHandler.ts'])

@@ -8,7 +8,7 @@ import {
 	getSessionChatQueryKey,
 	getSessionIssuesQueryKey,
 	listArtifactsQueryKey,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 import { THREAD_REALTIME_EVENTS, threadInvalidations, useThreadRealtime, type ThreadRealtimeEvent } from './useThreadRealtime'
 
 /**

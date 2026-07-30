@@ -13,7 +13,7 @@ Generates the typed SDK from backend OpenAPI specification, making hooks, types,
 - The frontend never manually defines API types or validation — everything stays synchronized with the backend automatically
 - Query key functions ensure cache invalidation is always correct and refactor-safe
 - Zod schemas are reused for route `validateSearch` and form `validators.onSubmit`, so URL params and form inputs are validated against the same contract the backend enforces
-- HTTP functions (from `@codedm/client-typescript/typescript`) are for external consumers/integration boundaries, not for internal `api` cross-context orchestration
+- HTTP functions (from `@codm/client-typescript/typescript`) are for external consumers/integration boundaries, not for internal `api` cross-context orchestration
 
 ## When to Use This Skill
 
@@ -108,14 +108,14 @@ http://localhost:{PORT}/v1/shared/internal/docs
 ### Hooks (Frontend)
 
 ```typescript
-// Import from @codedm/client-typescript/typescript
+// Import from @codm/client-typescript/typescript
 import {
   useCreateProduct,      // POST /product
   useUpdateProduct,      // PUT /product/:id
   useDeleteProduct,      // DELETE /product/:id
   useGetProduct,         // GET /product/:id
   useListProducts,       // GET /product
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 ```
 
 ### Types (Frontend & Backend)
@@ -126,7 +126,7 @@ import type {
   CreateProductMutationResponse,  // Output type
   ListProductsQueryParams,        // Query params
   ListProductsQueryResponse,      // List response
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 ```
 
 ### Zod Schemas (Frontend)
@@ -135,7 +135,7 @@ import type {
 import {
   createProductMutationRequestSchema,  // For form validation
   listProductsQueryParamsSchema,        // For URL validation
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 ```
 
 ### Query Keys (Frontend)
@@ -145,7 +145,7 @@ import {
   createProductMutationKey,
   listProductsQueryKey,
   getProductQueryKey,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 
 // Usage for cache invalidation
 queryClient.invalidateQueries({ queryKey: listProductsQueryKey() })
@@ -154,12 +154,12 @@ queryClient.invalidateQueries({ queryKey: listProductsQueryKey() })
 ### HTTP Functions (External Consumers)
 
 ```typescript
-// Import from @codedm/client-typescript/typescript
+// Import from @codm/client-typescript/typescript
 import {
   createProduct,
   getProduct,
   listProducts,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 
 // Use in external consumers (outside api/)
 const product = await getProduct({ id: productId })
@@ -212,7 +212,7 @@ Regenerate the SDK when:
 - [ ] Controllers exported in index.ts
 - [ ] Router wired into the ROUTERS map in packages/api/typescript/src/routers.ts
 - [ ] `bun sdk` completed successfully
-- [ ] Hooks available in `@codedm/client-typescript/typescript`
+- [ ] Hooks available in `@codm/client-typescript/typescript`
 - [ ] Types available for import
 - [ ] OpenAPI docs show all endpoints
 
@@ -235,7 +235,7 @@ bun x nx run api:dev
 bun sdk
 
 # 6. Use in frontend
-import { useCreateProduct } from '@codedm/client-typescript/typescript'
+import { useCreateProduct } from '@codm/client-typescript/typescript'
 ```
 
 ## Frontend Usage Example
@@ -249,7 +249,7 @@ import {
   createProductMutationRequestSchema,
   listProductsQueryKey,
   type CreateProductMutationRequest,
-} from '@codedm/client-typescript/typescript'
+} from '@codm/client-typescript/typescript'
 import { useQueryClient } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/products/')({
@@ -276,7 +276,7 @@ function ProductsPage() {
 ## Bad Practices
 
 ### bp-01: Re-exporting SDK schemas unnecessarily
-Import directly from `@codedm/client-typescript/typescript`. Never re-export SDK schemas.
+Import directly from `@codm/client-typescript/typescript`. Never re-export SDK schemas.
 
 ```typescript
 // ❌ WRONG
@@ -285,7 +285,7 @@ export { listPatientsQueryParamsSchema }
 
 ```typescript
 // ✅ CORRECT - Importar diretamente da SDK
-import { listPatientsQueryParamsSchema } from '@codedm/client-typescript/typescript'
+import { listPatientsQueryParamsSchema } from '@codm/client-typescript/typescript'
 ```
 
 ### bp-02: Creating local types that should come from the SDK
@@ -298,7 +298,7 @@ export type PatientStatus = 'ativo' | 'inativo' | 'novo' | 'cancelado'
 
 ```typescript
 // ✅ CORRECT
-import { type PatientStatusEnum } from '@codedm/client-typescript/typescript'
+import { type PatientStatusEnum } from '@codm/client-typescript/typescript'
 ```
 
 ### bp-03: Creating local interface instead of inferring from SDK
@@ -315,7 +315,7 @@ interface ConsultationItem {
 
 ```typescript
 // ✅ CORRECT
-import type { ListPatientDetails200 } from '@codedm/client-typescript/typescript'
+import type { ListPatientDetails200 } from '@codm/client-typescript/typescript'
 type ConsultationItem = ListPatientDetails200['consultations'][number]
 ```
 
@@ -340,7 +340,7 @@ const tabs = [
 
 ```typescript
 // ✅ CORRECT
-import { patientTabEnum } from '@codedm/client-typescript/typescript'
+import { patientTabEnum } from '@codm/client-typescript/typescript'
 const tabs = Object.entries(patientTabEnum).map(([key, value]) => ({
   id: value,
   label: tabLabels[value],
@@ -357,7 +357,7 @@ field.handleChange(val as CreateServiceMutationRequest['specialty'])
 
 ```typescript
 // ✅ CORRECT
-import { SpecialtyEnum } from '@codedm/client-typescript/typescript'
+import { SpecialtyEnum } from '@codm/client-typescript/typescript'
 field.handleChange(val as SpecialtyEnum)
 ```
 

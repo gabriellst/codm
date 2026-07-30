@@ -1,4 +1,4 @@
-import { ThreadStatus } from '@codedm/contracts-typescript/wire/enums'
+import { ThreadStatus } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * What a thread's operating status is DERIVED from. Deliberately three booleans and no database

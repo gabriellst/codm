@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codedm/core-typescript'
-import { issues, stops, terminalLines, transcriptEntries } from '@codedm/contracts/db'
-import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@codedm/contracts-typescript/wire/enums'
+import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { issues, stops, terminalLines, transcriptEntries } from '@codm/contracts/db'
+import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 
 export const GetIssueDetailInputSchema = z.object({ ownerId: z.uuid(), issueId: z.uuid() })
@@ -18,7 +18,13 @@ export const GetIssueDetailOutputSchema = z.object({
 	provider: z.enum(ProviderKind),
 	terminalLog: z.array(z.object({ at: z.string(), line: z.string() })),
 	routedMessages: z.array(
-		z.object({ entryId: z.uuid(), kind: z.enum(TranscriptKind), text: z.string(), at: z.string(), classification: z.enum(ClassificationMethod).optional() }),
+		z.object({
+			entryId: z.uuid(),
+			kind: z.enum(TranscriptKind),
+			text: z.string(),
+			at: z.string(),
+			classification: z.enum(ClassificationMethod).optional(),
+		}),
 	),
 	stops: z.array(z.object({ stopId: z.uuid(), kind: z.enum(StopKind), title: z.string(), detail: z.string(), raisedAt: z.string() })),
 })
@@ -40,8 +46,15 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 		if (!issue || issue.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('ISSUE_NOT_FOUND', `no issue ${input.issueId}`)
 
 		const lines = await this.db.select().from(terminalLines).where(eq(terminalLines.issueId, input.issueId)).orderBy(asc(terminalLines.seq))
-		const routed = await this.db.select().from(transcriptEntries).where(eq(transcriptEntries.issueId, input.issueId)).orderBy(asc(transcriptEntries.at))
-		const openStops = await this.db.select().from(stops).where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
+		const routed = await this.db
+			.select()
+			.from(transcriptEntries)
+			.where(eq(transcriptEntries.issueId, input.issueId))
+			.orderBy(asc(transcriptEntries.at))
+		const openStops = await this.db
+			.select()
+			.from(stops)
+			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 
 		return {
 			issue: {
@@ -61,7 +74,13 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				at: e.at.toISOString(),
 				classification: (e.classification ?? undefined) as ClassificationMethod | undefined,
 			})),
-			stops: openStops.map(s => ({ stopId: s.id, kind: s.kind as StopKind, title: s.title, detail: s.detail, raisedAt: s.raisedAt.toISOString() })),
+			stops: openStops.map(s => ({
+				stopId: s.id,
+				kind: s.kind as StopKind,
+				title: s.title,
+				detail: s.detail,
+				raisedAt: s.raisedAt.toISOString(),
+			})),
 		}
 	}
 }

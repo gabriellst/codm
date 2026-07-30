@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Handler, z } from '@codedm/core-typescript'
-import type { Transaction } from '@codedm/core-typescript'
+import { BaseError, Handler, z } from '@codm/core-typescript'
+import type { Transaction } from '@codm/core-typescript'
 import { OwnerRepository } from '../repositories/OwnerRepository'
 import { OwnerSettingsUpdatedEvent } from '../events'
 import type { ApplicationErrors } from '../errors'

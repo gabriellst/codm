@@ -1,13 +1,7 @@
 // Recipe: dev:packages/api/src/auth/registry.ts — per-env bindings for auth context.
 // Stripped: no clinic-switching, no doctor/collaborator.
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
-import {
-	type InstanceRegistry,
-	expandBindings,
-	RateLimitStore,
-	InMemoryRateLimitStore,
-	RedisRateLimitStore,
-} from '@codedm/core-typescript'
+import { type InstanceRegistry, expandBindings, RateLimitStore, InMemoryRateLimitStore, RedisRateLimitStore } from '@codm/core-typescript'
 import { UserRepository } from './repositories/UserRepository/UserRepository'
 import { DrizzleUserRepository } from './repositories/UserRepository/DrizzleUserRepository'
 import { MockUserRepository } from './repositories/UserRepository/MockUserRepository'

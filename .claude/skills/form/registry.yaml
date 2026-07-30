@@ -10,7 +10,7 @@ registry:
     - id: FRM-01
       name: "SDK schema as validation base"
       when: always
-      rule: "import { xMutationRequestSchema } from '@codedm/client-typescript/typescript'"
+      rule: "import { xMutationRequestSchema } from '@codm/client-typescript/typescript'"
       wrong: "redefining validation rules already in SDK"
     - id: FRM-02
       name: "useForm with validators"
@@ -727,7 +727,7 @@ registry:
         - '\.formApi\.reset\('
 
   canonical_snippet: |
-    import { createProductMutationRequestSchema, useCreateProduct } from '@codedm/client-typescript/typescript'
+    import { createProductMutationRequestSchema, useCreateProduct } from '@codm/client-typescript/typescript'
     const schema = createProductMutationRequestSchema
     export function CreateProductForm() {
       const createProduct = useCreateProduct()

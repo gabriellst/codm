@@ -1,4 +1,4 @@
-import { StopKind } from '@codedm/contracts-typescript/wire/enums'
+import { StopKind } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * The TRANSPORT half of the frozen `StopKind` value-set (GOAL-agent-abstraction §4.3).
