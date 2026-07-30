@@ -32,6 +32,10 @@ const LANG_CONFIG = {
 	// with zero brand-facing benefit. It intentionally stays `template` through npm-scope
 	// rebrands; walker.go mirrors THIS value (source of truth), so there is no stray literal.
 	go: { modulePrefix: 'template' },
+	// Rust crates derive names from the brand (`codedm-contracts-rust`, `codedm-client-rust`).
+	// Standalone crates, never a language-level Cargo workspace (rust-wire spec §F6): the only
+	// Cargo workspace in the repo is the Tauri shell's, which consumes these as path deps.
+	rust: { cratePrefix: brand },
 } as const
 
 /**
@@ -161,6 +165,7 @@ export const REPO = {
 	sdkPackagePrefixes: {
 		typescript: `${scope}/client`,
 		go: `${LANG_CONFIG.go.modulePrefix}/client`,
+		rust: `${LANG_CONFIG.rust.cratePrefix}-client`,
 	},
 
 	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */

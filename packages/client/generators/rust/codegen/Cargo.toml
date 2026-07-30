@@ -1,0 +1,21 @@
+# Standalone helper crate — drives progenitor for the Rust client generator
+# (packages/client/generators/rust/index.ts). NOT a member of any Cargo workspace;
+# invoked via `cargo run --manifest-path` (rust-wire spec §F6: no language-level
+# workspace — the only Cargo workspace in this repo is the Tauri shell's).
+[package]
+name = "codedm-client-rust-codegen"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "rust-codegen"
+path = "src/main.rs"
+
+[dependencies]
+progenitor = "0.10"
+openapiv3 = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+syn = "2"
+prettyplease = "0.2"

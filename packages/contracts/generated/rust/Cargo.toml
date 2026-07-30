@@ -1,0 +1,24 @@
+# Standalone wire-binding crate — the Rust sibling of generated/go (module template/contracts-go)
+# and generated/typescript (@codedm/contracts-typescript). NOT a member of any Cargo workspace:
+# consumers (the Tauri shell) take it as a path dependency inside THEIR workspace, exactly like
+# Go consumers resolve contracts-go via a `replace` directive. `cargo test` runs with cwd here.
+#
+# This file is committed and hand-maintained (like go.mod); src/wire/* is emitted by
+# packages/contracts/codegen/emit-wire-rs.ts — do not edit those by hand.
+[package]
+name = "codedm-contracts-rust"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+# Pure wire crate: serde + scalar carriers only. NEVER a backend-framework dependency —
+# the Tauri shell must not drag a server stack to deserialize JSON (rust-wire spec §3.2).
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["serde"] }
+strum = { version = "0.27", features = ["derive"] }

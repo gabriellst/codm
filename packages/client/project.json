@@ -21,6 +21,15 @@
 				"cwd": "packages/client",
 				"command": "bun run check"
 			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/client",
+				"command": "bun run test:rust"
+			},
+			"inputs": ["{projectRoot}/dist/rust/**"],
+			"cache": true
 		}
 	}
 }

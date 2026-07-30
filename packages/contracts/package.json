@@ -13,12 +13,16 @@
 		"tsp:watch": "tsp compile wire/ --watch",
 		"codegen:wire:typescript": "bun codegen/emit-wire-ts.ts",
 		"codegen:wire:go": "bun codegen/emit-wire-go.ts",
-		"codegen:wire": "bun run codegen:wire:typescript && bun run codegen:wire:go",
+		"codegen:wire:rust": "bun codegen/emit-wire-rs.ts && cargo check --quiet --manifest-path generated/rust/Cargo.toml",
+		"codegen:wire": "bun run codegen:wire:typescript && bun run codegen:wire:go && bun run codegen:wire:rust",
+		"codegen:fixtures": "bun codegen/emit-fixtures.ts",
+		"test:rust": "cargo test --quiet --manifest-path generated/rust/Cargo.toml",
+		"test:go": "cd generated/go && go test ./...",
 		"db:sync-go": "bun ../../scripts/db/sync-sqlite-migrations.ts",
 		"db:check-go": "bun ../../scripts/db/sync-sqlite-migrations.ts --check",
 		"drizzle:generate": "drizzle-kit generate --config=db/schema-sqlite/drizzle.config.ts",
-		"all": "bun run tsp:compile && bun run codegen:wire && bun run drizzle:generate",
-		"test": "bun test codegen/"
+		"all": "bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate",
+		"test": "bun test codegen/ && bun run test:rust && bun run test:go"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.45.2",
@@ -29,6 +33,7 @@
 		"@typespec/openapi": "^1.5.0",
 		"@typespec/openapi3": "^1.5.0",
 		"drizzle-kit": "^0.31.0",
-		"@codedm/contracts-typescript": "workspace:*"
+		"@codedm/contracts-typescript": "workspace:*",
+		"@codedm/core-typescript": "workspace:*"
 	}
 }

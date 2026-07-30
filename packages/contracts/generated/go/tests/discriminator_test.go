@@ -17,16 +17,18 @@ func TestParseChannelMessageReceivedVariant(t *testing.T) {
 		"entityId": "ch_1",
 		"ownerId": "tenant-1",
 		"occurredAt": "2024-01-01T00:00:00Z",
-		"channelId": "ch_1",
+		"channelId": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
 		"messageId": "wamid_1",
-		"contactExternalId": "5511999990000",
-		"contactDisplayName": "Ada",
-		"contactKind": "CONTACT",
-		"senderExternalId": "5511999990000",
+		"internalMessageId": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+		"remoteId": "5511999990000",
+		"senderId": "5511999990000",
+		"fromMe": false,
+		"author": "HUMAN",
 		"isGroup": false,
-		"text": "fix the coupon flow",
-		"platform": "WHATSAPP",
-		"receivedAt": "2024-01-01T00:00:00Z"
+		"timestamp": 1704067200,
+		"observedAt": "2024-01-01T00:00:00Z",
+		"messageType": "TEXT",
+		"platform": "WHATSAPP"
 	}`)
 	parsed, err := wire.ParseIntegrationEvent(raw)
 	if err != nil {
@@ -39,16 +41,16 @@ func TestParseChannelMessageReceivedVariant(t *testing.T) {
 	if event.Name != wire.ChannelMessageReceivedEventName {
 		t.Fatalf("expected Name=%q, got %q", wire.ChannelMessageReceivedEventName, event.Name)
 	}
-	// ChannelKind + ContactKind are generated wire enums; confirm they unmarshal verbatim.
-	if event.Platform != wire.ChannelKindWHATSAPP {
-		t.Fatalf("expected Platform=%q, got %q", wire.ChannelKindWHATSAPP, event.Platform)
+	// MessageAuthor + MessageType are generated wire enums; confirm they unmarshal verbatim.
+	if event.Author != wire.MessageAuthorHUMAN {
+		t.Fatalf("expected Author=%q, got %q", wire.MessageAuthorHUMAN, event.Author)
 	}
-	if event.ContactKind != wire.ContactKindCONTACT {
-		t.Fatalf("expected ContactKind=%q, got %q", wire.ContactKindCONTACT, event.ContactKind)
+	if event.MessageType != wire.MessageTypeTEXT {
+		t.Fatalf("expected MessageType=%q, got %q", wire.MessageTypeTEXT, event.MessageType)
 	}
-	// Absent optional (quotedEntryId) stays a nil pointer.
-	if event.QuotedEntryID != nil {
-		t.Fatalf("expected QuotedEntryID=nil, got %v", *event.QuotedEntryID)
+	// Absent optional union slot (content) stays a nil RawMessage.
+	if event.Content != nil {
+		t.Fatalf("expected Content=nil, got %s", event.Content)
 	}
 }
 
