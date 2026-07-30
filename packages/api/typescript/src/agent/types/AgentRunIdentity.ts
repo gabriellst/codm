@@ -71,3 +71,36 @@ export interface AgentRunIdentity extends AgentIdentity, AgentRunIdentityFields 
 	/** Short-lived: the run window plus grace. Expiry is a backstop; `revoke` is the primary. */
 	expiresAt: Date
 }
+
+/**
+ * WHAT `AgentIdentityMiddleware` STAMPS ON `ctx` — declared ONCE, composed by every controller that
+ * reads it.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────────
+ * IT MUST BE DECLARED SOMEWHERE, AND THAT IS NOT A DESIGN CHOICE. `Controller.execute` validates the
+ * whole request against `inputSchema` and merges the VALIDATED envelope over the raw one, and Zod
+ * objects STRIP unknown keys — so a value a middleware injected but no schema named is silently
+ * removed before `handle` ever sees it. That is not hypothetical: it cost a 500 on every fork, with
+ * the middleware provably correct and the key simply gone.
+ *
+ * WHAT CHANGED IS THE COUNT. `ForkIssue` and `SteerIssueTurn` each carried their own verbatim copy
+ * (`RunClaimsCtxSchema`), because there was nowhere shared to put it. There is now, and the third
+ * controller that needs it composes instead of copying.
+ *
+ * OPTIONAL, because the middleware is NOT fail-closed: a `system` operation served to a human
+ * operator carries no agent identity, and that is the normal case for 23 of the 32 exposed
+ * controllers. A controller for which absence is a broken invariant says so in its own `handle()` —
+ * which is where `ForkIssue` already rejects a run with no originating entry.
+ * ─────────────────────────────────────────────────────────────────────────────────────────────────
+ */
+export const AgentRunIdentityCtxSchema = z.object({
+	agentIdentity: z
+		.object({
+			ownerId: z.uuid(),
+			issueId: z.uuid().optional(),
+			threadId: z.uuid(),
+			entryId: z.uuid().optional(),
+			scope: z.enum(McpScope),
+		})
+		.optional(),
+})

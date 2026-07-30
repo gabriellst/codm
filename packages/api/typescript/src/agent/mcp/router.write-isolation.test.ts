@@ -12,12 +12,18 @@ import { McpRouterController } from './router'
 import { wireToolName } from './wire'
 
 /**
- * AC-6.6 — "AND NOTHING WAS WRITTEN", MEASURED BY COUNTING, not by the absence of an exception.
+ * "AND NOTHING WAS WRITTEN", MEASURED BY COUNTING, not by the absence of an exception.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
- * WHY A SECOND SUITE. `router.test.ts` proves the router does not DISPATCH a rejected call. That is
+ * WHY A SECOND SUITE. `router.test.ts` proves the door does not DISPATCH a refused call. That is
  * necessary and it is not what the AC asks for: it asks for row counts and outbox counts taken before
  * and after. A dispatch counter is a proxy; this file removes the proxy.
+ *
+ * WHICH REFUSAL IS COUNTED, AFTER B2 T7. The per-argument identity walk left this file's subject: it
+ * runs at the destination controller now (`AgentIdentityMiddleware`), which never issues the outbound
+ * write either. What the door still refuses on its own is an unusable credential and a credential
+ * aimed at the WRONG SURFACE — so those are what is counted here, against the same control that
+ * writes. The asymmetry between the control and the refusals IS the measurement, and it is unchanged.
  *
  * HOW IT IS HONEST. The transport substituted below is not a no-op stand-in whose silence proves
  * nothing — it EXECUTES THE REAL `RecordArtifact` USE CASE, against the real (in-process) database, on
@@ -35,14 +41,12 @@ import { wireToolName } from './wire'
  */
 
 const ISSUE_A = '00000000-0000-4000-8000-0000000000a2'
-const ISSUE_B = '00000000-0000-4000-8000-0000000000b2'
-const THREAD_B = '00000000-0000-4000-8000-0000000000b3'
 
 /** The three counters the AC names. `artifacts` is the row; `events` + `outbox` are the fact. */
 const COUNTED = ['artifacts', 'events', 'outbox'] as const
 
 /**
- * A router whose transport PERFORMS the write a dispatched tool call would have performed.
+ * A door whose transport PERFORMS the write a dispatched tool call would have performed.
  *
  * This is the shortest path that is still real: the generated handler's whole job is to turn the tool
  * arguments into `POST /v1/threads/:threadId/artifacts`, which the controller turns into exactly this
@@ -78,7 +82,7 @@ class WritingRouter extends McpRouterController {
 	}
 }
 
-describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
+describe('a refused tool call writes NOTHING, counted', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 	let tokens: InMemoryAgentIdentityService<AgentRunIdentity>
@@ -150,29 +154,6 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 		await expect(router.handle(post('issue-handling', call({ threadId, data: {} }), authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
-		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
-	})
-
-	it('(b) CROSS-ISSUE via the PATH param → nothing moves', async () => {
-		const token = tokens.issue(identity())
-		const before = await testBed.probe().snapshot(COUNTED)
-		const response = (await router.handle(
-			post('issue-handling', call({ threadId: THREAD_B, data: { kind: ArtifactKind.LINK } }), authorized(token)),
-		)) as unknown as Response
-		expect(response.status).toBe(403)
-		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
-	})
-
-	it('(b) CROSS-ISSUE via the BODY — right thread, wrong issue → nothing moves', async () => {
-		// THE VECTOR A PATH-ONLY CHECK MISSES, and the reason this file counts rather than reads: the
-		// transport above WOULD have written this artifact against issue B, with a perfectly valid token
-		// and a perfectly correct thread.
-		const token = tokens.issue(identity())
-		const before = await testBed.probe().snapshot(COUNTED)
-		const response = (await router.handle(
-			post('issue-handling', call({ threadId, data: { issueId: ISSUE_B, kind: ArtifactKind.LINK } }), authorized(token)),
-		)) as unknown as Response
-		expect(response.status).toBe(403)
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
 	})
 

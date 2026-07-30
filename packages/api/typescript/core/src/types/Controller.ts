@@ -15,6 +15,7 @@ import {
 	HttpStatusCode,
 } from './Http'
 import { Middleware, MiddlewareClass } from './Middleware'
+import { AgentIdentityMiddleware } from '../middlewares/AgentIdentityMiddleware'
 import { BaseError } from './BaseError'
 import { BaseInterfaceErrors } from '../errors/codes'
 import { type AllErrors, GlobalErrorMapper } from '../utils/GlobalErrorMapper'
@@ -165,6 +166,32 @@ export abstract class Controller<
 		return response as unknown as this['output']
 	}
 
+	/**
+	 * The middlewares that ACTUALLY run — the declared list, plus the ones a static on the class
+	 * makes mandatory.
+	 *
+	 * `AgentIdentityMiddleware` is appended for any controller with a non-empty `static mcpScopes`,
+	 * WITHOUT an entry in `middlewares`, and the asymmetry with `OperatorMiddleware` is the point:
+	 * opting into "who is this daemon" is a routing choice, while a controller that declared itself
+	 * model-callable has already said the dangerous thing, and a protection that must be remembered
+	 * separately is one that can be forgotten exactly where it matters.
+	 *
+	 * It is appended HERE rather than in `MainRouter.configureRouterControllers` (which also merges
+	 * middleware lists) because MainRouter is SKIPPABLE: spec emission never constructs it, and a test
+	 * that calls `executeController` directly bypasses it entirely — `DetectProviders.test.ts` already
+	 * does. A security boundary with a bypass is not one. This method is the only door `handle()` can
+	 * be reached through.
+	 *
+	 * Appended LAST so `OperatorMiddleware` has already stamped `ctx.ownerId`, and skipped when the
+	 * controller listed it explicitly, so the dedup rule is the same one the router applies.
+	 */
+	private get effectiveMiddlewares(): (Middleware | MiddlewareClass)[] {
+		const scopes = (this.constructor as typeof Controller).mcpScopes
+		if (!scopes || scopes.length === 0) return this.middlewares
+		const declared = new Set(this.middlewares.map(m => (typeof m === 'function' ? m.name : m.constructor.name)))
+		return declared.has(AgentIdentityMiddleware.name) ? this.middlewares : [...this.middlewares, AgentIdentityMiddleware]
+	}
+
 	private async executeMiddlewares(request: HttpControllerRequest<unknown>): Promise<Response | undefined> {
 		const blacklist = new Set(
 			this.skipMiddlewares.map(skip => {
@@ -173,7 +200,7 @@ export abstract class Controller<
 			}),
 		)
 
-		for (const middlewareOrClass of this.middlewares) {
+		for (const middlewareOrClass of this.effectiveMiddlewares) {
 			let middleware: Middleware
 			if (typeof middlewareOrClass === 'function') {
 				middleware = container.resolve(middlewareOrClass)

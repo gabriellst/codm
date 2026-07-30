@@ -40,14 +40,15 @@ export const GetIssueStatusControllerOutputSchema = z
  *
  * ### Why a NEW door instead of the `system` scope's `GetIssueDetail`
  * `GetIssueDetail` sits at `/issues/:issueId` and takes NO threadId. Under an `orchestration` token
- * that is unconfined in the strongest sense: such a token deliberately carries no `issueId` claim
- * (§7.2.1), and `assertIdentityMatchesClaims` SKIPS any key whose claim is absent rather than
- * rejecting it — so the generic walker has nothing to compare and every issue in the database is
- * reachable by id. The model driving these runs reads messages written by strangers in a group.
+ * that is unconfined in the strongest sense: such an identity deliberately carries no `issueId`
+ * (§7.2.1), and `compareIdentity` reads the keys the IDENTITY carries — so there is nothing to compare
+ * `issueId` against and every issue in the database is reachable by id. The model driving these runs
+ * reads messages written by strangers in a group.
  *
- * Putting `threadId` in the path restores half of it for free (the walker DOES confine `threadId`,
- * which the claims always carry), and the ownership check below closes the other half: a caller that
- * supplies its OWN threadId with SOMEBODY ELSE'S issueId passes the walker and must be stopped here.
+ * Putting `threadId` in the path restores half of it for free (the comparison DOES confine `threadId`,
+ * which the identity always carries), and the ownership check below closes the other half: a caller
+ * that supplies its OWN threadId with SOMEBODY ELSE'S issueId passes the comparison and must be
+ * stopped here.
  * That pairing — a claim-confined path segment plus an explicit ownership assertion — is the shape
  * §7.2.1 requires of every `orchestration` tool that accepts an `issueId`.
  *

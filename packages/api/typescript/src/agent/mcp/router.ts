@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Config, Controller, HttpStatusCode, MimeTypes, z, BaseError } from '@codedm/core-typescript'
+import { Config, Controller, MimeTypes, z, BaseError } from '@codedm/core-typescript'
 import type { HttpMethod } from '@codedm/core-typescript'
 import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
@@ -7,7 +7,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { AgentIdentityService } from '@codedm/core-typescript'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import { McpScope } from '@codedm/contracts-typescript/wire/enums'
-import { assertIdentityMatches } from './identity'
 import type { AgentInterfaceErrors } from '../errors'
 
 import { MCP_ROUTE_PREFIX } from './route'
@@ -16,9 +15,6 @@ export { MCP_ROUTE_PREFIX }
 
 const McpRouterInputSchema = z.object({ params: z.object({ scope: z.string() }) })
 const McpRouterOutputSchema = z.any()
-
-/** JSON-RPC 2.0 error codes we produce ourselves, before the transport ever sees the message. */
-const JSONRPC_INVALID_PARAMS = -32602
 
 /**
  * THE MCP DOOR — the JSON-RPC endpoint an agent CLI talks to, and the place the mandatory identity
@@ -44,11 +40,21 @@ const JSONRPC_INVALID_PARAMS = -32602
  * expired and revoked, so a late tool call from a run that already died gets 401 and writes nothing —
  * the property §4.11 promises when a run is cancelled.
  *
- * IDENTITY IS CHECKED BEFORE THE TRANSPORT DISPATCHES, WHICH IS WHY "NO WRITE HAPPENED" IS PROVABLE
- * The message is parsed here, and a `tools/call` has its arguments walked against the identity BEFORE
- * `handleRequest` runs. Doing it inside a tool wrapper would be too late in a measurable way: the MCP
- * SDK validates `outputSchema` AFTER the handler returns, and the probe caught a rejected call whose
- * HTTP write had already been issued. Rejecting here means the outbound request is never built.
+ * WHAT STAYED HERE AND WHY IT COULD NOT MOVE
+ * The SCOPE MATCH. `tools/list` is answered by the MCP SDK itself, with no round trip back to any
+ * HTTP controller — so a per-controller middleware structurally cannot see it, and this is the only
+ * point where "was this credential issued for THIS surface" can be asked of EVERY JSON-RPC message
+ * rather than only of `tools/call`. Without it an `issue-handling` token enumerates and calls the
+ * twenty-three `system` operations.
+ *
+ * WHAT LEFT, AND WHERE IT WENT
+ * The per-argument identity walk. It lived here because arguments had to be rejected BEFORE the
+ * transport dispatched — the MCP SDK validates a tool's `outputSchema` AFTER the handler returns, so a
+ * rejection inside a tool wrapper would arrive with the HTTP write already issued. That constraint is
+ * satisfied a different way now: `AgentIdentityMiddleware` runs at the destination controller, BEFORE
+ * its `handle()`, so the write is still never built. And it compares the keys the identity actually
+ * carries against `params`/`body` already parsed, instead of walking a JSON-RPC body against a
+ * hardcoded list of three names.
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
 @injectable()
@@ -82,10 +88,10 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		// shipped (contract defect D6-8). A valid token proves WHICH RUN is calling; it must also prove
 		// which SURFACE that run was granted. Before the claim existed, an `issue-handling` token
 		// authenticated a `tools/call` against `/mcp/system` and its twenty-three operations — owner and
-		// workspace administration included — none of which carry an identity key for the walk below to
-		// compare, so nothing downstream would have objected. The token rides on the child CLI's argv,
-		// which the model can read; enforcing the scope only through `--allowedTools` puts the boundary
-		// on the attacker's side of the wire.
+		// workspace administration included — none of which carry a confinement axis for the
+		// destination-side comparison to read, so nothing downstream would have objected. The token
+		// rides on the child CLI's argv, which the model can read; enforcing the scope only through
+		// `--allowedTools` puts the boundary on the attacker's side of the wire.
 		if (identity.scope !== scope) {
 			throw new BaseError<AgentInterfaceErrors>(
 				'AGENT_RUN_SCOPE_MISMATCH',
@@ -93,19 +99,11 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 			)
 		}
 
-		// The body is consumed here to inspect it, so the transport is handed a fresh Request built
-		// from the bytes we already read — a Request body is a one-shot stream and re-reading it would
-		// hand the transport an empty message.
-		const body = raw.method === 'POST' ? await raw.text() : ''
-		const identityError = this.rejectMismatchedIdentity(body, identity)
-		if (identityError) return this.rawResponse(identityError)
-
+		// The body is no longer consumed here. It used to be, so the identity walk could inspect it
+		// BEFORE dispatching; that responsibility moved to `AgentIdentityMiddleware`, which runs at the
+		// destination controller with `params` and `body` already separated by the HTTP layer. Reading a
+		// Request body is one-shot, so not reading it means not having to rebuild the Request either.
 		const transport = await this.buildTransport(scope)
-		const replay = new Request(raw.url, {
-			method: raw.method,
-			headers: raw.headers,
-			...(body.length > 0 && { body }),
-		})
 
 		// The context the generated `_http.ts` shims read to address AND authenticate their outbound
 		// call. Established AROUND the whole dispatch, so it covers every async continuation the
@@ -117,7 +115,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		// standing rule intact (the api does not use the SDK's HTTP client) and keeps the value a
 		// runtime fact instead of a literal frozen into every generated call site (AC-6.19(b)).
 		const baseUrl = `http://127.0.0.1:${Config.env.API_PORT}`
-		return this.rawResponse(await withMcpRunContext({ token, baseUrl }, () => transport.handleRequest(replay)))
+		return this.rawResponse(await withMcpRunContext({ token, baseUrl }, () => transport.handleRequest(raw)))
 	}
 
 	/**
@@ -137,61 +135,6 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		if (dedicated) return dedicated
 		const authorization = raw.headers.get('authorization') ?? ''
 		return authorization.toLowerCase().startsWith('bearer ') ? authorization.slice('bearer '.length).trim() : ''
-	}
-
-	/**
-	 * Walk a `tools/call`'s arguments against the identity and, on disagreement, answer with a JSON-RPC
-	 * error INSTEAD of dispatching. Returns `null` when there is nothing to reject.
-	 *
-	 * BOTH LAYERS CARRY THE REFUSAL: HTTP **403** (what AC-6.6(b) contracts, and what an access log,
-	 * a proxy and a security review all read) with a JSON-RPC error object as the body (what an MCP
-	 * client can actually render, keyed to the request id so a batch member is identifiable). An
-	 * earlier revision answered 200 with only the JSON-RPC half, on the theory that a 403 reaches the
-	 * model as an uninterpretable transport failure. That theory is not worth a silent deviation from
-	 * a contract whose header says the phase does not close without it: the model is not the only
-	 * reader, and the body still says exactly what happened.
-	 *
-	 * A message that does not parse is passed through untouched — the transport owns malformed-input
-	 * handling, and duplicating its error vocabulary here would be a second source of truth for it.
-	 */
-	private rejectMismatchedIdentity(body: string, identity: AgentRunIdentity): Response | null {
-		if (body.length === 0) return null
-		let message: unknown
-		try {
-			message = JSON.parse(body)
-		} catch {
-			return null
-		}
-
-		for (const call of this.toolCallsIn(message)) {
-			try {
-				assertIdentityMatches(call.args, identity)
-			} catch (error) {
-				const detail = error instanceof BaseError ? error.message : String(error)
-				return Response.json(
-					{
-						jsonrpc: '2.0',
-						id: call.id ?? null,
-						error: { code: JSONRPC_INVALID_PARAMS, message: `AGENT_RUN_SCOPE_MISMATCH: ${detail}` },
-					},
-					{ status: HttpStatusCode.FORBIDDEN },
-				)
-			}
-		}
-		return null
-	}
-
-	/** Every `tools/call` in the message — JSON-RPC allows a BATCH, and one bad member taints the batch. */
-	private toolCallsIn(message: unknown): Array<{ id: unknown; args: unknown }> {
-		const messages = Array.isArray(message) ? message : [message]
-		const calls: Array<{ id: unknown; args: unknown }> = []
-		for (const entry of messages) {
-			if (!entry || typeof entry !== 'object') continue
-			const record = entry as { method?: unknown; id?: unknown; params?: { arguments?: unknown } }
-			if (record.method !== 'tools/call') continue
-			calls.push({ id: record.id, args: record.params?.arguments })
-		}
-		return calls
 	}
 
 	/**

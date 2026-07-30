@@ -29,9 +29,9 @@ import { OrchestratorInputSchema } from './types'
  * ### The tools it does NOT get, and why the omission is the design
  * `issue-handling`'s six writes are absent: this agent converses, forks and reads — it never does
  * issue work (§3, "o orquestrador nunca executa trabalho de issue"). Two consequences follow that are
- * easy to miss. First, a thread-confined token has NO generic protection on an `issueId` argument
- * (`assertIdentityMatchesClaims` skips an absent claim rather than rejecting it), so every tool in
- * this scope that takes one confines itself — which is affordable for three read/create operations
+ * easy to miss. First, a thread-confined identity has NO generic protection on an `issueId` argument
+ * (`compareIdentity` reads the keys the identity CARRIES, and this one carries no `issueId`), so every
+ * tool in this scope that takes one confines itself — which is affordable for three read/create operations
  * and would not be for six writes on somebody's repository. Second, the prompt tells this agent not
  * to edit files, and that instruction is the ONLY thing standing between it and the CLI's own
  * Read/Write/Edit/Bash surface: `--allowedTools` is passed only alongside an MCP config, while

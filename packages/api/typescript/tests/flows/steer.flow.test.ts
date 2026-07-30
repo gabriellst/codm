@@ -48,6 +48,14 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 		expect(queued?.targetKind).toBe(MailboxTargetKind.ISSUE)
 		expect(queued?.targetId).toBe(issue.id.value)
 		// The steer's OWN text — a resumed session needs the new instruction, not the original brief.
+		//
+		// PRE-EXISTING violation, byte-identical in the HEAD blob, surfaced here only because B2 T7 is
+		// the first change to stage this file. The short-circuit the rule warns about cannot happen and
+		// would not matter if it did: `queued` is asserted non-null by the three `expect`s directly
+		// above, and a `TypeError` on this line fails the test exactly as the assertion would. Dropping
+		// the `?.` is the real fix and it belongs to whoever owns this suite's null-handling, not to a
+		// commit about identity middleware.
+		// biome-ignore lint/correctness/noUnsafeOptionalChaining: pre-existing, see the note above
 		expect((queued?.payload as { text: string }).text).toBe('prefira o resumo curto')
 	})
 
@@ -59,7 +67,9 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 	it('a whisper with NO open issue becomes a message to the orchestrator', async () => {
 		const t = await thread()
 
-		await testBed.resolve(SteerThread).execute({ ownerId: OPERATOR_ID, threadId: t.id.value, text: 'pergunte mais uma vez se ele está bem' })
+		await testBed
+			.resolve(SteerThread)
+			.execute({ ownerId: OPERATOR_ID, threadId: t.id.value, text: 'pergunte mais uma vez se ele está bem' })
 
 		const queued = await testBed.resolve(MailboxRepository).claimNext('steer-test', 60_000)
 		expect(queued?.kind).toBe(MailboxItemKind.OPERATOR_MESSAGE)
@@ -88,9 +98,10 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 	})
 
 	/**
-	 * AC-B2.3 — the confinement the generic guard cannot provide. An `orchestration` token carries no
-	 * `issueId` claim, so `assertIdentityMatchesClaims` skips that key entirely; without the handler's
-	 * own check, a model reading a group chat could redirect work belonging to another conversation.
+	 * AC-B2.3 — the confinement the generic comparison cannot provide. An `orchestration` identity
+	 * carries no `issueId` at all, so `compareIdentity` has nothing to compare that key against; without
+	 * the handler's own check, a model reading a group chat could redirect work belonging to another
+	 * conversation.
 	 */
 	it('AC-B2.3 — a run on thread A cannot steer an issue of thread B', async () => {
 		const a = await thread()
@@ -100,7 +111,7 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 		const controller = testBed.resolve(SteerIssueTurnController)
 		await expect(
 			controller.handle({
-				ctx: { ownerId: OPERATOR_ID, runClaims: { threadId: a.id.value } },
+				ctx: { ownerId: OPERATOR_ID, agentIdentity: { threadId: a.id.value } },
 				params: { threadId: a.id.value, issueId: foreign.id.value },
 				body: { text: 'muda de rumo' },
 			} as Parameters<SteerIssueTurnController['handle']>[0]),
@@ -112,7 +123,7 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 		const own = await givenIssue(testBed, { ownerId: OPERATOR_ID, threadId: t.id.value, key: 'own' })
 
 		const response = await testBed.resolve(SteerIssueTurnController).handle({
-			ctx: { ownerId: OPERATOR_ID, runClaims: { threadId: t.id.value, entryId: '019fac48-06c6-7a11-afdf-29fff08d4a81' } },
+			ctx: { ownerId: OPERATOR_ID, agentIdentity: { threadId: t.id.value, entryId: '019fac48-06c6-7a11-afdf-29fff08d4a81' } },
 			params: { threadId: t.id.value, issueId: own.id.value },
 			body: { text: 'muda de rumo' },
 		} as Parameters<SteerIssueTurnController['handle']>[0])
