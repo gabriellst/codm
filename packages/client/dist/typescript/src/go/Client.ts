@@ -10,6 +10,7 @@ import {
 	forwardMessage,
 	getChannel,
 	getOrCreateChannel,
+	health,
 	listChannels,
 	listenEvents,
 	logoutChannel,
@@ -90,6 +91,10 @@ export class GoClient {
 
 	getOrCreateChannel(...args: Parameters<typeof getOrCreateChannel>): ReturnType<typeof getOrCreateChannel> {
 		return (getOrCreateChannel as (...a: any[]) => ReturnType<typeof getOrCreateChannel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	health(...args: Parameters<typeof health>): ReturnType<typeof health> {
+		return (health as (...a: any[]) => ReturnType<typeof health>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	listChannels(...args: Parameters<typeof listChannels>): ReturnType<typeof listChannels> {

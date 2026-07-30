@@ -36,6 +36,15 @@ var Module = fx.Module("shared",
 		fx.ResultTags(`group:"controllers"`),
 	)),
 
+	// Readiness Controller — GET /api/health, PUBLIC (see the controller's
+	// docblock): it is the one route the shell's supervisor can reach before any
+	// session or API key exists.
+	fx.Provide(fx.Annotate(
+		provideHealthController,
+		fx.As(new(types.Controller)),
+		fx.ResultTags(`group:"controllers"`),
+	)),
+
 	// Global auth chain (sanção #18): Session + APIKey, contributed to the
 	// core middleware group.
 	fx.Provide(fx.Annotate(
@@ -46,6 +55,13 @@ var Module = fx.Module("shared",
 	// Lifecycle hooks
 	fx.Invoke(registerDocsRoutes),
 )
+
+// provideHealthController hands the readiness controller the shared store's db
+// handle — the same *sql.DB every other consumer uses, so "SELECT 1 answers" is a
+// statement about the connection the process actually serves traffic on.
+func provideHealthController(store *sqlite.SqliteStore) *sharedcontrollers.HealthController {
+	return sharedcontrollers.NewHealthController(store.DB())
+}
 
 // newAuthMiddleware composes Session → APIKey as a single middleware so the
 // intra-chain order is deterministic (fx value groups have no ordering).

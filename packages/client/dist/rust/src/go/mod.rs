@@ -14111,6 +14111,81 @@ pub mod types {
             value.clone()
         }
     }
+    ///`HealthComponent`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "gate",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "detail": {
+    ///      "type": "string"
+    ///    },
+    ///    "gate": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "status": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct HealthComponent {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub detail: ::std::option::Option<::std::string::String>,
+        pub gate: bool,
+        pub status: ::std::string::String,
+    }
+    impl ::std::convert::From<&HealthComponent> for HealthComponent {
+        fn from(value: &HealthComponent) -> Self {
+            value.clone()
+        }
+    }
+    ///`HealthOutput`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "components",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "components": {
+    ///      "type": "object",
+    ///      "additionalProperties": {
+    ///        "$ref": "#/components/schemas/HealthComponent"
+    ///      }
+    ///    },
+    ///    "status": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct HealthOutput {
+        pub components: ::std::collections::HashMap<
+            ::std::string::String,
+            HealthComponent,
+        >,
+        pub status: ::std::string::String,
+    }
+    impl ::std::convert::From<&HealthOutput> for HealthOutput {
+        fn from(value: &HealthOutput) -> Self {
+            value.clone()
+        }
+    }
     ///`ImageMessageData`
     ///
     /// <details><summary>JSON schema</summary>
@@ -21592,6 +21667,44 @@ Sends a `GET` request to `/events`
         &'a self,
     ) -> Result<ResponseValue<types::ServerEvent>, Error<types::ErrorResponse>> {
         let url = format!("{}/events", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            400u16..=499u16 => {
+                Err(Error::ErrorResponse(ResponseValue::from_response(response).await?))
+            }
+            500u16..=599u16 => {
+                Err(Error::ErrorResponse(ResponseValue::from_response(response).await?))
+            }
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Readiness do gateway: o SQLite compartilhado responde (canal WhatsApp entra só como diagnóstico)
+
+Sends a `GET` request to `/health`
+
+*/
+    pub async fn health<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<types::HealthOutput>, Error<types::ErrorResponse>> {
+        let url = format!("{}/health", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(

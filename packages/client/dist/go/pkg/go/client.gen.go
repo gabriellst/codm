@@ -3415,6 +3415,19 @@ type GetOrCreateChannelOutput struct {
 // GroupRole defines model for GroupRole.
 type GroupRole string
 
+// HealthComponent defines model for HealthComponent.
+type HealthComponent struct {
+	Detail *string `json:"detail,omitempty"`
+	Gate   bool    `json:"gate"`
+	Status string  `json:"status"`
+}
+
+// HealthOutput defines model for HealthOutput.
+type HealthOutput struct {
+	Components map[string]HealthComponent `json:"components"`
+	Status     string                     `json:"status"`
+}
+
 // HistorySyncType defines model for HistorySyncType.
 type HistorySyncType string
 
@@ -6429,6 +6442,9 @@ type ClientInterface interface {
 	// ListenEvents request
 	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// Health request
+	Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SendAudioWithBody request with any body
 	SendAudioWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -6856,6 +6872,18 @@ func (c *Client) UnpinRemote(ctx context.Context, body UnpinRemoteJSONRequestBod
 
 func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListenEventsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewHealthRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -8066,6 +8094,33 @@ func NewListenEventsRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewHealthRequest generates requests for Health
+func NewHealthRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/health")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewSendAudioRequest calls the generic SendAudio builder with application/json body
 func NewSendAudioRequest(server string, body SendAudioJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -8983,6 +9038,9 @@ type ClientWithResponsesInterface interface {
 	// ListenEventsWithResponse request
 	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
 
+	// HealthWithResponse request
+	HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error)
+
 	// SendAudioWithBodyWithResponse request with any body
 	SendAudioWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendAudioResponse, error)
 
@@ -9627,6 +9685,37 @@ func (r ListenEventsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r ListenEventsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type HealthResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *HealthOutput
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r HealthResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r HealthResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r HealthResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -10495,6 +10584,15 @@ func (c *ClientWithResponses) ListenEventsWithResponse(ctx context.Context, reqE
 	return ParseListenEventsResponse(rsp)
 }
 
+// HealthWithResponse request returning *HealthResponse
+func (c *ClientWithResponses) HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error) {
+	rsp, err := c.Health(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseHealthResponse(rsp)
+}
+
 // SendAudioWithBodyWithResponse request with arbitrary body returning *SendAudioResponse
 func (c *ClientWithResponses) SendAudioWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendAudioResponse, error) {
 	rsp, err := c.SendAudioWithBody(ctx, contentType, body, reqEditors...)
@@ -11349,6 +11447,39 @@ func ParseListenEventsResponse(rsp *http.Response) (*ListenEventsResponse, error
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest ServerEvent
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseHealthResponse parses an HTTP response from a HealthWithResponse call
+func ParseHealthResponse(rsp *http.Response) (*HealthResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &HealthResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest HealthOutput
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

@@ -62,9 +62,17 @@ func (r *HttpRouter) RegisterControllers(controllers []types.Controller) {
 			handler = meta.Middlewares[i](handler)
 		}
 
-		// Apply global middlewares (outermost first)
-		for i := len(r.middlewares) - 1; i >= 0; i-- {
-			handler = r.middlewares[i](handler)
+		// Apply global middlewares (outermost first).
+		//
+		// A Public route skips THIS chain and only this one — the controller's own
+		// Middlewares above still wrap it. See types.ControllerMetadata.Public: the
+		// global chain is where the app contributes auth (Session → APIKey), and a
+		// readiness route that demands credentials can never tell a credential-less
+		// supervisor that the process came up.
+		if !meta.Public {
+			for i := len(r.middlewares) - 1; i >= 0; i-- {
+				handler = r.middlewares[i](handler)
+			}
 		}
 
 		r.mux.Handle(pattern, handler)

@@ -18,6 +18,23 @@ type ControllerMetadata struct {
 	Tags        []string // for grouping (mirrors swag tags)
 	Middlewares []Middleware
 
+	// Public opts this route OUT of the GLOBAL middleware chain (the one apps
+	// contribute through the "app_middlewares" value group — in codedm, Session →
+	// APIKey). It never opts out of the controller's OWN Middlewares.
+	//
+	// This is the Go twin of the TS side's "public controller". There, a controller
+	// that declares no `middlewares` and no `static mcpScopes` simply HAS an empty
+	// chain. Here, RegisterControllers applies the global chain to EVERY controller
+	// route, so opting out needs a mechanism. The one route that escapes today
+	// (/api/openapi.json) escapes by being registered straight on the mux by
+	// RegisterDocsRoutes — an accident of registration, not a mechanism.
+	//
+	// The motivating case is readiness: the supervisor asking "did this process
+	// finish booting?" holds no session and no API key yet, so demanding credentials
+	// to answer would mean the app can never learn that it is ready. Reach for Public
+	// only for that shape of route — process-level facts carrying no tenant content.
+	Public bool
+
 	// Spec-emission fields (mirror TS `inputSchema` / `outputSchema`).
 	//
 	// Request is the zero value of the request struct (nil if no body/params).
