@@ -46,6 +46,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: 'the SCHEDULED-COMMAND row is the subject (B3): the delegation case asserts the enqueued row `name` on `shared_scheduled_commands`, a column the probe does not expose; the envelope-guard case DOES use probe().snapshot()',
 	},
 	{
+		path: 'src/thread/repositories/ThreadRepository/DrizzleThreadRepository.test.ts',
+		why: 'the TWO-TABLE write of the Thread aggregate is the subject (B4): it asserts raw `thread_transcript_entries` columns (`id` = the id `recordEntry` minted, `text`) and the `thread_threads.version` bump surviving-or-not a rollback — columns the probe deliberately does not expose (it counts rows, it does not read them) — same exception class as Drizzle*Repository.test.ts, which this file IS, only living under `src/` rather than `core/`',
+	},
+	{
 		path: 'tests/kernel/DomainEventListByNameSince.test.ts',
 		why: 'raw db.update(events) write-only seed — backdates `occurred_at` timestamps to age event rows into/out of the sweep window while exercising DomainEventRepository.listByNameSince; no persisted-data read assertion goes through the raw client',
 	},

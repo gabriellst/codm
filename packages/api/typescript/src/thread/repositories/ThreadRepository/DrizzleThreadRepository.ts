@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { threads } from '@codedm/contracts/db'
+import { threads, transcriptEntries } from '@codedm/contracts/db'
 import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
-import { Thread, ThreadSchema, type MentionGate, type Participant } from '../../entities/Thread'
+import { Thread, ThreadSchema, type MentionGate, type Participant, type TranscriptEntry } from '../../entities/Thread'
 import { ThreadRepository } from './ThreadRepository'
 
 @injectable()
@@ -43,6 +43,14 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return result.data.map(row => this.toDomain(row))
 	}
 
+	/**
+	 * The thread row plus every entry the aggregate accumulated, on the SAME `dbc` (B4, decision 1).
+	 *
+	 * Order matters: the thread row first, then its children — so a reader that sees an entry always
+	 * sees the thread it hangs off. Ids come from `recordEntry`, never from here, which is the whole
+	 * difference from the `DrizzleTranscriptRepository.append()` this replaces (it minted with
+	 * `crypto.randomUUID()` inside the insert, so no aggregate could reference the row it was creating).
+	 */
 	async save(entity: Thread, tx?: DrizzleClient): Promise<Thread> {
 		entity.incrementVersion()
 		const dbc = tx ?? this.db
@@ -65,6 +73,11 @@ export class DrizzleThreadRepository extends ThreadRepository {
 						version: data.version,
 					},
 				})
+
+			const { entries } = entity.pullPendingWrites()
+			if (entries.length > 0) {
+				await dbc.insert(transcriptEntries).values(entries.map(entry => this.entryToPersistence(entry)))
+			}
 			return entity
 		})
 		if (!result.success) throw result.error
@@ -79,10 +92,41 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		if (!result.success) throw result.error
 	}
 
+	// ── Child reads ───────────────────────────────────────────────────────────────────────────────
+
+	async recentEntries(threadId: string, limit: number, tx?: DrizzleClient): Promise<TranscriptEntry[]> {
+		const dbc = tx ?? this.db
+		// DESC + limit is the only way to take the LAST N; `.reverse()` hands them back chronological,
+		// which is the order the agent's context window must read them in.
+		const rows = await dbc
+			.select()
+			.from(transcriptEntries)
+			.where(eq(transcriptEntries.threadId, threadId))
+			.orderBy(desc(transcriptEntries.at))
+			.limit(limit)
+		return rows.map(row => this.toEntry(row)).reverse()
+	}
+
+	async listEntries(threadId: string, tx?: DrizzleClient): Promise<TranscriptEntry[]> {
+		const dbc = tx ?? this.db
+		const rows = await dbc
+			.select()
+			.from(transcriptEntries)
+			.where(eq(transcriptEntries.threadId, threadId))
+			.orderBy(asc(transcriptEntries.at))
+		return rows.map(row => this.toEntry(row))
+	}
+
+	async findEntry(entryId: string, tx?: DrizzleClient): Promise<TranscriptEntry | undefined> {
+		const dbc = tx ?? this.db
+		const rows = await dbc.select().from(transcriptEntries).where(eq(transcriptEntries.id, entryId)).limit(1)
+		return rows[0] ? this.toEntry(rows[0]) : undefined
+	}
+
+	// ── Mapping ───────────────────────────────────────────────────────────────────────────────────
+
 	private toDomain(row: typeof threads.$inferSelect): Thread {
-		const mentionGate: MentionGate = row.mentionGateEnabled
-			? { enabled: true, tag: row.mentionGateTag ?? '' }
-			: { enabled: false }
+		const mentionGate: MentionGate = row.mentionGateEnabled ? { enabled: true, tag: row.mentionGateTag ?? '' } : { enabled: false }
 		const parsed = ThreadSchema.parse({
 			ownerId: row.ownerId,
 			channelId: row.channelId,
@@ -117,6 +161,44 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			version: entity.version,
+		}
+	}
+
+	private entryToPersistence(entry: TranscriptEntry): typeof transcriptEntries.$inferInsert {
+		return {
+			id: entry.entryId,
+			ownerId: entry.ownerId,
+			threadId: entry.threadId,
+			kind: entry.kind,
+			text: entry.text,
+			issueId: entry.issueId ?? null,
+			quotedEntryId: entry.quotedEntryId ?? null,
+			senderExternalId: entry.senderExternalId ?? null,
+			provider: entry.provider ?? null,
+			classification: entry.classification ?? null,
+			at: entry.at,
+		}
+	}
+
+	/**
+	 * NO casts, deliberately — `DrizzleTranscriptRepository.toRow` had four and every one was a no-op.
+	 * `thread_transcript_entries` declares `kind`, `provider` and `classification` with `$type<…>()`
+	 * (`schema-sqlite/thread.ts`), so the row is already narrowed and `as TranscriptKind` only hid that
+	 * fact — and hid it in the one place a real mismatch would matter.
+	 */
+	private toEntry(row: typeof transcriptEntries.$inferSelect): TranscriptEntry {
+		return {
+			entryId: row.id,
+			ownerId: row.ownerId,
+			threadId: row.threadId,
+			kind: row.kind,
+			text: row.text,
+			issueId: row.issueId ?? undefined,
+			quotedEntryId: row.quotedEntryId ?? undefined,
+			senderExternalId: row.senderExternalId ?? undefined,
+			provider: row.provider ?? undefined,
+			classification: row.classification ?? undefined,
+			at: row.at,
 		}
 	}
 }
