@@ -6,6 +6,9 @@
 //! test to emit `../commands/bindings.ts`. Keeping one constructor guarantees the
 //! running handler and the committed bindings never drift.
 
+mod boot;
+pub use boot::*;
+
 mod secrets;
 pub use secrets::*;
 
@@ -15,7 +18,9 @@ pub fn specta_builder() -> tauri_specta::Builder {
     tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
         secret_get,
         secret_set,
-        secret_delete
+        secret_delete,
+        boot_failures,
+        retry_boot
     ])
 }
 

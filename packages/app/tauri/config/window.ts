@@ -21,18 +21,39 @@ export const WINDOW = {
 	hiddenTitle: true,
 	// Nudge the traffic lights in/down so they vertically center in the taller custom header.
 	trafficLightPosition: { x: 19, y: 18 },
-	// BORN HIDDEN. The shell reveals the window only once every sidecar has answered its health probe
-	// (`src-tauri/src/sidecars/mod.rs` — `note_ready` / `reveal_main_window`). Without this the console
-	// painted the instant the webview existed, while the daemon was still applying migrations, so the
-	// first thing an operator saw was a UI querying a port nobody was listening on yet: failed reads, a
-	// dead SSE stream, and a dashboard that filled in seconds later if at all.
+	// BORN HIDDEN. The shell reveals this window only when EVERY sidecar has answered its health
+	// probe (`src-tauri/src/sidecars/gate.rs` — `ReadinessGate` → `Reveal::Main`). Without this the
+	// console painted the instant the webview existed, while the daemon was still applying
+	// migrations, so the first thing an operator saw was a UI querying a port nobody was listening
+	// on yet: failed reads, a dead SSE stream, and a dashboard that filled in seconds later if at all.
 	//
-	// A house standard rather than a per-product knob — every stamped app boots sidecars this way — and
-	// the reveal is FAIL-SAFE: a sidecar that never becomes healthy still opens the window (carrying its
-	// `sidecar:error` event), because an app with no window is the worse failure.
+	// A house standard rather than a per-product knob — every stamped app boots sidecars this way —
+	// and the reveal is now FAIL-CLOSED: a sidecar that never becomes healthy sends the boot to
+	// BOOT_ERROR_FRAME below and leaves THIS window hidden. Opening a console whose backends are
+	// dead was the older, worse failure — the operator got a silently broken dashboard.
 	visible: false,
 } as const
 
 /** Window FRAME — size + label. Genuine shell decisions (defaults, no repo-fact source);
  *  was `REPO.desktop.window`. The generated window `title` comes from `./app` DISPLAY_NAME. */
 export const WINDOW_FRAME = { label: 'main', width: 1280, height: 800, minWidth: 980, minHeight: 640 } as const
+
+/**
+ * The BOOT-ERROR splash — the window the readiness gate opens instead of the console when any
+ * sidecar fails to come up (`Reveal::BootError`). Born hidden exactly like the main window; only
+ * one of the two is ever revealed.
+ *
+ * `url` is a plain HTML file served from the console's `public/` (copied verbatim into
+ * `dist/client` by vite, served at the root in dev) — deliberately NOT a React route, because the
+ * console fires SDK queries on boot against precisely the backends that just failed. Its label must
+ * also appear in the generated capabilities: `core:default` (which covers `invoke`) is granted PER
+ * WINDOW, and without it the splash could not call `boot_failures` / `retry_boot`.
+ */
+export const BOOT_ERROR_FRAME = {
+	label: 'boot-error',
+	width: 720,
+	height: 520,
+	url: 'boot-error.html',
+	visible: false,
+	title: 'CodeDM — boot failed',
+} as const

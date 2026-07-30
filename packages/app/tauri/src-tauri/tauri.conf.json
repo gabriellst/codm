@@ -26,6 +26,14 @@
 					"y": 18
 				},
 				"visible": false
+			},
+			{
+				"label": "boot-error",
+				"width": 720,
+				"height": 520,
+				"url": "boot-error.html",
+				"visible": false,
+				"title": "CodeDM — boot failed"
 			}
 		],
 		"security": {

@@ -15,7 +15,6 @@
 //! `tauri::Builder` — `commands::specta_builder()` for the invoke handler,
 //! `sidecars::sidecars()` / `boot_sidecar()` in setup.
 
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
 use tauri::Manager;
@@ -54,16 +53,17 @@ pub fn run() {
             // client, opening no connection; requests simply fail until the sidecars answer.
             api::manage(app.handle());
 
-            // READINESS GATE — the main window is `"visible": false` in tauri.conf.json and is revealed
-            // by whichever sidecar finishes last (`sidecars::note_ready`). Painting the console before
-            // the daemon answered meant the operator's first sight of the app was a UI querying a port
-            // still applying migrations. EVERY exit path in `boot_sidecar` counts, failures included, so
-            // a sidecar that never comes up yields a visibly broken window rather than no window at all.
+            // READINESS GATE — both windows are `"visible": false` in tauri.conf.json, and whichever
+            // sidecar finishes LAST decides which one opens (`sidecars::ReadinessGate`). Painting the
+            // console before the daemon answered meant the operator's first sight of the app was a UI
+            // querying a port still applying migrations. Every exit path in `boot_sidecar` reports to
+            // the gate, and a single failure routes the boot to the error splash instead of the
+            // console — the `boot_failures` command reads the failures back out of this same gate.
             let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir);
-            let total = fleet.len();
-            let ready = Arc::new(AtomicUsize::new(0));
+            let gate = Arc::new(sidecars::ReadinessGate::new(fleet.len()));
+            app.manage(gate.clone());
             for sidecar in fleet {
-                sidecars::boot_sidecar(app.handle(), sidecar, ready.clone(), total);
+                sidecars::boot_sidecar(app.handle(), sidecar, gate.clone());
             }
             Ok(())
         })

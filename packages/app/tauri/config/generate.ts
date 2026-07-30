@@ -24,7 +24,7 @@ import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
-import { WINDOW, WINDOW_FRAME } from './window'
+import { BOOT_ERROR_FRAME, WINDOW, WINDOW_FRAME } from './window'
 
 // config/ → tauri → app → packages → repo root (four levels up). Output paths stay repo-relative
 // (derived from REPO.workspaces.appTauri.pkgRoot) so they resolve to the same src-tauri/ files.
@@ -111,6 +111,10 @@ export function renderTauriConf(): string {
 					// standard, not a per-product knob. Spread AFTER the size/label so it always wins.
 					...WINDOW,
 				},
+				// The boot-error splash — DECLARED, not built at runtime, so it inherits the same
+				// drift gate as the main window and can be named in capabilities. Born hidden like
+				// the main one: the readiness gate reveals exactly one of the two.
+				{ ...BOOT_ERROR_FRAME },
 			],
 			security: {
 				csp: `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ${connectSrc} ipc: http://ipc.localhost`,
@@ -152,7 +156,10 @@ export function renderCapabilities(): string {
 		identifier: 'default',
 		description:
 			'GENERATED from config/capabilities.ts (bun desktop:generate) — permissions derive from the capabilities the console consumes; do NOT hand-edit.',
-		windows: [WINDOW_FRAME.label],
+		// BOTH windows. `core:default` — which is what covers `invoke` — is granted PER WINDOW, so
+		// without the splash's label here the boot-error page could not call `boot_failures` /
+		// `retry_boot`, and the one screen that exists to explain a failed boot would render empty.
+		windows: [WINDOW_FRAME.label, BOOT_ERROR_FRAME.label],
 		permissions,
 	}
 	return `${JSON.stringify(capability, null, '\t')}\n`

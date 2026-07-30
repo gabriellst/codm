@@ -28,6 +28,17 @@ async secretDelete(key: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async bootFailures() : Promise<SidecarFailure[]> {
+    return await TAURI_INVOKE("boot_failures");
+},
+/**
+ * Retry = boot again. `restart()` and nothing else: the sidecar descriptors are derived in `setup`
+ * (data dir, resource dir), and retaining them just to re-spawn would be inventing state to
+ * reimplement — worse — what the process already does for free.
+ */
+async retryBoot() : Promise<void> {
+    await TAURI_INVOKE("retry_boot");
 }
 }
 
@@ -41,7 +52,18 @@ async secretDelete(key: string) : Promise<Result<null, string>> {
 
 /** user-defined types **/
 
-
+/**
+ * What a sidecar that never came up leaves for the operator to read.
+ */
+export type SidecarFailure = { name: string; 
+/**
+ * Why we gave up: the spawn failed, or no healthy answer within the budget.
+ */
+reason: string; 
+/**
+ * The retained tail of captured stderr, in chronological order.
+ */
+stderr: string[] }
 
 /** tauri-specta globals **/
 

@@ -11,6 +11,7 @@ import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
 import { SIDECARS } from './sidecars'
+import { BOOT_ERROR_FRAME, WINDOW_FRAME } from './window'
 
 // config/ → tauri → app → packages → repo root (four levels up).
 const ROOT = resolve(import.meta.dirname, '..', '..', '..', '..')
@@ -49,9 +50,17 @@ describe('desktop config (packages/app/tauri/config)', () => {
 	it('DSK-04: tauri.conf reflects the manifest — externalBin + identity + staged resources', () => {
 		const conf = JSON.parse(renderTauriConf()) as {
 			identifier: string
+			app: { windows: { label: string; visible: boolean; url?: string }[] }
 			bundle: { externalBin: string[]; resources: Record<string, string> }
 		}
 		expect(conf.identifier).toBe(IDENTIFIER)
+		// TWO windows, and BOTH born hidden: the readiness gate reveals exactly one of them
+		// (Reveal::Main | Reveal::BootError). A visible main window here would resurrect the
+		// fail-open the gate exists to kill — the console painting over dead backends.
+		expect(conf.app.windows.map(w => w.label)).toEqual([WINDOW_FRAME.label, BOOT_ERROR_FRAME.label])
+		expect(conf.app.windows.map(w => w.visible)).toEqual([false, false])
+		// The splash is a static file from the console's public/, never a React route.
+		expect(conf.app.windows.find(w => w.label === BOOT_ERROR_FRAME.label)?.url).toBe('boot-error.html')
 		expect(conf.bundle.externalBin).toEqual(SIDECARS.map(s => `binaries/${REPO.brand}-${s.role}`))
 		// The staged assets a compiled sidecar reads from disk: the Drizzle migrations, and the
 		// daemon's libsql native-prebuild dir — which is ALSO its spawn cwd (Sidecar.cwd in mod.rs).
@@ -70,9 +79,12 @@ describe('desktop config (packages/app/tauri/config)', () => {
 			expect(map[cap], `capability '${cap}' has no permission mapping in ./capabilities`).toBeDefined()
 		}
 		// Rendering is behaviour-preserving: core:default + each capability's mapped permissions, in order.
-		const rendered = JSON.parse(renderCapabilities()) as { permissions: string[] }
+		const rendered = JSON.parse(renderCapabilities()) as { permissions: string[]; windows: string[] }
 		const expected = ['core:default', ...CAPABILITIES.flatMap(cap => map[cap] ?? [])]
 		expect(rendered.permissions).toEqual(expected)
+		// BOTH window labels — `core:default` (which covers `invoke`) is granted per window, so
+		// dropping the splash's label would leave the boot-error page unable to call boot_failures.
+		expect(rendered.windows).toEqual([WINDOW_FRAME.label, BOOT_ERROR_FRAME.label])
 	})
 
 	it('DSK-05: desktop dev serves the root-based SPA (devUrl = ROOT, beforeDevCommand = dev-spa target)', () => {

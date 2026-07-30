@@ -3,7 +3,8 @@
 	"identifier": "default",
 	"description": "GENERATED from config/capabilities.ts (bun desktop:generate) — permissions derive from the capabilities the console consumes; do NOT hand-edit.",
 	"windows": [
-		"main"
+		"main",
+		"boot-error"
 	],
 	"permissions": [
 		"core:default",

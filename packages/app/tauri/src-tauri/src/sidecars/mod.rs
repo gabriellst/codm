@@ -11,7 +11,6 @@
 //! (same two roles, same ports). The readiness PATH is in NEITHER list any more: it
 //! lives in the OpenAPI contract and arrives through the generated method (spec E2).
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -20,6 +19,9 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::api::Api;
+
+mod gate;
+pub use gate::*;
 
 /// Which SDK sub-client answers for this process. A fact of the SHELL (which binary is which
 /// service), not of the contract: the health PATH lives in the OpenAPI spec and arrives through the
@@ -124,39 +126,41 @@ async fn probe(api: &Api, service: SidecarService) -> bool {
     }
 }
 
-/// Reveal the main window. Idempotent — `show()` on an already-visible window is a no-op, and the
-/// readiness path can reach this from either the success or the give-up branch.
-fn reveal_main_window(app: &tauri::AppHandle) {
-    match app.get_webview_window("main") {
+/// Reveal the window the gate chose. Idempotent — `show()` on an already-visible window is a no-op.
+///
+/// The main window appears ONLY through `Reveal::Main`. The give-up path opens `boot-error` —
+/// declared in `tauri.conf.json` with `visible: false`, exactly like the main one — and the main
+/// window STAYS hidden: a dashboard firing queries at dead ports is worse than a screen that says
+/// what broke.
+fn apply(app: &tauri::AppHandle, reveal: Reveal) {
+    let label = match &reveal {
+        Reveal::Main => "main",
+        Reveal::BootError(failures) => {
+            // The splash reads the failures back through `boot_failures` (PULL — an emit fired
+            // before that page loads would be lost); this line is the same fact in the shell log,
+            // for whoever is tailing a terminal instead of looking at the window.
+            let names: Vec<&str> = failures.iter().map(|f| f.name.as_str()).collect();
+            log::error!("boot failed for {} sidecar(s): {}", failures.len(), names.join(", "));
+            "boot-error"
+        }
+    };
+    match app.get_webview_window(label) {
         Some(window) => {
             let _ = window.show();
             let _ = window.set_focus();
         }
-        None => log::warn!("main window not found — nothing to reveal"),
+        None => log::error!("window '{label}' does not exist — check tauri.conf.json (generated)"),
     }
 }
 
-/// READINESS GATE. The window starts hidden (`"visible": false` in tauri.conf.json) and is revealed
-/// only once every sidecar has answered its health probe.
-///
-/// Before this the shell painted the console the moment the webview existed, while the daemon was
-/// still applying migrations — so the first thing the operator saw was a UI firing queries at a port
-/// nobody was listening on yet: failed reads, a dead SSE stream, and a dashboard that filled in
-/// several seconds later, if at all. Waiting is both more honest and cheaper than the reconnect
-/// machinery the alternative would need.
-///
-/// `ready` counts the sidecars that have PASSED; `total` is how many must. Whoever arrives last
-/// opens the window.
-fn note_ready(app: &tauri::AppHandle, ready: &Arc<AtomicUsize>, total: usize) {
-    if ready.fetch_add(1, Ordering::SeqCst) + 1 >= total {
-        reveal_main_window(app);
-    }
-}
-
-/// Spawn one sidecar and poll its health URL until ready (or timeout). Emits
+/// Spawn one sidecar and poll its health operation until ready (or timeout). Emits
 /// `sidecar:ready` / `sidecar:error` to the webview so the console can render
 /// boot progress honestly instead of spinning forever.
-pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicUsize>, total: usize) {
+///
+/// EVERY exit path reports to the `gate` — success through `note_ready`, the three failure paths
+/// through `note_failed` — and whoever arrives last gets the `Reveal` that decides which window the
+/// operator actually sees.
+pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, gate: Arc<ReadinessGate>) {
     let command = match app.shell().sidecar(sidecar.name) {
         Ok(cmd) => {
             let cmd = cmd.envs(sidecar.env.clone());
@@ -167,9 +171,12 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicU
             }
         }
         Err(e) => {
-            let _ = app.emit("sidecar:error", format!("{}: spawn setup failed: {e}", sidecar.name));
-            // Count it, or the gate below never reaches `total` and the window stays hidden forever.
-            note_ready(app, &ready, total);
+            let reason = format!("spawn setup failed: {e}");
+            let _ = app.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
+            // Report it, or the gate never reaches `total` and NO window is ever revealed.
+            if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+                apply(app, reveal);
+            }
             return;
         }
     };
@@ -177,20 +184,27 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicU
     let (mut rx, _child) = match command.spawn() {
         Ok(pair) => pair,
         Err(e) => {
-            let _ = app.emit("sidecar:error", format!("{}: spawn failed: {e}", sidecar.name));
-            // Same reason as above: every exit from this function must advance the readiness count.
-            note_ready(app, &ready, total);
+            let reason = format!("spawn failed: {e}");
+            let _ = app.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
+            // Same reason as above: every exit from this function must report to the gate.
+            if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+                apply(app, reveal);
+            }
             return;
         }
     };
 
-    // Forward sidecar stderr into the shell log so crashes are diagnosable.
+    // Forward sidecar stderr into the shell log AND into the gate's ring buffer — the log is for
+    // the developer tailing a terminal, the ring is what the boot-error splash shows the operator.
     let log_handle = app.clone();
     let log_name = sidecar.name;
+    let log_gate = gate.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
             if let CommandEvent::Stderr(line) = event {
-                log::warn!("[{}] {}", log_name, String::from_utf8_lossy(&line));
+                let line = String::from_utf8_lossy(&line);
+                log::warn!("[{}] {}", log_name, line);
+                log_gate.record_stderr(log_name, line.trim_end());
                 let _ = log_handle; // handle kept alive for the sidecar's lifetime
             }
         }
@@ -208,21 +222,23 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicU
             if probe(&api, sidecar.service).await {
                 let _ = health_handle.emit("sidecar:ready", sidecar.name);
                 log::info!("[{}] ready on :{}", sidecar.name, sidecar.port);
-                note_ready(&health_handle, &ready, total);
+                if let Some(reveal) = gate.note_ready(sidecar.name) {
+                    apply(&health_handle, reveal);
+                }
                 return;
             }
             if Instant::now() >= deadline {
-                let _ = health_handle.emit(
-                    "sidecar:error",
-                    format!("{}: no healthy response from :{} within 60s", sidecar.name, sidecar.port),
-                );
-                // REVEAL ANYWAY. A sidecar that never comes up must not leave the operator staring at
-                // a dock icon with no window and no way to learn why — a visibly broken console beats
-                // an invisible one, and the `sidecar:error` event above is what the UI renders. This
-                // is why the gate counts through `note_ready` rather than waiting on every probe: the
-                // give-up path has to be able to open the window too.
-                log::warn!("[{}] never became healthy — revealing the window regardless", sidecar.name);
-                note_ready(&health_handle, &ready, total);
+                let reason = format!("no healthy response from :{} within 60s", sidecar.port);
+                let _ = health_handle.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
+                // NO LONGER REVEALED ANYWAY. This branch used to call the same `note_ready` as the
+                // success path, so a dead sidecar still opened the console — the operator got a
+                // dashboard querying ports nobody was listening on, with the reason buried in an
+                // event the UI may never have rendered. The give-up now reports a FAILURE, and the
+                // gate sends the last arrival to the boot-error splash instead.
+                log::warn!("[{}] never became healthy — routing boot to the error splash", sidecar.name);
+                if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+                    apply(&health_handle, reveal);
+                }
                 return;
             }
             tokio::time::sleep(Duration::from_millis(500)).await;
