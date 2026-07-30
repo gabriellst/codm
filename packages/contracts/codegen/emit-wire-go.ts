@@ -1,15 +1,9 @@
 import { mkdir, writeFile, rm, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-	parseContractsOpenapi,
-	type ParsedEnum,
-	type ParsedUnion,
-	type ParsedEvent,
-	type FieldType,
-	type EventField,
-} from './lib/parse-openapi'
+import { parseContractsOpenapi, type ParsedEnum, type ParsedUnion, type ParsedEvent, type FieldType } from './lib/parse-openapi'
 import { assertIntegrationWireNames } from './lib/assert-wire-names'
+import { ENVELOPE_TSP_FIELDS, payloadFieldsOf } from './lib/envelope'
 import { assertUnionSlotOwners } from './lib/union-slots'
 import { REPO } from '../../../template.config'
 
@@ -125,13 +119,6 @@ export function emitGoUnions(unions: ParsedUnion[]): string {
 	return lines.join('\n')
 }
 
-const ENVELOPE_FIELDS = new Set(['name', 'entityId', 'ownerId', 'occurredAt'])
-
-/** Fields that make up an event's payload struct: the model's OWN declarations minus the discriminator + entity id. */
-function payloadFieldsOf(ev: ParsedEvent): EventField[] {
-	return ev.ownFields.filter(f => f.name !== 'name' && f.name !== 'entityId')
-}
-
 /**
  * `// @union` / `// @variant` annotation block for a payload struct — syntax identical to the
  * hand-written medscall style (internal/channel/events/message_received.go), so the pkg/openapi
@@ -186,7 +173,7 @@ export function emitGoEvents(events: ParsedEvent[]): string {
 		lines.push(`\tOccurredAt time.Time \`json:"occurredAt"\``)
 		// Payload fields (everything that's not envelope or name)
 		for (const f of ev.fields) {
-			if (ENVELOPE_FIELDS.has(f.name)) continue
+			if (ENVELOPE_TSP_FIELDS.has(f.name)) continue
 			// The FLAT event struct carries the EventName() discriminator method; a verbatim
 			// payload field named `eventName` (channel_special_platform_event.received) would
 			// collide with it, so ONLY the flat struct renames the Go ident — the json tag

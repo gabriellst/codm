@@ -11,6 +11,7 @@ import {
 	type EventField,
 } from './lib/parse-openapi'
 import { assertIntegrationWireNames } from './lib/assert-wire-names'
+import { payloadFieldsOf } from './lib/envelope'
 import { assertUnionSlotOwners, type UnionSlotDecl, type UnionVariantDecl } from './lib/union-slots'
 import { REPO } from '../../../template.config'
 
@@ -156,10 +157,8 @@ export function emitTsEvents(events: ParsedEvent[]): Record<string, string> {
 	const files: Record<string, string> = {}
 
 	for (const ev of events) {
-		// Payload = the model's OWN declarations (declaration order), minus the wire
-		// discriminator + entity id. Envelope fields a model explicitly REDECLARES
-		// (verbatim payloads carrying ownerId/occurredAt inside the payload) stay in.
-		const payloadFields = ev.ownFields.filter(f => f.name !== 'name' && f.name !== 'entityId')
+		// The canonical payload projection (lib/envelope.ts) — shared with every emitter.
+		const payloadFields = payloadFieldsOf(ev)
 
 		const enumRefs = payloadFields.flatMap(f => collectEnumRefs(f.type))
 		const enumImports = [...new Set(enumRefs)].sort()
@@ -383,8 +382,8 @@ export function emitTsInProcess(events: ParsedEvent[], workspaces: Record<string
 
 	for (const ev of slotted) {
 		const model = ev.modelName.replace(/Event$/, '')
-		// The same payload projection `emitTsEvents` uses — the arms extend THAT object.
-		const payloadFields = ev.ownFields.filter(f => f.name !== 'name' && f.name !== 'entityId')
+		// The same payload projection `emitTsEvents` uses (lib/envelope.ts) — the arms extend THAT object.
+		const payloadFields = payloadFieldsOf(ev)
 		const fieldByName = new Map(payloadFields.map(f => [f.name, f]))
 		const primary = primarySlotOf(ev.unionSlots)
 		const secondaries = ev.unionSlots.filter(s => s.field !== primary.field)
