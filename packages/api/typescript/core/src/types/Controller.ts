@@ -72,6 +72,25 @@ export abstract class Controller<
 	middlewares: (Middleware | MiddlewareClass)[] = []
 	skipMiddlewares: (Middleware | MiddlewareClass)[] = []
 
+	/**
+	 * WHICH declared tool surfaces expose this operation as a model-callable MCP tool.
+	 *
+	 * `static`, and the difference from `middlewares` right above is the whole reason: `middlewares` is
+	 * a property of the RUNNING controller (each instance may be re-wired by the router), while "is
+	 * this endpoint exposed as a tool" is a property of the CLASS — read by the OpenAPI emitter during
+	 * the scan, and by a runtime scan over the `controllers/index.ts` barrels, neither of which wants
+	 * to construct anything to ask the question.
+	 *
+	 * `readonly string[]` and not an enum: core does not know what this product's surfaces are called.
+	 * The product tightens it (`static override mcpScopes = [McpScope.ISSUE_HANDLING]`), and the
+	 * assignment typechecks because the enum's members are strings.
+	 *
+	 * ABSENT IS THE DEFAULT AND ABSENT MEANS NOT EXPOSED. Measured: with no filter,
+	 * `@kubb/plugin-mcp` turns every operation in the spec into a tool. The security property comes
+	 * ENTIRELY from this being opt-in, per class, in the file a reviewer is already reading.
+	 */
+	static readonly mcpScopes?: readonly string[]
+
 	// Base Properties
 	readonly errorMapper = GlobalErrorMapper
 	readonly errors: AllErrors[] = []

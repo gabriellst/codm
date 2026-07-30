@@ -8,6 +8,7 @@ import { z, type ZodType } from 'zod'
 import { OpenAPIV3 } from 'openapi-types'
 import { AllErrors, GlobalErrorMapper } from './GlobalErrorMapper'
 import { mcpScopeRegistrySnapshot, mcpScopesFor } from './McpScopeRegistry'
+import { operationIdOf } from './McpExposure'
 import { API_PUBLIC } from './paths'
 
 const SPECIFICATION_OUTPUT_DIR = join(API_PUBLIC, 'docs')
@@ -543,7 +544,7 @@ export class OpenAPI {
 	 */
 	private processDiscriminatedUnions(jsonSchema: Record<string, unknown>, zodSchema: ZodType, parentName: string): Record<string, unknown> {
 		const def = (zodSchema as { _def?: ZodDef & { discriminator?: string; options?: ZodType[] } })._def
-		if (!def || def.type !== 'union' || !def.discriminator || !Array.isArray(def.options)) {
+		if (def?.type !== 'union' || !def.discriminator || !Array.isArray(def.options)) {
 			return jsonSchema
 		}
 
@@ -801,7 +802,12 @@ export class OpenAPI {
 
 		this.spec.paths[parsedParamsPath] = {
 			...(this.spec.paths[parsedParamsPath] ?? {}),
-			...Object.fromEntries(methods.map(method => [method, this.buildOperation(controller, router, method)])),
+			// `String(method)` is `local/no-enum-widening`'s own sanctioned opt-out: `methods` is
+			// `HttpMethod[]` (a closed union) and `buildOperation` takes a plain `string`. PRE-EXISTING
+			// violation, surfaced here only because this is the first change to stage the file. Typing
+			// `buildOperation` as `HttpMethod` is the real fix, but it cascades into `buildOperationId`
+			// and then `operationIdOf`, whose signature B2 T5 consumes — follow-up, not this commit.
+			...Object.fromEntries(methods.map(method => [method, this.buildOperation(controller, router, String(method))])),
 		}
 	}
 
@@ -874,13 +880,12 @@ export class OpenAPI {
 	}
 
 	private buildOperationId(controller: Controller, method: string): string {
-		const baseName = controller.constructor.name.replace('Controller', '')
-		// If controller handles multiple methods, include method in operationId to make it unique
+		// THE rule, and it now has exactly one home (`utils/McpExposure.ts#operationIdOf`). It used to be
+		// spelled here and copied by hand into `agent/mcp/manifest.ts`, with an architecture test
+		// asserting set-equality between the two copies — a referee between two truths instead of one
+		// truth with two callers.
 		const methods = Array.isArray(controller.method) ? controller.method : [controller.method]
-		if (methods.length > 1) {
-			return `${baseName}${method.charAt(0).toUpperCase() + method.slice(1)}`
-		}
-		return baseName
+		return operationIdOf(controller, method, methods)
 	}
 
 	private buildRequestParams(controller: Controller): OpenAPIV3.ParameterObject[] {
