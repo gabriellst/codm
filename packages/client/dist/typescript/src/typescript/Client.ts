@@ -8,6 +8,7 @@ import {
 	configureMentionGate,
 	createIssue,
 	createOwner,
+	deleteThread,
 	detectProviders,
 	disableOwner,
 	enableOwner,
@@ -92,6 +93,10 @@ export class TypescriptClient {
 
 	createOwner(...args: Parameters<typeof createOwner>): ReturnType<typeof createOwner> {
 		return (createOwner as (...a: any[]) => ReturnType<typeof createOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	deleteThread(...args: Parameters<typeof deleteThread>): ReturnType<typeof deleteThread> {
+		return (deleteThread as (...a: any[]) => ReturnType<typeof deleteThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	detectProviders(...args: Parameters<typeof detectProviders>): ReturnType<typeof detectProviders> {

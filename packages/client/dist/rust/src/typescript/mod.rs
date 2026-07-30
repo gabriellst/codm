@@ -271,6 +271,8 @@ pub mod types {
     ///    "TERMINAL_ALREADY_RUNNING",
     ///    "TERMINAL_SPAWN_FAILED",
     ///    "THREAD_ALREADY_ATTACHED",
+    ///    "THREAD_ALREADY_DELETED",
+    ///    "THREAD_HAS_ACTIVE_WORK",
     ///    "THREAD_NOT_FOUND",
     ///    "THREAD_NOT_PAUSED",
     ///    "THREAD_PAUSED",
@@ -435,6 +437,10 @@ pub mod types {
         TerminalSpawnFailed,
         #[serde(rename = "THREAD_ALREADY_ATTACHED")]
         ThreadAlreadyAttached,
+        #[serde(rename = "THREAD_ALREADY_DELETED")]
+        ThreadAlreadyDeleted,
+        #[serde(rename = "THREAD_HAS_ACTIVE_WORK")]
+        ThreadHasActiveWork,
         #[serde(rename = "THREAD_NOT_FOUND")]
         ThreadNotFound,
         #[serde(rename = "THREAD_NOT_PAUSED")]
@@ -548,6 +554,8 @@ pub mod types {
                 Self::TerminalAlreadyRunning => f.write_str("TERMINAL_ALREADY_RUNNING"),
                 Self::TerminalSpawnFailed => f.write_str("TERMINAL_SPAWN_FAILED"),
                 Self::ThreadAlreadyAttached => f.write_str("THREAD_ALREADY_ATTACHED"),
+                Self::ThreadAlreadyDeleted => f.write_str("THREAD_ALREADY_DELETED"),
+                Self::ThreadHasActiveWork => f.write_str("THREAD_HAS_ACTIVE_WORK"),
                 Self::ThreadNotFound => f.write_str("THREAD_NOT_FOUND"),
                 Self::ThreadNotPaused => f.write_str("THREAD_NOT_PAUSED"),
                 Self::ThreadPaused => f.write_str("THREAD_PAUSED"),
@@ -640,6 +648,8 @@ pub mod types {
                 "TERMINAL_ALREADY_RUNNING" => Ok(Self::TerminalAlreadyRunning),
                 "TERMINAL_SPAWN_FAILED" => Ok(Self::TerminalSpawnFailed),
                 "THREAD_ALREADY_ATTACHED" => Ok(Self::ThreadAlreadyAttached),
+                "THREAD_ALREADY_DELETED" => Ok(Self::ThreadAlreadyDeleted),
+                "THREAD_HAS_ACTIVE_WORK" => Ok(Self::ThreadHasActiveWork),
                 "THREAD_NOT_FOUND" => Ok(Self::ThreadNotFound),
                 "THREAD_NOT_PAUSED" => Ok(Self::ThreadNotPaused),
                 "THREAD_PAUSED" => Ok(Self::ThreadPaused),
@@ -9002,6 +9012,41 @@ Sends a `POST` request to `/v1/threads`
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
             .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Apagar uma conversa configurada — soft delete, bloqueado por trabalho vivo (C-DEL)
+
+Sends a `DELETE` request to `/v1/threads/{threadId}`
+
+*/
+    pub async fn delete_thread<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}", self.baseurl, encode_path(& thread_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .delete(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;

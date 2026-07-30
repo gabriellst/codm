@@ -89,6 +89,8 @@ const (
 	TERMINALALREADYRUNNING          ApiErrors = "TERMINAL_ALREADY_RUNNING"
 	TERMINALSPAWNFAILED             ApiErrors = "TERMINAL_SPAWN_FAILED"
 	THREADALREADYATTACHED           ApiErrors = "THREAD_ALREADY_ATTACHED"
+	THREADALREADYDELETED            ApiErrors = "THREAD_ALREADY_DELETED"
+	THREADHASACTIVEWORK             ApiErrors = "THREAD_HAS_ACTIVE_WORK"
 	THREADNOTFOUND                  ApiErrors = "THREAD_NOT_FOUND"
 	THREADNOTPAUSED                 ApiErrors = "THREAD_NOT_PAUSED"
 	THREADPAUSED                    ApiErrors = "THREAD_PAUSED"
@@ -240,6 +242,10 @@ func (e ApiErrors) Valid() bool {
 	case TERMINALSPAWNFAILED:
 		return true
 	case THREADALREADYATTACHED:
+		return true
+	case THREADALREADYDELETED:
+		return true
+	case THREADHASACTIVEWORK:
 		return true
 	case THREADNOTFOUND:
 		return true
@@ -1733,6 +1739,9 @@ type ClientInterface interface {
 
 	AttachThread(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteThread request
+	DeleteThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListArtifacts request
 	ListArtifacts(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2140,6 +2149,18 @@ func (c *Client) AttachThreadWithBody(ctx context.Context, contentType string, b
 
 func (c *Client) AttachThread(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAttachThreadRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteThreadRequest(c.Server, threadId)
 	if err != nil {
 		return nil, err
 	}
@@ -3342,6 +3363,40 @@ func NewAttachThreadRequestWithBody(server string, contentType string, body io.R
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteThreadRequest generates requests for DeleteThread
+func NewDeleteThreadRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -4664,6 +4719,9 @@ type ClientWithResponsesInterface interface {
 
 	AttachThreadWithResponse(ctx context.Context, body AttachThreadJSONRequestBody, reqEditors ...RequestEditorFn) (*AttachThreadResponse, error)
 
+	// DeleteThreadWithResponse request
+	DeleteThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*DeleteThreadResponse, error)
+
 	// ListArtifactsWithResponse request
 	ListArtifactsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListArtifactsResponse, error)
 
@@ -5415,6 +5473,36 @@ func (r AttachThreadResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r AttachThreadResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteThreadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteThreadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteThreadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteThreadResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -6788,6 +6876,15 @@ func (c *ClientWithResponses) AttachThreadWithResponse(ctx context.Context, body
 	return ParseAttachThreadResponse(rsp)
 }
 
+// DeleteThreadWithResponse request returning *DeleteThreadResponse
+func (c *ClientWithResponses) DeleteThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*DeleteThreadResponse, error) {
+	rsp, err := c.DeleteThread(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteThreadResponse(rsp)
+}
+
 // ListArtifactsWithResponse request returning *ListArtifactsResponse
 func (c *ClientWithResponses) ListArtifactsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListArtifactsResponse, error) {
 	rsp, err := c.ListArtifacts(ctx, threadId, reqEditors...)
@@ -7711,6 +7808,32 @@ func ParseAttachThreadResponse(rsp *http.Response) (*AttachThreadResponse, error
 		var dest struct {
 			ThreadId openapi_types.UUID `json:"threadId"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteThreadResponse parses an HTTP response from a DeleteThreadWithResponse call
+func ParseDeleteThreadResponse(rsp *http.Response) (*DeleteThreadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteThreadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
