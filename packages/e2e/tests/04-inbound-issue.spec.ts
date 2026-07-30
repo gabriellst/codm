@@ -101,6 +101,7 @@ test('inbound message → issue appears with slug label → session runs', async
 	// the first producer of that kind and a strictly better proof: it means the agent SPOKE, not merely
 	// that a classifier annotated a row.
 	expect(chat.transcript.some(entry => entry.kind === 'SYSTEM')).toBe(true)
-	// Live session ⇒ the composer is in whisper (STEER) mode, not paused/direct.
-	expect(chat.composerMode).toBe('STEER')
+	// Live session ⇒ the composer DEFAULTS to DIRECT (the founder's rule in GetSessionChat: a running
+	// thread is a live conversation, so Enter talks to the people in it; STEER is the paused default).
+	expect(chat.composerMode).toBe('DIRECT')
 })
