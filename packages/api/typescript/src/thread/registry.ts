@@ -20,6 +20,7 @@ import {
 import { OpenIssuesReader, DrizzleOpenIssuesReader, MockOpenIssuesReader } from './services/OpenIssuesReader'
 import { ChannelConnectivity, DrizzleChannelConnectivity, MockChannelConnectivity } from './services/ChannelConnectivity'
 import { GroupMemberReader, DrizzleGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
+import { ThreadStatusDeriver, DrizzleThreadStatusDeriver, MockThreadStatusDeriver } from './services/ThreadStatusDeriver'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
@@ -54,4 +55,7 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// Group-member hydration reads the Go gateway `remote_memberships` read model: real in
 	// real+integration, empty in mock.
 	{ token: GroupMemberReader, mock: MockGroupMemberReader, integration: DrizzleGroupMemberReader, real: DrizzleGroupMemberReader },
+	// Derived thread status: real table reads in real+integration, IDLE in mock. The seam exists because
+	// the three READS behind the precedence were duplicated at every call site (spec decision 7).
+	{ token: ThreadStatusDeriver, mock: MockThreadStatusDeriver, integration: DrizzleThreadStatusDeriver, real: DrizzleThreadStatusDeriver },
 ])

@@ -2,8 +2,16 @@ import { injectable } from 'tsyringe-neo'
 import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codedm/core-typescript'
 import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codedm/contracts/db'
-import { ThreadStatus, ChannelKind, ChannelStatus, IssueStatus, ProviderKind, StopKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
-import { deriveThreadStatus } from '@shared/services'
+import {
+	ThreadStatus,
+	ChannelKind,
+	ChannelStatus,
+	IssueStatus,
+	ProviderKind,
+	StopKind,
+	TranscriptKind,
+} from '@codedm/contracts-typescript/wire/enums'
+import { ThreadStatusDeriver } from '@thread/services/ThreadStatusDeriver'
 
 const ThreadSummarySchema = z.object({
 	threadId: z.uuid(),
@@ -18,9 +26,7 @@ const ThreadSummarySchema = z.object({
 export const GetHomeDashboardInputSchema = z.object({ ownerId: z.uuid() })
 export const GetHomeDashboardOutputSchema = z.object({
 	agentsRunningNow: z.number().int(),
-	needsYou: z
-		.object({ threadId: z.uuid(), threadDisplayName: z.string(), stopKinds: z.array(z.enum(StopKind)) })
-		.optional(),
+	needsYou: z.object({ threadId: z.uuid(), threadDisplayName: z.string(), stopKinds: z.array(z.enum(StopKind)) }).optional(),
 	/**
 	 * EVERY thread of the owner — the sidebar's conversation list (F1).
 	 *
@@ -53,7 +59,10 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 	readonly inputSchema = GetHomeDashboardInputSchema
 	readonly outputSchema = GetHomeDashboardOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(
+		private readonly db: DrizzleClient,
+		private readonly statuses: ThreadStatusDeriver,
+	) {
 		super()
 	}
 
@@ -76,14 +85,17 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.leftJoin(channels, eq(threads.channelId, channels.id))
 			.where(eq(threads.ownerId, input.ownerId))
 
-		const openStops = await this.db.select().from(stops).where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
+		const openStops = await this.db
+			.select()
+			.from(stops)
+			.where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
 
 		// Status is DERIVED, never read from `threads.status` — that column only ever holds IDLE or
 		// PAUSED (nothing stamps it when work starts), so filtering it for RUNNING/NEEDS_ATTENTION
 		// matched nothing and "active sessions" was permanently empty while the headline right above it
-		// counted a working agent. Both facts come from queries this handler already makes.
-		const threadsWithWork = new Set(allIssues.filter(i => i.status === IssueStatus.WORKING && !i.archived).map(i => i.threadId))
-		const threadsWithStop = new Set(openStops.map(s => s.threadId))
+		// counted a working agent. One batched call for the whole owner (B4, spec decision 7): the three
+		// reads behind the precedence live in `ThreadStatusDeriver`, not here.
+		const statuses = await this.statuses.forOwner(input.ownerId)
 
 		const toSummary = (t: (typeof threadRows)[number]) => ({
 			threadId: t.threadId,
@@ -91,11 +103,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			channelKind: (t.channelKind ?? ChannelKind.WHATSAPP) as ChannelKind,
 			workspacePath: t.workspacePath ?? '',
 			providers: t.providers as ProviderKind[],
-			status: deriveThreadStatus({
-				paused: t.paused,
-				hasOpenStop: threadsWithStop.has(t.threadId),
-				hasWorkingIssue: threadsWithWork.has(t.threadId),
-			}),
+			status: statuses.get(t.threadId) ?? ThreadStatus.IDLE,
 			lastActivity: t.updatedAt.toISOString(),
 		})
 
@@ -107,7 +115,12 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		const needsYou = this.buildNeedsYou(openStops, threadRows)
 
 		const recent = await this.db
-			.select({ text: transcriptEntries.text, threadId: transcriptEntries.threadId, at: transcriptEntries.at, kind: transcriptEntries.kind })
+			.select({
+				text: transcriptEntries.text,
+				threadId: transcriptEntries.threadId,
+				at: transcriptEntries.at,
+				kind: transcriptEntries.kind,
+			})
 			.from(transcriptEntries)
 			.where(eq(transcriptEntries.ownerId, input.ownerId))
 			.orderBy(desc(transcriptEntries.at))
@@ -123,7 +136,10 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		const issuesOpened = allIssues.filter(i => i.createdAt >= dayStart).length
 		const issuesClosed = allIssues.filter(i => i.completedAt !== null && i.completedAt !== undefined && i.completedAt >= dayStart).length
 
-		const channelRows = await this.db.select({ kind: channels.platform, status: channels.status }).from(channels).where(eq(channels.ownerId, input.ownerId))
+		const channelRows = await this.db
+			.select({ kind: channels.platform, status: channels.status })
+			.from(channels)
+			.where(eq(channels.ownerId, input.ownerId))
 
 		return {
 			agentsRunningNow,

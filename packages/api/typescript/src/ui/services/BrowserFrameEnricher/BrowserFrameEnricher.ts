@@ -11,7 +11,7 @@ import {
 	ThreadStopResolvedEvent,
 	ChannelMessageReceivedEvent,
 } from '@codedm/contracts-typescript/wire/events'
-import { deriveThreadStatus } from '@shared/services'
+import { ThreadStatusDeriver } from '@thread/services/ThreadStatusDeriver'
 
 /**
  * The `browser.*` SSE frames — DECLARED HERE, at their synthesizer. These are UI-only enriched views
@@ -96,7 +96,10 @@ export type BrowserFrame = ThreadStatusChangedFrame | StopRaisedFrame | ThreadMe
  */
 @injectable()
 export class BrowserFrameEnricher {
-	constructor(private readonly db: DrizzleClient) {}
+	constructor(
+		private readonly db: DrizzleClient,
+		private readonly statuses: ThreadStatusDeriver,
+	) {}
 
 	async enrich(event: BaseIntegrationEvent): Promise<BrowserFrame[]> {
 		const ownerId = event.ownerId || ''
@@ -188,9 +191,10 @@ export class BrowserFrameEnricher {
 	}
 
 	/**
-	 * The precedence itself lives in `deriveThreadStatus` (shared) — this method's job is only to
-	 * gather the three facts, and to gather them EXCLUDING the issue/stop the current event just
-	 * resolved, so the frame reflects the transition without waiting on a read-after-write.
+	 * The precedence itself lives in `ThreadStatusDeriver.derive` — this method's job is only to gather
+	 * the three facts, and to gather them EXCLUDING the issue/stop the current event just resolved, so the
+	 * frame reflects the transition without waiting on a read-after-write. That exclusion is why it calls
+	 * the pure half of the seam rather than `forThread`.
 	 */
 	private async deriveStatus(threadId: string, exclude: { excludeIssueId?: string; excludeStopId?: string }): Promise<ThreadStatus> {
 		const openStops = await tryCatchAsync(async () =>
@@ -206,7 +210,7 @@ export class BrowserFrameEnricher {
 				.where(and(eq(issues.threadId, threadId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false))),
 		)
 
-		return deriveThreadStatus({
+		return this.statuses.derive({
 			paused: await this.isPaused(threadId),
 			hasOpenStop: openStops.success && openStops.data.some(s => s.id !== exclude.excludeStopId),
 			hasWorkingIssue: working.success && working.data.some(i => i.id !== exclude.excludeIssueId),
