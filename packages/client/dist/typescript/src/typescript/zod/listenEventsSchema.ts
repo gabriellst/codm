@@ -742,6 +742,12 @@ get "providers"(){
     })
     }), z.object({
     "ownerId": z.string(),
+"name": z.enum(["integration.thread.message_ingested"]),
+"payload": z.object({
+    "threadId": z.string()
+    })
+    }), z.object({
+    "ownerId": z.string(),
 "name": z.enum(["integration.thread.stop_raised"]),
 "payload": z.object({
     "stopId": z.string(),

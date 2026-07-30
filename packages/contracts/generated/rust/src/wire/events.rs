@@ -659,6 +659,20 @@ pub struct ThreadAttachedPayload {
 /// `integration.thread.attached` in the canonical transport envelope.
 pub type ThreadAttachedEvent = super::envelope::Envelope<ThreadAttachedPayload>;
 
+/// Wire discriminator for [`ThreadMessageIngestedPayload`].
+pub const THREAD_MESSAGE_INGESTED_EVENT_NAME: &str = "integration.thread.message_ingested";
+
+/// BC4 Thread & Routing -> consumers. An inbound message was appended to a thread's transcript. Closes the threadId gap `integration.channel_message.received` cannot: that fact is addressed by (channelId, remoteId) — a WhatsApp JID — not by threadId, so a browser console could not scope a live update to one thread without a server-side join. Published by the bridge that already owns thread.* facts (PublishThreadIntegrationEvents), from the domain event IngestChannelMessage raises with threadId already resolved — no lookup.
+/// Payload of `integration.thread.message_ingested`, generated from the contract declaration.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadMessageIngestedPayload {
+	pub thread_id: String,
+}
+
+/// `integration.thread.message_ingested` in the canonical transport envelope.
+pub type ThreadMessageIngestedEvent = super::envelope::Envelope<ThreadMessageIngestedPayload>;
+
 /// Wire discriminator for [`ThreadStopRaisedPayload`].
 pub const THREAD_STOP_RAISED_EVENT_NAME: &str = "integration.thread.stop_raised";
 

@@ -938,6 +938,26 @@ type ThreadAttachedPayload struct {
 	Providers []ProviderKind `json:"providers" validate:"required"`
 }
 
+// ThreadMessageIngestedEventName is the wire discriminator for ThreadMessageIngestedEvent.
+const ThreadMessageIngestedEventName = "integration.thread.message_ingested"
+
+// ThreadMessageIngestedEvent — wire shape of integration.thread.message_ingested.
+// BC4 Thread & Routing -> consumers. An inbound message was appended to a thread's transcript. Closes the threadId gap `integration.channel_message.received` cannot: that fact is addressed by (channelId, remoteId) — a WhatsApp JID — not by threadId, so a browser console could not scope a live update to one thread without a server-side join. Published by the bridge that already owns thread.* facts (PublishThreadIntegrationEvents), from the domain event IngestChannelMessage raises with threadId already resolved — no lookup.
+type ThreadMessageIngestedEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	ThreadID string `json:"threadId"`
+}
+
+func (e ThreadMessageIngestedEvent) EventName() string { return ThreadMessageIngestedEventName }
+
+// ThreadMessageIngestedPayload — payload of integration.thread.message_ingested, generated from the contract declaration.
+type ThreadMessageIngestedPayload struct {
+	ThreadID string `json:"threadId" validate:"required"`
+}
+
 // ThreadStopRaisedEventName is the wire discriminator for ThreadStopRaisedEvent.
 const ThreadStopRaisedEventName = "integration.thread.stop_raised"
 

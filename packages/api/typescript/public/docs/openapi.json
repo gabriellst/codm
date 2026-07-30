@@ -7410,6 +7410,37 @@
                         },
                         "name": {
                           "type": "string",
+                          "const": "integration.thread.message_ingested"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "properties": {
+                            "threadId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "threadId"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "ownerId",
+                        "name",
+                        "payload"
+                      ],
+                      "additionalProperties": false,
+                      "examples": []
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ownerId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
                           "const": "integration.thread.stop_raised"
                         },
                         "payload": {
