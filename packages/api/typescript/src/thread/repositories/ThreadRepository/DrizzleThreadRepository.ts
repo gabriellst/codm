@@ -218,7 +218,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 	/**
 	 * NO casts, deliberately — `DrizzleTranscriptRepository.toRow` had four and every one was a no-op.
 	 * `thread_transcript_entries` declares `kind`, `provider` and `classification` with `$type<…>()`
-	 * (`schema-sqlite/thread.ts`), so the row is already narrowed and `as TranscriptKind` only hid that
+	 * (`schema/thread.ts`), so the row is already narrowed and `as TranscriptKind` only hid that
 	 * fact — and hid it in the one place a real mismatch would matter.
 	 */
 	private stopToPersistence(stop: Stop): typeof stops.$inferInsert {

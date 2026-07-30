@@ -37,8 +37,8 @@ describe('sqlite migrations — contracts source vs //go:embed copy', () => {
 	test('detects a content divergence (the gate is not vacuously green)', () => {
 		// Point the comparison at a directory that holds a same-named file with different
 		// bytes: the source dir's own meta/ sibling cannot serve, so use a synthetic check
-		// against the schema-sqlite dir, which has no .sql at all → every file reads as missing.
-		const bogus = join(PROJECT_ROOT, 'packages/contracts/db/schema-sqlite')
+		// against the schema dir, which has no .sql at all → every file reads as missing.
+		const bogus = join(PROJECT_ROOT, 'packages/contracts/db/schema')
 		const findings = diverged(bogus)
 		expect(findings.length).toBeGreaterThan(0)
 		expect(findings.every(f => f.reason === 'missing')).toBe(true)

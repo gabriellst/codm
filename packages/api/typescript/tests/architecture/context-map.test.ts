@@ -26,7 +26,7 @@ import {
  */
 
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
-const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema-sqlite')
+const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema')
 const MODULES = Object.keys(CONTEXTS)
 
 // The contracts DB schema is a single flat SQLite dialect: the pgSchema NAMESPACE is encoded as the
@@ -176,7 +176,7 @@ describe('context-map (declared intent map + global surface policy over real imp
 		expect(true).toBe(true)
 	})
 
-	test('pgSchema parity: declared CONTEXTS pgSchemas == contracts/db/schema-sqlite table-name prefixes', () => {
+	test('pgSchema parity: declared CONTEXTS pgSchemas == contracts/db/schema table-name prefixes', () => {
 		const declared: string[] = [
 			...Object.values(CONTEXTS).flatMap(c => (c.pgSchema === null ? [] : [c.pgSchema as string])),
 			// Schemas owned by non-TS backends — declared in the same spine (intent precedes derivation).
@@ -220,7 +220,7 @@ describe('context-map — TABLE-READ leg (drizzle tables resolved to their ownin
 	// pgSchema (parsed from the contracts schema sources — zero hand lists) and enforces
 	// TABLE_READ_EDGES the same intent-first way.
 
-	/** table export name → owning pgSchema namespace, parsed from packages/contracts/db/schema-sqlite. */
+	/** table export name → owning pgSchema namespace, parsed from packages/contracts/db/schema. */
 	function tableOwners(): Map<string, string> {
 		const owners = new Map<string, string>()
 		for (const f of listContractsSchemaFiles()) {

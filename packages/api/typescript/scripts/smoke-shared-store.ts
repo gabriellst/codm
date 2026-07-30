@@ -320,9 +320,7 @@ async function main(): Promise<number> {
 		// COUNTED from the contracts source, not hard-coded: the literal that used to sit here went
 		// stale the first time a migration was added (the Fase-4 agent-session rename), and a smoke
 		// that has to be hand-bumped to stay true will eventually be bumped to whatever it printed.
-		const expectedLedgerRows = readdirSync(join(repoRoot, 'packages/contracts/db/schema-sqlite/migrations')).filter(f =>
-			f.endsWith('.sql'),
-		).length
+		const expectedLedgerRows = readdirSync(join(repoRoot, 'packages/contracts/db/schema/migrations')).filter(f => f.endsWith('.sql')).length
 		const [ledger = '0'] = readFile(dbPath, 'SELECT count(*) FROM _sqlite_migrations;')
 		check(
 			ledger === String(expectedLedgerRows),

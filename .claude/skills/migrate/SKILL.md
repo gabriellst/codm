@@ -20,12 +20,17 @@ migrators over the SAME ledger** (`_sqlite_migrations`, keyed by filename):
 
 | Process | Migrator | Source of the SQL |
 |---|---|---|
-| TS daemon | `LibsqlDriver` | `packages/contracts/db/schema-sqlite/migrations/*.sql` |
+| TS daemon | `LibsqlDriver` | `packages/contracts/db/schema/migrations/*.sql` |
 | Go gateway | `SqliteStore` | `packages/api/go/core/db/sqlite/migrations/*.sql` (`//go:embed`) |
 
 Whoever boots first applies; the second finds the ledger rows and no-ops. Both split each file on
 `--> statement-breakpoint` and derive the set to apply from `readdir | filter .sql | sort` — never
 from `meta/_journal.json`.
+
+**Convention (upstreamed to the template): the schema directory name is neutral to dialect.**
+`packages/contracts/db/schema/` carries no `-sqlite`/`-postgres` suffix — the dialect is a property
+of the driver and of `drizzle.config.ts`'s `dialect` key, not of the folder name. A fork that swaps
+SQLite for Postgres edits the config, it does not rename or move the 30 schema files.
 
 A **third** applier carrying a ledger of its own is the failure mode this design exists to
 prevent — which is why `drizzle-kit migrate` (it writes `__drizzle_migrations`) has no script here.
@@ -38,7 +43,7 @@ Drizzle tables only: `whatsmeow_*` belongs to the gateway and appears on first c
 
 ## When to Use This Skill
 
-- After `/db-modelling` updated `packages/contracts/db/schema-sqlite/*.ts` and you need the SQL
+- After `/db-modelling` updated `packages/contracts/db/schema/*.ts` and you need the SQL
 - Reviewing generated migration SQL before it reaches a runtime
 - Getting a new migration into the Go `//go:embed` copy
 
@@ -50,8 +55,8 @@ Drizzle tables only: `whatsmeow_*` belongs to the gateway and appears on first c
 
 ## Prerequisites
 
-- Schema files updated via `/db-modelling` under `packages/contracts/db/schema-sqlite/`
-- New table exported from `packages/contracts/db/schema-sqlite/index.ts`
+- Schema files updated via `/db-modelling` under `packages/contracts/db/schema/`
+- New table exported from `packages/contracts/db/schema/index.ts`
 
 ## Process
 
@@ -61,8 +66,8 @@ Drizzle tables only: `whatsmeow_*` belongs to the gateway and appears on first c
 bun migrate:create
 ```
 
-`drizzle-kit generate` with `packages/contracts/db/schema-sqlite/drizzle.config.ts`, writing SQL +
-snapshot into `packages/contracts/db/schema-sqlite/migrations/`. With no schema change it prints
+`drizzle-kit generate` with `packages/contracts/db/schema/drizzle.config.ts`, writing SQL +
+snapshot into `packages/contracts/db/schema/migrations/`. With no schema change it prints
 `No schema changes, nothing to generate` and writes nothing — the command is idempotent.
 
 ### Step 2: Review the generated SQL
@@ -120,7 +125,7 @@ SELECT * FROM _sqlite_migrations ORDER BY name;
 
 ## Checklist
 
-- [ ] Schema files updated via `/db-modelling`, table exported from `schema-sqlite/index.ts`
+- [ ] Schema files updated via `/db-modelling`, table exported from `schema/index.ts`
 - [ ] Migration generated: `bun migrate:create`
 - [ ] SQL reviewed — rebuild statements checked for data loss, CHECK constraints carried across
 - [ ] Go embed mirrored: `bun run --cwd packages/contracts db:sync-go`
@@ -175,6 +180,6 @@ it must end up in `_sqlite_migrations`, keyed by filename, reading the contracts
 
 - `.claude/skills/db-modelling/SKILL.md` — schema design (tables, columns, indexes, VO persistence)
 - `scripts/db/sync-sqlite-migrations.ts` — the source→derived copy gate, with the full rationale
-- `packages/contracts/db/schema-sqlite/drizzle.config.ts` — why there is no `drizzle:migrate`
+- `packages/contracts/db/schema/drizzle.config.ts` — why there is no `drizzle:migrate`
 - Drizzle ORM Documentation: https://orm.drizzle.team/docs
 - `docs/BACKEND.md` — architecture principles

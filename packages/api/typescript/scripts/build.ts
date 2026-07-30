@@ -20,10 +20,10 @@
  *     from `dist/server.js` finds the entry point AND every sibling it requires. Shipping the whole
  *     `dist/` as a unit makes the Docker image self-contained too.
  *
- *  2. **The migrations directory is COPIED to `dist/schema-sqlite/migrations`.**
+ *  2. **The migrations directory is COPIED to `dist/schema/migrations`.**
  *     `@codedm/contracts/db/migrations` exports `migrationsDir` derived from `import.meta.url` with a
- *     `schema-sqlite/migrations` suffix; the bundler rewrites `import.meta.url` to the OUTPUT file, so
- *     at runtime it resolves to `dist/schema-sqlite/migrations`. Staging the drizzle-kit output at
+ *     `schema/migrations` suffix; the bundler rewrites `import.meta.url` to the OUTPUT file, so
+ *     at runtime it resolves to `dist/schema/migrations`. Staging the drizzle-kit output at
  *     exactly that path makes the fallback correct without any env override — the destination is not
  *     free, it MIRRORS the suffix in `packages/contracts/db/migrations.ts`. (`CODEDM_MIGRATIONS_DIR`
  *     remains an escape hatch for images that stage them elsewhere.)
@@ -35,8 +35,8 @@ import { fileURLToPath } from 'node:url'
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const distDir = join(pkgRoot, 'dist')
 // MIRRORS the fallback suffix in packages/contracts/db/migrations.ts — see header note 2.
-const contractsMigrations = resolve(pkgRoot, '../../contracts/db/schema-sqlite/migrations')
-const stagedMigrations = join(distDir, 'schema-sqlite/migrations')
+const contractsMigrations = resolve(pkgRoot, '../../contracts/db/schema/migrations')
+const stagedMigrations = join(distDir, 'schema/migrations')
 
 /** Kept external (see header) — the entry point plus the native addon package it bottoms out in. */
 const EXTERNALS = ['@libsql/client', 'libsql'] as const
@@ -114,9 +114,7 @@ async function main(): Promise<void> {
 		await cp(root, join(distDir, 'node_modules', name), { recursive: true, dereference: true })
 	}
 
-	console.log(
-		`✅ node bundle built → dist/server.js (+ dist/schema-sqlite/migrations + dist/node_modules/{${[...roots.keys()].join(', ')}})`,
-	)
+	console.log(`✅ node bundle built → dist/server.js (+ dist/schema/migrations + dist/node_modules/{${[...roots.keys()].join(', ')}})`)
 }
 
 main().catch(error => {

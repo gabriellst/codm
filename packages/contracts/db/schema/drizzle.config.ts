@@ -21,10 +21,10 @@ import { defineConfig } from 'drizzle-kit'
 
 export default defineConfig({
 	dialect: 'sqlite',
-	schema: './db/schema-sqlite/index.ts',
-	out: './db/schema-sqlite/migrations',
+	schema: './db/schema/index.ts',
+	out: './db/schema/migrations',
 	dbCredentials: {
-		url: './db/schema-sqlite/.scratch/codedm.db',
+		url: './db/schema/.scratch/codedm.db',
 	},
 	verbose: true,
 	strict: true,

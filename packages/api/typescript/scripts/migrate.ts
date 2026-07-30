@@ -7,7 +7,7 @@
  * `__drizzle_migrations`) would re-apply DDL the boot migrators already applied, and the divergence
  * raises no error — only wrong reads. This script sidesteps that by calling
  * `migrateEmbeddedDatabase()`, the EXACT function `src/boot/migrate-embedded.ts` calls at daemon
- * boot: same driver singleton, same `packages/contracts/db/schema-sqlite/migrations/*.sql`, same
+ * boot: same driver singleton, same `packages/contracts/db/schema/migrations/*.sql`, same
  * `_sqlite_migrations` ledger. Running it is indistinguishable from booting the daemon and killing
  * it after the migration step — which is precisely the convenience it buys.
  *

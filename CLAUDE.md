@@ -61,7 +61,7 @@ bun install
 bun docker:compose
 
 # 4. Migrações: NÃO há passo manual. O daemon TS (LibsqlDriver) e o gateway Go
-#    (SqliteStore) aplicam packages/contracts/db/schema-sqlite/migrations no BOOT,
+#    (SqliteStore) aplicam packages/contracts/db/schema/migrations no BOOT,
 #    idempotentes sobre a MESMA ledger `_sqlite_migrations` — quem sobe primeiro aplica,
 #    o segundo é no-op. Para AUTORAR uma migração nova: `bun migrate:create`.
 
@@ -104,7 +104,7 @@ bun contracts        # regenera bindings de contracts (TypeSpec → ts/go/rust +
 
 # Banco de dados (um arquivo SQLite; o boot migra sozinho — `migrate:dev` é só conveniência)
 bun migrate:create           # AUTORA uma migração SQLite (drizzle-kit generate →
-                             # packages/contracts/db/schema-sqlite/migrations)
+                             # packages/contracts/db/schema/migrations)
 bun migrate:dev              # APLICA no $CODEDM_DATA_DIR sem subir servidor (mesmo aplicador do
                              # boot, mesmo ledger `_sqlite_migrations`). Só tabelas Drizzle —
                              # whatsmeow_* nasce quando o gateway conecta.

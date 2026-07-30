@@ -47,7 +47,7 @@ describe('full graph integration (polyglot)', () => {
 		expect((byKind['contract-enum'] ?? 0) + (byKind['contract-event'] ?? 0)).toBeGreaterThan(0)
 	})
 
-	it('drizzle extractor emits db-table nodes from contracts/db/schema-sqlite', () => {
+	it('drizzle extractor emits db-table nodes from contracts/db/schema', () => {
 		const result = buildOnce()
 		const tables = [...result.graph.nodes.values()].filter(n => n.kind === 'db-table')
 		// 25 tables across 9 pgSchema namespaces today. A FLOOR is asserted rather than the exact

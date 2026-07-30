@@ -1,4 +1,4 @@
-// Drizzle schema extractor — reads packages/contracts/db/schema-sqlite/*.ts and
+// Drizzle schema extractor — reads packages/contracts/db/schema/*.ts and
 // emits db-table nodes plus fk-references edges.
 //
 // Dialect note (Phase 0 — the daemon/gateway share one SQLite file): the contracts schema is a

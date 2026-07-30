@@ -260,9 +260,9 @@ describe('globToRegExp', () => {
 	})
 
 	test('end-anchored but not start-anchored (absolute paths match)', () => {
-		const re = globToRegExp('packages/contracts/db/schema-sqlite/*.ts')!
-		expect(re.test(`${ROOT}/packages/contracts/db/schema-sqlite/orders.ts`)).toBe(true)
-		expect(re.test(`${ROOT}/packages/contracts/db/schema-sqlite/orders.ts.bak`)).toBe(false)
+		const re = globToRegExp('packages/contracts/db/schema/*.ts')!
+		expect(re.test(`${ROOT}/packages/contracts/db/schema/orders.ts`)).toBe(true)
+		expect(re.test(`${ROOT}/packages/contracts/db/schema/orders.ts.bak`)).toBe(false)
 	})
 })
 

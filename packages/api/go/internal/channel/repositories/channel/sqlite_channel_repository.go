@@ -31,7 +31,7 @@ import (
 //     work (unitofwork.TxFromContext) when the caller opened one.
 //
 // SQL dialect deltas vs the pg original (all mechanical, see the sqlite schema
-// at packages/contracts/db/schema-sqlite/channel.ts):
+// at packages/contracts/db/schema/channel.ts):
 //   - table `channels` -> `gateway_channels` (pgSchema namespace became a prefix)
 //   - $N placeholders  -> ?N
 //   - timestamptz      -> INTEGER unix-millis (dbutil.Millis / TimeFromMillis)

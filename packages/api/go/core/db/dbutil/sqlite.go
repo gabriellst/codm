@@ -7,7 +7,7 @@ import (
 
 // SQLite-dialect bind/scan helpers.
 //
-// The SQLite contract schema (packages/contracts/db/schema-sqlite) stores every
+// The SQLite contract schema (packages/contracts/db/schema) stores every
 // timestamptz as an INTEGER of unix MILLISECONDS (drizzle `timestamp_ms`) and
 // every boolean as an INTEGER 0/1. These helpers are the single conversion point
 // between that wire shape and the Go domain types, so no repository hand-rolls a

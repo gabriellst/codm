@@ -151,7 +151,7 @@ live process leaves it writing to an unlinked inode.
 
 **Install has no migrate step.** The TS daemon (`LibsqlDriver`) and the
 Go gateway (`SqliteStore`) each apply
-`packages/contracts/db/schema-sqlite/migrations/*.sql` on boot,
+`packages/contracts/db/schema/migrations/*.sql` on boot,
 idempotently, over the **same** `_sqlite_migrations` ledger: whoever
 starts first applies, the second no-ops. A cold data dir is migrated by
 step 8 (`bun dev`) — you do not need to do anything here.

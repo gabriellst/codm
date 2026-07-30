@@ -52,9 +52,9 @@ const DRIZZLE_TABLE_COUNT = Object.values(schema).filter(v => is(v, SQLiteTable)
  * a migration" into a red test that reads like a race regression, which is the most expensive kind
  * of false alarm in a suite that runs 20 probabilistic rounds.
  */
-const MIGRATION_FILE_COUNT = readdirSync(
-	join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema-sqlite', 'migrations'),
-).filter(f => f.endsWith('.sql')).length
+const MIGRATION_FILE_COUNT = readdirSync(join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema', 'migrations')).filter(
+	f => f.endsWith('.sql'),
+).length
 /** Racers per round. Three, so a bug that needs more than a pair to surface still has room. */
 const RACERS = 3
 /** Cold data dirs. The race is probabilistic, so it is repeated — the plan's T28 asks for 20. */

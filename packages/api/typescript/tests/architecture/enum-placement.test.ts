@@ -35,7 +35,7 @@ import * as WireEnums from '@codedm/contracts-typescript/wire/enums'
 const CROSS_BOUNDARY_ENUMS = Object.keys(WireEnums).filter(k => /^[A-Z]/.test(k))
 
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
-const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema-sqlite')
+const CONTRACTS_SCHEMA = join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'db', 'schema')
 
 // Non-table files in the schema dir — the barrel, the CHECK-constraint helper (`enumCheck`) and the
 // drizzle-kit config. They declare no table, so scanning them widens CMPL-01 past what it guards.
@@ -113,7 +113,7 @@ function scanSrcEnumDefs(root: string): Violation[] {
 }
 
 describe('enum-placement (cross-boundary enums live only in contracts, never mirrored in src/schema)', () => {
-	test('CMPL-01: no inline string-literal enum mirror in contracts/db/schema-sqlite', () => {
+	test('CMPL-01: no inline string-literal enum mirror in contracts/db/schema', () => {
 		// Non-vacuity first: a green scan over ZERO files is the failure mode this rail cannot have
 		// (it is exactly what a stale CONTRACTS_SCHEMA path would produce). 9 namespace files today.
 		const scanned = listSchemaFiles(CONTRACTS_SCHEMA)

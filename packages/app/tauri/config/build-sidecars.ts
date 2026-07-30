@@ -161,7 +161,7 @@ export async function buildSidecars(): Promise<void> {
 		repoRoot,
 		REPO.workspaces.contracts.pkgRoot,
 		'db',
-		'schema-sqlite',
+		'schema',
 		'migrations',
 	)
 	const migrationsDest = join(outDir, 'migrations')

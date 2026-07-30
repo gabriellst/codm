@@ -26,18 +26,12 @@
 			"packages/app/astro/src/**",
 			"!!packages/app/astro/src/**/*.astro",
 
-
-
-
-
-
-
 			"packages/app/react/src/**",
 			"packages/app/react/.storybook/**",
 			"packages/client/generators/**",
 			"packages/client/lib/**",
 			"packages/contracts/codegen/**",
-			"packages/contracts/db/schema-sqlite/**",
+			"packages/contracts/db/schema/**",
 			"packages/contracts/wire/**",
 			"packages/e2e/extension/**",
 			"packages/e2e/lib/**",
@@ -72,7 +66,7 @@
 			"!!packages/api/typescript/public/docs",
 			"!!packages/api/go/public/openapi.json",
 			"!!packages/api/go/public/docs",
-			"!!packages/contracts/db/schema-sqlite/migrations/meta",
+			"!!packages/contracts/db/schema/migrations/meta",
 			"!!api/public/app",
 			"!!channel/public/app"
 		]

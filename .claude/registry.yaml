@@ -142,7 +142,7 @@ components:
   db-schema:
     skill: db-modelling
     patterns:
-      - "packages/contracts/db/schema-sqlite/*.ts"
+      - "packages/contracts/db/schema/*.ts"
       - "!*/index.ts"
       - "!*/_enum.ts"
       - "!*/drizzle.config.ts"

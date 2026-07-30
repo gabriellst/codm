@@ -4,8 +4,8 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./db/schema-sqlite/index.ts",
-		"./db": "./db/schema-sqlite/index.ts",
+		".": "./db/schema/index.ts",
+		"./db": "./db/schema/index.ts",
 		"./db/migrations": "./db/migrations.ts"
 	},
 	"scripts": {
@@ -20,7 +20,7 @@
 		"test:go": "cd generated/go && go test ./...",
 		"db:sync-go": "bun ../../scripts/db/sync-sqlite-migrations.ts",
 		"db:check-go": "bun ../../scripts/db/sync-sqlite-migrations.ts --check",
-		"drizzle:generate": "drizzle-kit generate --config=db/schema-sqlite/drizzle.config.ts",
+		"drizzle:generate": "drizzle-kit generate --config=db/schema/drizzle.config.ts",
 		"all": "bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate",
 		"test": "bun test codegen/ && bun run test:rust && bun run test:go"
 	},

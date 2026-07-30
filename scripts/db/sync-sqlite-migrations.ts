@@ -2,10 +2,10 @@
 /**
  * sync-sqlite-migrations.ts — ONE source of SQLite migrations, N copies on disk.
  *
- * `packages/contracts/db/schema-sqlite/migrations/*.sql` (drizzle-kit output) is the source
+ * `packages/contracts/db/schema/migrations/*.sql` (drizzle-kit output) is the source
  * of truth. Every runtime copy is DERIVED from it and never edited by hand:
  *
- *   contracts/db/schema-sqlite/migrations/   ← drizzle-kit writes here (source)
+ *   contracts/db/schema/migrations/   ← drizzle-kit writes here (source)
  *     └─> packages/api/go/core/db/sqlite/migrations/   ← what //go:embed compiles in
  *
  * WHY A GATE AND NOT A CONVENTION. Both backends apply migrations against the SAME file, and
@@ -34,7 +34,7 @@ const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
 export const PROJECT_ROOT = process.env.ROOT_OVERRIDE ? resolve(process.env.ROOT_OVERRIDE) : resolve(SCRIPT_DIR, '../..')
 
 /** The drizzle-kit output every other copy derives from. */
-export const SOURCE_DIR = join(PROJECT_ROOT, 'packages/contracts/db/schema-sqlite/migrations')
+export const SOURCE_DIR = join(PROJECT_ROOT, 'packages/contracts/db/schema/migrations')
 
 /** Derived copies. Add a destination here when a new runtime needs its own copy. */
 export const DERIVED_DIRS = [join(PROJECT_ROOT, 'packages/api/go/core/db/sqlite/migrations')]

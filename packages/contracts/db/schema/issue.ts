@@ -5,7 +5,7 @@ import { enumCheck } from './_enum'
 /**
  * `issue` (pgSchema namespace) → `issue_*` table prefix. SQLite-dialect mirror of
  * db/schema/issue.ts. Issues as units of concurrent work — the terminal log and
- * the global stop-criteria config. The stops themselves moved to schema-sqlite/thread.ts
+ * the global stop-criteria config. The stops themselves moved to schema/thread.ts
  * (B4): a Stop is a child of the THREAD aggregate, not of the Issue.
  * bigint→integer (terminal_lines.seq); enum→text + CHECK.
  */
