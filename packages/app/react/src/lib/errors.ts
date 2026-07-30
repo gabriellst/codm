@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { ERROR_CODES } from '@codedm/client-typescript/error-codes'
+import { ERROR_CODES } from '@codedm/client-typescript/errors'
 import i18n from './i18n'
 
 // Frontend-only error codes that no backend emits.
@@ -10,7 +10,7 @@ const frontendErrorsEnum = {
 } as const
 
 // Closed set of known error codes — the CROSS-BACKEND union (openapi x-error-codes of every
-// service, generated at @codedm/client-typescript/error-codes — the same union the locales gate
+// service, generated at @codedm/client-typescript/errors — the same union the locales gate
 // checks) + the frontend-only codes. Anything else is treated as a free-form message (e.g. an
 // already-translated zod default) and rendered as-is. NEVER the per-service ApiErrorsEnum: that
 // blinds the console to every other backend's vocabulary.

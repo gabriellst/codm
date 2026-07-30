@@ -4,8 +4,8 @@
  * Source of truth: each service's openapi.json root `x-error-codes` (emitted by the api's
  * OpenAPI generator from the runtime GlobalErrorMapper — core seed + every context's
  * registerErrorCodes). The union of all services lands in
- * `dist/typescript/src/error-codes/index.ts`, importable as
- * `@codedm/client-typescript/error-codes` (the dist wildcard subpath export).
+ * `dist/typescript/src/errors/index.ts`, importable as
+ * `@codedm/client-typescript/errors` (the dist wildcard subpath export).
  *
  * Consumers: app locale catalogues compile-check their `errors` section with
  * `satisfies Record<ErrorCode, string>` — a backend code without a translation is a tsc
@@ -17,7 +17,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { discoverApis } from '../lib/discover'
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..')
-const outDir = path.resolve(import.meta.dirname, '../dist/typescript/src/error-codes')
+const outDir = path.resolve(import.meta.dirname, '../dist/typescript/src/errors')
 
 async function main(): Promise<void> {
 	const sources = await discoverApis(repoRoot)
@@ -48,7 +48,7 @@ export type ErrorCode = (typeof ERROR_CODES)[number]
 `
 	await mkdir(outDir, { recursive: true })
 	await writeFile(path.join(outDir, 'index.ts'), body)
-	console.log(`[error-codes] ${sorted.length} codes from ${carriers} service spec(s) → dist/typescript/src/error-codes/index.ts`)
+	console.log(`[error-codes] ${sorted.length} codes from ${carriers} service spec(s) → dist/typescript/src/errors/index.ts`)
 }
 
 await main()
