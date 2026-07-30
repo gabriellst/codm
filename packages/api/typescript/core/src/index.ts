@@ -17,6 +17,7 @@ export * from './types/Middleware'
 export * from './types/Registry'
 export * from './types/Router'
 export * from './types/AgentIdentity'
+export * from './types/McpAdapter'
 
 // Entities
 export * from './entities'

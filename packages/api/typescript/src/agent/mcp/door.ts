@@ -1,26 +1,20 @@
 import { injectable } from 'tsyringe-neo'
-import { Config, Controller, MimeTypes, z, BaseError } from '@codedm/core-typescript'
-import type { HttpMethod } from '@codedm/core-typescript'
-import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
+import { Config, McpAdapter, BaseError, AgentIdentityService, type McpRefusal } from '@codedm/core-typescript'
+import { withMcpRunContext } from '@codedm/client-typescript/typescript/mcp/context'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { AgentIdentityService } from '@codedm/core-typescript'
-import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
 
 import { MCP_ROUTE_PREFIX } from './route'
 
 export { MCP_ROUTE_PREFIX }
 
-const McpRouterInputSchema = z.object({ params: z.object({ scope: z.string() }) })
-const McpRouterOutputSchema = z.any()
-
 /**
- * THE MCP DOOR — the JSON-RPC endpoint an agent CLI talks to, and the place the mandatory identity
- * mitigation lives (GOAL-agent-abstraction §4.4, AC-6.6/AC-6.12/AC-6.16).
+ * THE PRODUCT'S MCP DOOR — everything `McpAdapter` left abstract, and nothing else.
  *
- * ─────────────────────────────────────────────────────────────────────────────────────────────────
+ * ───────────────────────────────────────────────────────────────────────────────────────────────
  * IT IS A REAL ROUTE THAT IS DELIBERATELY NOT IN THE SPEC
  * Mounted only when `EMIT_OPENAPI !== 'true'` (see `agent/index.ts`), exactly like `ChannelProxy` and
  * `TestIngressController`. A JSON-RPC tool endpoint rendered into the SDK would become React Query
@@ -35,76 +29,56 @@ const McpRouterOutputSchema = z.any()
  * (Its NAME is deliberately not written anywhere under `src/`: AC-6.16(e) greps for exactly that
  * string and a comment mentioning it is indistinguishable from a call site to a grep.)
  *
+ * WHAT SHRANK. This file used to be ~270 lines and carried, besides the three below, a generic
+ * identity walk over the JSON-RPC body against a hardcoded list of three key names. That walk is
+ * `AgentIdentityMiddleware` now, at the destination controller, comparing the keys the identity
+ * actually carries. What remains here is the part that could not move, because `tools/list` never
+ * reaches a controller.
+ *
  * AUTHORIZATION IS PER CALL, NOT PER RUN
- * Every request carries the opaque run token. `resolve` is a map lookup that fails closed on unknown,
- * expired and revoked, so a late tool call from a run that already died gets 401 and writes nothing —
- * the property §4.11 promises when a run is cancelled.
- *
- * WHAT STAYED HERE AND WHY IT COULD NOT MOVE
- * The SCOPE MATCH. `tools/list` is answered by the MCP SDK itself, with no round trip back to any
- * HTTP controller — so a per-controller middleware structurally cannot see it, and this is the only
- * point where "was this credential issued for THIS surface" can be asked of EVERY JSON-RPC message
- * rather than only of `tools/call`. Without it an `issue-handling` token enumerates and calls the
- * twenty-three `system` operations.
- *
- * WHAT LEFT, AND WHERE IT WENT
- * The per-argument identity walk. It lived here because arguments had to be rejected BEFORE the
- * transport dispatched — the MCP SDK validates a tool's `outputSchema` AFTER the handler returns, so a
- * rejection inside a tool wrapper would arrive with the HTTP write already issued. That constraint is
- * satisfied a different way now: `AgentIdentityMiddleware` runs at the destination controller, BEFORE
- * its `handle()`, so the write is still never built. And it compares the keys the identity actually
- * carries against `params`/`body` already parsed, instead of walking a JSON-RPC body against a
- * hardcoded list of three names.
- * ─────────────────────────────────────────────────────────────────────────────────────────────────
+ * Every request carries the opaque run token, and `McpAdapter.handle` resolves it on every message.
+ * `resolve` is a map lookup that fails closed on unknown, expired and revoked, so a late tool call
+ * from a run that already died gets 401 and writes nothing — the property §4.11 promises when a run is
+ * cancelled.
+ * ───────────────────────────────────────────────────────────────────────────────────────────────
  */
 @injectable()
-export class McpRouterController extends Controller<typeof McpRouterInputSchema, typeof McpRouterOutputSchema> {
+export class McpDoorController extends McpAdapter {
 	readonly path = `${MCP_ROUTE_PREFIX}/:scope` as const
-	readonly method: HttpMethod[] = ['post', 'get', 'delete']
 	readonly description = 'CodeDM MCP server (JSON-RPC) — not emitted to the OpenAPI/SDK'
-	readonly inputSchema = McpRouterInputSchema
-	readonly outputSchema = McpRouterOutputSchema
-	override readonly contentType: MimeTypes = MimeTypes['.stream']
 
-	// NO middlewares. `OperatorMiddleware` would stamp the daemon's own operator identity onto every
-	// call unconditionally — the confused-deputy shape this whole file exists to prevent. Authority
-	// here comes from the run token and from nothing else.
-	override middlewares = []
+	protected readonly scopes: readonly string[] = Object.values(McpScope)
 
-	constructor(private readonly identities: AgentIdentityService<AgentRunIdentity>) {
-		super()
+	/**
+	 * NOT a useless constructor, and the suppression below is load-bearing rather than cosmetic.
+	 *
+	 * MEASURED: with this constructor removed — which `biome check --write --unsafe` did on its own
+	 * during pre-commit, since `noUselessConstructor` is an UNSAFE autofix that applies even though the
+	 * rule never reports at error level — `container.resolve(McpDoorController)` returns an instance
+	 * whose `identities` is `undefined`. tsyringe reads `design:paramtypes`, TypeScript emits that
+	 * metadata only for a class that DECLARES a constructor, and `@injectable()` on a subclass without
+	 * one records a zero-argument signature. Every tool call would then die on
+	 * `this.identities.resolve(...)`, IN PRODUCTION ONLY: every test builds this door with `new`, and
+	 * the door sits deliberately outside the controllers barrel, so no rail constructs it through the
+	 * container. Same silent shape as the defaulted-parameter defect that
+	 * `tests/architecture/real-di-resolution.test.ts` was written for.
+	 *
+	 * It also narrows the service's generic to this product's identity, which is what makes `resolve()`
+	 * hand back an `AgentRunIdentity` rather than the bare core format.
+	 */
+	// biome-ignore lint/complexity/noUselessConstructor: carries design:paramtypes for tsyringe — see above
+	constructor(identities: AgentIdentityService<AgentRunIdentity>) {
+		super(identities)
 	}
 
-	async handle(request: this['input']): Promise<this['output']> {
-		const scope = this.resolveScope(request.params.scope)
-		const raw = request.raw
-		const token = this.readToken(raw)
-		const identity = this.identities.resolve(token)
-		if (!identity) {
-			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', 'missing, unknown, expired or revoked run token')
-		}
+	/** 401 for a credential that is absent or dead, 403 for one aimed at the wrong surface. */
+	protected refuse(reason: McpRefusal, detail: string): never {
+		if (reason === 'scope-mismatch') throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', detail)
+		throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', detail)
+	}
 
-		// AUTHORIZATION, not authentication — and it is the half that was MISSING when this file first
-		// shipped (contract defect D6-8). A valid token proves WHICH RUN is calling; it must also prove
-		// which SURFACE that run was granted. Before the claim existed, an `issue-handling` token
-		// authenticated a `tools/call` against `/mcp/system` and its twenty-three operations — owner and
-		// workspace administration included — none of which carry a confinement axis for the
-		// destination-side comparison to read, so nothing downstream would have objected. The token
-		// rides on the child CLI's argv, which the model can read; enforcing the scope only through
-		// `--allowedTools` puts the boundary on the attacker's side of the wire.
-		if (identity.scope !== scope) {
-			throw new BaseError<AgentInterfaceErrors>(
-				'AGENT_RUN_SCOPE_MISMATCH',
-				`run token was issued for the '${identity.scope}' tool surface and cannot be used against '${scope}'`,
-			)
-		}
-
-		// The body is no longer consumed here. It used to be, so the identity walk could inspect it
-		// BEFORE dispatching; that responsibility moved to `AgentIdentityMiddleware`, which runs at the
-		// destination controller with `params` and `body` already separated by the HTTP layer. Reading a
-		// Request body is one-shot, so not reading it means not having to rebuild the Request either.
+	protected async serve(scope: string, token: string, request: Request): Promise<Response> {
 		const transport = await this.buildTransport(scope)
-
 		// The context the generated `_http.ts` shims read to address AND authenticate their outbound
 		// call. Established AROUND the whole dispatch, so it covers every async continuation the
 		// transport spawns — a per-tool wrapper would miss the ones the SDK schedules itself.
@@ -115,26 +89,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		// standing rule intact (the api does not use the SDK's HTTP client) and keeps the value a
 		// runtime fact instead of a literal frozen into every generated call site (AC-6.19(b)).
 		const baseUrl = `http://127.0.0.1:${Config.env.API_PORT}`
-		return this.rawResponse(await withMcpRunContext({ token, baseUrl }, () => transport.handleRequest(raw)))
-	}
-
-	/**
-	 * A scope that is not in the declared vocabulary is not a typo to be guessed at — it is a request
-	 * for a tool surface that was never declared, and answering it with the wrong scope's tools would
-	 * be exactly the accidental exposure the allowlist exists to prevent.
-	 */
-	private resolveScope(candidate: string): McpScope {
-		const scope = Object.values(McpScope).find(name => name === candidate)
-		if (!scope) throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', `unknown MCP scope '${candidate}'`)
-		return scope
-	}
-
-	/** `Authorization: Bearer <token>` or the dedicated header — CLIs differ on which they can set. */
-	private readToken(raw: Request): string {
-		const dedicated = raw.headers.get(MCP_RUN_TOKEN_HEADER)
-		if (dedicated) return dedicated
-		const authorization = raw.headers.get('authorization') ?? ''
-		return authorization.toLowerCase().startsWith('bearer ') ? authorization.slice('bearer '.length).trim() : ''
+		return withMcpRunContext({ token, baseUrl }, () => transport.handleRequest(request))
 	}
 
 	/**
@@ -162,8 +117,8 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 	 * call moves every counter, the rejected one moves none, and the asymmetry is the measurement.
 	 * A `private` method would leave that claim argued in a comment, which is what this AC forbids.
 	 */
-	protected async buildTransport(scope: McpScope): Promise<WebStandardStreamableHTTPServerTransport> {
-		const server = await loadGeneratedServer(scope)
+	protected async buildTransport(scope: string): Promise<WebStandardStreamableHTTPServerTransport> {
+		const server = await loadGeneratedServer(scope as McpScope)
 		const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
 		await server.connect(transport)
 		return transport

@@ -48,7 +48,7 @@ export const TestRunIssueTurnOutputSchema = z.object({
  * Mounted ONLY under `CODEDM_E2E` (`agent/index.ts`), refused under NODE_ENV=production by
  * `src/boot/assert-e2e-safe.ts`, and never emitted to the SDK/OpenAPI — emission runs with
  * `EMIT_OPENAPI=true`, where `CODEDM_E2E` is unset, so this controller is not in the map the emitter
- * walks. Same discipline as `McpRouterController` beside it.
+ * walks. Same discipline as `McpDoorController` beside it.
  *
  * It lives in the `agent` context, not beside the gateway simulator in `shared/`, because the use case
  * it drives is an `agent` use case: a door in `shared/` would make the root context import a leaf's

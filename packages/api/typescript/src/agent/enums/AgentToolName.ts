@@ -24,7 +24,7 @@
  * schema has an identity field", which made declaring against the WRONG issue INEXPRESSIBLE. A tool
  * generated from a controller inherits that controller's `issueId`/`threadId`, so the invariant is now
  * "DIVERGENT IDENTITY IS REJECTED" — implemented in `mcp/identity.ts`, enforced per call by
- * `mcp/router.ts`, and measured by the cross-issue attempt test without which this phase does not
+ * `mcp/door.ts`, and measured by the cross-issue attempt test without which this phase does not
  * close.
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */

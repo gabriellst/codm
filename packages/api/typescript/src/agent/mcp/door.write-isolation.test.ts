@@ -8,14 +8,14 @@ import { AgentName } from '../enums'
 import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
 import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
-import { McpRouterController } from './router'
+import { McpDoorController } from './door'
 import { wireToolName } from './wire'
 
 /**
  * "AND NOTHING WAS WRITTEN", MEASURED BY COUNTING, not by the absence of an exception.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
- * WHY A SECOND SUITE. `router.test.ts` proves the door does not DISPATCH a refused call. That is
+ * WHY A SECOND SUITE. `door.test.ts` proves the door does not DISPATCH a refused call. That is
  * necessary and it is not what the AC asks for: it asks for row counts and outbox counts taken before
  * and after. A dispatch counter is a proxy; this file removes the proxy.
  *
@@ -29,12 +29,12 @@ import { wireToolName } from './wire'
  * nothing — it EXECUTES THE REAL `RecordArtifact` USE CASE, against the real (in-process) database, on
  * the arguments the tool call carried. So the control case genuinely moves all three counters, and the
  * rejected cases genuinely leave them still. The asymmetry between the two IS the measurement; without
- * a transport that writes, "no rows appeared" would be true of a router that had simply been handed
+ * a transport that writes, "no rows appeared" would be true of a door that had simply been handed
  * nothing to do.
  *
  * WHY NOT THE GENERATED SERVER HERE. It would make a real outbound HTTP call to a daemon that is not
  * listening in a unit test, so the write would fail for the wrong reason and the counters would be
- * still no matter what the router did — the classic vacuously-green gate. The generated server is
+ * still no matter what the door did — the classic vacuously-green gate. The generated server is
  * driven for real in `generated-server.test.ts` (in-memory MCP client) and end-to-end in the
  * Playwright e2e (real daemon, real HTTP, real declaration).
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -51,9 +51,9 @@ const COUNTED = ['artifacts', 'events', 'outbox'] as const
  * This is the shortest path that is still real: the generated handler's whole job is to turn the tool
  * arguments into `POST /v1/threads/:threadId/artifacts`, which the controller turns into exactly this
  * use-case call. Standing in for the HTTP hop keeps the test hermetic while leaving the thing being
- * measured — whether the router let anything through — completely untouched.
+ * measured — whether the door let anything through — completely untouched.
  */
-class WritingRouter extends McpRouterController {
+class WritingDoor extends McpDoorController {
 	constructor(
 		tokens: InMemoryAgentIdentityService<AgentRunIdentity>,
 		private readonly recordArtifact: RecordArtifact,
@@ -86,7 +86,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 	let tokens: InMemoryAgentIdentityService<AgentRunIdentity>
-	let router: WritingRouter
+	let door: WritingDoor
 	let threadId: string
 
 	beforeAll(async () => {
@@ -98,7 +98,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		threadId = thread.id.value
 		tokens = new InMemoryAgentIdentityService<AgentRunIdentity>()
-		router = new WritingRouter(tokens, testBed.resolve(RecordArtifact))
+		door = new WritingDoor(tokens, testBed.resolve(RecordArtifact))
 	})
 	afterAll(async () => {
 		await testBed.destroy()
@@ -120,7 +120,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 		({
 			params: { scope },
 			raw: new Request(`http://127.0.0.1:3030/v1/mcp/${scope}`, { method: 'POST', headers, body }),
-		}) as unknown as McpRouterController['input']
+		}) as unknown as McpDoorController['input']
 
 	const authorized = (token: string) => ({ authorization: `Bearer ${token}`, 'content-type': 'application/json' })
 	const anonymous = () => ({ 'content-type': 'application/json' })
@@ -131,7 +131,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 		const token = tokens.issue(identity())
 		const before = await testBed.probe().snapshot(COUNTED)
 
-		await router.handle(post('issue-handling', call({ threadId, data: { kind: ArtifactKind.LINK } }), authorized(token)))
+		await door.handle(post('issue-handling', call({ threadId, data: { kind: ArtifactKind.LINK } }), authorized(token)))
 
 		const after = await testBed.probe().snapshot(COUNTED)
 		expect(after.artifacts).toBe(before.artifacts + 1)
@@ -141,7 +141,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 
 	it('(a) an ABSENT token → 401, and nothing moves', async () => {
 		const before = await testBed.probe().snapshot(COUNTED)
-		await expect(router.handle(post('issue-handling', call({ threadId, data: {} }), anonymous()))).rejects.toMatchObject({
+		await expect(door.handle(post('issue-handling', call({ threadId, data: {} }), anonymous()))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
@@ -151,7 +151,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 		const token = tokens.issue(identity())
 		tokens.revoke(token)
 		const before = await testBed.probe().snapshot(COUNTED)
-		await expect(router.handle(post('issue-handling', call({ threadId, data: {} }), authorized(token)))).rejects.toMatchObject({
+		await expect(door.handle(post('issue-handling', call({ threadId, data: {} }), authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
@@ -161,7 +161,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 		const token = tokens.issue({ ...identity(), scope: McpScope.system })
 		const before = await testBed.probe().snapshot(COUNTED)
 		await expect(
-			router.handle(post('issue-handling', call({ threadId, data: { kind: ArtifactKind.LINK } }), authorized(token))),
+			door.handle(post('issue-handling', call({ threadId, data: { kind: ArtifactKind.LINK } }), authorized(token))),
 		).rejects.toMatchObject({ name: 'AGENT_RUN_SCOPE_MISMATCH' })
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
 	})

@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
 import { McpScope } from '@codedm/contracts-typescript/wire/enums'
-import { loadGeneratedServer } from './router'
+import { loadGeneratedServer } from './door'
 
 /**
  * THE GENERATED SERVER RUNS — and `tsc` being green is not evidence of that (AC-6.16).

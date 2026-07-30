@@ -7,7 +7,7 @@ import { AgentName } from '../enums'
 import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
 import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
-import { McpRouterController } from './router'
+import { McpDoorController } from './door'
 import { wireToolName } from './wire'
 
 /**
@@ -48,9 +48,9 @@ const identityForA = (): AgentRunIdentity => ({
  * an assertion. `handleRequest` is the single door every tool call must pass through to reach a
  * generated handler, an outbound HTTP call and therefore the domain; counting how many times it was
  * entered is the cheapest honest proxy for "nothing was written", and the integration suite in
- * `router.write-isolation.test.ts` measures the same property by counting rows and outbox events.
+ * `door.write-isolation.test.ts` measures the same property by counting rows and outbox events.
  */
-class ObservableRouter extends McpRouterController {
+class ObservableDoor extends McpDoorController {
 	readonly dispatched: Request[] = []
 
 	protected override async buildTransport(): Promise<never> {
@@ -72,34 +72,34 @@ const post = (scope: string, body: string, headers: Record<string, string>) =>
 	({
 		params: { scope },
 		raw: new Request(`http://127.0.0.1:3030/v1/mcp/${scope}`, { method: 'POST', headers, body }),
-	}) as unknown as McpRouterController['input']
+	}) as unknown as McpDoorController['input']
 
 describe('the door refuses BEFORE dispatching, and refuses an unusable credential at all', () => {
 	let tokens: InMemoryAgentIdentityService<AgentRunIdentity>
-	let router: ObservableRouter
+	let door: ObservableDoor
 
 	beforeEach(() => {
 		tokens = new InMemoryAgentIdentityService<AgentRunIdentity>()
-		router = new ObservableRouter(tokens)
+		door = new ObservableDoor(tokens)
 	})
 
 	const authorized = (token: string) => ({ authorization: `Bearer ${token}`, 'content-type': 'application/json' })
 
 	it('(a) NO token → AGENT_RUN_TOKEN_INVALID (401), and the transport is never reached', async () => {
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
-		await expect(router.handle(post('issue-handling', call, { 'content-type': 'application/json' }))).rejects.toMatchObject({
+		await expect(door.handle(post('issue-handling', call, { 'content-type': 'application/json' }))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
 		// MEASURED, not read off the control flow: nothing was dispatched, so no generated handler ran,
 		// so no outbound HTTP call was built, so nothing could have been written.
-		expect(router.dispatched).toHaveLength(0)
+		expect(door.dispatched).toHaveLength(0)
 	})
 
 	it('(a) a REVOKED token → 401. This is the late tool call from a run that already died.', async () => {
 		const token = tokens.issue(identityForA())
 		tokens.revoke(token)
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
-		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
+		await expect(door.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
 	})
@@ -107,26 +107,26 @@ describe('the door refuses BEFORE dispatching, and refuses an unusable credentia
 	it('(a) an EXPIRED token → 401, even though it was never revoked', async () => {
 		const token = tokens.issue({ ...identityForA(), expiresAt: new Date(Date.now() - 1) })
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
-		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
+		await expect(door.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
 	})
 
 	it('AC-6.6(d) — the CONCORDANT call IS dispatched, which is what makes the counts above mean something', async () => {
-		// Without this, a router that refused everything would satisfy every assertion in this file and
+		// Without this, a door that refused everything would satisfy every assertion in this file and
 		// `dispatched` would be trivially empty forever.
 		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { issueId: ISSUE_A, kind: 'LINK' } })
-		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as unknown as Response
+		const response = (await door.handle(post('issue-handling', call, authorized(token)))) as unknown as Response
 
 		expect(response.status).toBe(HttpStatusCode.OK)
-		expect(router.dispatched).toHaveLength(1)
+		expect(door.dispatched).toHaveLength(1)
 	})
 
 	it('an UNKNOWN scope is refused rather than resolved to the nearest one', async () => {
 		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
-		await expect(router.handle(post('not-a-scope', call, authorized(token)))).rejects.toMatchObject({
+		await expect(door.handle(post('not-a-scope', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
 		})
 	})
@@ -142,27 +142,27 @@ describe('the door refuses BEFORE dispatching, and refuses an unusable credentia
 		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RemoveWorkspace'), { workspaceId: '019e4d24-6524-7041-9e1c-8108180cddae' })
 
-		await expect(router.handle(post('system', call, authorized(token)))).rejects.toMatchObject({
+		await expect(door.handle(post('system', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_SCOPE_MISMATCH',
 		})
-		expect(router.dispatched).toHaveLength(0)
+		expect(door.dispatched).toHaveLength(0)
 		expect(GlobalErrorMapper.AGENT_RUN_SCOPE_MISMATCH).toBe(HttpStatusCode.FORBIDDEN)
 	})
 
 	it('the SAME token is accepted against the scope it WAS minted for — the check is not "refuse everything"', async () => {
 		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { kind: 'LINK' } })
-		await router.handle(post('issue-handling', call, authorized(token)))
-		expect(router.dispatched).toHaveLength(1)
+		await door.handle(post('issue-handling', call, authorized(token)))
+		expect(door.dispatched).toHaveLength(1)
 	})
 
 	it('a SYSTEM-scoped token is likewise confined — the rule is symmetric, not a special case for one scope', async () => {
 		const token = tokens.issue({ ...identityForA(), scope: McpScope.system })
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { kind: 'LINK' } })
-		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
+		await expect(door.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_SCOPE_MISMATCH',
 		})
-		expect(router.dispatched).toHaveLength(0)
+		expect(door.dispatched).toHaveLength(0)
 	})
 })
 
@@ -170,6 +170,6 @@ describe('the door grants no ambient authority', () => {
 	it('it carries NO middleware — nothing stamps operator authority onto a tool call', () => {
 		// `OperatorMiddleware` on this route would grant every inbound JSON-RPC message the daemon's own
 		// authority before the token was even read: the confused-deputy shape the whole file prevents.
-		expect(new McpRouterController(new InMemoryAgentIdentityService<AgentRunIdentity>()).middlewares).toEqual([])
+		expect(new McpDoorController(new InMemoryAgentIdentityService<AgentRunIdentity>()).middlewares).toEqual([])
 	})
 })
