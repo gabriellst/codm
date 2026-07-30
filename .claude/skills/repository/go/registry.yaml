@@ -443,3 +443,55 @@ registry:
             transcodingjob.NewPgTranscodingJobRepository,
             fx.As(new(transcodingjob.TranscodingJobRepository)),
         )),
+
+    - id: bp-GO-REPO-10
+      name: "Repositório sobre tabela sem entidade e sem justificativa de lifecycle/escala (mesma regra DDD do par TS)"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Mesma regra do par TS (bp-12) — é DDD, não particularidade de linguagem. Uma tabela sem
+        // entidade em `<ctx>/entities/` E sem struct de projeção em `<ctx>/projections/` só é
+        // legítima como repositório-sem-agregado quando (1) é infra, ou (2) é child aggregate com
+        // justificativa de lifecycle/escala no PAI. Detecção:
+        // `find packages/api/go/internal/*/repositories -mindepth 1 -type d` + para cada tabela
+        // escrita, procurar `internal/<ctx>/entities/` e `internal/<ctx>/projections/`.
+
+        // Cuidado real, achado na varredura B4: duas escritas na MESMA tabela só são legítimas
+        // quando a fronteira é por COLUNA e documentada NOS DOIS LADOS — o contrato de colunas
+        // disjuntas de `gateway_remotes` é honrado por sqlite_remote_repository.go ("`name` is
+        // projection-owned: bound as '' on insert and never touched on conflict, so a
+        // projector-written display name survives an aggregate save.") mas QUEBRADO pelo Save
+        // largo da projeção, que reclama 6 colunas do agregado no ON CONFLICT DO UPDATE (type,
+        // pinned_at, archived, mute_expiration, marked_as_unread, deleted_at) — a disjunção vale
+        // numa direção só. Um contrato de coluna que só um lado honra é meio contrato.
+        func (r *sqliteRemoteProjectionRepository) Save(ctx context.Context, row projections.Remote) error {
+            // ON CONFLICT DO UPDATE reclamando colunas que o agregado também escreve —
+            // verifique os DOIS ON CONFLICT, não só o do agregado.
+        }
+      right: |
+        // Positivo (o agregado inteiro) — internal/channel/repositories/channel/sqlite_channel_repository.go:
+        // Find hidrata via hydrateChannel -> entities.ReconstructChannel(...) (nunca por construtor
+        // de negócio); Save tem `events := ch.PullDomainEvents()` como PRIMEIRA instrução, SaveAll
+        // em seguida, e só então o INSERT ... ON CONFLICT(id) DO UPDATE. Eventos antes do upsert,
+        // sempre.
+        func (r *sqliteChannelRepository) Save(ctx context.Context, ch *entities.Channel) error {
+            events := ch.PullDomainEvents() // primeira instrução
+            if err := r.SaveAll(ctx, events); err != nil {
+                return err
+            }
+            // ... INSERT ... ON CONFLICT(id) DO UPDATE ...
+        }
+
+        // Positivo-sutil (duas escritas, mesma tabela, colunas disjuntas por CONTRATO) — o
+        // repositório do agregado `remote` e o RemoteProjectionRepository escrevem ambos
+        // `gateway_remotes` com subconjuntos de coluna DECLARADAMENTE disjuntos — legítimo desde
+        // que o contrato esteja escrito nos dois lados (ver o achado colateral em "wrong" acima).
+
+        // Armadilha-justificada — gateway_remote_memberships: SEM entidade E SEM struct de
+        // projeção, escrita SÓ pelo RemoteProjectionRepository (UpdateMembership/AddMember/
+        // RemoveMember/BulkUpdateMemberships). Legítima: a membership NÃO TEM identidade própria —
+        // a única representação em código é um MembershipRow sem campo de id, a identidade é a
+        // chave composta ON CONFLICT(channel_id, group_id, member_id), e o conjunto é substituído
+        // por inteiro (DELETE-all + batch INSERT dentro de inTx). O teste para distinguir uma da
+        // outra: a linha tem lifecycle próprio (nasce, muda de estado, morre) ou é reposta em
+        // bloco? Se é reposta em bloco, não há invariante para um agregado guardar.

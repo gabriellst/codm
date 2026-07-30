@@ -418,6 +418,10 @@ Repositories must not contain business logic like status changes or computed fie
 
 The database can have many-to-many relationships via junction tables, but in code these checks must go through the aggregate root. The repository loads the aggregate with its relationships, and the root entity decides. See `bp-09` in registry.yaml for the wrong/right pattern.
 
+### Child-table repository with no entity behind it, and no justification on the parent [bp-12]
+
+A bare `abstract class XRepository {` (no `extends Repository<T>`) over a table that has no entity in `<ctx>/entities/` is legitimate in exactly two cases: it's infra (idempotency ledger, outbox, queue — not a domain model), or it's a child table of an aggregate whose PARENT aggregate names, in its own docstring, the lifecycle/scale reason it stays out (`TerminalLineRepository` ← `Issue.ts`). Outside those two, the table is PART of the aggregate — the write goes through a method on it, and persistence through the aggregate's own repository, in the same transaction (`ThreadRepository.save` draining `Thread.pullPendingWrites()`). B4 killed two repositories that violated this (`TranscriptRepository`, `StopRepository`) plus one whose good justification lived in the wrong file (`StopPolicyConfigRepository`). See `bp-12` in registry.yaml for the three negative and three positive worked examples.
+
 ## Checklist
 
 - [ ] All `when: always` patterns present (REPO-01 through REPO-04, REPOI-01 through REPOI-06 — verify against registry.yaml)

@@ -847,6 +847,65 @@ cross_cutting_bad_practices:
       // com retry/backoff/lease da fila. O FATO, se importa para auditoria, continua existindo —
       // sem consumidor.
 
+  - id: cc-bp-27
+    scope: backend
+    name: "Repositório de tabela-filha sem entidade correspondente e sem justificativa de lifecycle/escala no agregado pai"
+    severity: warning
+    always_flag_when: >
+      3 casos legítimos: infra; child-de-agregado justificado NO PAI; settings row SEM pai que
+      NOMEIA a ausência (ex.: StopPolicyConfigRepository — NÃO violação, ver right/Positivo 4).
+
+      Um `abstract class XRepository {` (TS) ou uma interface `XRepository` (Go) PELADA — sem
+      `extends Repository<T>`, sem entidade em `<ctx>/entities/` por trás — existe sobre uma tabela
+      que não é write-model de um agregado. É princípio de DDD, não particularidade de linguagem (B4,
+      2026-07-30). Legítimo em exatamente TRÊS casos: (1) INFRA — ledger de idempotência, outbox,
+      fila; não é modelo de domínio. (2) tabela-filha de um agregado E o agregado PAI carrega, na
+      PRÓPRIA docstring, a razão de lifecycle/escala pela qual ela fica de fora (replay, log de
+      transporte, escala própria etc.). (3) settings/config row GENUINAMENTE sem agregado pai
+      (per-owner, não per-instância de nenhum agregado) cuja docstring nomeia EXPLICITAMENTE a
+      ausência de pai como o motivo de autojustificar-se no próprio repositório. Fora desses três
+      casos a tabela é PARTE do agregado: a escrita passa por um método dele, e a persistência pelo
+      repositório do agregado, na mesma transação. Julgamento, não forma — por isso
+      `mechanical: false`: é preciso ler o agregado pai (ou, no caso 3, o próprio arquivo) para saber
+      se a justificativa existe e se ela nomeia lifecycle/escala OU a ausência de pai. Quatro
+      sintomas que contam como falha mesmo quando existe ALGUMA prosa: (a) um enunciado do FATO da
+      separação ("X is a separate table/entity") sem motivo de lifecycle/escala anexado; (b) uma
+      justificativa que cobre N tabelas de uma vez só — verifique cada uma individualmente; (c) uma
+      justificativa boa que mora no lugar errado (no próprio repositório em vez do agregado pai,
+      quando um agregado pai EXISTE) — aí o que se corrige é o ENDEREÇO, não o conteúdo; (d) no caso
+      3, uma prosa que só cita a demoção ("demoted from an aggregate to a settings row") sem dizer
+      POR QUE não há pai — a frase tem de nomear a ausência, não só admiti-la.
+    exceptions: |
+      - Repositório de PROJEÇÃO (read-model materializado por evento) — não é agregado, tem seu
+        próprio par Projection/ProjectionRepository, e não precisa de justificativa no pai.
+      - Relationship set sem identidade própria, reposto em bloco (DELETE-all + batch INSERT) cuja
+        identidade é uma chave composta — não é child aggregate (Go: `gateway_remote_memberships`).
+      - Settings/config row per-owner sem agregado pai (caso 3) — ex. `StopPolicyConfigRepository`:
+        a docstring nomeia a ausência de pai e o endereço é o contexto dono do que a config governa.
+    wrong: |
+      // thread/repositories/TranscriptRepository.ts (eliminado no B4)
+      // Docstring: "The TranscriptEntry store... A distinct entity within BC4" — mas não existe
+      // entidade `TranscriptEntry`, e `Thread.ts` só ENUNCIAVA a separação, sem lifecycle/escala:
+      // "The transcript + pending clarifications are separate entities/records, not embedded here."
+      export abstract class TranscriptRepository {
+        abstract append(input: AppendTranscriptInput, tx?: Transaction): Promise<TranscriptEntryRow>
+      }
+    right: |
+      StopPolicyConfigRepository (thread/) has NO parent aggregate (per-owner settings row) and its
+      docstring SAYS SO — self-hosted justification IS the sanctioned case-3 form here, not a defect.
+
+      // ThreadRepository (pós-B4) — a tabela-filha é PARTE do agregado
+      export abstract class ThreadRepository extends Repository<Thread> {
+        abstract recentEntries(threadId: string, limit: number, tx?: Transaction): Promise<TranscriptEntry[]>
+        abstract findEntry(entryId: string, tx?: Transaction): Promise<TranscriptEntry | undefined>
+        // save(thread, tx) drena thread.pullPendingWrites() e grava a entry no MESMO dbc da linha
+        // do agregado — Thread.recordEntry() é o único jeito de uma entry vir a existir.
+      }
+
+      // Exemplo positivo pré-existente — issue/entities/Issue.ts:44 nomeia lifecycle/escala:
+      // "The terminal log is a separate table (own lifecycle/scale: T12 replay of a transport log,
+      //  unbounded per issue)." → issue/repositories/TerminalLineRepository fica.
+
 # Implementation order — follow top-to-bottom when building a feature
 backend_sequence: [controller, schema, sdk, entity, value-object, enum, errors, db-schema, repository-interface, repository-impl, service-interface, service-impl, usecase, handler, query, sdk]
 frontend_sequence: [route, section, component, form, store]

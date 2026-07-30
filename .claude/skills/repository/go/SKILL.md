@@ -322,6 +322,10 @@ Atomic op methods go on the concrete struct (not on the interface) unless they a
 
 ---
 
+## Child-table repository with no entity behind it, and no justification on the parent [bp-GO-REPO-10]
+
+Same DDD rule as the TypeScript pair (not a language particularity): a repository over a table with no `entities.X` struct behind it and no `projections.X` struct either is legitimate only as infra, or as a child table whose PARENT aggregate documents the lifecycle/scale reason it stays out. Zero violations in the current Go inventory (6 repositories), but the boundary is easy to blur when one table is written by both an aggregate repo and a projection repo — see the `gateway_remotes` worked example (disjoint columns by CONTRACT, checked on BOTH `ON CONFLICT` clauses, not just the aggregate's) and the `gateway_remote_memberships` trap (no entity, no projection struct, legitimately written only by the projection because the row has no identity of its own and is replaced in bulk). See `bp-GO-REPO-10` in registry.yaml for the full worked examples.
+
 ## Checklist
 
 - [ ] Folder is `<ctx>/repositories/<snake_name>/` with three files: interface, pg, mock.

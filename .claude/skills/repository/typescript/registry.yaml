@@ -677,6 +677,112 @@ registry:
         }
         // (Query/BFF use cases that query Drizzle directly may also use DrizzleClient.)
 
+    - id: bp-12
+      name: "Repositório de tabela-filha sem entidade correspondente, sem justificativa de lifecycle/escala no agregado PAI"
+      severity: critical
+      mechanical: false
+      wrong: |
+        LEGÍTIMO só em 3 casos: (1) infra (ledger/outbox/fila); (2) child de agregado com
+        justificativa de lifecycle/escala NO PAI; (3) settings/config row SEM pai que nomeia A
+        RAZÃO da ausência (ex.: StopPolicyConfigRepository — ver Positivo 4, NÃO é violação).
+        Fora disso é PARTE do agregado.
+
+        // Um `abstract class XRepository {` PELADO (sem `extends Repository<T>`) sobre uma tabela
+        // que não tem entidade em `<ctx>/entities/` só é legítimo em TRÊS casos: (1) INFRA — ledger
+        // de idempotência, outbox, fila; (2) tabela-filha de um agregado E o agregado PAI carrega,
+        // na PRÓPRIA docstring, a razão de lifecycle/escala pela qual ela fica de fora; (3) settings
+        // row GENUINAMENTE sem agregado pai (config per-owner, não per-instância de nenhum
+        // agregado) cuja docstring nomeia EXPLICITAMENTE a ausência de pai como o motivo de
+        // autojustificar-se no próprio repositório — não basta reaproveitar a mesma frase de uma
+        // migração de contexto (ver Positivo 4), o texto tem de dizer POR QUE não há pai. Fora
+        // desses três, a tabela é PARTE do agregado. Detecção: `grep -rn "^export abstract class
+        // .*Repository {" packages/api/typescript/src` lista os candidatos (o tell é a ausência de
+        // `extends Repository<T>`); para cada um, `ls <ctx>/entities/` e — se não houver entidade —
+        // procurar a justificativa na docstring do agregado pai ou, no caso (3), no próprio arquivo.
+
+        // Negativo 1 — thread/repositories/TranscriptRepository (eliminado no B4). Docstring
+        // prometia "The TranscriptEntry store... A distinct entity within BC4" e não existia
+        // entidade `TranscriptEntry`; `DrizzleTranscriptRepository.append()` mintava o id com
+        // `crypto.randomUUID()` dentro do insert e gravava o que recebia, sem ninguém validar que a
+        // entry citada pertencia à thread ou que uma linha CONTACT trazia sender. `Thread.ts`
+        // mencionava a separação — "The transcript + pending clarifications are separate
+        // entities/records, not embedded here." — mas isso é ENUNCIADO DO FATO, não justificativa:
+        // nem lifecycle, nem escala.
+        export abstract class TranscriptRepository {
+          abstract append(input: AppendTranscriptInput, tx?: Transaction): Promise<TranscriptEntryRow>
+          abstract recentByThread(threadId: string, limit: number, tx?: Transaction): Promise<TranscriptEntryRow[]>
+        }
+
+        // Negativo 2 — issue/repositories/StopRepository (eliminado no B4). Mesmo shape, e um
+        // agravante: a justificativa que TINHA (`Issue.ts`: "Stops + the terminal log are separate
+        // tables (own lifecycles/scale)") era de segunda mão — cobria DUAS tabelas numa linha só, e
+        // para Stop era falsa: `issueId` era obrigatório, o que IMPEDIA o caso de negócio de stop
+        // sem issue. Uma justificativa que cobre N tabelas de uma vez é bandeira: verifique cada uma.
+        export abstract class StopRepository {
+          abstract raise(input: RaiseStopInput, tx?: Transaction): Promise<StopRow>
+        }
+
+        // Negativo 3 (variação: justificativa no lugar errado) — StopPolicyConfigRepository ANTES
+        // do B4, quando vivia em `issue/repositories/`. A justificativa existia e citava a demoção
+        // ("demoted from an aggregate to a settings row"), mas não dizia POR QUE não há agregado
+        // pai — e morava no CONTEXTO errado: `issue/` não é o dono dos stops que a policy governa
+        // (a policy é per-owner, não per-issue). Duas falhas ao mesmo tempo: endereço errado E a
+        // prosa não nomeia a ausência de pai. Comparar com o Positivo 4 (mesma classe, pós-B4).
+        /** The global (per-owner) stop-criteria toggles — demoted from an aggregate to a settings row. */
+        export abstract class StopPolicyConfigRepository {
+          abstract get(ownerId: string, tx?: Transaction): Promise<StopPolicyConfig>
+        }
+      right: |
+        StopPolicyConfigRepository (thread/) is CASE 3, not a violation: it has NO parent aggregate
+        (per-owner settings row) and its docstring SAYS SO — "has no parent aggregate to justify it
+        in, which is why this justification sits on the repository itself". Self-hosted justification
+        IS the sanctioned form here; do not require moving it into any entity file. See Positivo 4.
+
+        // Positivo 1 (tabela-filha justificada) — issue/repositories/TerminalLineRepository, com a
+        // linha correspondente NO AGREGADO PAI (`issue/entities/Issue.ts`): "The terminal log is a
+        // separate table (own lifecycle/scale: T12 replay of a transport log, unbounded per
+        // issue)." É replay, log de transporte, escala própria — o agregado não quer nem consegue
+        // carregá-lo. A justificativa está no PAI, nomeia o motivo, e é verificável.
+        export abstract class TerminalLineRepository {
+          abstract append(input: AppendTerminalLineInput, tx?: Transaction): Promise<TerminalLineRow>
+        }
+
+        // Positivo 2 (infra) — ConsumedMessageRepository (latch exactly-once,
+        // INSERT ... ON CONFLICT DO NOTHING sobre UNIQUE(channelId, platformMessageId)) e
+        // MailboxRepository (fila durável por target, com lease e poison). Nenhum dos dois é
+        // modelo de domínio; nenhum precisa de justificativa em agregado nenhum.
+        export abstract class ConsumedMessageRepository { /* ... */ }
+        export abstract class MailboxRepository { /* ... */ }
+
+        // Positivo 4 (caso 3: settings row genuinamente sem agregado pai) — StopPolicyConfigRepository
+        // DEPOIS do B4, em `thread/repositories/`. Mesmo texto de demoção do Negativo 3, mas agora
+        // completo: a docstring nomeia A RAZÃO de não ter pai ("A settings row has no parent
+        // aggregate to justify it in, which is why this justification sits on the repository
+        // itself") e o endereço é o contexto dono dos stops que a policy governa. Não vira
+        // `Thread.raiseStop` porque a policy não é per-thread, é per-owner — não há instância de
+        // `Thread` nenhuma para hospedar a linha. Autojustificação no próprio repositório É o caso
+        // sancionado (3), não uma falha à espera de correção.
+        /**
+         * The global (per-owner) stop-criteria toggles — demoted from an aggregate to a settings row.
+         * Lives in `thread/` since B4. A settings row has no parent aggregate to justify it in, which
+         * is why this justification sits on the repository itself; what B4 fixes is the ADDRESS — the
+         * policy now sits in the context that owns the stops it gates.
+         */
+        export abstract class StopPolicyConfigRepository {
+          abstract get(ownerId: string, tx?: Transaction): Promise<StopPolicy>
+          abstract upsert(ownerId: string, policy: StopPolicy, tx?: Transaction): Promise<void>
+        }
+
+        // Positivo 5 (o shape correto pós-correção) — ThreadRepository: save(thread, tx) dreno
+        // thread.pullPendingWrites() e grava a tabela-filha no MESMO dbc da linha do agregado; as
+        // leituras que sobram (recentEntries, findEntry, openStops) são superfície do repositório
+        // do agregado, não um segundo repositório; findById NÃO hidrata histórico.
+        export abstract class ThreadRepository extends Repository<Thread> {
+          abstract recentEntries(threadId: string, limit: number, tx?: Transaction): Promise<TranscriptEntry[]>
+          abstract findEntry(entryId: string, tx?: Transaction): Promise<TranscriptEntry | undefined>
+          abstract openStops(threadId: string, tx?: Transaction): Promise<Stop[]>
+        }
+
   snippet:
     skeleton: |
       import { Repository } from '@codedm/core-typescript'

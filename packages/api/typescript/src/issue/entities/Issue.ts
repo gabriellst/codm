@@ -39,9 +39,11 @@ export type IssueProps = Z.infer<typeof IssueSchema>
 
 /**
  * `Issue` (BC5 Issue Execution, Core) — a unit of concurrent work with its own terminal session.
- * Invariants: `key` unique within the thread (DB-enforced); stops only while not archived (guarded
- * by RaiseStop); lifecycle NEEDS_INPUT → WORKING → COMPLETED, plus archive (MANUAL / AUTO_24H /
- * THREAD_DETACHED) and restore. Stops + the terminal log are separate tables (own lifecycles/scale).
+ * Invariants: `key` unique within the thread (DB-enforced); lifecycle NEEDS_INPUT → WORKING →
+ * COMPLETED, plus archive (MANUAL / AUTO_24H / THREAD_DETACHED) and restore. The terminal log is a
+ * separate table (own lifecycle/scale: T12 replay of a transport log, unbounded per issue).
+ * Stops are NOT here any more — since B4 a Stop is a child of the `Thread` aggregate (it can exist
+ * without an issue at all), so `Thread.raiseStop`/`resolveStop` own it and this line no longer covers it.
  */
 export class Issue extends AggregateRoot<typeof IssueSchema> {
 	static override schema = IssueSchema
