@@ -8,6 +8,7 @@ import { Handler } from '../../types/Handler'
 import { tryCatchAsync } from '../../utils/TryCatch'
 import { DrizzleDatabaseDriver } from '../../db/drivers/DrizzleDatabaseDriver'
 import { DomainEventRepository } from '../../repositories/DomainEventRepository'
+import type { PollingService } from '../HealthService/HealthCheck'
 import { BaseIntegrationEvent, type AnyIntegrationEvent } from '../../types/BaseIntegrationEvent'
 import { EventCallback, ExternalMediator, Unsubscribe, handlerEventNames } from './Mediator'
 import { adaptWireEnvelope, reviveIsoDates } from './wire'
@@ -71,7 +72,7 @@ interface ClaimedOutboxRow {
  * arrived first" must say so at its own site.
  */
 @injectable()
-export class SqlExternalMediator extends ExternalMediator {
+export class SqlExternalMediator extends ExternalMediator implements PollingService {
 	private handlerMap = new Map<string, Handler[]>()
 	private callbacks = new Set<EventCallback>()
 	private namedCallbacks = new Map<string, Set<EventCallback>>()
@@ -80,6 +81,18 @@ export class SqlExternalMediator extends ExternalMediator {
 	private pollIntervalMs = POLL_MIN_MS
 	private draining = false
 	private stopped = true
+
+	/**
+	 * "Meu timer de poll está armado" — o menor sinal VERDADEIRO que já existia aqui.
+	 *
+	 * `stopped` e não `timer`: `stopped` nasce `true` e só é virado por `start()`/`stop()`, então
+	 * `!stopped` é literalmente "start rodou e stop não" — correto ANTES do primeiro `start()`, que
+	 * é a janela em que o probe de readiness pergunta. `timer` aqui só existe entre um
+	 * `scheduleNext()` e o `drainOnce` seguinte.
+	 */
+	get running(): boolean {
+		return !this.stopped
+	}
 
 	constructor(
 		private driver: DrizzleDatabaseDriver,

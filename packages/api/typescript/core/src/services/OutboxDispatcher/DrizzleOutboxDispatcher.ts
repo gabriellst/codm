@@ -8,6 +8,7 @@ import { BaseError } from '../../types/BaseError'
 import type { BaseInfrastructureErrors } from '../../errors/codes'
 import { eq, sql, inArray } from 'drizzle-orm'
 import { tryCatchAsync } from '../../utils/TryCatch'
+import type { PollingService } from '../HealthService/HealthCheck'
 import { LoggingService } from '../Logging'
 
 // ─── Configuration ───────────────────────────────────────────────────────────
@@ -48,12 +49,24 @@ interface DispatchResult {
 }
 
 @injectable()
-export class DrizzleOutboxDispatcher extends OutboxDispatcher {
+export class DrizzleOutboxDispatcher extends OutboxDispatcher implements PollingService {
 	private timer: ReturnType<typeof setInterval> | null = null
 	private isProcessing = false
 	private stopping = false
 	private pollIntervalMs = POLL_MIN_MS
 	private lastProcessedCount = 0
+
+	/**
+	 * "Meu timer de poll está armado" — o menor sinal VERDADEIRO que já existia aqui.
+	 *
+	 * `timer` e não `stopping`: `stopping` nasce `false`, então `!stopping` diria READY antes de
+	 * `start()` ter rodado — mentiria exatamente na janela que o probe de readiness interroga.
+	 * `timer` nasce `null`, é setado por `scheduleNext()` e NUNCA fica `null` durante o poll:
+	 * `poll()` não o limpa, e `scheduleNext()` anula+reatribui no MESMO bloco síncrono.
+	 */
+	get running(): boolean {
+		return this.timer !== null
+	}
 
 	constructor(
 		private driver: DrizzleDatabaseDriver,
