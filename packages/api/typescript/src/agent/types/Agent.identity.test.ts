@@ -51,6 +51,28 @@ class CapturingRunner extends AgentRunner {
 	async shutdown(): Promise<void> {}
 }
 
+/**
+ * The REAL service with its one WRITER observed — not a stub.
+ *
+ * `issue()` is the only thing that can bring a credential into existence, so counting its calls is
+ * the only DIRECT measurement of "no credential was created". The assertion this replaces —
+ * `expect(identities.resolve('')).toBeNull()` — could not measure it: a token is 32 random bytes and
+ * is never the empty string, so that expression is `null` no matter what the implementation did. It
+ * was MEASURED vacuous: with the parse moved below `.issue(`, the suite stayed 8 pass / 0 fail, and a
+ * gate that has never gone red is not a gate.
+ *
+ * Subclassing instead of mocking keeps the storage REAL — `resolve()` still returns what `issue()`
+ * stored, so the tests that read an identity back still exercise the production path.
+ */
+class RecordingAgentIdentityService extends InMemoryAgentIdentityService<AgentRunIdentity> {
+	readonly issued: AgentRunIdentity[] = []
+
+	override issue(identity: AgentRunIdentity): string {
+		this.issued.push(identity)
+		return super.issue(identity)
+	}
+}
+
 const ProbeInputSchema = z.agentInput({})
 
 /**
@@ -100,15 +122,18 @@ describe('Agent — the identity is parsed at spawn, and it gates the credential
 		expect(runner.requests).toHaveLength(0)
 	})
 
-	it('FALSEADOR — and no credential was created: the service holds nothing to resolve', async () => {
-		const identities = new InMemoryAgentIdentityService<AgentRunIdentity>()
+	it('FALSEADOR — and no credential was created: `issue()` was never reached', async () => {
+		const identities = new RecordingAgentIdentityService()
 		const Probe = probeAgentFor(McpScope.ISSUE_HANDLING, IssueWorkIdentity)
 		const agent = new Probe(identities)
 
 		await expect(drain(agent, new CapturingRunner())).rejects.toThrow()
-		// There is no token to name, so the assertion is on the store's behaviour: nothing it could
-		// have issued resolves. `issue()` is the only writer and it was never reached.
-		expect(identities.resolve('')).toBeNull()
+		// THE ORDER, MEASURED AT THE WRITER. The refusal above proves the identity was rejected; this
+		// line proves the rejection happened BEFORE anything was minted. `issue()` is the sole way a
+		// credential comes into existence, so an implementation that issued first and validated after
+		// leaves exactly one entry here while still throwing the same error — which is what the
+		// falsifier for this axis moves the parse below `.issue(` to produce.
+		expect(identities.issued).toHaveLength(0)
 	})
 
 	it('the same agent spawns normally WITH the field, and the identity carries it', async () => {
