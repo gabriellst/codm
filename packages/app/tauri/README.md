@@ -4,7 +4,7 @@ Tauri v2 host for the CodeDM desktop app. The shell does three things and nothin
 
 1. **Serves the react console** — dev: `devUrl` → the vite dev server at
    `http://localhost:5173/app/`; prod: `frontendDist` → the static SPA emitted by
-   `nx run app-react:build-spa` (`packages/app/react/dist/client`, `CODEDM_DESKTOP=true`
+   `nx run app-react:build-spa` (`packages/app/react/dist/client`, `CODM_DESKTOP=true`
    flips vite to base `/`, SPA shell prerender, no nitro server).
 2. **Supervises the sidecars** — `bundle.externalBin` ships `codm-daemon`
    (TS daemon, `bun build --compile`) and `codm-gateway` (Go). `src/lib.rs` spawns both

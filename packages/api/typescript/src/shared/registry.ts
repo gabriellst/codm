@@ -77,7 +77,7 @@ function getTestDatabaseDriver(): LibsqlDriver {
 }
 const libsqlDriver = { useFactory: () => getTestDatabaseDriver() }
 
-// Real persistence: the SHARED, file-backed SQLite database at <CODEDM_DATA_DIR>/codedm.db — the
+// Real persistence: the SHARED, file-backed SQLite database at <CODM_DATA_DIR>/codm.db — the
 // very same file the Go gateway opens (`dbFileName` in core/db/sqlite/store.go). That co-tenancy is
 // the entire point of the phase; WAL is what makes it safe. Migrations apply on boot, from either
 // process, in any order (see shared/index.ts and LibsqlDriver.runMigrations).
@@ -116,7 +116,7 @@ export function getRealDatabaseDriver(): LibsqlDriver {
 			migrationsDir,
 			// EXACTLY the Go gateway's file name — a different name here means two databases and the
 			// `DISCONNECTED` console this phase exists to kill.
-			dbPath: join(resolveDataDir(Config.env.CODEDM_DATA_DIR), 'codedm.db'),
+			dbPath: join(resolveDataDir(Config.env.CODM_DATA_DIR), 'codm.db'),
 		})
 	}
 	return realDriverSingleton

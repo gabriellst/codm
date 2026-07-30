@@ -38,7 +38,7 @@ const srcTauriDir = posix.join(shell.pkgRoot, 'src-tauri')
 // `<subpath>`; the Rust supervisor resolves `resource_dir/<subpath>` at runtime. Explicit lines here,
 // mirrored in build-sidecars.ts + mod.rs.
 //
-//   migrations     — the Drizzle migrations dir; the daemon's `CODEDM_MIGRATIONS_DIR` points at it.
+//   migrations     — the Drizzle migrations dir; the daemon's `CODM_MIGRATIONS_DIR` points at it.
 //   daemon-runtime — the libsql native-prebuild closure; it is the daemon's spawn CWD (`Sidecar.cwd`),
 //                    because a `bun build --compile` binary resolves that dynamic `require` from the
 //                    process CWD, never from the executable's directory.

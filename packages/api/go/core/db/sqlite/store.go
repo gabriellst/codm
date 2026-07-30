@@ -3,8 +3,8 @@
 // binary target, go-domain-design.md §1.3/§5.2), owning its whole lifecycle
 // behind NewSqliteStore.
 //
-// The store ENCAPSULATES the data-dir dance the leaky CODEDM_DATA_DIR /
-// CODEDM_MIGRATIONS_DIR pattern used to thread through callers: the constructor
+// The store ENCAPSULATES the data-dir dance the leaky CODM_DATA_DIR /
+// CODM_MIGRATIONS_DIR pattern used to thread through callers: the constructor
 // mkdirs the dir, opens the db in WAL with a busy timeout, applies the
 // //go:embed migrations, and acquires a single-instance lock. Callers hand it a
 // path (or "" for a per-platform default) and get a ready store — nothing about
@@ -41,7 +41,7 @@ var migrationsFS embed.FS
 
 const (
 	// dbFileName is the single WAL database file inside the data dir.
-	dbFileName = "codedm.db"
+	dbFileName = "codm.db"
 	// migrationsTable is the store's own applied-migrations ledger, making boot
 	// idempotent: a squashed migration applied once is skipped on every reboot.
 	//

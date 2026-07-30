@@ -18,13 +18,13 @@ import {
 } from './repositories'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
-// daemon but must never spawn a provider CLI or probe host PATH: under CODEDM_E2E the `real`
+// daemon but must never spawn a provider CLI or probe host PATH: under CODM_E2E the `real`
 // AgentRunnerFactory drops to one over a deterministic stub (NEW_ISSUE decision + canned reply
 // frames, no subprocess) and the `real` ProviderDetector drops to the canned catalog (claude-code
 // DETECTED), so AttachThread's provider check and the inbound → classify → session → reply chain run
 // without a host toolchain. Production (flag unset) keeps DefaultAgentRunnerFactory over
 // ClaudeAgentRunner (bidirectional stream-json over plain pipes) + SystemProviderDetector.
-const E2E = process.env.CODEDM_E2E === 'true'
+const E2E = process.env.CODM_E2E === 'true'
 const realRunnerFactory = E2E ? E2eAgentRunnerFactory : DefaultAgentRunnerFactory
 const realProviderDetector = E2E ? MockProviderDetector : SystemProviderDetector
 

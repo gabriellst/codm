@@ -39,7 +39,7 @@ if (!dataDir) {
 
 // Same file layout the Go store owns (`core/db/sqlite/store.go`, dbFileName) — the two appliers
 // must land on the same path or the test proves nothing.
-const driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dataDir, 'codedm.db') })
+const driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dataDir, 'codm.db') })
 
 const readyFile = flag('ready')
 const startFile = flag('start')

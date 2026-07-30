@@ -2,7 +2,7 @@ import type { ApiSession } from './api'
 
 /**
  * Trigger ONE agent turn against an issue the spec already knows — the spec side of the daemon's
- * `/v1/_test/agent/run-turn` door (mounted only under CODEDM_E2E).
+ * `/v1/_test/agent/run-turn` door (mounted only under CODM_E2E).
  *
  * The turn is the real use case on the real DI graph; only the TRIGGER is test-only. It exists
  * because the SSE observer for an issue must be attached BEFORE the run streams, and on the

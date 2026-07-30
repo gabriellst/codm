@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * migrate — apply the shared-SQLite migrations against `$CODEDM_DATA_DIR`, then exit.
+ * migrate — apply the shared-SQLite migrations against `$CODM_DATA_DIR`, then exit.
  *
  * WHY THIS IS NOT A SECOND APPLIER. The rule this repo enforces is ONE LEDGER, not "no script":
  * a third applier carrying its own bookkeeping (`drizzle-kit migrate`/`push`, which write
@@ -22,8 +22,8 @@ import { Database } from 'bun:sqlite'
 import { Config, resolveDataDir } from '@codm/core-typescript'
 import { migrateEmbeddedDatabase } from '@shared/registry'
 
-const dataDir = resolveDataDir(Config.env.CODEDM_DATA_DIR)
-const dbPath = join(dataDir, 'codedm.db')
+const dataDir = resolveDataDir(Config.env.CODM_DATA_DIR)
+const dbPath = join(dataDir, 'codm.db')
 
 // Read the ledger through a SEPARATE read-only handle rather than the applier's driver: the point
 // is to report what the applier did, and reusing its connection would report what we asked for.

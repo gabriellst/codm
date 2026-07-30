@@ -25,7 +25,7 @@ import { McpDoorController } from '@agent/mcp/door'
  * inbound WhatsApp message sat at `attempts = 0` forever. No error, no retry, no symptom.
  *
  * ### Why every existing gate stayed green
- * Nothing built the class. `mock`/`integration` bind stubs, `CODEDM_E2E` swaps in a stub, and the unit
+ * Nothing built the class. `mock`/`integration` bind stubs, `CODM_E2E` swaps in a stub, and the unit
  * tests construct runners by hand with `new`. PRODUCTION WAS THE ONLY CALLER THAT WENT THROUGH THE
  * CONTAINER — which makes a `real`-only binding a permanent blind spot unless something resolves it on
  * purpose. This file is that something.
@@ -46,10 +46,10 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 	}
 
 	// The agent graph is bound in `real` by `agent/registry.ts`, whose E2E ternary reads the env at
-	// module load: under `CODEDM_E2E=true` the `real` column deliberately holds the hermetic stub. The
+	// module load: under `CODM_E2E=true` the `real` column deliberately holds the hermetic stub. The
 	// flag is therefore read and ASSERTED AGAINST rather than used to skip — a rail that opts out under
 	// a flag is a rail that proves nothing in exactly the configuration CI runs Playwright in.
-	const hermetic = process.env.CODEDM_E2E === 'true'
+	const hermetic = process.env.CODM_E2E === 'true'
 
 	/**
 	 * The graph the pivot left behind: the classifier and the router are gone, and the ORCHESTRATOR and

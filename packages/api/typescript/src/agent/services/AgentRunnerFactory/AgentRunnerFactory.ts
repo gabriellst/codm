@@ -32,7 +32,7 @@ import { AgentRunner, ClaudeAgentRunner } from '../AgentRunner'
  * `real` implementation below and it is why `DefaultAgentRunnerFactory` injects `ClaudeAgentRunner`
  * concretely. But the binding this factory REPLACES was also the env seam that makes "no test spawns a
  * provider CLI" a property of DI rather than of test discipline (§8 rule 8) — collapsing it into one
- * `@injectable()` class would push `process.env.CODEDM_E2E` inside a domain class. So the ABSTRACT
+ * `@injectable()` class would push `process.env.CODM_E2E` inside a domain class. So the ABSTRACT
  * token below is bound per env in `agent/registry.ts`, and each env's factory is honest about the one
  * runner it can produce.
  */

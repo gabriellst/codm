@@ -6,9 +6,9 @@ import { ChannelMessageReceivedEvent } from '@codm/contracts-typescript/wire/eve
 import { OperatorMiddleware } from '@auth/middlewares'
 
 /**
- * TEST-ONLY gateway ingress seam — mounted ONLY under `CODEDM_E2E` (see shared/index.ts) and refused
+ * TEST-ONLY gateway ingress seam — mounted ONLY under `CODM_E2E` (see shared/index.ts) and refused
  * outright under NODE_ENV=production (src/boot/assert-e2e-safe.ts). Never emitted to the SDK/OpenAPI
- * (route collection runs under EMIT_OPENAPI, where CODEDM_E2E is unset, so the controller is not mounted).
+ * (route collection runs under EMIT_OPENAPI, where CODM_E2E is unset, so the controller is not mounted).
  *
  * Founder decision 3 runs two processes — the Go Channel Gateway and this TS daemon — sharing ONE
  * SQLite file. The Playwright harness boots ONLY the TS daemon; the gateway is simulated at the

@@ -87,8 +87,8 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
             cwd: Some(resource_dir.join("daemon-runtime")),
             env: vec![
                 ("API_PORT".into(), api_port.to_string()),
-                ("CODEDM_DATA_DIR".into(), data_dir.into()),
-                ("CODEDM_MIGRATIONS_DIR".into(), migrations_dir),
+                ("CODM_DATA_DIR".into(), data_dir.into()),
+                ("CODM_MIGRATIONS_DIR".into(), migrations_dir),
                 ("API_GO_URL".into(), "http://localhost:3032".into()),
                 ("NODE_ENV".into(), "production".into()),
             ],
@@ -101,7 +101,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
             cwd: None,
             env: vec![
                 ("CHANNEL_PORT".into(), channel_port.to_string()),
-                ("CODEDM_DATA_DIR".into(), data_dir.into()),
+                ("CODM_DATA_DIR".into(), data_dir.into()),
                 (
                     "CHANNEL_ALLOWED_ORIGINS".into(),
                     "tauri://localhost,http://localhost:5173".into(),

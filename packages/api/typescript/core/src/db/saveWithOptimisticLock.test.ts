@@ -48,7 +48,7 @@ describe('saveWithOptimisticLock', () => {
 
 	beforeAll(async () => {
 		dir = mkdtempSync(join(tmpdir(), 'libsql-oplock-test-'))
-		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codedm.db') })
+		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
 	})
 

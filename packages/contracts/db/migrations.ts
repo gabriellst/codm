@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 // Absolute path to the Drizzle migrations directory (the `db/schema/migrations` output).
 //
 // Resolution order:
-//   1. `CODEDM_MIGRATIONS_DIR` env override — the escape hatch for any packaging where the
+//   1. `CODM_MIGRATIONS_DIR` env override — the escape hatch for any packaging where the
 //      migrations do not sit next to this module (e.g. a container that stages them elsewhere).
 //   2. `<dirname(this file)>/schema/migrations`.
 //
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 // when it is pulled into a `bun build --target=node` bundle, the bundler REWRITES
 // `import.meta.url` to the OUTPUT file (`dist/server.js`), so the fallback would resolve to a
 // nonexistent `dist/schema/migrations`. The node-target build copies the migrations next to
-// the bundle AND callers may set `CODEDM_MIGRATIONS_DIR` to stage them anywhere.
+// the bundle AND callers may set `CODM_MIGRATIONS_DIR` to stage them anywhere.
 export const migrationsDir =
-	process.env.CODEDM_MIGRATIONS_DIR ??
+	process.env.CODM_MIGRATIONS_DIR ??
 	join(dirname(fileURLToPath(import.meta.url)), 'schema', 'migrations')

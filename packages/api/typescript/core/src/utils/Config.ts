@@ -24,11 +24,11 @@ const RawEnvSchema = z.object({
 	API_URL: z.string().optional(),
 	APP_URL: z.string().optional(),
 	// Data directory for the REAL daemon (founder decision 3: 2 processes, one embedded DB — no
-	// external Postgres). It holds `codedm.db`, the SINGLE shared SQLite file that the Go gateway
+	// external Postgres). It holds `codm.db`, the SINGLE shared SQLite file that the Go gateway
 	// opens too, plus its `-wal`/`-shm` companions and this daemon's `daemon.lock`; migrations apply
 	// on boot from either process, idempotently. A leading `~` expands to $HOME in the driver factory.
 	// Tests pass no dbPath (a process-scoped temp file) and never read this key.
-	CODEDM_DATA_DIR: z.string().default('~/.codedm/data'),
+	CODM_DATA_DIR: z.string().default('~/.codm/data'),
 	OTEL_COLLECTOR_TRACE_URL: z.string().default(''),
 	OTEL_SERVICE_NAME: z.string().default('service'),
 	OTEL_COLLECTOR_LOG_URL: z.string().default(''),
@@ -43,7 +43,7 @@ const RawEnvSchema = z.object({
 	// api-go public base URL — targeted by the SDK aggregate client (shared/registry) AND the
 	// external/ChannelProxy reverse proxy (`${API_GO_URL}/api`). No apikey seam here: the gateway's
 	// own CHANNEL_GLOBAL_API_KEY guard stays empty in proxied deployments (auth lives on the api-ts
-	// hop — OperatorMiddleware), so the former CODEDM_GATEWAY_API_KEY key was removed with the
+	// hop — OperatorMiddleware), so the former CODM_GATEWAY_API_KEY key was removed with the
 	// per-endpoint ui proxies that were its only consumers.
 	API_GO_URL: z.string().default('http://localhost:3032'),
 	// Declared escape hatch for hermetic test stacks (the e2e runner sets it): the sign-in/up

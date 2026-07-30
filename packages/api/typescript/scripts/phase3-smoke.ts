@@ -21,7 +21,7 @@
  *      and the frames it yielded are what the SSE panel would have shown.
  *
  * WHY NOT THE WHOLE DAEMON: the HTTP test-ingress that seeds an inbound message is guarded by
- * `CODEDM_E2E=true`, and that same flag is what swaps `StreamJsonAgentRunner` out for the e2e stub
+ * `CODM_E2E=true`, and that same flag is what swaps `StreamJsonAgentRunner` out for the e2e stub
  * (`agent/registry.ts`). Booting the daemon to reach the ingress would therefore guarantee the CLI
  * is NEVER spawned — the opposite of what this smoke exists to prove. So the smoke drives the two
  * consumers directly, which is precisely the surface Fase 3 changed; the rest of the chain
@@ -48,7 +48,7 @@ import { IssueClassifier } from '../src/agent/services/IssueClassifier/IssueClas
 import { TerminalOutputAccumulator } from '../src/agent/services/TerminalOutputAccumulator/TerminalOutputAccumulator'
 import { AgentMessageRole, AgentName } from '../src/agent/enums'
 
-const BIN = process.env.CODEDM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
+const BIN = process.env.CODM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
 // The RECORD lives with the other phase artifacts in `.specs/`; the SCRIPT lives here because it
 // imports workspace packages (`reflect-metadata`, `@codm/core-typescript`) that only resolve from
 // inside this package's `node_modules` — the Fase-2 smoke could sit under `.specs/` only because it

@@ -123,7 +123,7 @@ describe('shared_outbox lanes (api / gateway / integration) over one file', () =
 
 	beforeAll(async () => {
 		dir = mkdtempSync(join(tmpdir(), 'codedm-outbox-lanes-'))
-		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codedm.db') })
+		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
 	})
 

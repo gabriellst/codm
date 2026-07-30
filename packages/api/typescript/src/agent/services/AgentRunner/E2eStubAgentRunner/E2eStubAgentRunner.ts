@@ -7,7 +7,7 @@ import type { AgentFrame, AgentRunRequest, AgentRuntimeEvent } from '../../../ty
 import { AgentRunner } from '../AgentRunner'
 
 /**
- * The `AgentRunner` bound in the `real` DI env under `CODEDM_E2E` (agent/registry.ts).
+ * The `AgentRunner` bound in the `real` DI env under `CODM_E2E` (agent/registry.ts).
  *
  * The Playwright harness boots the REAL daemon over the real SQLite, but must never spawn a provider
  * CLI. This stand-in keeps the whole inbound → classify → session → declare chain hermetic AND

@@ -7,7 +7,7 @@ import path from 'node:path'
  *
  * The meaning narrowed with the SQLite flip. It used to mean "this database file has an exclusive
  * owner"; it now means "another process IN THIS ROLE is already running here". Exclusivity of the
- * FILE is gone on purpose — the Go gateway opens the very same `codedm.db`, and WAL is what makes
+ * FILE is gone on purpose — the Go gateway opens the very same `codm.db`, and WAL is what makes
  * that safe. What survives is the thing the lock was actually worth: catching an operator who
  * starts two copies of the SAME process on one data dir (duplicate outbox dispatchers, duplicate
  * schedulers).
@@ -20,7 +20,7 @@ export class DataDirLockedError extends Error {
 	) {
 		super(
 			`Another CodeDM daemon is already running on this data dir "${dataDir}" (pid ${heldByPid}). ` +
-				`Stop the other daemon or point this one at a different CODEDM_DATA_DIR. ` +
+				`Stop the other daemon or point this one at a different CODM_DATA_DIR. ` +
 				`The Go gateway sharing this dir is expected and fine — it takes a different lock.`,
 		)
 		this.name = 'DataDirLockedError'
@@ -52,7 +52,7 @@ export function lockPathFor(dataDir: string): string {
  * Resolve a configured data dir to an absolute path (expanding a leading `~` to $HOME) and ensure
  * it exists on disk before the database file is opened inside it. Lives here (next to the lock) so
  * BOTH the composition-root driver binding and the early boot-time lock step resolve the SAME
- * concrete path — the lockfile and `<dataDir>/codedm.db` must agree exactly.
+ * concrete path — the lockfile and `<dataDir>/codm.db` must agree exactly.
  */
 export function resolveDataDir(raw: string): string {
 	const expanded = raw.startsWith('~') ? path.join(os.homedir(), raw.slice(1)) : path.resolve(raw)

@@ -18,7 +18,7 @@ Only one worktree is "active" (running `bun dev`) at a time. The
 worktree isolates code; runtime (ports, the SQLite data dir) is shared.
 
 If you need two worktrees with `bun dev` running simultaneously,
-that's a manual workflow — adjust `.env` ports / `CODEDM_DATA_DIR`
+that's a manual workflow — adjust `.env` ports / `CODM_DATA_DIR`
 yourself in the second worktree. `/install` does not handle
 per-worktree port allocation today.
 
@@ -123,7 +123,7 @@ followed by
 
 **There is no Postgres here.** The compose file carries `lgtm`
 (traces/logs/metrics) and `redis` only. The database is a single
-**SQLite file** at `$CODEDM_DATA_DIR/codedm.db`, opened by both the TS
+**SQLite file** at `$CODM_DATA_DIR/codm.db`, opened by both the TS
 daemon and the Go gateway. There is no `DATABASE_URL`.
 
 ### Step 5 — Nothing to create (and what `--reset-db` means now)
@@ -137,10 +137,10 @@ siblings), which is the full reset:
 ```bash
 # --reset-db: delete the store (with confirmation)
 if [ "$RESET_DB" = "1" ]; then
-  DATA_DIR="${CODEDM_DATA_DIR:-$HOME/.codedm}"
+  DATA_DIR="${CODM_DATA_DIR:-$HOME/.codedm}"
   read -p "About to DELETE the SQLite store under '$DATA_DIR'. Continue? [y/N] " ack
   [ "$ack" = "y" ] || { echo "aborted"; exit 1; }
-  rm -f "$DATA_DIR/codedm.db" "$DATA_DIR/codedm.db-wal" "$DATA_DIR/codedm.db-shm"
+  rm -f "$DATA_DIR/codm.db" "$DATA_DIR/codm.db-wal" "$DATA_DIR/codm.db-shm"
 fi
 ```
 
@@ -224,7 +224,7 @@ Environment:
   .env: <created | already present>
   Worktree settings: ensured in .claude/settings.local.json (baseRef=head, bgIsolation=none)
   Services: up (lgtm + redis)
-  Store: SQLite at <CODEDM_DATA_DIR>/codedm.db (migrated at boot)
+  Store: SQLite at <CODM_DATA_DIR>/codm.db (migrated at boot)
   SDK: regenerated (api-ts + api-go)
 
 Next:

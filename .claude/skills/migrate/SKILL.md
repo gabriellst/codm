@@ -9,7 +9,7 @@ description: Generate SQLite migrations after schema design is complete. Use thi
 # Database Migration
 
 Turns schema file changes into versioned SQL. The database is **one SQLite file** at
-`$CODEDM_DATA_DIR/codedm.db`, shared by the TS daemon and the Go gateway.
+`$CODM_DATA_DIR/codm.db`, shared by the TS daemon and the Go gateway.
 
 ## The one thing to internalise: ONE ledger
 
@@ -119,7 +119,7 @@ filename, so renaming applied SQL makes it look new. Never rename an applied mig
 ### Migration history
 
 ```sql
--- against $CODEDM_DATA_DIR/codedm.db
+-- against $CODM_DATA_DIR/codm.db
 SELECT * FROM _sqlite_migrations ORDER BY name;
 ```
 

@@ -26,11 +26,11 @@ const { TestRunIssueTurnController, ...productionControllers } = controllers
 // same claim as "not implemented".
 const runtimeControllers = process.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }
 
-// The test trigger takes the same carve-out, one condition tighter: emission never sets CODEDM_E2E,
+// The test trigger takes the same carve-out, one condition tighter: emission never sets CODM_E2E,
 // so it is doubly absent from the spec, and a production boot refuses the flag outright
 // (`src/boot/assert-e2e-safe.ts`). It exists so a spec can attach the console's SSE observer BEFORE
 // the run it means to watch; the controller documents why nothing on the production path can.
-const mountedControllers = process.env.CODEDM_E2E === 'true' ? { ...runtimeControllers, TestRunIssueTurnController } : runtimeControllers
+const mountedControllers = process.env.CODM_E2E === 'true' ? { ...runtimeControllers, TestRunIssueTurnController } : runtimeControllers
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.agent,

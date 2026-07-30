@@ -29,7 +29,7 @@ import (
 // Module wires the channel bounded context over the SHARED SQLite store.
 //
 // Every repository below resolves *sqlite.SqliteStore (provided by core.Module)
-// — the single codedm.db file the TS daemon will also open. That is the fix for
+// — the single codm.db file the TS daemon will also open. That is the fix for
 // the split-DB symptom the console showed: the gateway used to write channel
 // state to Postgres while the ui read PGlite, so a freshly connected channel
 // still rendered DISCONNECTED. One store, one truth.
@@ -416,7 +416,7 @@ func registerDomainEventHandlers(
 // query aggregates them at read time. Delivery status is similarly
 // computed from channel.message_delivered / channel.message_seen events.
 
-// newTestIngressControllers mounts the test-only gateway ingress seam ONLY under CODEDM_E2E.
+// newTestIngressControllers mounts the test-only gateway ingress seam ONLY under CODM_E2E.
 // cfg.TestIngress is already refused under PRODUCTION by config.Load, so this stays a plain
 // read of a decided flag rather than a second place that reasons about environments.
 func newTestIngressControllers(cfg *config.Config, m mediator.InternalMediator) []types.Controller {

@@ -8,11 +8,11 @@
  *
  * WHY IT BOOTS THE WHOLE DAEMON, unlike the Fase-3 smoke (`phase3-smoke.ts`), which explicitly did
  * NOT. The Fase-3 smoke avoided booting the daemon because reaching its HTTP test-ingress requires
- * `CODEDM_E2E=true`, and that same flag swaps the real runner for a stub — the opposite of what that
+ * `CODM_E2E=true`, and that same flag swaps the real runner for a stub — the opposite of what that
  * smoke needed to prove. This smoke does not go through the agent pipeline or the test-ingress AT
  * ALL: it seeds an `Issue` directly via the repository (the `given*` helper pattern, never a use
  * case) and mints a run token directly via the SAME `RunTokenService` singleton the router verifies
- * against — both in-process, in the SAME script that boots the HTTP listener. `CODEDM_E2E` stays
+ * against — both in-process, in the SAME script that boots the HTTP listener. `CODM_E2E` stays
  * UNSET, so nothing is stubbed; the MCP router, the generated tool, the controller and the use case
  * are all the real production wiring. The only thing this script substitutes for is the `IssueWorkAgent`
  * itself minting the token — which is legitimate, because the claim this AC exists to verify is "does
@@ -25,7 +25,7 @@
  * and `phase3-smoke.ts`).
  *
  *   cd packages/api/typescript
- *   CODEDM_DATA_DIR=<scratch> API_PORT=<free-port> NODE_ENV=development bun scripts/phase6-mcp-smoke.ts
+ *   CODM_DATA_DIR=<scratch> API_PORT=<free-port> NODE_ENV=development bun scripts/phase6-mcp-smoke.ts
  *
  * Exit code 0 = the tool call round-tripped and the issue reached COMPLETED. Non-zero =
  * ATTEMPT-FAILED; the report records the literal command, exit code and stderr, and §8 rule 8-bis
@@ -63,7 +63,7 @@ import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { wireToolName, operationIdOf, TransitionIssueStatusController } from '@agent/mcp/exposure'
 import { MCP_ROUTE_PREFIX } from '@agent/mcp/route'
 
-const BIN = process.env.CODEDM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
+const BIN = process.env.CODM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
 const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.specs', 'codedm', 'phase6-mcp-smoke')
 const RAW_PATH = join(SPEC_DIR, 'raw', 'smoke.jsonl')
 const REPORT_PATH = join(SPEC_DIR, 'raw', 'report.json')

@@ -8,7 +8,7 @@
  * libsql addon left unresolvable outside `dist/node_modules`.
  *
  * Node is nvm-only on the build host (not on the bare non-interactive PATH), so resolve it explicitly:
- * honor `CODEDM_NODE_BIN`, else the newest node under `~/.nvm/versions/node`, else PATH `node`.
+ * honor `CODM_NODE_BIN`, else the newest node under `~/.nvm/versions/node`, else PATH `node`.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
@@ -20,7 +20,7 @@ import { lockPathFor } from '../core/src/db/drivers/DataDirLock'
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 function resolveNodeBin(): string {
-	if (process.env.CODEDM_NODE_BIN) return process.env.CODEDM_NODE_BIN
+	if (process.env.CODM_NODE_BIN) return process.env.CODM_NODE_BIN
 	const nvmRoot = join(process.env.HOME ?? '', '.nvm/versions/node')
 	if (existsSync(nvmRoot)) {
 		const versions = readdirSync(nvmRoot).sort().reverse()
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
 
 	const child = spawn(nodeBin, ['--enable-source-maps', join(pkgRoot, 'dist/server.js')], {
 		cwd: pkgRoot,
-		env: { ...process.env, CODEDM_DATA_DIR: join(dataDir, 'data'), API_PORT: String(port), PORT: String(port) },
+		env: { ...process.env, CODM_DATA_DIR: join(dataDir, 'data'), API_PORT: String(port), PORT: String(port) },
 		stdio: 'inherit',
 	})
 
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
 		if (child.exitCode === null) child.kill('SIGKILL')
 		try {
 			// The lock now lives INSIDE the data dir (see lockPathFor) — and the child boots with
-			// CODEDM_DATA_DIR = `<dataDir>/data`, so that is the dir to ask about. The rule is imported,
+			// CODM_DATA_DIR = `<dataDir>/data`, so that is the dir to ask about. The rule is imported,
 			// never re-typed: the old hardcoded sibling path became a silent no-op the moment the lock
 			// moved, and this is a scratch dir where a no-op teardown looks exactly like a working one.
 			rmSync(lockPathFor(join(dataDir, 'data')), { force: true })

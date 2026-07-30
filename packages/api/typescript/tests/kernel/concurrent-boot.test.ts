@@ -82,7 +82,7 @@ afterAll(() => {
  * when staging the sidecar.)
  */
 function query(dataDir: string, sql: string): string[] {
-	const result = Bun.spawnSync({ cmd: ['sqlite3', join(dataDir, 'codedm.db'), sql] })
+	const result = Bun.spawnSync({ cmd: ['sqlite3', join(dataDir, 'codm.db'), sql] })
 	if (result.exitCode !== 0) throw new Error(`sqlite3 failed: ${result.stderr.toString()}`)
 	return result.stdout.toString().trim().split('\n').filter(Boolean)
 }

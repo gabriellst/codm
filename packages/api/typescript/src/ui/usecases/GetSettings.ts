@@ -82,7 +82,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 				// Empty when unnamed — the frontend renders its own i18n placeholder; never an EN literal from the API.
 				operatorName: ownerRow[0]?.name ?? '',
 				timezone: ownerRow[0]?.timezone ?? '',
-				dataDir: Config.env.CODEDM_DATA_DIR,
+				dataDir: Config.env.CODM_DATA_DIR,
 			},
 			appVersion: APP_VERSION,
 		}

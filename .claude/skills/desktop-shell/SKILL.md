@@ -51,7 +51,7 @@ only ever do three jobs:
 
 1. **Serve the console** — dev via `build.devUrl` (`http://localhost:5173/app/`), prod via
    `build.frontendDist` (`packages/app/react/dist/client`, produced by
-   `nx run app-react:build-spa`; `CODEDM_DESKTOP=true` flips vite to base `/` + SPA shell +
+   `nx run app-react:build-spa`; `CODM_DESKTOP=true` flips vite to base `/` + SPA shell +
    no nitro).
 2. **Supervise sidecars** — `bundle.externalBin` = `codm-daemon` (TS, `bun build
    --compile`) + `codm-gateway` (Go). `src-tauri/src/lib.rs` spawns both on boot and

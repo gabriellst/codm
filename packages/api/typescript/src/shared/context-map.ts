@@ -104,7 +104,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextModule; schema: strin
 	{
 		consumer: 'shared',
 		schema: 'gateway',
-		note: 'TestIngressController seeds a connected channel — CODEDM_E2E-gated hermetic seam, never mounted in production.',
+		note: 'TestIngressController seeds a connected channel — CODM_E2E-gated hermetic seam, never mounted in production.',
 	},
 ]
 

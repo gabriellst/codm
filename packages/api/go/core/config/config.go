@@ -59,14 +59,14 @@ func Load() (*Config, error) {
 		GlobalAPIKey:      getEnvOrDefault("CHANNEL_GLOBAL_API_KEY", os.Getenv("GLOBAL_API_KEY")),
 		WhatsmeowLogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),
 		AllowedOrigins:    parseOrigins(getEnvOrDefault("CHANNEL_ALLOWED_ORIGINS", os.Getenv("ALLOWED_ORIGINS"))),
-		DataDir:           getEnvOrDefault("CODEDM_DATA_DIR", ""),
-		TestIngress:       getEnvOrDefault("CODEDM_E2E", "") == "true",
+		DataDir:           getEnvOrDefault("CODM_DATA_DIR", ""),
+		TestIngress:       getEnvOrDefault("CODM_E2E", "") == "true",
 	}
 
 	// FAIL-CLOSED. A test seam that raises domain events on demand must not be a
 	// runtime toggle in a shipped build: refuse to boot rather than serve it.
 	if cfg.TestIngress && cfg.Environment == enums.EnvironmentProduction {
-		return nil, errors.NewBaseError(errors.CodeMissingEnvVar, "CODEDM_E2E is a test-only ingress seam and is refused under PRODUCTION")
+		return nil, errors.NewBaseError(errors.CodeMissingEnvVar, "CODM_E2E is a test-only ingress seam and is refused under PRODUCTION")
 	}
 
 	validate := validator.New()

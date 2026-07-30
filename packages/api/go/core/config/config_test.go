@@ -9,7 +9,7 @@ import (
 // default). These cover the remaining defaults.
 
 func TestLoad_DataDirDefaultsToEmpty(t *testing.T) {
-	t.Setenv("CODEDM_DATA_DIR", "")
+	t.Setenv("CODM_DATA_DIR", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -24,7 +24,7 @@ func TestLoad_DataDirDefaultsToEmpty(t *testing.T) {
 }
 
 func TestLoad_DataDirCustom(t *testing.T) {
-	t.Setenv("CODEDM_DATA_DIR", "/tmp/codedm-config-test")
+	t.Setenv("CODM_DATA_DIR", "/tmp/codedm-config-test")
 
 	cfg, err := Load()
 	if err != nil {

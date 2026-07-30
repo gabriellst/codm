@@ -12,11 +12,11 @@ const API_TS_ROOT = resolve(E2E_ROOT, '../api/typescript')
 /**
  * Resolve a Node binary to boot the daemon the RUN-UNDER-NODE way (the daemon is built with Bun but
  * runs under Node). Node is nvm-only on the build host (absent from the bare non-interactive PATH),
- * so resolve explicitly: honor `CODEDM_NODE_BIN`, else the newest `~/.nvm/versions/node/<v>/bin/node`,
+ * so resolve explicitly: honor `CODM_NODE_BIN`, else the newest `~/.nvm/versions/node/<v>/bin/node`,
  * else PATH `node`.
  */
 function resolveNodeBin(): string {
-	if (process.env.CODEDM_NODE_BIN) return process.env.CODEDM_NODE_BIN
+	if (process.env.CODM_NODE_BIN) return process.env.CODM_NODE_BIN
 	const nvmRoot = join(process.env.HOME ?? '', '.nvm/versions/node')
 	if (existsSync(nvmRoot)) {
 		for (const v of readdirSync(nvmRoot).sort().reverse()) {
@@ -33,15 +33,15 @@ function resolveNodeBin(): string {
  * the app-react console — and runs Playwright against it.
  *
  * The Go Channel Gateway is NOT booted; gateway ingress is simulated at the integration-event seam by
- * the TEST-ONLY `/v1/_test/gateway` endpoint (mounted only under CODEDM_E2E). So this runner needs no
+ * the TEST-ONLY `/v1/_test/gateway` endpoint (mounted only under CODM_E2E). So this runner needs no
  * Postgres, no Redis, no Docker — just a scratch data dir the daemon migrates on boot.
  *
  * What it owns:
- *   - a fresh scratch CODEDM_DATA_DIR per run (codedm.db + its -wal/-shm and daemon.lock root here;
+ *   - a fresh scratch CODM_DATA_DIR per run (codm.db + its -wal/-shm and daemon.lock root here;
  *     dropped on exit);
  *   - the two dev ports (pre-kills stale listeners — a watch-mode orphan pointing at a dropped dir is
  *     always wrong), pinned per-server so the api (fastify) and app (vite) don't collide on $PORT;
- *   - CODEDM_E2E=true, which flips the daemon's `real` bindings to the hermetic seams (in-process
+ *   - CODM_E2E=true, which flips the daemon's `real` bindings to the hermetic seams (in-process
  *     ExternalMediator, stub AgentRunner, canned ProviderDetector, test ingress controller).
  */
 function runCaptureExitCode(command: string, args: string[], env: NodeJS.ProcessEnv, cwd: string) {
@@ -82,14 +82,14 @@ async function main() {
 		...process.env,
 		// Hermetic seam: real-mode daemon with the in-process mediator + test ingress endpoint + stub
 		// runner (no Redis, no Go gateway, no provider CLI). Refused under NODE_ENV=production.
-		CODEDM_E2E: 'true',
-		CODEDM_DATA_DIR: dataDir,
+		CODM_E2E: 'true',
+		CODM_DATA_DIR: dataDir,
 		// Pin ports so the webServer entries don't collide on $PORT from the root .env.
 		API_PORT: apiPort,
 		PORT: apiPort,
 		VITE_PORT: vitePort,
 		// The node binary the playwright webServer uses to boot `dist/server.js` (nvm-resolved).
-		CODEDM_NODE_BIN: nodeBin,
+		CODM_NODE_BIN: nodeBin,
 		// One host runs the whole suite — per-IP auth windows would 429 legitimate specs.
 		RATE_LIMIT_DISABLED: 'true',
 	}

@@ -56,7 +56,7 @@ cp .env.example .env
 bun install
 
 # 3. Infra local em Docker (redis + lgtm para traces/logs/metrics — NÃO há Postgres:
-#    a persistência é um único arquivo SQLite em $CODEDM_DATA_DIR, compartilhado
+#    a persistência é um único arquivo SQLite em $CODM_DATA_DIR, compartilhado
 #    pelo daemon TS e pelo gateway Go)
 bun docker:compose
 
@@ -105,7 +105,7 @@ bun contracts        # regenera bindings de contracts (TypeSpec → ts/go/rust +
 # Banco de dados (um arquivo SQLite; o boot migra sozinho — `migrate:dev` é só conveniência)
 bun migrate:create           # AUTORA uma migração SQLite (drizzle-kit generate →
                              # packages/contracts/db/schema/migrations)
-bun migrate:dev              # APLICA no $CODEDM_DATA_DIR sem subir servidor (mesmo aplicador do
+bun migrate:dev              # APLICA no $CODM_DATA_DIR sem subir servidor (mesmo aplicador do
                              # boot, mesmo ledger `_sqlite_migrations`). Só tabelas Drizzle —
                              # whatsmeow_* nasce quando o gateway conecta.
 bun run --cwd packages/contracts db:sync-go    # espelha o SQL novo na cópia //go:embed do gateway

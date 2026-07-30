@@ -17,7 +17,7 @@ import (
 )
 
 // WhatsmeowStore is whatsmeow's device/session container plus the dedicated
-// *sql.DB it runs on. Both point at the SHARED SQLite file — the same codedm.db
+// *sql.DB it runs on. Both point at the SHARED SQLite file — the same codm.db
 // the domain repositories, the event store and the outbox use — so a channel's
 // session lives in the one store the console reads, not in a second database
 // nobody else can see.

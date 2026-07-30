@@ -148,7 +148,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 	// NOT `readonly`, and NOT constructor parameters — see `withOptions` below for why.
 	private spawner: AgentProcessSpawner = nodeAgentProcessSpawner
-	private inactivityMs = Number(process.env.CODEDM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
+	private inactivityMs = Number(process.env.CODM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
 	private readonly live = new Set<AgentProcess>()
 
 	/**
@@ -167,7 +167,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 * `attempts = 0`: inbound messages produced nothing, forever, with no error anywhere.
 	 *
 	 * Nothing caught it because nothing exercised this path: `mock`/`integration` bind a stub,
-	 * `CODEDM_E2E` swaps in `E2eStubAgentRunner` (whose one parameter IS resolvable), and the unit
+	 * `CODM_E2E` swaps in `E2eStubAgentRunner` (whose one parameter IS resolvable), and the unit
 	 * tests construct this class by hand. Production was the only caller that went through the
 	 * container.
 	 */
@@ -508,7 +508,7 @@ function renderMcpConfig(mcp: AgentMcpInvocation): string {
 	const server =
 		mcp.transport === 'http'
 			? { type: 'http', url: mcp.endpoint, headers: { Authorization: `Bearer ${mcp.token}` } }
-			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { CODEDM_RUN_TOKEN: mcp.token } }
+			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { CODM_RUN_TOKEN: mcp.token } }
 	return JSON.stringify({ mcpServers: { [MCP_SERVER_KEY]: server } })
 }
 

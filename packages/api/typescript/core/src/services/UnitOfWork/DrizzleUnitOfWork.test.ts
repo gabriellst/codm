@@ -31,7 +31,7 @@ describe('DrizzleUnitOfWork', () => {
 
 	beforeAll(async () => {
 		dir = mkdtempSync(join(tmpdir(), 'libsql-uow-test-'))
-		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codedm.db') })
+		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
 	})
 

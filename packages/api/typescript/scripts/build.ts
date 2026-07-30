@@ -25,7 +25,7 @@
  *     `schema/migrations` suffix; the bundler rewrites `import.meta.url` to the OUTPUT file, so
  *     at runtime it resolves to `dist/schema/migrations`. Staging the drizzle-kit output at
  *     exactly that path makes the fallback correct without any env override — the destination is not
- *     free, it MIRRORS the suffix in `packages/contracts/db/migrations.ts`. (`CODEDM_MIGRATIONS_DIR`
+ *     free, it MIRRORS the suffix in `packages/contracts/db/migrations.ts`. (`CODM_MIGRATIONS_DIR`
  *     remains an escape hatch for images that stage them elsewhere.)
  */
 import { cp, mkdir, rm } from 'node:fs/promises'

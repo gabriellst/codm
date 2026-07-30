@@ -41,7 +41,7 @@ describe('DrizzleDomainEventRepository', () => {
 
 	beforeAll(async () => {
 		dir = mkdtempSync(join(tmpdir(), 'libsql-events-test-'))
-		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codedm.db') })
+		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
 		repo = new DrizzleDomainEventRepository(driver.db as DrizzleClient)
 	})

@@ -24,7 +24,7 @@ export default defineConfig({
 	schema: './db/schema/index.ts',
 	out: './db/schema/migrations',
 	dbCredentials: {
-		url: './db/schema/.scratch/codedm.db',
+		url: './db/schema/.scratch/codm.db',
 	},
 	verbose: true,
 	strict: true,

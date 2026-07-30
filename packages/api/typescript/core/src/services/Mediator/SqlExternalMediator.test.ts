@@ -58,7 +58,7 @@ describe('SqlExternalMediator (shared-outbox ingress)', () => {
 
 	beforeAll(async () => {
 		dir = mkdtempSync(join(tmpdir(), 'libsql-ingress-test-'))
-		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codedm.db') })
+		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
 	})
 

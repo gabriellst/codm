@@ -153,7 +153,7 @@ export async function buildSidecars(): Promise<void> {
 	// `bun build --compile` binary has no node_modules and the migration applier reads the folder via
 	// node fs (which can't walk the `/$bunfs` virtual FS), so the migrations travel as a bundle
 	// resource. Staged under `binaries/migrations`; tauri.conf `bundle.resources` (generated) copies
-	// it to the app resource dir at `migrations`, and the daemon's inline `CODEDM_MIGRATIONS_DIR`
+	// it to the app resource dir at `migrations`, and the daemon's inline `CODM_MIGRATIONS_DIR`
 	// (src/sidecars/mod.rs) resolves `resource_dir/migrations` at runtime. One explicit path, mirrored
 	// in generate.ts (MIGRATIONS_RESOURCE) + mod.rs. Source is the canonical contracts migrations
 	// output — the SQLite one, the source of truth for BOTH the TS daemon and the Go gateway.

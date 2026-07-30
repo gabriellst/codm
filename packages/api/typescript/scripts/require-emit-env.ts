@@ -6,7 +6,7 @@
  * `process.env.EMIT_OPENAPI = 'true'` in emit-openapi.ts runs too late — the composition root
  * (`@codm/core-typescript` → `../src/routers` → `@shared/index`'s top-level-await
  * BoundedContext.create) has already evaluated with EMIT_OPENAPI still undefined, booting the REAL
- * real embedded database (mkdir + migrate ~/.codedm/data + start the outbox dispatcher). This module has no
+ * real embedded database (mkdir + migrate ~/.codm/data + start the outbox dispatcher). This module has no
  * dependency on the composition root, so importing it before core/routers makes its assertion the
  * first thing that runs — failing loud instead of silently booting the real DB.
  *

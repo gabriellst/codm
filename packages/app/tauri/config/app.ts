@@ -26,7 +26,7 @@ export const CONSOLE = {
 	devPortEnvKey: 'VITE_PORT',
 	devPath: '/app/',
 	/** Desktop dev: the nx target that serves the console as a root-based SPA
-	 *  (`CODEDM_DESKTOP=true vite --host` → nitro OFF, base '/', VITE_PORT). Symmetric to
+	 *  (`CODM_DESKTOP=true vite --host` → nitro OFF, base '/', VITE_PORT). Symmetric to
 	 *  `buildTarget`'s build-spa. The shell's beforeDevCommand runs THIS, not `dev`. */
 	devTarget: 'dev-spa',
 	/** Base path the tauri webview loads in dev. The desktop SPA serves at root '/' (dev-spa /

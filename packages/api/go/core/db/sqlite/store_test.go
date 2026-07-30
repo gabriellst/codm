@@ -35,7 +35,7 @@ func newTestStore(t *testing.T) *SqliteStore {
 func TestNewSqliteStore_BootsMigratesLocks(t *testing.T) {
 	store := newTestStore(t)
 
-	// The store owns its file layout — the db lives at <dataDir>/codedm.db.
+	// The store owns its file layout — the db lives at <dataDir>/codm.db.
 	if filepath.Base(store.Path()) != dbFileName {
 		t.Fatalf("unexpected db path %q", store.Path())
 	}
@@ -109,7 +109,7 @@ func TestNewSqliteStore_SameProcessReopenIsIdempotent(t *testing.T) {
 }
 
 func TestAcquireDataDirLock_ForeignLiveOwnerFailsLoud(t *testing.T) {
-	lockPath := filepath.Join(t.TempDir(), "codedm.db.lock")
+	lockPath := filepath.Join(t.TempDir(), "codm.db.lock")
 
 	// Spawn a real, live process and plant ITS pid in the lockfile — a foreign
 	// owner the guard must refuse (the same-pid idempotency branch cannot fire).
@@ -140,7 +140,7 @@ func TestAcquireDataDirLock_ForeignLiveOwnerFailsLoud(t *testing.T) {
 }
 
 func TestAcquireDataDirLock_StaleLockIsReclaimed(t *testing.T) {
-	lockPath := filepath.Join(t.TempDir(), "codedm.db.lock")
+	lockPath := filepath.Join(t.TempDir(), "codm.db.lock")
 
 	// A pid from a process that has exited — its lock is stale and reclaimable.
 	cmd := exec.Command("true")

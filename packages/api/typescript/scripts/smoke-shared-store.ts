@@ -43,12 +43,12 @@
  *
  * ══ TRAPS ALREADY PAID FOR — do not rediscover ═════════════════════════════════════════════════
  * A1  `scripts/smoke-node-boot.ts` cannot be reused: it mkdtemps its OWN dir and passes an
- *     explicit CODEDM_DATA_DIR in the child env (the explicit key beats the `...process.env`
+ *     explicit CODM_DATA_DIR in the child env (the explicit key beats the `...process.env`
  *     spread, so an exported one is silently DISCARDED — the exact failure mode this phase kills,
  *     and it would pass green), and it SIGTERM/SIGKILLs the child ~1.5s later. It is a boot PROBE,
  *     not a supervisor. Hence DAEMON_LAUNCH=bundle here: build, then run `node dist/server.js`
  *     under this script's own supervision.
- * A2  `node` is NOT on the bare PATH of this host. Resolve it: CODEDM_NODE_BIN → newest under
+ * A2  `node` is NOT on the bare PATH of this host. Resolve it: CODM_NODE_BIN → newest under
  *     ~/.nvm/versions/node → PATH.
  * A3  The gateway's connected Dispatch fans out to TWO handlers and returns on the first error, so
  *     a non-2xx can equally mean "nothing written" or "written, then a later handler failed". The
@@ -96,7 +96,7 @@ function check(ok: boolean, what: string, detail: string): boolean {
 // ── process plumbing ──────────────────────────────────────────────────────────────────────────
 
 function resolveNodeBin(): string {
-	if (process.env.CODEDM_NODE_BIN) return process.env.CODEDM_NODE_BIN
+	if (process.env.CODM_NODE_BIN) return process.env.CODM_NODE_BIN
 	const nvmRoot = join(process.env.HOME ?? '', '.nvm/versions/node')
 	if (existsSync(nvmRoot)) {
 		for (const version of readdirSync(nvmRoot).sort().reverse()) {
@@ -190,12 +190,12 @@ async function main(): Promise<number> {
 
 	// ONE cold data dir, for BOTH (R3).
 	const dataDir = mkdtempSync(join(tmpdir(), 'codedm-shared-store-'))
-	const dbPath = join(dataDir, 'codedm.db')
+	const dbPath = join(dataDir, 'codm.db')
 	const nodeBin = resolveNodeBin()
 
 	// R4/A5 — the child envs are BUILT here, key by key, not inherited. PATH/HOME are what a child
 	// process needs to exist at all; everything else is a decision this script is making on purpose.
-	const baseEnv = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', CODEDM_DATA_DIR: dataDir }
+	const baseEnv = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', CODM_DATA_DIR: dataDir }
 	const daemonEnv = { ...baseEnv, API_PORT: String(API_PORT), PORT: String(API_PORT), NODE_ENV: 'development' }
 	const gatewayEnv = {
 		...baseEnv,
@@ -204,7 +204,7 @@ async function main(): Promise<number> {
 		// The seam that makes the CONNECTED literal reachable unattended. Go-side ONLY: src/boot.ts
 		// refuses the flag on the TS side under NODE_ENV=production, and the daemon has no business
 		// simulating the gateway in a test whose whole point is that the gateway is real.
-		CODEDM_E2E: 'true',
+		CODM_E2E: 'true',
 		// BOTH keys, both empty — config.go falls back from the first to the second, so binding only
 		// one leaves the api-key guard on and turns every request below into a 401.
 		CHANNEL_GLOBAL_API_KEY: '',
@@ -310,7 +310,7 @@ async function main(): Promise<number> {
 		log('── the file itself ──────────────────────────────────────────────────────')
 		const entries = readdirSync(dataDir).sort()
 		check(
-			entries.includes('codedm.db') && entries.includes('codedm.db-wal') && entries.includes('codedm.db-shm'),
+			entries.includes('codm.db') && entries.includes('codm.db-wal') && entries.includes('codm.db-shm'),
 			'one WAL database, and no per-directory database layout beside it',
 			entries.join(' '),
 		)

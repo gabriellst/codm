@@ -169,7 +169,7 @@ export const REPO = {
 	},
 
 	/** Env override for the monorepo root (graph CLI invoked from arbitrary cwds). */
-	rootEnvVar: 'CODEDM_ROOT',
+	rootEnvVar: 'CODM_ROOT',
 
 	// ── Layout — ALL DERIVED from WORKSPACES (the single source); do not add literals here ──
 	workspaces: WORKSPACES,
@@ -248,11 +248,11 @@ export const REPO = {
 			doc: 'read by the e2e harness only — vite.config.ts hardcodes 5173; keep in sync',
 		},
 		// ── database / redis ──
-		CODEDM_DATA_DIR: {
+		CODM_DATA_DIR: {
 			consumers: ['apiTs', 'apiGo'],
 			schema: 'kernel',
-			example: '~/.codedm/data',
-			doc: 'shared data dir for the real daemon; ~ expands to $HOME. BOTH sidecars open the SAME codedm.db here (api-go via modernc, api-ts via libsql; whatsmeow session tables live in the same file), and both run the same idempotent migration applier on boot in whatever order they start.',
+			example: '~/.codm/data',
+			doc: 'shared data dir for the real daemon; ~ expands to $HOME. BOTH sidecars open the SAME codm.db here (api-go via modernc, api-ts via libsql; whatsmeow session tables live in the same file), and both run the same idempotent migration applier on boot in whatever order they start.',
 		},
 		REDIS_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'redis://localhost:6379' },
 		// ── Verbatim medscall channel service config (port b4530e2b) — CHANNEL_* primary keys with
@@ -281,7 +281,7 @@ export const REPO = {
 		// side reads this flag as raw process.env (src/shared/index.ts, src/boot.ts), outside
 		// RawEnvSchema. Declared with apiGo as the consumer because config.go is where it is now read,
 		// which is what puts it under the ENV-03 rail.
-		CODEDM_E2E: {
+		CODM_E2E: {
 			consumers: ['apiGo'],
 			example: '',
 			doc: 'test-only gateway ingress seam (internal/channel/testseam); refused under PRODUCTION',
@@ -362,11 +362,11 @@ export const REPO = {
 			doc: 'per-service override; go sets its own',
 		},
 		// ── channel gateway (BC1, api-go) ──
-		// (CODEDM_GATEWAY_API_KEY removed: its only consumers were the deleted per-endpoint ui
+		// (CODM_GATEWAY_API_KEY removed: its only consumers were the deleted per-endpoint ui
 		// proxies. The gateway's own guard is CHANNEL_GLOBAL_API_KEY — empty/allow-all in proxied
 		// deployments, since auth lives on the api-ts external/ChannelProxy hop.)
 		// (WHATSMEOW_DATABASE_URL removed: whatsmeow's session tables now live in the
-		// shared SQLite store, opened from CODEDM_DATA_DIR — there is no separate
+		// shared SQLite store, opened from CODM_DATA_DIR — there is no separate
 		// database to point at. CHANNEL_SERVICE_NAME/SERVICE_NAME went with it: they
 		// only ever drove the Postgres search_path.)
 		// ── misc ──

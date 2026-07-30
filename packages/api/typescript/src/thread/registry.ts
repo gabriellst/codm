@@ -5,7 +5,7 @@ import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
 import { ChannelSender, GatewayChannelSender, MockChannelSender } from './services/ChannelSender'
 
 /** The Playwright harness boots the real daemon with no gateway behind it — see the ChannelSender binding. */
-const E2E = process.env.CODEDM_E2E === 'true'
+const E2E = process.env.CODM_E2E === 'true'
 import { ThreadRepository, DrizzleThreadRepository, MockThreadRepository } from './repositories/ThreadRepository'
 import {
 	ConsumedMessageRepository,
@@ -26,7 +26,7 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
 	// S2S, permitted between services). Bound to the double outside `real` so no test depends on the
 	// Go gateway being up, which is the operational half of the S2S rule.
-	// Hermetic under CODEDM_E2E, same rule the agent registry uses for its runner: the Playwright
+	// Hermetic under CODM_E2E, same rule the agent registry uses for its runner: the Playwright
 	// harness boots the REAL daemon but there is no Go gateway behind it, so a real send fails with
 	// GATEWAY_UNAVAILABLE.
 	//

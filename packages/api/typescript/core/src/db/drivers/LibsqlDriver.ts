@@ -96,7 +96,7 @@ export interface LibsqlDriverOptions {
 	/** Absolute path to the migrations directory (drizzle-kit output for the sqlite dialect). */
 	migrationsDir: string
 	/**
-	 * Absolute path to the database FILE — for the real daemon, `<CODEDM_DATA_DIR>/codedm.db`, the
+	 * Absolute path to the database FILE — for the real daemon, `<CODM_DATA_DIR>/codm.db`, the
 	 * very same file the Go gateway opens. Absent ⇒ a process-scoped temporary file on disk.
 	 * Never an in-memory database: memory is per-connection, so it would exercise neither WAL nor
 	 * the second writer, which are the two properties this driver exists to get right.

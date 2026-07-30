@@ -16,7 +16,7 @@ FROM oven/bun:latest AS builder
 
 WORKDIR /app
 
-# No database build args. The daemon owns an EMBEDDED SQLite file under CODEDM_DATA_DIR and
+# No database build args. The daemon owns an EMBEDDED SQLite file under CODM_DATA_DIR and
 # applies the migrations itself, idempotently, on boot — there is no external database to point
 # a build at, and nothing to migrate ahead of time.
 

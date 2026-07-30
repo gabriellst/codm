@@ -49,7 +49,7 @@ describe('LibsqlDriver', () => {
 
 	beforeAll(async () => {
 		dir = mkdtempSync(join(tmpdir(), 'libsql-driver-test-'))
-		dbPath = join(dir, 'codedm.db')
+		dbPath = join(dir, 'codm.db')
 		driver = new LibsqlDriver({ schema, migrationsDir, dbPath })
 		await driver.runMigrations()
 	})

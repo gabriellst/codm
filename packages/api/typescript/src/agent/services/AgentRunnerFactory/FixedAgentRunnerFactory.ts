@@ -61,7 +61,7 @@ export class StubAgentRunnerFactory extends FixedAgentRunnerFactory {
 }
 
 /**
- * The factory bound in `real` under `CODEDM_E2E` — the Playwright harness boots the REAL daemon over
+ * The factory bound in `real` under `CODM_E2E` — the Playwright harness boots the REAL daemon over
  * the real SQLite and must never spawn a provider CLI, so the hermetic seam swaps the FACTORY rather
  * than the runner. Same ternary position in `agent/registry.ts` the runner ternary held.
  */
