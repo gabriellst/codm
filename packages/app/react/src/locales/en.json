@@ -517,6 +517,15 @@
 		"composerSteerHint": "Whispers reach agents only — never sent to the channel.",
 		"contextBuffer": "Context buffer",
 		"contextBufferHint": "Every message is kept in a rolling buffer the agents can read — including from people who can't invoke.",
+		"deleteThread": {
+			"action": "Delete conversation",
+			"confirmAction": "Delete conversation",
+			"confirmDescription": "The conversation with {{name}} disappears from the list, the dashboard and the chat, and new messages from that contact are ignored. The history is kept — re-attaching from the wizard brings it all back.",
+			"confirmTitle": "Delete this conversation?",
+			"fallbackName": "this contact",
+			"hint": "Deleting removes this conversation from the console. The history is kept, and you can re-attach the contact from the wizard later.",
+			"sectionTitle": "Danger zone"
+		},
 		"issuesEmptyDescription": "Routed messages that spawn work will show up here as issues.",
 		"issuesEmptyTitle": "No issues in this thread",
 		"issuesStats": "{{awaiting}} awaiting input · {{working}} working · {{completed}} completed",

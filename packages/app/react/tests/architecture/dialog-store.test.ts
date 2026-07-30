@@ -34,8 +34,12 @@ const IMPORTS_DIALOG_STORE = /^import\s[^'"]*\buseDialogStore\b/m
  * ser conteúdo puro nunca justifica ser dono do próprio `open`.
  */
 const WHITELIST: Record<string, string> = {
-	'routes/(app)/threads/$threadId/-components/ThreadSettingsDialog/index.tsx':
-		'conteúdo puro sem afordância própria de fechar — o dismissal roteia pelo host (o X do DialogContent, Esc, backdrop), então não há `hide` a chamar e o import seria morto.',
+	// O `ThreadSettingsDialog` SAIU daqui (thread-deletion spec, decisão 7). A isenção dizia "conteúdo
+	// puro sem afordância própria de fechar, então não há `hide` a chamar e o import seria morto" — e
+	// isso deixou de ser verdade no minuto em que ele ganhou a zona de perigo: apagar confirma, fecha o
+	// dialog e navega para fora do chat, então ele importa `useDialogStore` de fato, por `confirm` e por
+	// `hide`. Isenção com justificativa caduca é pior que isenção nenhuma: ela dispensa o arquivo do
+	// predicado para sempre, inclusive depois de o motivo ter evaporado.
 }
 
 async function dialogFiles(): Promise<string[]> {

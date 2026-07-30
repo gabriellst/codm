@@ -1,20 +1,27 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import {
+	getHomeDashboardQueryKey,
+	getNeedsYouPanelQueryKey,
+	getSessionChatQueryKey,
 	getThreadSettingsQueryKey,
 	useConfigureContextBuffer,
 	useConfigureMentionGate,
+	useDeleteThread,
 	useGetSessionChat,
 	useGetThreadSettings,
 	useSetParticipantInvocation,
 } from '@codm/client-typescript/typescript'
 import type { BufferSize } from '@codm/client-typescript/typescript'
+import { Button } from '@/components/ui/button'
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { useDialogStore } from '@/stores/useDialogStore'
 import { cn } from '@/lib/utils'
 
 const BUFFER_SIZES: BufferSize[] = ['25', '50', '100', '200']
@@ -52,7 +59,76 @@ export function ThreadSettingsDialog({ threadId }: { threadId: string }) {
 				</DialogDescription>
 			</DialogHeader>
 			<ThreadSettingsBody threadId={threadId} />
+			{/* The name is READ HERE and handed down, deliberately breaking the "each component owns its
+			    data" habit for one prop: the confirmation must say WHICH conversation is about to go, and
+			    this component already holds the query that knows. A second `useGetSessionChat` inside the
+			    danger zone would be the same cache entry read twice. */}
+			<DangerZone threadId={threadId} threadName={session?.thread.displayName} />
 		</DialogContent>
+	)
+}
+
+/**
+ * The destructive corner of the settings dialog (thread-deletion spec, decision 7).
+ *
+ * Set apart by a rule and its own muted heading rather than by a red panel: the console has exactly one
+ * destructive action per screen and the `destructive` button carries the weight. What makes it safe is
+ * the CONFIRMATION, not the decoration — and the confirmation names the conversation, because "Apagar
+ * conversa" with no subject is the dialog people dismiss on autopilot and regret.
+ *
+ * `confirm()` from `useDialogStore` replaces this dialog's content with the shared `ConfirmDialog` and
+ * resolves a boolean, so cancelling costs the operator nothing but a re-open.
+ */
+function DangerZone({ threadId, threadName }: { threadId: string; threadName?: string }) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const navigate = useNavigate()
+	const { confirm, hide } = useDialogStore()
+	const deleteThread = useDeleteThread()
+
+	// Is the operator LOOKING at the conversation they just deleted? The dialog is opened from the chat
+	// header today, so this is normally true — but it is asked rather than assumed, because navigating
+	// away from a screen the operator was not on is its own bug.
+	const pathname = useRouterState({ select: s => s.location.pathname })
+	const viewingThisThread = pathname.includes(`/threads/${threadId}`)
+
+	const onDelete = async () => {
+		const ok = await confirm({
+			title: t('session.deleteThread.confirmTitle'),
+			description: t('session.deleteThread.confirmDescription', { name: threadName ?? t('session.deleteThread.fallbackName') }),
+			actionLabel: t('session.deleteThread.confirmAction'),
+			cancelLabel: t('common.cancel'),
+			variant: 'destructive',
+		})
+		if (!ok) return
+
+		deleteThread.mutate(
+			{ threadId },
+			{
+				onSuccess: () => {
+					hide()
+					// Invalidate BEFORE navigating: the dashboard is where we are going, and it must not paint
+					// the row that was just deleted on the way in.
+					queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
+					queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
+					queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+					queryClient.invalidateQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
+					if (viewingThisThread) navigate({ to: '/dashboard' })
+				},
+			},
+		)
+	}
+
+	return (
+		<section className="flex flex-col gap-3">
+			<h3 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">{t('session.deleteThread.sectionTitle')}</h3>
+			<div className="flex items-center justify-between gap-4">
+				<p className="text-sm text-muted-foreground">{t('session.deleteThread.hint')}</p>
+				<Button variant="destructive" className="shrink-0" disabled={deleteThread.isPending} onClick={onDelete}>
+					{t('session.deleteThread.action')}
+				</Button>
+			</div>
+		</section>
 	)
 }
 

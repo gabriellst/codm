@@ -517,6 +517,15 @@
 		"composerSteerHint": "Sussurros chegam apenas aos agentes — nunca enviados ao canal.",
 		"contextBuffer": "Buffer de contexto",
 		"contextBufferHint": "Toda mensagem entra num buffer rolante que os agentes podem ler — inclusive de quem não pode invocar.",
+		"deleteThread": {
+			"action": "Apagar conversa",
+			"confirmAction": "Apagar conversa",
+			"confirmDescription": "A conversa com {{name}} some da listagem, do painel e do chat, e mensagens novas desse contato passam a ser ignoradas. O histórico fica salvo — reanexar pelo assistente traz tudo de volta.",
+			"confirmTitle": "Apagar esta conversa?",
+			"fallbackName": "este contato",
+			"hint": "Apagar remove esta conversa do console. O histórico fica salvo, e você pode reanexar o contato pelo assistente depois.",
+			"sectionTitle": "Zona de perigo"
+		},
 		"issuesEmptyDescription": "Mensagens encaminhadas que geram trabalho aparecerão aqui como tarefas.",
 		"issuesEmptyTitle": "Nenhuma tarefa nesta conversa",
 		"issuesStats": "{{awaiting}} aguardando entrada · {{working}} em andamento · {{completed}} concluídas",
