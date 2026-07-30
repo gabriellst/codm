@@ -1,8 +1,11 @@
+import type { ComponentProps } from 'react'
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
-export interface ConfirmDialogProps {
+// `children`/`showCloseButton` are owned by this component — the body is fixed (title/description/
+// footer) and the close button is force-hidden (dismissal is the two explicit buttons, not an X).
+export interface ConfirmDialogProps extends Omit<ComponentProps<typeof DialogContent>, 'children' | 'showCloseButton'> {
 	title: string
 	description?: string
 	actionLabel?: string
@@ -24,9 +27,10 @@ export function ConfirmDialog({
 	variant = 'default',
 	onConfirm,
 	onCancel,
+	...props
 }: ConfirmDialogProps) {
 	return (
-		<DialogContent showCloseButton={false}>
+		<DialogContent {...props} showCloseButton={false}>
 			<DialogHeader>
 				<DialogTitle>{title}</DialogTitle>
 				{description && <DialogDescription>{description}</DialogDescription>}

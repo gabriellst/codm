@@ -37,7 +37,9 @@ function displayToCents(raw: string): number {
 // CurrencyInput
 // ──────────────────────────────────────────────────────────────────────────────
 
-export interface CurrencyInputProps {
+// `id` is re-typed identically — it targets the inner InputGroupInput, not the InputGroup root, so
+// it stays a named field instead of flowing through the spread. `children` is fully owned.
+export interface CurrencyInputProps extends Omit<React.ComponentProps<typeof InputGroup>, 'children' | 'id'> {
 	/** Current amount in integer cents (e.g. 1050 = R$ 10,50) */
 	amountCents: number
 	/** Active currency code */
@@ -49,7 +51,6 @@ export interface CurrencyInputProps {
 	/** Subset of currencies to show in the selector dropdown */
 	currencies?: CurrencyCodeEnumKey[]
 	placeholder?: string
-	className?: string
 	disabled?: boolean
 	id?: string
 }
@@ -77,6 +78,7 @@ function CurrencyInput({
 	className,
 	disabled = false,
 	id,
+	...props
 }: CurrencyInputProps) {
 	// Locale comes from i18n (same source as useMoney) so the decimal/grouping separators match the app locale.
 	const locale = useLocale()
@@ -116,7 +118,7 @@ function CurrencyInput({
 	}
 
 	return (
-		<InputGroup className={cn(className)} data-disabled={disabled || undefined}>
+		<InputGroup className={cn(className)} data-disabled={disabled || undefined} {...props}>
 			<InputGroupAddon align="inline-start" className="p-0">
 				{/*
 				 * CurrencySelector keeps its own `trigger` surface (triggerBg/Border/Hover).

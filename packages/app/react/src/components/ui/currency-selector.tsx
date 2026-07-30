@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
 import { useTranslation } from 'react-i18next'
 import { IconChevronDown } from '@tabler/icons-react'
@@ -99,11 +100,14 @@ export const DEFAULT_CURRENCIES: CurrencyCodeEnumKey[] = ['USD', 'BRL', 'EUR', '
 // CurrencySelector
 // ──────────────────────────────────────────────────────────────────────────────
 
-export interface CurrencySelectorProps {
+// `value`/`onChange`/`currencies` are the component's own — `disabled` is re-typed identically (it
+// also gates the hidden Positioner-anchor input). `children` is fully owned (trigger content is
+// fixed: flag + code + chevron), so it's excluded from the extended vocabulary.
+export interface CurrencySelectorProps
+	extends Omit<ComponentProps<typeof ComboboxPrimitive.Trigger>, 'children' | 'disabled' | 'onChange'> {
 	value: CurrencyCodeEnumKey
 	onChange: (currency: CurrencyCodeEnumKey) => void
 	currencies?: CurrencyCodeEnumKey[]
-	className?: string
 	disabled?: boolean
 }
 
@@ -115,7 +119,14 @@ export interface CurrencySelectorProps {
  * as the leading addon — the trigger strips its own border when the parent
  * group provides the unified surface.
  */
-function CurrencySelector({ value, onChange, currencies = DEFAULT_CURRENCIES, className, disabled = false }: CurrencySelectorProps) {
+function CurrencySelector({
+	value,
+	onChange,
+	currencies = DEFAULT_CURRENCIES,
+	className,
+	disabled = false,
+	...props
+}: CurrencySelectorProps) {
 	const { t } = useTranslation()
 	const items = currencies.map(code => ({
 		value: code,
@@ -151,6 +162,7 @@ function CurrencySelector({ value, onChange, currencies = DEFAULT_CURRENCIES, cl
 						'[&_svg]:pointer-events-none [&_svg]:shrink-0',
 						className,
 					)}
+					{...props}
 				>
 					<span className="text-base leading-none select-none" aria-hidden="true">
 						{currencyFlag(value)}

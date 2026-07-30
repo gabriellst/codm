@@ -13,7 +13,10 @@ import { IconChevronDown, IconX, IconCheck } from '@tabler/icons-react'
 // Enum-mode props (opt-in via the `enum` prop)
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface ComboboxEnumProps<E extends Record<string, string>> {
+// The visible root in enum mode is `ComboboxSelectTrigger` (a <div> wrapper) — className/id/
+// disabled/aria-invalid all come from there instead of being hand-typed. `children` is fully owned
+// (the trigger content is derived from `value`/`placeholder`, never passed by the caller).
+interface ComboboxEnumProps<E extends Record<string, string>> extends Omit<React.ComponentProps<typeof ComboboxSelectTrigger>, 'children'> {
 	/** The SDK enum object. When present, activates enum mode (select-trigger style). */
 	enum: E
 	/** i18n key prefix — each value `v` is rendered as `t(`${i18nPrefix}.${v}`)`. */
@@ -26,10 +29,6 @@ interface ComboboxEnumProps<E extends Record<string, string>> {
 	placeholder?: string
 	/** Optional subset of enum values to show. Defaults to `Object.values(enum)`. */
 	values?: E[keyof E][]
-	id?: string
-	className?: string
-	disabled?: boolean
-	'aria-invalid'?: boolean | 'true' | 'false'
 	children?: never
 }
 
@@ -42,18 +41,7 @@ function Combobox<E extends Record<string, string>>(props: ComboboxEnumProps<E>)
 function Combobox<Value>(props: ComboboxPrimitive.Root.Props<Value>): React.ReactElement
 function Combobox(props: ComboboxEnumProps<Record<string, string>> | ComboboxPrimitive.Root.Props<unknown>): React.ReactElement {
 	if ('enum' in props && props.enum != null) {
-		const {
-			enum: enumObj,
-			i18nPrefix,
-			value,
-			onValueChange,
-			placeholder,
-			values,
-			id,
-			className,
-			disabled,
-			'aria-invalid': ariaInvalid,
-		} = props
+		const { enum: enumObj, i18nPrefix, value, onValueChange, placeholder, values, ...rest } = props
 		return (
 			<ComboboxEnum
 				enumObj={enumObj}
@@ -62,10 +50,7 @@ function Combobox(props: ComboboxEnumProps<Record<string, string>> | ComboboxPri
 				onValueChange={onValueChange}
 				placeholder={placeholder}
 				values={values}
-				id={id}
-				className={className}
-				disabled={disabled}
-				aria-invalid={ariaInvalid}
+				{...rest}
 			/>
 		)
 	}
@@ -84,10 +69,7 @@ function ComboboxEnum<E extends Record<string, string>>({
 	onValueChange,
 	placeholder,
 	values,
-	id,
-	className,
-	disabled,
-	'aria-invalid': ariaInvalid,
+	...props
 }: Omit<ComboboxEnumProps<E>, 'enum'> & { enumObj: E }) {
 	const { t } = useTranslation()
 	const options = values ?? (Object.values(enumObj) as E[keyof E][])
@@ -99,9 +81,9 @@ function ComboboxEnum<E extends Record<string, string>>({
 			onValueChange={v => {
 				if (isEnumValue(enumObj, v)) onValueChange(v)
 			}}
-			disabled={disabled}
+			disabled={props.disabled}
 		>
-			<ComboboxSelectTrigger id={id} className={cn(className)} disabled={disabled} aria-invalid={ariaInvalid}>
+			<ComboboxSelectTrigger {...props}>
 				{label != null ? <span>{label}</span> : <span className="text-muted-foreground">{placeholder ? t(placeholder) : null}</span>}
 			</ComboboxSelectTrigger>
 			<ComboboxContent>

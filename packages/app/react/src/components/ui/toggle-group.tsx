@@ -14,7 +14,9 @@ import { toggleVariants } from '@/components/ui/toggle'
 // Enum-mode props (opt-in via the `enum` prop)
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface ToggleGroupEnumProps<E extends Record<string, string>> {
+// `className` comes from the root's own vocabulary instead of being hand-typed — the enum mode
+// already carries `VariantProps<typeof toggleVariants>` below, so this is the last hand-typed field.
+interface ToggleGroupEnumProps<E extends Record<string, string>> extends Pick<React.ComponentProps<'div'>, 'className'> {
 	/** The SDK enum object. When present, activates enum mode (single-select). */
 	enum: E
 	/** i18n key prefix — each value `v` is rendered as `t(`${i18nPrefix}.${v}`)`. */
@@ -26,7 +28,6 @@ interface ToggleGroupEnumProps<E extends Record<string, string>> {
 	/** Optional subset of enum values to show. Defaults to `Object.values(enum)`. */
 	values?: E[keyof E][]
 	id?: string
-	className?: string
 	disabled?: boolean
 	'aria-invalid'?: boolean | 'true' | 'false'
 	variant?: VariantProps<typeof toggleVariants>['variant']

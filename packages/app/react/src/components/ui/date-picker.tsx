@@ -15,7 +15,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 export { defaultPresets } from '@/components/ui/calendar'
 export type { DatePreset, DatePresetViewHint } from '@/components/ui/calendar'
 
-export interface DatePickerProps extends Omit<React.ComponentProps<typeof Popover>, 'children'> {
+// `Popover`'s Root doesn't render a DOM node (it's a state provider), so `className` — which the
+// trigger `<Button>` actually receives — comes from the trigger's own vocabulary, not hand-typed.
+export interface DatePickerProps
+	extends Omit<React.ComponentProps<typeof Popover>, 'children'>,
+		Pick<React.ComponentProps<typeof Button>, 'className'> {
 	/** Selected date */
 	date?: Date
 	/** Callback when date changes */
@@ -28,8 +32,6 @@ export interface DatePickerProps extends Omit<React.ComponentProps<typeof Popove
 	onPresetSelect?: (date: Date, viewHint?: DatePresetViewHint) => void
 	/** Placeholder text when no date selected */
 	placeholder?: string
-	/** Additional CSS classes */
-	className?: string
 	/** Locale for date formatting */
 	locale?: typeof ptBR
 	/** Date format string */

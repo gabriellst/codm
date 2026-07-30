@@ -11,7 +11,10 @@ import { IconSelector, IconCheck, IconChevronUp, IconChevronDown } from '@tabler
 // Enum-mode props (opt-in via the `enum` prop)
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface SelectEnumProps<E extends Record<string, string>> {
+// The visible root in enum mode is `SelectTrigger` — className/id/disabled/aria-invalid all come
+// from there instead of being hand-typed. `children` is fully owned (the trigger content is derived
+// from `value`/`placeholder`, never passed by the caller).
+interface SelectEnumProps<E extends Record<string, string>> extends Omit<React.ComponentProps<typeof SelectTrigger>, 'children'> {
 	/** The SDK enum object (e.g. `TaxTypeEnum`). When present, activates enum mode. */
 	enum: E
 	/** i18n key prefix — each value `v` is rendered as `t(`${i18nPrefix}.${v}`)`. */
@@ -24,10 +27,6 @@ interface SelectEnumProps<E extends Record<string, string>> {
 	placeholder?: string
 	/** Optional subset of enum values to show. Defaults to `Object.values(enum)`. */
 	values?: E[keyof E][]
-	id?: string
-	className?: string
-	disabled?: boolean
-	'aria-invalid'?: boolean | 'true' | 'false'
 	children?: never
 }
 
@@ -40,18 +39,7 @@ function Select<E extends Record<string, string>>(props: SelectEnumProps<E>): Re
 function Select<Value>(props: SelectPrimitive.Root.Props<Value>): React.ReactElement
 function Select(props: SelectEnumProps<Record<string, string>> | SelectPrimitive.Root.Props<unknown>): React.ReactElement {
 	if ('enum' in props && props.enum != null) {
-		const {
-			enum: enumObj,
-			i18nPrefix,
-			value,
-			onValueChange,
-			placeholder,
-			values,
-			id,
-			className,
-			disabled,
-			'aria-invalid': ariaInvalid,
-		} = props
+		const { enum: enumObj, i18nPrefix, value, onValueChange, placeholder, values, ...rest } = props
 		return (
 			<SelectEnum
 				enumObj={enumObj}
@@ -60,10 +48,7 @@ function Select(props: SelectEnumProps<Record<string, string>> | SelectPrimitive
 				onValueChange={onValueChange}
 				placeholder={placeholder}
 				values={values}
-				id={id}
-				className={className}
-				disabled={disabled}
-				aria-invalid={ariaInvalid}
+				{...rest}
 			/>
 		)
 	}
@@ -82,10 +67,7 @@ function SelectEnum<E extends Record<string, string>>({
 	onValueChange,
 	placeholder,
 	values,
-	id,
-	className,
-	disabled,
-	'aria-invalid': ariaInvalid,
+	...props
 }: Omit<SelectEnumProps<E>, 'enum'> & { enumObj: E }) {
 	const { t } = useTranslation()
 	const options = values ?? (Object.values(enumObj) as E[keyof E][])
@@ -97,7 +79,7 @@ function SelectEnum<E extends Record<string, string>>({
 				if (isEnumValue(enumObj, v)) onValueChange(v)
 			}}
 		>
-			<SelectTrigger id={id} className={className} disabled={disabled} aria-invalid={ariaInvalid}>
+			<SelectTrigger {...props}>
 				<SelectValue>{value != null ? t(`${i18nPrefix}.${value}`) : placeholder ? t(placeholder) : null}</SelectValue>
 			</SelectTrigger>
 			<SelectContent>
