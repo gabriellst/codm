@@ -5,7 +5,9 @@
 	"type": "module",
 	"main": "./lib/discover.ts",
 	"scripts": {
-		"generate": "bun generators/typescript.ts && bun generators/go.ts && bun generators/error-codes.ts",
+		"generate": "bun generators/typescript.ts && bun generators/go.ts && bun generators/rust/index.ts && bun generators/error-codes.ts",
+		"generate:rust": "bun generators/rust/index.ts",
+		"test:rust": "cargo test --quiet --manifest-path dist/rust/Cargo.toml",
 		"check": "bun tsc --noEmit"
 	},
 	"dependencies": {

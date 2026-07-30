@@ -1,0 +1,28 @@
+# Standalone Rust SDK crate — the Rust sibling of dist/typescript (@codedm/client-typescript)
+# and dist/go. NOT a member of any Cargo workspace (rust-wire spec §F6): consumers (the
+# Tauri shell) take it as a path dependency inside THEIR workspace. `cargo test` runs with
+# cwd here. src/ is emitted by packages/client/generators/rust/index.ts — do not edit.
+#
+# codedm-contracts-rust is a REAL dependency, not convenience: contract enums are not
+# regenerated here — progenitor replaces them with the wire crate's types (spec §F4), so
+# client and binding share one definition per contract enum.
+[package]
+name = "codedm-client-rust"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+thiserror = "1"
+progenitor-client = "0.10"
+# progenitor emits ::regress::Regex for pattern-validated strings; version paired with typify 0.4.
+regress = "0.10"
+codedm-contracts-rust = { path = "../../../contracts/generated/rust" }
