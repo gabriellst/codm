@@ -264,6 +264,26 @@ export function emitGoEnvelope(events: ParsedEvent[]): string {
 	lines.push('func ParseIntegrationEvent(raw []byte) (IntegrationEvent, error) {')
 	lines.push('\treturn UnmarshalIntegrationEvent(raw)')
 	lines.push('}')
+	lines.push('')
+	lines.push('// UnmarshalPayload decodes the PAYLOAD of the canonical transport envelope')
+	lines.push('// {id, ownerId, time, name, payload} into the typed <Model>Payload struct for `name`.')
+	lines.push('// Unknown names return an error — the passthrough policy for unknown events lives with')
+	lines.push('// the consumer, not here.')
+	lines.push('func UnmarshalPayload(name string, data []byte) (any, error) {')
+	lines.push('\tswitch name {')
+	for (const ev of events) {
+		const payloadName = `${ev.modelName.replace(/Event$/, '')}Payload`
+		lines.push(`\tcase ${ev.modelName}Name:`)
+		lines.push(`\t\tvar v ${payloadName}`)
+		lines.push('\t\tif err := json.Unmarshal(data, &v); err != nil {')
+		lines.push('\t\t\treturn nil, err')
+		lines.push('\t\t}')
+		lines.push('\t\treturn v, nil')
+	}
+	lines.push('\tdefault:')
+	lines.push('\t\treturn nil, fmt.Errorf("unknown integration event: %q", name)')
+	lines.push('\t}')
+	lines.push('}')
 	return `${lines.join('\n')}\n`
 }
 

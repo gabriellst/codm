@@ -1,0 +1,13 @@
+{
+	"id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+	"ownerId": "fixture-tenant",
+	"time": "2026-07-30T12:00:00Z",
+	"name": "integration.channel.presence_updated",
+	"payload": {
+		"channelId": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+		"remoteId": "remoteId-sample",
+		"unavailable": true,
+		"observedAt": "2026-07-30T12:00:00Z",
+		"ownerId": "ownerId-sample"
+	}
+}

@@ -68,6 +68,16 @@ describe('emitGoEvents / emitGoEnvelope — wire-name gate', () => {
 		expect(out).toContain('AffectedMonitorIDs []string `json:"affectedMonitorIds"`')
 		expect(out).not.toContain('*[]string')
 	})
+
+	test('envelope emits UnmarshalPayload — the nested-transport payload decoder, one arm per event', () => {
+		// The canonical transport is {id, ownerId, time, name, payload} (lib/envelope.ts);
+		// UnmarshalPayload is the typed door from that envelope's payload into <Model>Payload.
+		const out = emitGoEnvelope([sample])
+		expect(out).toContain('func UnmarshalPayload(name string, data []byte) (any, error) {')
+		expect(out).toContain('case VideoUploadedEventName:')
+		expect(out).toContain('var v VideoUploadedPayload')
+		expect(out).toContain('return nil, fmt.Errorf("unknown integration event: %q", name)')
+	})
 })
 
 describe('emitGoEnums — toGoEnumIdent', () => {

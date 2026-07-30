@@ -241,3 +241,224 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 func ParseIntegrationEvent(raw []byte) (IntegrationEvent, error) {
 	return UnmarshalIntegrationEvent(raw)
 }
+
+// UnmarshalPayload decodes the PAYLOAD of the canonical transport envelope
+// {id, ownerId, time, name, payload} into the typed <Model>Payload struct for `name`.
+// Unknown names return an error — the passthrough policy for unknown events lives with
+// the consumer, not here.
+func UnmarshalPayload(name string, data []byte) (any, error) {
+	switch name {
+	case ArtifactRecordedEventName:
+		var v ArtifactRecordedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelChatPresenceUpdatedEventName:
+		var v ChannelChatPresenceUpdatedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelConnectedEventName:
+		var v ChannelConnectedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelDisconnectedEventName:
+		var v ChannelDisconnectedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelLoggedOutEventName:
+		var v ChannelLoggedOutPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMembershipAddedEventName:
+		var v ChannelMembershipAddedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMembershipRemovedEventName:
+		var v ChannelMembershipRemovedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessageDeletedEventName:
+		var v ChannelMessageDeletedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessageDeliveredEventName:
+		var v ChannelMessageDeliveredPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessageEditedEventName:
+		var v ChannelMessageEditedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessageReceivedEventName:
+		var v ChannelMessageReceivedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessageSeenEventName:
+		var v ChannelMessageSeenPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessageSentEventName:
+		var v ChannelMessageSentPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelMessagesSyncedEventName:
+		var v ChannelMessagesSyncedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelOutboundDeliveredEventName:
+		var v ChannelOutboundDeliveredPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelPairingQrUpdatedEventName:
+		var v ChannelPairingQrUpdatedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelPresenceUpdatedEventName:
+		var v ChannelPresenceUpdatedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelRemoteCreatedEventName:
+		var v ChannelRemoteCreatedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelRemoteDeletedEventName:
+		var v ChannelRemoteDeletedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelRemoteUpdatedEventName:
+		var v ChannelRemoteUpdatedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelRemotesSyncedEventName:
+		var v ChannelRemotesSyncedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelSpecialPlatformEventReceivedEventName:
+		var v ChannelSpecialPlatformEventReceivedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelSyncCompletedEventName:
+		var v ChannelSyncCompletedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelSyncProgressEventName:
+		var v ChannelSyncProgressPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ChannelSyncStartedEventName:
+		var v ChannelSyncStartedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case IssueArchivedEventName:
+		var v IssueArchivedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case IssueCompletedEventName:
+		var v IssueCompletedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case IssueCreatedEventName:
+		var v IssueCreatedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case IssueOpenedEventName:
+		var v IssueOpenedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case IssueStopRaisedEventName:
+		var v IssueStopRaisedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case IssueStopResolvedEventName:
+		var v IssueStopResolvedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case OrchestratorRepliedEventName:
+		var v OrchestratorRepliedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case SubscriptionChangedEventName:
+		var v SubscriptionChangedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ThreadAttachedEventName:
+		var v ThreadAttachedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case WorkspaceRemovedEventName:
+		var v WorkspaceRemovedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	default:
+		return nil, fmt.Errorf("unknown integration event: %q", name)
+	}
+}
