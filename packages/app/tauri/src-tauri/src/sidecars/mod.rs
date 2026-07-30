@@ -1,31 +1,43 @@
 //! Sidecar supervision — spawns the two bundled sidecars (TS daemon + Go gateway,
-//! `bundle.externalBin`) and polls a bootstrap HTTP health-check per service.
+//! `bundle.externalBin`) and polls each service's readiness through the TYPED SDK
+//! (`api::Api` → the generated `health()` operation), never a hand-assembled request.
 //!
 //! The sidecar SET and each process's boot ENV are hand-written in `sidecars()`
 //! below — env values are runtime paths (`data_dir`, `resource_dir/migrations`) and
 //! shell-decision literals the supervisor owns, not a cross-boundary contract. The
-//! LEAN cross-boundary list the JS side needs (binary role → port env key → health
-//! path → build recipe) lives in `packages/app/tauri/config/sidecars.ts`, which
+//! LEAN cross-boundary list the JS side needs (binary role → port env key → build
+//! recipe) lives in `packages/app/tauri/config/sidecars.ts`, which
 //! `config/build-sidecars.ts` and `config/generate.ts` read; keep the two in step
-//! (same two roles, same ports, same health paths).
+//! (same two roles, same ports). The readiness PATH is in NEITHER list any more: it
+//! lives in the OpenAPI contract and arrives through the generated method (spec E2).
 
-use std::io::{Read, Write};
-use std::net::TcpStream;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-/// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`),
-/// readiness URL parts, the working directory it must be spawned in, and the env
-/// the process boots with.
+use crate::api::Api;
+
+/// Which SDK sub-client answers for this process. A fact of the SHELL (which binary is which
+/// service), not of the contract: the health PATH lives in the OpenAPI spec and arrives through the
+/// generated method, so there is no longer a literal to keep in step with `config/sidecars.ts`
+/// (spec E2). The `match` in `probe` is total — the compiler proves every service is probeable.
+#[derive(Clone, Copy)]
+pub enum SidecarService {
+    Daemon,
+    Gateway,
+}
+
+/// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`), the port
+/// it listens on, which SDK sub-client probes it, the working directory it must be
+/// spawned in, and the env the process boots with.
 pub struct Sidecar {
     name: &'static str,
     port: u16,
-    health_path: &'static str,
+    service: SidecarService,
     /// Working directory for the child process. Load-bearing, not cosmetic: a
     /// `bun build --compile` binary resolves the one `require` bun could not bundle
     /// (the libsql native addon, reached dynamically through `@neon-rs/load`) from
@@ -67,7 +79,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
         Sidecar {
             name: "codedm-daemon",
             port: api_port,
-            health_path: "/v1/session",
+            service: SidecarService::Daemon,
             // Not optional: the compiled daemon resolves the libsql native addon from
             // its CWD. Without this it cannot start. See `Sidecar::cwd`.
             cwd: Some(resource_dir.join("daemon-runtime")),
@@ -82,7 +94,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
         Sidecar {
             name: "codedm-gateway",
             port: channel_port,
-            health_path: "/api/openapi.json",
+            service: SidecarService::Gateway,
             // A static Go binary — nothing to resolve from disk, so it inherits the shell's CWD.
             cwd: None,
             env: vec![
@@ -97,30 +109,24 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
     ]
 }
 
-/// Minimal HTTP/1.1 readiness probe over std TcpStream (no HTTP client dependency):
-/// true iff the service answers the GET with a 200 within the per-attempt timeout.
-fn probe(port: u16, path: &str) -> bool {
-    let attempt = || -> std::io::Result<bool> {
-        let addr = format!("127.0.0.1:{port}");
-        let mut stream = TcpStream::connect_timeout(
-            &addr.parse().expect("static addr"),
-            Duration::from_millis(1500),
-        )?;
-        stream.set_read_timeout(Some(Duration::from_millis(1500)))?;
-        stream.set_write_timeout(Some(Duration::from_millis(1500)))?;
-        let request = format!("GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n");
-        stream.write_all(request.as_bytes())?;
-        let mut status_line = [0u8; 16];
-        stream.read_exact(&mut status_line)?;
-        Ok(status_line.starts_with(b"HTTP/1.1 200") || status_line.starts_with(b"HTTP/1.0 200"))
-    };
-    attempt().unwrap_or(false)
+/// READINESS BY CONTRACT. One typed call through the generated client (`codedm-client-rust`) — the
+/// same door the rest of the shell uses (`api::Api`, the house rule pinned by
+/// `tests/no_raw_http.rs`).
+///
+/// `is_ok()` is the entire predicate, and it is sufficient by construction: the generated method
+/// matches `200 => Ok(..)` and sends everything else to `Err` — including the 503 both health
+/// endpoints answer with while a gate component is down. Readiness is the HTTP code; the payload is
+/// for humans.
+async fn probe(api: &Api, service: SidecarService) -> bool {
+    match service {
+        SidecarService::Daemon => api.client.typescript.health().await.is_ok(),
+        SidecarService::Gateway => api.client.go.health().await.is_ok(),
+    }
 }
 
 /// Reveal the main window. Idempotent — `show()` on an already-visible window is a no-op, and the
 /// readiness path can reach this from either the success or the give-up branch.
 fn reveal_main_window(app: &tauri::AppHandle) {
-    use tauri::Manager;
     match app.get_webview_window("main") {
         Some(window) => {
             let _ = window.show();
@@ -190,21 +196,25 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicU
         }
     });
 
-    // Bootstrap health-check: 60s budget, 500ms cadence.
+    // Bootstrap health-check: 60s budget, 500ms cadence — both unchanged. What changed is HOW the
+    // question is asked: the typed probe is async, `tauri::async_runtime` does not re-export
+    // `sleep`, and its `block_on` is `Runtime::block_on` (panics when called from inside the
+    // runtime) — so this is a real async loop over the tokio the tauri dependency already carries.
     let health_handle = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    tauri::async_runtime::spawn(async move {
+        let api = health_handle.state::<Api>();
         let deadline = Instant::now() + Duration::from_secs(60);
         loop {
-            if probe(sidecar.port, sidecar.health_path) {
+            if probe(&api, sidecar.service).await {
                 let _ = health_handle.emit("sidecar:ready", sidecar.name);
-                log::info!("[{}] ready on :{}{}", sidecar.name, sidecar.port, sidecar.health_path);
+                log::info!("[{}] ready on :{}", sidecar.name, sidecar.port);
                 note_ready(&health_handle, &ready, total);
                 return;
             }
             if Instant::now() >= deadline {
                 let _ = health_handle.emit(
                     "sidecar:error",
-                    format!("{}: no 200 from :{}{} within 60s", sidecar.name, sidecar.port, sidecar.health_path),
+                    format!("{}: no healthy response from :{} within 60s", sidecar.name, sidecar.port),
                 );
                 // REVEAL ANYWAY. A sidecar that never comes up must not leave the operator staring at
                 // a dock icon with no window and no way to learn why — a visibly broken console beats
@@ -215,7 +225,7 @@ pub fn boot_sidecar(app: &tauri::AppHandle, sidecar: Sidecar, ready: Arc<AtomicU
                 note_ready(&health_handle, &ready, total);
                 return;
             }
-            std::thread::sleep(Duration::from_millis(500));
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
     });
 }

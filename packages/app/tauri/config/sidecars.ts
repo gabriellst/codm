@@ -20,8 +20,6 @@ export interface SidecarManifestEntry {
 	/** REPO.env key holding the port this sidecar listens on (the generator reads its `example`
 	 *  for the CSP connect-src; the Rust supervisor reads the same env var at runtime). */
 	portEnvKey: string
-	/** Readiness probe path — documented here; the Rust supervisor owns the runtime probe. */
-	healthPath: string
 	/** How `./build-sidecars.ts` compiles the binary: the toolchain kind, the entry, and the source workspace. */
 	build: { kind: 'bun-compile' | 'go-build'; entry: string; workspace: WorkspaceId }
 }
@@ -30,13 +28,11 @@ export const SIDECARS = [
 	{
 		role: 'daemon',
 		portEnvKey: 'API_PORT',
-		healthPath: '/v1/session',
 		build: { kind: 'bun-compile', entry: './src/index.ts', workspace: 'apiTs' },
 	},
 	{
 		role: 'gateway',
 		portEnvKey: 'CHANNEL_PORT',
-		healthPath: '/api/openapi.json',
 		build: { kind: 'go-build', entry: './cmd/api', workspace: 'apiGo' },
 	},
 ] as const satisfies readonly SidecarManifestEntry[]

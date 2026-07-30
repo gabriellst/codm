@@ -47,6 +47,13 @@ pub fn run() {
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.
             let resource_dir = app.path().resource_dir().expect("resource dir resolvable");
 
+            // Typed SDK aggregate (api::Api) — the shell's only door to the backends, and now the
+            // readiness probe's door too, so it MUST be managed before the fleet spawns: each
+            // supervisor task resolves `State<Api>` and would race an unmanaged state otherwise.
+            // Building it early is free — `Api::from_env` only reads env and assembles a lazy HTTP
+            // client, opening no connection; requests simply fail until the sidecars answer.
+            api::manage(app.handle());
+
             // READINESS GATE — the main window is `"visible": false` in tauri.conf.json and is revealed
             // by whichever sidecar finishes last (`sidecars::note_ready`). Painting the console before
             // the daemon answered meant the operator's first sight of the app was a UI querying a port
@@ -58,11 +65,6 @@ pub fn run() {
             for sidecar in fleet {
                 sidecars::boot_sidecar(app.handle(), sidecar, ready.clone(), total);
             }
-
-            // Typed SDK aggregate (api::Api) — the shell's only door to the backends.
-            // Managed AFTER the sidecars start booting; requests simply fail until the
-            // readiness gate reveals the window, same as the console's SDK.
-            api::manage(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())

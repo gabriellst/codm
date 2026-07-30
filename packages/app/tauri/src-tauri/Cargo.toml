@@ -34,3 +34,8 @@ specta-typescript = "=0.0.9"
 codedm-contracts-rust = { path = "../../../contracts/generated/rust" }
 codedm-client-rust = { path = "../../../client/dist/rust" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# The readiness loop is async (the typed probe awaits), and `tauri::async_runtime` re-exports
+# neither `sleep` nor a re-entrant `block_on` — so the supervisor sleeps on tokio directly. Already
+# in Cargo.lock as a tauri transitive dep: declaring it adds no crate and does not touch the lock.
+tokio = { version = "1", features = ["time"] }

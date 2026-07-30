@@ -37,6 +37,12 @@ describe('desktop config (packages/app/tauri/config)', () => {
 				(REPO.env as Record<string, unknown>)[sidecar.portEnvKey],
 				`sidecar '${sidecar.role}' names unknown port env key '${sidecar.portEnvKey}'`,
 			).toBeDefined()
+			// NO readiness path here. Since E1 the shell probes through the generated `health()`
+			// operation, so the path lives in the OpenAPI contract; a path field in this manifest
+			// would be documentation nobody reads — editing it would not change what the SDK calls.
+			expect('healthPath' in sidecar, `sidecar '${sidecar.role}' re-declares a health path — it lives in the contract`).toBe(
+				false,
+			)
 		}
 	})
 

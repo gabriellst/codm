@@ -54,7 +54,13 @@ impl Api {
 
         let client = codedm_client_rust::Client::builder()
             .typescript(format!("http://127.0.0.1:{api_port}"))
-            .go(format!("http://127.0.0.1:{channel_port}"))
+            // The `/api` frontier belongs to the BASE URL, never to a contract path — the repo's
+            // convention, mirrored from the console: `Config.gatewayBaseUrl` points the `go`
+            // sub-client at the api-ts ChannelProxy, which forwards to `${API_GO_URL}/api`
+            // server-side (packages/app/react/src/lib/config.ts). The gateway's spec paths are
+            // relative to that frontier, so the shell — which talks to :3032 directly, with no
+            // proxy in between — carries it here.
+            .go(format!("http://127.0.0.1:{channel_port}/api"))
             .http(http)
             .build()
             .expect("both service urls are set above — build cannot fail");
