@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use tauri::Manager;
 
+mod api;
 mod commands;
 mod sidecars;
 
@@ -57,6 +58,11 @@ pub fn run() {
             for sidecar in fleet {
                 sidecars::boot_sidecar(app.handle(), sidecar, ready.clone(), total);
             }
+
+            // Typed SDK aggregate (api::Api) — the shell's only door to the backends.
+            // Managed AFTER the sidecars start booting; requests simply fail until the
+            // readiness gate reveals the window, same as the console's SDK.
+            api::manage(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())

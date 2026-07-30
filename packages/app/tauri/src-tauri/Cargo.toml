@@ -1,7 +1,6 @@
-# CodeDM desktop shell — Tauri v2 host.
-# UNVERIFIED-COMPILE: no Rust toolchain is present on the machine that authored this
-# (see .specs/codedm/OVERNIGHT-BLOCKED.md — `tauri dev`/`tauri build` acceptance parked).
-# First `cargo build` may need minor version/API adjustments.
+# CodeDM desktop shell — Tauri v2 host. This crate's Cargo workspace is THE repo's only
+# one (rust-wire spec §F6): the generated contracts/client crates are standalone path
+# deps, compiled inside this workspace's target/lock — like Go's `replace` directives.
 [package]
 name = "codedm-desktop"
 version = "0.1.0"
@@ -28,3 +27,10 @@ serde_json = "1"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 specta = { version = "=2.0.0-rc.22", features = ["derive"] }
 specta-typescript = "=0.0.9"
+
+# Typed backend access (rust-wire spec §F7): wire binding + SDK aggregate as standalone
+# path deps. reqwest appears ONLY for building the identity-carrying http client in
+# src/api/mod.rs — raw reqwest anywhere else is banned (tests/no_raw_http.rs).
+codedm-contracts-rust = { path = "../../../contracts/generated/rust" }
+codedm-client-rust = { path = "../../../client/dist/rust" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
