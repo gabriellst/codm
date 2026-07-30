@@ -9,7 +9,8 @@ import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkAgent } from './IssueWorkAgent'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
-import { InMemoryRunTokenService } from '../../mcp/RunTokenService'
+import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { TOOLS_IN_SCOPE, MCP_SCOPES } from '../../mcp/manifest'
 
 /**
@@ -50,7 +51,7 @@ const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[1]> = {}): P
 
 const build = () => {
 	const runner = new CapturingRunner()
-	return { runner, agent: new IssueWorkAgent(new InMemoryRunTokenService(), new IssueWorkPromptBuilder()) }
+	return { runner, agent: new IssueWorkAgent(new InMemoryAgentIdentityService<AgentRunIdentity>(), new IssueWorkPromptBuilder()) }
 }
 
 describe('IssueWorkAgent (and the Agent template method under it)', () => {
@@ -109,9 +110,9 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		for (const systemTool of TOOLS_IN_SCOPE.system) expect(declared.has(systemTool)).toBe(false)
 	})
 
-	it('the BASE mints the run token and points the CLI at this scope endpoint — the subclass sets no `mcp`', async () => {
+	it('the BASE issues the run credential and points the CLI at this scope endpoint — the subclass sets no `mcp`', async () => {
 		const runner = new CapturingRunner()
-		const tokens = new InMemoryRunTokenService()
+		const tokens = new InMemoryAgentIdentityService<AgentRunIdentity>()
 		const agent = new IssueWorkAgent(tokens, new IssueWorkPromptBuilder())
 
 		for await (const _ of agent.run(runner, input())) {
@@ -123,7 +124,7 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		expect(mcp?.endpoint).toContain('/mcp/issue-handling')
 		// The token is OPAQUE on the request and resolves to the ENVELOPE's identity — the seam carries
 		// no `ownerId`/`issueId`/`threadId` of its own, which is the invariant AC-1.11 and AC-6.12 pin.
-		expect(tokens.verify(mcp?.token ?? '')).toMatchObject({
+		expect(tokens.resolve(mcp?.token ?? '')).toMatchObject({
 			ownerId: '00000000-0000-4000-8000-0000000000aa',
 			issueId: '00000000-0000-4000-8000-0000000000cc',
 			threadId: '00000000-0000-4000-8000-0000000000bb',

@@ -1,7 +1,8 @@
 import { singleton } from 'tsyringe-neo'
 import { BaseError, type HttpControllerRequest, type HttpMiddlewareResponse, type Middleware } from '@codedm/core-typescript'
 import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
-import { RunTokenService } from '../services/RunTokenService'
+import { AgentIdentityService } from '@codedm/core-typescript'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
 
 /**
@@ -30,21 +31,21 @@ import type { AgentInterfaceErrors } from '../errors'
  */
 @singleton()
 export class RunTokenMiddleware implements Middleware {
-	constructor(private readonly runTokens: RunTokenService) {}
+	constructor(private readonly identities: AgentIdentityService<AgentRunIdentity>) {}
 
 	async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<void>> {
 		const token = request.headers?.[MCP_RUN_TOKEN_HEADER] ?? request.headers?.[MCP_RUN_TOKEN_HEADER.toLowerCase()]
-		const claims = typeof token === 'string' ? this.runTokens.verify(token) : null
+		const identity = typeof token === 'string' ? this.identities.resolve(token) : null
 		// FAIL CLOSED. A route that carries this middleware is reachable ONLY from inside a run, so a
 		// missing or dead token is not an anonymous caller to be served with the daemon's own authority
 		// — it is a late tool call from a run that already ended, or a request that never was one. The
 		// alternative (fall through with no `entryId`) would let `issue/create` mint an issue with no
 		// provenance, and the eventual answer would quote nothing.
-		if (!claims) {
+		if (!identity) {
 			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', 'this operation is only reachable from inside an agent run')
 		}
 
-		request.ctx = { ...request.ctx, runClaims: claims }
+		request.ctx = { ...request.ctx, runClaims: identity }
 		return {}
 	}
 }

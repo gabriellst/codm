@@ -5,7 +5,7 @@ import { nodeAgentProcessSpawner, type AgentProcess } from './AgentProcess'
 import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
-import { InMemoryRunTokenService } from '../../../mcp/RunTokenService'
+import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
 
 /**
  * AC-3.3 — CANCELLATION KILLS THE WHOLE PROCESS GROUP, not just the direct child.
@@ -114,7 +114,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 
 	it('an aborted run kills the process, and the drain still ends on ONE terminal event', async () => {
 		const { proc, state } = fakeBlockingProcess()
-		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryRunTokenService(), {
+		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryAgentIdentityService(), {
 			spawner: () => proc,
 			inactivityMs: 30_000,
 		})
@@ -144,7 +144,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 
 	it('shutdown() kills every process the runner still owns', async () => {
 		const { proc, state } = fakeBlockingProcess()
-		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryRunTokenService(), {
+		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryAgentIdentityService(), {
 			spawner: () => proc,
 			inactivityMs: 30_000,
 		})
@@ -169,7 +169,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 	})
 
 	it('shutdown() is idempotent — a second call has nothing left to own', async () => {
-		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryRunTokenService(), { inactivityMs: 30_000 })
+		const runner = ClaudeAgentRunner.withOptions(new LoggingService(), new InMemoryAgentIdentityService(), { inactivityMs: 30_000 })
 		await runner.shutdown()
 		await runner.shutdown()
 	})

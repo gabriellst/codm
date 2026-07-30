@@ -4,7 +4,9 @@ import { ContactKind, MailboxItemKind } from '@codedm/contracts-typescript/wire/
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
-import { InMemoryRunTokenService } from '../../mcp/RunTokenService'
+import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
 import { OrchestratorPromptBuilder } from './prompt'
 import { OrchestratorAgent } from './OrchestratorAgent'
@@ -45,14 +47,14 @@ const input = () =>
 
 const build = () => ({
 	runner: new CapturingRunner(),
-	tokens: new InMemoryRunTokenService(),
+	tokens: new InMemoryAgentIdentityService<AgentRunIdentity>(),
 })
 
 describe('OrchestratorAgent', () => {
 	/**
 	 * AC-T3.2 — the blocker that gated the whole pivot, asserted as behaviour rather than as a comment.
 	 *
-	 * Before §7.2.1 the base refused to mint for ANY scoped agent without an `issueId`. This agent
+	 * Before §7.2.1 the base refused to issue a credential for ANY scoped agent without an `issueId`. This agent
 	 * declares a scope and never has one, so that rule would have thrown on every single turn — the
 	 * product would have shipped conversing-never. A regression here is not subtle in production and is
 	 * completely silent in a unit test that only checks the happy path, which is why the assertion is
@@ -95,13 +97,13 @@ describe('OrchestratorAgent', () => {
 			// drain
 		}
 
-		expect(tokens.verify(runner.requests[0]?.mcp?.token ?? '')).toMatchObject({
+		expect(tokens.resolve(runner.requests[0]?.mcp?.token ?? '')).toMatchObject({
 			threadId: '00000000-0000-4000-8000-0000000000bb',
 			entryId: '00000000-0000-4000-8000-0000000000dd',
 			agentName: AgentName.ORCHESTRATOR,
-			scope: 'orchestration',
+			scope: McpScope.orchestration,
 		})
-		expect(tokens.verify(runner.requests[0]?.mcp?.token ?? '')?.issueId).toBeUndefined()
+		expect(tokens.resolve(runner.requests[0]?.mcp?.token ?? '')?.issueId).toBeUndefined()
 	})
 
 	/** The base stamps identity; `buildRequest` must never set it (§4.5). */

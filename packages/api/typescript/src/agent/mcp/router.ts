@@ -4,9 +4,10 @@ import type { HttpMethod } from '@codedm/core-typescript'
 import { withMcpRunContext, MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { RunTokenService, type RunTokenClaims } from '../services/RunTokenService'
+import { AgentIdentityService } from '@codedm/core-typescript'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import { MCP_SCOPE_NAMES, type McpScope } from './manifest'
-import { assertIdentityMatchesClaims } from './identity'
+import { assertIdentityMatches } from './identity'
 import type { AgentInterfaceErrors } from '../errors'
 
 import { MCP_ROUTE_PREFIX } from './route'
@@ -39,12 +40,12 @@ const JSONRPC_INVALID_PARAMS = -32602
  * string and a comment mentioning it is indistinguishable from a call site to a grep.)
  *
  * AUTHORIZATION IS PER CALL, NOT PER RUN
- * Every request carries the opaque run token. `verify` is a map lookup that fails closed on unknown,
+ * Every request carries the opaque run token. `resolve` is a map lookup that fails closed on unknown,
  * expired and revoked, so a late tool call from a run that already died gets 401 and writes nothing —
  * the property §4.11 promises when a run is cancelled.
  *
  * IDENTITY IS CHECKED BEFORE THE TRANSPORT DISPATCHES, WHICH IS WHY "NO WRITE HAPPENED" IS PROVABLE
- * The message is parsed here, and a `tools/call` has its arguments walked against the claims BEFORE
+ * The message is parsed here, and a `tools/call` has its arguments walked against the identity BEFORE
  * `handleRequest` runs. Doing it inside a tool wrapper would be too late in a measurable way: the MCP
  * SDK validates `outputSchema` AFTER the handler returns, and the probe caught a rejected call whose
  * HTTP write had already been issued. Rejecting here means the outbound request is never built.
@@ -64,7 +65,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 	// here comes from the run token and from nothing else.
 	override middlewares = []
 
-	constructor(private readonly runTokens: RunTokenService) {
+	constructor(private readonly identities: AgentIdentityService<AgentRunIdentity>) {
 		super()
 	}
 
@@ -72,8 +73,8 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		const scope = this.resolveScope(request.params.scope)
 		const raw = request.raw
 		const token = this.readToken(raw)
-		const claims = this.runTokens.verify(token)
-		if (!claims) {
+		const identity = this.identities.resolve(token)
+		if (!identity) {
 			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', 'missing, unknown, expired or revoked run token')
 		}
 
@@ -85,10 +86,10 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		// compare, so nothing downstream would have objected. The token rides on the child CLI's argv,
 		// which the model can read; enforcing the scope only through `--allowedTools` puts the boundary
 		// on the attacker's side of the wire.
-		if (claims.scope !== scope) {
+		if (identity.scope !== scope) {
 			throw new BaseError<AgentInterfaceErrors>(
 				'AGENT_RUN_SCOPE_MISMATCH',
-				`run token was minted for the '${claims.scope}' tool surface and cannot be used against '${scope}'`,
+				`run token was issued for the '${identity.scope}' tool surface and cannot be used against '${scope}'`,
 			)
 		}
 
@@ -96,7 +97,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 		// from the bytes we already read — a Request body is a one-shot stream and re-reading it would
 		// hand the transport an empty message.
 		const body = raw.method === 'POST' ? await raw.text() : ''
-		const identityError = this.rejectMismatchedIdentity(body, claims)
+		const identityError = this.rejectMismatchedIdentity(body, identity)
 		if (identityError) return this.rawResponse(identityError)
 
 		const transport = await this.buildTransport(scope)
@@ -139,7 +140,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 	}
 
 	/**
-	 * Walk a `tools/call`'s arguments against the claims and, on disagreement, answer with a JSON-RPC
+	 * Walk a `tools/call`'s arguments against the identity and, on disagreement, answer with a JSON-RPC
 	 * error INSTEAD of dispatching. Returns `null` when there is nothing to reject.
 	 *
 	 * BOTH LAYERS CARRY THE REFUSAL: HTTP **403** (what AC-6.6(b) contracts, and what an access log,
@@ -153,7 +154,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 	 * A message that does not parse is passed through untouched — the transport owns malformed-input
 	 * handling, and duplicating its error vocabulary here would be a second source of truth for it.
 	 */
-	private rejectMismatchedIdentity(body: string, claims: RunTokenClaims): Response | null {
+	private rejectMismatchedIdentity(body: string, identity: AgentRunIdentity): Response | null {
 		if (body.length === 0) return null
 		let message: unknown
 		try {
@@ -164,7 +165,7 @@ export class McpRouterController extends Controller<typeof McpRouterInputSchema,
 
 		for (const call of this.toolCallsIn(message)) {
 			try {
-				assertIdentityMatchesClaims(call.args, claims)
+				assertIdentityMatches(call.args, identity)
 			} catch (error) {
 				const detail = error instanceof BaseError ? error.message : String(error)
 				return Response.json(

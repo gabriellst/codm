@@ -6,8 +6,6 @@ export * from './AgentRunner'
 export * from './AgentRunnerFactory'
 export * from './StreamJsonCodec'
 export * from './ProviderDetector'
-// Contract-only until Fase 6 (mint/verify/revoke has no implementation yet). It moved here from the
-// illegal `mcp/` folder in Fase 4.5: a bounded context's citizens are the ones `CLAUDE.md` lists, and
-// an abstract collaborator with three verbs is a service like any other.
-export * from './RunTokenService'
+// The run-credential seam (issue/resolve/revoke) is NOT here: it is `AgentIdentityService` in
+// `@codedm/core-typescript`, a core service bound at the ROOT container in `shared/registry.ts`.
 export { MailboxDispatcher, DrizzleMailboxDispatcher } from './MailboxDispatcher'

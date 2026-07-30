@@ -1,4 +1,5 @@
 import type { Controller } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
 import { RecordArtifactController, ListArtifactsController } from '@artifact/controllers'
 import {
 	GetIssueStatusController,
@@ -40,6 +41,9 @@ import { AskOperatorController } from '../controllers/AskOperator'
 import { ForkIssueController } from '../controllers/ForkIssue'
 import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
 
+// SHRINKING (B2 T4): SCOPE_CONFINEMENT is gone — confinement is each agent's own `static
+// IdentitySchema`, parsed at spawn. The remaining lists die in T5.
+
 /**
  * THE MANIFEST — the single declaration of which HTTP operations are reachable as MCP tools, and
  * under which scope (GOAL-agent-abstraction Fase 6, founder design amendment; AC-6.14/AC-6.15).
@@ -79,54 +83,13 @@ import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
  * happens through the EMITTED SPEC. There is no third copy of this list anywhere.
  */
 
-/** The audiences. They cut ACROSS the per-bounded-context tags, which is why a second axis exists at all. */
-export const MCP_SCOPE_NAMES = ['issue-handling', 'orchestration', 'system'] as const
-export type McpScope = (typeof MCP_SCOPE_NAMES)[number]
-
 /**
- * WHAT A TOKEN OF THIS SCOPE IS CONFINED TO — `'issue'` or `'thread'` (orchestrator pivot §7.2.1).
- *
- * Until the pivot this was not a question: every scope-declaring agent worked an issue, so the base
- * `Agent` could hard-require an `issueId` before minting and `mcp/identity.ts` could rely on the claim
- * always being there. The orchestrator breaks that premise — it is keyed by THREAD and structurally has
- * no issue (§6.1) — and the honest fix is to make confinement a DECLARED property of the scope rather
- * than an assumption baked into the mint site.
- *
- * A `Record<McpScope, …>` on purpose, exactly like `GENERATED_SERVERS` in `router.ts`: a scope added to
- * `MCP_SCOPE_NAMES` breaks `tsc` HERE until somebody states what its tokens are confined to. The
- * alternative — a list of the scopes that need an issue, with everything else falling through to
- * "thread" — would make the weaker confinement the SILENT default, and a new scope would ship
- * unconfined because nobody remembered to add it to a list.
- *
- * ### `'thread'` is strictly weaker, and the weakness has a name
- * `assertIdentityMatchesClaims` skips any identity key whose claim is absent — it does not reject.
- * So a `'thread'`-confined token gets NO generic protection on an `issueId` argument, and every tool
- * in such a scope that accepts one MUST check `issue.threadId === claims.threadId` itself. That is
- * why `orchestration` carries read/`create` operations and NOT the six writes of `issue-handling`.
+ * The declared surfaces, as an iterable. The VALUES are the wire spelling and they now come from
+ * `packages/contracts` — this file no longer owns the vocabulary, only (until T5) the lists derived
+ * from it.
  */
-export const SCOPE_CONFINEMENT = {
-	/** Six writes an agent performs ON ITS OWN ISSUE. The claim is what makes "its own" checkable. */
-	'issue-handling': 'issue',
-	/**
-	 * The orchestrator: ONE per thread, and no issue exists to confine it to (§6.1). Every tool in this
-	 * scope that accepts an `issueId` therefore verifies `issue.threadId === claims.threadId` in its own
-	 * handler — the generic walker SKIPS an absent claim rather than rejecting it, so it cannot help
-	 * here (§7.2.1).
-	 */
-	orchestration: 'thread',
-	/**
-	 * `'issue'` — the STRICTER of the two, and deliberately so despite `system` operations being
-	 * neither issue- nor thread-shaped (`owner/*`, `workspace/*`, ui reads).
-	 *
-	 * No internal agent declares this scope, so nothing mints such a token today and the value has no
-	 * runtime effect. It is a choice about what the NEXT person inherits: `system` is the scope that
-	 * opens account administration, so an agent that wants it should have to state an identity as
-	 * specific as the surface is dangerous — and if a thread-confined `system` token ever turns out to
-	 * be the right thing, that is a decision someone makes explicitly, by editing this line, rather
-	 * than one they get by default from a list they forgot to update.
-	 */
-	system: 'issue',
-} as const satisfies Record<McpScope, 'issue' | 'thread'>
+export const MCP_SCOPE_NAMES = Object.values(McpScope)
+export { McpScope }
 
 /**
  * Structural type of a controller class.

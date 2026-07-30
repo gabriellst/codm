@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { BaseError, DomainEventRepository, LoggingService, type MockLoggingService } from '@codedm/core-typescript'
-import { IssueStatus, MailboxItemKind, MailboxTargetKind, ProviderKind, ProviderStatus, StopKind } from '@codedm/contracts-typescript/wire/enums'
+import {
+	IssueStatus,
+	MailboxItemKind,
+	MailboxTargetKind,
+	ProviderKind,
+	ProviderStatus,
+	StopKind,
+} from '@codedm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { DeclareIssueComplete } from './DeclareIssueComplete'
@@ -11,7 +18,7 @@ import { AgentRunner } from '../services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
-import { RunTokenService } from '../services/RunTokenService'
+import { AgentIdentityService } from '@codedm/core-typescript'
 import { AgentSessionRepository, MailboxRepository } from '../repositories'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from '../agents/IssueWorkAgent'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
@@ -120,7 +127,7 @@ describe('RunIssueTurn use case', () => {
 		const queued = await testBed.resolve(MailboxRepository).claimNext('run-issue-turn-test', 60_000)
 		expect(queued?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
 		expect(queued?.targetKind).toBe(MailboxTargetKind.THREAD)
-		expect((queued?.payload as { outcome: { replyText: string } }).outcome.replyText).toBeTruthy()
+		expect((queued?.payload as { outcome: { replyText: string } } | undefined)?.outcome.replyText).toBeTruthy()
 
 		// TEARDOWN — the single-active claim is released.
 		expect(registry.isActive(issueId)).toBe(false)
@@ -419,7 +426,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 	 * at call time — so a double built here can no longer capture a stale one.
 	 */
 	const injectToollessAgent = () =>
-		testBed.override(IssueWorkAgent, new ToollessIssueWorkAgent(testBed.resolve(RunTokenService), new IssueWorkPromptBuilder()))
+		testBed.override(IssueWorkAgent, new ToollessIssueWorkAgent(testBed.resolve(AgentIdentityService), new IssueWorkPromptBuilder()))
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()

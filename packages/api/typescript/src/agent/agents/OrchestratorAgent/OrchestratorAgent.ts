@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { AgentIdentityService } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
-import { RunTokenService } from '../../services/RunTokenService'
 import { Agent } from '../../types/Agent'
+import { AgentRunIdentitySchema, type AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
 import type { AgentRunRequest } from '../../types'
 import { OrchestratorPromptBuilder } from './prompt'
@@ -19,11 +20,11 @@ import { OrchestratorInputSchema } from './types'
  * `buildRequest` is the only variation point.
  *
  * ### Why it CAN declare a scope with no `issueId`, which was the blocker
- * The base used to refuse to mint a run token for any scoped agent without an `issueId` ("a run token
- * must be confined to an issue"). This agent is keyed by THREAD and structurally has none (§6.1 — its
- * session row is the one with `issue_id IS NULL`), so that rule would have killed every turn at mint
- * time. Confinement is now a declared property of the SCOPE (`SCOPE_CONFINEMENT`), and
- * `orchestration` is `'thread'`.
+ * The base used to refuse to issue a run credential for any scoped agent without an `issueId` ("a run
+ * token must be confined to an issue"). This agent is keyed by THREAD and structurally has none (§6.1
+ * — its session row is the one with `issue_id IS NULL`), so that rule would have killed every turn at
+ * spawn time. Confinement is now declared by the AGENT, as its own `static IdentitySchema` — and this
+ * one omits the field entirely.
  *
  * ### The tools it does NOT get, and why the omission is the design
  * `issue-handling`'s six writes are absent: this agent converses, forks and reads — it never does
@@ -42,15 +43,24 @@ export class OrchestratorAgent extends Agent<typeof OrchestratorInputSchema> {
 
 	override readonly inputSchema = OrchestratorInputSchema
 
-	override readonly mcpScope = 'orchestration' as const
+	/**
+	 * NO `issueId` — not "optional", ABSENT. The orchestrator is keyed by THREAD and structurally has
+	 * no issue, and the field's absence is what tells the destination-side comparison there is nothing
+	 * to compare on that axis. The consequence is named, not hidden: every tool in this scope that
+	 * ACCEPTS an `issueId` verifies ownership in its own handler (`SteerIssueTurn` does exactly that),
+	 * because no generic check can help where there is no claim.
+	 */
+	static override readonly IdentitySchema = AgentRunIdentitySchema.omit({ issueId: true })
+
+	override readonly mcpScope = McpScope.orchestration
 	/** DERIVED, never hand-written — add a tool to the manifest and the argv follows with no edit here. */
-	override readonly tools = TOOLS_IN_SCOPE.orchestration
+	override readonly tools = TOOLS_IN_SCOPE[McpScope.orchestration]
 
 	constructor(
-		runTokens: RunTokenService,
+		identities: AgentIdentityService<AgentRunIdentity>,
 		private readonly prompt: OrchestratorPromptBuilder,
 	) {
-		super(runTokens)
+		super(identities)
 	}
 
 	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {

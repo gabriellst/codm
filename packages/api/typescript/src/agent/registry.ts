@@ -15,8 +15,6 @@ import {
 	MockAgentSessionRepository,
 	MockMailboxRepository,
 } from './repositories'
-import { RunTokenService } from './services/RunTokenService'
-import { InMemoryRunTokenService } from './mcp/RunTokenService'
 // Side-effect: publishes the MCP manifest to the core registry the OpenAPI emitter reads. It has to
 // happen before `generateSpecification()`, which the composition root guarantees by importing every
 // context router first — the same ordering `x-error-codes` already relies on.
@@ -85,17 +83,14 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// wire enum whose values are the product's supported CLIs, not a stringly-typed label for a class.)
 	// TRANSIENT (`useClass`), not singleton, and the reason survives the runner leaving the constructor:
 	// an agent holds nothing but its prompt builder, so a singleton buys no shared state, while it WOULD
-	// capture whichever `RunTokenService` and builder were bound at first construction — and
+	// capture whichever `AgentIdentityService` and builder were bound at first construction — and
 	// `TestBed.override` swaps bindings per suite. One allocation per resolve, and the graph stays honest.
 	{ token: IssueWorkPromptBuilder, mock: { useClass: IssueWorkPromptBuilder }, real: { useClass: IssueWorkPromptBuilder } },
 	{ token: IssueWorkAgent, mock: { useClass: IssueWorkAgent }, real: { useClass: IssueWorkAgent } },
 	{ token: OrchestratorPromptBuilder, mock: { useClass: OrchestratorPromptBuilder }, real: { useClass: OrchestratorPromptBuilder } },
 	{ token: OrchestratorAgent, mock: { useClass: OrchestratorAgent }, real: { useClass: OrchestratorAgent } },
 	//
-	// The run token — the SINGLE source of identity for every MCP tool call (§4.4). One in-memory
-	// instance per process in every env: a token's lifetime is one run inside one daemon, and a
-	// persisted one would outlive the process it authorizes. Bound in all three envs because the
-	// integration and mock suites exercise the router's 401/403 boundary directly, and a double would
-	// be a second implementation of the thing under test.
-	{ token: RunTokenService, mock: InMemoryRunTokenService, integration: InMemoryRunTokenService, real: InMemoryRunTokenService },
+	// The run credential is NOT bound here. `AgentIdentityService` is a CORE token and lives on the
+	// ROOT shelf in `shared/registry.ts` — see the comment there for the mechanical reason
+	// (`Controller.executeMiddlewares` resolves from the root container).
 ])

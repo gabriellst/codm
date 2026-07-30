@@ -3,7 +3,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { ArtifactKind, IssueStatus } from '@codedm/contracts-typescript/wire/enums'
 import { BaseError } from '@codedm/core-typescript'
-import { RunTokenService, type RunTokenClaims } from '../services/RunTokenService'
+import { AgentIdentityService } from '@codedm/core-typescript'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentMcpInvocation } from '../types/AgentMcpInvocation'
 import type { AgentApplicationErrors } from '../errors'
 import { MCP_RUN_TOKEN_HEADER } from '@codedm/client-typescript/typescript/mcp/context'
@@ -38,15 +39,15 @@ export interface DeclaredToolCall {
  * `services/AgentRunner` + `providers` for `ownerId|issueId|threadId` and requires ZERO hits: the
  * transport seam does not see identity. A driver that names the issue it is declaring on therefore
  * cannot live there. `agent/mcp/` is exactly where the AC says those three names appear legitimately —
- * it is where the claims are read and compared.
+ * it is where the identity is read and compared.
  *
- * WHERE ITS IDENTITY COMES FROM, and why that is not a shortcut. It resolves the claims from the
- * OPAQUE token through `RunTokenService.verify` — the same call, on the same service instance, that
+ * WHERE ITS IDENTITY COMES FROM, and why that is not a shortcut. It resolves the identity from the
+ * OPAQUE token through `AgentIdentityService.resolve` — the same call, on the same service instance, that
  * the router makes on every tool call. A real model learns the same two ids from its prompt (see
  * `IssueWorkPromptBuilder`, which renders them precisely because a generated tool inherits its
  * controller's path parameters). Reading them from the credential instead of re-parsing prose keeps
  * this file free of the text-matching AC-6.2 forbids anywhere in the chain, and it cannot widen what
- * the run may touch: the router validates every argument against those same claims regardless.
+ * the run may touch: the router validates every argument against that same identity regardless.
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
 @injectable()
@@ -58,7 +59,7 @@ export class E2eMcpDriver {
 	static readonly COMPLETION_SUMMARY = 'e2e-agent: declared complete over MCP'
 	static readonly FORK_GOAL = 'e2e-agent: fix the login bug'
 
-	constructor(private readonly runTokens: RunTokenService) {}
+	constructor(private readonly identities: AgentIdentityService<AgentRunIdentity>) {}
 
 	/**
 	 * Record an artifact, then declare the issue COMPLETED — the exact chain AC-6.2 names.
@@ -75,22 +76,22 @@ export class E2eMcpDriver {
 	 * The stub used to fake this by returning a structured classification verdict — which only worked
 	 * because `ClassifyIssueAgent` had an `outputSchema` to discriminate on. That agent is gone, so the
 	 * deterministic driver now does what the real orchestrator does: it calls the tool. Strictly better
-	 * coverage, too — the old shape never exercised the MCP router, the run-token claims or the
+	 * coverage, too — the old shape never exercised the MCP router, the run identity or the
 	 * thread-ownership check, and every e2e run does now.
 	 *
-	 * `originEntryId` is NOT passed and could not be: the router injects it from the claims (§7.2). If
+	 * `originEntryId` is NOT passed and could not be: the router injects it from the identity (§7.2). If
 	 * this driver could supply it, so could a model.
 	 */
 	async forkIssue(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
 		// A run with no triggering transcript entry CANNOT fork: the router injects `originEntryId`
-		// from this very claim, and `ForkIssue` rejects the attribution gap by design (§7.2). Such
+		// from this very field, and `ForkIssue` rejects the attribution gap by design (§7.2). Such
 		// turns exist — a whisper queues an orchestrator turn with no origin — and the real
 		// orchestrator answers them by replying, not by forking. Declaring nothing is that behavior
 		// (AC-5: return [] WITHOUT entering `call`); forcing the call would turn a designed rejection
 		// into 3 mailbox retries per whisper. An INVALID token still falls through to `call`, whose
 		// fail-loudly path reports it — that guard is for drift on turns that CAN fork and stays.
-		const claims = this.runTokens.verify(mcp.token)
-		if (claims && !claims.entryId) return []
+		const identity = this.identities.resolve(mcp.token)
+		if (identity && !identity.entryId) return []
 		return this.call(mcp, verified => [
 			{
 				tool: operationIdOf(ForkIssueController),
@@ -101,13 +102,13 @@ export class E2eMcpDriver {
 	}
 
 	async declareIssueWorkComplete(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
-		return this.call(mcp, claims => [
+		return this.call(mcp, identity => [
 			{
 				tool: ISSUE_HANDLING_OPERATION.recordArtifact,
 				// NO `issueId`: the use case validates the issue EXISTS when one is supplied, and the issue
 				// is materialized asynchronously. Naming the thread only is sufficient and race-free.
 				input: {
-					threadId: claims.threadId,
+					threadId: identity.threadId,
 					data: { kind: ArtifactKind.LINK, name: E2eMcpDriver.ARTIFACT_NAME, ref: E2eMcpDriver.ARTIFACT_REF, meta: '{}' },
 				},
 				summary: 'artifact recorded',
@@ -115,8 +116,8 @@ export class E2eMcpDriver {
 			{
 				tool: ISSUE_HANDLING_OPERATION.transitionIssueStatus,
 				input: {
-					threadId: claims.threadId,
-					issueId: claims.issueId,
+					threadId: identity.threadId,
+					issueId: identity.issueId,
 					data: { status: IssueStatus.COMPLETED, summary: E2eMcpDriver.COMPLETION_SUMMARY },
 				},
 				summary: 'issue declared complete',
@@ -125,9 +126,9 @@ export class E2eMcpDriver {
 	}
 
 	/** Connect over the real MCP door, make the calls, fail loudly on `isError`. */
-	private async call(mcp: AgentMcpInvocation, build: (claims: RunTokenClaims) => DeclaredToolCall[]): Promise<DeclaredToolCall[]> {
-		const claims = this.runTokens.verify(mcp.token)
-		if (!claims) {
+	private async call(mcp: AgentMcpInvocation, build: (identity: AgentRunIdentity) => DeclaredToolCall[]): Promise<DeclaredToolCall[]> {
+		const identity = this.identities.resolve(mcp.token)
+		if (!identity) {
 			throw new BaseError<AgentApplicationErrors>('AGENT_TOOLS_UNSUPPORTED', 'run token is not valid — nothing can be declared with it')
 		}
 		if (!mcp.endpoint) {
@@ -142,7 +143,7 @@ export class E2eMcpDriver {
 
 		try {
 			await client.connect(transport)
-			const calls = build(claims)
+			const calls = build(identity)
 
 			for (const call of calls) {
 				const result = await client.callTool({ name: call.tool, arguments: call.input })

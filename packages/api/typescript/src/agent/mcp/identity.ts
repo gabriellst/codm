@@ -1,5 +1,5 @@
 import { BaseError } from '@codedm/core-typescript'
-import type { RunTokenClaims } from '../services/RunTokenService'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
 
 /**
@@ -47,7 +47,7 @@ export interface IdentityMismatch {
 }
 
 /**
- * Find every identity key anywhere in `args` whose value disagrees with the run token's claims.
+ * Find every identity key anywhere in `args` whose value disagrees with the run's identity.
  *
  * Returns ALL mismatches rather than the first, so the log records the full shape of an attempt
  * instead of whichever axis happened to be walked first — the difference between "someone tried a
@@ -56,7 +56,7 @@ export interface IdentityMismatch {
  * A key whose value is not a string is ignored: it cannot name an id, and coercing would invent a
  * comparison the schema never promised.
  */
-export function findIdentityMismatches(args: unknown, claims: RunTokenClaims): IdentityMismatch[] {
+export function findIdentityMismatches(args: unknown, identity: AgentRunIdentity): IdentityMismatch[] {
 	const mismatches: IdentityMismatch[] = []
 
 	const walk = (node: unknown, path: string): void => {
@@ -70,7 +70,7 @@ export function findIdentityMismatches(args: unknown, claims: RunTokenClaims): I
 		for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
 			const at = path ? `${path}.${key}` : key
 			if (isIdentityKey(key) && typeof value === 'string') {
-				const claimed = claims[key]
+				const claimed = identity[key]
 				// An empty claim cannot confine anything, so it is not compared. It is also not
 				// reachable: only an agent with a NON-EMPTY tool scope mints a token, and the base
 				// `Agent` narrows `issueId` at that single minting point (§4.6) precisely so that a run
@@ -93,8 +93,8 @@ export function findIdentityMismatches(args: unknown, claims: RunTokenClaims): I
  * identity. 403 and not 401 on purpose: the token is VALID here and the target is wrong, so telling
  * the caller to authenticate again would be a lie to both the client and the log.
  */
-export function assertIdentityMatchesClaims(args: unknown, claims: RunTokenClaims): void {
-	const mismatches = findIdentityMismatches(args, claims)
+export function assertIdentityMatches(args: unknown, identity: AgentRunIdentity): void {
+	const mismatches = findIdentityMismatches(args, identity)
 	if (mismatches.length === 0) return
 	const detail = mismatches.map(m => `${m.at}=${m.supplied} (run is scoped to ${m.claimed})`).join('; ')
 	throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', `tool call targets another run's identity: ${detail}`)

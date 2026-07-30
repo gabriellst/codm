@@ -4,9 +4,10 @@ import { BaseError, GlobalErrorMapper, HttpStatusCode } from '@codedm/core-types
 // assertions below read `undefined` — the union alone does not perform the registration.
 import '../errors'
 import { AgentName } from '../enums'
-import type { RunTokenClaims } from '../services/RunTokenService'
-import { InMemoryRunTokenService } from './RunTokenService'
-import { findIdentityMismatches, assertIdentityMatchesClaims } from './identity'
+import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
+import { findIdentityMismatches, assertIdentityMatches } from './identity'
 import { McpRouterController } from './router'
 import { wireToolName } from './wire'
 
@@ -36,12 +37,12 @@ const ISSUE_B = '00000000-0000-4000-8000-0000000000b2'
 const THREAD_A = '00000000-0000-4000-8000-0000000000a3'
 const THREAD_B = '00000000-0000-4000-8000-0000000000b3'
 
-const claimsForA = (): RunTokenClaims => ({
+const identityForA = (): AgentRunIdentity => ({
 	ownerId: OWNER_A,
 	issueId: ISSUE_A,
 	threadId: THREAD_A,
 	agentName: AgentName.ISSUE_WORK,
-	scope: 'issue-handling',
+	scope: McpScope.ISSUE_HANDLING,
 	expiresAt: new Date(Date.now() + 60_000),
 })
 
@@ -79,7 +80,7 @@ const post = (scope: string, body: string, headers: Record<string, string>) =>
 	}) as unknown as McpRouterController['input']
 
 describe('AC-6.6(b) — the cross-issue attempt is rejected on ALL THREE axes', () => {
-	const claims = claimsForA()
+	const claims = identityForA()
 
 	it('PATH PARAM — a threadId that disagrees with the claims', () => {
 		// The literal shape the probe observed the generated tool emit:
@@ -111,7 +112,7 @@ describe('AC-6.6(b) — the cross-issue attempt is rejected on ALL THREE axes', 
 	it('AC-6.6(d) — the HAPPY path with concordant identity is NOT rejected', () => {
 		// Without this clause a router that rejects everything would satisfy the whole AC.
 		expect(findIdentityMismatches({ threadId: THREAD_A, data: { issueId: ISSUE_A, kind: 'LINK' } }, claims)).toEqual([])
-		expect(() => assertIdentityMatchesClaims({ threadId: THREAD_A, data: { issueId: ISSUE_A } }, claims)).not.toThrow()
+		expect(() => assertIdentityMatches({ threadId: THREAD_A, data: { issueId: ISSUE_A } }, claims)).not.toThrow()
 	})
 
 	it('the rejection is AGENT_RUN_SCOPE_MISMATCH → 403, never the 401 of an invalid token', () => {
@@ -119,7 +120,7 @@ describe('AC-6.6(b) — the cross-issue attempt is rejected on ALL THREE axes', 
 		// tell the caller to authenticate again when authenticating changes nothing, and would leave the
 		// log unable to tell an expired run from an attempted cross-issue write.
 		try {
-			assertIdentityMatchesClaims({ threadId: THREAD_B }, claims)
+			assertIdentityMatches({ threadId: THREAD_B }, claims)
 			throw new Error('expected a rejection')
 		} catch (error) {
 			expect(error).toBeInstanceOf(BaseError)
@@ -131,11 +132,11 @@ describe('AC-6.6(b) — the cross-issue attempt is rejected on ALL THREE axes', 
 })
 
 describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an invalid token at all', () => {
-	let tokens: InMemoryRunTokenService
+	let tokens: InMemoryAgentIdentityService<AgentRunIdentity>
 	let router: ObservableRouter
 
 	beforeEach(() => {
-		tokens = new InMemoryRunTokenService()
+		tokens = new InMemoryAgentIdentityService<AgentRunIdentity>()
 		router = new ObservableRouter(tokens)
 	})
 
@@ -152,7 +153,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	})
 
 	it('(a) a REVOKED token → 401. This is the late tool call from a run that already died.', async () => {
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		tokens.revoke(token)
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
 		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
@@ -161,7 +162,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	})
 
 	it('(a) an EXPIRED token → 401, even though it was never revoked', async () => {
-		const token = tokens.mint({ ...claimsForA(), expiresAt: new Date(Date.now() - 1) })
+		const token = tokens.issue({ ...identityForA(), expiresAt: new Date(Date.now() - 1) })
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
 		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
@@ -169,7 +170,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	})
 
 	it('a VALID token aimed at another issue answers 403 and NEVER reaches the transport', async () => {
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		// The body vector — correct thread, wrong issue. If the router dispatched this, the generated
 		// handler would issue `POST /v1/threads/<A>/artifacts` carrying issue B, and the MCP SDK would
 		// only notice afterwards while validating the OUTPUT schema — with the write already sent.
@@ -189,7 +190,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	it('AC-6.6(d) — the CONCORDANT call IS dispatched, which is what makes the counts above mean something', async () => {
 		// Without this, a router that refused everything would satisfy every assertion in this file and
 		// `dispatched` would be trivially empty forever.
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { issueId: ISSUE_A, kind: 'LINK' } })
 		const response = (await router.handle(post('issue-handling', call, authorized(token)))) as unknown as Response
 
@@ -198,7 +199,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	})
 
 	it('an UNKNOWN scope is refused rather than resolved to the nearest one', async () => {
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: {} })
 		await expect(router.handle(post('not-a-scope', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_TOKEN_INVALID',
@@ -213,7 +214,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 		// `AddWorkspace` and `RemoveWorkspace` — none of which carry an identity key, so the walk found
 		// nothing to compare and waved them through. `--allowedTools` is the client-side half of the
 		// rule, and the client is the attacker's.
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RemoveWorkspace'), { workspaceId: '019e4d24-6524-7041-9e1c-8108180cddae' })
 
 		await expect(router.handle(post('system', call, authorized(token)))).rejects.toMatchObject({
@@ -224,14 +225,14 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	})
 
 	it('the SAME token is accepted against the scope it WAS minted for — the check is not "refuse everything"', async () => {
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { kind: 'LINK' } })
 		await router.handle(post('issue-handling', call, authorized(token)))
 		expect(router.dispatched).toHaveLength(1)
 	})
 
 	it('a SYSTEM-scoped token is likewise confined — the rule is symmetric, not a special case for one scope', async () => {
-		const token = tokens.mint({ ...claimsForA(), scope: 'system' })
+		const token = tokens.issue({ ...identityForA(), scope: McpScope.system })
 		const call = toolCall(wireToolName('RecordArtifact'), { threadId: THREAD_A, data: { kind: 'LINK' } })
 		await expect(router.handle(post('issue-handling', call, authorized(token)))).rejects.toMatchObject({
 			name: 'AGENT_RUN_SCOPE_MISMATCH',
@@ -240,7 +241,7 @@ describe('AC-6.6 — the router refuses BEFORE dispatching, and refuses an inval
 	})
 
 	it('a BATCH is checked member by member — one bad member taints the batch', async () => {
-		const token = tokens.mint(claimsForA())
+		const token = tokens.issue(identityForA())
 		const batch = JSON.stringify([
 			{ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'RecordArtifact', arguments: { threadId: THREAD_A } } },
 			{ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'RecordArtifact', arguments: { threadId: THREAD_B } } },
@@ -261,13 +262,13 @@ describe('AC-6.6(c) — the operator ctx comes from the CLAIMS, not from an ambi
 		// ownerId axis MORE important here, not less: it is the only place the run's own owner is
 		// compared to what the model asked for, and a walk that skipped it would let an injected
 		// instruction name someone else's owner id and rely on the middleware to stamp authority anyway.
-		const mismatches = findIdentityMismatches({ ownerId: OWNER_B, data: { ownerId: OWNER_B } }, claimsForA())
+		const mismatches = findIdentityMismatches({ ownerId: OWNER_B, data: { ownerId: OWNER_B } }, identityForA())
 		expect(mismatches.map(m => m.at)).toEqual(['ownerId', 'data.ownerId'])
 	})
 
 	it('the router carries NO middleware — nothing stamps operator authority onto a tool call', () => {
 		// `OperatorMiddleware` on this route would grant every inbound JSON-RPC message the daemon's own
 		// authority before the token was even read: the confused-deputy shape the whole file prevents.
-		expect(new McpRouterController(new InMemoryRunTokenService()).middlewares).toEqual([])
+		expect(new McpRouterController(new InMemoryAgentIdentityService<AgentRunIdentity>()).middlewares).toEqual([])
 	})
 })

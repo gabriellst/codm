@@ -31,6 +31,8 @@ import {
 	CommandQueue,
 	MockCommandQueue,
 	SqliteCommandQueue,
+	AgentIdentityService,
+	InMemoryAgentIdentityService,
 	Config,
 } from '@codedm/core-typescript'
 import { join } from 'node:path'
@@ -189,6 +191,24 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// In-memory queue in tests; database-backed in production (origin-faithful: medscall runs the
 	// DB poller — no broker dependency).
 	{ token: CommandQueue, mock: MockCommandQueue, real: SqliteCommandQueue },
+	// The agent run identity — the SINGLE source of "on whose behalf" for every MCP tool call.
+	//
+	// It lives HERE and not in `agent/registry.ts` for a mechanical reason: `AgentIdentityMiddleware`
+	// is auto-applied by `Controller.executeMiddlewares`, which resolves from the ROOT container
+	// (`container.resolve(middlewareOrClass)`) — so a binding scoped to one context's child container
+	// would resolve in production and throw in any suite that exercises a controller directly. Same
+	// shelf as `CommandQueue` and `IdempotencyGuard`: a core seam the whole process shares.
+	//
+	// One in-memory instance per process in EVERY env: a token's lifetime is one run inside one
+	// daemon, and a persisted one would outlive the process it authorizes. Bound in all three because
+	// the integration and mock suites exercise the 401/403 boundary directly, and a double would be a
+	// second implementation of the thing under test.
+	{
+		token: AgentIdentityService,
+		mock: InMemoryAgentIdentityService,
+		integration: InMemoryAgentIdentityService,
+		real: InMemoryAgentIdentityService,
+	},
 ])
 
 // One entry PER CONTEXT, compile-checked against the CONTEXTS spine — forgetting a context here is

@@ -17,7 +17,7 @@ import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
 import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
-import { InMemoryRunTokenService } from '../../../mcp/RunTokenService'
+import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
 
 // ── A fake process: canned stdout, observable stdin ───────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 }
 
 function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivityMs = 60_000): ClaudeAgentRunner {
-	return ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryRunTokenService(), { spawner, inactivityMs })
+	return ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), { spawner, inactivityMs })
 }
 
 const request = (overrides: Partial<AgentRunRequest<z.ZodType | undefined>> = {}): AgentRunRequest<z.ZodType | undefined> => ({
@@ -434,7 +434,7 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 	})
 
 	it('surfaces a spawn failure as the terminal event instead of throwing out of run()', async () => {
-		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryRunTokenService(), {
+		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {
 			spawner: () => {
 				throw new Error('ENOENT')
 			},

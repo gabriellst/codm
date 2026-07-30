@@ -5,8 +5,9 @@ import { ArtifactKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { RecordArtifact } from '@artifact/usecases/RecordArtifact'
 import { AgentName } from '../enums'
-import type { RunTokenClaims } from '../services/RunTokenService'
-import { InMemoryRunTokenService } from './RunTokenService'
+import { InMemoryAgentIdentityService } from '@codedm/core-typescript'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import { McpRouterController } from './router'
 import { wireToolName } from './wire'
 
@@ -50,7 +51,7 @@ const COUNTED = ['artifacts', 'events', 'outbox'] as const
  */
 class WritingRouter extends McpRouterController {
 	constructor(
-		tokens: InMemoryRunTokenService,
+		tokens: InMemoryAgentIdentityService<AgentRunIdentity>,
 		private readonly recordArtifact: RecordArtifact,
 	) {
 		super(tokens)
@@ -80,7 +81,7 @@ class WritingRouter extends McpRouterController {
 describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let tokens: InMemoryRunTokenService
+	let tokens: InMemoryAgentIdentityService<AgentRunIdentity>
 	let router: WritingRouter
 	let threadId: string
 
@@ -92,19 +93,19 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 		await testBed.reset()
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		threadId = thread.id.value
-		tokens = new InMemoryRunTokenService()
+		tokens = new InMemoryAgentIdentityService<AgentRunIdentity>()
 		router = new WritingRouter(tokens, testBed.resolve(RecordArtifact))
 	})
 	afterAll(async () => {
 		await testBed.destroy()
 	})
 
-	const claims = (): RunTokenClaims => ({
+	const identity = (): AgentRunIdentity => ({
 		ownerId: OPERATOR_ID,
 		issueId: ISSUE_A,
 		threadId,
 		agentName: AgentName.ISSUE_WORK,
-		scope: 'issue-handling',
+		scope: McpScope.ISSUE_HANDLING,
 		expiresAt: new Date(Date.now() + 60_000),
 	})
 
@@ -123,7 +124,7 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 	it('THE CONTROL — a concordant call DOES move all three counters', async () => {
 		// Runs first and asserts the opposite of everything below. Without it, every "unchanged" result
 		// in this file would also be produced by a transport that silently did nothing.
-		const token = tokens.mint(claims())
+		const token = tokens.issue(identity())
 		const before = await testBed.probe().snapshot(COUNTED)
 
 		await router.handle(post('issue-handling', call({ threadId, data: { kind: ArtifactKind.LINK } }), authorized(token)))
@@ -143,7 +144,7 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 	})
 
 	it('(a) a REVOKED token → 401, and nothing moves — the late call from a run that already died', async () => {
-		const token = tokens.mint(claims())
+		const token = tokens.issue(identity())
 		tokens.revoke(token)
 		const before = await testBed.probe().snapshot(COUNTED)
 		await expect(router.handle(post('issue-handling', call({ threadId, data: {} }), authorized(token)))).rejects.toMatchObject({
@@ -153,7 +154,7 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 	})
 
 	it('(b) CROSS-ISSUE via the PATH param → nothing moves', async () => {
-		const token = tokens.mint(claims())
+		const token = tokens.issue(identity())
 		const before = await testBed.probe().snapshot(COUNTED)
 		const response = (await router.handle(
 			post('issue-handling', call({ threadId: THREAD_B, data: { kind: ArtifactKind.LINK } }), authorized(token)),
@@ -166,7 +167,7 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 		// THE VECTOR A PATH-ONLY CHECK MISSES, and the reason this file counts rather than reads: the
 		// transport above WOULD have written this artifact against issue B, with a perfectly valid token
 		// and a perfectly correct thread.
-		const token = tokens.mint(claims())
+		const token = tokens.issue(identity())
 		const before = await testBed.probe().snapshot(COUNTED)
 		const response = (await router.handle(
 			post('issue-handling', call({ threadId, data: { issueId: ISSUE_B, kind: ArtifactKind.LINK } }), authorized(token)),
@@ -175,8 +176,8 @@ describe('AC-6.6 — a refused tool call writes NOTHING, counted', () => {
 		expect(await testBed.probe().snapshot(COUNTED)).toEqual(before)
 	})
 
-	it('(D6-8) a token minted for another SCOPE → nothing moves', async () => {
-		const token = tokens.mint({ ...claims(), scope: 'system' })
+	it('(D6-8) a token issued for another SCOPE → nothing moves', async () => {
+		const token = tokens.issue({ ...identity(), scope: McpScope.system })
 		const before = await testBed.probe().snapshot(COUNTED)
 		await expect(
 			router.handle(post('issue-handling', call({ threadId, data: { kind: ArtifactKind.LINK } }), authorized(token))),

@@ -4,7 +4,8 @@ import { TestBed, givenIssue } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
 import { findIdentityMismatches } from '@agent/mcp/identity'
 import { AgentName } from '@agent/enums'
-import type { RunTokenClaims } from '@agent/services/RunTokenService'
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+import type { AgentRunIdentity } from '@agent/types/AgentRunIdentity'
 import { GetIssueStatusController } from './GetIssueStatus'
 
 /**
@@ -40,12 +41,12 @@ describe('AC-T2.3 — GetIssueStatus refuses an issue belonging to another threa
 		await testBed.destroy()
 	})
 
-	const orchestrationClaims = (): RunTokenClaims => ({
+	const orchestrationIdentity = (): AgentRunIdentity => ({
 		ownerId: OPERATOR_ID,
 		threadId: THREAD_A,
 		// No `issueId` — that is the whole point of a thread-confined token.
 		agentName: AgentName.ORCHESTRATOR,
-		scope: 'orchestration',
+		scope: McpScope.orchestration,
 		expiresAt: new Date(Date.now() + 60_000),
 	})
 
@@ -54,7 +55,7 @@ describe('AC-T2.3 — GetIssueStatus refuses an issue belonging to another threa
 
 		// The call names its OWN thread (so the threadId axis agrees) and somebody else's issue. The
 		// walker finds no `issueId` claim to compare against and reports NOTHING.
-		const mismatches = findIdentityMismatches({ threadId: THREAD_A, issueId: issueOfAnotherThread }, orchestrationClaims())
+		const mismatches = findIdentityMismatches({ threadId: THREAD_A, issueId: issueOfAnotherThread }, orchestrationIdentity())
 
 		expect(mismatches).toEqual([])
 	})

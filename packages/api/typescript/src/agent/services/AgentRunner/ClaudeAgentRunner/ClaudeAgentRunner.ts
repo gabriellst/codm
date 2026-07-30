@@ -18,7 +18,7 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // manifest and the turn-fact accumulator all need the same spelling and routing them through one
 // another would drag a subprocess-spawning module into a pure state machine.
 import { MCP_SERVER_KEY } from '../../../mcp/wire'
-import { RunTokenService } from '../../RunTokenService'
+import { AgentIdentityService } from '@codedm/core-typescript'
 
 /** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
 const DEFAULT_INACTIVITY_MS = 180_000
@@ -173,7 +173,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 */
 	constructor(
 		private readonly logging: LoggingService,
-		private readonly runTokens: RunTokenService,
+		private readonly identities: AgentIdentityService,
 	) {
 		super()
 	}
@@ -185,8 +185,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 * as harmless and is not (see the constructor docblock), and a seam that only tests use should be
 	 * visible as such at the call site instead of hiding in the signature the container reads.
 	 */
-	static withOptions(logging: LoggingService, runTokens: RunTokenService, options: ClaudeAgentRunnerOptions): ClaudeAgentRunner {
-		const runner = new ClaudeAgentRunner(logging, runTokens)
+	static withOptions(logging: LoggingService, identities: AgentIdentityService, options: ClaudeAgentRunnerOptions): ClaudeAgentRunner {
+		const runner = new ClaudeAgentRunner(logging, identities)
 		if (options.spawner !== undefined) runner.spawner = options.spawner
 		if (options.inactivityMs !== undefined) runner.inactivityMs = options.inactivityMs
 		return runner
@@ -394,7 +394,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			//
 			// The token stays OPAQUE here. The runner revokes a string it was handed; it never learns —
 			// and must never learn — whose issue it belonged to (AC-6.12).
-			if (request.mcp) this.runTokens.revoke(request.mcp.token)
+			if (request.mcp) this.identities.revoke(request.mcp.token)
 		}
 	}
 

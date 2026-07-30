@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { AgentModelId } from '@codedm/contracts-typescript/wire/enums'
+import { AgentModelId, McpScope } from '@codedm/contracts-typescript/wire/enums'
+import { AgentIdentityService, z } from '@codedm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../enums'
-import { RunTokenService } from '../../services/RunTokenService'
 import { Agent } from '../../types/Agent'
+import { AgentRunIdentitySchema, type AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { TOOLS_IN_SCOPE } from '../../mcp/manifest'
 import type { AgentRunRequest } from '../../types'
 import { IssueWorkPromptBuilder } from './prompt'
@@ -50,14 +51,26 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 	 * `tools` is the DERIVED expansion, never a hand-written list — add a seventh entry to the manifest
 	 * and the argv changes with no edit here (AC-6.5's falsifier).
 	 */
-	override readonly mcpScope = 'issue-handling' as const
-	override readonly tools = TOOLS_IN_SCOPE['issue-handling']
+	/**
+	 * `issueId` is REQUIRED — the security half, stated where the agent lives.
+	 *
+	 * This agent's tools are six WRITES performed on its own issue, and the destination-side check
+	 * (`AgentIdentityMiddleware`) can only compare an axis the identity CARRIES. An identity without
+	 * `issueId` gives no protection at all on an `issueId` argument, so a credential that could call
+	 * these tools without naming its issue would be a credential confined to nothing.
+	 *
+	 * It is enforced at SPAWN, before `.issue(` — see `Agent.buildMcpInvocation`.
+	 */
+	static override readonly IdentitySchema = AgentRunIdentitySchema.extend({ issueId: z.uuid() })
+
+	override readonly mcpScope = McpScope.ISSUE_HANDLING
+	override readonly tools = TOOLS_IN_SCOPE[McpScope.ISSUE_HANDLING]
 
 	constructor(
-		runTokens: RunTokenService,
+		identities: AgentIdentityService<AgentRunIdentity>,
 		private readonly prompt: IssueWorkPromptBuilder,
 	) {
-		super(runTokens)
+		super(identities)
 	}
 
 	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
