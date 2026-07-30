@@ -263,6 +263,7 @@
       },
       "devDependencies": {
         "@codedm/contracts-typescript": "workspace:*",
+        "@codedm/core-typescript": "workspace:*",
         "@typespec/compiler": "^1.5.0",
         "@typespec/openapi": "^1.5.0",
         "@typespec/openapi3": "^1.5.0",
