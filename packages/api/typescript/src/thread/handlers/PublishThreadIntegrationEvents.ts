@@ -1,24 +1,26 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler, ExternalMediator } from '@codedm/core-typescript'
-import { MessageAuthor } from '@codedm/contracts-typescript/wire/enums'
-import {
-	ThreadAttachedEvent as ThreadAttachedIntegrationEvent,
-	ChannelDeliveryRequestedEvent,
-} from '@codedm/contracts-typescript/wire/events'
+import { ThreadAttachedEvent as ThreadAttachedIntegrationEvent } from '@codedm/contracts-typescript/wire/events'
 import { ThreadAttachedEvent } from '../events/ThreadAttachedEvent'
-import { DirectMessageSentEvent } from '../events/DirectMessageSentEvent'
 
 /**
- * Write-side bridge (EVT-02/03): BC4's context-private facts are republished as their FROZEN
- * integration events, born in `packages/contracts`:
- *   thread.attached            → integration.thread.attached            (frozen fact; NO consumer today — BC5 warm indexing is a pending cluster)
- *   thread.message_classified  → integration.message.classified        (BC4 → BC5 route into issue)
- *   thread.clarification_requested → integration.channel.delivery_requested (ROUTER — ask the question)
- *   thread.direct_message_sent → integration.channel.delivery_requested (OPERATOR — deliver as self)
+ * The thread context's NAMED EXCEPTION (B3, decision 4): the ONE handler in this context authorized to
+ * call `ExternalMediator.publish()`. Every other handler here is pure domain — it reacts and invokes
+ * use cases, and never publishes integration events. Facts republished as their FROZEN contracts:
+ *   thread.attached → integration.thread.attached   (frozen fact; no TS consumer today — the browser
+ *                                                    SSE surface forwards it, BC5 warm indexing is pending)
+ *
+ * The `thread.direct_message_sent` branch is GONE (decision 3): it translated a fact into
+ * `integration.channel.delivery_requested`, i.e. it used an event to COMMAND. The order is now a
+ * durable `deliver_channel_message` command enqueued inside `SendDirectMessage`'s own transaction, and
+ * the fact stays as an audit record with no consumer.
+ *
+ * The subscription stays a readonly TUPLE rather than collapsing to a single class: this is the
+ * context's publisher, one per CONTEXT by design, and B5 adds the next fact to it.
  */
 @injectable()
-export class PublishThreadIntegrationEvents extends EventHandler<readonly [typeof ThreadAttachedEvent, typeof DirectMessageSentEvent]> {
-	readonly event = [ThreadAttachedEvent, DirectMessageSentEvent] as const
+export class PublishThreadIntegrationEvents extends EventHandler<readonly [typeof ThreadAttachedEvent]> {
+	readonly event = [ThreadAttachedEvent] as const
 
 	constructor(private readonly mediator: ExternalMediator) {
 		super()
@@ -29,25 +31,6 @@ export class PublishThreadIntegrationEvents extends EventHandler<readonly [typeo
 
 		if (event instanceof ThreadAttachedEvent) {
 			await this.mediator.publish(new ThreadAttachedIntegrationEvent({ ownerId, payload: { ...event.payload } }))
-			return
-		}
-
-		if (event instanceof DirectMessageSentEvent) {
-			await this.mediator.publish(
-				new ChannelDeliveryRequestedEvent({
-					ownerId,
-					payload: {
-						channelId: event.payload.channelId,
-						contactExternalId: event.payload.contactExternalId,
-						contactDisplayName: event.payload.contactDisplayName,
-						contactKind: event.payload.contactKind,
-						text: event.payload.text,
-						// A HUMAN wrote it. The owner typed it in the console and we are only the courier —
-						// which is exactly the distinction `fromMe` cannot make once we can send.
-						author: MessageAuthor.HUMAN,
-					},
-				}),
-			)
 		}
 	}
 }

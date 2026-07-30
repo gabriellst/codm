@@ -34,6 +34,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: 'the SCHEDULED-COMMAND row is the subject (B3): it asserts row-by-id `attempts`/`run_at`/`dead_at` on `shared_scheduled_commands` across a failed tick and its backoff — columns the probe deliberately does not expose (it counts rows, it does not read them) — same exception class as tests/kernel/SqliteCommandQueue.test.ts',
 	},
 	{
+		path: 'src/thread/usecases/SendDirectMessage.test.ts',
+		why: "the SCHEDULED-COMMAND row is the subject (B3): it asserts the enqueued row's `id` (= entryId, the dedup handle), `name` and JSON `input` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; the atomicity case DOES use probe().snapshot()",
+	},
+	{
 		path: 'tests/kernel/DomainEventListByNameSince.test.ts',
 		why: 'raw db.update(events) write-only seed — backdates `occurred_at` timestamps to age event rows into/out of the sweep window while exercising DomainEventRepository.listByNameSince; no persisted-data read assertion goes through the raw client',
 	},
