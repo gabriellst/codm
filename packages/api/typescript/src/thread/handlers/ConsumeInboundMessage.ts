@@ -55,8 +55,15 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		if (!firstDelivery) return
 
 		// 2. Route to the thread bound to this (channel, contact). Unattached contact → drop.
+		//
+		// APAGADA = DESCONFIGURADA (thread-deletion spec, decision 3), and it lands on the SAME line as
+		// the unattached case because that is precisely what the decision says it is: a deleted thread's
+		// contact is treated exactly like one that was never attached. The ledger row above is already
+		// claimed, which is what we want — the message is consumed and dropped, so a redelivery does not
+		// come back around hoping for a different answer. Nothing revives by accident; only `AttachThread`
+		// revives (decision 4).
 		const thread = await this.threads.findByChannelContact(channelId, remoteId)
-		if (!thread) return
+		if (!thread || thread.deletedAt) return
 
 		// 3. Discriminator narrowing — no parse. `content` is `.optional()` on every arm, so this is
 		// `string | undefined` by type; the falsy guard also covers the RUNTIME case the type cannot,

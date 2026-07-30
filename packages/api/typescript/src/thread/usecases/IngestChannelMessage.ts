@@ -40,8 +40,15 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		// A deleted thread is not a thread this use case may write to (thread-deletion spec, decision 3),
+		// so it answers with the code it already has for "there is nothing here to ingest into".
+		//
+		// This is the FLOOR, not the gate: `ConsumeInboundMessage` drops the message before ever calling
+		// here, which is where the decision's "ignora, sem side-effects" actually lives. The guard exists
+		// so the invariant holds for any future caller too — an ingest that silently appended to an
+		// apagada conversation would put words in a chat the console answers THREAD_NOT_FOUND for.
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.deletedAt) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
 		return this.withTransaction(tx, async tx => {
 			// THE CITATION, RESOLVED FIRST (B4, decision D-B). This lookup already existed — it is how

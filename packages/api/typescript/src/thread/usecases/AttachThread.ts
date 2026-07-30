@@ -67,8 +67,11 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 			}
 		}
 
+		// A LIVE thread for this contact is still a conflict. A DELETED one is the re-attach the operator
+		// just asked for (thread-deletion spec, decision 4) — see the revive branch below.
 		const existing = await this.threads.findByChannelContact(input.contactRef.channelId, input.contactRef.externalId)
-		if (existing) throw new BaseError<ApplicationErrors>('THREAD_ALREADY_ATTACHED', 'a thread already exists for this contact')
+		if (existing && !existing.deletedAt)
+			throw new BaseError<ApplicationErrors>('THREAD_ALREADY_ATTACHED', 'a thread already exists for this contact')
 
 		// Seed the roster: the operator always invokes. For a 1:1 CONTACT the counterparty observes;
 		// for a GROUP the roster is hydrated from the gateway `remote_memberships` read model (each
@@ -100,15 +103,34 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 		}
 
 		return this.withTransaction(tx, async tx => {
-			const thread = Thread.create({
-				ownerId: input.ownerId,
-				channelId: input.contactRef.channelId,
-				contactRef: { externalId: input.contactRef.externalId, displayName: input.contactRef.displayName, kind: input.contactRef.kind },
+			const contactRef = {
+				externalId: input.contactRef.externalId,
+				displayName: input.contactRef.displayName,
+				kind: input.contactRef.kind,
+			}
+			const settings = {
+				contactRef,
 				workspaceId: input.workspaceId,
 				providers: input.providers,
 				mentionTag: mintMentionTag(workspace.path),
 				participants,
-			})
+			}
+
+			/**
+			 * REVIVE, don't recreate (thread-deletion spec, decision 4).
+			 *
+			 * `Thread.create` here would mint a new id and insert — straight into
+			 * `threads_owner_channel_contact_unq`, because the deleted row never left. Reviving in place is
+			 * also what makes the decision's promise true: the transcript hangs off THIS id, so re-attaching
+			 * the same contact returns the same conversation rather than an empty one beside it.
+			 *
+			 * Everything else below is unchanged, and deliberately so: the revived thread publishes
+			 * `thread.attached` exactly like a new one. Downstream (BC5 workspace indexing) cares that this
+			 * conversation is now bound to this workspace, which is equally true either way — and the new
+			 * binding may well be a DIFFERENT workspace than the one it had before it was deleted.
+			 */
+			const thread = existing ?? Thread.create({ ownerId: input.ownerId, channelId: input.contactRef.channelId, ...settings })
+			if (existing) existing.revive(settings)
 			await this.threads.save(thread, tx)
 
 			await this.domainEventRepository.save(
