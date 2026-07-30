@@ -2,7 +2,7 @@
 //! Go/TS union-parity checks (13 variants across the two slots, single owner apiGo).
 //! If the contract's @unionSlot/@variant declarations change, this pins the regen.
 
-use codedm_contracts_rust::wire::slots::CHANNEL_MESSAGE_RECEIVED_EVENT_SLOTS;
+use codm_contracts_rust::wire::slots::CHANNEL_MESSAGE_RECEIVED_EVENT_SLOTS;
 
 #[test]
 fn pilot_manifest_carries_both_slots_with_all_declared_variants() {

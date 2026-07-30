@@ -124,26 +124,26 @@ mod tests {
     #[test]
     fn every_sidecar_ready_reveals_the_main_window_exactly_once() {
         let gate = ReadinessGate::new(2);
-        assert!(gate.note_ready("codedm-daemon").is_none(), "o primeiro a chegar nao revela nada");
-        assert!(matches!(gate.note_ready("codedm-gateway"), Some(Reveal::Main)));
+        assert!(gate.note_ready("codm-daemon").is_none(), "o primeiro a chegar nao revela nada");
+        assert!(matches!(gate.note_ready("codm-gateway"), Some(Reveal::Main)));
     }
 
     /// FALSEADOR AC-9 — o give-up NUNCA revela a janela principal.
     #[test]
     fn a_single_failure_reveals_the_error_splash_and_never_main() {
         let gate = ReadinessGate::new(2);
-        gate.record_stderr("codedm-gateway", "panic: dial tcp 127.0.0.1:3032: connection refused");
-        assert!(gate.note_ready("codedm-daemon").is_none());
+        gate.record_stderr("codm-gateway", "panic: dial tcp 127.0.0.1:3032: connection refused");
+        assert!(gate.note_ready("codm-daemon").is_none());
 
         let reveal = gate
-            .note_failed("codedm-gateway", "no 200 within 60s")
+            .note_failed("codm-gateway", "no 200 within 60s")
             .expect("o ultimo a chegar revela");
         let failures = match reveal {
             Reveal::Main => panic!("AC-9: give-up nao pode revelar a janela principal"),
             Reveal::BootError(failures) => failures,
         };
         assert_eq!(failures.len(), 1);
-        assert_eq!(failures[0].name, "codedm-gateway");
+        assert_eq!(failures[0].name, "codm-gateway");
         assert_eq!(failures[0].reason, "no 200 within 60s");
         assert_eq!(
             failures[0].stderr,

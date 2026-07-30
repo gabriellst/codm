@@ -9,7 +9,7 @@
 //! Committed by hand (not generated): the fixture DIR is the contract; this file only
 //! walks it.
 
-use codedm_contracts_rust::wire::envelope::WireEvent;
+use codm_contracts_rust::wire::envelope::WireEvent;
 
 fn fixtures_dir() -> std::path::PathBuf {
     // crate root = packages/contracts/generated/rust → ../../fixtures/events

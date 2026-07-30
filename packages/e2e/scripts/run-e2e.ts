@@ -58,7 +58,7 @@ function runCaptureExitCode(command: string, args: string[], env: NodeJS.Process
 async function main() {
 	// Scratch, file-backed SQLite data dir — the embedded `real` driver roots here and migrates on
 	// boot (idempotent). A fresh dir per run = a fresh database with no cross-run state.
-	const dataDir = mkdtempSync(join(tmpdir(), 'codedm-e2e-data-'))
+	const dataDir = mkdtempSync(join(tmpdir(), 'codm-e2e-data-'))
 
 	const apiPort = process.env.API_PORT ?? '3030'
 	const vitePort = process.env.VITE_PORT ?? '5173'

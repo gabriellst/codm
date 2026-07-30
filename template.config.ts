@@ -14,7 +14,7 @@
 // `modulePrefix`). Keep them in lockstep when editing here.
 
 const scope = '@codm'
-const brand = 'codedm'
+const brand = 'codm'
 
 /**
  * PER-LANGUAGE identity config — facts owned by a language TOOLCHAIN and shared by every
@@ -32,7 +32,7 @@ const LANG_CONFIG = {
 	// with zero brand-facing benefit. It intentionally stays `template` through npm-scope
 	// rebrands; walker.go mirrors THIS value (source of truth), so there is no stray literal.
 	go: { modulePrefix: 'template' },
-	// Rust crates derive names from the brand (`codedm-contracts-rust`, `codedm-client-rust`).
+	// Rust crates derive names from the brand (`codm-contracts-rust`, `codm-client-rust`).
 	// Standalone crates, never a language-level Cargo workspace (rust-wire spec §F6): the only
 	// Cargo workspace in the repo is the Tauri shell's, which consumes these as path deps.
 	rust: { cratePrefix: brand },
@@ -268,7 +268,7 @@ export const REPO = {
 		ALLOWED_ORIGINS: { consumers: ['apiGo'], example: 'http://localhost:5173', doc: 'generic CORS fallback' },
 		CHANNEL_ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'gateway environment (fallback: ENVIRONMENT)' },
 		ENVIRONMENT: { consumers: ['apiGo'], example: 'DEVELOPMENT', doc: 'generic environment fallback' },
-		CHANNEL_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'codedm-gateway', doc: 'outbox source tag for the gateway' },
+		CHANNEL_EVENT_GROUP_ID: { consumers: ['apiGo'], example: 'codm-gateway', doc: 'outbox source tag for the gateway' },
 		CHANNEL_GLOBAL_API_KEY: {
 			consumers: ['apiGo'],
 			secret: true,

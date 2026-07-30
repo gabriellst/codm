@@ -79,7 +79,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
         .into_owned();
     vec![
         Sidecar {
-            name: "codedm-daemon",
+            name: "codm-daemon",
             port: api_port,
             service: SidecarService::Daemon,
             // Not optional: the compiled daemon resolves the libsql native addon from
@@ -94,7 +94,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
             ],
         },
         Sidecar {
-            name: "codedm-gateway",
+            name: "codm-gateway",
             port: channel_port,
             service: SidecarService::Gateway,
             // A static Go binary — nothing to resolve from disk, so it inherits the shell's CWD.
@@ -111,7 +111,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
     ]
 }
 
-/// READINESS BY CONTRACT. One typed call through the generated client (`codedm-client-rust`) — the
+/// READINESS BY CONTRACT. One typed call through the generated client (`codm-client-rust`) — the
 /// same door the rest of the shell uses (`api::Api`, the house rule pinned by
 /// `tests/no_raw_http.rs`).
 ///

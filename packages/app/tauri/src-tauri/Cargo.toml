@@ -2,13 +2,13 @@
 # one (rust-wire spec §F6): the generated contracts/client crates are standalone path
 # deps, compiled inside this workspace's target/lock — like Go's `replace` directives.
 [package]
-name = "codedm-desktop"
+name = "codm-desktop"
 version = "0.1.0"
 description = "CodeDM desktop shell (react console webview + TS daemon / Go gateway sidecars)"
 edition = "2021"
 
 [lib]
-name = "codedm_desktop_lib"
+name = "codm_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -31,8 +31,8 @@ specta-typescript = "=0.0.9"
 # Typed backend access (rust-wire spec §F7): wire binding + SDK aggregate as standalone
 # path deps. reqwest appears ONLY for building the identity-carrying http client in
 # src/api/mod.rs — raw reqwest anywhere else is banned (tests/no_raw_http.rs).
-codedm-contracts-rust = { path = "../../../contracts/generated/rust" }
-codedm-client-rust = { path = "../../../client/dist/rust" }
+codm-contracts-rust = { path = "../../../contracts/generated/rust" }
+codm-client-rust = { path = "../../../client/dist/rust" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 # The readiness loop is async (the typed probe awaits), and `tauri::async_runtime` re-exports

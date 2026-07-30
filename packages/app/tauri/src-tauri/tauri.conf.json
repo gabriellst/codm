@@ -2,7 +2,7 @@
 	"$schema": "https://schema.tauri.app/config/2",
 	"productName": "CodeDM",
 	"version": "0.1.0",
-	"identifier": "app.codedm.desktop",
+	"identifier": "app.codm.desktop",
 	"build": {
 		"devUrl": "http://localhost:5173/",
 		"frontendDist": "../../react/dist/client",
@@ -44,8 +44,8 @@
 		"active": true,
 		"targets": "all",
 		"externalBin": [
-			"binaries/codedm-daemon",
-			"binaries/codedm-gateway"
+			"binaries/codm-daemon",
+			"binaries/codm-gateway"
 		],
 		"icon": [
 			"icons/icon.icns",

@@ -7,7 +7,7 @@
 //! Proves the whole chain the shell relies on: typed aggregate → HTTP → gateway →
 //! typed response (contract enums resolving to the WIRE crate's types).
 
-use codedm_client_rust::Client;
+use codm_client_rust::Client;
 
 #[tokio::test]
 #[ignore = "needs live backends on :3030/:3032 — run with -- --ignored"]

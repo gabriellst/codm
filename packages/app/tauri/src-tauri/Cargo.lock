@@ -508,11 +508,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "codedm-client-rust"
+name = "codm-client-rust"
 version = "0.0.1"
 dependencies = [
  "chrono",
- "codedm-contracts-rust",
+ "codm-contracts-rust",
  "progenitor-client",
  "regress",
  "reqwest 0.12.28",
@@ -523,7 +523,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "codedm-contracts-rust"
+name = "codm-contracts-rust"
 version = "0.0.1"
 dependencies = [
  "chrono",
@@ -534,11 +534,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "codedm-desktop"
+name = "codm-desktop"
 version = "0.1.0"
 dependencies = [
- "codedm-client-rust",
- "codedm-contracts-rust",
+ "codm-client-rust",
+ "codm-contracts-rust",
  "keyring",
  "log",
  "reqwest 0.12.28",

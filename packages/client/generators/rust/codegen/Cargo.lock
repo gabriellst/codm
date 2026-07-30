@@ -69,7 +69,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "codedm-client-rust-codegen"
+name = "codm-client-rust-codegen"
 version = "0.0.0"
 dependencies = [
  "openapiv3",

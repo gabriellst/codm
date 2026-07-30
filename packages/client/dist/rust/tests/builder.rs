@@ -1,7 +1,7 @@
 //! Construction rail — the aggregate Client wires one typed sub-client per discovered
 //! api service. Symmetric with the TS/Go SDK aggregates.
 
-use codedm_client_rust::Client;
+use codm_client_rust::Client;
 
 #[test]
 fn client_builder_constructs() {
@@ -26,6 +26,6 @@ fn missing_url_fails_loud() {
 /// compiles if the replacement actually happened (type identity, not name equality).
 #[test]
 fn contract_enums_are_the_wire_crate_types() {
-    let _: codedm_contracts_rust::wire::enums::ChannelKind =
-        codedm_contracts_rust::wire::enums::ChannelKind::WHATSAPP;
+    let _: codm_contracts_rust::wire::enums::ChannelKind =
+        codm_contracts_rust::wire::enums::ChannelKind::WHATSAPP;
 }

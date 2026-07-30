@@ -3,7 +3,7 @@ import type { Loader } from 'astro/loaders'
 
 export function plansLoader(): Loader {
 	return {
-		name: 'codedm-plans',
+		name: 'codm-plans',
 		load: async ({ store, parseData, logger }) => {
 			// SEAM: when the daemon exposes GET /public/plans, set PLANS_SOURCE_URL at build
 			// time and this loader fetches instead of reading the checked-in JSON. Same shape,

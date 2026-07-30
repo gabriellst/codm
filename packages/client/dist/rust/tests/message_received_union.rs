@@ -7,8 +7,8 @@
 //! (an IMAGE message parsed as WhatsappContact; INTERNAL TEXT as WhatsappText). The
 //! generator's `constToSingleEnum` transform restores the pins; these cases keep it dead.
 
-use codedm_client_rust::go::types::ChannelMessageReceivedPayload as P;
-use codedm_contracts_rust::slot::Slot;
+use codm_client_rust::go::types::ChannelMessageReceivedPayload as P;
+use codm_contracts_rust::slot::Slot;
 
 fn base(msg_type: &str, platform: &str, content: serde_json::Value) -> serde_json::Value {
     let mut v = serde_json::json!({

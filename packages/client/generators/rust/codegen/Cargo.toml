@@ -3,7 +3,7 @@
 # invoked via `cargo run --manifest-path` (rust-wire spec §F6: no language-level
 # workspace — the only Cargo workspace in this repo is the Tauri shell's).
 [package]
-name = "codedm-client-rust-codegen"
+name = "codm-client-rust-codegen"
 version = "0.0.0"
 edition = "2021"
 publish = false

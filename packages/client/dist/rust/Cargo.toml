@@ -3,11 +3,11 @@
 # Tauri shell) take it as a path dependency inside THEIR workspace. `cargo test` runs with
 # cwd here. src/ is emitted by packages/client/generators/rust/index.ts — do not edit.
 #
-# codedm-contracts-rust is a REAL dependency, not convenience: contract enums are not
+# codm-contracts-rust is a REAL dependency, not convenience: contract enums are not
 # regenerated here — progenitor replaces them with the wire crate's types (spec §F4), so
 # client and binding share one definition per contract enum.
 [package]
-name = "codedm-client-rust"
+name = "codm-client-rust"
 version = "0.0.1"
 edition = "2021"
 publish = false
@@ -25,7 +25,7 @@ thiserror = "1"
 progenitor-client = "0.10"
 # progenitor emits ::regress::Regex for pattern-validated strings; version paired with typify 0.4.
 regress = "0.10"
-codedm-contracts-rust = { path = "../../../contracts/generated/rust" }
+codm-contracts-rust = { path = "../../../contracts/generated/rust" }
 
 [dev-dependencies]
 # live_smoke.rs only (#[ignore]d by default — needs live backends).

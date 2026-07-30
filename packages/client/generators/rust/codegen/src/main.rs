@@ -9,7 +9,7 @@
 //! drives progenitor for a single preprocessed 3.0.x spec.
 //!
 //! `replacements.json` (optional third arg) carries the ENUM DEDUP contract (rust-wire
-//! spec §F4): `{ "enums": { "VideoStatus": "codedm_contracts_rust::wire::enums::VideoStatus" } }`.
+//! spec §F4): `{ "enums": { "VideoStatus": "codm_contracts_rust::wire::enums::VideoStatus" } }`.
 //! Every schema component whose name appears there is NOT regenerated — progenitor
 //! references the contracts crate's type instead, so the client and the wire binding
 //! share ONE definition per contract enum (the generated enums derive strum Display +

@@ -21,7 +21,7 @@ pub struct Api {
     // `state.client.<service>.<method>()`. The live end-to-end path is proven by the
     // #[ignore]d smoke in packages/client/dist/rust/tests/live_smoke.rs.
     #[allow(dead_code)]
-    pub client: codedm_client_rust::Client,
+    pub client: codm_client_rust::Client,
 }
 
 /// The single-tenant owner the desktop shell acts as. The daemon provisions the local
@@ -52,7 +52,7 @@ impl Api {
             .build()
             .expect("reqwest client");
 
-        let client = codedm_client_rust::Client::builder()
+        let client = codm_client_rust::Client::builder()
             .typescript(format!("http://127.0.0.1:{api_port}"))
             // The `/api` frontier belongs to the BASE URL, never to a contract path — the repo's
             // convention, mirrored from the console: `Config.gatewayBaseUrl` points the `go`

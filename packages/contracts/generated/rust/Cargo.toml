@@ -6,7 +6,7 @@
 # This file is committed and hand-maintained (like go.mod); src/wire/* is emitted by
 # packages/contracts/codegen/emit-wire-rs.ts — do not edit those by hand.
 [package]
-name = "codedm-contracts-rust"
+name = "codm-contracts-rust"
 version = "0.0.1"
 edition = "2021"
 publish = false

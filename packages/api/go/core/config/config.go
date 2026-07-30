@@ -53,7 +53,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		Port:                getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3032")),
-		ChannelEventGroupID: getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codedm-gateway"),
+		ChannelEventGroupID: getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codm-gateway"),
 		Environment:         enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
 
 		GlobalAPIKey:      getEnvOrDefault("CHANNEL_GLOBAL_API_KEY", os.Getenv("GLOBAL_API_KEY")),

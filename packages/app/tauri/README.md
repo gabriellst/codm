@@ -6,8 +6,8 @@ Tauri v2 host for the CodeDM desktop app. The shell does three things and nothin
    `http://localhost:5173/app/`; prod: `frontendDist` → the static SPA emitted by
    `nx run app-react:build-spa` (`packages/app/react/dist/client`, `CODEDM_DESKTOP=true`
    flips vite to base `/`, SPA shell prerender, no nitro server).
-2. **Supervises the sidecars** — `bundle.externalBin` ships `codedm-daemon`
-   (TS daemon, `bun build --compile`) and `codedm-gateway` (Go). `src/lib.rs` spawns both
+2. **Supervises the sidecars** — `bundle.externalBin` ships `codm-daemon`
+   (TS daemon, `bun build --compile`) and `codm-gateway` (Go). `src/lib.rs` spawns both
    at boot and health-checks them: daemon `GET :3030/v1/session`, gateway
    `GET :3032/api/openapi.json` (60s budget; emits `sidecar:ready` / `sidecar:error` to
    the webview). Build the binaries with `bun x nx run app-tauri:sidecars`.

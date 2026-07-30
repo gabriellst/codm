@@ -31,7 +31,7 @@ import { join } from 'node:path'
 import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
 import { ChannelKind, MessageAuthor, MessageType } from '@codm/contracts-typescript/wire/enums'
 
-const DB = join(homedir(), 'Library', 'Application Support', 'app.codedm.desktop', 'data', 'codedm.db')
+const DB = join(homedir(), 'Library', 'Application Support', 'app.codm.desktop', 'data', 'codedm.db')
 const OWNER = '00000000-0000-4000-8000-000000000001'
 const CHANNEL = '1158f5b6-843b-4b60-8d12-3e4550a35f5c'
 const GROUP = '558388287518-1575856528@g.us'

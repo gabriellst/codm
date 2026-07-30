@@ -1,7 +1,7 @@
 //! `Slot<T>` behavior rail — the forward-compat semantics of union slots (spec §2.5),
 //! proven at the serde level with a stand-in for an owner-client shape.
 
-use codedm_contracts_rust::slot::Slot;
+use codm_contracts_rust::slot::Slot;
 
 /// Stand-in for a progenitor-generated owner aggregate: untagged over variants whose
 /// single-value discriminator enums make matching semantic (the exact shape the spike

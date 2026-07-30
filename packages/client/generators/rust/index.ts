@@ -5,7 +5,7 @@
  *
  * Enum dedup (rust-wire spec §F4): contract enums are NOT regenerated in the client —
  * the codegen binary receives a replacements map (contract enum name → path in
- * `codedm_contracts_rust`) so client and wire binding share ONE type per contract enum.
+ * `codm_contracts_rust`) so client and wire binding share ONE type per contract enum.
  *
  * No Cargo workspace is involved (spec §F6): the helper crate and the dist crate are
  * standalone; cargo runs via --manifest-path.
@@ -88,7 +88,7 @@ async function contractEnumReplacements(): Promise<Record<string, string>> {
 	const parsed = parseContractsOpenapi(yamlText)
 	// Leading `::` — absolute path, immune to relative resolution inside progenitor's
 	// nested `mod types` (matches progenitor's own `::std::...` style).
-	return Object.fromEntries(parsed.enums.map(e => [e.name, `::codedm_contracts_rust::wire::enums::${e.name}`]))
+	return Object.fromEntries(parsed.enums.map(e => [e.name, `::codm_contracts_rust::wire::enums::${e.name}`]))
 }
 
 async function preprocessAll(sources: ApiSource[]): Promise<Plan[]> {

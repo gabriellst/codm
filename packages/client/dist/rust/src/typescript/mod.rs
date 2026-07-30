@@ -185,9 +185,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct AddWorkspaceResponse {
-        pub badges: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::WorkspaceBadge,
-        >,
+        pub badges: ::std::vec::Vec<::codm_contracts_rust::wire::enums::WorkspaceBadge>,
         #[serde(rename = "workspaceId")]
         pub workspace_id: ::uuid::Uuid,
     }
@@ -891,9 +889,7 @@ pub mod types {
     pub struct AttachThreadBody {
         #[serde(rename = "contactRef")]
         pub contact_ref: AttachThreadBodyContactRef,
-        pub providers: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::ProviderKind,
-        >,
+        pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
         #[serde(rename = "workspaceId")]
         pub workspace_id: ::uuid::Uuid,
     }
@@ -944,7 +940,7 @@ pub mod types {
         pub display_name: AttachThreadBodyContactRefDisplayName,
         #[serde(rename = "externalId")]
         pub external_id: AttachThreadBodyContactRefExternalId,
-        pub kind: ::codedm_contracts_rust::wire::enums::ContactKind,
+        pub kind: ::codm_contracts_rust::wire::enums::ContactKind,
     }
     impl ::std::convert::From<&AttachThreadBodyContactRef>
     for AttachThreadBodyContactRef {
@@ -1167,7 +1163,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ConfigureContextBufferBody {
         #[serde(rename = "bufferSize")]
-        pub buffer_size: ::codedm_contracts_rust::wire::enums::BufferSize,
+        pub buffer_size: ::codm_contracts_rust::wire::enums::BufferSize,
     }
     impl ::std::convert::From<&ConfigureContextBufferBody>
     for ConfigureContextBufferBody {
@@ -1401,7 +1397,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct CreateIssueBody {
-        pub provider: ::codedm_contracts_rust::wire::enums::ProviderKind,
+        pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         pub title: CreateIssueBodyTitle,
     }
     impl ::std::convert::From<&CreateIssueBody> for CreateIssueBody {
@@ -1561,7 +1557,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct CreateOwnerBody {
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
-        pub kind: ::std::option::Option<::codedm_contracts_rust::wire::enums::OwnerKind>,
+        pub kind: ::std::option::Option<::codm_contracts_rust::wire::enums::OwnerKind>,
         pub name: CreateOwnerBodyName,
         #[serde(
             rename = "pictureUrl",
@@ -1856,8 +1852,8 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub binary_path: ::std::option::Option<::std::string::String>,
-        pub name: ::codedm_contracts_rust::wire::enums::ProviderKind,
-        pub status: ::codedm_contracts_rust::wire::enums::ProviderStatus,
+        pub name: ::codm_contracts_rust::wire::enums::ProviderKind,
+        pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub version: ::std::option::Option<::std::string::String>,
     }
@@ -2412,7 +2408,7 @@ pub mod types {
     pub struct GetAttachThreadWizardResponseChannelsItem {
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
-        pub kind: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub kind: ::codm_contracts_rust::wire::enums::ChannelKind,
     }
     impl ::std::convert::From<&GetAttachThreadWizardResponseChannelsItem>
     for GetAttachThreadWizardResponseChannelsItem {
@@ -2493,7 +2489,7 @@ pub mod types {
         pub display_name: ::std::string::String,
         #[serde(rename = "externalId")]
         pub external_id: ::std::string::String,
-        pub kind: ::codedm_contracts_rust::wire::enums::ContactKind,
+        pub kind: ::codm_contracts_rust::wire::enums::ContactKind,
         #[serde(rename = "lastMessageAt")]
         pub last_message_at: ::std::option::Option<::std::string::String>,
         #[serde(rename = "participantCount")]
@@ -2539,8 +2535,8 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetAttachThreadWizardResponseProvidersItem {
         pub available: bool,
-        pub provider: ::codedm_contracts_rust::wire::enums::ProviderKind,
-        pub status: ::codedm_contracts_rust::wire::enums::ProviderStatus,
+        pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
+        pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub version: ::std::option::Option<::std::string::String>,
     }
@@ -2585,9 +2581,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetAttachThreadWizardResponseWorkspacesItem {
-        pub badges: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::WorkspaceBadge,
-        >,
+        pub badges: ::std::vec::Vec<::codm_contracts_rust::wire::enums::WorkspaceBadge>,
         pub path: ::std::string::String,
         #[serde(rename = "workspaceId")]
         pub workspace_id: ::uuid::Uuid,
@@ -2885,15 +2879,13 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseActiveSessionsItem {
         #[serde(rename = "channelKind")]
-        pub channel_kind: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub channel_kind: ::codm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
-        pub providers: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::ProviderKind,
-        >,
-        pub status: ::codedm_contracts_rust::wire::enums::ThreadStatus,
+        pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
+        pub status: ::codm_contracts_rust::wire::enums::ThreadStatus,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
         #[serde(rename = "workspacePath")]
@@ -2931,8 +2923,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseChannelsItem {
-        pub kind: ::codedm_contracts_rust::wire::enums::ChannelKind,
-        pub status: ::codedm_contracts_rust::wire::enums::ChannelStatus,
+        pub kind: ::codm_contracts_rust::wire::enums::ChannelKind,
+        pub status: ::codm_contracts_rust::wire::enums::ChannelStatus,
     }
     impl ::std::convert::From<&GetHomeDashboardResponseChannelsItem>
     for GetHomeDashboardResponseChannelsItem {
@@ -2977,7 +2969,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseLatestActivityItem {
         pub at: ::std::string::String,
-        pub kind: ::codedm_contracts_rust::wire::enums::TranscriptKind,
+        pub kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
         pub subtitle: ::std::string::String,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
@@ -3024,7 +3016,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseNeedsYou {
         #[serde(rename = "stopKinds")]
-        pub stop_kinds: ::std::vec::Vec<::codedm_contracts_rust::wire::enums::StopKind>,
+        pub stop_kinds: ::std::vec::Vec<::codm_contracts_rust::wire::enums::StopKind>,
         #[serde(rename = "threadDisplayName")]
         pub thread_display_name: ::std::string::String,
         #[serde(rename = "threadId")]
@@ -3088,15 +3080,13 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseThreadsItem {
         #[serde(rename = "channelKind")]
-        pub channel_kind: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub channel_kind: ::codm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
-        pub providers: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::ProviderKind,
-        >,
-        pub status: ::codedm_contracts_rust::wire::enums::ThreadStatus,
+        pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
+        pub status: ::codm_contracts_rust::wire::enums::ThreadStatus,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
         #[serde(rename = "workspacePath")]
@@ -3299,7 +3289,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetIssueDetailResponse {
         pub issue: GetIssueDetailResponseIssue,
-        pub provider: ::codedm_contracts_rust::wire::enums::ProviderKind,
+        pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         #[serde(rename = "routedMessages")]
         pub routed_messages: ::std::vec::Vec<GetIssueDetailResponseRoutedMessagesItem>,
         pub stops: ::std::vec::Vec<GetIssueDetailResponseStopsItem>,
@@ -3360,7 +3350,7 @@ pub mod types {
         pub key: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
     }
     impl ::std::convert::From<&GetIssueDetailResponseIssue>
@@ -3411,11 +3401,11 @@ pub mod types {
         pub at: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub classification: ::std::option::Option<
-            ::codedm_contracts_rust::wire::enums::ClassificationMethod,
+            ::codm_contracts_rust::wire::enums::ClassificationMethod,
         >,
         #[serde(rename = "entryId")]
         pub entry_id: ::uuid::Uuid,
-        pub kind: ::codedm_contracts_rust::wire::enums::TranscriptKind,
+        pub kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
         pub text: ::std::string::String,
     }
     impl ::std::convert::From<&GetIssueDetailResponseRoutedMessagesItem>
@@ -3465,7 +3455,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetIssueDetailResponseStopsItem {
         pub detail: ::std::string::String,
-        pub kind: ::codedm_contracts_rust::wire::enums::StopKind,
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
         #[serde(rename = "raisedAt")]
         pub raised_at: ::std::string::String,
         #[serde(rename = "stopId")]
@@ -3557,7 +3547,7 @@ pub mod types {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
     }
     impl ::std::convert::From<&GetIssueStatusResponse> for GetIssueStatusResponse {
@@ -3795,7 +3785,7 @@ pub mod types {
         pub key: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadDisplayName")]
         pub thread_display_name: ::std::string::String,
         #[serde(rename = "threadId")]
@@ -3878,7 +3868,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetIssuesOverviewResponseGroupsItem {
         pub items: ::std::vec::Vec<GetIssuesOverviewResponseGroupsItemItemsItem>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
     }
     impl ::std::convert::From<&GetIssuesOverviewResponseGroupsItem>
     for GetIssuesOverviewResponseGroupsItem {
@@ -3945,7 +3935,7 @@ pub mod types {
         pub key: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadDisplayName")]
         pub thread_display_name: ::std::string::String,
         #[serde(rename = "threadId")]
@@ -4152,8 +4142,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetMyAccountResponsePreferences {
-        pub currency: ::codedm_contracts_rust::wire::enums::CurrencyCode,
-        pub language: ::codedm_contracts_rust::wire::enums::Language,
+        pub currency: ::codm_contracts_rust::wire::enums::CurrencyCode,
+        pub language: ::codm_contracts_rust::wire::enums::Language,
         pub timezone: ::std::string::String,
     }
     impl ::std::convert::From<&GetMyAccountResponsePreferences>
@@ -4402,7 +4392,7 @@ pub mod types {
     pub struct GetNeedsYouPanelResponseStopsItem {
         #[serde(rename = "availableResolutions")]
         pub available_resolutions: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::StopResolution,
+            ::codm_contracts_rust::wire::enums::StopResolution,
         >,
         pub detail: ::std::string::String,
         #[serde(
@@ -4417,7 +4407,7 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub issue_key: ::std::option::Option<::std::string::String>,
-        pub kind: ::codedm_contracts_rust::wire::enums::StopKind,
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
         #[serde(rename = "raisedAt")]
         pub raised_at: ::std::string::String,
         #[serde(rename = "stopId")]
@@ -4618,7 +4608,7 @@ pub mod types {
         #[serde(rename = "activeStops")]
         pub active_stops: ::std::vec::Vec<GetSessionChatResponseActiveStopsItem>,
         #[serde(rename = "composerMode")]
-        pub composer_mode: ::codedm_contracts_rust::wire::enums::ThreadMode,
+        pub composer_mode: ::codm_contracts_rust::wire::enums::ThreadMode,
         #[serde(rename = "mentionGate")]
         pub mention_gate: GetSessionChatResponseMentionGate,
         pub paused: bool,
@@ -4671,7 +4661,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSessionChatResponseActiveStopsItem {
         pub detail: ::std::string::String,
-        pub kind: ::codedm_contracts_rust::wire::enums::StopKind,
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
         #[serde(rename = "raisedAt")]
         pub raised_at: ::std::string::String,
         #[serde(rename = "stopId")]
@@ -4792,15 +4782,13 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSessionChatResponseThread {
         #[serde(rename = "channelKind")]
-        pub channel_kind: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub channel_kind: ::codm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
-        pub providers: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::ProviderKind,
-        >,
-        pub status: ::codedm_contracts_rust::wire::enums::ThreadStatus,
+        pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
+        pub status: ::codm_contracts_rust::wire::enums::ThreadStatus,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
         #[serde(rename = "workspacePath")]
@@ -4865,7 +4853,7 @@ pub mod types {
         pub at: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub classification: ::std::option::Option<
-            ::codedm_contracts_rust::wire::enums::ClassificationMethod,
+            ::codm_contracts_rust::wire::enums::ClassificationMethod,
         >,
         #[serde(rename = "entryId")]
         pub entry_id: ::uuid::Uuid,
@@ -4875,10 +4863,10 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub issue_id: ::std::option::Option<::uuid::Uuid>,
-        pub kind: ::codedm_contracts_rust::wire::enums::TranscriptKind,
+        pub kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub provider: ::std::option::Option<
-            ::codedm_contracts_rust::wire::enums::ProviderKind,
+            ::codm_contracts_rust::wire::enums::ProviderKind,
         >,
         #[serde(
             rename = "quotedEntryId",
@@ -5088,7 +5076,7 @@ pub mod types {
         pub key: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseArchivedItem>
@@ -5157,7 +5145,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSessionIssuesResponseGroupsItem {
         pub items: ::std::vec::Vec<GetSessionIssuesResponseGroupsItemItemsItem>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseGroupsItem>
     for GetSessionIssuesResponseGroupsItem {
@@ -5214,7 +5202,7 @@ pub mod types {
         pub key: ::std::string::String,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
     }
     impl ::std::convert::From<&GetSessionIssuesResponseGroupsItemItemsItem>
@@ -5643,8 +5631,8 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSettingsResponseProvidersItem {
         pub available: bool,
-        pub provider: ::codedm_contracts_rust::wire::enums::ProviderKind,
-        pub status: ::codedm_contracts_rust::wire::enums::ProviderStatus,
+        pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
+        pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub version: ::std::option::Option<::std::string::String>,
     }
@@ -5847,7 +5835,7 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetThreadSettingsResponse {
         #[serde(rename = "bufferSize")]
-        pub buffer_size: ::codedm_contracts_rust::wire::enums::BufferSize,
+        pub buffer_size: ::codm_contracts_rust::wire::enums::BufferSize,
         #[serde(rename = "invokerCount")]
         pub invoker_count: i64,
         #[serde(rename = "mentionGate")]
@@ -6406,7 +6394,7 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub issue_id: ::std::option::Option<::uuid::Uuid>,
-        pub kind: ::codedm_contracts_rust::wire::enums::ArtifactKind,
+        pub kind: ::codm_contracts_rust::wire::enums::ArtifactKind,
         pub meta: ::std::string::String,
         pub name: ::std::string::String,
         #[serde(rename = "recordedAt")]
@@ -6531,9 +6519,7 @@ pub mod types {
     pub struct ListWorkspacesResponseWorkspacesItem {
         #[serde(rename = "addedAt")]
         pub added_at: ::chrono::DateTime<::chrono::offset::Utc>,
-        pub badges: ::std::vec::Vec<
-            ::codedm_contracts_rust::wire::enums::WorkspaceBadge,
-        >,
+        pub badges: ::std::vec::Vec<::codm_contracts_rust::wire::enums::WorkspaceBadge>,
         pub path: ::std::string::String,
         #[serde(rename = "threadCount")]
         pub thread_count: i64,
@@ -6573,7 +6559,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct RaiseStopBody {
         pub detail: RaiseStopBodyDetail,
-        pub kind: ::codedm_contracts_rust::wire::enums::StopKind,
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
     }
     impl ::std::convert::From<&RaiseStopBody> for RaiseStopBody {
         fn from(value: &RaiseStopBody) -> Self {
@@ -6740,7 +6726,7 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub issue_id: ::std::option::Option<::uuid::Uuid>,
-        pub kind: ::codedm_contracts_rust::wire::enums::ArtifactKind,
+        pub kind: ::codm_contracts_rust::wire::enums::ArtifactKind,
         pub meta: ::std::string::String,
         pub name: RecordArtifactBodyName,
         #[serde(rename = "ref")]
@@ -6965,7 +6951,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ResolveStopBody {
-        pub resolution: ::codedm_contracts_rust::wire::enums::StopResolution,
+        pub resolution: ::codm_contracts_rust::wire::enums::StopResolution,
     }
     impl ::std::convert::From<&ResolveStopBody> for ResolveStopBody {
         fn from(value: &ResolveStopBody) -> Self {
@@ -7863,7 +7849,7 @@ pub mod types {
     pub struct TransitionIssueStatusBody {
         #[serde(default)]
         pub key: ::std::string::String,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(default = "defaults::transition_issue_status_body_summary")]
         pub summary: TransitionIssueStatusBodySummary,
     }
@@ -7989,7 +7975,7 @@ pub mod types {
     pub struct TransitionIssueStatusResponse {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
-        pub status: ::codedm_contracts_rust::wire::enums::IssueStatus,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
     }
     impl ::std::convert::From<&TransitionIssueStatusResponse>
     for TransitionIssueStatusResponse {

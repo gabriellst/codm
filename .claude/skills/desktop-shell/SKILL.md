@@ -53,8 +53,8 @@ only ever do three jobs:
    `build.frontendDist` (`packages/app/react/dist/client`, produced by
    `nx run app-react:build-spa`; `CODEDM_DESKTOP=true` flips vite to base `/` + SPA shell +
    no nitro).
-2. **Supervise sidecars** — `bundle.externalBin` = `codedm-daemon` (TS, `bun build
-   --compile`) + `codedm-gateway` (Go). `src-tauri/src/lib.rs` spawns both on boot and
+2. **Supervise sidecars** — `bundle.externalBin` = `codm-daemon` (TS, `bun build
+   --compile`) + `codm-gateway` (Go). `src-tauri/src/lib.rs` spawns both on boot and
    health-checks: daemon `GET :3030/v1/session`, gateway `GET :3032/api/openapi.json`;
    emits `sidecar:ready` / `sidecar:error` to the webview. Binaries:
    `bun x nx run app-tauri:sidecars` (suffix = host target triple).
