@@ -215,11 +215,16 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		const hasMore = rows.length > CONTACTS_PAGE_SIZE
 		const page = hasMore ? rows.slice(0, CONTACTS_PAGE_SIZE) : rows
 
-		// `alreadyAttached` = a thread already exists for (channel, contact) on this owner.
+		// `alreadyAttached` = a LIVE thread exists for (channel, contact) on this owner.
+		//
+		// The `deletedAt` filter is AC-5's PRECONDITION, not decoration (thread-deletion spec, decision 5):
+		// counting an apagada thread here would leave its contact flagged "já anexado" in the only screen
+		// that can re-attach it, so the revive decision 4 promises would be unreachable from the UI while
+		// the conversation stays invisible everywhere else.
 		const threadRows = await this.db
 			.select({ channelId: threads.channelId, externalId: threads.contactExternalId })
 			.from(threads)
-			.where(eq(threads.ownerId, input.ownerId))
+			.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))
 		const attachedKeys = new Set(threadRows.map(t => `${t.channelId}:${t.externalId}`))
 
 		// One grouped count for every GROUP remote on the page (no N+1).

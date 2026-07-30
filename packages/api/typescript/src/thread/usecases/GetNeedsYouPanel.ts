@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
-import { stops, issues } from '@codm/contracts/db'
+import { stops, issues, threads } from '@codm/contracts/db'
 import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { resolutionsForKind } from '../objects/StopResolutions'
 
@@ -60,6 +60,11 @@ export class GetNeedsYouPanel extends Handler<typeof GetNeedsYouPanelInputSchema
 			})
 			.from(stops)
 			.leftJoin(issues, eq(stops.issueId, issues.id))
+			// INNER join on the thread — this panel reads `stops`, so `deleted_at` is not on any column it
+			// already touches, and without this join a deleted conversation would still be able to raise a
+			// Needs-you card (thread-deletion spec, decision 5). Inner rather than left because every stop
+			// has a NOT NULL `thread_id` whose row exists: the join drops apagadas and nothing else.
+			.innerJoin(threads, and(eq(stops.threadId, threads.id), isNull(threads.deletedAt)))
 			// TENANCY, and it is a NAMED tightening (see the Scope fence): `ownerId` was already on the
 			// input and already passed by the controller from `ctx`, and it was already unused — so any
 			// caller who knew a thread id could read another owner's stops. The sibling read guards

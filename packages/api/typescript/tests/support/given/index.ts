@@ -24,6 +24,7 @@ export { givenUser, givenAccount, givenUserWithAccount, givenActiveSession }
 export { givenOwner, givenOwnerWithResponsible } from './owners'
 export { givenWorkspace } from './workspaces'
 export { givenThread, GIVEN_MENTION_TAG } from './threads'
+export { givenChannel } from './channels'
 export { givenRemote } from './remotes'
 export { givenIssue } from './issues'
 export { givenStop } from './stops'

@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
@@ -21,7 +21,12 @@ export class DrizzleWorkspaceUsageQuery extends WorkspaceUsageQuery {
 			const rows = await this.db
 				.select({ one: sql`1` })
 				.from(issues)
-				.innerJoin(threads, eq(issues.threadId, threads.id))
+				// Apagadas do not hold a workspace hostage (thread-deletion spec, decision 5). Reaching this
+				// with a deleted thread takes a race the product cannot currently lose — decision 2 refuses
+				// the delete while an issue is WORKING, and decision 3 stops a deleted thread from acquiring
+				// new work — so the predicate is a floor, not a fix. It is here because "which reads can see
+				// a deleted thread" has to be answerable per query rather than per argument.
+				.innerJoin(threads, and(eq(issues.threadId, threads.id), isNull(threads.deletedAt)))
 				.where(and(eq(threads.workspaceId, workspaceId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false)))
 				.limit(1)
 			return rows.length > 0

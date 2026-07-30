@@ -81,7 +81,16 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const rows = await this.db.select().from(threads).where(eq(threads.id, input.threadId)).limit(1)
+		// `deletedAt IS NULL` is part of the IDENTITY of the row this read is looking for (thread-deletion
+		// spec, decision 5): an apagada conversation answers THREAD_NOT_FOUND, the same code an unknown id
+		// and another owner's thread get. One indistinguishable 404 is the right answer — the console
+		// routes away from all three identically, and the operator who just deleted it is not owed a
+		// different word for "it is gone".
+		const rows = await this.db
+			.select()
+			.from(threads)
+			.where(and(eq(threads.id, input.threadId), isNull(threads.deletedAt)))
+			.limit(1)
 		const thread = rows[0]
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)

@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
@@ -52,7 +52,11 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 				threadDisplayName: threads.contactDisplayName,
 			})
 			.from(issues)
-			.innerJoin(threads, eq(issues.threadId, threads.id))
+			// The join already existed (every item carries its thread of origin); it now also FILTERS.
+			// An issue whose conversation was apagada would render a row labelled with a chat that answers
+			// THREAD_NOT_FOUND (thread-deletion spec, decision 5). The rows stay in the database — decision 1
+			// keeps every child — they simply stop being listed.
+			.innerJoin(threads, and(eq(issues.threadId, threads.id), isNull(threads.deletedAt)))
 			.where(eq(issues.ownerId, input.ownerId))
 
 		const items = rows.map(r => ({

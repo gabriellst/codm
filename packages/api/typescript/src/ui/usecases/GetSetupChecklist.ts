@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
 import { channels, workspaces, threads } from '@codm/contracts/db'
 import { ChannelStatus } from '@codm/contracts-typescript/wire/enums'
@@ -37,7 +37,14 @@ export class GetSetupChecklist extends Handler<typeof GetSetupChecklistInputSche
 				.where(and(eq(channels.ownerId, input.ownerId), eq(channels.status, ChannelStatus.CONNECTED)))
 				.limit(1),
 			this.db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.ownerId, input.ownerId)).limit(1),
-			this.db.select({ id: threads.id }).from(threads).where(eq(threads.ownerId, input.ownerId)).limit(1),
+			// `threadDone` asks "is at least one conversation attached", and an apagada one is not
+			// (thread-deletion spec, decision 5): deleting your only thread must put the onboarding gate back
+			// where it was, not leave a checklist ticked by a row nothing else in the console can see.
+			this.db
+				.select({ id: threads.id })
+				.from(threads)
+				.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))
+				.limit(1),
 		])
 
 		return {

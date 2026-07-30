@@ -83,11 +83,19 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.from(threads)
 			.leftJoin(workspaces, eq(threads.workspaceId, workspaces.id))
 			.leftJoin(channels, eq(threads.channelId, channels.id))
-			.where(eq(threads.ownerId, input.ownerId))
+			// Apagadas are out (thread-deletion spec, decision 5). This one predicate covers BOTH `threads`
+			// and `activeSessions` below, because the second is derived from the first.
+			.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))
 
+		// PROJECTED, not `select()` — the join below would otherwise nest the row per table
+		// (`{ issue_stops: …, thread_threads: … }`) and silently change what `buildNeedsYou` reads. Only
+		// the two columns it uses travel.
 		const openStops = await this.db
-			.select()
+			.select({ threadId: stops.threadId, kind: stops.kind })
 			.from(stops)
+			// Stops are read owner-wide here, so the join is how a deleted thread's stop is kept out of the
+			// Needs-you callout — the same reason `GetNeedsYouPanel` grew one.
+			.innerJoin(threads, and(eq(stops.threadId, threads.id), isNull(threads.deletedAt)))
 			.where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
 
 		// Status is DERIVED, never read from `threads.status` — that column only ever holds IDLE or
@@ -122,6 +130,11 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 				kind: transcriptEntries.kind,
 			})
 			.from(transcriptEntries)
+			// THE READ THE SPEC NAMES BY HAND (thread-deletion spec, decision 5): this one reads the
+			// TRANSCRIPT, so a sweep that walks `from(threads)` never visits it — and without the join the
+			// home screen prints the words of a conversation the operator believes they deleted. Inner join
+			// because every entry has a NOT NULL `thread_id` whose row exists.
+			.innerJoin(threads, and(eq(transcriptEntries.threadId, threads.id), isNull(threads.deletedAt)))
 			.where(eq(transcriptEntries.ownerId, input.ownerId))
 			.orderBy(desc(transcriptEntries.at))
 			.limit(8)

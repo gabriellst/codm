@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
 import { threads, remotes } from '@codm/contracts/db'
 import { BufferSize } from '@codm/contracts-typescript/wire/enums'
@@ -31,7 +31,14 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const [thread] = await this.db.select().from(threads).where(eq(threads.id, input.threadId)).limit(1)
+		// Filtered on `deletedAt` like its sibling `GetSessionChat` (thread-deletion spec, decision 5). It
+		// matters here in particular because THIS dialog is where the delete is triggered from: the settings
+		// of a conversation that no longer exists must not keep rendering after the action succeeds.
+		const [thread] = await this.db
+			.select()
+			.from(threads)
+			.where(and(eq(threads.id, input.threadId), isNull(threads.deletedAt)))
+			.limit(1)
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 

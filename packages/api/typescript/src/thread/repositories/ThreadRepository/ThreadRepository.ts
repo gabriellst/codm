@@ -20,6 +20,19 @@ import { Thread, type Stop, type TranscriptEntry } from '../../entities/Thread'
  * a reference the caller resolved, and `resolveStop` against a stop the caller loaded — never against a
  * loaded collection.
  *
+ * ### These reads SEE SOFT-DELETED THREADS, deliberately (thread-deletion spec, AC-3 whitelist)
+ * `deleted_at IS NULL` belongs to the console's reads, not to this repository — and the difference is
+ * not stylistic. This is the WRITE side, and both directions of the soft delete need the row: without
+ * it `Thread.delete()` cannot refuse a second call (it would degrade to THREAD_NOT_FOUND, which says
+ * the wrong thing), and `AttachThread` cannot find the row to `revive()` — it would try to insert and
+ * hit `threads_owner_channel_contact_unq` instead, which is the failure decision 4 exists to avoid.
+ *
+ * The consequence is that every CALLER of `findById` / `findByChannelContact` owns the question "may a
+ * deleted thread do this?" explicitly. Today that is: `DeleteThread` (must see it — refuses),
+ * `AttachThread` (must see it — revives), `ConsumeInboundMessage` and `IngestChannelMessage` (must see
+ * it — drop the message, decision 3), and the control-plane use cases, which are unreachable for an
+ * apagada thread because the console cannot route to a chat that answers THREAD_NOT_FOUND.
+ *
  * ### `save` is atomic only with a transaction
  * The pending entries and stops are written on the SAME `dbc` as the thread row, so passing `tx` is what
  * makes thread+children atomic — identical to how the entity row and its domain-event row are atomic

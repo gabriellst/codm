@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
 import { workspaces, threads } from '@codm/contracts/db'
 import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
@@ -46,7 +46,11 @@ export class ListWorkspaces extends Handler<typeof ListWorkspacesInputSchema, ty
 				threadCount,
 			})
 			.from(workspaces)
-			.leftJoin(threads, eq(threads.workspaceId, workspaces.id))
+			// The `deletedAt` predicate belongs in the JOIN CONDITION, not in the `where`: this is a LEFT
+			// join whose whole job is to count, and moving it to the where-clause would turn it into an
+			// inner join and drop every workspace with no live thread off the list entirely
+			// (thread-deletion spec, decision 5).
+			.leftJoin(threads, and(eq(threads.workspaceId, workspaces.id), isNull(threads.deletedAt)))
 			.where(eq(workspaces.ownerId, input.ownerId))
 			.groupBy(workspaces.id)
 

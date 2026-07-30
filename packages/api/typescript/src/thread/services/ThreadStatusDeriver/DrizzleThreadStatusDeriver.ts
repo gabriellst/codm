@@ -13,7 +13,17 @@ export class DrizzleThreadStatusDeriver extends ThreadStatusDeriver {
 
 	async forThread(threadId: string): Promise<ThreadStatus> {
 		const result = await tryCatchAsync(async () => {
-			const [threadRow] = await this.db.select({ paused: threads.paused }).from(threads).where(eq(threads.id, threadId)).limit(1)
+			// Filtered like every other read (thread-deletion spec, decision 5), and here the filter is what
+			// makes the FALLBACK correct rather than merely tidy: no row → `undefined` → the caller gets the
+			// IDLE default, which is precisely the neutral badge an apagada conversation should have if a
+			// screen somehow still asks. Both of this deriver's callers already refuse a deleted thread
+			// outright (`GetSessionChat` throws, `GetHomeDashboard` never lists it), so this is the floor
+			// under them, not the gate.
+			const [threadRow] = await this.db
+				.select({ paused: threads.paused })
+				.from(threads)
+				.where(and(eq(threads.id, threadId), isNull(threads.deletedAt)))
+				.limit(1)
 			if (!threadRow) return undefined
 			// `limit(1)` on both: the question is EXISTENCE, and a thread with forty open stops must not
 			// pay for thirty-nine rows nobody reads.
@@ -36,7 +46,12 @@ export class DrizzleThreadStatusDeriver extends ThreadStatusDeriver {
 
 	async forOwner(ownerId: string): Promise<Map<string, ThreadStatus>> {
 		const result = await tryCatchAsync(async () => {
-			const threadRows = await this.db.select({ id: threads.id, paused: threads.paused }).from(threads).where(eq(threads.ownerId, ownerId))
+			// The owner-wide map keys on live threads only: an entry for an apagada conversation is a status
+			// nothing can render, and the dashboard that consumes this map has already dropped the row.
+			const threadRows = await this.db
+				.select({ id: threads.id, paused: threads.paused })
+				.from(threads)
+				.where(and(eq(threads.ownerId, ownerId), isNull(threads.deletedAt)))
 			const openStops = await this.db
 				.select({ threadId: stops.threadId })
 				.from(stops)
