@@ -12,7 +12,6 @@ import {
 	ArtifactRecordedEventSchema,
 	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
-	ChannelDeliveryRequestedEventSchema,
 	ChannelDisconnectedEventSchema,
 	ChannelLoggedOutEventSchema,
 	ChannelMembershipAddedEventSchema,
@@ -51,7 +50,6 @@ import { channelMessageReceivedPayloadSchema, channelSpecialPlatformEventReceive
 export const ArtifactRecordedEventMaterializedSchema = ArtifactRecordedEventSchema
 export const ChannelChatPresenceUpdatedEventMaterializedSchema = ChannelChatPresenceUpdatedEventSchema
 export const ChannelConnectedEventMaterializedSchema = ChannelConnectedEventSchema
-export const ChannelDeliveryRequestedEventMaterializedSchema = ChannelDeliveryRequestedEventSchema
 export const ChannelDisconnectedEventMaterializedSchema = ChannelDisconnectedEventSchema
 export const ChannelLoggedOutEventMaterializedSchema = ChannelLoggedOutEventSchema
 export const ChannelMembershipAddedEventMaterializedSchema = ChannelMembershipAddedEventSchema
@@ -98,7 +96,6 @@ export const materializedIntegrationEventSchemas = [
 	ChannelSpecialPlatformEventReceivedEventMaterializedSchema,
 	ChannelChatPresenceUpdatedEventMaterializedSchema,
 	ChannelConnectedEventMaterializedSchema,
-	ChannelDeliveryRequestedEventMaterializedSchema,
 	ChannelDisconnectedEventMaterializedSchema,
 	ChannelLoggedOutEventMaterializedSchema,
 	ChannelMembershipAddedEventMaterializedSchema,
@@ -137,7 +134,6 @@ export const MaterializedIntegrationEventSchema = z.discriminatedUnion('name', [
 	ChannelSpecialPlatformEventReceivedEventMaterializedSchema,
 	ChannelChatPresenceUpdatedEventMaterializedSchema,
 	ChannelConnectedEventMaterializedSchema,
-	ChannelDeliveryRequestedEventMaterializedSchema,
 	ChannelDisconnectedEventMaterializedSchema,
 	ChannelLoggedOutEventMaterializedSchema,
 	ChannelMembershipAddedEventMaterializedSchema,

@@ -91,44 +91,6 @@ type ChannelConnectedPayload struct {
 	OwnerID string `json:"ownerId" validate:"required"`
 }
 
-// ChannelDeliveryRequestedEventName is the wire discriminator for ChannelDeliveryRequestedEvent.
-const ChannelDeliveryRequestedEventName = "integration.channel.delivery_requested"
-
-// ChannelDeliveryRequestedEvent — wire shape of integration.channel.delivery_requested.
-// BC4 Thread & Routing -> BC1 Channel Gateway (command-event). Orders the gateway to deliver an outbound message. In medscall this is an HTTP send call; modeled here as an integration event so it rides the same outbox/transport as the rest of the lock. The label fields carry the issue/thread a SYSTEM message belongs to. ownerId travels on the envelope.
-type ChannelDeliveryRequestedEvent struct {
-	Name       string    `json:"name"`
-	EntityID   string    `json:"entityId"`
-	OwnerID    string    `json:"ownerId"`
-	OccurredAt time.Time `json:"occurredAt"`
-	ChannelID string `json:"channelId"`
-	ContactExternalID string `json:"contactExternalId"`
-	ContactDisplayName string `json:"contactDisplayName"`
-	ContactKind ContactKind `json:"contactKind"`
-	Text string `json:"text"`
-	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
-	LabelThreadID *string `json:"labelThreadId,omitempty"`
-	Author MessageAuthor `json:"author"`
-	QuotedMessageID *string `json:"quotedMessageId,omitempty"`
-	ReplyEntryID *string `json:"replyEntryId,omitempty"`
-}
-
-func (e ChannelDeliveryRequestedEvent) EventName() string { return ChannelDeliveryRequestedEventName }
-
-// ChannelDeliveryRequestedPayload — payload of integration.channel.delivery_requested, generated from the contract declaration.
-type ChannelDeliveryRequestedPayload struct {
-	ChannelID string `json:"channelId" validate:"required"`
-	ContactExternalID string `json:"contactExternalId" validate:"required"`
-	ContactDisplayName string `json:"contactDisplayName" validate:"required"`
-	ContactKind ContactKind `json:"contactKind" validate:"required"`
-	Text string `json:"text" validate:"required"`
-	LabelIssueKey *string `json:"labelIssueKey,omitempty"`
-	LabelThreadID *string `json:"labelThreadId,omitempty"`
-	Author MessageAuthor `json:"author" validate:"required"`
-	QuotedMessageID *string `json:"quotedMessageId,omitempty"`
-	ReplyEntryID *string `json:"replyEntryId,omitempty"`
-}
-
 // ChannelDisconnectedEventName is the wire discriminator for ChannelDisconnectedEvent.
 const ChannelDisconnectedEventName = "integration.channel.disconnected"
 

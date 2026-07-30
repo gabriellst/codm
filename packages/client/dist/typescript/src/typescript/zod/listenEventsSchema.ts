@@ -512,25 +512,6 @@ get "state"(){
     })
     }), z.object({
     "ownerId": z.string(),
-"name": z.enum(["integration.channel.delivery_requested"]),
-"payload": z.object({
-    "channelId": z.string(),
-"contactExternalId": z.string(),
-"contactDisplayName": z.string(),
-get "contactKind"(){
-                return contactKindSchema
-              },
-"text": z.string(),
-"labelIssueKey": z.optional(z.string()),
-"labelThreadId": z.optional(z.string()),
-get "author"(){
-                return messageAuthorSchema
-              },
-"quotedMessageId": z.optional(z.string()),
-"replyEntryId": z.optional(z.string())
-    })
-    }), z.object({
-    "ownerId": z.string(),
 "name": z.enum(["integration.channel.disconnected"]),
 "payload": z.object({
     "channelId": z.uuid(),

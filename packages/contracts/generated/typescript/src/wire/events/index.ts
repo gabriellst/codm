@@ -5,7 +5,6 @@ import {
 	ArtifactRecordedEventSchema,
 	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
-	ChannelDeliveryRequestedEventSchema,
 	ChannelDisconnectedEventSchema,
 	ChannelLoggedOutEventSchema,
 	ChannelMembershipAddedEventSchema,
@@ -43,7 +42,6 @@ import {
 export * from './artifact-recorded'
 export * from './channel-chat-presence-updated'
 export * from './channel-connected'
-export * from './channel-delivery-requested'
 export * from './channel-disconnected'
 export * from './channel-logged-out'
 export * from './channel-membership-added'
@@ -83,7 +81,6 @@ export const IntegrationEventSchema = z.discriminatedUnion('name', [
 	ArtifactRecordedEventSchema,
 	ChannelChatPresenceUpdatedEventSchema,
 	ChannelConnectedEventSchema,
-	ChannelDeliveryRequestedEventSchema,
 	ChannelDisconnectedEventSchema,
 	ChannelLoggedOutEventSchema,
 	ChannelMembershipAddedEventSchema,

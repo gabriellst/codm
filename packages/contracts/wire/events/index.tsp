@@ -17,7 +17,6 @@ import "./channel-connected.tsp";
 import "./channel-disconnected.tsp";
 import "./channel-pairing-qr-updated.tsp";
 import "./channel-outbound-delivered.tsp";
-import "./channel-delivery-requested.tsp";
 
 // Gateway full-port — the complete medscall channel wire surface, retargeted to the codedm
 // envelope. Everything below is defined-and-dormant except where the first gateway phase

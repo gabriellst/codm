@@ -6403,69 +6403,6 @@
                         },
                         "name": {
                           "type": "string",
-                          "const": "integration.channel.delivery_requested"
-                        },
-                        "payload": {
-                          "type": "object",
-                          "properties": {
-                            "channelId": {
-                              "type": "string"
-                            },
-                            "contactExternalId": {
-                              "type": "string"
-                            },
-                            "contactDisplayName": {
-                              "type": "string"
-                            },
-                            "contactKind": {
-                              "$ref": "#/components/schemas/ContactKind"
-                            },
-                            "text": {
-                              "type": "string"
-                            },
-                            "labelIssueKey": {
-                              "type": "string"
-                            },
-                            "labelThreadId": {
-                              "type": "string"
-                            },
-                            "author": {
-                              "$ref": "#/components/schemas/MessageAuthor"
-                            },
-                            "quotedMessageId": {
-                              "type": "string"
-                            },
-                            "replyEntryId": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "channelId",
-                            "contactExternalId",
-                            "contactDisplayName",
-                            "contactKind",
-                            "text",
-                            "author"
-                          ],
-                          "additionalProperties": false
-                        }
-                      },
-                      "required": [
-                        "ownerId",
-                        "name",
-                        "payload"
-                      ],
-                      "additionalProperties": false,
-                      "examples": []
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "ownerId": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string",
                           "const": "integration.channel.disconnected"
                         },
                         "payload": {

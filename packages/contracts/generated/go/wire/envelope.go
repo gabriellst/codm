@@ -39,12 +39,6 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 			return nil, err
 		}
 		return v, nil
-	case "integration.channel.delivery_requested":
-		var v ChannelDeliveryRequestedEvent
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
 	case "integration.channel.disconnected":
 		var v ChannelDisconnectedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
