@@ -33,7 +33,10 @@ export class GatewayChannelSender extends ChannelSender {
 			return { messageId: out.messageId }
 		} catch (error) {
 			// A dead gateway is not a bug in the thread context — it is the same GATEWAY_UNAVAILABLE the
-			// proxy already surfaces, and the outbox will retry it.
+			// proxy already surfaces. The RETRY is the CommandQueue's (B3): this send only runs as the
+			// `deliver_channel_message` command, so a throw here backs the row off and re-executes it (3
+			// attempts, then dead-letter). The old claim that "the outbox will retry it" was false — the
+			// event carrying this send was never written anywhere.
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', `channel send failed: ${String(error)}`)
 		}
 	}

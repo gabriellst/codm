@@ -30,6 +30,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: "tests SqliteCommandQueue's own DB-backed scheduling behavior directly (row-by-id, repeat scheduling, lease/claim) — the DB is the subject, same exception class as Drizzle*Repository.test.ts",
 	},
 	{
+		path: 'src/thread/usecases/DeliverChannelMessage.test.ts',
+		why: 'the SCHEDULED-COMMAND row is the subject (B3): it asserts row-by-id `attempts`/`run_at`/`dead_at` on `shared_scheduled_commands` across a failed tick and its backoff — columns the probe deliberately does not expose (it counts rows, it does not read them) — same exception class as tests/kernel/SqliteCommandQueue.test.ts',
+	},
+	{
 		path: 'tests/kernel/DomainEventListByNameSince.test.ts',
 		why: 'raw db.update(events) write-only seed — backdates `occurred_at` timestamps to age event rows into/out of the sweep window while exercising DomainEventRepository.listByNameSince; no persisted-data read assertion goes through the raw client',
 	},

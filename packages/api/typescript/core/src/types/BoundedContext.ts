@@ -35,6 +35,13 @@ export interface BoundedContextOptions<TName extends string = string> {
 	internalHandlers?: HandlerRecord
 	externalHandlers?: HandlerRecord
 	projectors?: Record<string, new (...args: any[]) => Projector>
+	/**
+	 * One-shot COMMAND executors — the consumer half of `CommandQueue.enqueueCommand(...)`. Registered
+	 * on the queue so THIS process executes them. Unlike `jobs`, NOTHING is enqueued at boot: the
+	 * producer enqueues inside the transaction of the fact that motivates the command (the durable
+	 * alternative to an integration event whose only consumer executes an action).
+	 */
+	commandHandlers?: HandlerRecord
 	registry?: InstanceRegistry
 	jobs?: JobDefinition[]
 	setup?: (container: DependencyContainer) => void | Promise<void>
@@ -58,6 +65,7 @@ export class BoundedContext {
 		await BoundedContext.registerHandlers(container, options)
 		await BoundedContext.registerProjectors(container, options)
 		await BoundedContext.registerJobs(container, options.jobs)
+		await BoundedContext.registerCommandHandlers(container, options)
 		await options.setup?.(container)
 
 		const router = new Router(options.name, container, options.controllers, options.middlewares, options.skipMiddlewares)
@@ -131,5 +139,19 @@ export class BoundedContext {
 			await commandQueue.registerCommandHandler(handler)
 			await commandQueue.enqueueCommand(handler.name, {}, { repeat: job.repeat })
 		}
+	}
+
+	private static async registerCommandHandlers(container: DependencyContainer, options: BoundedContextOptions): Promise<void> {
+		if (!options.commandHandlers) return
+
+		// Same guard as registerJobs: spec emission (emit-openapi / bun sdk) imports the composition root
+		// ONLY to collect routers, and registering a command handler STARTS the queue's poller against a
+		// database emission has no business opening.
+		if (process.env.EMIT_OPENAPI === 'true') return
+
+		const commandQueue = container.resolve(CommandQueue as any) as CommandQueue
+		// The static helper resolves + binds each handler's container and registers it — it has existed
+		// since the queue was written and this is its first call site.
+		await CommandQueue.registerCommandHandler(container, commandQueue, options.commandHandlers)
 	}
 }

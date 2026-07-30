@@ -17,3 +17,4 @@ export { SendDirectMessage, SendDirectMessageInputSchema, SendDirectMessageOutpu
 export { IngestChannelMessage, IngestChannelMessageInputSchema, IngestChannelMessageOutputSchema } from './IngestChannelMessage'
 export { GetSessionChat, GetSessionChatInputSchema, GetSessionChatOutputSchema } from './GetSessionChat'
 export { GetThreadSettings, GetThreadSettingsInputSchema, GetThreadSettingsOutputSchema } from './GetThreadSettings'
+export { DeliverChannelMessage } from './DeliverChannelMessage'
