@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react'
+import { type ComponentProps, type ReactNode, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -21,7 +21,7 @@ const SLIDE_COMPONENTS: Record<SlideId, ReactNode> = {
 }
 
 /** First-run intro (T01): value prop, how it works, the control plane — 3 slides that slide. */
-export function OnboardingFlow() {
+export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { currentSlide, direction, setCurrentSlide, setDirection, reset } = useOnboardingStore()
@@ -39,7 +39,7 @@ export function OnboardingFlow() {
 	}
 
 	return (
-		<div className="flex min-h-dvh flex-col bg-route-background text-foreground">
+		<div className={cn('flex min-h-dvh flex-col bg-route-background text-foreground', className)} {...props}>
 			<header className="flex items-center justify-between px-6 py-6 md:px-10">
 				<Logo />
 				<Link to="/dashboard" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">

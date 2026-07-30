@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconPlayerPause, IconPlayerPlay, IconSettings2 } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -59,7 +60,7 @@ const TABS = [
  * owns the clearance, the geometry never changes between scrolled and unscrolled, and the pill cannot
  * collide with the icon buttons on the right of row one.
  */
-export function SessionHeader({ threadId }: { threadId: string }) {
+export function SessionHeader({ threadId, className, ...props }: ComponentProps<'div'> & { threadId: string }) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const pathname = useRouterState({ select: s => s.location.pathname })
@@ -83,7 +84,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 			: '/threads/$threadId'
 
 	return (
-		<div className="sticky top-0 z-10 -mx-6 flex shrink-0 flex-col bg-route-background px-6 pt-12">
+		<div className={cn('sticky top-0 z-10 -mx-6 flex shrink-0 flex-col bg-route-background px-6 pt-12', className)} {...props}>
 			<div className="flex items-center gap-3.5 pb-4">
 				{isLoading || !data ? (
 					<Skeleton className="h-12 w-64" />

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo } from 'react'
+import { type ComponentProps, type ReactNode, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
 import { IconX } from '@tabler/icons-react'
@@ -40,7 +40,7 @@ function _inferAttachForm() {
 export type AttachForm = ReturnType<typeof _inferAttachForm>
 
 /** Guided attach flow (T15): contact → workspace → agents → review on a chrome-less fullscreen. */
-export function AttachThreadWizard() {
+export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { data, isLoading } = useGetAttachThreadWizard()
@@ -128,7 +128,7 @@ export function AttachThreadWizard() {
 	}
 
 	return (
-		<div className="flex min-h-dvh flex-col bg-route-background text-foreground">
+		<div className={cn('flex min-h-dvh flex-col bg-route-background text-foreground', className)} {...props}>
 			<header className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-5 md:px-10">
 				<Logo className="text-base" />
 				<nav className="flex items-center justify-center gap-6">

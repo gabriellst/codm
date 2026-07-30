@@ -1,9 +1,11 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconChevronRight } from '@tabler/icons-react'
 import { useGetHomeDashboard } from '@codedm/client-typescript/typescript'
 import type { ChannelKind, ChannelStatus } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { CHANNEL_KINDS, channelGlyph } from '@/components/console/glyphs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,7 +20,7 @@ import { ConnectChannelDialog } from '../ConnectChannelDialog'
  */
 const CONNECTABLE: readonly ChannelKind[] = ['WHATSAPP']
 
-export function ChannelsSection() {
+export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const { data, isLoading } = useGetHomeDashboard()
 	const show = useDialogStore(s => s.show)
@@ -26,7 +28,7 @@ export function ChannelsSection() {
 	const statusByKind = new Map<ChannelKind, ChannelStatus>((data?.channels ?? []).map(c => [c.kind, c.status]))
 
 	return (
-		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
+		<div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('channels.title')}
 				action={<Button onClick={() => show(<ConnectChannelDialog />)}>{t('channels.connectChannel')}</Button>}

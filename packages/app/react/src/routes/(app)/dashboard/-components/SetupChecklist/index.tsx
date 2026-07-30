@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconCheck } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
@@ -21,7 +22,7 @@ interface Step {
  * guided checklist. Each row deep-links to the screen that completes it and flips to
  * a check once the corresponding read reports it done.
  */
-export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQueryResponse }) {
+export function SetupChecklist({ checklist, className, ...props }: ComponentProps<'div'> & { checklist: GetSetupChecklistQueryResponse }) {
 	const { t } = useTranslation()
 	const steps: Step[] = [
 		{ n: 1, title: t('home.setupChannelTitle'), description: t('home.setupChannelDesc'), to: '/channels', done: checklist.channelDone },
@@ -36,7 +37,7 @@ export function SetupChecklist({ checklist }: { checklist: GetSetupChecklistQuer
 	]
 
 	return (
-		<div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-6 pb-16 pt-24 text-center">
+		<div className={cn('mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-6 pb-16 pt-24 text-center', className)} {...props}>
 			<div className="flex flex-col gap-3">
 				<p className="text-sm text-muted-foreground">{t(greetingKey())}</p>
 				<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('home.welcome')}</h1>

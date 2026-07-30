@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconChevronLeft } from '@tabler/icons-react'
 import { useRouter } from '@tanstack/react-router'
@@ -17,17 +17,17 @@ export function PageHeader({
 	action,
 	back = true,
 	className,
-}: {
+	...props
+}: ComponentProps<'div'> & {
 	title: ReactNode
 	subtitle?: ReactNode
 	action?: ReactNode
 	back?: boolean
-	className?: string
 }) {
 	const router = useRouter()
 	const { t } = useTranslation()
 	return (
-		<div className={cn('flex items-start justify-between gap-4', className)}>
+		<div className={cn('flex items-start justify-between gap-4', className)} {...props}>
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				{back && (
 					<Button

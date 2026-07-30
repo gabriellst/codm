@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGetSettings } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 /**
  * Environment facts (T08): where the data lives and which build is running.
@@ -10,13 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton'
  * filled in by a screen that does not exist, and the timezone is the machine's. A settings list should
  * only hold things you can act on or facts you would go looking for.
  */
-export function GeneralSection() {
+export function GeneralSection({ className, ...props }: ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const { data, isLoading } = useGetSettings()
 
 	if (isLoading || !data) {
 		return (
-			<section className="flex flex-col gap-3">
+			<section className={cn('flex flex-col gap-3', className)} {...props}>
 				<h2 className="label-eyebrow">{t('settings.general')}</h2>
 				<Skeleton className="h-24 rounded-2xl" />
 			</section>
@@ -29,7 +31,7 @@ export function GeneralSection() {
 	]
 
 	return (
-		<section className="flex flex-col gap-3">
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
 			<h2 className="label-eyebrow">{t('settings.general')}</h2>
 			<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
 				{rows.map(row => (

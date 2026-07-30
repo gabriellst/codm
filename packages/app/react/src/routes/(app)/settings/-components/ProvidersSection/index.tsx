@@ -1,18 +1,20 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDetectProviders } from '@codedm/client-typescript/typescript'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
 /** Detected agent-provider CLIs with binary path, version and install status. */
-export function ProvidersSection() {
+export function ProvidersSection({ className, ...props }: ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const { data, isLoading } = useDetectProviders()
 	const providers = data?.providers ?? []
 
 	return (
-		<section className="flex flex-col gap-3">
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
 			<h2 className="label-eyebrow">{t('settings.agentProviders')}</h2>
 			{isLoading ? (
 				<div className="flex flex-col gap-3">

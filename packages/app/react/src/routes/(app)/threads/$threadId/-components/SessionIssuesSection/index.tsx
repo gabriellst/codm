@@ -1,21 +1,23 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGetSessionIssues } from '@codedm/client-typescript/typescript'
 import type { IssueStatus } from '@codedm/client-typescript/typescript'
 import { IssueRow } from '@/components/console/IssueRow'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 
 const STATUS_ORDER: IssueStatus[] = ['NEEDS_INPUT', 'WORKING', 'COMPLETED']
 
 /** Issues of one thread grouped by status, with the auto-archive note (T11). */
-export function SessionIssuesSection({ threadId }: { threadId: string }) {
+export function SessionIssuesSection({ threadId, className, ...props }: ComponentProps<'div'> & { threadId: string }) {
 	const { t } = useTranslation()
 	const { data, isLoading } = useGetSessionIssues(threadId)
 
 	if (isLoading || !data) {
 		return (
-			<div className="flex flex-col gap-4 py-4">
+			<div className={cn('flex flex-col gap-4 py-4', className)} {...props}>
 				<Skeleton className="h-4 w-56" />
 				<Skeleton className="h-16 rounded-2xl" />
 				<Skeleton className="h-16 rounded-2xl" />
@@ -30,7 +32,7 @@ export function SessionIssuesSection({ threadId }: { threadId: string }) {
 	const empty = orderedGroups.length === 0 && data.archived.length === 0
 
 	return (
-		<div className="flex flex-col gap-6 py-2 h-full">
+		<div className={cn('flex flex-col gap-6 py-2 h-full', className)} {...props}>
 			<p className="text-sm text-muted-foreground">
 				{t('session.issuesStats', { awaiting: stats.awaitingInput, working: stats.working, completed: stats.completed })}
 			</p>

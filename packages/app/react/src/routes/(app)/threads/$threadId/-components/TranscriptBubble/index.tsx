@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import type { GetSessionChatQueryResponse } from '@codedm/client-typescript/typescript'
@@ -13,11 +14,11 @@ type Entry = GetSessionChatQueryResponse['transcript'][number]
  * right in a dark bubble; WHISPER is a right-aligned agents-only aside; ACTION is a
  * full-width system line (classifications, edits, test runs).
  */
-export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: string }) {
+export function TranscriptBubble({ entry, threadId, className, ...props }: ComponentProps<'div'> & { entry: Entry; threadId: string }) {
 	const { t } = useTranslation()
 	if (entry.kind === 'ACTION') {
 		return (
-			<div className="flex items-start gap-2 py-1 text-sm text-muted-foreground">
+			<div className={cn('flex items-start gap-2 py-1 text-sm text-muted-foreground', className)} {...props}>
 				<Dot className="mt-1.5 bg-muted-foreground/50" />
 				<span className="flex-1">{entry.text}</span>
 			</div>
@@ -26,7 +27,7 @@ export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: 
 
 	if (entry.kind === 'CONTACT') {
 		return (
-			<div className="flex flex-col items-start gap-1">
+			<div className={cn('flex flex-col items-start gap-1', className)} {...props}>
 				<div className="max-w-[85%] rounded-2xl rounded-tl-md bg-secondary px-4 py-2.5 text-foreground">{entry.text}</div>
 				<span className="px-1 text-xs text-muted-foreground">{entry.at}</span>
 			</div>
@@ -38,11 +39,10 @@ export function TranscriptBubble({ entry, threadId }: { entry: Entry; threadId: 
 	// page's activity list uses — one set of words for one concept, translated in one place. It used to
 	// be three English literals ('Agent' / 'Whisper' / 'You') sitting in an otherwise translated screen.
 	// A SYSTEM line names the actual CLI when it knows it, which is more specific than "Agente".
-	const caption =
-		entry.kind === 'SYSTEM' && entry.provider ? providerLabel[entry.provider] : enumLabel('TranscriptKind', entry.kind)
+	const caption = entry.kind === 'SYSTEM' && entry.provider ? providerLabel[entry.provider] : enumLabel('TranscriptKind', entry.kind)
 
 	return (
-		<div className="flex flex-col items-end gap-1">
+		<div className={cn('flex flex-col items-end gap-1', className)} {...props}>
 			<div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
 				{entry.issueId && (
 					<Link

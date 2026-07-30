@@ -1,4 +1,6 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 
 // Localized step copy — titles/descriptions come from the typed catalog, never inline literals.
 const STEPS = [
@@ -8,10 +10,10 @@ const STEPS = [
 ]
 
 /** Slide 2 — how it works: the three cold-start chores as a numbered list. */
-export function HowItWorksSlide() {
+export function HowItWorksSlide({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	return (
-		<div className="flex w-full flex-col items-center gap-6">
+		<div className={cn('flex w-full flex-col items-center gap-6', className)} {...props}>
 			<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('onboarding.slide2Title')}</h1>
 			<div className="flex w-full flex-col gap-5 text-left">
 				{STEPS.map(step => (

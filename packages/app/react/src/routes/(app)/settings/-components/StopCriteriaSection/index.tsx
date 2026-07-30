@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { getSettingsQueryKey, useGetSettings, useUpdateStopCriteria } from '@codedm/client-typescript/typescript'
 import type { GetSettingsQueryResponse } from '@codedm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 
 type Criteria = GetSettingsQueryResponse['stopCriteria']
 type CriteriaKey = keyof Criteria
@@ -20,7 +22,7 @@ const CRITERIA: { key: CriteriaKey; labelKey: string; descKey: string }[] = [
  * Stop criteria (T08): the conditions that pause an agent and flag the thread
  * "Needs you". Each toggle persists the full criteria object via UpdateStopCriteria.
  */
-export function StopCriteriaSection() {
+export function StopCriteriaSection({ className, ...props }: ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetSettings()
@@ -39,7 +41,7 @@ export function StopCriteriaSection() {
 	}
 
 	return (
-		<section className="flex flex-col gap-3">
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
 			<div className="flex flex-col gap-1">
 				<h2 className="label-eyebrow">{t('settings.stopCriteria')}</h2>
 				<p className="text-sm text-muted-foreground">{t('settings.stopCriteriaDescription')}</p>

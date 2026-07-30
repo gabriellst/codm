@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codedm/client-typescript/typescript'
+import { cn } from '@/lib/utils'
 import { useServerEvents } from '@/hooks'
 import { Dot } from './StatusDot'
 
@@ -12,7 +14,7 @@ import { Dot } from './StatusDot'
  * Direct wire events since B5 — the synthesized `browser.thread_status_changed`
  * frame (and the `BrowserFrameEnricher` that computed it) are gone.
  */
-export function AgentsRunningPill() {
+export function AgentsRunningPill({ className, ...props }: ComponentProps<'span'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data } = useGetHomeDashboard()
@@ -28,7 +30,13 @@ export function AgentsRunningPill() {
 	const running = count > 0
 
 	return (
-		<span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-1.5 text-sm font-medium text-secondary-foreground shadow-sm">
+		<span
+			className={cn(
+				'inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-1.5 text-sm font-medium text-secondary-foreground shadow-sm',
+				className,
+			)}
+			{...props}
+		>
 			<Dot className={running ? 'bg-success' : 'bg-muted-foreground/40'} />
 			{t('console.agentsRunning', { count })}
 		</span>

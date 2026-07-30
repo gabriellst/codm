@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -17,7 +18,7 @@ import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 type Dashboard = GetHomeDashboardQueryResponse
 
 /** The operating overview (T03): agents live, who needs you, active sessions, today's numbers, channel health. */
-export function HomeDashboard() {
+export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetHomeDashboard()
@@ -29,13 +30,13 @@ export function HomeDashboard() {
 		},
 	)
 
-	if (isLoading || !data) return <DashboardSkeleton />
+	if (isLoading || !data) return <DashboardSkeleton className={className} {...props} />
 
 	const running = data.agentsRunningNow
 	const headline = running === 0 ? t('dashboard.agentsWorkingNone') : t('dashboard.agentsWorking', { count: running })
 
 	return (
-		<div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10">
+		<div className={cn('mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10', className)} {...props}>
 			<div className="flex flex-col gap-2">
 				<p className="text-sm text-muted-foreground">{t(greetingKey())}</p>
 				<h1 className="heading-display text-4xl text-foreground md:text-5xl">{headline}</h1>
@@ -210,9 +211,9 @@ function ChannelsCard({ channels }: { channels: Dashboard['channels'] }) {
 	)
 }
 
-function DashboardSkeleton() {
+function DashboardSkeleton({ className, ...props }: ComponentProps<'div'>) {
 	return (
-		<div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10">
+		<div className={cn('mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10', className)} {...props}>
 			<div className="flex flex-col gap-3">
 				<Skeleton className="h-4 w-28" />
 				<Skeleton className="h-12 w-96" />

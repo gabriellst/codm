@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { channelGlyph } from './glyphs'
@@ -22,16 +23,16 @@ export function ThreadAvatar({
 	channelKind,
 	size = 'default',
 	className,
-}: {
+	...props
+}: ComponentProps<'div'> & {
 	name: string
 	channelKind?: ChannelKind
 	size?: Size
-	className?: string
 }) {
 	const Glyph = channelKind ? channelGlyph[channelKind] : undefined
 	const badgeSize = size === 'lg' ? 'size-4' : 'size-3.5'
 	return (
-		<div className={cn('relative shrink-0', className)}>
+		<div className={cn('relative shrink-0', className)} {...props}>
 			<Avatar size={size}>
 				<AvatarFallback>{initials(name)}</AvatarFallback>
 			</Avatar>

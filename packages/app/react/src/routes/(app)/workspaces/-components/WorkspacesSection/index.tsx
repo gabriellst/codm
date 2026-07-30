@@ -1,9 +1,11 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconFolder, IconPlus } from '@tabler/icons-react'
 import { useListWorkspaces } from '@codedm/client-typescript/typescript'
 import type { ListWorkspacesQueryResponse } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,14 +16,14 @@ import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 type Workspace = ListWorkspacesQueryResponse['workspaces'][number]
 
 /** Registered project folders on this Mac, with their git/Claude badges and thread counts (T07). */
-export function WorkspacesSection() {
+export function WorkspacesSection({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const { data, isLoading } = useListWorkspaces()
 	const show = useDialogStore(s => s.show)
 	const workspaces = data?.workspaces ?? []
 
 	return (
-		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
+		<div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('workspaces.title')}
 				action={

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowUp, IconChevronLeft } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
 import { Dot } from '@/components/console/StatusDot'
 import { TranscriptBubble } from '../TranscriptBubble'
@@ -23,7 +25,12 @@ import { TranscriptBubble } from '../TranscriptBubble'
 type Detail = GetIssueDetailQueryResponse
 
 /** One issue drill-down (T12): the dark terminal panel, routed messages, and an issue-scoped steer. */
-export function IssueDetailSection({ threadId, issueId }: { threadId: string; issueId: string }) {
+export function IssueDetailSection({
+	threadId,
+	issueId,
+	className,
+	...props
+}: ComponentProps<'div'> & { threadId: string; issueId: string }) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
@@ -32,7 +39,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 
 	if (isLoading || !data) {
 		return (
-			<div className="flex flex-col gap-4 py-4">
+			<div className={cn('flex flex-col gap-4 py-4', className)} {...props}>
 				<Skeleton className="h-8 w-64" />
 				<Skeleton className="h-48 rounded-2xl" />
 			</div>
@@ -53,7 +60,7 @@ export function IssueDetailSection({ threadId, issueId }: { threadId: string; is
 	}
 
 	return (
-		<div className="flex flex-col py-2 gap-2">
+		<div className={cn('flex flex-col py-2 gap-2', className)} {...props}>
 			<Link
 				to="/threads/$threadId/issues"
 				params={{ threadId }}

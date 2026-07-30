@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react'
+import { cn } from '@/lib/utils'
 import { isTauri } from '@/services/utils/tauri/isTauri'
 
 /**
@@ -13,14 +15,18 @@ import { isTauri } from '@/services/utils/tauri/isTauri'
  * TODO: they need a WindowService in the services DI so getCurrentWindow() stays inside the
  * code-split tauri layer.
  */
-export function AppChrome() {
+export function AppChrome({ className, ...props }: ComponentProps<'header'>) {
 	// In Overlay mode the traffic lights sit top-left, overlaid on the webview — reserve the band so
 	// the wordmark clears them, and mirror it on the right so the centre stays a true centre.
 	const trafficLightBand = isTauri() ? 'w-[78px]' : 'w-3'
 	return (
 		<header
 			data-tauri-drag-region
-			className="grid h-8 shrink-0 grid-cols-[auto_1fr_auto] items-center border-b border-border/60 bg-route-background/70 backdrop-blur"
+			className={cn(
+				'grid h-8 shrink-0 grid-cols-[auto_1fr_auto] items-center border-b border-border/60 bg-route-background/70 backdrop-blur',
+				className,
+			)}
+			{...props}
 		>
 			<div data-tauri-drag-region className={trafficLightBand} />
 			<div data-tauri-drag-region className="flex justify-center">

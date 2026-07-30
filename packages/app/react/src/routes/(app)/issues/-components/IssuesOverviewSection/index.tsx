@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { useGetIssuesOverview } from '@codedm/client-typescript/typescript'
@@ -5,6 +6,7 @@ import type { IssueStatus } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
 import { IssueRow } from '@/components/console/IssueRow'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
@@ -14,7 +16,7 @@ const routeApi = getRouteApi('/(app)/issues/')
 const STATUS_ORDER: IssueStatus[] = ['NEEDS_INPUT', 'WORKING', 'COMPLETED']
 
 /** Every issue across every thread, grouped by status, with an archived reveal (T04). */
-export function IssuesOverviewSection() {
+export function IssuesOverviewSection({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const { archived } = routeApi.useSearch()
 	const { data, isLoading } = useGetIssuesOverview({ includeArchived: archived })
@@ -34,7 +36,7 @@ export function IssuesOverviewSection() {
 	)
 
 	return (
-		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
+		<div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('issues.title')}
 				subtitle={subtitle ?? <Skeleton className="h-4 w-64" />}

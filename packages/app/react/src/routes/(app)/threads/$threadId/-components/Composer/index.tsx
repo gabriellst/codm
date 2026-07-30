@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowUp } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -6,6 +7,7 @@ import { getSessionChatQueryKey, useSendDirectMessage, useSteerThread } from '@c
 import type { ThreadMode } from '@codedm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 
 /**
  * The composer (T09). Whisper (STEER) reaches agents only, via `SteerThread`; Direct (DIRECT) sends
@@ -23,7 +25,12 @@ import { Textarea } from '@/components/ui/textarea'
  * hint line under the box says which, in words, on every render — the state is still visible, it
  * just is not a control any more.
  */
-export function Composer({ threadId, composerMode }: { threadId: string; composerMode: ThreadMode }) {
+export function Composer({
+	threadId,
+	composerMode,
+	className,
+	...props
+}: ComponentProps<'div'> & { threadId: string; composerMode: ThreadMode }) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const [text, setText] = useState('')
@@ -47,7 +54,12 @@ export function Composer({ threadId, composerMode }: { threadId: string; compose
 	}
 
 	return (
-		<div data-testid="composer" data-mode={mode} className="sticky bottom-0 z-10 flex flex-col gap-2 bg-route-background pb-2 pt-4">
+		<div
+			{...props}
+			data-testid="composer"
+			data-mode={mode}
+			className={cn('sticky bottom-0 z-10 flex flex-col gap-2 bg-route-background pb-2 pt-4', className)}
+		>
 			{/* Shape owned by the CLI's `composer` block: bun cli component <route> <Name> --mutation=<Hook> */}
 			<div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2">
 				<Textarea
