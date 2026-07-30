@@ -414,17 +414,23 @@ Ambos os 0→1 confirmam que as duas regras novas de T8 SABEM falhar, não só d
      dark mode. Correto e a regra é cega.
    - **~60 de `packages/api/**`** — território PROIBIDO desta frente por definição do plano; `bun
      detect` continua exit 1 por causa deles, declarado desde o Ground, não regressão.
-10. **Redis compartilhado entre repos irmãos causa 1 falha ambiental em `api-typescript:test`
+10. **Redis compartilhado entre repos irmãos causa flakiness ambiental em `api-typescript:test`
     (`redis-bridge.integration.test.ts`), não relacionada a esta frente.** O teste é `SKIP-GATED`
     (deveria pular se Redis não estiver acessível), mas há um container Redis de OUTRO repo
     (`medscall-monorepo-redis`, `docker ps` confirma) escutando na mesma porta `6379` do host — o teste
-    CONECTA com sucesso mas o `waitUntil` do fluxo Go→TS nunca vê o fato esperado (consumer group /
-    stream provavelmente contaminado por outro processo usando a mesma porta), e falha por timeout
-    (20s) consistentemente em 2 tentativas. `git log -- .../redis-bridge.integration.test.ts` mostra a
-    última mudança em B4 (`839ee162`), nada a ver com o diff desta frente (7 arquivos, todos fora de
-    `packages/api/**`). `bun run test` COM cache Nx (o caminho normal, inclusive o do pre-commit hook)
-    não reexecuta esse teste porque o hash de conteúdo de `packages/api/typescript` não mudou — só
-    `--skipNxCache` expôs a falha ambiental. Não é uma regressão desta frente; é infraestrutura de
+    CONECTA com sucesso mas o `waitUntil` do fluxo Go→TS às vezes não vê o fato esperado a tempo
+    (consumer group / stream provavelmente contendendo com outro processo na mesma porta), e falha por
+    timeout (20s). Confirmado como FLAKY, não deterministicamente quebrado: 2 execuções isoladas
+    (`bun test tests/integration/redis-bridge.integration.test.ts`) falharam em sequência durante a
+    medição de §(a); o próprio Nx, no pre-commit hook do commit deste artefato (`2fed1a40`), reportou
+    `Nx detected a flaky task` e o retry automático **passou** ("Successfully ran target test for
+    project api-typescript") — três amostras, dois padrões (falha isolada repetida, sucesso via retry
+    do Nx), a assinatura clássica de contenção de recurso externo, não de bug determinístico. `git log
+    -- .../redis-bridge.integration.test.ts` mostra a última mudança em B4 (`839ee162`), nada a ver com
+    o diff desta frente (7 arquivos, todos fora de `packages/api/**`). `bun run test` COM cache Nx (o
+    caminho normal do dia a dia) às vezes replaya um resultado stale (verde OU vermelho, dependendo de
+    qual foi a última rodada fresh que escreveu aquele hash) — só `--skipNxCache` ou o retry do Nx
+    revelam o estado real no momento. Não é uma regressão desta frente; é infraestrutura de
     desenvolvimento compartilhada entre repos irmãos brigando pela mesma porta.
 
 ---
