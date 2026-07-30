@@ -10,10 +10,14 @@ import { join, resolve } from 'node:path'
  * próprio `useState` de `open` e ninguém ficou vermelho. Esta rail é a metade mecânica.
  *
  * O predicado tem três metades porque cada uma sozinha é contornável:
- *   1. o arquivo REFERENCIA `useDialogStore`         — sem isso não há store nenhuma
+ *   1. o arquivo IMPORTA `useDialogStore`             — sem isso não há store nenhuma
  *   2. o arquivo NÃO tem `onOpenChange`               — a prop é o sintoma do wrapper <Dialog> local
  *   3. o arquivo NÃO declara `const [open|isOpen, …]` — importar a store e manter o useState é o
  *      caminho mais provável de regressão
+ *
+ * O predicado 1 exige o IMPORT, não a menção: um `.includes('useDialogStore')` é satisfeito por um
+ * docblock que apenas AFIRMA seguir o padrão — foi exatamente assim que o `ThreadSettingsDialog`
+ * passou. Prosa não é fiação.
  *
  * Escopo: qualquer `.tsx` sob `-components/` cujo CAMINHO contenha "Dialog" — a pasta conta tanto
  * quanto o basename, porque o padrão do repo é `<Name>Dialog/index.tsx`. `routes/styleguide/` fica
@@ -22,9 +26,16 @@ import { join, resolve } from 'node:path'
 
 const REACT_SRC = resolve(import.meta.dirname, '../../src')
 
-/** Ficheiros isentos, cada um com o PORQUÊ. Vazia é o estado correto — uma entrada aqui é dívida. */
+/** Um import de fato, em qualquer grafia (named, default, `import type` misto, multi-linha). */
+const IMPORTS_DIALOG_STORE = /^import\s[^'"]*\buseDialogStore\b/m
+
+/**
+ * Isenções do predicado 1 (o IMPORT), cada uma com o PORQUÊ. Os predicados 2 e 3 não têm isenção:
+ * ser conteúdo puro nunca justifica ser dono do próprio `open`.
+ */
 const WHITELIST: Record<string, string> = {
-	// (vazia — nenhum dialog de rota tem motivo para ser dono do próprio `open`)
+	'routes/(app)/threads/$threadId/-components/ThreadSettingsDialog/index.tsx':
+		'conteúdo puro sem afordância própria de fechar — o dismissal roteia pelo host (o X do DialogContent, Esc, backdrop), então não há `hide` a chamar e o import seria morto.',
 }
 
 async function dialogFiles(): Promise<string[]> {
@@ -39,10 +50,10 @@ async function dialogFiles(): Promise<string[]> {
 }
 
 describe('rail A — dialog de rota é dirigido por useDialogStore (component bp-24)', () => {
-	it('todo *Dialog* em -components/ referencia useDialogStore', async () => {
+	it('todo *Dialog* em -components/ IMPORTA useDialogStore', async () => {
 		const offenders = (await dialogFiles()).filter(f => {
 			if (WHITELIST[f]) return false
-			return !readFileSync(join(REACT_SRC, f), 'utf8').includes('useDialogStore')
+			return !IMPORTS_DIALOG_STORE.test(readFileSync(join(REACT_SRC, f), 'utf8'))
 		})
 		expect(offenders).toEqual([])
 	})
@@ -50,7 +61,6 @@ describe('rail A — dialog de rota é dirigido por useDialogStore (component bp
 	it('nenhum dialog de rota declara open/onOpenChange local — a store é a dona do aberto', async () => {
 		const offenders: string[] = []
 		for (const f of await dialogFiles()) {
-			if (WHITELIST[f]) continue
 			const source = readFileSync(join(REACT_SRC, f), 'utf8')
 			if (/\bonOpenChange\b/.test(source)) offenders.push(`${f} (onOpenChange)`)
 			if (/const\s*\[\s*(open|isOpen)\s*,/.test(source)) offenders.push(`${f} (useState de open)`)
