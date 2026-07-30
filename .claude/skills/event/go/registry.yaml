@@ -150,6 +150,26 @@ registry:
                 events.TranscodingJobCompletedIntegrationPayload{VideoID: typed.Payload.VideoID},
             ))
         }
+    - id: EVT-GO-09
+      name: "As três formas de ativação — e a intenção decide qual (par Go de EVT-C11)"
+      when: "você está a ponto de criar um evento para fazer algo acontecer"
+      rule: |
+        // Fato (reativo/auditoria) → EVENTO.
+        //   Domain event: acumulado no agregado (AppendDomainEvent) e entregue pelo outbox.
+        //   Integration event: publicado por um handler NOMEADO — a convenção Go é um handler POR
+        //   EVENTO com sufixo *IntegrationHandler, em internal/<ctx>/handlers/, registrado
+        //   nominalmente em module.go. Publish() INSERE a linha no outbox (durável) e faz fan-out dos
+        //   callbacks in-process.
+        // Comando durável de executor único → a fila de comandos, na transação do fato que o motiva.
+        // Síncrono na própria request → chamar o use case direto.
+        //
+        // A REGRA DE INTENÇÃO (founder, 29-jul-2026), citada literalmente: "evento existe para fins
+        // reativos, auditoria ou event sourcing — nunca para comandar. Se a existência do evento é só
+        // para um handler executar algo que poderia ser um comando/use case direto, está errado."
+        //
+        // ESCADA DO PAYLOAD: (1) o dado pertence ao fato → o domain event o carrega; (2) o consumidor
+        // relê → evento thin; (3) só então enrichment no handler publicador, por dependência injetada.
+      wrong: "declarar um evento de wire cuja razão de existir é um handler executar uma ação"
 
   bad_practices:
     - id: bp-GO-EVT-01

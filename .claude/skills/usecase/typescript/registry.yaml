@@ -208,6 +208,36 @@ registry:
         // Tests: success path, validation errors, domain errors, tenant/ownership guards
         // See test skill TST-14 for canonical pattern
       wrong: "No colocated test file exists for the use case, OR test uses mock mode instead of integration mode, OR test creates data via use cases instead of given helpers"
+    - id: UC-P16
+      name: "Comando durável cross-processo: enqueueCommand(..., tx) na transação do fato"
+      when: "o use case precisa que algo aconteça fora do processo/da request, com retry, e o executor é único"
+      reason: >
+        `SqliteCommandQueue.enqueueCommand(name, input, opts, tx)` INSERE em
+        `shared_scheduled_commands` DENTRO da transação do chamador, então "agendar" commita ou aborta
+        junto com a escrita de domínio que motiva o comando — sem dual-write. Uma queda entre "o
+        usuário vê o efeito" e "a ação externa aconteceu" deixa a linha na fila, e o worker
+        (registrado pelo `commandHandlers` do BoundedContext) reexecuta com backoff exponencial, lease
+        de 60s e dead-letter em `MAX_ATTEMPTS`. É a alternativa DURÁVEL ao evento-comando (cc-bp-26).
+        Canonical snippet: `thread/usecases/SendDirectMessage.ts`.
+      rule: |
+        constructor(
+          private readonly transcript: TranscriptRepository,
+          private readonly commands: CommandQueue,
+        ) { super() }
+
+        return this.withTransaction(tx, async tx => {
+          const entry = await this.transcript.append({ … }, tx)
+          // MESMA transação da escrita que o motiva. `jobId` é a chave natural do fato (aqui o
+          // entryId), então um reenvio do mesmo fato deduplica em vez de mandar duas vezes.
+          await this.commands.enqueueCommand<DeliverChannelMessage>(
+            'deliver_channel_message',
+            { ownerId: thread.ownerId, channelId: thread.channelId, contactExternalId: thread.contactRef.externalId, text: input.text, author: MessageAuthor.HUMAN },
+            { jobId: entry.entryId },
+            tx,
+          )
+          return { entryId: entry.entryId }
+        })
+      wrong: "enfileirar fora da transação (dual-write: a ação sobrevive a um rollback, ou o rollback perde a ação); ou publicar um integration event para que um único handler execute a ação"
 
 
   snippet:

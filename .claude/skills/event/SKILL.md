@@ -9,6 +9,21 @@ A past-tense fact. **Domain events** stay inside one bounded context and trigger
 
 The shape and idioms of this primitive differ per backend language; the lang-specific playbooks below carry the concrete rules, code, and bad practices.
 
+## Ativação — qual mecanismo (decisão do founder, 29-jul-2026)
+
+| Precisa de… | Mecanismo | Garantia | Quem entrega |
+|---|---|---|---|
+| "isto aconteceu, quem quiser reage" (fato, auditoria, event sourcing) | **outbox** — domain event no contexto; integration event pelo publisher nomeado | durável, at-least-once, fan-out | dispatcher/poller do outbox |
+| "isto precisa acontecer, com retry, e alguém é o único executor" | **CommandQueue** — `enqueueCommand(nome, input, opts, tx)` na transação do fato | durável, retry+backoff, lease, dead-letter | o worker que registrou o comando |
+| "turnos serializados por target" | **Mailbox** — produtores só ENFILEIRAM, sempre na transação do fato | durável, um turno por target de cada vez | o MailboxDispatcher (consumidor único) |
+| "síncrono, nesta request" | **use case chamado direto** | a transação da própria request | o chamador |
+
+**A regra de intenção:** evento existe para fins reativos, auditoria ou event sourcing — **nunca para
+comandar**. Se a existência do evento é só para um handler executar algo que poderia ser um
+comando/use case direto, está errado. Nomes `*Requested` não são proibidos por si; a intenção é o
+critério. Enforcement: `cc-bp-26` (cross-cutting, warning), `handler` bp-09 / bp-GO-HDL-07,
+`EVT-C11` / `EVT-GO-09`, `UC-P16`.
+
 ## Language variants
 
 | Backend | Playbook | Registry |

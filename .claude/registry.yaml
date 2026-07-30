@@ -805,6 +805,48 @@ cross_cutting_bad_practices:
       // OR (form 3): convergent re-derivation —
       //   "Naturally idempotent: re-enforcing limits re-derives the same lock set."
 
+  - id: cc-bp-26
+    scope: backend
+    name: "Intenção de comando disfarçada de evento (evento existe só para um handler executar algo)"
+    severity: warning
+    always_flag_when: >
+      Um evento (de domínio OU de integração) tem UM ÚNICO consumidor e esse consumidor não reage a um
+      fato — ele EXECUTA uma ação (chama um serviço externo, faz um POST, dispara um envio) que poderia
+      ser um comando ou um use case chamado direto. A formulação do founder (29-jul-2026): "evento
+      existe para fins reativos, auditoria ou event sourcing — nunca para comandar. Se a existência do
+      evento é só para um handler executar algo que poderia ser um comando/use case direto, está
+      errado." Nomes `*Requested` não são proibidos por si; a INTENÇÃO é o critério. Julgamento, não
+      forma: não existe teste mecânico para isto (por isso `mechanical: false` e severidade warning) —
+      pergunte "se este handler não existisse, alguém mais reagiria a este fato?". Se a resposta é não,
+      o desenho certo é (a) `CommandQueue.enqueueCommand(nome, input, opts, tx)` na MESMA transação do
+      fato que o motiva, quando precisa de durabilidade/retry e o executor é único, ou (b) o use case
+      chamado direto, quando é síncrono na própria request.
+    exceptions: |
+      - Fatos genuinamente reativos que HOJE têm um consumidor só e amanhã podem ter outros (o fato
+        existiria mesmo sem o handler) — o critério é a intenção, não a contagem de consumidores.
+      - Fatos publicados para auditoria/event sourcing sem consumidor nenhum (ex.
+        `thread.direct_message_sent`): são registro, não comando.
+    wrong: |
+      // contracts: um evento cuja razão de existir é fazer alguém executar
+      model ChannelDeliveryRequestedEvent extends IntegrationEvent { name: "integration.channel.delivery_requested"; text: string; }
+      // e o único consumidor não reage — executa:
+      export class DeliverChannelMessage extends EventHandler<typeof ChannelDeliveryRequestedEvent> {
+        async handle(event) { await this.sender.send({ ...event.payload }, event.ownerId) }
+      }
+      // produtor: o "pedido" viaja por um transporte sem persistência; uma queda perde a ação.
+      await this.mediator.publish(new ChannelDeliveryRequestedEvent({ ownerId, payload }))
+    right: |
+      // O comando é um comando: durável, executor único, enfileirado na transação do fato.
+      await this.commands.enqueueCommand<DeliverChannelMessage>(
+        'deliver_channel_message',
+        { ownerId, channelId, contactExternalId, text, author },
+        { jobId: entry.entryId },
+        tx,
+      )
+      // O executor é um use case registrado no CommandQueue (BoundedContext `commandHandlers`),
+      // com retry/backoff/lease da fila. O FATO, se importa para auditoria, continua existindo —
+      // sem consumidor.
+
 # Implementation order — follow top-to-bottom when building a feature
 backend_sequence: [controller, schema, sdk, entity, value-object, enum, errors, db-schema, repository-interface, repository-impl, service-interface, service-impl, usecase, handler, query, sdk]
 frontend_sequence: [route, section, component, form, store]

@@ -178,6 +178,26 @@ registry:
             // intentionally return nil
         }
         return nil
+    - id: HDL-GO-08
+      name: "A exceção nomeada em Go: um *IntegrationHandler por evento, registrado nominalmente"
+      when: "um fato do contexto precisa atravessar para outro bounded context/serviço"
+      rule: |
+        // A regra agnóstica é a mesma do TS (HDL-P13) — "publicação de integração só em publicadores
+        // NOMEADOS; todo outro handler é domínio puro" — mas ela se instancia na convenção Go, que já
+        // existe e é diferente: um handler POR EVENTO, sufixo *IntegrationHandler, em
+        // internal/<ctx>/handlers/, com o ExternalMediator INJETADO no construtor (HDL-GO-05) e
+        // registro NOMINAL em module.go. Nunca em use case, repositório, controller/rota ou service.
+        //
+        // internal/channel/handlers/remotes_synced_handler.go
+        func (h *RemotesSyncedIntegrationHandler) Handle(ctx context.Context, event types.DomainEventI) error {
+            if err := h.externalMediator.Publish(ctx, integrationEvent); err != nil {
+                return err
+            }
+            return nil
+        }
+        // internal/channel/module.go — registro nominal, um por linha
+        m.Register(handlers.NewRemotesSyncedIntegrationHandler(ext))
+      wrong: "Publish() chamado de um use case, de um repositório, de uma rota ou de um service; ou um publicador anônimo/ad-hoc fora de internal/<ctx>/handlers/"
 
   bad_practices:
     - id: bp-GO-HDL-01
@@ -268,3 +288,23 @@ registry:
         }
         profile := entities.NewProfile(e.Payload.UserID)
         return h.repo.Save(ctx, profile)
+
+    - id: bp-GO-HDL-07
+      name: "Handler que EXECUTA uma ação de consumidor único (par Go de handler/typescript bp-09)"
+      severity: warning
+      mechanical: false
+      reason: >
+        O handler é o único consumidor do evento e não reage a um fato — executa uma ação. Então o
+        evento existe para COMANDAR. Regra de intenção do founder (29-jul-2026), citada literalmente:
+        "evento existe para fins reativos, auditoria ou event sourcing — nunca para comandar. Se a
+        existência do evento é só para um handler executar algo que poderia ser um comando/use case
+        direto, está errado." A forma certa é um comando durável (enfileirado na transação do fato que
+        o motiva, executor único, com retry) ou o use case chamado direto. Julgamento, não grep.
+      wrong: |
+        // evento de wire declarado só para que ISTO rode
+        func (h *SendSomethingHandler) Handle(ctx context.Context, event fwtypes.IntegrationEventI) error {
+            return h.client.Post(ctx, typed.Payload) // executa, não reage
+        }
+      right: |
+        // O fato, se importa, continua sendo fato; a AÇÃO é comandada — enfileirada na mesma
+        // transação do fato, com executor único e retry, ou chamada direto pelo use case.

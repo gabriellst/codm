@@ -31,7 +31,7 @@ registry:
     - id: EVT-C02
       name: "Integration event (cross-context)"
       when: "event consumed by different bounded context"
-      rule: "extends BaseIntegrationEvent, published via ExternalMediator by a HANDLER reacting to a domain event — never by a use case"
+      rule: "extends BaseIntegrationEvent, publicado via ExternalMediator pelo publisher NOMEADO do contexto (`Publish<Ctx>IntegrationEvents`) — nunca por um use case, nunca por outro handler. `publish()` PERSISTE a linha na lane `integration` do outbox (B3); a entrega é sempre do poller, at-least-once, e o consumidor deduplica"
     - id: EVT-C10
       name: "Raising = the use case persists the event (declaring the class is NOT enough)"
       when: always
@@ -42,6 +42,28 @@ registry:
         await this.domainEventRepository.save(new XUpdatedEvent({ ... }), tx)
         // (inject domainEventRepository via the use case constructor if not present)
       wrong: "Declaring the event class without a raise site — a declared-never-raised event is dead code (slice-closure SCW-01a); or internalMediator.publish(...) from a use case"
+    - id: EVT-C11
+      name: "As três formas de ativação — e a intenção decide qual"
+      when: "você está a ponto de criar um evento para fazer algo acontecer"
+      rule: |
+        # Fato (reativo/auditoria) → EVENTO.
+        #   Domain event: persistido pelo use case na tx do agregado; o outbox entrega ao InternalMediator.
+        #   Integration event: republicado pelo publisher NOMEADO do contexto; `publish()` grava na lane
+        #   `integration` e o poller entrega (durável desde B3; antes era fan-out em memória).
+        # Comando durável de executor único → CommandQueue.enqueueCommand(nome, input, opts, tx).
+        # Turnos serializados por target → Mailbox.
+        # Síncrono na própria request → use case chamado direto.
+        #
+        # A REGRA DE INTENÇÃO (founder, 29-jul-2026), citada literalmente: "evento existe para fins
+        # reativos, auditoria ou event sourcing — nunca para comandar. Se a existência do evento é só
+        # para um handler executar algo que poderia ser um comando/use case direto, está errado."
+        #
+        # ESCADA DO PAYLOAD, nesta ordem:
+        #   1. O dado pertence ao fato? → o domain event o carrega desde o raise.
+        #   2. O consumidor consegue reler? → evento thin, o consumidor busca o resto.
+        #   3. Só então enrichment NO PUBLISHER do contexto, por um service injetado (exceção
+        #      justificada — nunca no consumidor, nunca no transporte).
+      wrong: "criar um evento novo porque 'aí um handler faz X' — X é um comando ou um use case"
 
     # Patterns extracted from codebase implementations
     - id: EVT-P01

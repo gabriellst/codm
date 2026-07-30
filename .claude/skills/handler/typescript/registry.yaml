@@ -178,6 +178,32 @@ registry:
             return
           }
         }
+    - id: HDL-P13
+      name: "A exceção nomeada: um publisher de integração POR CONTEXTO"
+      when: "um fato do contexto precisa atravessar para outro bounded context/serviço"
+      reason: >
+        `Publish<Ctx>IntegrationEvents` é o ÚNICO código autorizado a chamar
+        `ExternalMediator.publish()` — um por contexto, com união/`instanceof` sobre os fatos do
+        contexto. Todo outro handler é domínio puro: reage, invoca use cases, e não publica
+        integração. Com a publicação concentrada, a durabilidade do transporte mora num lugar só
+        (`publish()` persiste na lane `integration`) e "quem pode publicar" é verificável por grep.
+        A variante Go instancia a MESMA regra com a convenção dela (HDL-GO-08): um
+        `*IntegrationHandler` por evento — não force o shape TS no Go.
+      rule: |
+        @injectable()
+        export class PublishThreadIntegrationEvents extends EventHandler<readonly [typeof ThreadAttachedEvent]> {
+          readonly event = [ThreadAttachedEvent] as const
+          constructor(private readonly mediator: ExternalMediator) { super() }
+          async handle(event: this['input']): Promise<void> {
+            const ownerId = event.ownerId ?? ''
+            if (event instanceof ThreadAttachedEvent) {
+              await this.mediator.publish(new ThreadAttachedIntegrationEvent({ ownerId, payload: { ...event.payload } }))
+            }
+          }
+        }
+        // Enrichment, quando um dia for necessário: service INJETADO no publisher (3º degrau da
+        // escada de payload — ver EVT-C11), nunca no consumidor.
+      wrong: "qualquer handler fora de Publish<Ctx>IntegrationEvents chamando this.mediator.publish(...)"
 
   snippet:
     skeleton: |
@@ -234,7 +260,8 @@ registry:
       right: |
         // Save domain event to outbox — OutboxDispatcher handles delivery
         await this.domainEventRepository.save(event)
-        // For integration events, use ExternalMediator.publish() (fire-and-forget, no outbox)
+        // Integration events: ExternalMediator.publish() PERSISTE na lane `integration` do outbox
+        // (B3) e o poller entrega — e só o publisher nomeado do contexto pode chamá-lo (HDL-P13).
 
     - id: bp-02
       name: "Non-idempotent handler — but idempotency belongs in the entity (Tell Don't Ask)"
@@ -369,3 +396,33 @@ registry:
       right: |
         throw new BaseError<ApplicationErrors>('CUSTOMER_NOT_FOUND')
       mechanical: false
+
+    - id: bp-09
+      name: "Handler que EXECUTA uma ação de consumidor único (deveria ser CommandQueue ou use case direto)"
+      severity: warning
+      mechanical: false
+      reason: >
+        O handler é o único consumidor do evento e não reage a um fato — executa uma ação (POST a um
+        serviço, envio, chamada externa). Então o evento existe para COMANDAR, e a forma certa é
+        `CommandQueue.enqueueCommand(nome, input, opts, tx)` na MESMA transação do fato que motiva o
+        comando (executor único, retry/backoff/lease de graça) ou o use case chamado direto. Regra de
+        intenção do founder (29-jul-2026), cross-cutting em cc-bp-26 — julgamento, não grep.
+        Precedente shipped: `DeliverChannelMessage` era `EventHandler` de
+        `integration.channel.delivery_requested`, cujo transporte (`publish`) não persistia nada:
+        gateway morto ou processo morto = mensagem perdida, sem retry e sem rastro. Virou o executor
+        do comando `deliver_channel_message`.
+      wrong: |
+        export class DeliverChannelMessage extends EventHandler<typeof ChannelDeliveryRequestedEvent> {
+          readonly event = ChannelDeliveryRequestedEvent
+          async handle(event: this['input']): Promise<void> {
+            await this.sender.send({ ...event.payload }, event.ownerId)   // executa, não reage
+          }
+        }
+      right: |
+        // O executor é um use case registrado no CommandQueue (BoundedContext `commandHandlers`):
+        export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageInputSchema, typeof DeliverChannelMessageOutputSchema> {
+          readonly name = 'deliver_channel_message' as const
+          protected async handle(input: this['input'], tx?: Transaction): Promise<void> { /* … */ }
+        }
+        // …e o produtor ordena dentro da transação do fato:
+        await this.commands.enqueueCommand<DeliverChannelMessage>('deliver_channel_message', { … }, { jobId: entry.entryId }, tx)
