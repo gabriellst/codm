@@ -1090,4 +1090,29 @@ registry:
         - '(?<![\w$.])fetch\s*\('
         - 'from\s+[''"](?:axios|ky|got|redaxios|superagent)[''"]'
 
+    - id: bp-33
+      name: "Search modeled as a form field"
+      severity: moderate
+      rule: >
+        Search/filter text over a list already loaded in memory (or a route search param) is
+        NEVER a `form.Field` — there is nothing to validate against an SDK schema and nothing to
+        submit. A field with no submit and no schema behind it is a `useState` that filters, not a
+        form. `bun cli form` is for a mutation payload; a search box scaffolds through `/component`
+        (or `/route` when it belongs in URL search params — STR-P10 case 2/5).
+      wrong: |
+        <form.Field name="search">
+          {field => <Input value={field.state.value} onChange={e => field.handleChange(e.target.value)} />}
+        </form.Field>
+      right: |
+        // ContactStep — filters an already-loaded list, inside one step of a wizard
+        const [search, setSearch] = useState('')
+        const filtered = contacts.filter(c => c.displayName.toLowerCase().includes(search.trim().toLowerCase()))
+        <Input placeholder={t('attach.searchContacts')} value={search} onChange={e => setSearch(e.target.value)} />
+      mechanical: false
+      note: >
+        The recipe `live-settings` (component react) is the other shape of "a control with no
+        submit" — save-on-change instead of filter-on-change. Both exist because TanStack Form
+        owns exactly one thing: fields that validate against a schema and submit. A control that
+        does neither is not a form, whichever direction it leans.
+
   scaffold: "bun cli form <route> <name> (--from=<sdk.path> | --fields=<spec>) [--edit] [--mutation=<hookName>] --i18n=<prefix>"

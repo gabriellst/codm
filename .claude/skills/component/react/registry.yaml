@@ -577,7 +577,7 @@ registry:
       )
     }
 
-  scaffold: "bun cli component <route> <name> [--recipe=<plain|section|card|empty-state>] [--sdk=<Identifier>] [--state=<csv>] [--store=<StoreName>] [--variants=<spec>] [--i18n=<prefix>]"
+  scaffold: "bun cli component <route> <name> [--recipe=<plain|section|card|empty-state>] [--sdk=<Identifier>] [--mutation=<Hook>] [--state=<csv>] [--store=<StoreName>] [--variants=<spec>] [--i18n=<prefix>]"
 
   bad_practices:
     - id: bp-01
@@ -975,6 +975,7 @@ registry:
         - 'useState<[^>]+\|\s*null>'
       detect_skip:
         - 'components/ui/'
+      rail: "packages/app/react/tests/architecture/dialog-store.test.ts — rail A, the mechanical enforcement of this bad_practice. Whole-file text scan: every *Dialog* under -components/ must IMPORT useDialogStore and must not declare open/onOpenChange/useState-of-open locally. This detector's regex is the edit-time half; the rail is the repo-wide half that fails a batch pass a per-file diff can miss."
 
     - id: bp-27
       name: "try/catch around a mutation call"

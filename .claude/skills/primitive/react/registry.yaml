@@ -210,6 +210,40 @@ registry:
       detect:
         - 'style=\{\{[^}]*\d+(px|rem)'
 
+    - id: bp-05
+      name: "Primitive with a closed props interface"
+      severity: critical
+      rule: >
+        PRM-04 promoted from pattern to bad_practice: a primitive under components/ui/ whose
+        `Props` interface does not extend the root's own vocabulary (ComponentProps<'el'>,
+        SVGProps, a Base UI `*.Props`, or VariantProps) is a dead end — the caller cannot pass
+        className, aria-*, data-testid, or spread props, and the next dev copies the primitive
+        instead of composing it. A hand-typed `className?: string` field is the mechanical tell.
+      wrong: |
+        interface InfoHintProps {
+          children: ReactNode
+          label?: string
+          className?: string
+        }
+        export function InfoHint({ children, label = 'Info', className }: InfoHintProps) {
+          return <TooltipTrigger aria-label={label} className={cn('...', className)}>...
+      right: |
+        interface InfoHintProps extends Omit<ComponentProps<typeof TooltipTrigger>, 'children'> {
+          children: ReactNode
+          label?: string
+        }
+        export function InfoHint({ children, label = 'Info', className, ...props }: InfoHintProps) {
+          return <TooltipTrigger aria-label={label} className={cn('...', className)} {...props}>...
+      mechanical: true
+      detect:
+        - 'className\?:\s*string'
+      refs: [PRM-04, "packages/app/react/tests/architecture/primitive-props.test.ts (rail C)"]
+      note: >
+        PRM-04 already named this shape as `when: always`, but only as a pattern — nothing failed
+        when a primitive violated it (component-props.ts deliberately excludes /ui/; see its
+        docblock). This bad_practice is the doctrine catching up to what the rail C test now
+        enforces mechanically, repo-wide, over components/ui/*.tsx.
+
   canonical_snippet: |
     const buttonVariants = cva(
       'inline-flex items-center justify-center rounded-md font-medium transition-colors',

@@ -169,6 +169,10 @@ state, in order:
    schema, `.omit()` app-global-store-owned fields (tenancyScope), `.and(z.object({...}))`
    route-local additions — and EVERY field carries `.default()` so a garbage deep link
    renders defaults. Exemplar: `dashboardSearchSchema` in `routes/(app)/dashboard/index.tsx`.
+   **Exception (case 5, not case 2):** search that filters a list already loaded in memory,
+   inside one step of a wizard/dialog — not deep-linkable, does not outlive the step — stays
+   local `useState`, marked `// STATE-LOCAL-FILTER: …` (route bp-03 `detect_skip`). Exemplar:
+   `ContactStep`.
 3. **Cross-component client state?** (sibling-shared selection, dialog content) → Zustand.
 4. **Form fields?** → TanStack Form; derived values via `form.Subscribe` narrow selectors —
    never mirrored to useState/store on onChange.
@@ -221,17 +225,28 @@ useServerEvents('integration.billing.subscription_changed', event => {
   `BROWSER_EVENTS` list this bullet used to describe is gone). A new contract event becomes
   subscribable by running `bun sdk`; it MUST carry an envelope `ownerId`, which is the
   broadcaster's only filter.
-- A `browser.*` frame is added to `BrowserFrameEnricher` ONLY when the browser cannot scope the
-  raw fact by itself — `integration.channel_message.received` is addressed by WhatsApp JID, so
-  the enricher resolves it to `browser.thread_message_ingested { threadId }`. A fact that
-  already carries `threadId` is subscribed to raw; a `browser.*` twin would be a second name
-  for the same thing.
+- **The front subscribes to the contract's own name — there is no server-side enrichment.**
+  `ListenEventsController` re-emits the raw `integration.*` envelope (`{ name, ownerId, payload }`)
+  unchanged — nothing synthesizes an additive frame per fact anymore (B5). If a fact does not
+  carry the scope a screen needs (e.g. a message addressed by WhatsApp JID but a thread page that
+  needs `threadId`), the fix is the CONTRACT payload gaining that field — never a synthetic frame
+  invented on the frontend's behalf. Subscribe to the raw name directly; there is nothing else to
+  resolve to.
+- **Two SSE channels exist, and `browser.*` is only dead on one of them.** `useServerEvents`
+  (this section) is the owner-scoped stream at `GET /v1/ui/events`, names `integration.*`, no
+  enrichment. `useTerminalStream` (`@/hooks`) is a SEPARATE, issue-scoped stream
+  (`GET /v1/terminal/sessions/:issueId/stream`) for the live PTY tail — its frames are transport,
+  never touch the outbox, and `browser.terminal_action_detected` is very much alive there
+  (`IssueDetailSection` consumes it). Do not read "browser.\* is dead" as "every `browser.*` name
+  is dead" — it is dead specifically as an SSE-broadcaster enrichment mechanism.
 - **Page-scoped freshness may live in ONE hook.** `useThreadRealtime`, mounted by the
   `$threadId` layout, owns that thread's whole invalidation map: the three tabs are one
   conversation, and a tab that is not mounted still has to be fresh when the operator switches
   to it. Components keep owning their queries — just not the policy for when those go stale.
-- **A subscription to the wrong fact fails silently.** The thread page subscribed only to
-  `browser.thread_status_changed`, and a new message changes no status — so it never updated and
-  no test was red. Prove the WIRING by mounting the hook and dispatching the CustomEvent
-  (`tests/setup.ts` registers happy-dom for exactly this); a test of the mapping function alone
-  cannot see a subscription that never fires.
+- **A subscription to the wrong fact fails silently.** The thread page once subscribed only to
+  `browser.thread_status_changed` — a frame that no longer exists (superseded by
+  `integration.thread.stop_raised`/`stop_resolved`, which is what `useThreadRealtime` subscribes to
+  today) — and a new message changes no status, so it never updated and no test was red. The
+  lesson outlives the specific frame name: prove the WIRING by mounting the hook and dispatching
+  the CustomEvent (`tests/setup.ts` registers happy-dom for exactly this); a test of the mapping
+  function alone cannot see a subscription that never fires.

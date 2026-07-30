@@ -33,6 +33,8 @@ type ContactStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
 
 export function ContactStep({ contacts, channelKindById, defaultValues, onSubmit, isSubmitting, className, ...props }: ContactStepProps) {
 	const { t } = useTranslation()
+	// STATE-LOCAL-FILTER: filters `contacts` already loaded, inside one step of a wizard — not
+	// deep-linkable and does not outlive the step, so it does not go to search params (route bp-03).
 	const [search, setSearch] = useState('')
 
 	const form = useForm({

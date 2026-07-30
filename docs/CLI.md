@@ -31,8 +31,8 @@ The CLI produces a **typed skeleton** that the agent or developer wires up. Gene
 ## 3. Mental model
 
 - **Verb** = top-level subcommand: `route`, `component`, `dialog`, `form`, `onboarding-step`, `i18n`, `mask`, `store`, `primitive`.
-- **Recipe** (for `component`) = a preset bundle of blocks: `plain`, `section`, `card`, `empty-state`.
-- **Block** = a small fragment contributing imports/hooks/JSX/declarations to the generated file: `element`, `sdk`, `variants`, `query`, `store`, `search`, `labels`, `consts`, `i18n`, `skeleton`.
+- **Recipe** (for `component`) = a preset bundle of blocks: `plain`, `section`, `card`, `empty-state`, `live-settings`.
+- **Block** = a small fragment contributing imports/hooks/JSX/declarations to the generated file: `element`, `sdk`, `variants`, `query`, `store`, `search`, `labels`, `consts`, `i18n`, `skeleton`, `composer`.
 - **Flag** = `--name=value` (or bare `--name` for booleans).
 
 ## 4. Flag syntax conventions
@@ -134,7 +134,7 @@ bun cli component <route> <Name> [flags]
 
 | Flag | Effect |
 |---|---|
-| `--recipe=<plain\|section\|card\|empty-state>` | Default `plain`. See §7. |
+| `--recipe=<plain\|section\|card\|empty-state\|live-settings>` | Default `plain`. See §7. |
 | `--as=<section\|div\|article\|aside\|button\|a>` | Root element. Defaults per recipe. |
 | `--sdk=<Identifier>` | SDK type/hook reference. Auto-imports `useList<X>s` when paired with `--state=query`. |
 | `--mutation=<Hook>` | SDK mutation hook. Activates the `composer` block AND feeds it: textarea + Enter-to-send (Shift+Enter breaks a line) + a `send()` that dies on empty text **or** on the in-flight mutation. Independent of `--sdk` — a component may read a type with one and write with the other. `--no-composer` opts out. |
@@ -166,6 +166,18 @@ bun cli component '(app)/patients' PatientCard \
   --variants='size:sm,md,lg|tone:default,muted' \
   --i18n=patients.card
 ```
+
+#### 6.7 Worked example — composer block (`--mutation`)
+
+```bash
+bun cli component '(app)/threads/$threadId' IssueSteerComposer \
+  --mutation=useSteerIssue --i18n=threadDetail.composer
+```
+
+Emits the textarea + Enter-to-send (Shift+Enter breaks a line) + `send()` shape with the mutation
+wired in. `--recipe=plain` is the default here — the composer block owns the whole body, so no
+other recipe scaffolding is needed. `--no-composer` on a component that also takes `--mutation`
+opts back out (rare — the flag exists only for `--mutation` used purely for wiring, not layout).
 
 ### `dialog <route> <Name>`
 
@@ -280,6 +292,7 @@ Unchanged from before V1. `store` emits a Zustand store; `primitive` emits a CVA
 | `section` | `element=section`, `skeleton` | Takes `data: <T> \| undefined` prop. Renders skeleton when undefined. Optional i18n header. |
 | `card` | `element=article`, `variants` | Leaf card for `.map()`. Empty CVA scaffold. Pass `--i18n` if rendering text. |
 | `empty-state` | `element=div`, `i18n` | Icon + heading + message + optional CTA button. **`--i18n` required.** |
+| `live-settings` | `element=div`, `skeleton` | Toggle/pill controls that save on their own `onChange`/`onBlur` — no "Salvar" button. Reference shape: `ThreadSettingsDialog`. **`--i18n` required** (slots: `section`, `toggle`). |
 
 V2 plans add `list-section`, `stats-section`, `detail-header` once V1 usage shows where the per-recipe complexity is worth encoding.
 

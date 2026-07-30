@@ -322,6 +322,13 @@ registry:
       detect:
         - 'const\s*\[\s*page\s*,\s*setPage\s*\]\s*=\s*useState'
         - 'const\s*\[\s*search\s*,\s*setSearch\s*\]\s*=\s*useState'
+      detect_skip: 'STATE-LOCAL-FILTER'
+      note: >
+        STATE-LOCAL-FILTER is the declared exception for search that filters a list already loaded
+        in memory inside a wizard/dialog step (not deep-linkable, does not outlive the step) — see
+        ContactStep for the canonical case. The marker is whole-file (registry detect_skip has no
+        per-match granularity), so it must be written directly above the useState it exempts and
+        never added to a file that ALSO has a real page/setPage-in-state violation to hide.
 
     - id: bp-04
       name: "Creating searchSchema without composing SDK schema"
