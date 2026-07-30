@@ -775,7 +775,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "delivered": {
-    ///      "type": "boolean"
+    ///      "type": "boolean",
+    ///      "enum": [
+    ///        true
+    ///      ]
     ///    },
     ///    "stopId": {
     ///      "type": "string",
@@ -1163,7 +1166,10 @@ pub mod types {
     ///          ],
     ///          "properties": {
     ///            "enabled": {
-    ///              "type": "boolean"
+    ///              "type": "boolean",
+    ///              "enum": [
+    ///                false
+    ///              ]
     ///            }
     ///          }
     ///        },
@@ -1175,7 +1181,10 @@ pub mod types {
     ///          ],
     ///          "properties": {
     ///            "enabled": {
-    ///              "type": "boolean"
+    ///              "type": "boolean",
+    ///              "enum": [
+    ///                true
+    ///              ]
     ///            },
     ///            "tag": {
     ///              "type": "string",
@@ -1213,7 +1222,10 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "enabled": {
-    ///          "type": "boolean"
+    ///          "type": "boolean",
+    ///          "enum": [
+    ///            false
+    ///          ]
     ///        }
     ///      }
     ///    },
@@ -1225,7 +1237,10 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "enabled": {
-    ///          "type": "boolean"
+    ///          "type": "boolean",
+    ///          "enum": [
+    ///            true
+    ///          ]
     ///        },
     ///        "tag": {
     ///          "type": "string",
@@ -4443,7 +4458,10 @@ pub mod types {
     ///          ],
     ///          "properties": {
     ///            "enabled": {
-    ///              "type": "boolean"
+    ///              "type": "boolean",
+    ///              "enum": [
+    ///                false
+    ///              ]
     ///            }
     ///          },
     ///          "additionalProperties": false
@@ -4456,7 +4474,10 @@ pub mod types {
     ///          ],
     ///          "properties": {
     ///            "enabled": {
-    ///              "type": "boolean"
+    ///              "type": "boolean",
+    ///              "enum": [
+    ///                true
+    ///              ]
     ///            },
     ///            "tag": {
     ///              "type": "string"
@@ -4644,7 +4665,10 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "enabled": {
-    ///          "type": "boolean"
+    ///          "type": "boolean",
+    ///          "enum": [
+    ///            false
+    ///          ]
     ///        }
     ///      },
     ///      "additionalProperties": false
@@ -4657,7 +4681,10 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "enabled": {
-    ///          "type": "boolean"
+    ///          "type": "boolean",
+    ///          "enum": [
+    ///            true
+    ///          ]
     ///        },
     ///        "tag": {
     ///          "type": "string"
@@ -5722,7 +5749,10 @@ pub mod types {
     ///          ],
     ///          "properties": {
     ///            "enabled": {
-    ///              "type": "boolean"
+    ///              "type": "boolean",
+    ///              "enum": [
+    ///                false
+    ///              ]
     ///            }
     ///          },
     ///          "additionalProperties": false
@@ -5735,7 +5765,10 @@ pub mod types {
     ///          ],
     ///          "properties": {
     ///            "enabled": {
-    ///              "type": "boolean"
+    ///              "type": "boolean",
+    ///              "enum": [
+    ///                true
+    ///              ]
     ///            },
     ///            "tag": {
     ///              "type": "string"
@@ -5807,7 +5840,10 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "enabled": {
-    ///          "type": "boolean"
+    ///          "type": "boolean",
+    ///          "enum": [
+    ///            false
+    ///          ]
     ///        }
     ///      },
     ///      "additionalProperties": false
@@ -5820,7 +5856,10 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "enabled": {
-    ///          "type": "boolean"
+    ///          "type": "boolean",
+    ///          "enum": [
+    ///            true
+    ///          ]
     ///        },
     ///        "tag": {
     ///          "type": "string"

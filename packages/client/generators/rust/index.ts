@@ -32,6 +32,31 @@ interface Plan {
 }
 
 /**
+ * `const` → single-value `enum` (rust-generator-local). The house convention pins union
+ * discriminators with `const` ("discriminadores const", CLAUDE.md) — an OpenAPI 3.1 /
+ * JSON Schema keyword the 3.0 `openapiv3` parser progenitor uses DROPS silently. Without
+ * the pin every oneOf arm's discriminator degrades to plain String, the untagged enum
+ * matches STRUCTURALLY (first compatible arm wins), and narrowing is wrong — proven by
+ * tests/message_received_union.rs (an IMAGE message parsed as WhatsappContact before
+ * this). `enum: [X]` is 3.0-legal and semantically identical; typify turns it into a
+ * single-value enum type that discriminates correctly. kubb consumes `const` fine, so
+ * the shared preprocess must not change shape for it.
+ */
+function constToSingleEnum(node: unknown): void {
+	if (!node || typeof node !== 'object') return
+	if (Array.isArray(node)) {
+		for (const item of node) constToSingleEnum(item)
+		return
+	}
+	const obj = node as Record<string, unknown>
+	if ('const' in obj && !('enum' in obj)) {
+		obj.enum = [obj.const]
+		delete obj.const
+	}
+	for (const value of Object.values(obj)) constToSingleEnum(value)
+}
+
+/**
  * Progenitor 0.10 quirk (asserted at method.rs:1197): a SPECIFIC 2xx (200/201) plus
  * `default` both enter the success filter — two response types → panic. (It only pops
  * `default` after a RANGE "2XX".) Rewriting `default` → "4XX" + "5XX" keeps the error
@@ -70,6 +95,7 @@ async function preprocessAll(sources: ApiSource[]): Promise<Plan[]> {
 	const plans: Plan[] = []
 	for (const source of sources) {
 		const { spec } = await preprocessSpec(source.specPath)
+		constToSingleEnum(spec)
 		splitDefaultResponses(spec)
 		const tmp = path.join(repoRoot, 'tmp', `client-rust-${source.service}.openapi.json`)
 		await mkdir(path.dirname(tmp), { recursive: true })

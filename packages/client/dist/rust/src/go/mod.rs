@@ -633,7 +633,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.channel_created"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelCreatedPayload"
@@ -644,13 +647,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelChannelCreated {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelChannelCreatedName,
         pub payload: ChannelCreatedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelChannelCreated>
     for ChannelEventChannelChannelCreated {
         fn from(value: &ChannelEventChannelChannelCreated) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelChannelCreatedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.channel_created"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelChannelCreatedName {
+        #[serde(rename = "channel.channel_created")]
+        ChannelChannelCreated,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelChannelCreatedName {
+        fn from(value: &ChannelEventChannelChannelCreatedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelChannelCreatedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelChannelCreated => f.write_str("channel.channel_created"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelChannelCreatedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.channel_created" => Ok(Self::ChannelChannelCreated),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelChannelCreatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelChannelCreatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelChannelCreatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelGatewayConnected`
@@ -666,7 +747,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.gateway_connected"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelConnectedPayload"
@@ -677,13 +761,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelGatewayConnected {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelGatewayConnectedName,
         pub payload: ChannelConnectedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelGatewayConnected>
     for ChannelEventChannelGatewayConnected {
         fn from(value: &ChannelEventChannelGatewayConnected) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelGatewayConnectedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.gateway_connected"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelGatewayConnectedName {
+        #[serde(rename = "channel.gateway_connected")]
+        ChannelGatewayConnected,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelGatewayConnectedName {
+        fn from(value: &ChannelEventChannelGatewayConnectedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelGatewayConnectedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelGatewayConnected => f.write_str("channel.gateway_connected"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelGatewayConnectedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.gateway_connected" => Ok(Self::ChannelGatewayConnected),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelGatewayConnectedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelGatewayConnectedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelGatewayConnectedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelGatewayDisconnected`
@@ -699,7 +861,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.gateway_disconnected"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelDisconnectedPayload"
@@ -710,13 +875,93 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelGatewayDisconnected {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelGatewayDisconnectedName,
         pub payload: ChannelDisconnectedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelGatewayDisconnected>
     for ChannelEventChannelGatewayDisconnected {
         fn from(value: &ChannelEventChannelGatewayDisconnected) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelGatewayDisconnectedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.gateway_disconnected"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelGatewayDisconnectedName {
+        #[serde(rename = "channel.gateway_disconnected")]
+        ChannelGatewayDisconnected,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelGatewayDisconnectedName {
+        fn from(value: &ChannelEventChannelGatewayDisconnectedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelGatewayDisconnectedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelGatewayDisconnected => {
+                    f.write_str("channel.gateway_disconnected")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelGatewayDisconnectedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.gateway_disconnected" => Ok(Self::ChannelGatewayDisconnected),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelGatewayDisconnectedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelGatewayDisconnectedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelGatewayDisconnectedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMembershipAdded`
@@ -732,7 +977,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.membership_added"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMembershipAddedPayload"
@@ -743,13 +991,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMembershipAdded {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMembershipAddedName,
         pub payload: ChannelMembershipAddedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMembershipAdded>
     for ChannelEventChannelMembershipAdded {
         fn from(value: &ChannelEventChannelMembershipAdded) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMembershipAddedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.membership_added"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMembershipAddedName {
+        #[serde(rename = "channel.membership_added")]
+        ChannelMembershipAdded,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMembershipAddedName {
+        fn from(value: &ChannelEventChannelMembershipAddedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMembershipAddedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMembershipAdded => f.write_str("channel.membership_added"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMembershipAddedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.membership_added" => Ok(Self::ChannelMembershipAdded),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMembershipAddedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMembershipAddedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMembershipAddedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMembershipRemoved`
@@ -765,7 +1091,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.membership_removed"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMembershipRemovedPayload"
@@ -776,13 +1105,93 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMembershipRemoved {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMembershipRemovedName,
         pub payload: ChannelMembershipRemovedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMembershipRemoved>
     for ChannelEventChannelMembershipRemoved {
         fn from(value: &ChannelEventChannelMembershipRemoved) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMembershipRemovedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.membership_removed"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMembershipRemovedName {
+        #[serde(rename = "channel.membership_removed")]
+        ChannelMembershipRemoved,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMembershipRemovedName {
+        fn from(value: &ChannelEventChannelMembershipRemovedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMembershipRemovedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMembershipRemoved => {
+                    f.write_str("channel.membership_removed")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMembershipRemovedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.membership_removed" => Ok(Self::ChannelMembershipRemoved),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMembershipRemovedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMembershipRemovedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMembershipRemovedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessageDeleted`
@@ -798,7 +1207,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.message_deleted"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessageDeletedPayload"
@@ -809,13 +1221,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessageDeleted {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessageDeletedName,
         pub payload: ChannelMessageDeletedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessageDeleted>
     for ChannelEventChannelMessageDeleted {
         fn from(value: &ChannelEventChannelMessageDeleted) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessageDeletedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.message_deleted"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessageDeletedName {
+        #[serde(rename = "channel.message_deleted")]
+        ChannelMessageDeleted,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessageDeletedName {
+        fn from(value: &ChannelEventChannelMessageDeletedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessageDeletedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessageDeleted => f.write_str("channel.message_deleted"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessageDeletedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.message_deleted" => Ok(Self::ChannelMessageDeleted),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessageDeletedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessageDeletedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessageDeletedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessageDelivered`
@@ -831,7 +1321,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.message_delivered"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessageDeliveredPayload"
@@ -842,13 +1335,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessageDelivered {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessageDeliveredName,
         pub payload: ChannelMessageDeliveredPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessageDelivered>
     for ChannelEventChannelMessageDelivered {
         fn from(value: &ChannelEventChannelMessageDelivered) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessageDeliveredName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.message_delivered"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessageDeliveredName {
+        #[serde(rename = "channel.message_delivered")]
+        ChannelMessageDelivered,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessageDeliveredName {
+        fn from(value: &ChannelEventChannelMessageDeliveredName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessageDeliveredName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessageDelivered => f.write_str("channel.message_delivered"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessageDeliveredName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.message_delivered" => Ok(Self::ChannelMessageDelivered),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessageDeliveredName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessageDeliveredName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessageDeliveredName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessageEdited`
@@ -864,7 +1435,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.message_edited"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessageEditedPayload"
@@ -875,13 +1449,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessageEdited {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessageEditedName,
         pub payload: ChannelMessageEditedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessageEdited>
     for ChannelEventChannelMessageEdited {
         fn from(value: &ChannelEventChannelMessageEdited) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessageEditedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.message_edited"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessageEditedName {
+        #[serde(rename = "channel.message_edited")]
+        ChannelMessageEdited,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessageEditedName {
+        fn from(value: &ChannelEventChannelMessageEditedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessageEditedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessageEdited => f.write_str("channel.message_edited"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessageEditedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.message_edited" => Ok(Self::ChannelMessageEdited),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessageEditedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessageEditedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessageEditedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessageReceived`
@@ -897,7 +1549,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.message_received"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessageReceivedPayload"
@@ -908,13 +1563,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessageReceived {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessageReceivedName,
         pub payload: ChannelMessageReceivedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessageReceived>
     for ChannelEventChannelMessageReceived {
         fn from(value: &ChannelEventChannelMessageReceived) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessageReceivedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.message_received"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessageReceivedName {
+        #[serde(rename = "channel.message_received")]
+        ChannelMessageReceived,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessageReceivedName {
+        fn from(value: &ChannelEventChannelMessageReceivedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessageReceivedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessageReceived => f.write_str("channel.message_received"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessageReceivedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.message_received" => Ok(Self::ChannelMessageReceived),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessageReceivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessageReceivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessageReceivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessageSeen`
@@ -930,7 +1663,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.message_seen"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessageSeenPayload"
@@ -941,13 +1677,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessageSeen {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessageSeenName,
         pub payload: ChannelMessageSeenPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessageSeen>
     for ChannelEventChannelMessageSeen {
         fn from(value: &ChannelEventChannelMessageSeen) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessageSeenName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.message_seen"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessageSeenName {
+        #[serde(rename = "channel.message_seen")]
+        ChannelMessageSeen,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessageSeenName {
+        fn from(value: &ChannelEventChannelMessageSeenName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessageSeenName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessageSeen => f.write_str("channel.message_seen"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessageSeenName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.message_seen" => Ok(Self::ChannelMessageSeen),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessageSeenName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessageSeenName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessageSeenName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessageSent`
@@ -963,7 +1777,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.message_sent"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessageSentPayload"
@@ -974,13 +1791,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessageSent {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessageSentName,
         pub payload: ChannelMessageSentPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessageSent>
     for ChannelEventChannelMessageSent {
         fn from(value: &ChannelEventChannelMessageSent) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessageSentName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.message_sent"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessageSentName {
+        #[serde(rename = "channel.message_sent")]
+        ChannelMessageSent,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessageSentName {
+        fn from(value: &ChannelEventChannelMessageSentName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessageSentName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessageSent => f.write_str("channel.message_sent"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessageSentName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.message_sent" => Ok(Self::ChannelMessageSent),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessageSentName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessageSentName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessageSentName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelMessagesSynced`
@@ -996,7 +1891,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.messages_synced"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelMessagesSyncedPayload"
@@ -1007,13 +1905,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelMessagesSynced {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelMessagesSyncedName,
         pub payload: ChannelMessagesSyncedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelMessagesSynced>
     for ChannelEventChannelMessagesSynced {
         fn from(value: &ChannelEventChannelMessagesSynced) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelMessagesSyncedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.messages_synced"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelMessagesSyncedName {
+        #[serde(rename = "channel.messages_synced")]
+        ChannelMessagesSynced,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelMessagesSyncedName {
+        fn from(value: &ChannelEventChannelMessagesSyncedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelMessagesSyncedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelMessagesSynced => f.write_str("channel.messages_synced"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelMessagesSyncedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.messages_synced" => Ok(Self::ChannelMessagesSynced),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelMessagesSyncedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelMessagesSyncedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelMessagesSyncedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteArchived`
@@ -1029,7 +2005,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_archived"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteArchivedPayload"
@@ -1040,13 +2019,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteArchived {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteArchivedName,
         pub payload: ChannelRemoteArchivedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteArchived>
     for ChannelEventChannelRemoteArchived {
         fn from(value: &ChannelEventChannelRemoteArchived) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteArchivedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_archived"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteArchivedName {
+        #[serde(rename = "channel.remote_archived")]
+        ChannelRemoteArchived,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteArchivedName {
+        fn from(value: &ChannelEventChannelRemoteArchivedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteArchivedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteArchived => f.write_str("channel.remote_archived"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteArchivedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_archived" => Ok(Self::ChannelRemoteArchived),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteArchivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteArchivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteArchivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteChatSeen`
@@ -1062,7 +2119,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_chat_seen"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteChatSeenPayload"
@@ -1073,13 +2133,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteChatSeen {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteChatSeenName,
         pub payload: ChannelRemoteChatSeenPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteChatSeen>
     for ChannelEventChannelRemoteChatSeen {
         fn from(value: &ChannelEventChannelRemoteChatSeen) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteChatSeenName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_chat_seen"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteChatSeenName {
+        #[serde(rename = "channel.remote_chat_seen")]
+        ChannelRemoteChatSeen,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteChatSeenName {
+        fn from(value: &ChannelEventChannelRemoteChatSeenName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteChatSeenName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteChatSeen => f.write_str("channel.remote_chat_seen"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteChatSeenName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_chat_seen" => Ok(Self::ChannelRemoteChatSeen),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteChatSeenName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteChatSeenName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteChatSeenName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteCreated`
@@ -1095,7 +2233,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_created"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteCreatedPayload"
@@ -1106,13 +2247,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteCreated {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteCreatedName,
         pub payload: ChannelRemoteCreatedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteCreated>
     for ChannelEventChannelRemoteCreated {
         fn from(value: &ChannelEventChannelRemoteCreated) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteCreatedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_created"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteCreatedName {
+        #[serde(rename = "channel.remote_created")]
+        ChannelRemoteCreated,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteCreatedName {
+        fn from(value: &ChannelEventChannelRemoteCreatedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteCreatedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteCreated => f.write_str("channel.remote_created"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteCreatedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_created" => Ok(Self::ChannelRemoteCreated),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteCreatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteCreatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteCreatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteDeleted`
@@ -1128,7 +2347,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_deleted"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteDeletedPayload"
@@ -1139,13 +2361,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteDeleted {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteDeletedName,
         pub payload: ChannelRemoteDeletedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteDeleted>
     for ChannelEventChannelRemoteDeleted {
         fn from(value: &ChannelEventChannelRemoteDeleted) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteDeletedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_deleted"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteDeletedName {
+        #[serde(rename = "channel.remote_deleted")]
+        ChannelRemoteDeleted,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteDeletedName {
+        fn from(value: &ChannelEventChannelRemoteDeletedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteDeletedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteDeleted => f.write_str("channel.remote_deleted"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteDeletedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_deleted" => Ok(Self::ChannelRemoteDeleted),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteDeletedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteDeletedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteDeletedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteMarkedAsUnread`
@@ -1161,7 +2461,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_marked_as_unread"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteMarkedAsUnreadPayload"
@@ -1172,13 +2475,95 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteMarkedAsUnread {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteMarkedAsUnreadName,
         pub payload: ChannelRemoteMarkedAsUnreadPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteMarkedAsUnread>
     for ChannelEventChannelRemoteMarkedAsUnread {
         fn from(value: &ChannelEventChannelRemoteMarkedAsUnread) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteMarkedAsUnreadName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_marked_as_unread"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteMarkedAsUnreadName {
+        #[serde(rename = "channel.remote_marked_as_unread")]
+        ChannelRemoteMarkedAsUnread,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteMarkedAsUnreadName {
+        fn from(value: &ChannelEventChannelRemoteMarkedAsUnreadName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteMarkedAsUnreadName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteMarkedAsUnread => {
+                    f.write_str("channel.remote_marked_as_unread")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteMarkedAsUnreadName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_marked_as_unread" => {
+                    Ok(Self::ChannelRemoteMarkedAsUnread)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteMarkedAsUnreadName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteMarkedAsUnreadName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteMarkedAsUnreadName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteMuted`
@@ -1194,7 +2579,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_muted"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteMutedPayload"
@@ -1205,13 +2593,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteMuted {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteMutedName,
         pub payload: ChannelRemoteMutedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteMuted>
     for ChannelEventChannelRemoteMuted {
         fn from(value: &ChannelEventChannelRemoteMuted) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteMutedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_muted"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteMutedName {
+        #[serde(rename = "channel.remote_muted")]
+        ChannelRemoteMuted,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteMutedName {
+        fn from(value: &ChannelEventChannelRemoteMutedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteMutedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteMuted => f.write_str("channel.remote_muted"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteMutedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_muted" => Ok(Self::ChannelRemoteMuted),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteMutedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteMutedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteMutedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemotePinned`
@@ -1227,7 +2693,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_pinned"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemotePinnedPayload"
@@ -1238,13 +2707,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemotePinned {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemotePinnedName,
         pub payload: ChannelRemotePinnedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemotePinned>
     for ChannelEventChannelRemotePinned {
         fn from(value: &ChannelEventChannelRemotePinned) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemotePinnedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_pinned"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemotePinnedName {
+        #[serde(rename = "channel.remote_pinned")]
+        ChannelRemotePinned,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemotePinnedName {
+        fn from(value: &ChannelEventChannelRemotePinnedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemotePinnedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemotePinned => f.write_str("channel.remote_pinned"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemotePinnedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_pinned" => Ok(Self::ChannelRemotePinned),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemotePinnedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemotePinnedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemotePinnedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteUnarchived`
@@ -1260,7 +2807,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_unarchived"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteUnarchivedPayload"
@@ -1271,13 +2821,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteUnarchived {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteUnarchivedName,
         pub payload: ChannelRemoteUnarchivedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteUnarchived>
     for ChannelEventChannelRemoteUnarchived {
         fn from(value: &ChannelEventChannelRemoteUnarchived) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteUnarchivedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_unarchived"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteUnarchivedName {
+        #[serde(rename = "channel.remote_unarchived")]
+        ChannelRemoteUnarchived,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteUnarchivedName {
+        fn from(value: &ChannelEventChannelRemoteUnarchivedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteUnarchivedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteUnarchived => f.write_str("channel.remote_unarchived"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteUnarchivedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_unarchived" => Ok(Self::ChannelRemoteUnarchived),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteUnarchivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteUnarchivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteUnarchivedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteUnmuted`
@@ -1293,7 +2921,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_unmuted"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteUnmutedPayload"
@@ -1304,13 +2935,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteUnmuted {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteUnmutedName,
         pub payload: ChannelRemoteUnmutedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteUnmuted>
     for ChannelEventChannelRemoteUnmuted {
         fn from(value: &ChannelEventChannelRemoteUnmuted) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteUnmutedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_unmuted"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteUnmutedName {
+        #[serde(rename = "channel.remote_unmuted")]
+        ChannelRemoteUnmuted,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteUnmutedName {
+        fn from(value: &ChannelEventChannelRemoteUnmutedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteUnmutedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteUnmuted => f.write_str("channel.remote_unmuted"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteUnmutedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_unmuted" => Ok(Self::ChannelRemoteUnmuted),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteUnmutedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteUnmutedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteUnmutedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteUnpinned`
@@ -1326,7 +3035,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_unpinned"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteUnpinnedPayload"
@@ -1337,13 +3049,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteUnpinned {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteUnpinnedName,
         pub payload: ChannelRemoteUnpinnedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteUnpinned>
     for ChannelEventChannelRemoteUnpinned {
         fn from(value: &ChannelEventChannelRemoteUnpinned) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteUnpinnedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_unpinned"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteUnpinnedName {
+        #[serde(rename = "channel.remote_unpinned")]
+        ChannelRemoteUnpinned,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteUnpinnedName {
+        fn from(value: &ChannelEventChannelRemoteUnpinnedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteUnpinnedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteUnpinned => f.write_str("channel.remote_unpinned"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteUnpinnedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_unpinned" => Ok(Self::ChannelRemoteUnpinned),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteUnpinnedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteUnpinnedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteUnpinnedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemoteUpdated`
@@ -1359,7 +3149,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remote_updated"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemoteUpdatedPayload"
@@ -1370,13 +3163,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemoteUpdated {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemoteUpdatedName,
         pub payload: ChannelRemoteUpdatedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemoteUpdated>
     for ChannelEventChannelRemoteUpdated {
         fn from(value: &ChannelEventChannelRemoteUpdated) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemoteUpdatedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remote_updated"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemoteUpdatedName {
+        #[serde(rename = "channel.remote_updated")]
+        ChannelRemoteUpdated,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemoteUpdatedName {
+        fn from(value: &ChannelEventChannelRemoteUpdatedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemoteUpdatedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemoteUpdated => f.write_str("channel.remote_updated"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemoteUpdatedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remote_updated" => Ok(Self::ChannelRemoteUpdated),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemoteUpdatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemoteUpdatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemoteUpdatedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelEventChannelRemotesSynced`
@@ -1392,7 +3263,10 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "channel.remotes_synced"
+    ///      ]
     ///    },
     ///    "payload": {
     ///      "$ref": "#/components/schemas/ChannelRemotesSyncedPayload"
@@ -1403,13 +3277,91 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelEventChannelRemotesSynced {
-        pub name: ::std::string::String,
+        pub name: ChannelEventChannelRemotesSyncedName,
         pub payload: ChannelRemotesSyncedPayload,
     }
     impl ::std::convert::From<&ChannelEventChannelRemotesSynced>
     for ChannelEventChannelRemotesSynced {
         fn from(value: &ChannelEventChannelRemotesSynced) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelEventChannelRemotesSyncedName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "channel.remotes_synced"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelEventChannelRemotesSyncedName {
+        #[serde(rename = "channel.remotes_synced")]
+        ChannelRemotesSynced,
+    }
+    impl ::std::convert::From<&Self> for ChannelEventChannelRemotesSyncedName {
+        fn from(value: &ChannelEventChannelRemotesSyncedName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelEventChannelRemotesSyncedName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ChannelRemotesSynced => f.write_str("channel.remotes_synced"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelEventChannelRemotesSyncedName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "channel.remotes_synced" => Ok(Self::ChannelRemotesSynced),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ChannelEventChannelRemotesSyncedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelEventChannelRemotesSyncedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelEventChannelRemotesSyncedName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelLoggedOutPayload`
@@ -1959,7 +3911,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "TEXT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -1973,7 +3928,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "INTERNAL"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/InternalChannelMessageReceivedPlatformData"
@@ -2007,14 +3965,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadInternalTextMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadInternalTextPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2033,6 +3991,166 @@ pub mod types {
     for ChannelMessageReceivedPayloadInternalText {
         fn from(value: &ChannelMessageReceivedPayloadInternalText) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadInternalTextMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "TEXT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadInternalTextMessageType {
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadInternalTextMessageType {
+        fn from(value: &ChannelMessageReceivedPayloadInternalTextMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadInternalTextMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Text => f.write_str("TEXT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadInternalTextMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "TEXT" => Ok(Self::Text),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadInternalTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadInternalTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadInternalTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadInternalTextPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "INTERNAL"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadInternalTextPlatform {
+        #[serde(rename = "INTERNAL")]
+        Internal,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadInternalTextPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadInternalTextPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadInternalTextPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Internal => f.write_str("INTERNAL"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadInternalTextPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "INTERNAL" => Ok(Self::Internal),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadInternalTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadInternalTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadInternalTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappAudio`
@@ -2083,7 +4201,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "AUDIO"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2097,7 +4218,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2131,14 +4255,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappAudioMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappAudioPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2157,6 +4281,166 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappAudio {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappAudio) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappAudioMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "AUDIO"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        #[serde(rename = "AUDIO")]
+        Audio,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappAudioMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Audio => f.write_str("AUDIO"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "AUDIO" => Ok(Self::Audio),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappAudioMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappAudioPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappAudioPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappAudioPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappContact`
@@ -2207,7 +4491,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "CONTACT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2221,7 +4508,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2255,14 +4545,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappContactMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappContactPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2281,6 +4571,170 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappContact {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappContact) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappContactMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "CONTACT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        #[serde(rename = "CONTACT")]
+        Contact,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        fn from(
+            value: &ChannelMessageReceivedPayloadWhatsappContactMessageType,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Contact => f.write_str("CONTACT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "CONTACT" => Ok(Self::Contact),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappContactMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappContactPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappContactPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappContactPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappDocument`
@@ -2331,7 +4785,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "DOCUMENT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2345,7 +4802,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2379,14 +4839,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappDocumentMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappDocumentPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2405,6 +4865,170 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappDocument {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappDocument) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappDocumentMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "DOCUMENT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        #[serde(rename = "DOCUMENT")]
+        Document,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        fn from(
+            value: &ChannelMessageReceivedPayloadWhatsappDocumentMessageType,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Document => f.write_str("DOCUMENT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "DOCUMENT" => Ok(Self::Document),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappDocumentMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappDocumentPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappDocumentPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappDocumentPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappImage`
@@ -2455,7 +5079,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "IMAGE"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2469,7 +5096,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2503,14 +5133,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappImageMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappImagePlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2529,6 +5159,166 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappImage {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappImage) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappImageMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "IMAGE"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        #[serde(rename = "IMAGE")]
+        Image,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappImageMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Image => f.write_str("IMAGE"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "IMAGE" => Ok(Self::Image),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappImageMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappImagePlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappImagePlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappImagePlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappLocation`
@@ -2579,7 +5369,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "LOCATION"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2593,7 +5386,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2627,14 +5423,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappLocationMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappLocationPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2653,6 +5449,170 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappLocation {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappLocation) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappLocationMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "LOCATION"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        #[serde(rename = "LOCATION")]
+        Location,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        fn from(
+            value: &ChannelMessageReceivedPayloadWhatsappLocationMessageType,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Location => f.write_str("LOCATION"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "LOCATION" => Ok(Self::Location),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappLocationMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappLocationPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappLocationPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappLocationPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappPoll`
@@ -2703,7 +5663,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "POLL"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2717,7 +5680,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2751,14 +5717,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappPollMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappPollPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2777,6 +5743,166 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappPoll {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappPoll) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappPollMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "POLL"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        #[serde(rename = "POLL")]
+        Poll,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappPollMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Poll => f.write_str("POLL"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "POLL" => Ok(Self::Poll),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappPollMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappPollPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappPollPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappPollPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappReaction`
@@ -2827,7 +5953,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "REACTION"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2841,7 +5970,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2875,14 +6007,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappReactionMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappReactionPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -2901,6 +6033,170 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappReaction {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappReaction) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappReactionMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "REACTION"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        #[serde(rename = "REACTION")]
+        Reaction,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        fn from(
+            value: &ChannelMessageReceivedPayloadWhatsappReactionMessageType,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Reaction => f.write_str("REACTION"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "REACTION" => Ok(Self::Reaction),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappReactionMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappReactionPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappReactionPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappReactionPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappSticker`
@@ -2951,7 +6247,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "STICKER"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -2965,7 +6264,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -2999,14 +6301,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappStickerMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappStickerPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3025,6 +6327,170 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappSticker {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappSticker) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappStickerMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "STICKER"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        #[serde(rename = "STICKER")]
+        Sticker,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        fn from(
+            value: &ChannelMessageReceivedPayloadWhatsappStickerMessageType,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Sticker => f.write_str("STICKER"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "STICKER" => Ok(Self::Sticker),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappStickerMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappStickerPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappStickerPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappStickerPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappText`
@@ -3075,7 +6541,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "TEXT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3089,7 +6558,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -3123,14 +6595,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappTextMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappTextPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3149,6 +6621,166 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappText {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappText) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappTextMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "TEXT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappTextMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Text => f.write_str("TEXT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "TEXT" => Ok(Self::Text),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappTextPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappTextPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageReceivedPayloadWhatsappVideo`
@@ -3199,7 +6831,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "VIDEO"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3213,7 +6848,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageReceivedPlatformData"
@@ -3247,14 +6885,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageReceivedPayloadWhatsappVideoMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageReceivedPayloadWhatsappVideoPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3273,6 +6911,166 @@ pub mod types {
     for ChannelMessageReceivedPayloadWhatsappVideo {
         fn from(value: &ChannelMessageReceivedPayloadWhatsappVideo) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappVideoMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "VIDEO"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        #[serde(rename = "VIDEO")]
+        Video,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappVideoMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Video => f.write_str("VIDEO"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "VIDEO" => Ok(Self::Video),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappVideoMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageReceivedPayloadWhatsappVideoPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        fn from(value: &ChannelMessageReceivedPayloadWhatsappVideoPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageReceivedPayloadWhatsappVideoPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSeenPayload`
@@ -3521,7 +7319,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "TEXT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3535,7 +7336,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "INTERNAL"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/InternalChannelMessageSentPlatformData"
@@ -3566,14 +7370,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadInternalTextMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadInternalTextPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3590,6 +7394,165 @@ pub mod types {
     for ChannelMessageSentPayloadInternalText {
         fn from(value: &ChannelMessageSentPayloadInternalText) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadInternalTextMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "TEXT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadInternalTextMessageType {
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadInternalTextMessageType {
+        fn from(value: &ChannelMessageSentPayloadInternalTextMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadInternalTextMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Text => f.write_str("TEXT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadInternalTextMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "TEXT" => Ok(Self::Text),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadInternalTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadInternalTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadInternalTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadInternalTextPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "INTERNAL"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadInternalTextPlatform {
+        #[serde(rename = "INTERNAL")]
+        Internal,
+    }
+    impl ::std::convert::From<&Self> for ChannelMessageSentPayloadInternalTextPlatform {
+        fn from(value: &ChannelMessageSentPayloadInternalTextPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadInternalTextPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Internal => f.write_str("INTERNAL"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadInternalTextPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "INTERNAL" => Ok(Self::Internal),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadInternalTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadInternalTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadInternalTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappAudio`
@@ -3632,7 +7595,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "AUDIO"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3646,7 +7612,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -3677,14 +7646,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappAudioMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappAudioPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3701,6 +7670,165 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappAudio {
         fn from(value: &ChannelMessageSentPayloadWhatsappAudio) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappAudioMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "AUDIO"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappAudioMessageType {
+        #[serde(rename = "AUDIO")]
+        Audio,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappAudioMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappAudioMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappAudioMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Audio => f.write_str("AUDIO"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappAudioMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "AUDIO" => Ok(Self::Audio),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappAudioMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappAudioMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappAudioMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappAudioPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappAudioPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self> for ChannelMessageSentPayloadWhatsappAudioPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappAudioPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappAudioPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappAudioPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappAudioPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappAudioPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappAudioPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappContact`
@@ -3743,7 +7871,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "CONTACT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3757,7 +7888,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -3788,14 +7922,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappContactMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappContactPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3812,6 +7946,166 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappContact {
         fn from(value: &ChannelMessageSentPayloadWhatsappContact) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappContactMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "CONTACT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappContactMessageType {
+        #[serde(rename = "CONTACT")]
+        Contact,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappContactMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappContactMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappContactMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Contact => f.write_str("CONTACT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappContactMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "CONTACT" => Ok(Self::Contact),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappContactMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappContactMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappContactMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappContactPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappContactPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappContactPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappContactPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappContactPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappContactPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappContactPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappContactPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappContactPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappDocument`
@@ -3854,7 +8148,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "DOCUMENT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3868,7 +8165,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -3899,14 +8199,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappDocumentMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappDocumentPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -3923,6 +8223,166 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappDocument {
         fn from(value: &ChannelMessageSentPayloadWhatsappDocument) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappDocumentMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "DOCUMENT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        #[serde(rename = "DOCUMENT")]
+        Document,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappDocumentMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Document => f.write_str("DOCUMENT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "DOCUMENT" => Ok(Self::Document),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappDocumentMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappDocumentPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappDocumentPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappDocumentPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappImage`
@@ -3965,7 +8425,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "IMAGE"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -3979,7 +8442,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4010,14 +8476,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappImageMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappImagePlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4034,6 +8500,165 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappImage {
         fn from(value: &ChannelMessageSentPayloadWhatsappImage) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappImageMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "IMAGE"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappImageMessageType {
+        #[serde(rename = "IMAGE")]
+        Image,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappImageMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappImageMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappImageMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Image => f.write_str("IMAGE"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappImageMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "IMAGE" => Ok(Self::Image),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappImageMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappImageMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappImageMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappImagePlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappImagePlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self> for ChannelMessageSentPayloadWhatsappImagePlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappImagePlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappImagePlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappImagePlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappImagePlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappImagePlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappImagePlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappLocation`
@@ -4076,7 +8701,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "LOCATION"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -4090,7 +8718,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4121,14 +8752,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappLocationMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappLocationPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4145,6 +8776,166 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappLocation {
         fn from(value: &ChannelMessageSentPayloadWhatsappLocation) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappLocationMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "LOCATION"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappLocationMessageType {
+        #[serde(rename = "LOCATION")]
+        Location,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappLocationMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappLocationMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappLocationMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Location => f.write_str("LOCATION"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappLocationMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "LOCATION" => Ok(Self::Location),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappLocationMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappLocationMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappLocationMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappLocationPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappLocationPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappLocationPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappLocationPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappLocationPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappLocationPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappLocationPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappLocationPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappLocationPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappPoll`
@@ -4187,7 +8978,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "POLL"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -4201,7 +8995,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4232,14 +9029,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappPollMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappPollPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4256,6 +9053,165 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappPoll {
         fn from(value: &ChannelMessageSentPayloadWhatsappPoll) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappPollMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "POLL"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappPollMessageType {
+        #[serde(rename = "POLL")]
+        Poll,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappPollMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappPollMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappPollMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Poll => f.write_str("POLL"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappPollMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "POLL" => Ok(Self::Poll),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappPollMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappPollMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappPollMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappPollPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappPollPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self> for ChannelMessageSentPayloadWhatsappPollPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappPollPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappPollPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappPollPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappPollPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappPollPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappPollPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappReaction`
@@ -4298,7 +9254,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "REACTION"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -4312,7 +9271,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4343,14 +9305,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappReactionMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappReactionPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4367,6 +9329,166 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappReaction {
         fn from(value: &ChannelMessageSentPayloadWhatsappReaction) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappReactionMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "REACTION"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappReactionMessageType {
+        #[serde(rename = "REACTION")]
+        Reaction,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappReactionMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappReactionMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappReactionMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Reaction => f.write_str("REACTION"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappReactionMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "REACTION" => Ok(Self::Reaction),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappReactionMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappReactionMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappReactionMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappReactionPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappReactionPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappReactionPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappReactionPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappReactionPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappReactionPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappReactionPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappReactionPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappReactionPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappSticker`
@@ -4409,7 +9531,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "STICKER"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -4423,7 +9548,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4454,14 +9582,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappStickerMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappStickerPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4478,6 +9606,166 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappSticker {
         fn from(value: &ChannelMessageSentPayloadWhatsappSticker) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappStickerMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "STICKER"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappStickerMessageType {
+        #[serde(rename = "STICKER")]
+        Sticker,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappStickerMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappStickerMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappStickerMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Sticker => f.write_str("STICKER"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappStickerMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "STICKER" => Ok(Self::Sticker),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappStickerMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappStickerMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappStickerMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappStickerPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappStickerPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappStickerPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappStickerPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappStickerPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappStickerPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappStickerPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappStickerPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappStickerPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappText`
@@ -4520,7 +9808,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "TEXT"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -4534,7 +9825,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4565,14 +9859,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappTextMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappTextPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4589,6 +9883,165 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappText {
         fn from(value: &ChannelMessageSentPayloadWhatsappText) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappTextMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "TEXT"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappTextMessageType {
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappTextMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappTextMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappTextMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Text => f.write_str("TEXT"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappTextMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "TEXT" => Ok(Self::Text),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappTextMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappTextPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappTextPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self> for ChannelMessageSentPayloadWhatsappTextPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappTextPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappTextPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappTextPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappTextPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessageSentPayloadWhatsappVideo`
@@ -4631,7 +10084,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "messageType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "VIDEO"
+    ///      ]
     ///    },
     ///    "observedAt": {
     ///      "type": "string",
@@ -4645,7 +10101,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    },
     ///    "platformData": {
     ///      "$ref": "#/components/schemas/WhatsAppChannelMessageSentPlatformData"
@@ -4676,14 +10135,14 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: ::std::string::String,
+        pub message_type: ChannelMessageSentPayloadWhatsappVideoMessageType,
         #[serde(rename = "observedAt")]
         pub observed_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "occurredAt")]
         pub occurred_at: ::chrono::DateTime<::chrono::offset::Utc>,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: ::std::string::String,
+        pub platform: ChannelMessageSentPayloadWhatsappVideoPlatform,
         #[serde(
             rename = "platformData",
             default,
@@ -4700,6 +10159,165 @@ pub mod types {
     for ChannelMessageSentPayloadWhatsappVideo {
         fn from(value: &ChannelMessageSentPayloadWhatsappVideo) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappVideoMessageType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "VIDEO"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappVideoMessageType {
+        #[serde(rename = "VIDEO")]
+        Video,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelMessageSentPayloadWhatsappVideoMessageType {
+        fn from(value: &ChannelMessageSentPayloadWhatsappVideoMessageType) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappVideoMessageType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Video => f.write_str("VIDEO"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappVideoMessageType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "VIDEO" => Ok(Self::Video),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappVideoMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappVideoMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappVideoMessageType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelMessageSentPayloadWhatsappVideoPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelMessageSentPayloadWhatsappVideoPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self> for ChannelMessageSentPayloadWhatsappVideoPlatform {
+        fn from(value: &ChannelMessageSentPayloadWhatsappVideoPlatform) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for ChannelMessageSentPayloadWhatsappVideoPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ChannelMessageSentPayloadWhatsappVideoPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelMessageSentPayloadWhatsappVideoPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelMessageSentPayloadWhatsappVideoPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelMessageSentPayloadWhatsappVideoPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelMessagesSyncedPayload`
@@ -5515,7 +11133,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "eventType": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "qr_code_updated"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -5524,7 +11145,10 @@ pub mod types {
     ///      "$ref": "#/components/schemas/WhatsAppQRCodeUpdated"
     ///    },
     ///    "platform": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "WHATSAPP"
+    ///      ]
     ///    }
     ///  }
     ///}
@@ -5537,11 +11161,11 @@ pub mod types {
         #[serde(rename = "eventName")]
         pub event_name: ::std::string::String,
         #[serde(rename = "eventType")]
-        pub event_type: ::std::string::String,
+        pub event_type: ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: WhatsAppQrCodeUpdated,
-        pub platform: ::std::string::String,
+        pub platform: ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform,
     }
     impl ::std::convert::From<
         &ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated,
@@ -5550,6 +11174,174 @@ pub mod types {
             value: &ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdated,
         ) -> Self {
             value.clone()
+        }
+    }
+    ///`ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "qr_code_updated"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        #[serde(rename = "qr_code_updated")]
+        QrCodeUpdated,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        fn from(
+            value: &ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::QrCodeUpdated => f.write_str("qr_code_updated"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "qr_code_updated" => Ok(Self::QrCodeUpdated),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedEventType {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "WHATSAPP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        #[serde(rename = "WHATSAPP")]
+        Whatsapp,
+    }
+    impl ::std::convert::From<&Self>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        fn from(
+            value: &ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Whatsapp => f.write_str("WHATSAPP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "WHATSAPP" => Ok(Self::Whatsapp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ChannelSpecialPlatformEventReceivedPayloadWhatsappQrCodeUpdatedPlatform {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ChannelSyncCompletedPayload`
@@ -8417,7 +14209,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.chat_presence_updated"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8437,7 +14232,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelChatPresenceUpdatedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelChatPresenceUpdatedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelChatPresenceUpdatedPayload,
@@ -8447,6 +14242,89 @@ pub mod types {
     for IntegrationChannelChatPresenceUpdatedEvent {
         fn from(value: &IntegrationChannelChatPresenceUpdatedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelChatPresenceUpdatedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.chat_presence_updated"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelChatPresenceUpdatedEventName {
+        #[serde(rename = "integration.channel.chat_presence_updated")]
+        IntegrationChannelChatPresenceUpdated,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelChatPresenceUpdatedEventName {
+        fn from(value: &IntegrationChannelChatPresenceUpdatedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelChatPresenceUpdatedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelChatPresenceUpdated => {
+                    f.write_str("integration.channel.chat_presence_updated")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelChatPresenceUpdatedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.chat_presence_updated" => {
+                    Ok(Self::IntegrationChannelChatPresenceUpdated)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for IntegrationChannelChatPresenceUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelChatPresenceUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelChatPresenceUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelConnectedEvent`
@@ -8468,7 +14346,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.connected"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8488,7 +14369,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelConnectedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelConnectedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelConnectedPayload,
@@ -8498,6 +14379,86 @@ pub mod types {
     for IntegrationChannelConnectedEvent {
         fn from(value: &IntegrationChannelConnectedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelConnectedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.connected"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelConnectedEventName {
+        #[serde(rename = "integration.channel.connected")]
+        IntegrationChannelConnected,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelConnectedEventName {
+        fn from(value: &IntegrationChannelConnectedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelConnectedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelConnected => {
+                    f.write_str("integration.channel.connected")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelConnectedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.connected" => Ok(Self::IntegrationChannelConnected),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelConnectedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelConnectedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelConnectedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelDisconnectedEvent`
@@ -8519,7 +14480,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.disconnected"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8539,7 +14503,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelDisconnectedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelDisconnectedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelDisconnectedPayload,
@@ -8549,6 +14513,88 @@ pub mod types {
     for IntegrationChannelDisconnectedEvent {
         fn from(value: &IntegrationChannelDisconnectedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelDisconnectedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.disconnected"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelDisconnectedEventName {
+        #[serde(rename = "integration.channel.disconnected")]
+        IntegrationChannelDisconnected,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelDisconnectedEventName {
+        fn from(value: &IntegrationChannelDisconnectedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelDisconnectedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelDisconnected => {
+                    f.write_str("integration.channel.disconnected")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelDisconnectedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.disconnected" => {
+                    Ok(Self::IntegrationChannelDisconnected)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelDisconnectedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelDisconnectedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelDisconnectedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelLoggedOutEvent`
@@ -8570,7 +14616,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.logged_out"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8590,7 +14639,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelLoggedOutEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelLoggedOutEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelLoggedOutPayload,
@@ -8600,6 +14649,86 @@ pub mod types {
     for IntegrationChannelLoggedOutEvent {
         fn from(value: &IntegrationChannelLoggedOutEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelLoggedOutEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.logged_out"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelLoggedOutEventName {
+        #[serde(rename = "integration.channel.logged_out")]
+        IntegrationChannelLoggedOut,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelLoggedOutEventName {
+        fn from(value: &IntegrationChannelLoggedOutEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelLoggedOutEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelLoggedOut => {
+                    f.write_str("integration.channel.logged_out")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelLoggedOutEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.logged_out" => Ok(Self::IntegrationChannelLoggedOut),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelLoggedOutEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelLoggedOutEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelLoggedOutEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelMembershipAddedEvent`
@@ -8621,7 +14750,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.membership_added"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8641,7 +14773,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelMembershipAddedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelMembershipAddedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelMembershipAddedPayload,
@@ -8651,6 +14783,88 @@ pub mod types {
     for IntegrationChannelMembershipAddedEvent {
         fn from(value: &IntegrationChannelMembershipAddedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelMembershipAddedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.membership_added"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelMembershipAddedEventName {
+        #[serde(rename = "integration.channel.membership_added")]
+        IntegrationChannelMembershipAdded,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelMembershipAddedEventName {
+        fn from(value: &IntegrationChannelMembershipAddedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelMembershipAddedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelMembershipAdded => {
+                    f.write_str("integration.channel.membership_added")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelMembershipAddedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.membership_added" => {
+                    Ok(Self::IntegrationChannelMembershipAdded)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelMembershipAddedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelMembershipAddedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelMembershipAddedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelMembershipRemovedEvent`
@@ -8672,7 +14886,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.membership_removed"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8692,7 +14909,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelMembershipRemovedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelMembershipRemovedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelMembershipRemovedPayload,
@@ -8702,6 +14919,88 @@ pub mod types {
     for IntegrationChannelMembershipRemovedEvent {
         fn from(value: &IntegrationChannelMembershipRemovedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelMembershipRemovedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.membership_removed"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelMembershipRemovedEventName {
+        #[serde(rename = "integration.channel.membership_removed")]
+        IntegrationChannelMembershipRemoved,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelMembershipRemovedEventName {
+        fn from(value: &IntegrationChannelMembershipRemovedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelMembershipRemovedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelMembershipRemoved => {
+                    f.write_str("integration.channel.membership_removed")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelMembershipRemovedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.membership_removed" => {
+                    Ok(Self::IntegrationChannelMembershipRemoved)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelMembershipRemovedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelMembershipRemovedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelMembershipRemovedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelMessageDeliveredEvent`
@@ -8723,7 +15022,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel_message.delivered"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8743,7 +15045,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelMessageDeliveredEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelMessageDeliveredEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelMessageDeliveredPayload,
@@ -8753,6 +15055,88 @@ pub mod types {
     for IntegrationChannelMessageDeliveredEvent {
         fn from(value: &IntegrationChannelMessageDeliveredEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelMessageDeliveredEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel_message.delivered"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelMessageDeliveredEventName {
+        #[serde(rename = "integration.channel_message.delivered")]
+        IntegrationChannelMessageDelivered,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelMessageDeliveredEventName {
+        fn from(value: &IntegrationChannelMessageDeliveredEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelMessageDeliveredEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelMessageDelivered => {
+                    f.write_str("integration.channel_message.delivered")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelMessageDeliveredEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel_message.delivered" => {
+                    Ok(Self::IntegrationChannelMessageDelivered)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelMessageDeliveredEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelMessageDeliveredEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelMessageDeliveredEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelMessageReceivedEvent`
@@ -8774,7 +15158,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel_message.received"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8794,7 +15181,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelMessageReceivedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelMessageReceivedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelMessageReceivedPayload,
@@ -8804,6 +15191,88 @@ pub mod types {
     for IntegrationChannelMessageReceivedEvent {
         fn from(value: &IntegrationChannelMessageReceivedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelMessageReceivedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel_message.received"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelMessageReceivedEventName {
+        #[serde(rename = "integration.channel_message.received")]
+        IntegrationChannelMessageReceived,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelMessageReceivedEventName {
+        fn from(value: &IntegrationChannelMessageReceivedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelMessageReceivedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelMessageReceived => {
+                    f.write_str("integration.channel_message.received")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelMessageReceivedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel_message.received" => {
+                    Ok(Self::IntegrationChannelMessageReceived)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelMessageReceivedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelMessageReceivedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelMessageReceivedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelMessageSeenEvent`
@@ -8825,7 +15294,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel_message.seen"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8845,7 +15317,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelMessageSeenEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelMessageSeenEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelMessageSeenPayload,
@@ -8855,6 +15327,88 @@ pub mod types {
     for IntegrationChannelMessageSeenEvent {
         fn from(value: &IntegrationChannelMessageSeenEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelMessageSeenEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel_message.seen"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelMessageSeenEventName {
+        #[serde(rename = "integration.channel_message.seen")]
+        IntegrationChannelMessageSeen,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelMessageSeenEventName {
+        fn from(value: &IntegrationChannelMessageSeenEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelMessageSeenEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelMessageSeen => {
+                    f.write_str("integration.channel_message.seen")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelMessageSeenEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel_message.seen" => {
+                    Ok(Self::IntegrationChannelMessageSeen)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelMessageSeenEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelMessageSeenEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelMessageSeenEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelMessagesSyncedEvent`
@@ -8876,7 +15430,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.messages_synced"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8896,7 +15453,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelMessagesSyncedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelMessagesSyncedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelMessagesSyncedPayload,
@@ -8906,6 +15463,88 @@ pub mod types {
     for IntegrationChannelMessagesSyncedEvent {
         fn from(value: &IntegrationChannelMessagesSyncedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelMessagesSyncedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.messages_synced"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelMessagesSyncedEventName {
+        #[serde(rename = "integration.channel.messages_synced")]
+        IntegrationChannelMessagesSynced,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelMessagesSyncedEventName {
+        fn from(value: &IntegrationChannelMessagesSyncedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelMessagesSyncedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelMessagesSynced => {
+                    f.write_str("integration.channel.messages_synced")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelMessagesSyncedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.messages_synced" => {
+                    Ok(Self::IntegrationChannelMessagesSynced)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelMessagesSyncedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelMessagesSyncedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelMessagesSyncedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelPresenceUpdatedEvent`
@@ -8927,7 +15566,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.presence_updated"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8947,7 +15589,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelPresenceUpdatedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelPresenceUpdatedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelPresenceUpdatedPayload,
@@ -8957,6 +15599,88 @@ pub mod types {
     for IntegrationChannelPresenceUpdatedEvent {
         fn from(value: &IntegrationChannelPresenceUpdatedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelPresenceUpdatedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.presence_updated"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelPresenceUpdatedEventName {
+        #[serde(rename = "integration.channel.presence_updated")]
+        IntegrationChannelPresenceUpdated,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelPresenceUpdatedEventName {
+        fn from(value: &IntegrationChannelPresenceUpdatedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelPresenceUpdatedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelPresenceUpdated => {
+                    f.write_str("integration.channel.presence_updated")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelPresenceUpdatedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.presence_updated" => {
+                    Ok(Self::IntegrationChannelPresenceUpdated)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelPresenceUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelPresenceUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelPresenceUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelRemoteCreatedEvent`
@@ -8978,7 +15702,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.remote_created"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -8998,7 +15725,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelRemoteCreatedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelRemoteCreatedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelRemoteCreatedPayload,
@@ -9008,6 +15735,88 @@ pub mod types {
     for IntegrationChannelRemoteCreatedEvent {
         fn from(value: &IntegrationChannelRemoteCreatedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelRemoteCreatedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.remote_created"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelRemoteCreatedEventName {
+        #[serde(rename = "integration.channel.remote_created")]
+        IntegrationChannelRemoteCreated,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelRemoteCreatedEventName {
+        fn from(value: &IntegrationChannelRemoteCreatedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelRemoteCreatedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelRemoteCreated => {
+                    f.write_str("integration.channel.remote_created")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelRemoteCreatedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.remote_created" => {
+                    Ok(Self::IntegrationChannelRemoteCreated)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelRemoteCreatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelRemoteCreatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelRemoteCreatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelRemoteDeletedEvent`
@@ -9029,7 +15838,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.remote_deleted"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9049,7 +15861,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelRemoteDeletedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelRemoteDeletedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelRemoteDeletedPayload,
@@ -9059,6 +15871,88 @@ pub mod types {
     for IntegrationChannelRemoteDeletedEvent {
         fn from(value: &IntegrationChannelRemoteDeletedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelRemoteDeletedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.remote_deleted"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelRemoteDeletedEventName {
+        #[serde(rename = "integration.channel.remote_deleted")]
+        IntegrationChannelRemoteDeleted,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelRemoteDeletedEventName {
+        fn from(value: &IntegrationChannelRemoteDeletedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelRemoteDeletedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelRemoteDeleted => {
+                    f.write_str("integration.channel.remote_deleted")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelRemoteDeletedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.remote_deleted" => {
+                    Ok(Self::IntegrationChannelRemoteDeleted)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelRemoteDeletedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelRemoteDeletedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelRemoteDeletedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelRemoteUpdatedEvent`
@@ -9080,7 +15974,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.remote_updated"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9100,7 +15997,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelRemoteUpdatedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelRemoteUpdatedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelRemoteUpdatedPayload,
@@ -9110,6 +16007,88 @@ pub mod types {
     for IntegrationChannelRemoteUpdatedEvent {
         fn from(value: &IntegrationChannelRemoteUpdatedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelRemoteUpdatedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.remote_updated"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelRemoteUpdatedEventName {
+        #[serde(rename = "integration.channel.remote_updated")]
+        IntegrationChannelRemoteUpdated,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelRemoteUpdatedEventName {
+        fn from(value: &IntegrationChannelRemoteUpdatedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelRemoteUpdatedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelRemoteUpdated => {
+                    f.write_str("integration.channel.remote_updated")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelRemoteUpdatedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.remote_updated" => {
+                    Ok(Self::IntegrationChannelRemoteUpdated)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelRemoteUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelRemoteUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelRemoteUpdatedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelRemotesSyncedEvent`
@@ -9131,7 +16110,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.remotes_synced"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9151,7 +16133,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelRemotesSyncedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelRemotesSyncedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelRemotesSyncedPayload,
@@ -9161,6 +16143,88 @@ pub mod types {
     for IntegrationChannelRemotesSyncedEvent {
         fn from(value: &IntegrationChannelRemotesSyncedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelRemotesSyncedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.remotes_synced"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelRemotesSyncedEventName {
+        #[serde(rename = "integration.channel.remotes_synced")]
+        IntegrationChannelRemotesSynced,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelRemotesSyncedEventName {
+        fn from(value: &IntegrationChannelRemotesSyncedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelRemotesSyncedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelRemotesSynced => {
+                    f.write_str("integration.channel.remotes_synced")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelRemotesSyncedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.remotes_synced" => {
+                    Ok(Self::IntegrationChannelRemotesSynced)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelRemotesSyncedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelRemotesSyncedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelRemotesSyncedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelSpecialPlatformEventReceivedEvent`
@@ -9182,7 +16246,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel_special_platform_event.received"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9202,7 +16269,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelSpecialPlatformEventReceivedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelSpecialPlatformEventReceivedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelSpecialPlatformEventReceivedPayload,
@@ -9212,6 +16279,94 @@ pub mod types {
     for IntegrationChannelSpecialPlatformEventReceivedEvent {
         fn from(value: &IntegrationChannelSpecialPlatformEventReceivedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelSpecialPlatformEventReceivedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel_special_platform_event.received"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelSpecialPlatformEventReceivedEventName {
+        #[serde(rename = "integration.channel_special_platform_event.received")]
+        IntegrationChannelSpecialPlatformEventReceived,
+    }
+    impl ::std::convert::From<&Self>
+    for IntegrationChannelSpecialPlatformEventReceivedEventName {
+        fn from(
+            value: &IntegrationChannelSpecialPlatformEventReceivedEventName,
+        ) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display
+    for IntegrationChannelSpecialPlatformEventReceivedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelSpecialPlatformEventReceived => {
+                    f.write_str("integration.channel_special_platform_event.received")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr
+    for IntegrationChannelSpecialPlatformEventReceivedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel_special_platform_event.received" => {
+                    Ok(Self::IntegrationChannelSpecialPlatformEventReceived)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for IntegrationChannelSpecialPlatformEventReceivedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelSpecialPlatformEventReceivedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelSpecialPlatformEventReceivedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelSyncCompletedEvent`
@@ -9233,7 +16388,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.sync_completed"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9253,7 +16411,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelSyncCompletedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelSyncCompletedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelSyncCompletedPayload,
@@ -9263,6 +16421,88 @@ pub mod types {
     for IntegrationChannelSyncCompletedEvent {
         fn from(value: &IntegrationChannelSyncCompletedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelSyncCompletedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.sync_completed"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelSyncCompletedEventName {
+        #[serde(rename = "integration.channel.sync_completed")]
+        IntegrationChannelSyncCompleted,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelSyncCompletedEventName {
+        fn from(value: &IntegrationChannelSyncCompletedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelSyncCompletedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelSyncCompleted => {
+                    f.write_str("integration.channel.sync_completed")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelSyncCompletedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.sync_completed" => {
+                    Ok(Self::IntegrationChannelSyncCompleted)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelSyncCompletedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelSyncCompletedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelSyncCompletedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelSyncProgressEvent`
@@ -9284,7 +16524,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.sync_progress"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9304,7 +16547,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelSyncProgressEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelSyncProgressEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelSyncProgressPayload,
@@ -9314,6 +16557,88 @@ pub mod types {
     for IntegrationChannelSyncProgressEvent {
         fn from(value: &IntegrationChannelSyncProgressEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelSyncProgressEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.sync_progress"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelSyncProgressEventName {
+        #[serde(rename = "integration.channel.sync_progress")]
+        IntegrationChannelSyncProgress,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelSyncProgressEventName {
+        fn from(value: &IntegrationChannelSyncProgressEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelSyncProgressEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelSyncProgress => {
+                    f.write_str("integration.channel.sync_progress")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelSyncProgressEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.sync_progress" => {
+                    Ok(Self::IntegrationChannelSyncProgress)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelSyncProgressEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelSyncProgressEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelSyncProgressEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`IntegrationChannelSyncStartedEvent`
@@ -9335,7 +16660,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "name": {
-    ///      "type": "string"
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "integration.channel.sync_started"
+    ///      ]
     ///    },
     ///    "ownerId": {
     ///      "type": "string"
@@ -9355,7 +16683,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntegrationChannelSyncStartedEvent {
         pub id: ::std::string::String,
-        pub name: ::std::string::String,
+        pub name: IntegrationChannelSyncStartedEventName,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub payload: ChannelSyncStartedPayload,
@@ -9365,6 +16693,88 @@ pub mod types {
     for IntegrationChannelSyncStartedEvent {
         fn from(value: &IntegrationChannelSyncStartedEvent) -> Self {
             value.clone()
+        }
+    }
+    ///`IntegrationChannelSyncStartedEventName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "integration.channel.sync_started"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IntegrationChannelSyncStartedEventName {
+        #[serde(rename = "integration.channel.sync_started")]
+        IntegrationChannelSyncStarted,
+    }
+    impl ::std::convert::From<&Self> for IntegrationChannelSyncStartedEventName {
+        fn from(value: &IntegrationChannelSyncStartedEventName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IntegrationChannelSyncStartedEventName {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::IntegrationChannelSyncStarted => {
+                    f.write_str("integration.channel.sync_started")
+                }
+            }
+        }
+    }
+    impl ::std::str::FromStr for IntegrationChannelSyncStartedEventName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "integration.channel.sync_started" => {
+                    Ok(Self::IntegrationChannelSyncStarted)
+                }
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IntegrationChannelSyncStartedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for IntegrationChannelSyncStartedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for IntegrationChannelSyncStartedEventName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`InternalChannelMessageReceivedPlatformData`
