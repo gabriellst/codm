@@ -1,9 +1,9 @@
 /**
- * The wire name of a tool the CodeDM MCP server exposes.
+ * The wire name of a tool the CODM MCP server exposes.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────────
  * THIS WAS A UNION OF FOUR HAND-WRITTEN LITERALS AND THEY WERE UNREACHABLE. Fase 1 froze four
- * `codedm`-prefixed spellings — one per declaration — and documented them as *"the value IS the wire
+ * `codm`-prefixed spellings — one per declaration — and documented them as *"the value IS the wire
  * name the model calls"*. (The literals themselves are deliberately not repeated here: AC-6.17(a)
  * keeps them out of `src` so nobody copies a dead name into a new call site. The one surviving
  * occurrence is the regression assertion in the accumulator's test, which AC-6.17(d) requires.)

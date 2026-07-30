@@ -53,18 +53,7 @@ const BIN = process.env.CODM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Content
 // imports workspace packages (`reflect-metadata`, `@codm/core-typescript`) that only resolve from
 // inside this package's `node_modules` — the Fase-2 smoke could sit under `.specs/` only because it
 // imported nothing but `node:*` and spawned the binary directly.
-const OUT = join(
-	dirname(fileURLToPath(import.meta.url)),
-	'..',
-	'..',
-	'..',
-	'..',
-	'.specs',
-	'codedm',
-	'phase3-smoke',
-	'raw',
-	'vertical.json',
-)
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.specs', 'codm', 'phase3-smoke', 'raw', 'vertical.json')
 const INBOUND = 'the login button does nothing when I click it — please fix'
 
 for (const key of Object.keys(process.env)) {
@@ -84,7 +73,7 @@ const report: Report = { binary: BIN, inbound: INBOUND, startedAt: new Date().to
 
 async function main(): Promise<number> {
 	const runner = new StreamJsonAgentRunner(new LoggingService(), { inactivityMs: 240_000 })
-	const cwd = mkdtempSync(join(tmpdir(), 'codedm-phase3-smoke-'))
+	const cwd = mkdtempSync(join(tmpdir(), 'codm-phase3-smoke-'))
 	writeFileSync(join(cwd, 'README.md'), '# scratch workspace for the fase-3 smoke\n')
 
 	// ── LEG 1: inbound → issue decision (structured output through the ONE seam) ────────────────

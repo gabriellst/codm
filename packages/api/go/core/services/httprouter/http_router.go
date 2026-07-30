@@ -99,7 +99,7 @@ func (r *HttpRouter) RegisterDocsRoutes(openapiJSON []byte) {
 // All unmatched routes serve index.html for client-side routing.
 //
 // NOTE(core-adequation): the template's core HttpRouter has no SPA surface —
-// this is a codedm extension (sanção #4). At pairing convergence it becomes
+// this is a codm extension (sanção #4). At pairing convergence it becomes
 // an api-go-local extension registered from internal/shared, not a core method.
 func (r *HttpRouter) RegisterSPA(fsys fs.FS) {
 	fileServer := http.FileServerFS(fsys)

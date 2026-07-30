@@ -8,7 +8,7 @@ import { AgentToolCallStatus } from '../enums'
  * CONTEXT-ORIGIN: medscall `packages/api/src/agent/events/ChatToolCallEvent.ts`
  * @ c58ed45677c473b0415c03cfc741fea3a00946f4 — the SHAPE decision is adopted (one event per
  * invocation carrying start+end+outcome, rather than a start event and an end event that consumers
- * have to correlate), the fields are CodeDM's.
+ * have to correlate), the fields are CODM's.
  *
  * Two rules of §4.3 are visible in this schema and neither is optional:
  *  - `status` is terminal-only, so `flush()` MUST materialize a `tool_use` that never received its

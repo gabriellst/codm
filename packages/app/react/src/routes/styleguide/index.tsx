@@ -147,11 +147,10 @@ function StyleguideRoute() {
 					<Section title="Typography" hint="System grotesque for UI, heavy uppercase for display, mono for the machine.">
 						<div className="flex flex-col gap-4">
 							<span className="heading-display text-5xl text-foreground">How it works</span>
-							<span className="heading-display text-2xl text-foreground">Welcome to CodeDM</span>
+							<span className="heading-display text-2xl text-foreground">Welcome to CODM</span>
 							<h3 className="text-2xl font-bold text-foreground">1 agent working right now</h3>
 							<p className="max-w-2xl text-foreground">
-								Body copy is a clean system sans at a comfortable measure. CodeDM connects your channels to coding agents running on this
-								Mac.
+								Body copy is a clean system sans at a comfortable measure. CODM connects your channels to coding agents running on this Mac.
 							</p>
 							<p className="max-w-2xl text-sm text-muted-foreground">Muted secondary text for descriptions, timestamps, and metadata.</p>
 							<Eyebrow>Section label · eyebrow</Eyebrow>

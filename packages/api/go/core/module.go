@@ -241,7 +241,7 @@ func startSqliteOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.SqliteOutbo
 // StartHTTPServer starts the HTTP server as an fx lifecycle hook.
 //
 // NOTE(core-adequation): unlike the template's core, the handler is wrapped in
-// the CORS middleware — codedm's console talks to the gateway cross-origin.
+// the CORS middleware — codm's console talks to the gateway cross-origin.
 func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config) {
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,

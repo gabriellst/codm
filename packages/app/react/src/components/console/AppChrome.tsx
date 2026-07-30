@@ -31,7 +31,7 @@ export function AppChrome({ className, ...props }: ComponentProps<'header'>) {
 			<div data-tauri-drag-region className={trafficLightBand} />
 			<div data-tauri-drag-region className="flex justify-center">
 				{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- brand wordmark, never localized (see Logo.tsx) */}
-				<span className="select-none text-sm text-muted-foreground">codedm</span>
+				<span className="select-none text-sm text-muted-foreground">codm</span>
 			</div>
 			<div data-tauri-drag-region className={trafficLightBand} />
 		</header>

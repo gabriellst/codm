@@ -1,4 +1,4 @@
-# CodeDM E2E flows
+# CODM E2E flows
 
 Cross-stack canonical flows exercised through Playwright against the REAL stack the harness can boot
 on its own: the TS daemon in `real` mode over an EMBEDDED file-backed SQLite store (a scratch

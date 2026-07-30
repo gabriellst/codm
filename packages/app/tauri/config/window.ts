@@ -55,5 +55,5 @@ export const BOOT_ERROR_FRAME = {
 	height: 520,
 	url: 'boot-error.html',
 	visible: false,
-	title: 'CodeDM — boot failed',
+	title: 'CODM — boot failed',
 } as const

@@ -8,10 +8,10 @@ export const MentionGateSchema = z.discriminatedUnion('enabled', [
 ])
 
 /** Fallback tag when the folder name slugs to nothing (a root path, a CJK-only basename). */
-const FALLBACK_TAG = 'codedm'
+const FALLBACK_TAG = 'codm'
 
 /**
- * Mint the citation tag for a thread from the folder it was linked to — `/Users/w/codedm` → `@codedm`.
+ * Mint the citation tag for a thread from the folder it was linked to — `/Users/w/codm` → `@codm`.
  *
  * `Workspace` carries `{ ownerId, path, badges, addedAt }` and `AddWorkspace` collects only a path, so
  * the basename is the ONLY human-facing name the system has. Deliberately NOT `agent/…/slug.ts`'s
@@ -37,9 +37,13 @@ export function mintMentionTag(workspacePath: string): string {
  *
  * The tag is derived from a folder name, so it collides with the vocabulary of the very project it
  * names. This repo's own packages are `@codm/core-typescript`, `@codm/contracts-typescript`,
- * `@codm/client-typescript`, and its live thread is bound to `/…/pessoal/codedm` — so under
- * `includes`, "bump @codm/core-typescript to 2.0" summons the agent. The `/` in the right-hand
- * class is the character that stops it; the `.` handles `codedm.ts`.
+ * `@codm/client-typescript` — that much moved with the rebrand (`template.config.ts` `REPO.scope`).
+ * The CHECKOUT DIRECTORY did not: it is not a tracked file, so renaming it is out of scope for a
+ * codemod, and this founder's live thread is still bound to `/…/pessoal/codedm`, minting `@codedm`
+ * live, while `FALLBACK_TAG` above is `codm`. Under `includes`, "bump @codm/core-typescript to 2.0"
+ * would still summon the agent — that is exactly why this is a WORD-BOUNDARY match, not
+ * `includes`: the `/` in the right-hand class is the character that stops it; the `.` handles
+ * `codedm.ts`.
  *
  * Case-insensitive because the mint lowercases while every UI surface renders the raw path: an
  * operator reading `/Users/x/MyApp` would tell the group to type `@MyApp` and get silence.

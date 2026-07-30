@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
  * apply to a proper noun, so it's disabled for this one-line mark.
  */
 /* eslint-disable local/no-hardcoded-jsx-text */
-/** The CodeDM wordmark: "Code" in ink, "DM" in a black pill. */
+/** The CODM wordmark: "Code" in ink, "DM" in a black pill. */
 export function Logo({ className, ...props }: ComponentProps<'span'>) {
 	return (
 		<span className={cn('inline-flex items-center text-xl font-bold tracking-tight text-foreground', className)} {...props}>

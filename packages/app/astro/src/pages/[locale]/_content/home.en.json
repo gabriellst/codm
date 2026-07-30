@@ -23,7 +23,7 @@
 	"demo": {
 		"eyebrow": "YOUR PROJECTS, ON CALL",
 		"title": "Run your projects from anywhere you can text",
-		"body": "CodeDM turns any conversation into an operations desk for your projects — code, deploys, files, whatever your agents can do. Your client reports the bug at lunch; by coffee the fix is deployed and the reply is in their chat.",
+		"body": "CODM turns any conversation into an operations desk for your projects — code, deploys, files, whatever your agents can do. Your client reports the bug at lunch; by coffee the fix is deployed and the reply is in their chat.",
 		"steps": [
 			{ "body": "message classified → issue", "title": "coupon-focus" },
 			{ "body": "terminal session spawned on the folder", "title": "" },
@@ -130,7 +130,7 @@
 	"footer": {
 		"copyright": "© 2026 · MIT license",
 		"links": {
-			"github": "https://github.com/codedm",
+			"github": "https://github.com/codm",
 			"docs": "Docs",
 			"changelog": "Changelog"
 		}

@@ -45,7 +45,7 @@ export { MCP_ROUTE_PREFIX }
 @injectable()
 export class McpDoorController extends McpAdapter {
 	readonly path = `${MCP_ROUTE_PREFIX}/:scope` as const
-	readonly description = 'CodeDM MCP server (JSON-RPC) — not emitted to the OpenAPI/SDK'
+	readonly description = 'CODM MCP server (JSON-RPC) — not emitted to the OpenAPI/SDK'
 
 	protected readonly scopes: readonly string[] = Object.values(McpScope)
 

@@ -5,7 +5,7 @@ import type { SecretsService } from './SecretsService'
  * (SecretsService.ts). Never treat this as secure storage: the tauri platform
  * is the one backed by the OS keychain.
  */
-const SECRET_PREFIX = 'codedm.native.secret.'
+const SECRET_PREFIX = 'codm.native.secret.'
 
 export class BrowserSecretsService implements SecretsService {
 	async get(key: string): Promise<string | null> {

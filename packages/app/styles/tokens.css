@@ -1,4 +1,4 @@
-/* CodeDM design tokens — the product's own identity.
+/* CODM design tokens — the product's own identity.
    Monochrome: near-black / white / light-gray. Black is the sole action color;
    status is expressed only through small colored dots. Pill-heavy radii, hairline
    borders, heavy uppercase display type, generous whitespace, subtle/no shadows.
@@ -70,7 +70,7 @@
 	/* ── Radius — pill-heavy. Base tuned for cards; buttons/badges/inputs go full. ─ */
 	--radius: 1.25rem; /* 20px — the design's large content-card radius */
 
-	/* ── Sidebar (light — CodeDM chrome) ─────────────── */
+	/* ── Sidebar (light — CODM chrome) ─────────────── */
 	--sidebar: oklch(0.976 0 0);
 	--sidebar-foreground: oklch(0.18 0 0);
 	--sidebar-primary: oklch(0.16 0 0);

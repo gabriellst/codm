@@ -7,7 +7,7 @@ import type { z as Z, ZodObject, ZodRawShape } from 'zod'
  *
  * CONTEXT-ORIGIN: medscall `packages/api/src/agent/types/AgentInputSchemaConstraint.ts`
  * @ c58ed45677c473b0415c03cfc741fea3a00946f4 — technique copied, field set NOT (see
- * `BaseAgentInputSchema` in core for why the CodeDM envelope is `{ownerId, issueId, threadId, cwd}`).
+ * `BaseAgentInputSchema` in core for why the CODM envelope is `{ownerId, issueId, threadId, cwd}`).
  *
  * The problem this closes, verbatim from the medscall finding: TypeScript's generic narrowing of
  * `z.output<InputSchema>` alone collapses to `Record<string, unknown>` under constraint erasure,
@@ -23,7 +23,7 @@ import type { z as Z, ZodObject, ZodRawShape } from 'zod'
 export { BaseAgentInputSchema }
 
 /**
- * Alias kept for symmetry with the medscall vocabulary and for the day a CodeDM-wide input field is
+ * Alias kept for symmetry with the medscall vocabulary and for the day a CODM-wide input field is
  * added that is NOT part of the core envelope. Today it is exactly the envelope.
  */
 export const AgentInputSchema = BaseAgentInputSchema

@@ -1,5 +1,5 @@
 import { AgentMessageRole, AgentToolCallStatus } from '../../enums'
-import { isCodedmTool } from '../../mcp/wire'
+import { isCodmTool } from '../../mcp/wire'
 import { AgentMessageEvent, AgentToolCallEvent, AgentUsageEvent, type AgentTurnFact } from '../../events'
 import type { AgentFrame } from '../../types'
 
@@ -92,12 +92,12 @@ export class StreamJsonToTurnFactAccumulator {
 				})
 
 			case 'tool_use':
-				// `isCodedmTool`, NOT `startsWith('codedm__')`. The Fase-1 guard was the latter and it would
-				// have failed silently: the real wire name is `mcp__codedm__RecordArtifact`, so the old
+				// `isCodmTool`, NOT `startsWith('codm__')`. The Fase-1 guard was the latter and it would
+				// have failed silently: the real wire name is `mcp__codm__RecordArtifact`, so the old
 				// prefix sits in the MIDDLE and `startsWith` is false — the accumulator would mint a turn
 				// fact for a call whose use case already persisted one, publishing
 				// `integration.issue.completed` twice.
-				if (frame.parentToolUseId !== null || isCodedmTool(frame.tool)) return null
+				if (frame.parentToolUseId !== null || isCodmTool(frame.tool)) return null
 				this.inflight.set(frame.toolUseId, {
 					tool: frame.tool,
 					input: asInput(frame.input),

@@ -21,27 +21,27 @@ describe('mintMentionTag — the tag is the folder name, slugged', () => {
 	it('falls back rather than minting an unusable tag', () => {
 		// A root path and a non-latin basename both slug to nothing. An empty tag would be worse than a
 		// wrong one: `MentionGateSchema` rejects it, so `Thread.create` would throw on attach.
-		expect(mintMentionTag('/')).toBe('@codedm')
-		expect(mintMentionTag('/Users/dev/日本語')).toBe('@codedm')
+		expect(mintMentionTag('/')).toBe('@codm')
+		expect(mintMentionTag('/Users/dev/日本語')).toBe('@codm')
 	})
 })
 
 describe('mentionsTag — a standalone token, not a substring', () => {
 	it('matches a citation anywhere in the message, case-insensitively', () => {
-		expect(mentionsTag('@codedm fix the login bug', '@codedm')).toBe(true)
-		expect(mentionsTag('hey @codedm, can you look?', '@codedm')).toBe(true)
+		expect(mentionsTag('@codm fix the login bug', '@codm')).toBe(true)
+		expect(mentionsTag('hey @codm, can you look?', '@codm')).toBe(true)
 		// The mint lowercases; every UI surface renders the raw folder path. An operator reading
 		// `/Users/x/MyApp` will tell the group to type `@MyApp`.
-		expect(mentionsTag('@CodeDM ping', '@codedm')).toBe(true)
+		expect(mentionsTag('@CODM ping', '@codm')).toBe(true)
 	})
 
 	it('does NOT match inside a longer token — the reason this is not String.includes', () => {
 		// The tag is derived from a folder name, so it collides with the vocabulary of the project it
-		// names. This repo's packages are literally `@codm/*` and its live thread mints `@codedm`.
-		expect(mentionsTag('bump @codm/core-typescript to 2.0', '@codedm')).toBe(false)
-		expect(mentionsTag('see codedm.ts', '@codedm')).toBe(false)
-		expect(mentionsTag('@codedmx is someone else', '@codedm')).toBe(false)
-		expect(mentionsTag('mail me at a@codedm.dev', '@codedm')).toBe(false)
+		// names. This repo's packages are literally `@codm/*` and its live thread mints `@codm`.
+		expect(mentionsTag('bump @codm/core-typescript to 2.0', '@codm')).toBe(false)
+		expect(mentionsTag('see codm.ts', '@codm')).toBe(false)
+		expect(mentionsTag('@codmx is someone else', '@codm')).toBe(false)
+		expect(mentionsTag('mail me at a@codm.dev', '@codm')).toBe(false)
 	})
 
 	it('treats an operator-set tag as text, never as a pattern', () => {
@@ -52,23 +52,23 @@ describe('mentionsTag — a standalone token, not a substring', () => {
 
 	it('is stateless across calls', () => {
 		// A `g`-flagged RegExp carries `lastIndex`; reusing one would make every other call miss.
-		expect(mentionsTag('@codedm one', '@codedm')).toBe(true)
-		expect(mentionsTag('@codedm two', '@codedm')).toBe(true)
+		expect(mentionsTag('@codm one', '@codm')).toBe(true)
+		expect(mentionsTag('@codm two', '@codm')).toBe(true)
 	})
 })
 
 describe('stripMentionTag — addressing is not content', () => {
 	it('removes every citation and collapses the gap', () => {
-		expect(stripMentionTag('@codedm fix the login bug', '@codedm')).toBe('fix the login bug')
-		expect(stripMentionTag('hey @codedm please @codedm hurry', '@codedm')).toBe('hey please hurry')
+		expect(stripMentionTag('@codm fix the login bug', '@codm')).toBe('fix the login bug')
+		expect(stripMentionTag('hey @codm please @codm hurry', '@codm')).toBe('hey please hurry')
 	})
 
 	it('leaves a non-citation occurrence alone', () => {
-		expect(stripMentionTag('bump @codm/core to 2.0', '@codedm')).toBe('bump @codm/core to 2.0')
+		expect(stripMentionTag('bump @codm/core to 2.0', '@codm')).toBe('bump @codm/core to 2.0')
 	})
 
 	it('CAN empty a bare summon — the caller is responsible for that', () => {
 		// `Thread.textWithoutMention` falls back to the original text precisely because of this.
-		expect(stripMentionTag('@codedm', '@codedm')).toBe('')
+		expect(stripMentionTag('@codm', '@codm')).toBe('')
 	})
 })

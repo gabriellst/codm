@@ -68,7 +68,7 @@ export const FOREIGN_PGSCHEMAS: readonly string[] = ['gateway']
  * precedes derivation — the schema is claimed here so the context-map parity rail stays green
  * until each context (its `src/<module>/` folder + router + registry) is built and PROMOTED into
  * CONTEXTS. When a context lands, move its schema OUT of this list and INTO CONTEXTS.pgSchema.
- * (CodeDM new contexts: workspace / thread / issue / artifact.)
+ * (CODM new contexts: workspace / thread / issue / artifact.)
  */
 export const PENDING_PGSCHEMAS: readonly string[] = []
 

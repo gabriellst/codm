@@ -18,7 +18,7 @@ export const StreamTerminalSessionInputSchema = z
 export const StreamTerminalSessionOutputSchema = TerminalSseFrameSchema
 
 /**
- * The two-stream TRANSPORT endpoint — the CodeDM descendant of whatscode's SSE Completion controller,
+ * The two-stream TRANSPORT endpoint — the CODM descendant of whatscode's SSE Completion controller,
  * rekeyed chatId → issueId. It registers ONE observer writer per issue in `AgentStreamRegistry`
  * (double-open → 409, the observer half of the single-active invariant) and forwards every terminal
  * output frame the running session pushes (`AgentStreamRegistry.send`) straight to the browser.

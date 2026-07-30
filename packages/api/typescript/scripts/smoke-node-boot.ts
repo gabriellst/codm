@@ -42,7 +42,7 @@ async function main(): Promise<void> {
 	if (build.exitCode !== 0) process.exit(build.exitCode ?? 1)
 
 	const nodeBin = resolveNodeBin()
-	const dataDir = mkdtempSync(join(tmpdir(), 'codedm-node-smoke-'))
+	const dataDir = mkdtempSync(join(tmpdir(), 'codm-node-smoke-'))
 	const port = Number(process.env.API_PORT ?? 3097)
 	console.log(`[smoke] node=${nodeBin} port=${port} dataDir=${dataDir}`)
 

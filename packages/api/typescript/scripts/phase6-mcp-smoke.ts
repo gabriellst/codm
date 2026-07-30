@@ -64,13 +64,13 @@ import { wireToolName, operationIdOf, TransitionIssueStatusController } from '@a
 import { MCP_ROUTE_PREFIX } from '@agent/mcp/route'
 
 const BIN = process.env.CODM_SMOKE_CLAUDE_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/claude'
-const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.specs', 'codedm', 'phase6-mcp-smoke')
+const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.specs', 'codm', 'phase6-mcp-smoke')
 const RAW_PATH = join(SPEC_DIR, 'raw', 'smoke.jsonl')
 const REPORT_PATH = join(SPEC_DIR, 'raw', 'report.json')
 const TIMEOUT_MS = 240_000
 
 const TOOL_OPERATION = operationIdOf(TransitionIssueStatusController) // 'TransitionIssueStatus', derived — never a literal
-const TOOL_WIRE = wireToolName(TOOL_OPERATION) // WIRE(C) = mcp__codedm__TransitionIssueStatus, computed, never typed
+const TOOL_WIRE = wireToolName(TOOL_OPERATION) // WIRE(C) = mcp__codm__TransitionIssueStatus, computed, never typed
 
 interface Report {
 	binary: string
@@ -146,7 +146,7 @@ async function main(): Promise<Report> {
 	})
 
 	const endpoint = `http://127.0.0.1:${Config.env.API_PORT}/${Config.version}${MCP_ROUTE_PREFIX}/issue-handling`
-	const mcpConfig = { mcpServers: { codedm: { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${token}` } } } }
+	const mcpConfig = { mcpServers: { codm: { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${token}` } } } }
 	const allowedTools = TOOL_WIRE
 
 	const args = [
@@ -172,13 +172,13 @@ async function main(): Promise<Report> {
 		'After the tool call returns, reply with exactly the single word DONE and nothing else.',
 	].join('\n')
 
-	const cwd = mkdtempSync(join(tmpdir(), 'codedm-phase6-mcp-smoke-'))
+	const cwd = mkdtempSync(join(tmpdir(), 'codm-phase6-mcp-smoke-'))
 
 	const report: Report = {
 		binary: BIN,
 		startedAt: new Date().toISOString(),
 		command,
-		mcpConfig: { mcpServers: { codedm: { type: 'http', url: endpoint, headers: { Authorization: 'Bearer <redacted>' } } } },
+		mcpConfig: { mcpServers: { codm: { type: 'http', url: endpoint, headers: { Authorization: 'Bearer <redacted>' } } } },
 		allowedTools,
 		issueId,
 		threadId,

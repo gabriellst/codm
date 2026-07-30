@@ -186,8 +186,8 @@ describe('StreamJsonToTurnFactAccumulator — sub-agent SCOPE, keyed by parent_t
 
 describe('StreamJsonToTurnFactAccumulator — ANTI-DOUBLE-PUBLISH (AC-2.4, §4.3 rule 3; AC-6.17(d))', () => {
 	// Every name below comes from `wireToolName`, never typed as a literal. That is the whole point of
-	// this block after Fase 6: the guard used to be `startsWith('codedm__')` and the REAL wire name is
-	// `mcp__codedm__RecordArtifact`, in which `codedm__` sits in the MIDDLE — so the old guard matched
+	// this block after Fase 6: the guard used to be `startsWith('codm__')` and the REAL wire name is
+	// `mcp__codm__RecordArtifact`, in which `codm__` sits in the MIDDLE — so the old guard matched
 	// NOTHING and the double-publish it existed to prevent would have come back silently.
 	const COMPLETE = wireToolName('TransitionIssueStatus')
 	const RAISE_STOP = wireToolName('RaiseStop')
@@ -211,8 +211,8 @@ describe('StreamJsonToTurnFactAccumulator — ANTI-DOUBLE-PUBLISH (AC-2.4, §4.3
 		// This assertion exists so nobody "fixes" the guard back to the frozen prefix. It is not a
 		// tautology: the two spellings are close enough to look interchangeable, and the failure mode of
 		// getting it wrong is silent (a fact minted twice), not loud.
-		expect(COMPLETE.startsWith('codedm__')).toBe(false)
-		expect(COMPLETE).toContain('codedm__')
+		expect(COMPLETE.startsWith('codm__')).toBe(false)
+		expect(COMPLETE).toContain('codm__')
 	})
 
 	it('does not resurrect one of OUR unfinished calls as an orphan failure on flush()', () => {

@@ -32,7 +32,7 @@ export async function givenAttachedThread(
 ): Promise<AttachedThread> {
 	const channelId = await seedConnectedChannel(session)
 	// A real directory — AddWorkspace stat()s the path and rejects a missing one.
-	const workspacePath = mkdtempSync(join(tmpdir(), 'codedm-e2e-ws-'))
+	const workspacePath = mkdtempSync(join(tmpdir(), 'codm-e2e-ws-'))
 	const workspace = await addWorkspace({ path: workspacePath }, { client: session.client })
 
 	const contactExternalId = overrides.contactExternalId ?? `55119${Math.floor(Math.random() * 1e8)}`

@@ -137,7 +137,7 @@ siblings), which is the full reset:
 ```bash
 # --reset-db: delete the store (with confirmation)
 if [ "$RESET_DB" = "1" ]; then
-  DATA_DIR="${CODM_DATA_DIR:-$HOME/.codedm}"
+  DATA_DIR="${CODM_DATA_DIR:-$HOME/.codm}"
   read -p "About to DELETE the SQLite store under '$DATA_DIR'. Continue? [y/N] " ack
   [ "$ack" = "y" ] || { echo "aborted"; exit 1; }
   rm -f "$DATA_DIR/codm.db" "$DATA_DIR/codm.db-wal" "$DATA_DIR/codm.db-shm"

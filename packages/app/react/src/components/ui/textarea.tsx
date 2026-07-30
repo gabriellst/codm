@@ -2,7 +2,7 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-// Flat CodeDM surface — same language as <Input>, but a rounded rectangle (a
+// Flat CODM surface — same language as <Input>, but a rounded rectangle (a
 // pill can't hold multiple lines). Border darkens on hover/focus.
 const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(function Textarea({ className, ...props }, ref) {
 	return (

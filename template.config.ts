@@ -1,9 +1,20 @@
 // template.config.ts — the ONE-file repo identity (Plan: .plans/2026-07-11-sync-machinery.md P1-1).
 //
 // Checked in per repo, NEVER synced by the sync train. Rebranding a fork
-// (template → berzerk → medscall) is editing THIS file + regenerating
-// (`bun sdk` / `bun contracts`) — never a codemod. Any generator, script, or
-// tool that needs a brand value MUST read it from here; a literal is a bug.
+// (template → berzerk → medscall → codm) is editing THIS file + regenerating
+// (`bun sdk` / `bun contracts`) — never a codemod, for anything DERIVED from
+// `scope`/`brand` below. Any generator, script, or tool that needs a brand value
+// MUST read it from here; a literal is a bug.
+//
+// The 2026-07-30 codedm→codm rebrand (`.plans/2026-07-30-a-renames-codm.md`) needed
+// a codemod (`scripts/rebrand-codm.ts`, deleted after use — plan D-B) on TOP of this
+// file, because four literals do NOT derive from `scope`/`brand` and a hand-edit here
+// alone cannot reach them: `rootEnvVar` and `repoUrl` below (literals by design, see
+// their own comments), `MCP_SERVER_KEY` (`src/agent/mcp/wire.ts` — a leaf file kept
+// import-free on purpose, mirrors `brand`), and `dbFileName` (`core/db/sqlite/store.go`
+// — a Go literal, Go cannot import this file). Each is commented at its own site as
+// mirroring this config. A future rebrand pays down the same four-literal debt: edit
+// this file + regenerate for everything else, then hand-fix those four.
 //
 // Deliberately dependency-free (plain const object, no imports) so ANY
 // script/generator — bun scripts, eslint rule modules loaded via jiti,
@@ -147,7 +158,7 @@ export const REPO = {
 	/** Human brand label (report titles, generated-doc headers). */
 	brand,
 	/** GitHub URL — eslint rule docs point here. */
-	repoUrl: 'https://github.com/codedm/codedm',
+	repoUrl: 'https://github.com/codm/codm',
 
 	// ── Well-known package specifiers (all derived from `scope`) ─────────────
 	/** The cross-stack SDK package (Kubb output, committed at packages/client/dist/typescript). */
@@ -228,7 +239,7 @@ export const REPO = {
 		// ── compose / identity ──
 		PROJECT: {
 			consumers: ['compose'],
-			example: 'codedm',
+			example: 'codm',
 			doc: 'docker-compose prefix + Config.name (container naming only — there is no external database)',
 		},
 		SERVICE: { consumers: ['compose'], example: 'backend', doc: 'docker-compose container prefix (${PROJECT}-${SERVICE})' },

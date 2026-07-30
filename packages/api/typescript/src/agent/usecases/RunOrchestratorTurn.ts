@@ -254,7 +254,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// The agent's OWN past lines are labelled `you`, not by the operator's name: a model reading
 			// its own words attributed to somebody else answers them.
 			speaker: row.kind === TranscriptKind.SYSTEM ? 'you' : nameOf(row.senderExternalId),
-			// Already stripped of the tag — it is noise to the model, and leaving it in put `@codedm` at
+			// Already stripped of the tag — it is noise to the model, and leaving it in put `@codm` at
 			// the head of every rendered line.
 			text: thread.textWithoutMention(row.text),
 			// `canInvoke` and NOT `mentionsTag`: a muted participant's tagged message produced no turn, so

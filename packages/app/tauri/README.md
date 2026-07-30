@@ -1,6 +1,6 @@
 # @codm/app-tauri — desktop shell
 
-Tauri v2 host for the CodeDM desktop app. The shell does three things and nothing else:
+Tauri v2 host for the CODM desktop app. The shell does three things and nothing else:
 
 1. **Serves the react console** — dev: `devUrl` → the vite dev server at
    `http://localhost:5173/app/`; prod: `frontendDist` → the static SPA emitted by

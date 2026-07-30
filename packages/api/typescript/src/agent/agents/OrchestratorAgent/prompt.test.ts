@@ -22,7 +22,7 @@ const base = {
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
 	contactKind: ContactKind.GROUP,
-	mentionTag: '@codedm',
+	mentionTag: '@codm',
 	window: { seeded: true, entries: [] },
 }
 

@@ -13,7 +13,7 @@ import { givenAttachedThread, runIssueTurn } from '../utils/given'
  * generated tools, real React app); only the provider CLI is the hermetic stub, per §8 rule 8.
  *
  * ### The tool names asserted here CANNOT be produced by anything but the re-key
- * `mcp__codedm__TransitionIssueStatus` and `mcp__codedm__RecordArtifact` are names the MCP layer
+ * `mcp__codm__TransitionIssueStatus` and `mcp__codm__RecordArtifact` are names the MCP layer
  * derives from `operationId`s at generation time. No TUI regex could ever have emitted them (that
  * enum's widest member was `UNKNOWN`) and no fixture in the app spells them — so a panel showing them
  * has necessarily received the real `tool` field off a real `tool_use` frame over the real transport.
@@ -67,14 +67,14 @@ test('the console panel receives the REAL tool name on the re-keyed SSE action f
 	// THE ASSERTION — a structured action row carrying the generated MCP tool name, rendered from the
 	// `tool` field that did not exist on this frame before this phase.
 	const tools = page.getByTestId('terminal-action-tool')
-	await expect(tools.filter({ hasText: 'mcp__codedm__TransitionIssueStatus' })).toBeVisible({ timeout: 30_000 })
+	await expect(tools.filter({ hasText: 'mcp__codm__TransitionIssueStatus' })).toBeVisible({ timeout: 30_000 })
 
 	// …and the artifact tool that preceded it, so the panel is shown rendering the OPEN set rather than
 	// one recognized name.
-	await expect(tools.filter({ hasText: 'mcp__codedm__RecordArtifact' })).toBeVisible()
+	await expect(tools.filter({ hasText: 'mcp__codm__RecordArtifact' })).toBeVisible()
 
 	// The input summary rides the same frame — "which tool" AND "on what", the §4.9 net gain.
-	await expect(page.getByTestId('terminal-action').filter({ hasText: 'mcp__codedm__TransitionIssueStatus' })).toContainText(
+	await expect(page.getByTestId('terminal-action').filter({ hasText: 'mcp__codm__TransitionIssueStatus' })).toContainText(
 		`issueId: ${opened.issueId}`,
 	)
 })

@@ -1,4 +1,4 @@
-//! CodeDM desktop shell — Tauri v2 host.
+//! CODM desktop shell — Tauri v2 host.
 //!
 //! Responsibilities (and nothing else — the product lives in the react console):
 //! 1. Serve the react SPA (frontendDist / devUrl in tauri.conf.json).

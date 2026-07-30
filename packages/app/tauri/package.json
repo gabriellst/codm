@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"description": "CodeDM desktop shell — Tauri v2 host for the react console + TS daemon / Go gateway sidecars.",
+	"description": "CODM desktop shell — Tauri v2 host for the react console + TS daemon / Go gateway sidecars.",
 	"exports": {
 		"./commands": "./commands/index.ts"
 	},

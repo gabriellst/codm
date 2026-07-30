@@ -35,7 +35,7 @@ const input = () =>
 		entryId: '00000000-0000-4000-8000-0000000000dd',
 		cwd: '/Users/dev/project',
 		contactKind: ContactKind.GROUP,
-		mentionTag: '@codedm',
+		mentionTag: '@codm',
 		window: { seeded: true, entries: [] },
 		item: {
 			kind: MailboxItemKind.OPERATOR_MESSAGE,

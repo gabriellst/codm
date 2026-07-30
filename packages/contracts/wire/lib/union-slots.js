@@ -7,7 +7,7 @@
 // (packages/contracts/codegen/lib/union-slots.ts), which fails the contract build.
 import { setExtension } from '@typespec/openapi'
 
-const stateKey = Symbol.for('codedm/contracts/union-slots')
+const stateKey = Symbol.for('codm/contracts/union-slots')
 
 /**
  * Per-model accumulator. The SAME array instances are handed to setExtension once;

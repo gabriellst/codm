@@ -7,7 +7,7 @@ import "net/http"
 
 // Domain-shape errors (validation primitives every domain re-uses).
 //
-// NOTE(core-adequation): declaration order deliberately KEEPS the codedm
+// NOTE(core-adequation): declaration order deliberately KEEPS the codm
 // original (InvalidID, BusinessRule, InvalidEntity) instead of the template's
 // — the openapi enum scanner emits `enum` + `x-enum-varnames` in declaration
 // order, so the template reorder is wire-visible (the plan's "zero impacto

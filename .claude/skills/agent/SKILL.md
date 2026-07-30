@@ -16,7 +16,7 @@ Three things belong to an agent and nothing else:
    (`ownerId` / `threadId` / `cwd`, and `issueId` where one exists) is inherited rather than retyped;
 2. **the prompt** — a `@injectable()` prompt builder in its own `prompt.ts`, so the day the prompt
    needs a repository read, the agent's shape does not change;
-3. **the tool scope** — `tools`, the closed list of `codedm__*` tools this run may call. Empty scope
+3. **the tool scope** — `tools`, the closed list of `codm__*` tools this run may call. Empty scope
    means the run declares nothing and carries no MCP config at all.
 
 Four things explicitly do NOT: routing/threshold/fallback **policy** (that is a service — see

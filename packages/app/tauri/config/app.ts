@@ -12,7 +12,7 @@ import { REPO, type WorkspaceId } from '../../../../template.config'
 
 /** OS-facing display name (window title, productName). The ONE place the cased brand spelling
  *  lives — REPO.brand stays the lowercase token, so this is a deliberate literal, not derived. */
-export const DISPLAY_NAME = 'CodeDM'
+export const DISPLAY_NAME = 'CODM'
 
 /** Reverse-DNS bundle identifier — DERIVED from brand. Rendered into tauri.conf.json `identifier`;
  *  the shell reads it back at runtime (`app.config().identifier`) as the keychain service name. */

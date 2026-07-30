@@ -85,7 +85,7 @@ class TxGate {
 let processTempDbPath: string | undefined
 function processScopedTempDbPath(): string {
 	if (!processTempDbPath) {
-		processTempDbPath = join(mkdtempSync(join(tmpdir(), 'codedm-sqlite-')), 'codedm-test.db')
+		processTempDbPath = join(mkdtempSync(join(tmpdir(), 'codm-sqlite-')), 'codm-test.db')
 	}
 	return processTempDbPath
 }

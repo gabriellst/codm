@@ -57,7 +57,7 @@ describe('a TS publisher rides the SAME lane as the Go gateway, and only the pol
 		})
 
 	beforeAll(async () => {
-		dir = mkdtempSync(join(tmpdir(), 'codedm-ts-lane-'))
+		dir = mkdtempSync(join(tmpdir(), 'codm-ts-lane-'))
 		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
 	})

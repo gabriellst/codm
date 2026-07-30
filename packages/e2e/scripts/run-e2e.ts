@@ -28,7 +28,7 @@ function resolveNodeBin(): string {
 }
 
 /**
- * CodeDM e2e runner. Boots the REAL stack the harness can stand up on its own — the TS daemon in
+ * CODM e2e runner. Boots the REAL stack the harness can stand up on its own — the TS daemon in
  * `real` mode over the EMBEDDED, file-backed SQLite store (founder decision 3: no external Postgres), plus
  * the app-react console — and runs Playwright against it.
  *

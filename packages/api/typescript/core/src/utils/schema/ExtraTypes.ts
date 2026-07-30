@@ -28,7 +28,7 @@ import { BaseIntegrationEventSchema } from '../../types/BaseIntegrationEvent'
  * CONTEXT-ORIGIN: medscall `packages/api/src/shared/types/BaseAgentInput.ts`
  * @ c58ed45677c473b0415c03cfc741fea3a00946f4 — the TECHNIQUE is copied, the
  * FIELDS are not (medscall's envelope is `{chatId, sessionId, ownerId}`; the
- * CodeDM run is identified by `{ownerId, issueId, threadId}` plus the absolute
+ * CODM run is identified by `{ownerId, issueId, threadId}` plus the absolute
  * workspace it executes in).
  *
  * Contract notes that were paid for and must not be re-litigated:
@@ -42,7 +42,7 @@ import { BaseIntegrationEventSchema } from '../../types/BaseIntegrationEvent'
  *   when it exists (D10) — never on `AgentRunRequest`.
  *
  * AMENDED IN FASE 5 — `issueId` is OPTIONAL, and the reason is structural, not
- * temporary. The CodeDM agent universe has exactly two members and one of them
+ * temporary. The CODM agent universe has exactly two members and one of them
  * runs BEFORE an issue exists: `ClassifyIssueAgent` decides whether an inbound
  * message CONTINUES an open issue, OPENS a new one, or is too ambiguous to route
  * — the issue id is its OUTPUT, never its input. Fase 1 froze `issueId` as

@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
-// CodeDM segmented control: a soft-gray track holds pill triggers; the active one
+// CODM segmented control: a soft-gray track holds pill triggers; the active one
 // lifts to a solid white (card) pill with a whisper of shadow. The `line` variant
 // stays a bare row with an underline indicator (wizard-step tabs).
 const tabsListBg = 'bg-muted'

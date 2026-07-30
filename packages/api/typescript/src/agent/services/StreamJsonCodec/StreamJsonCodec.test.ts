@@ -111,7 +111,7 @@ describe('StreamJsonCodec — line reassembly and parse failures never abort the
 
 		expect(frames.map(f => f.kind)).toEqual(['assistant_text', 'result'])
 		// SILENTLY: these two appear in ALL FOUR real captures, fired by the user's own hooks. Warning
-		// on ambient noise the CodeDM does not control would make the log useless on a real machine.
+		// on ambient noise the CODM does not control would make the log useless on a real machine.
 		expect(warns).toEqual([])
 	})
 })

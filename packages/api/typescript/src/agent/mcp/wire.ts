@@ -14,8 +14,17 @@
  * across a runner, a manifest, an accumulator guard and their tests.
  */
 
-/** The server key our tools are namespaced under inside the CLI's MCP config. */
-export const MCP_SERVER_KEY = 'codedm'
+/**
+ * The server key our tools are namespaced under inside the CLI's MCP config.
+ *
+ * MIRRORS `template.config.ts` `REPO.brand` — kept a literal, not an import, on purpose (see the
+ * module docblock: this is a LEAF file with zero imports so a correction is ONE edit here). Importing
+ * `template.config.ts` would drag the repo root into `packages/api/typescript/src`, a tree that
+ * `docker/Dockerfile.api` packages by copying only specific roots. Same decoupled-literal shape as
+ * `modulePrefix` in `packages/api/go/pkg/openapi/walker.go` (`template/api-go/`) — both name their
+ * source of truth in a comment instead of importing it.
+ */
+export const MCP_SERVER_KEY = 'codm'
 
 /**
  * The prefix EVERY tool of ours carries on the wire.
@@ -40,6 +49,6 @@ export function wireToolName(operationId: string): string {
  * Used by the accumulator to emit the frame (observability) and NEVER a fact: the fact was already
  * persisted, transactionally, by the use case that served the call.
  */
-export function isCodedmTool(toolName: string): boolean {
+export function isCodmTool(toolName: string): boolean {
 	return toolName.startsWith(MCP_TOOL_WIRE_PREFIX)
 }

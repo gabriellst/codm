@@ -78,7 +78,7 @@ type SqliteStore struct {
 	release func()
 }
 
-// NewSqliteStore opens (creating if absent) the codedm SQLite store under
+// NewSqliteStore opens (creating if absent) the codm SQLite store under
 // dataDir. When dataDir is "", a per-platform default under the user config dir
 // is used. The constructor is the whole lifecycle: it resolves + mkdirs the dir,
 // acquires a single-instance lock, opens the db in WAL mode with a busy timeout,
@@ -316,7 +316,7 @@ func resolveDataDir(raw string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("sqlite store: resolve default data dir: %w", err)
 		}
-		return filepath.Join(base, "codedm"), nil
+		return filepath.Join(base, "codm"), nil
 	}
 	if strings.HasPrefix(raw, "~") {
 		home, err := os.UserHomeDir()

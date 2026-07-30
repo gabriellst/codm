@@ -20,7 +20,7 @@ const t = entry!.data
 const jsonLd = {
 	'@context': 'https://schema.org',
 	'@type': 'SoftwareApplication',
-	name: 'CodeDM',
+	name: 'CODM',
 	applicationCategory: 'DeveloperApplication',
 	operatingSystem: 'macOS, Windows, Linux',
 	offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
@@ -33,7 +33,7 @@ const ogImage = new URL(`/og/og-${loc}.png`, Astro.site).href
 
 <BaseLayout
 	locale={loc}
-	title={`CodeDM — ${t.hero.titleBold} ${t.hero.titleLight}`}
+	title={`CODM — ${t.hero.titleBold} ${t.hero.titleLight}`}
 	description={t.hero.subtitle}
 	ogImage={ogImage}
 	jsonLd={jsonLd}

@@ -32,7 +32,7 @@ function createOperatorClient() {
 }
 
 /**
- * Returns the operator session — no sign-up, no cookies. CodeDM is single-operator (founder
+ * Returns the operator session — no sign-up, no cookies. CODM is single-operator (founder
  * decision 2); the API stamps the operator identity server-side via OperatorMiddleware.
  */
 export function apiOperatorSession(): ApiSession {

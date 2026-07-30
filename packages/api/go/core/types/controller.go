@@ -19,7 +19,7 @@ type ControllerMetadata struct {
 	Middlewares []Middleware
 
 	// Public opts this route OUT of the GLOBAL middleware chain (the one apps
-	// contribute through the "app_middlewares" value group — in codedm, Session →
+	// contribute through the "app_middlewares" value group — in codm, Session →
 	// APIKey). It never opts out of the controller's OWN Middlewares.
 	//
 	// This is the Go twin of the TS side's "public controller". There, a controller

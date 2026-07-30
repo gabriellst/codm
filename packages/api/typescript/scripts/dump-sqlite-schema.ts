@@ -33,7 +33,7 @@ import { LibsqlDriver } from '@codm/core-typescript'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
 const TARGET = join(ROOT, 'packages/api/go/core/db/sqlite/schema.sql')
 
-const dir = mkdtempSync(join(tmpdir(), 'codedm-schema-dump-'))
+const dir = mkdtempSync(join(tmpdir(), 'codm-schema-dump-'))
 try {
 	const dbPath = join(dir, 'codm.db')
 	const driver = new LibsqlDriver({ schema, migrationsDir, dbPath })

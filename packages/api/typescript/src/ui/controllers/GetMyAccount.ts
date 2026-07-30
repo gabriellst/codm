@@ -14,7 +14,7 @@ export const GetMyAccountControllerInputSchema = z
 	.example([
 		{
 			ctx: {
-				user: { id: 'operator', name: 'Operator', email: 'operator@codedm.local' },
+				user: { id: 'operator', name: 'Operator', email: 'operator@codm.local' },
 				session: { ownerId: '00000000-0000-4000-8000-000000000001' },
 			},
 		},

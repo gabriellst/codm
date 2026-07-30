@@ -71,7 +71,7 @@ class WritingDoor extends McpDoorController {
 					threadId: args.threadId ?? '',
 					kind: ArtifactKind.LINK,
 					name: 'dispatched',
-					ref: 'https://codedm.local/dispatched',
+					ref: 'https://codm.local/dispatched',
 					meta: '{}',
 					...(typeof args.data?.issueId === 'string' && { issueId: args.data.issueId }),
 				})

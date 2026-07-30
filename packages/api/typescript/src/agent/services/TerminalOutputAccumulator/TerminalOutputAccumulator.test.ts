@@ -43,7 +43,7 @@ describe('TerminalOutputAccumulator (two-stream split over AgentRuntimeEvent)', 
 			frame({
 				kind: 'tool_use',
 				toolUseId: 'toolu_2',
-				tool: 'mcp__codedm__TransitionIssueStatus',
+				tool: 'mcp__codm__TransitionIssueStatus',
 				input: { issueId: 'issue-1', data: { status: 'COMPLETED' } },
 				parentToolUseId: null,
 			}),
@@ -51,7 +51,7 @@ describe('TerminalOutputAccumulator (two-stream split over AgentRuntimeEvent)', 
 		// Nested objects are not scalars, so the one-line summary keeps only the scalar keys.
 		expect(sse).toMatchObject({
 			name: 'browser.terminal_action_detected',
-			tool: 'mcp__codedm__TransitionIssueStatus',
+			tool: 'mcp__codm__TransitionIssueStatus',
 			input: 'issueId: issue-1',
 		})
 	})

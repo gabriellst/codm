@@ -24,7 +24,7 @@ body {
 }
 
 @theme inline {
-	/* CodeDM type — system/open stacks, no external fetch.
+	/* CODM type — system/open stacks, no external fetch.
 	   Display renders heavy + uppercase via .heading-display; body is the same clean grotesque.
 	   Mono is load-bearing (paths, slugs, terminal, versions) — it's part of the identity. */
 	--font-sans:
@@ -201,7 +201,7 @@ body {
 }
 
 @layer utilities {
-	/* CodeDM display type — heavy, uppercase, tight. The "DM YOUR CODEBASE" voice. */
+	/* CODM display type — heavy, uppercase, tight. The "DM YOUR CODEBASE" voice. */
 	.heading-display {
 		font-family: var(--font-display);
 		font-weight: 800;

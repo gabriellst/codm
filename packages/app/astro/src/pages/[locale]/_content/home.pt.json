@@ -23,7 +23,7 @@
 	"demo": {
 		"eyebrow": "SEUS PROJETOS, DE PLANTÃO",
 		"title": "Rode seus projetos de onde você conseguir mandar mensagem",
-		"body": "O CodeDM transforma qualquer conversa numa mesa de operações para os seus projetos — código, deploys, arquivos, o que os seus agentes puderem fazer. Seu cliente reporta o bug no almoço; na hora do café o fix já está no ar e a resposta está no chat dele.",
+		"body": "O CODM transforma qualquer conversa numa mesa de operações para os seus projetos — código, deploys, arquivos, o que os seus agentes puderem fazer. Seu cliente reporta o bug no almoço; na hora do café o fix já está no ar e a resposta está no chat dele.",
 		"steps": [
 			{ "body": "mensagem classificada → issue", "title": "coupon-focus" },
 			{ "body": "sessão de terminal aberta na pasta", "title": "" },
@@ -130,7 +130,7 @@
 	"footer": {
 		"copyright": "© 2026 · Licença MIT",
 		"links": {
-			"github": "https://github.com/codedm",
+			"github": "https://github.com/codm",
 			"docs": "Docs",
 			"changelog": "Changelog"
 		}

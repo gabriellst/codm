@@ -27,7 +27,7 @@ type DataDirLockedError struct {
 func (e *DataDirLockedError) Error() string {
 	return fmt.Sprintf(
 		"sqlite data dir lock %q is already held by a running process (pid %d). "+
-			"Only one process may own the codedm SQLite store at a time — stop the other "+
+			"Only one process may own the codm SQLite store at a time — stop the other "+
 			"process or point this one at a different data dir.",
 		e.LockPath, e.HeldByPID,
 	)

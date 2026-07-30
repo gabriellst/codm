@@ -413,7 +413,7 @@ func (c *schemaCtx) basicSchema(b *types.Basic) map[string]any {
 // makeNullable converts a schema to its OpenAPI 3.0 nullable form.
 //
 // OpenAPI 3.0 has no `type: "null"`; nullability is the `nullable: true`
-// keyword. The codedm SDK pipeline enforces this (preprocess.ts R-05 rejects
+// keyword. The codm SDK pipeline enforces this (preprocess.ts R-05 rejects
 // 3.1 type-array / anyOf-null forms), so the emitter is responsible for
 // producing 3.0-compliant output.
 func makeNullable(schema map[string]any) map[string]any {

@@ -39,7 +39,7 @@ func Session(db *sql.DB) func(next http.Handler) http.Handler {
 			}
 
 			// NOTE(template-parity debt): the template Dels X-Owner-Id here as a
-			// spoof guard and re-sets it from the session lookup. codedm cannot
+			// spoof guard and re-sets it from the session lookup. codm cannot
 			// do that yet — identity also arrives via the api-ts pairing proxy
 			// (external/utils/forwardToChannel stamps X-Owner-Id server-side,
 			// overwriting any client value), so a Del would leave every proxied

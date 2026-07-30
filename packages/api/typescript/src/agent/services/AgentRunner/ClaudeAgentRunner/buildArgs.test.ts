@@ -24,7 +24,7 @@ import { ClaudeAgentRunner, type ClaudeBuildArgsOptions } from './ClaudeAgentRun
  * `PROVIDER_BINARIES`, in `ProviderDetector.test.ts`.
  */
 
-const CWD = '/Users/dev/repos/codedm'
+const CWD = '/Users/dev/repos/codm'
 
 const opts = (overrides: Partial<ClaudeBuildArgsOptions> = {}): ClaudeBuildArgsOptions => ({
 	cwd: CWD,
@@ -111,9 +111,9 @@ describe('AC-1.1 — ClaudeAgentRunner.buildArgs produces EXACTLY the spec argv'
 		const withMcp = ClaudeAgentRunner.buildArgs(opts({ mcp: mcp() }))
 		expect(withMcp).toContain('--mcp-config')
 		const config = JSON.parse(withMcp[withMcp.indexOf('--mcp-config') + 1] as string)
-		expect(config.mcpServers.codedm).toMatchObject({ type: 'http', url: 'http://127.0.0.1:3030/mcp' })
+		expect(config.mcpServers.codm).toMatchObject({ type: 'http', url: 'http://127.0.0.1:3030/mcp' })
 		// The run token rides the Authorization header — never a tool argument, never the prompt.
-		expect(config.mcpServers.codedm.headers.Authorization).toBe('Bearer run-token-opaque')
+		expect(config.mcpServers.codm.headers.Authorization).toBe('Bearer run-token-opaque')
 		expect(withMcp[withMcp.indexOf('--allowedTools') + 1]).toBe(`${wireToolName('TransitionIssueStatus')},${wireToolName('RaiseStop')}`)
 	})
 
@@ -144,7 +144,7 @@ describe('AC-1.1 — ClaudeAgentRunner.buildArgs produces EXACTLY the spec argv'
 			'--mcp-config',
 			JSON.stringify({
 				mcpServers: {
-					codedm: { type: 'http', url: 'http://127.0.0.1:3030/mcp', headers: { Authorization: 'Bearer run-token-opaque' } },
+					codm: { type: 'http', url: 'http://127.0.0.1:3030/mcp', headers: { Authorization: 'Bearer run-token-opaque' } },
 				},
 			}),
 			'--allowedTools',

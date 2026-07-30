@@ -56,7 +56,7 @@ export function currentMcpRunContext(): McpRunContext | undefined {
 }
 
 /** The header the run token travels in, single-sourced so the router and the shim cannot drift. */
-export const MCP_RUN_TOKEN_HEADER = 'x-codedm-run-token'
+export const MCP_RUN_TOKEN_HEADER = 'x-codm-run-token'
 
 /**
  * Read the current context — token AND origin — or FAIL.

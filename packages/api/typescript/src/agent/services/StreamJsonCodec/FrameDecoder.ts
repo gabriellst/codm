@@ -101,7 +101,7 @@ function renderToolResult(content: unknown): string {
  * politeness: the real corpus contains ten frame types this union does not name
  * (`system/{hook_started,hook_response,status,thinking_tokens,task_*}`, `rate_limit_event`,
  * `stream_event`), and `hook_started`/`hook_response`/`rate_limit_event` appear in ALL FOUR captures
- * because the user's own `SessionStart` hooks fire. It is ambient noise CodeDM does not control — it
+ * because the user's own `SessionStart` hooks fire. It is ambient noise CODM does not control — it
  * changes with the machine, the user's `~/.claude`, and the CLI build. A codec that treats an unknown
  * frame as an error dies on the first real machine that has a hook configured.
  *

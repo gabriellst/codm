@@ -8346,7 +8346,7 @@ pub mod types {
     }
 }
 #[derive(Clone, Debug)]
-/**Client for codedm-backend
+/**Client for codm-backend
 
 Version: v1*/
 pub struct Client {

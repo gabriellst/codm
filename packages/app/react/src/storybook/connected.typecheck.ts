@@ -22,7 +22,7 @@ export function connectedTypecheck() {
 	// AC-7: session typed off the app's own useSession. After the operator collapse the session is
 	// a non-null constant, so the mock takes the operator-shaped session (no unauthenticated case).
 	void mockSession({
-		user: { id: 'operator', email: 'operator@codedm.local', name: 'Operator', image: null, emailVerified: true },
+		user: { id: 'operator', email: 'operator@codm.local', name: 'Operator', image: null, emailVerified: true },
 		session: { id: 'operator', userId: 'operator', expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId: 'operator' },
 	})
 

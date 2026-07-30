@@ -174,7 +174,7 @@ registry:
       title: Metadata().Public is the ONLY sanctioned way to skip the global middleware chain
       description: >
         RegisterControllers (core/services/httprouter/http_router.go) applies the app's global
-        middlewares — the "app_middlewares" fx value group, Session -> APIKey in codedm — to
+        middlewares — the "app_middlewares" fx value group, Session -> APIKey in codm — to
         EVERY controller route, then applies the controller's OWN Metadata().Middlewares on top.
         Setting Public: true on ControllerMetadata skips ONLY the global chain; the controller's
         own Middlewares still run. This is the Go twin of the TS side's "public controller"

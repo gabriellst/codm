@@ -50,7 +50,7 @@ const rssHref = `/${locale}/blog/rss.xml`
 		<link rel="canonical" href={canonicalUrl} />
 		{alternateEntries.map(([loc, href]) => <link rel="alternate" hreflang={hreflang(loc)} href={new URL(href, site).href} />)}
 		{xDefault && <link rel="alternate" hreflang="x-default" href={new URL(xDefault, site).href} />}
-		<link rel="alternate" type="application/rss+xml" title="CodeDM Blog" href={rssHref} />
+		<link rel="alternate" type="application/rss+xml" title="CODM Blog" href={rssHref} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:type" content="website" />

@@ -16,7 +16,7 @@ export const GetSessionInputSchema = z
 	.example([
 		{
 			ctx: {
-				user: { id: 'operator', email: 'operator@codedm.local', name: 'Operator', emailVerified: true },
+				user: { id: 'operator', email: 'operator@codm.local', name: 'Operator', emailVerified: true },
 				session: { id: 'operator', userId: 'operator', expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId: 'operator' },
 			},
 		},
@@ -24,7 +24,7 @@ export const GetSessionInputSchema = z
 
 export const GetSessionOutputSchema = SessionSchema.example([
 	{
-		user: { id: 'operator', email: 'operator@codedm.local', name: 'Operator', emailVerified: true },
+		user: { id: 'operator', email: 'operator@codm.local', name: 'Operator', emailVerified: true },
 		session: { id: 'operator', userId: 'operator', expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId: 'operator' },
 	},
 ])

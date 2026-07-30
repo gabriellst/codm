@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "version": "v1",
-    "title": "codedm-backend"
+    "title": "codm-backend"
   },
   "paths": {
     "/v1/health": {
@@ -138,7 +138,7 @@
                     {
                       "user": {
                         "id": "operator",
-                        "email": "operator@codedm.local",
+                        "email": "operator@codm.local",
                         "name": "Operator",
                         "emailVerified": true
                       },
@@ -156,7 +156,7 @@
                     "value": {
                       "user": {
                         "id": "operator",
-                        "email": "operator@codedm.local",
+                        "email": "operator@codm.local",
                         "name": "Operator",
                         "emailVerified": true
                       },

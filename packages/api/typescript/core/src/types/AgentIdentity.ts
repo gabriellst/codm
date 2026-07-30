@@ -94,7 +94,7 @@ export function compareIdentity(identity: AgentIdentity, candidate: Readonly<Rec
  * `tests/architecture/mcp-exposure.test.ts` pins the pair, because it is the one place that may
  * import both sides.
  */
-export const AGENT_RUN_TOKEN_HEADER = 'x-codedm-run-token'
+export const AGENT_RUN_TOKEN_HEADER = 'x-codm-run-token'
 
 /**
  * Read the run token off a request — the dedicated header, or `Authorization: Bearer <token>`.

@@ -30,7 +30,7 @@ export const TerminalOutputFrameSchema = z.object({
  * regex parser over claude's terminal UI, i.e. a guess at a vocabulary nobody publishes. The
  * decoder now reads the REAL tool name off the `tool_use` frame of `--output-format stream-json`, and
  * that set is OPEN by construction: every MCP server a run mounts adds tools at runtime, including
- * our own (`mcp__codedm__TransitionIssueStatus` and friends). `CLAUDE.md`'s "closed set → enum" rule
+ * our own (`mcp__codm__TransitionIssueStatus` and friends). `CLAUDE.md`'s "closed set → enum" rule
  * is about closed sets; enumerating an open one is what produced the brittle thing this replaces.
  * The same carve-out is already written on `AgentToolCallEvent.tool`, for the same reason.
  *
@@ -61,7 +61,7 @@ interface StreamEntry {
 /**
  * Whatscode's `AgentStreamRegistry`, ADOPTED WHOLE (Fork C, ratified: option 1 — not the fold)
  * and rekeyed `chatId → issueId` (Fork B). It additionally ABSORBS the single-active-run guard that
- * codedm's interim per-issue session registry carried — that guard is an INVARIANT ("one agent run
+ * codm's interim per-issue session registry carried — that guard is an INVARIANT ("one agent run
  * per issue") and migrates INTO the adopted registry; the interim registry is superseded and deleted.
  * (Its class name is not repeated: Fase 5 dissolved the `terminal` context and AC-5.11 keeps the dead
  * `Terminal*` symbols out of the tree, prose included.)

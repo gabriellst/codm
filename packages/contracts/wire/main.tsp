@@ -13,7 +13,7 @@ import "./enums/timezone.tsp";
 import "./enums/role.tsp";
 import "./enums/owner-kind.tsp";
 
-// CodeDM domain enums (Phase-0 contract lock) — single-sourced here, pgEnum-paired
+// CODM domain enums (Phase-0 contract lock) — single-sourced here, pgEnum-paired
 // (materialized as text columns per the repo's never-pgEnum convention), consumed by
 // the TS core + the Go gateway/worker via the generated per-language bindings.
 import "./enums/channel-kind.tsp";

@@ -81,7 +81,7 @@ describe('Thread entity', () => {
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @BOT go' })).toBe(true)
 		// THE REASON THIS IS NOT `String.includes`. The tag is derived from a folder name, so it collides
 		// with the vocabulary of the project it names — this repo's own packages are `@codm/*` and its
-		// live thread mints `@codedm`. A scoped package name must NOT summon the agent.
+		// live thread mints `@codm`. A scoped package name must NOT summon the agent.
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'bump @bot/core to 2.0' })).toBe(false)
 		expect(t.canInvoke({ senderExternalId: 'operator', text: 'see bot.ts and @botanical' })).toBe(false)
 	})
@@ -117,7 +117,7 @@ describe('Thread entity', () => {
 	 * A REPLY to the agent is addressing it, so the mention gate steps aside.
 	 *
 	 * The gate exists to ask "is this for the agent?", and quoting its message answers that better than
-	 * a typed tag does: replying is reflex, remembering `@codedm` is a convention. Untagged replies used
+	 * a typed tag does: replying is reflex, remembering `@codm` is a convention. Untagged replies used
 	 * to fall on the floor — the operator answered the agent's own question and nothing happened.
 	 */
 	it('a reply to the agent invokes WITHOUT the mention tag, while the same text alone does not', () => {

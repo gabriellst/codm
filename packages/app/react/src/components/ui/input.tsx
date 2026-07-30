@@ -3,7 +3,7 @@ import { Input as InputPrimitive } from '@base-ui/react/input'
 
 import { cn } from '@/lib/utils'
 
-// CodeDM input — flat, fully-rounded pill with a hairline border that darkens to
+// CODM input — flat, fully-rounded pill with a hairline border that darkens to
 // near-black on focus. No gloss. Matches the search fields in the product shots.
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(function Input({ className, type, ...props }, ref) {
 	return (

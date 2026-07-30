@@ -1,7 +1,7 @@
 /**
  * Two load-bearing surface patterns shared across the design system.
  *
- * CodeDM is flat: surfaces are solid fills with a single hairline border — no
+ * CODM is flat: surfaces are solid fills with a single hairline border — no
  * gloss, no gradient. Redefining these two presets re-skins every consumer
  * (Card, Popover, Sheet, Tooltip, Select, Dropdown, Combobox, Calendar,
  * DataTable, secondary Button, …) in one place.

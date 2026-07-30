@@ -184,12 +184,12 @@ async function main(): Promise<number> {
 	const build = Bun.spawnSync(['bun', 'run', join(pkgRoot, 'scripts/build.ts')], { cwd: pkgRoot, stdout: 'inherit', stderr: 'inherit' })
 	if (build.exitCode !== 0) throw new Error('node bundle build failed')
 
-	const gatewayBin = join(mkdtempSync(join(tmpdir(), 'codedm-smoke-bin-')), 'gateway')
+	const gatewayBin = join(mkdtempSync(join(tmpdir(), 'codm-smoke-bin-')), 'gateway')
 	const goBuild = Bun.spawnSync(['go', 'build', '-o', gatewayBin, './cmd/api'], { cwd: goRoot, stdout: 'inherit', stderr: 'inherit' })
 	if (goBuild.exitCode !== 0) throw new Error('gateway build failed')
 
 	// ONE cold data dir, for BOTH (R3).
-	const dataDir = mkdtempSync(join(tmpdir(), 'codedm-shared-store-'))
+	const dataDir = mkdtempSync(join(tmpdir(), 'codm-shared-store-'))
 	const dbPath = join(dataDir, 'codm.db')
 	const nodeBin = resolveNodeBin()
 

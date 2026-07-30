@@ -3,7 +3,7 @@ export type Locale = (typeof LOCALES)[number]
 export const DEFAULT_LOCALE: Locale = 'pt'
 
 /** Cookie the LocaleSwitcher writes and the `/` redirect shell reads (Option B). */
-export const LOCALE_COOKIE = 'codedm_locale'
+export const LOCALE_COOKIE = 'codm_locale'
 
 export function isLocale(value: string | undefined | null): value is Locale {
 	return !!value && (LOCALES as readonly string[]).includes(value)

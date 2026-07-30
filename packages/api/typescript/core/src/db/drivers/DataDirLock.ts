@@ -19,7 +19,7 @@ export class DataDirLockedError extends Error {
 		readonly heldByPid: number,
 	) {
 		super(
-			`Another CodeDM daemon is already running on this data dir "${dataDir}" (pid ${heldByPid}). ` +
+			`Another CODM daemon is already running on this data dir "${dataDir}" (pid ${heldByPid}). ` +
 				`Stop the other daemon or point this one at a different CODM_DATA_DIR. ` +
 				`The Go gateway sharing this dir is expected and fine — it takes a different lock.`,
 		)

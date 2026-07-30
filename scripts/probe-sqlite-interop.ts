@@ -161,7 +161,7 @@ function isBusy(e: unknown): boolean {
 
 const tempDirs: string[] = []
 function freshDb(tag: string): string {
-	const dir = mkdtempSync(join(tmpdir(), `codedm-probe-${tag}-`))
+	const dir = mkdtempSync(join(tmpdir(), `codm-probe-${tag}-`))
 	tempDirs.push(dir)
 	return join(dir, 'probe.db')
 }

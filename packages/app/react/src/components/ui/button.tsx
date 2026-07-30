@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
-// CodeDM buttons are flat, fully-rounded pills. Black is the sole action color
+// CODM buttons are flat, fully-rounded pills. Black is the sole action color
 // (`default`); everything else is monochrome (hairline outline, soft-gray, ghost,
 // underline link). Sentence case — labels are NOT uppercased (that voice is reserved
 // for display headings). Icon sizes become perfect circles via the rounded-full base.

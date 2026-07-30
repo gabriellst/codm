@@ -1,11 +1,11 @@
-// Single-operator seam — CodeDM has no accounts, no sign-in, and no better-auth client. The web
+// Single-operator seam — CODM has no accounts, no sign-in, and no better-auth client. The web
 // console always runs as the constant operator (founder decision 2), so the "session" is a
 // compile-time constant with no network round-trip. `useSession` returns it unchanged and `signOut`
 // is a no-op; swapping a real auth client back in is a one-file change here.
 const OPERATOR_SESSION = {
 	user: {
 		id: 'operator',
-		email: 'operator@codedm.local',
+		email: 'operator@codm.local',
 		name: 'Operator',
 		image: null as string | null,
 		emailVerified: true,

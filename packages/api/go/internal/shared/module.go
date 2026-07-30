@@ -1,4 +1,4 @@
-// Package shared is the api-go-local fx module: everything the codedm gateway
+// Package shared is the api-go-local fx module: everything the codm gateway
 // wires on top of the generic core (template/core-go) module.
 //
 // Auth middlewares, the SSE ListenEvents controller and the docs routes are

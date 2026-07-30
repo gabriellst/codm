@@ -1,6 +1,6 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "CodeDM",
+	"productName": "CODM",
 	"version": "0.1.0",
 	"identifier": "app.codm.desktop",
 	"build": {
@@ -14,7 +14,7 @@
 		"windows": [
 			{
 				"label": "main",
-				"title": "CodeDM",
+				"title": "CODM",
 				"width": 1280,
 				"height": 800,
 				"minWidth": 980,
@@ -33,7 +33,7 @@
 				"height": 520,
 				"url": "boot-error.html",
 				"visible": false,
-				"title": "CodeDM — boot failed"
+				"title": "CODM — boot failed"
 			}
 		],
 		"security": {

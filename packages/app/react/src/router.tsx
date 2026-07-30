@@ -6,7 +6,7 @@ import { routeTree } from './routeTree.gen'
 
 configureZod()
 
-// Per-service base URLs (medscall model on codedm's generated seam): each service's SDK subpath
+// Per-service base URLs (medscall model on codm's generated seam): each service's SDK subpath
 // resolves through this ONE registry (`createClient('<service>')` in the generated `_http.ts`), so
 // declaring the URL here IS the per-service declaration. `go` — the gateway — points at the api-ts
 // external/ChannelProxy route, never at :3032 directly (see Config.gatewayBaseUrl).

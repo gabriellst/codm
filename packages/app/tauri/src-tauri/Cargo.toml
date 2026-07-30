@@ -1,10 +1,10 @@
-# CodeDM desktop shell — Tauri v2 host. This crate's Cargo workspace is THE repo's only
+# CODM desktop shell — Tauri v2 host. This crate's Cargo workspace is THE repo's only
 # one (rust-wire spec §F6): the generated contracts/client crates are standalone path
 # deps, compiled inside this workspace's target/lock — like Go's `replace` directives.
 [package]
 name = "codm-desktop"
 version = "0.1.0"
-description = "CodeDM desktop shell (react console webview + TS daemon / Go gateway sidecars)"
+description = "CODM desktop shell (react console webview + TS daemon / Go gateway sidecars)"
 edition = "2021"
 
 [lib]

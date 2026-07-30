@@ -1,5 +1,5 @@
 {
-	"name": "codedm",
+	"name": "codm",
 	"description": "Polyglot fullstack monorepo template (TS+Go backends, React web + Astro landing + Tauri desktop shell, contracts-driven SDKs).",
 	"author": "Template Authors",
 	"license": "MIT",

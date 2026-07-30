@@ -412,7 +412,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * ### Replying to the agent IS addressing it
 	 * `repliesToAgent` bypasses the MENTION GATE and nothing else. The gate exists to answer one
 	 * question — "is this message for the agent?" — and a quote answers it better than a tag does:
-	 * typing `@codedm` is a convention someone has to remember, while replying to the agent's own
+	 * typing `@codm` is a convention someone has to remember, while replying to the agent's own
 	 * message is what everyone does by reflex in a group chat. Demanding the tag on a reply meant the
 	 * natural answer to the agent's own question fell on the floor, and the operator had to remember
 	 * that this one conversation needs a prefix its other participants never see.
@@ -432,11 +432,11 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	/**
 	 * The message as the AGENT should read it — a citation is ADDRESSING, not content.
 	 *
-	 * With the gate on, every inbound carries the tag, so leaving it in would put `@codedm` at the head
+	 * With the gate on, every inbound carries the tag, so leaving it in would put `@codm` at the head
 	 * of every issue title and every slug key. The transcript keeps the text verbatim; only what is fed
 	 * to the model is cleaned.
 	 *
-	 * Falls back to the ORIGINAL text when stripping empties it. A bare `@codedm` is the most natural
+	 * Falls back to the ORIGINAL text when stripping empties it. A bare `@codm` is the most natural
 	 * thing someone types once told to cite the agent, and it strips to `''` — which `RunIssueTurn`'s
 	 * `prompt: z.string().trim().min(1)` rejects, turning a summon into a thrown VALIDATION_ERROR.
 	 */

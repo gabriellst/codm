@@ -53,7 +53,7 @@ export interface DeclaredToolCall {
 export class E2eMcpDriver {
 	/** Stable artifact the e2e asserts on, through the same `ListArtifacts` query the console uses. */
 	static readonly ARTIFACT_NAME = 'e2e-agent: run notes'
-	static readonly ARTIFACT_REF = 'https://codedm.local/e2e/run-notes'
+	static readonly ARTIFACT_REF = 'https://codm.local/e2e/run-notes'
 	/** Stable completion note — carried on the declaration, not inferred from any text. */
 	static readonly COMPLETION_SUMMARY = 'e2e-agent: declared complete over MCP'
 	static readonly FORK_GOAL = 'e2e-agent: fix the login bug'
@@ -134,7 +134,7 @@ export class E2eMcpDriver {
 			throw new BaseError<AgentApplicationErrors>('AGENT_TOOLS_UNSUPPORTED', 'the deterministic driver only speaks the http transport')
 		}
 
-		const client = new Client({ name: 'codedm-e2e-driver', version: '0.0.0' })
+		const client = new Client({ name: 'codm-e2e-driver', version: '0.0.0' })
 		const transport = new StreamableHTTPClientTransport(new URL(mcp.endpoint), {
 			// Both spellings, because the router accepts either and a CLI may only be able to set one.
 			requestInit: { headers: { authorization: `Bearer ${mcp.token}`, [MCP_RUN_TOKEN_HEADER]: mcp.token } },

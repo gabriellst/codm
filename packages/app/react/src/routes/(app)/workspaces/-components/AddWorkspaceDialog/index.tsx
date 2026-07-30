@@ -12,7 +12,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useFilePicker } from '@/services'
 import { useDialogStore } from '@/stores/useDialogStore'
 
-/** "Add folder" flow: point CodeDM at a project folder; badges are detected server-side. */
+/** "Add folder" flow: point CODM at a project folder; badges are detected server-side. */
 export function AddWorkspaceDialog() {
 	const { t } = useTranslation()
 	const hide = useDialogStore(s => s.hide)

@@ -64,7 +64,7 @@ const APPLIER_SCRIPT = join(import.meta.dir, '..', '..', 'scripts', 'apply-migra
 
 const tempDirs: string[] = []
 function coldDataDir(): string {
-	const dir = mkdtempSync(join(tmpdir(), 'codedm-concurrent-boot-'))
+	const dir = mkdtempSync(join(tmpdir(), 'codm-concurrent-boot-'))
 	tempDirs.push(dir)
 	return dir
 }

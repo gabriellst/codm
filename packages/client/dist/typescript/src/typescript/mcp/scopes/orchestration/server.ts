@@ -19,7 +19,7 @@ import { z } from "zod";
 
 export function getServer() {
   const server = new McpServer({
-    name: 'codedm-backend',
+    name: 'codm-backend',
     version: '3.0.3',
   })
 

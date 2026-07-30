@@ -24,14 +24,14 @@ func TestLoad_DataDirDefaultsToEmpty(t *testing.T) {
 }
 
 func TestLoad_DataDirCustom(t *testing.T) {
-	t.Setenv("CODM_DATA_DIR", "/tmp/codedm-config-test")
+	t.Setenv("CODM_DATA_DIR", "/tmp/codm-config-test")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if cfg.DataDir != "/tmp/codedm-config-test" {
+	if cfg.DataDir != "/tmp/codm-config-test" {
 		t.Errorf("expected DataDir to be the custom path, got %q", cfg.DataDir)
 	}
 }

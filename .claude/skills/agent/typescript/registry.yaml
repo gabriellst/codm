@@ -450,6 +450,6 @@ registry:
       mechanical: false
       reason: "The tool is not in `--allowedTools`, so the model narrates a call it cannot make. The declaration and the instruction ship together or not at all."
       wrong: |
-        system() { return 'Call codedm__complete_issue when you finish.' }   // with tools = []
+        system() { return 'Call codm__complete_issue when you finish.' }   // with tools = []
       right: |
         // add the tool to `tools` and the sentence to the prompt in the same change.

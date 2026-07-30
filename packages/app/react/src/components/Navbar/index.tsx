@@ -17,7 +17,7 @@ const rowIdle = 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60'
 const rowActive = 'bg-sidebar-accent text-sidebar-foreground'
 
 /**
- * The CodeDM console rail: primary destinations with live counts, then the THREADS
+ * The CODM console rail: primary destinations with live counts, then the THREADS
  * list. Owns its own data — the dashboard read supplies threads, channel health and
  * the agent count; workspaces and issues reads supply the two remaining counts.
  */

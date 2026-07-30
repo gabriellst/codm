@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
-// CodeDM badges are monochrome pills. Status lives in a small colored leading dot
+// CODM badges are monochrome pills. Status lives in a small colored leading dot
 // (baked in as a `before:` pseudo, spaced by the flex `gap`), never in the fill —
 // the pill itself stays neutral gray/hairline. `default` is the dominant soft-gray
 // tag (git · Detected · Connected · 3 files).

@@ -1,6 +1,6 @@
 {
             "mcpServers": {
-              "codedm-backend": {
+              "codm-backend": {
                 "type": "stdio",
                 "command": "npx",
                 "args": ["tsx", "/Users/work/Desktop/Projetos/pessoal/codedm/packages/client/dist/typescript/src/typescript/mcp/scopes/orchestration/server.ts"]

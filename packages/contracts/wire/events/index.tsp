@@ -6,7 +6,7 @@ import "./_base.tsp";
 // It carries no billing enum payload — only the envelope (ownerId/entityId/occurredAt).
 import "./billing-subscription-changed.tsp";
 
-// ── CodeDM Phase-0 contract lock — the frozen integration-event set (draft "Contract draft
+// ── CODM Phase-0 contract lock — the frozen integration-event set (draft "Contract draft
 // (to freeze)"). Cross-boundary facts on the outbox (`integration.*` prefix routes them to the
 // ExternalMediator). Nested VOs (ContactRef, IssueLabel) are flattened to scalar fields because the
 // wire codegen carries scalars + enums + arrays, not nested object models. ──
@@ -18,7 +18,7 @@ import "./channel-disconnected.tsp";
 import "./channel-pairing-qr-updated.tsp";
 import "./channel-outbound-delivered.tsp";
 
-// Gateway full-port — the complete medscall channel wire surface, retargeted to the codedm
+// Gateway full-port — the complete medscall channel wire surface, retargeted to the codm
 // envelope. Everything below is defined-and-dormant except where the first gateway phase
 // exercises it; every fact is an `integration.*` event so the outbox routes it to the
 // ExternalMediator (the assert-wire-names gate enforces the prefix).

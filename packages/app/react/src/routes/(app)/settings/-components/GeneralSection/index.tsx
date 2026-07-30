@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 /**
  * Environment facts (T08): where the data lives and which build is running.
  *
- * Operator and timezone were dropped (founder, 29-jul). Neither was actionable here: CodeDM runs as a
+ * Operator and timezone were dropped (founder, 29-jul). Neither was actionable here: CODM runs as a
  * single local operator with no account to name, so "Operador — Sem nome" was a row asking to be
  * filled in by a screen that does not exist, and the timezone is the machine's. A settings list should
  * only hold things you can act on or facts you would go looking for.
