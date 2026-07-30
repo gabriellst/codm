@@ -5,10 +5,3 @@ export {
 	DrizzleConsumedMessageRepository,
 	MockConsumedMessageRepository,
 } from './ConsumedMessageRepository'
-export {
-	TranscriptRepository,
-	type AppendTranscriptInput,
-	type TranscriptEntryRow,
-	DrizzleTranscriptRepository,
-	MockTranscriptRepository,
-} from './TranscriptRepository'

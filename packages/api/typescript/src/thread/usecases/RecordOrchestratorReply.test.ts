@@ -6,7 +6,7 @@ import { TestBed, givenThread } from '@test/support'
 import { MessageAuthor, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { RecordOrchestratorReply } from './RecordOrchestratorReply'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
+import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 
 /**
@@ -48,7 +48,7 @@ describe('RecordOrchestratorReply — the reply is transcribed and its delivery 
 
 		await testBed.resolve(RecordOrchestratorReply).execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'sim, claro' })
 
-		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const entries = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 		const system = entries.find(e => e.kind === TranscriptKind.SYSTEM)
 		expect(system?.text).toBe('sim, claro')
 
@@ -98,9 +98,14 @@ describe('RecordOrchestratorReply — the reply is transcribed and its delivery 
 
 	it('a citation that RESOLVES travels as the platform id the gateway quotes', async () => {
 		const thread = await givenThread(testBed)
-		const quoted = await testBed
-			.resolve(TranscriptRepository)
-			.append({ ownerId: OPERATOR_ID, threadId: thread.id.value, kind: TranscriptKind.CONTACT, text: 'e o cupom?' })
+		// The seed goes through the AGGREGATE since B4 — never a loose append. A CONTACT line carries the
+		// sender that spoke, which is the invariant `recordEntry` owns.
+		const quoted = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: 'e o cupom?',
+			senderExternalId: thread.contactRef.externalId,
+		})
+		await testBed.resolve(ThreadRepository).save(thread)
 		await testBed
 			.resolve(ConsumedMessageRepository)
 			.claim({ ownerId: OPERATOR_ID, channelId: thread.channelId, platformMessageId: 'wamid-asked' })

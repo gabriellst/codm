@@ -41,7 +41,7 @@ import { AgentSessionRepository } from '@agent/repositories/AgentSessionReposito
 import { AgentSession } from '@agent/entities/AgentSession'
 import { TerminalLineRepository } from '@issue/repositories/TerminalLineRepository'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
-import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { IdempotencyGuard } from '@codedm/core-typescript'
 import { DomainEventRepository } from '@codedm/core-typescript'
 import { BaseDomainEvent } from '@codedm/core-typescript'
@@ -163,14 +163,10 @@ describe('insert-site audit — every db-generated id and notNull timestamp surv
 		await assertLanded('agent_agent_sessions', ['id', 'created_at', 'updated_at'])
 	})
 
-	it('thread_transcript_entries — via TranscriptRepository (id minted in the repository)', async () => {
+	it('thread_transcript_entries — via ThreadRepository (id minted by the aggregate)', async () => {
 		const thread = await givenThread(testBed, { ownerId: OWNER })
-		await testBed.resolve(TranscriptRepository).append({
-			ownerId: OWNER,
-			threadId: thread.id.value,
-			kind: TranscriptKind.CONTACT,
-			text: 'audit line',
-		})
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'audit line', senderExternalId: 'contact-audit' })
+		await testBed.resolve(ThreadRepository).save(thread)
 		await assertLanded('thread_transcript_entries', ['id', 'at'])
 	})
 

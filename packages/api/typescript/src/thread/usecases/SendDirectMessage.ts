@@ -3,7 +3,6 @@ import { Handler, z, BaseError, CommandQueue } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { MessageAuthor, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { ChannelConnectivity } from '../services/ChannelConnectivity'
 import { DirectMessageSentEvent } from '../events'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
@@ -32,7 +31,6 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 
 	constructor(
 		private readonly threads: ThreadRepository,
-		private readonly transcript: TranscriptRepository,
 		private readonly connectivity: ChannelConnectivity,
 		private readonly commands: CommandQueue,
 	) {
@@ -48,10 +46,8 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 		}
 
 		return this.withTransaction(tx, async tx => {
-			const entry = await this.transcript.append(
-				{ ownerId: thread.ownerId, threadId: thread.id.value, kind: TranscriptKind.DIRECT, text: input.text },
-				tx,
-			)
+			const entry = thread.recordEntry({ kind: TranscriptKind.DIRECT, text: input.text })
+			await this.threads.save(thread, tx)
 
 			// THE ORDER, in the SAME transaction as the entry it refers to — the same shape
 			// `IngestChannelMessage` uses for the mailbox item. `jobId` is the ENTRY id, so a retried

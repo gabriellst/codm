@@ -5,7 +5,7 @@ import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService, MockLoggingService } from '@codedm/core-typescript'
 import { AgentModelId, ProviderKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
-import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { RunIssueTurn } from '@agent/usecases'
 import { AgentSessionRepository } from '@agent/repositories'
 import { AgentRunner } from '@agent/services/AgentRunner'
@@ -98,11 +98,24 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 		return { workspace, thread, issue }
 	}
 
-	/** Append an inbound message to the issue's conversation, exactly as `ClassifyMessage` leaves it. */
+	/**
+	 * Append an inbound message to the issue's conversation, exactly as `ClassifyMessage` leaves it.
+	 *
+	 * Recorded BY THE AGGREGATE since B4: `issueId` is stamped at record time rather than by a follow-up
+	 * `setIssueId` (which died with `TranscriptRepository`), and a CONTACT line carries the sender that
+	 * spoke — the invariant `recordEntry` owns.
+	 */
 	async function givenInboundOnIssue(threadId: string, issueId: string, text: string): Promise<string> {
-		const transcript = testBed.resolve(TranscriptRepository)
-		const entry = await transcript.append({ ownerId: OPERATOR_ID, threadId, kind: TranscriptKind.CONTACT, text })
-		await transcript.setIssueId(entry.entryId, issueId)
+		const threads = testBed.resolve(ThreadRepository)
+		const thread = await threads.findById(threadId)
+		if (!thread) throw new Error(`no thread ${threadId}`)
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text,
+			senderExternalId: thread.contactRef.externalId,
+			issueId,
+		})
+		await threads.save(thread)
 		return entry.entryId
 	}
 

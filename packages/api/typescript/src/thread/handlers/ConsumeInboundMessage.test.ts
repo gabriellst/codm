@@ -6,7 +6,7 @@ import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescri
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from './ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
+import { ThreadRepository } from '../repositories/ThreadRepository'
 
 /**
  * Phase-6 HARD GATE — at-least-once delivery from the gateway becomes exactly-once PROCESSING.
@@ -71,7 +71,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 	it('double-delivered inbound is processed exactly once (one transcript entry)', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const handler = testBed.resolve(ConsumeInboundMessage)
-		const transcript = testBed.resolve(TranscriptRepository)
+		const transcript = testBed.resolve(ThreadRepository)
 
 		const event = buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-double')
 
@@ -79,7 +79,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 		await handler.handle(event as never)
 		await handler.handle(event as never)
 
-		const entries = await transcript.listByThread(thread.id.value)
+		const entries = await transcript.listEntries(thread.id.value)
 		const contactEntries = entries.filter(e => e.kind === 'CONTACT')
 		expect(contactEntries).toHaveLength(1) // dedup: the redelivery was a no-op
 	})
@@ -87,12 +87,12 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 	it('distinct platform messages are both processed', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const handler = testBed.resolve(ConsumeInboundMessage)
-		const transcript = testBed.resolve(TranscriptRepository)
+		const transcript = testBed.resolve(ThreadRepository)
 
 		await handler.handle(buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-a') as never)
 		await handler.handle(buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-b') as never)
 
-		const entries = await transcript.listByThread(thread.id.value)
+		const entries = await transcript.listEntries(thread.id.value)
 		expect(entries.filter(e => e.kind === 'CONTACT')).toHaveLength(2)
 	})
 
@@ -111,10 +111,10 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 	it('resolves a WhatsApp reply-quote (contextInfo.stanzaId) into quotedEntryId via the ledger', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const handler = testBed.resolve(ConsumeInboundMessage)
-		const transcript = testBed.resolve(TranscriptRepository)
+		const transcript = testBed.resolve(ThreadRepository)
 
 		await handler.handle(buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-original') as never)
-		const [original] = await transcript.recentByThread(thread.id.value, 10)
+		const [original] = await transcript.recentEntries(thread.id.value, 10)
 		expect(original).toBeDefined()
 
 		// The ledger row is CLOSED by the first message — that is what makes it quotable at all.
@@ -128,7 +128,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 			}) as never,
 		)
 
-		const entries = await transcript.recentByThread(thread.id.value, 10)
+		const entries = await transcript.recentEntries(thread.id.value, 10)
 		const reply = entries.find(e => e.text.includes('and also this'))
 		expect(reply?.quotedEntryId).toBe(original!.entryId)
 	})
@@ -142,7 +142,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 			buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-orphan', { quotes: 'wamid-never-seen' }) as never,
 		)
 
-		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const [entry] = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 		expect(entry).toBeDefined()
 		expect(entry!.quotedEntryId).toBeUndefined()
 	})
@@ -170,14 +170,14 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 			}) as never,
 		)
 
-		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const [entry] = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 		expect(entry?.senderExternalId).toBe('operator')
 		// And the same message WITHOUT the citation is still only transcribed — the gate applies to the
 		// owner too, otherwise every sentence they say to real humans in the group summons the agent.
 		await handler.handle(
 			buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-own-2', { text: 'just chatting', fromMe: true }) as never,
 		)
-		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const entries = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 		expect(entries.some(e => e.text === 'just chatting')).toBe(true)
 	})
 
@@ -192,7 +192,7 @@ describe('Inbound message dedup (exactly-once processing)', () => {
 		const ledger = testBed.resolve(ConsumedMessageRepository)
 
 		await handler.handle(buildEvent(thread.channelId, thread.contactRef.externalId, 'wamid-anchor') as never)
-		const [entry] = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const [entry] = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 
 		expect(await ledger.findPlatformId(entry!.entryId)).toBe('wamid-anchor')
 		expect(await ledger.findPlatformId('00000000-0000-4000-8000-00000000dead')).toBeUndefined()

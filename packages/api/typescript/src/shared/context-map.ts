@@ -37,7 +37,7 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 		ui: { note: NOTE_MCP_MANIFEST },
 		owner: { note: NOTE_MCP_MANIFEST },
 		thread: {
-			note: 'The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/TranscriptRepository/OpenIssuesReader). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).',
+			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).",
 		},
 		workspace: { note: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).' },
 	},

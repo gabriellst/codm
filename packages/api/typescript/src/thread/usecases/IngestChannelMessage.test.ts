@@ -5,7 +5,6 @@ import { TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { IngestChannelMessage } from './IngestChannelMessage'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { MessageIngestedEvent } from '../events'
 import { DomainEventRepository } from '@codedm/core-typescript'
 
@@ -39,7 +38,7 @@ describe('IngestChannelMessage gate matrix', () => {
 		const out = await ingest(thread.id.value, thread.contactRef.externalId, 'just watching')
 
 		expect(out.invocable).toBe(false)
-		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
 		const contact = entries.filter(e => e.kind === TranscriptKind.CONTACT)
 		expect(contact).toHaveLength(1)
 		expect(contact[0]?.text).toBe('just watching')

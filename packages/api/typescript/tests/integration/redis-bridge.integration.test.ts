@@ -7,7 +7,7 @@ import { RedisExternalMediator, Config, type Handler } from '@codedm/core-typesc
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
-import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { AgentRunner } from '@agent/services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { AgentRunOutcome } from '@agent/enums'
@@ -193,7 +193,7 @@ describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + clas
 		const messageId = `wamid-${Date.now()}`
 
 		const consumed = testBed.resolve(ConsumedMessageRepository)
-		const transcript = testBed.resolve(TranscriptRepository)
+		const transcript = testBed.resolve(ThreadRepository)
 
 		// 1. The Go gateway publishes the frozen wire event (nested verbatim envelope) onto the stream.
 		await producer.send('XADD', [STREAM, 'MAXLEN', '~', '10000', '*', 'data', goWireEnvelope(channelId, contactExternalId, messageId)])
@@ -205,8 +205,8 @@ describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + clas
 		// 3. Ingested → exactly one CONTACT transcript entry (proves the verbatim payload decoded: the
 		//    WHATSAPP/TEXT content slot narrowed via the generated owner schema, senderId mapped, and
 		//    the ISO `occurredAt` revived to a Date the z.date() input accepts).
-		await waitUntil(async () => (await transcript.listByThread(thread.id.value)).filter(e => e.kind === 'CONTACT').length === 1)
-		expect((await transcript.listByThread(thread.id.value)).filter(e => e.kind === 'CONTACT')).toHaveLength(1)
+		await waitUntil(async () => (await transcript.listEntries(thread.id.value)).filter(e => e.kind === 'CONTACT').length === 1)
+		expect((await transcript.listEntries(thread.id.value)).filter(e => e.kind === 'CONTACT')).toHaveLength(1)
 
 		// 4. Classified → the demux fact `thread.message_classified` is persisted for this thread.
 		await waitUntil(async () => {
@@ -221,6 +221,6 @@ describeBridge('Go→TS Redis bridge: wire envelope → consume → dedup + clas
 		await producer.send('XADD', [STREAM, 'MAXLEN', '~', '10000', '*', 'data', goWireEnvelope(channelId, contactExternalId, messageId)])
 		await waitUntil(async () => deliveries >= deliveriesBefore + 1) // the redelivery was actually consumed
 
-		expect((await transcript.listByThread(thread.id.value)).filter(e => e.kind === 'CONTACT')).toHaveLength(1) // dedup latch held
+		expect((await transcript.listEntries(thread.id.value)).filter(e => e.kind === 'CONTACT')).toHaveLength(1) // dedup latch held
 	}, 45_000)
 })

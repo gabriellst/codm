@@ -6,7 +6,7 @@ import { TestBed, givenThread } from '@test/support'
 import { MessageAuthor, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { SendDirectMessage } from './SendDirectMessage'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
+import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ChannelConnectivity } from '../services/ChannelConnectivity'
 import { DirectMessageSentEvent } from '../events'
 
@@ -44,7 +44,7 @@ describe('SendDirectMessage — the entry and the delivery COMMAND commit togeth
 			.resolve(SendDirectMessage)
 			.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'oi, sou eu' })
 
-		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const entries = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 		expect(entries.find(e => e.entryId === entryId)?.kind).toBe(TranscriptKind.DIRECT)
 
 		const [command] = await db.select().from(scheduledCommands)

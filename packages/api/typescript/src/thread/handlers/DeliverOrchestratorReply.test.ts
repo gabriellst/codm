@@ -6,7 +6,7 @@ import { TestBed, givenThread } from '@test/support'
 import { OrchestratorRepliedEvent } from '@codedm/contracts-typescript/wire/events'
 import { TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
+import { ThreadRepository } from '../repositories/ThreadRepository'
 import { DeliverOrchestratorReply } from './DeliverOrchestratorReply'
 
 /**
@@ -39,7 +39,7 @@ describe('DeliverOrchestratorReply — the envelope guard and the delegation', (
 			.resolve(DeliverOrchestratorReply)
 			.handle(new OrchestratorRepliedEvent({ ownerId: OPERATOR_ID, payload: { threadId: thread.id.value, text: 'sim, claro' } }) as never)
 
-		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const entries = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
 		expect(entries.find(e => e.kind === TranscriptKind.SYSTEM)?.text).toBe('sim, claro')
 		const [command] = await db.select().from(scheduledCommands)
 		expect(command?.name).toBe('deliver_channel_message')

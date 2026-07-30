@@ -4,7 +4,6 @@ import type { Transaction } from '@codedm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { MessageIngestedEvent } from '../events'
 import type { ApplicationErrors } from '../errors'
 
@@ -35,7 +34,6 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 
 	constructor(
 		private readonly threads: ThreadRepository,
-		private readonly transcript: TranscriptRepository,
 		private readonly mailbox: MailboxRepository,
 	) {
 		super()
@@ -46,26 +44,28 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		if (!thread) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
 		return this.withTransaction(tx, async tx => {
-			// Always buffer + transcribe, even when the sender can't invoke (observation ≠ invocation).
-			const entry = await this.transcript.append(
-				{
-					ownerId: thread.ownerId,
-					threadId: thread.id.value,
-					kind: TranscriptKind.CONTACT,
-					text: input.text,
-					senderExternalId: input.senderExternalId,
-					quotedEntryId: input.quotedEntryId,
-					at: input.receivedAt,
-				},
-				tx,
-			)
+			// THE CITATION, RESOLVED FIRST (B4, decision D-B). This lookup already existed — it is how
+			// `repliesToAgent` is decided — and it now serves two purposes with one query: it tells us
+			// whether the quote addresses the agent, and it is the PROOF of thread membership that
+			// `recordEntry` demands. A quote that does not resolve degrades to no quote rather than being
+			// written blind at a `quoted_entry_id` pointing nowhere, which is what happened before.
+			const quoted = input.quotedEntryId ? await this.threads.findEntry(input.quotedEntryId, tx) : undefined
 
 			// Is this a REPLY to something the agent itself said? `SYSTEM` is the kind
-			// `DeliverOrchestratorReply` writes, so it is exactly "the agent's own words", and quoting
+			// `RecordOrchestratorReply` writes, so it is exactly "the agent's own words", and quoting
 			// those is addressing it — the mention gate stands down for that case (see `Thread.canInvoke`).
 			// A quote that resolves to anyone else's message, or does not resolve at all, is not one.
-			const quoted = input.quotedEntryId ? await this.transcript.findById(input.quotedEntryId, tx) : undefined
 			const repliesToAgent = quoted?.kind === TranscriptKind.SYSTEM
+
+			// Always buffer + transcribe, even when the sender can't invoke (observation ≠ invocation).
+			const entry = thread.recordEntry({
+				kind: TranscriptKind.CONTACT,
+				text: input.text,
+				senderExternalId: input.senderExternalId,
+				quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
+				at: input.receivedAt,
+			})
+			await this.threads.save(thread, tx)
 
 			const invocable = thread.canInvoke({ senderExternalId: input.senderExternalId, text: input.text, repliesToAgent })
 

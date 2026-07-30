@@ -10,7 +10,7 @@ import {
 	ProviderStatus,
 	TranscriptKind,
 } from '@codedm/contracts-typescript/wire/enums'
-import { ThreadRepository, TranscriptRepository } from '@thread/repositories'
+import { ThreadRepository } from '@thread/repositories'
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
@@ -116,7 +116,6 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		private readonly providerDetector: ProviderDetector,
 		private readonly sessions: AgentSessionRepository,
 		private readonly threads: ThreadRepository,
-		private readonly transcript: TranscriptRepository,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -236,9 +235,13 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	/**
 	 * The conversation window a FRESH session is seeded with (§7.5) — the mechanism that would have died
 	 * orphaned with `ClassifyMessage`, inherited here rather than reinvented.
+	 *
+	 * Reads through `ThreadRepository` (B4, decision 3): the window is a READ and stays outside the
+	 * aggregate, but it is a read of the thread's OWN rows, so it is the thread repository's surface. One
+	 * fewer injection than before, and no `DrizzleClient` in an agent use case.
 	 */
 	private async buildWindow(thread: LoadedThread) {
-		const rows = await this.transcript.recentByThread(thread.id.value, this.bufferLimit(thread.bufferSize))
+		const rows = await this.threads.recentEntries(thread.id.value, this.bufferLimit(thread.bufferSize))
 		// Roster lookup by the JID the gateway recorded. A participant the snapshot has since dropped
 		// still has their words in the transcript, so the fallback is the raw id rather than a hole —
 		// losing WHO said something would make the window unreadable.

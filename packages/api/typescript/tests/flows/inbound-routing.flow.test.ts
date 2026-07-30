@@ -6,7 +6,7 @@ import { ChannelKind, MessageType, TranscriptKind } from '@codedm/contracts-type
 import { ChannelMessageReceivedInProcessEvent } from '@codedm/contracts-typescript/wire/events'
 import { OPERATOR_ID } from '@auth/operator'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
-import { TranscriptRepository } from '@thread/repositories/TranscriptRepository'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { AgentRunner } from '@agent/services/AgentRunner'
 import { AgentRunOutcome } from '@agent/enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
@@ -113,7 +113,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 		await consumer.handle(event as never)
 		await consumer.handle(event as never)
 
-		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
 		expect(entries.filter(e => e.kind === TranscriptKind.CONTACT)).toHaveLength(1)
 	})
 
@@ -141,7 +141,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 
 		// The payload carries the entry the turn answers — the id the orchestrator may cite (D6) and the
 		// one the run token claim is minted from.
-		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
 		const contact = entries.find(e => e.kind === TranscriptKind.CONTACT)
 		expect(claimed).toBeDefined()
 		const payload = claimed?.payload as { entryId: string } | undefined
@@ -164,7 +164,7 @@ describe('Flow (mock): inbound → classify → spawn → issue opened → SSE',
 			}) as never,
 		)
 
-		const entries = await testBed.resolve(TranscriptRepository).listByThread(thread.id.value)
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
 		expect(entries.filter(e => e.kind === TranscriptKind.CONTACT)).toHaveLength(1)
 		expect(await testBed.resolve(MailboxRepository).claimNext('flow-test', 60_000)).toBeUndefined()
 	})

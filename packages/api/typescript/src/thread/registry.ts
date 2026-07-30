@@ -12,7 +12,6 @@ import {
 	DrizzleConsumedMessageRepository,
 	MockConsumedMessageRepository,
 } from './repositories/ConsumedMessageRepository'
-import { TranscriptRepository, DrizzleTranscriptRepository, MockTranscriptRepository } from './repositories/TranscriptRepository'
 import { OpenIssuesReader, DrizzleOpenIssuesReader, MockOpenIssuesReader } from './services/OpenIssuesReader'
 import { ChannelConnectivity, DrizzleChannelConnectivity, MockChannelConnectivity } from './services/ChannelConnectivity'
 import { GroupMemberReader, DrizzleGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
@@ -40,7 +39,6 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: DrizzleConsumedMessageRepository,
 		real: DrizzleConsumedMessageRepository,
 	},
-	{ token: TranscriptRepository, mock: MockTranscriptRepository, real: DrizzleTranscriptRepository },
 	// Classifier candidate set + reply-quote resolution: real table reads in real+integration, empty in mock.
 	{ token: OpenIssuesReader, mock: MockOpenIssuesReader, integration: DrizzleOpenIssuesReader, real: DrizzleOpenIssuesReader },
 	// Channel-connected gate reads the Go gateway read model: real in real+integration, always-true in mock.

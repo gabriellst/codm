@@ -5,7 +5,6 @@ import { MailboxItemKind, MailboxTargetKind, TranscriptKind } from '@codedm/cont
 import { MailboxRepository } from '@agent/repositories'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { ThreadSteeredEvent } from '../events'
 import type { ApplicationErrors } from '../errors'
 
@@ -25,7 +24,6 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 
 	constructor(
 		private readonly threads: ThreadRepository,
-		private readonly transcript: TranscriptRepository,
 		private readonly openIssues: OpenIssuesReader,
 		private readonly mailbox: MailboxRepository,
 	) {
@@ -34,7 +32,8 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const thread = await this.threads.findById(input.threadId)
-		if (!thread || thread.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
 		// Read BEFORE the transaction, not inside it. `OpenIssuesReader` is a read SEAM and takes no
 		// `tx`, and the tx-discipline rail is right to refuse an untethered `await this.*` in a
@@ -44,10 +43,12 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 		const active = await this.openIssues.openIssues(thread.id.value)
 
 		return this.withTransaction(tx, async tx => {
-			const entry = await this.transcript.append(
-				{ ownerId: thread.ownerId, threadId: thread.id.value, kind: TranscriptKind.WHISPER, text: input.text },
-				tx,
-			)
+			// The WHISPER is recorded BY THE AGGREGATE (B4, decision 1) and persisted by `save` in this
+			// same transaction — the id it returns is what the mailbox items below dedup on, so it has to
+			// exist before anything references it, which is exactly why `recordEntry` mints synchronously.
+			const entry = thread.recordEntry({ kind: TranscriptKind.WHISPER, text: input.text })
+			await this.threads.save(thread, tx)
+
 			await this.domainEventRepository.save(
 				new ThreadSteeredEvent({
 					entityId: thread.id.value,

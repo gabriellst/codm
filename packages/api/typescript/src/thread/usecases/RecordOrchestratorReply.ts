@@ -3,7 +3,6 @@ import { Handler, z, CommandQueue } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
 import { MessageAuthor, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { TranscriptRepository } from '../repositories/TranscriptRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
 
@@ -29,9 +28,11 @@ export const RecordOrchestratorReplyOutputSchema = z.void()
  * persisted nothing at all. The canonical fix in this house is "handler invokes use case": the
  * transactional body lives here with its own UnitOfWork, and `DeliverOrchestratorReply` is thin.
  *
- * ### Ordering: the entry is written BEFORE the delivery is enqueued
- * `replyEntryId` has to exist before anything can link to it, and the enqueue rides the same
- * transaction — so a crash cannot leave a delivery pointing at an entry that never committed.
+ * ### Ordering: the entry is recorded BY THE AGGREGATE before the delivery is enqueued
+ * `thread.recordEntry` mints the id synchronously and `ThreadRepository.save` persists the entry in
+ * THIS transaction (B4, decision 1) — so `replyEntryId` exists before anything links to it, and the
+ * enqueue rides the same transaction, meaning a crash cannot leave a delivery pointing at an entry that
+ * never committed.
  */
 @injectable()
 export class RecordOrchestratorReply extends Handler<
@@ -44,7 +45,6 @@ export class RecordOrchestratorReply extends Handler<
 
 	constructor(
 		private readonly threads: ThreadRepository,
-		private readonly transcript: TranscriptRepository,
 		private readonly consumed: ConsumedMessageRepository,
 		private readonly commands: CommandQueue,
 	) {
@@ -59,16 +59,18 @@ export class RecordOrchestratorReply extends Handler<
 		if (!thread) return
 
 		await this.withTransaction(tx, async tx => {
-			const entry = await this.transcript.append(
-				{
-					ownerId: input.ownerId,
-					threadId: thread.id.value,
-					kind: TranscriptKind.SYSTEM,
-					text: input.text,
-					quotedEntryId: input.replyToEntryId,
-				},
-				tx,
-			)
+			// The citation, RESOLVED (B4, decision D-B). `replyToEntryId` mirrors the wire and is a plain
+			// string, so it may well name nothing — and an unresolvable one now degrades to NO citation
+			// instead of being written blind. That is the same posture the `quotedMessageId` lookup below
+			// already takes, for the same reason: an unquoted answer is worth far more than a silence.
+			const quoted = input.replyToEntryId ? await this.threads.findEntry(input.replyToEntryId, tx) : undefined
+
+			const entry = thread.recordEntry({
+				kind: TranscriptKind.SYSTEM,
+				text: input.text,
+				quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
+			})
+			await this.threads.save(thread, tx)
 
 			// The platform id of the message being quoted. `findPlatformId` is the INVERSE lookup added in
 			// F1 for exactly this: everywhere else resolves platform id → entry, and a citation needs the
