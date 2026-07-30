@@ -34,7 +34,14 @@ import {
 	AgentIdentityService,
 	InMemoryAgentIdentityService,
 	Config,
+	HEALTH_CHECKS,
+	HealthService,
+	healthChecksFrom,
+	DatabaseHealthCheck,
+	MigrationsHealthCheck,
+	PollingHealthCheck,
 } from '@codedm/core-typescript'
+import { ChannelStatusHealthCheck } from './services'
 import { join } from 'node:path'
 import * as schema from '@codedm/contracts/db'
 import { migrationsDir } from '@codedm/contracts/db/migrations'
@@ -132,6 +139,12 @@ const fileLibsqlDriver = { useFactory: () => getRealDatabaseDriver() }
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
 const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }
 
+// The aggregator is the SAME in every env — what differs is how many checks answer it. `resolveAll`
+// over the multi-inject token is not expressable as injection-by-type, which is why this is a
+// factory and `HealthService` is not `@injectable()`.
+const healthServiceFactory = { useFactory: (c: DependencyContainer) => new HealthService(healthChecksFrom(c)) }
+const resolveDriver = (c: DependencyContainer) => c.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
+
 // Kernel bindings — one declaration per token, envs as columns (divergence is visible, absence is
 // a declared null, `integration` omitted mirrors `real`).
 const CORE_REGISTRY: InstanceRegistry = expandBindings([
@@ -191,6 +204,47 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// In-memory queue in tests; database-backed in production (origin-faithful: medscall runs the
 	// DB poller — no broker dependency).
 	{ token: CommandQueue, mock: MockCommandQueue, real: SqliteCommandQueue },
+	// HEALTH — multi-inject: N declarações do MESMO token, agregadas por resolveAll (core
+	// healthChecksFrom). `mock`/`integration` são ausência DECLARADA: os testes de health constroem
+	// HealthService à mão (Health.test.ts), e registrar checks reais num container de teste só criaria
+	// um segundo caminho, pior, para provar a mesma coisa.
+	{ token: HealthService, mock: healthServiceFactory, integration: healthServiceFactory, real: healthServiceFactory },
+	{
+		token: HEALTH_CHECKS,
+		mock: null,
+		integration: null,
+		real: { useFactory: (c: DependencyContainer) => new DatabaseHealthCheck(resolveDriver(c)) },
+	},
+	{
+		token: HEALTH_CHECKS,
+		mock: null,
+		integration: null,
+		real: { useFactory: (c: DependencyContainer) => new MigrationsHealthCheck(resolveDriver(c)) },
+	},
+	{
+		token: HEALTH_CHECKS,
+		mock: null,
+		integration: null,
+		real: {
+			useFactory: (c: DependencyContainer) =>
+				new PollingHealthCheck('outboxDispatcher', c.resolve(OutboxDispatcher as any) as DrizzleOutboxDispatcher),
+		},
+	},
+	{
+		token: HEALTH_CHECKS,
+		mock: null,
+		integration: null,
+		real: {
+			useFactory: (c: DependencyContainer) =>
+				new PollingHealthCheck('sqlExternalMediator', c.resolve(ExternalMediator as any) as SqlExternalMediator),
+		},
+	},
+	{
+		token: HEALTH_CHECKS,
+		mock: null,
+		integration: null,
+		real: { useFactory: (c: DependencyContainer) => new ChannelStatusHealthCheck(c.resolve(DrizzleClient as any) as DrizzleClient) },
+	},
 	// The agent run identity — the SINGLE source of "on whose behalf" for every MCP tool call.
 	//
 	// It lives HERE and not in `agent/registry.ts` for a mechanical reason: `AgentIdentityMiddleware`

@@ -26,6 +26,7 @@ import {
 	getSetupChecklist,
 	getThreadSettings,
 	getUserInfo,
+	health,
 	listArtifacts,
 	listWorkspaces,
 	listenEvents,
@@ -163,6 +164,10 @@ export class TypescriptClient {
 
 	getUserInfo(...args: Parameters<typeof getUserInfo>): ReturnType<typeof getUserInfo> {
 		return (getUserInfo as (...a: any[]) => ReturnType<typeof getUserInfo>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	health(...args: Parameters<typeof health>): ReturnType<typeof health> {
+		return (health as (...a: any[]) => ReturnType<typeof health>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	listArtifacts(...args: Parameters<typeof listArtifacts>): ReturnType<typeof listArtifacts> {

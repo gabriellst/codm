@@ -26,7 +26,7 @@ import * as sharedEnums from './enums'
 import * as authEnums from '@auth/enums'
 import * as uiEnums from '@ui/enums'
 import * as sharedObjects from './objects'
-import { TestIngressController } from './controllers'
+import { HealthController, TestIngressController } from './controllers'
 import { PruneOutbox } from './usecases/PruneOutbox'
 
 // TEST-ONLY gateway ingress seam — mounted ONLY under CODEDM_E2E (the Playwright harness), refused
@@ -38,7 +38,7 @@ const testControllers: Record<string, typeof TestIngressController> = process.en
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.shared,
 	root: true,
-	controllers: testControllers,
+	controllers: { HealthController, ...testControllers },
 	registry: ALL_REGISTRIES,
 	// Outbox retention. Both claimants TOMBSTONE on success instead of deleting (a deleted id is a
 	// re-insertable id for the Go `INSERT ... ON CONFLICT DO NOTHING` re-persist), so nothing

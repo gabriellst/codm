@@ -5,6 +5,60 @@
     "title": "codedm-backend"
   },
   "paths": {
+    "/v1/health": {
+      "get": {
+        "tags": [
+          "shared"
+        ],
+        "description": "Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)",
+        "operationId": "Health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/Status"
+                    },
+                    "components": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "$ref": "#/components/schemas/Status2"
+                          },
+                          "gate": {
+                            "type": "boolean"
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status",
+                          "gate"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "components"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/session": {
       "get": {
         "tags": [
@@ -7653,6 +7707,20 @@
           "WORKSPACE_NOT_FOUND"
         ],
         "description": "All possible error codes"
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "not_ready"
+        ]
+      },
+      "Status2": {
+        "type": "string",
+        "enum": [
+          "up",
+          "down"
+        ]
       },
       "OwnerKind": {
         "default": "ORGANIZATION",

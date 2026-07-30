@@ -880,6 +880,42 @@ func (e ProviderStatus) Valid() bool {
 	}
 }
 
+// Defines values for Status.
+const (
+	NotReady Status = "not_ready"
+	Ok       Status = "ok"
+)
+
+// Valid indicates whether the value is a known member of the Status enum.
+func (e Status) Valid() bool {
+	switch e {
+	case NotReady:
+		return true
+	case Ok:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Status2.
+const (
+	Down Status2 = "down"
+	Up   Status2 = "up"
+)
+
+// Valid indicates whether the value is a known member of the Status2 enum.
+func (e Status2) Valid() bool {
+	switch e {
+	case Down:
+		return true
+	case Up:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StopKind.
 const (
 	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
@@ -1092,6 +1128,12 @@ type ProviderKind string
 
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
+
+// Status defines model for Status.
+type Status string
+
+// Status2 defines model for Status2.
+type Status2 string
 
 // StopKind defines model for StopKind.
 type StopKind string
@@ -1623,6 +1665,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// Health request
+	Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// UploadAvatar request
 	UploadAvatar(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1803,6 +1848,18 @@ type ClientInterface interface {
 
 	// RemoveWorkspace request
 	RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewHealthRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) UploadAvatar(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -2607,6 +2664,33 @@ func (c *Client) RemoveWorkspace(ctx context.Context, workspaceId string, reqEdi
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewHealthRequest generates requests for Health
+func NewHealthRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/health")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewUploadAvatarRequest generates requests for UploadAvatar
@@ -4512,6 +4596,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// HealthWithResponse request
+	HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error)
+
 	// UploadAvatarWithResponse request
 	UploadAvatarWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error)
 
@@ -4692,6 +4779,43 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveWorkspaceWithResponse request
 	RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error)
+}
+
+type HealthResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Components map[string]struct {
+			Detail *string `json:"detail,omitempty"`
+			Gate   bool    `json:"gate"`
+			Status Status2 `json:"status"`
+		} `json:"components"`
+		Status Status `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r HealthResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r HealthResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r HealthResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type UploadAvatarResponse struct {
@@ -6446,6 +6570,15 @@ func (r RemoveWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+// HealthWithResponse request returning *HealthResponse
+func (c *ClientWithResponses) HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error) {
+	rsp, err := c.Health(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseHealthResponse(rsp)
+}
+
 // UploadAvatarWithResponse request returning *UploadAvatarResponse
 func (c *ClientWithResponses) UploadAvatarWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error) {
 	rsp, err := c.UploadAvatar(ctx, reqEditors...)
@@ -7027,6 +7160,39 @@ func (c *ClientWithResponses) RemoveWorkspaceWithResponse(ctx context.Context, w
 		return nil, err
 	}
 	return ParseRemoveWorkspaceResponse(rsp)
+}
+
+// ParseHealthResponse parses an HTTP response from a HealthWithResponse call
+func ParseHealthResponse(rsp *http.Response) (*HealthResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &HealthResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Components map[string]struct {
+				Detail *string `json:"detail,omitempty"`
+				Gate   bool    `json:"gate"`
+				Status Status2 `json:"status"`
+			} `json:"components"`
+			Status Status `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseUploadAvatarResponse parses an HTTP response from a UploadAvatarWithResponse call

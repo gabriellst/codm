@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
-import { LoggingService } from '@codedm/core-typescript'
+import { LoggingService, type PollingService } from '@codedm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codedm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
@@ -44,12 +44,25 @@ const MAX_CONCURRENT_TURNS = 4
  * pass, in order — and the loop IS the re-poll, which is why it needs no separate mechanism.
  */
 @injectable()
-export class DrizzleMailboxDispatcher extends MailboxDispatcher {
+export class DrizzleMailboxDispatcher extends MailboxDispatcher implements PollingService {
 	private timer: ReturnType<typeof setTimeout> | null = null
 	private stopping = false
 	private draining: Promise<number> | null = null
 	private pollIntervalMs = POLL_MIN_MS
 	private readonly workerId = `mailbox-${crypto.randomUUID()}`
+
+	/**
+	 * "Meu timer de poll está armado" — e aqui `timer` SOZINHO mentiria.
+	 *
+	 * `start()` termina em `void this.tick()`, e o timer só é setado DEPOIS do primeiro `drain()` —
+	 * que é a varredura de boot (a que reclama itens deixados leased por um processo morto no meio de
+	 * um turno). Só `timer` reportaria NOT-READY durante toda essa varredura, que é exatamente a
+	 * janela em que o probe de readiness pergunta. `draining` é setado por `drain()` e anulado no
+	 * `.finally`, cobrindo precisamente essa janela.
+	 */
+	get running(): boolean {
+		return this.timer !== null || this.draining !== null
+	}
 
 	constructor(
 		private readonly mailbox: MailboxRepository,
@@ -100,7 +113,13 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher {
 		// outside the reach of the console-discipline rail, which is a quirk of scope rather than a
 		// licence.
 		this.logging.info({
-			content: { message: 'MailboxDispatcher started', pollMinMs: POLL_MIN_MS, pollMaxMs: POLL_MAX_MS, leaseMs: LEASE_MS, maxAttempts: MAX_ATTEMPTS },
+			content: {
+				message: 'MailboxDispatcher started',
+				pollMinMs: POLL_MIN_MS,
+				pollMaxMs: POLL_MAX_MS,
+				leaseMs: LEASE_MS,
+				maxAttempts: MAX_ATTEMPTS,
+			},
 		})
 		void this.tick()
 	}

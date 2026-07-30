@@ -6193,6 +6193,102 @@ pub mod types {
             value.clone()
         }
     }
+    ///`HealthResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "components",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "components": {
+    ///      "type": "object",
+    ///      "additionalProperties": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "gate",
+    ///          "status"
+    ///        ],
+    ///        "properties": {
+    ///          "detail": {
+    ///            "type": "string"
+    ///          },
+    ///          "gate": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "status": {
+    ///            "$ref": "#/components/schemas/Status2"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/Status"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct HealthResponse {
+        pub components: ::std::collections::HashMap<
+            ::std::string::String,
+            HealthResponseComponentsValue,
+        >,
+        pub status: Status,
+    }
+    impl ::std::convert::From<&HealthResponse> for HealthResponse {
+        fn from(value: &HealthResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`HealthResponseComponentsValue`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "gate",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "detail": {
+    ///      "type": "string"
+    ///    },
+    ///    "gate": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/Status2"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct HealthResponseComponentsValue {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub detail: ::std::option::Option<::std::string::String>,
+        pub gate: bool,
+        pub status: Status2,
+    }
+    impl ::std::convert::From<&HealthResponseComponentsValue>
+    for HealthResponseComponentsValue {
+        fn from(value: &HealthResponseComponentsValue) -> Self {
+            value.clone()
+        }
+    }
     ///`ListArtifactsResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -7070,6 +7166,168 @@ pub mod types {
     for SetParticipantInvocationBody {
         fn from(value: &SetParticipantInvocationBody) -> Self {
             value.clone()
+        }
+    }
+    ///`Status`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "ok",
+    ///    "not_ready"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum Status {
+        #[serde(rename = "ok")]
+        Ok,
+        #[serde(rename = "not_ready")]
+        NotReady,
+    }
+    impl ::std::convert::From<&Self> for Status {
+        fn from(value: &Status) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for Status {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Ok => f.write_str("ok"),
+                Self::NotReady => f.write_str("not_ready"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for Status {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "ok" => Ok(Self::Ok),
+                "not_ready" => Ok(Self::NotReady),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for Status {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for Status {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for Status {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`Status2`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "up",
+    ///    "down"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum Status2 {
+        #[serde(rename = "up")]
+        Up,
+        #[serde(rename = "down")]
+        Down,
+    }
+    impl ::std::convert::From<&Self> for Status2 {
+        fn from(value: &Status2) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for Status2 {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Up => f.write_str("up"),
+                Self::Down => f.write_str("down"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for Status2 {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "up" => Ok(Self::Up),
+                "down" => Ok(Self::Down),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for Status2 {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for Status2 {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for Status2 {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`SteerIssueBody`
@@ -8156,6 +8414,38 @@ impl Client {
 #[allow(clippy::all)]
 #[allow(elided_named_lifetimes)]
 impl Client {
+    /**Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
+
+Sends a `GET` request to `/v1/health`
+
+*/
+    pub async fn health<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<types::HealthResponse>, Error<()>> {
+        let url = format!("{}/v1/health", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl
 
 Sends a `POST` request to `/v1/identity/account/avatar`

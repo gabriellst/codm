@@ -1,7 +1,8 @@
 // Per-env DI bindings for the `agent` context (the agent runtime).
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
 
-import { type InstanceRegistry, expandBindings } from '@codedm/core-typescript'
+import type { DependencyContainer } from 'tsyringe-neo'
+import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthCheck } from '@codedm/core-typescript'
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
@@ -63,6 +64,18 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// demand; only `real` ever has `start()` called on it, from the boot sequence — a poller running
 	// under a test suite would race every assertion in it.
 	{ token: MailboxDispatcher, mock: DrizzleMailboxDispatcher, integration: DrizzleMailboxDispatcher, real: DrizzleMailboxDispatcher },
+	// O contexto que POSSUI o dispatcher possui o check dele. Uma declaração a mais do token de
+	// multi-inject `HEALTH_CHECKS` — todo registry de contexto é aplicado ao MESMO rootContainer
+	// (`BoundedContext.create`), então este check é agregado junto com os do shared por `resolveAll`.
+	{
+		token: HEALTH_CHECKS,
+		mock: null,
+		integration: null,
+		real: {
+			useFactory: (c: DependencyContainer) =>
+				new PollingHealthCheck('mailboxDispatcher', c.resolve(MailboxDispatcher as any) as DrizzleMailboxDispatcher),
+		},
+	},
 	// ── The internal agents (§4.8) ────────────────────────────────────────────────────────────────
 	//
 	// CLASS TOKENS, same implementation in all three envs — an agent has no mock/real split because it
