@@ -192,7 +192,7 @@ type IssueIssue struct {
 type IssueStop struct {
 	ID         string
 	OwnerID    string
-	IssueID    string
+	IssueID    sql.NullString
 	ThreadID   string
 	Kind       string
 	Title      string
@@ -312,6 +312,7 @@ type ThreadThread struct {
 	CreatedAt          int64
 	UpdatedAt          int64
 	Version            int64
+	DeletedAt          sql.NullInt64
 }
 
 type ThreadTranscriptEntry struct {

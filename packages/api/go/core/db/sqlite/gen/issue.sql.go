@@ -246,7 +246,7 @@ type ListOpenStopsByIssueRow struct {
 	RaisedAt int64
 }
 
-func (q *Queries) ListOpenStopsByIssue(ctx context.Context, issueID string) ([]ListOpenStopsByIssueRow, error) {
+func (q *Queries) ListOpenStopsByIssue(ctx context.Context, issueID sql.NullString) ([]ListOpenStopsByIssueRow, error) {
 	rows, err := q.db.QueryContext(ctx, listOpenStopsByIssue, issueID)
 	if err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ ORDER BY s.raised_at ASC
 
 type ListOpenStopsByThreadWithIssueKeyRow struct {
 	ID       string
-	IssueID  string
+	IssueID  sql.NullString
 	IssueKey string
 	Kind     string
 	Title    string

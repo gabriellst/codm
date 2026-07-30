@@ -46,9 +46,29 @@ type GetThreadByChannelContactParams struct {
 	ContactExternalID string
 }
 
-func (q *Queries) GetThreadByChannelContact(ctx context.Context, arg GetThreadByChannelContactParams) (ThreadThread, error) {
+type GetThreadByChannelContactRow struct {
+	ID                 string
+	OwnerID            string
+	ChannelID          string
+	ContactExternalID  string
+	ContactDisplayName string
+	ContactKind        string
+	WorkspaceID        string
+	Providers          string
+	Paused             int64
+	MentionGateEnabled int64
+	MentionGateTag     sql.NullString
+	Participants       string
+	BufferSize         string
+	Status             string
+	CreatedAt          int64
+	UpdatedAt          int64
+	Version            int64
+}
+
+func (q *Queries) GetThreadByChannelContact(ctx context.Context, arg GetThreadByChannelContactParams) (GetThreadByChannelContactRow, error) {
 	row := q.db.QueryRowContext(ctx, getThreadByChannelContact, arg.ChannelID, arg.ContactExternalID)
-	var i ThreadThread
+	var i GetThreadByChannelContactRow
 	err := row.Scan(
 		&i.ID,
 		&i.OwnerID,
@@ -79,9 +99,29 @@ FROM thread_threads
 WHERE id = ?1
 `
 
-func (q *Queries) GetThreadByID(ctx context.Context, id string) (ThreadThread, error) {
+type GetThreadByIDRow struct {
+	ID                 string
+	OwnerID            string
+	ChannelID          string
+	ContactExternalID  string
+	ContactDisplayName string
+	ContactKind        string
+	WorkspaceID        string
+	Providers          string
+	Paused             int64
+	MentionGateEnabled int64
+	MentionGateTag     sql.NullString
+	Participants       string
+	BufferSize         string
+	Status             string
+	CreatedAt          int64
+	UpdatedAt          int64
+	Version            int64
+}
+
+func (q *Queries) GetThreadByID(ctx context.Context, id string) (GetThreadByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getThreadByID, id)
-	var i ThreadThread
+	var i GetThreadByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OwnerID,

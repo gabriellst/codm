@@ -54,6 +54,21 @@ export const threads = sqliteTable(
 		// ThreadStatus (RUNNING | IDLE | NEEDS_ATTENTION | PAUSED).
 		status: text('status').$type<ThreadStatus>().notNull(),
 
+		/**
+		 * SOFT DELETE (thread-deletion spec, decision 1) — null while the conversation is configured.
+		 *
+		 * A nullable timestamp rather than a boolean: "when" is the audit question the row must answer,
+		 * and the whole feature is defined by rows that STAY. No child is deleted, so the transcript,
+		 * issues, stops and artifacts of an apagada thread remain in the database while every console
+		 * read filters on `deleted_at IS NULL` (decision 5).
+		 *
+		 * Deliberately NOT part of `threads_owner_channel_contact_unq`. That unique index is exactly what
+		 * makes re-attach REVIVE this row (decision 4) instead of inserting a second one; admitting a
+		 * duplicate for a deleted row would give one contact two transcripts and lose the "mesma conversa"
+		 * property the decision names.
+		 */
+		deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
+
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.$defaultFn(() => new Date()),

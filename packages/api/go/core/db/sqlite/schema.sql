@@ -299,7 +299,7 @@ CREATE TABLE "thread_threads" (
 	"status" text NOT NULL,
 	"created_at" integer NOT NULL,
 	"updated_at" integer NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL, "deleted_at" integer,
 	CONSTRAINT "thread_threads_contact_kind_check" CHECK("thread_threads"."contact_kind" IN ('USER', 'GROUP', 'BROADCAST')),
 	CONSTRAINT "thread_threads_buffer_size_check" CHECK("thread_threads"."buffer_size" IN ('25', '50', '100', '200')),
 	CONSTRAINT "thread_threads_status_check" CHECK("thread_threads"."status" IN ('RUNNING', 'IDLE', 'NEEDS_ATTENTION', 'PAUSED'))
