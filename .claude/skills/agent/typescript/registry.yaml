@@ -75,6 +75,29 @@ registry:
       when: always
       rule: "Construct the agent directly with a stub runner that records requests and yields canned events. Assert `buildRequest`'s output via the recorded request, and that the BASE stamped `agentName`."
 
+    - id: AGT-14
+      name: "Identity is a static schema, parsed at spawn"
+      when: "the agent declares an mcpScope"
+      reason: "It replaced `SCOPE_CONFINEMENT`, a `Record<McpScope,'issue'|'thread'>` in a central manifest whose ONLY reader was one line in the base's mint site. That made 'which id does this surface require' a property of the SCOPE, kept far from every agent, with the weaker confinement as the silent default when a new scope was forgotten. The requirement did not go away — it became the agent's own."
+      rule: "`static override readonly IdentitySchema = AgentRunIdentitySchema.extend({ issueId: z.uuid() })` for an agent confined to an issue; `.omit({ issueId: true })` for one that structurally has none. The base parses it inside `buildMcpInvocation` BEFORE calling `AgentIdentityService.issue(...)`, so an identity that does not parse never becomes a credential and the runner is never reached."
+      wrong: "a scope→confinement record read at the mint site; an `if (!input.issueId) throw` in the agent; or parsing AFTER `.issue(` (the order is the property — a test that only asserts the throw stays green against an implementation that issued first)."
+
+    - id: AGT-15
+      name: "The identity service is AgentIdentityService, with issue/resolve/revoke"
+      when: always
+      reason: "`RunTokenClaims` named an ENVELOPE that does not exist — the token is 32 random bytes and the identity never leaves the process. What travels is a lookup key. The abstract + the InMemory implementation live in `core` (they are a template capability); the product only narrows the type."
+      rule: "`AgentIdentityService<AgentRunIdentity>` from `@codedm/core-typescript`, injected into the base `Agent`. `issue` is called ONLY by the base at spawn; `resolve` by the destination controller's middleware and by the MCP adapter's scope match; `revoke` by the runner at run end."
+      wrong: "`RunTokenService`, `RunTokenClaims`, `.mint(`, `.verify(` — all dead names. A runner that issues is the named bad practice: it would have to be handed the identity the seam exists to keep out of it."
+      exception: >
+        No `MockAgentIdentityService`, and this is deliberate, not a gap. `AgentIdentityService` binds
+        to `InMemoryAgentIdentityService` in ALL THREE envs (`shared/registry.ts`) because the service
+        IS in-memory by nature — the token lives one run inside a single daemon process, never crosses
+        a process boundary, never touches a store. A mock double would be a second implementation of
+        the same trivial logic the real one already is, and the integration/mock suites exercise the
+        401/403 boundary directly against the real thing. Inherited from `RunTokenService`'s identical
+        triple-env binding (`agent/registry.ts:98-101` documented the same reasoning pre-rename); the
+        rename carries the decision, it does not revisit it.
+
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'

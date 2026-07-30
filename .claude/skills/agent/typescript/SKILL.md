@@ -56,6 +56,28 @@ the base attach an `AgentMcpInvocation` to the request — the invariant is `req
   case cannot see it. The observable predicate is the **tool scope of the agent you injected**.
 - Never instruct the model (in the prompt) to call a tool that is not in the declared scope.
 
+## Identity — `static IdentitySchema`, parsed at spawn [AGT-14, AGT-15]
+
+An agent that declares an `mcpScope` also declares the **shape of its own confinement**:
+
+```ts
+static override readonly IdentitySchema = AgentRunIdentitySchema.extend({ issueId: z.uuid() })
+// or, for an agent structurally scoped to a thread and nothing narrower:
+static override readonly IdentitySchema = AgentRunIdentitySchema.omit({ issueId: true })
+```
+
+This replaced `SCOPE_CONFINEMENT`, a `Record<McpScope, 'issue' | 'thread'>` in a central manifest whose only reader was one line at the mint site — "which id does this surface require" lived far from the agent that had the answer, and a new scope silently fell back to the weaker confinement if a maintainer forgot the entry. Now the requirement is stated where it is known: `IssueWorkAgent.IdentitySchema` requires `issueId`; `OrchestratorAgent.IdentitySchema` has no such field at all.
+
+The base's `buildMcpInvocation` (`Agent.ts`) reads `(this.constructor as typeof Agent).IdentitySchema` and `.safeParse()`s it **before** calling `AgentIdentityService.issue(...)` — never after. The order is the property, not a detail: an identity that fails to parse never becomes a credential, and `runner.run` is never reached. A test that only asserts the throw would stay green against a broken implementation that issued first and validated second — that is exactly why the falsifier checks the order, not just the outcome.
+
+The identity service is `AgentIdentityService<AgentRunIdentity>` (`@codedm/core-typescript`), injected into the base `Agent`'s constructor — never `RunTokenService`. `RunTokenClaims` named an ENVELOPE that never existed (the token is 32 random bytes; nothing but a lookup key ever leaves the process), so the type is `AgentRunIdentity` and the verbs are `issue` / `resolve` / `revoke`:
+
+- `issue` — called ONLY here, in `buildMcpInvocation`. AC-6.12 greps for exactly one call site.
+- `resolve` — called by the destination controller's `AgentIdentityMiddleware` (see `/middleware` MID-C06) and by the MCP adapter's scope match.
+- `revoke` — called by the runner at run termination.
+
+**No `MockAgentIdentityService` exists, deliberately.** `AgentIdentityService` binds to `InMemoryAgentIdentityService` in ALL THREE envs (`shared/registry.ts`) — the abstract + the InMemory implementation both live in `core` as a template capability, and the product only narrows the generic. The service is in-memory **by nature**: the token lives one run inside a single daemon process and never crosses a process or store boundary, so a mock double would just be a second copy of the same trivial logic, and the integration/mock test suites exercise the real 401/403 boundary directly against it. This is inherited reasoning, not new — `RunTokenService` bound the same way for the same reason before the rename.
+
 ## DI
 
 Register in `<context>/registry.ts` via `expandBindings`, as a **class token**, in all three envs, with

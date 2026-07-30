@@ -330,6 +330,37 @@ Controller.execute()
 | `AuthActorMiddleware` | Actor type (DOCTOR or COLLABORATOR) from session | `ctx.actor` |
 | `OnboardingMiddleware` | User has completed onboarding | nothing (guard only) |
 
+## MCP Exposure — `static mcpScopes` [CTRL-C17, bp-23]
+
+A controller becomes callable by a model as an MCP tool by declaring `static override readonly mcpScopes`, right above `readonly path` — the same idiom `middlewares` already established: a cross-cutting property of an endpoint lives ON the endpoint, not in a list somewhere else.
+
+```typescript
+import { McpScope } from '@codedm/contracts-typescript/wire/enums'
+
+@injectable()
+export class ForkIssueController extends Controller<typeof ForkIssueControllerInputSchema, typeof ForkIssueControllerOutputSchema> {
+  /** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+  static override readonly mcpScopes = [McpScope.orchestration]
+  readonly path = '/threads/:threadId/issues/fork'
+  // ...
+}
+```
+
+**ABSENT is the default and absent means NOT EXPOSED.** With no filter, `@kubb/plugin-mcp` turns every operation in the OpenAPI spec into a tool — the security property comes entirely from this being opt-in, per class, in the file a reviewer is already reading. Never a bare string literal: `McpScope` always comes from `@codedm/contracts-typescript/wire/enums`.
+
+A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` **mandatory** — appended automatically by `Controller.executeMiddlewares` (core), WITHOUT a line in `override middlewares`. It resolves the caller's run identity, compares it against `params`/`body`, and stamps `ctx.agentIdentity`. Controllers that read the stamped identity compose the shared schema instead of re-declaring it:
+
+```typescript
+import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
+
+export const ForkIssueControllerInputSchema = z.object({
+  ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
+  // ...
+})
+```
+
+See `/middleware` MID-C06/MID-C07 for the middleware side of this pair. Never declare exposure in a central `MCP_SCOPES` record or similar — see `bp-23` in registry.yaml.
+
 ## Schema Patterns [CTRL-C04, CTRL-C09, CTRL-P02, CTRL-P03, CTRL-P14]
 
 ### Schema Import Hierarchy
@@ -553,8 +584,8 @@ Never use `z.string()` for a field with fixed values — the frontend won't know
 ## Checklist
 
 - [ ] All `when: always` patterns present (CTRL-01 through CTRL-06 — verify against registry.yaml)
-- [ ] Each conditional pattern evaluated (CTRL-C01 through CTRL-C11 — check which apply)
-- [ ] No `bad_practices` violations (bp-02 through bp-21 — verify against registry.yaml)
+- [ ] Each conditional pattern evaluated (CTRL-C01 through CTRL-C17 — check which apply)
+- [ ] No `bad_practices` violations (bp-02 through bp-23 — verify against registry.yaml)
 - [ ] Controller exported in `controllers/index.ts`
 
 ## Next Steps

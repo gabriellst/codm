@@ -7,6 +7,11 @@ import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
 import { ClaudeAgentRunner, E2eStubAgentRunner } from '@agent/services/AgentRunner'
 import { IssueWorkAgent, OrchestratorAgent } from '@agent/agents'
 import { MailboxDispatcher } from '@agent/services'
+// By FILE, never the `controllers` barrel — the barrel pulls in every other controller in the
+// context, and `MailboxDispatcher` (constructed above, same container) sits behind a cycle through
+// it. `McpDoorController` is reached the same way production reaches it: outside the barrel (B2 T8),
+// resolved by class token alone.
+import { McpDoorController } from '@agent/mcp/door'
 
 /**
  * THE RAIL THAT WAS MISSING ON 28-JUL-2026, written the day the bug it would have caught was found.
@@ -58,6 +63,19 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 		expect(() => child.resolve(IssueWorkAgent)).not.toThrow()
 		expect(() => child.resolve(OrchestratorAgent)).not.toThrow()
 		expect(() => child.resolve(MailboxDispatcher as never)).not.toThrow()
+	})
+
+	// B2 T8 measured: `biome check --write --unsafe` deletes a DI-carrying constructor silently
+	// (`noUselessConstructor` is an unsafe autofix that fires even though the rule never reports at
+	// error level). Deleted, `container.resolve(McpDoorController)` does NOT throw — the container
+	// happily hands back an instance with `identities` `undefined`, because tsyringe only fails to
+	// resolve a param it CAN'T type; a class with no declared constructor asks for none. `.not.toThrow()`
+	// would be a VACUOUS gate for this exact defect (measured against this file before landing it —
+	// deleting the constructor left `4 pass / 0 fail` unchanged). The constructed field is the only
+	// place the failure is observable, which is exactly what the door's own docstring names.
+	it('resolves McpDoorController WITH identities actually injected — the door biome silently gutted once', () => {
+		const instance = realContainer().resolve(McpDoorController) as unknown as { identities: unknown }
+		expect(instance.identities).toBeDefined()
 	})
 
 	it('the resolved factory yields the runner its env promises, and refuses a CLI with no runner class', () => {

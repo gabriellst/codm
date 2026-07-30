@@ -139,6 +139,13 @@ registry:
           })
           .example([...])
 
+    - id: CTRL-C17
+      name: "MCP exposure is a static on the controller, not a list elsewhere"
+      when: "the endpoint should be callable by a model as an MCP tool"
+      reason: "It used to live in a central manifest with seven parallel structures kept in sync by hand, so 'what exactly can a model call?' was un-answerable without leaving the file. `middlewares` already established the idiom: a cross-cutting property of an endpoint is declared ON the endpoint. The OpenAPI emitter reads the static during the same walk that builds the path — no registry, no side-effect module."
+      rule: "`static override readonly mcpScopes = [McpScope.X]`, right above `readonly path`, with `McpScope` from `@codedm/contracts-typescript/wire/enums`. ABSENT is the default and absent means NOT EXPOSED — measured: with no filter, `@kubb/plugin-mcp` turns every operation in the spec into a tool, so the security property comes entirely from this being opt-in. A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` mandatory (appended by `Controller.executeMiddlewares`, see `/middleware` MID-C06) — WITHOUT a line in `middlewares`."
+      wrong: "adding the controller class to a central `MCP_SCOPES` record, or declaring the scope as a bare string literal instead of the contracts enum."
+
     # ── Code patterns extracted from implementations ──────────────────
     - id: CTRL-P01
       name: "ctx.session for actor/owner injection"
@@ -714,6 +721,27 @@ registry:
           }),
         })
         // handle() then reads request.body.* / request.query.* (never request.<field>)
+
+    - id: bp-23
+      name: "Declaring MCP exposure outside the controller"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'MCP_SCOPES|MCP_SCOPE_BY_OPERATION|registerMcpScopes|mcpScopesFor'
+      wrong: |
+        // A central list, far from the endpoint it exposes — and one of seven structures
+        // that had to agree with each other by hand.
+        export const MCP_SCOPES = {
+          'issue-handling': [CreateIssueController, RaiseStopController, /* … */],
+        }
+      right: |
+        // On the controller, in the idiom `middlewares` already uses.
+        @injectable()
+        export class RaiseStopController extends Controller</* … */> {
+          static override readonly mcpScopes = [McpScope.ISSUE_HANDLING, McpScope.ORCHESTRATION]
+          readonly path = '/threads/:threadId/issues/:issueId/stops'
+          // …
+        }
 
   snippet:
     skeleton: |

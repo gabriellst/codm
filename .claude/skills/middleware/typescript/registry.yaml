@@ -84,6 +84,20 @@ registry:
       rule: "request.ctx = { ...request.ctx, <new-field>: <value> }"
       reason: "Never overwrite request.ctx wholesale — spread the existing values to preserve what earlier middlewares attached"
 
+    - id: MID-C06
+      name: "A middleware may be auto-applied by a static on the controller"
+      when: "the protection is implied by something the controller already declared"
+      reason: "`OperatorMiddleware` is opted into per controller because 'who is this daemon' is a routing choice. `AgentIdentityMiddleware` is not: a controller with a non-empty `static mcpScopes` has already said the dangerous thing, and a protection that must be remembered on a SECOND line is one that can be forgotten exactly where it matters. This is the general shape, not a one-off — any future capability whose danger is declared by a static can use it."
+      rule: "The predicate lives in `Controller.executeMiddlewares` (core), which appends the middleware LAST — after `OperatorMiddleware` has stamped `ctx` — and skips when the controller listed it explicitly, so the dedup rule matches the router's. `skipMiddlewares` remains the visible escape hatch."
+      wrong: "applying it in `MainRouter.configureRouterControllers`. MainRouter is SKIPPABLE — spec emission never constructs it, and a test that calls `executeController` directly bypasses it. A security boundary with a bypass is not one."
+
+    - id: MID-C07
+      name: "What a middleware stamps on ctx must be DECLARED in a schema — once, shared"
+      when: "the middleware writes to request.ctx"
+      reason: "`Controller.execute` validates against `inputSchema` and merges the VALIDATED envelope over the raw one, and Zod objects STRIP unknown keys. A value a middleware injected but no schema named is silently removed before `handle` sees it — measured: a 500 on every fork, with the middleware provably correct and the key simply gone."
+      rule: "One shared ctx schema next to the identity type (`AgentRunIdentityCtxSchema`), composed by every controller that reads it: `ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape)`. `ctx` never reaches the OpenAPI spec (the emitter reads only body/query/params/headers), so the shape costs nothing downstream."
+      wrong: "a verbatim copy of the ctx schema in each controller that reads it — the shape this repo had in two controllers before B2."
+
     # --- Patterns from real implementations ---
 
     - id: MID-P01

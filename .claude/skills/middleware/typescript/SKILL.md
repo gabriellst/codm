@@ -178,6 +178,25 @@ override skipMiddlewares: (Middleware | MiddlewareClass)[] = [
 
 **Do not** add a middleware that's already in the context default — it's redundant.
 
+## Auto-Applied by a Controller Static [MID-C06, MID-C07]
+
+Not every middleware is opted into per controller or wired into a context's default chain. When the danger a middleware guards against is already IMPLIED by something the controller declared, the base `Controller` can append the middleware itself — with no line in `override middlewares` at all.
+
+`AgentIdentityMiddleware` (`@codedm/core-typescript`) is the first case of this shape: any controller with a non-empty `static mcpScopes` (see `/controller` CTRL-C17) has already said "a model can call this", and `Controller.executeMiddlewares` appends `AgentIdentityMiddleware` LAST — after `OperatorMiddleware` has stamped `ctx.ownerId` — unless the controller already lists it explicitly (same dedup rule the router uses). This is the general shape, not a one-off: a future capability whose danger is declared by a static on the controller can reuse the same predicate.
+
+```typescript
+// core/src/types/Controller.ts — NOT MainRouter, because MainRouter is skippable (spec emission
+// never constructs it, and a test calling executeController directly bypasses it)
+private get effectiveMiddlewares(): (Middleware | MiddlewareClass)[] {
+  const scopes = (this.constructor as typeof Controller).mcpScopes
+  if (!scopes || scopes.length === 0) return this.middlewares
+  const declared = new Set(this.middlewares.map(m => (typeof m === 'function' ? m.name : m.constructor.name)))
+  return declared.has(AgentIdentityMiddleware.name) ? this.middlewares : [...this.middlewares, AgentIdentityMiddleware]
+}
+```
+
+**The paired rule:** whatever such a middleware stamps onto `request.ctx` must be declared in a schema — once, shared — because `Controller.execute` validates the whole request against `inputSchema` and Zod objects STRIP unknown keys. A value the middleware injected but no schema named is silently removed before `handle()` ever sees it. `AgentRunIdentityCtxSchema` (`src/agent/types/AgentRunIdentity.ts`) is the shared schema every controller that reads `ctx.agentIdentity` composes via `.extend(AgentRunIdentityCtxSchema.shape)` — never a verbatim per-controller copy.
+
 ## Current Middleware Inventory
 
 | Middleware | Purpose | Throws |
