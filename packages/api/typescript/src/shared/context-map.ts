@@ -27,6 +27,9 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 	},
 	thread: {
 		workspace: { note: 'AttachThread validates the workspace exists via WorkspaceRepository (repositories surface).' },
+		issue: {
+			note: "RaiseStop's archived guard READS the issue via IssueRepository (repositories surface) when the stop carries one — the sanctioned cross-context shape. The stop control plane lives here since B4 because the Stop is a child of the Thread aggregate; it never calls an issue entity method, only reads the flag.",
+		},
 		agent: {
 			note: 'The inbound path consumes the agent context ProviderDetector (which CLI a thread runs) and, since the orchestrator pivot, its MailboxRepository — an invocable message queues a turn in the SAME transaction as the transcript entry (§7.4).',
 		},
@@ -50,7 +53,9 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 	ui: {
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
 		agent: { note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).' },
-		issue: { note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface).' },
+		thread: {
+			note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops.',
+		},
 	},
 }
 

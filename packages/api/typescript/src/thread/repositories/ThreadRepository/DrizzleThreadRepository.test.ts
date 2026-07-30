@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { threads, transcriptEntries } from '@codedm/contracts/db'
+import { threads, transcriptEntries, stops } from '@codedm/contracts/db'
 import { DrizzleClient, DrizzleDatabaseDriver } from '@codedm/core-typescript'
-import { TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { TranscriptKind, StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
 import { TestBed, givenThread } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from './ThreadRepository'
@@ -122,5 +122,46 @@ describe('DrizzleThreadRepository — the thread row and its transcript entries 
 
 		expect(reloaded).toBeDefined()
 		expect(reloaded!.pullPendingWrites().entries).toHaveLength(0)
+	})
+
+	// ── The stop half of the aggregate (B4, spec decision 4) ──────────────────────────────────────
+
+	it('AC-7 — save persists a stop with issue_id NULL, and the read returns it', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+		const stop = thread.raiseStop({ kind: StopKind.HUMAN_REQUESTED, title: 'preciso de você', detail: 'a pergunta' })
+		await driver.transaction(tx => repo.save(thread, tx))
+
+		const row = (await db.select().from(stops).where(eq(stops.id, stop.stopId)))[0]
+		expect(row).toBeDefined()
+		expect(row!.issueId).toBeNull()
+		expect(await repo.openStops(thread.id.value)).toHaveLength(1)
+	})
+
+	it('AC-7 — resolveStop stamps resolution + resolvedAt regardless of whether the stop has an issue', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const stop = thread.raiseStop({ kind: StopKind.APPROVAL_NEEDED, title: 't', detail: 'd' })
+		await driver.transaction(tx => repo.save(thread, tx))
+
+		const loaded = await repo.findStop(stop.stopId)
+		thread.resolveStop(loaded!, StopResolution.APPROVE)
+		await driver.transaction(tx => repo.save(thread, tx))
+
+		expect(await repo.openStops(thread.id.value)).toHaveLength(0)
+		expect((await repo.findStop(stop.stopId))!.resolution).toBe(StopResolution.APPROVE)
+	})
+
+	it('AC-3 — the stop and the thread roll back together', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
+
+		await expect(
+			driver.transaction(async tx => {
+				await repo.save(thread, tx)
+				throw new Error('rollback')
+			}),
+		).rejects.toThrow('rollback')
+
+		expect(await repo.openStops(thread.id.value)).toHaveLength(0)
 	})
 })

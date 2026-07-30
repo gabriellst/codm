@@ -4,7 +4,6 @@ import {
 	GetIssueStatusController,
 	GetIssueDetailController,
 	GetIssuesOverviewController,
-	GetNeedsYouPanelController,
 	GetSessionIssuesController,
 } from '@issue/controllers'
 import {
@@ -13,6 +12,9 @@ import {
 	GetSessionChatController,
 	ConfigureContextBufferController,
 	ConfigureMentionGateController,
+	// The Needs-You panel moved with the Stop in B4 (spec decision 4) — same controller, same HTTP path,
+	// new owning context.
+	GetNeedsYouPanelController,
 } from '@thread/controllers'
 import {
 	GetHomeDashboardController,

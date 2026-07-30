@@ -5,3 +5,4 @@ export { ThreadSteeredEvent, ThreadSteeredEventSchema } from './ThreadSteeredEve
 export { ThreadPausedEvent, ThreadPausedEventSchema } from './ThreadPausedEvent'
 export { ThreadResumedEvent, ThreadResumedEventSchema } from './ThreadResumedEvent'
 export { ThreadDetachedEvent, ThreadDetachedEventSchema } from './ThreadDetachedEvent'
+export { ThreadStopResolvedEvent, ThreadStopResolvedEventSchema } from './ThreadStopResolvedEvent'

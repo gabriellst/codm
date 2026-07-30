@@ -5,3 +5,10 @@ export {
 	DrizzleConsumedMessageRepository,
 	MockConsumedMessageRepository,
 } from './ConsumedMessageRepository'
+export {
+	StopPolicyConfigRepository,
+	type StopPolicy,
+	DEFAULT_STOP_POLICY,
+	DrizzleStopPolicyConfigRepository,
+	MockStopPolicyConfigRepository,
+} from './StopPolicyConfigRepository'

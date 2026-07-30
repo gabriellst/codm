@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { BaseError } from '@codedm/core-typescript'
-import { ProviderKind, ContactKind, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
+import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { Thread } from './Thread'
 
 const base = {
@@ -250,5 +251,94 @@ describe('Thread.recordEntry — the thread owns who may cite what, and who need
 
 		expect(thread.pullPendingWrites().entries).toHaveLength(1)
 		expect(thread.pullPendingWrites().entries).toHaveLength(0)
+	})
+})
+
+/**
+ * B4 spec decision 4 — the Stop as a child of the Thread. Pure entity, no DB.
+ *
+ * The first case is the one the whole re-parenting exists for: it was UNREACHABLE before, because both
+ * `RaiseStopInputSchema` and `AskOperatorInputSchema` demanded an `issueId`.
+ */
+describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with or without an issue', () => {
+	const threadOf = () =>
+		Thread.create({
+			ownerId: base.ownerId,
+			channelId: base.channelId,
+			contactRef: { externalId: 'contact-1', displayName: 'Contact', kind: ContactKind.USER },
+			workspaceId: base.workspaceId,
+			providers: [ProviderKind.CLAUDE_CODE],
+			mentionTag: '@ws',
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true }],
+		})
+
+	it('US-5 — a stop with NO issue is raised, and carries the owner + thread from the aggregate', () => {
+		const thread = threadOf()
+
+		const stop = thread.raiseStop({ kind: StopKind.HUMAN_REQUESTED, title: 'preciso de você', detail: '' })
+
+		expect(stop.issueId).toBeUndefined()
+		expect(stop.ownerId).toBe(thread.ownerId)
+		expect(stop.threadId).toBe(thread.id.value)
+		expect(thread.pullPendingWrites().stops).toHaveLength(1)
+	})
+
+	it('honours a stopId decided upstream — a redelivered fact lands on the same row', () => {
+		const thread = threadOf()
+		const stopId = '019e4d24-6524-7041-9e1c-8108180cddb1'
+
+		expect(thread.raiseStop({ stopId, kind: StopKind.APPROVAL_NEEDED, title: 't', detail: 'd' }).stopId).toBe(stopId)
+	})
+
+	it('raiseStop raises NO domain event — the integration fact is its CAUSE, not its effect', () => {
+		const thread = threadOf()
+
+		thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
+
+		expect(thread.pullDomainEvents()).toHaveLength(0)
+	})
+
+	it('FALSEADOR — resolving a stop of ANOTHER thread is rejected', () => {
+		const threadA = threadOf()
+		const threadB = threadOf()
+		const stop = threadA.raiseStop({ kind: StopKind.APPROVAL_NEEDED, title: 't', detail: 'd' })
+
+		expect(() => threadB.resolveStop(stop, StopResolution.APPROVE)).toThrow(expect.objectContaining({ name: 'STOP_NOT_IN_THREAD' }))
+		expect(threadB.pullPendingWrites().stopResolutions).toHaveLength(0)
+	})
+
+	it('FALSEADOR — a resolution that does not apply to the kind is rejected (APPROVE only on APPROVAL_NEEDED)', () => {
+		const thread = threadOf()
+		const serverError = thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
+
+		expect(() => thread.resolveStop(serverError, StopResolution.APPROVE)).toThrow(
+			expect.objectContaining({ name: 'RESOLUTION_NOT_APPLICABLE' }),
+		)
+		// TAKE_OVER applies to every kind — the guard rejects the wrong pair, not every pair.
+		thread.resolveStop(serverError, StopResolution.TAKE_OVER)
+		expect(thread.pullPendingWrites().stopResolutions).toHaveLength(1)
+	})
+
+	it('FALSEADOR — resolving an already-resolved stop is rejected', () => {
+		const thread = threadOf()
+		const resolved = { ...thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' }), resolvedAt: new Date() }
+
+		expect(() => thread.resolveStop(resolved, StopResolution.RETRY)).toThrow(expect.objectContaining({ name: 'STOP_ALREADY_RESOLVED' }))
+	})
+
+	it('resolveStop raises thread.stop_resolved, carrying threadId always and issueId only when there is one', () => {
+		const thread = threadOf()
+		const withoutIssue = thread.raiseStop({ kind: StopKind.HUMAN_REQUESTED, title: 't', detail: 'd' })
+
+		thread.resolveStop(withoutIssue, StopResolution.TAKE_OVER)
+
+		const [event] = thread.pullDomainEvents()
+		expect(event).toBeInstanceOf(ThreadStopResolvedEvent)
+		expect((event as ThreadStopResolvedEvent).payload).toMatchObject({
+			stopId: withoutIssue.stopId,
+			threadId: thread.id.value,
+			resolution: StopResolution.TAKE_OVER,
+		})
+		expect((event as ThreadStopResolvedEvent).payload.issueId).toBeUndefined()
 	})
 })

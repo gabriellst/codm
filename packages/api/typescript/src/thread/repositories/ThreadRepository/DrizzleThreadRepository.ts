@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codedm/core-typescript'
-import { threads, transcriptEntries } from '@codedm/contracts/db'
+import { threads, transcriptEntries, stops } from '@codedm/contracts/db'
 import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codedm/contracts-typescript/wire/enums'
-import { Thread, ThreadSchema, type MentionGate, type Participant, type TranscriptEntry } from '../../entities/Thread'
+import { Thread, ThreadSchema, type MentionGate, type Participant, type Stop, type TranscriptEntry } from '../../entities/Thread'
 import { ThreadRepository } from './ThreadRepository'
 
 @injectable()
@@ -44,11 +44,12 @@ export class DrizzleThreadRepository extends ThreadRepository {
 	}
 
 	/**
-	 * The thread row plus every entry the aggregate accumulated, on the SAME `dbc` (B4, decision 1).
+	 * The thread row plus every entry and stop the aggregate accumulated, on the SAME `dbc` (B4,
+	 * decisions 1 and 4).
 	 *
 	 * Order matters: the thread row first, then its children — so a reader that sees an entry always
-	 * sees the thread it hangs off. Ids come from `recordEntry`, never from here, which is the whole
-	 * difference from the `DrizzleTranscriptRepository.append()` this replaces (it minted with
+	 * sees the thread it hangs off. Ids come from `recordEntry` / `raiseStop`, never from here, which is
+	 * the whole difference from the `DrizzleTranscriptRepository.append()` this replaces (it minted with
 	 * `crypto.randomUUID()` inside the insert, so no aggregate could reference the row it was creating).
 	 */
 	async save(entity: Thread, tx?: DrizzleClient): Promise<Thread> {
@@ -74,9 +75,19 @@ export class DrizzleThreadRepository extends ThreadRepository {
 					},
 				})
 
-			const { entries } = entity.pullPendingWrites()
+			// `stops_` aliases the drain so it does not shadow the Drizzle table symbol `stops`.
+			const { entries, stops: stops_, stopResolutions } = entity.pullPendingWrites()
 			if (entries.length > 0) {
 				await dbc.insert(transcriptEntries).values(entries.map(entry => this.entryToPersistence(entry)))
+			}
+			if (stops_.length > 0) {
+				await dbc.insert(stops).values(stops_.map(stop => this.stopToPersistence(stop)))
+			}
+			// The resolution is an UPDATE of a row that already committed — the caller loaded it with
+			// `findStop`, so it exists. One statement per resolution: a single resolve per request is the
+			// only shape the product has, and a CASE-based bulk update would be machinery for nobody.
+			for (const patch of stopResolutions) {
+				await dbc.update(stops).set({ resolution: patch.resolution, resolvedAt: patch.resolvedAt }).where(eq(stops.id, patch.stopId))
 			}
 			return entity
 		})
@@ -121,6 +132,30 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		const dbc = tx ?? this.db
 		const rows = await dbc.select().from(transcriptEntries).where(eq(transcriptEntries.id, entryId)).limit(1)
 		return rows[0] ? this.toEntry(rows[0]) : undefined
+	}
+
+	async findStop(stopId: string, tx?: DrizzleClient): Promise<Stop | undefined> {
+		const dbc = tx ?? this.db
+		const rows = await dbc.select().from(stops).where(eq(stops.id, stopId)).limit(1)
+		return rows[0] ? this.toStop(rows[0]) : undefined
+	}
+
+	async openStops(threadId: string, tx?: DrizzleClient): Promise<Stop[]> {
+		const dbc = tx ?? this.db
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(and(eq(stops.threadId, threadId), isNull(stops.resolvedAt)))
+		return rows.map(row => this.toStop(row))
+	}
+
+	async openStopsByIssue(issueId: string, tx?: DrizzleClient): Promise<Stop[]> {
+		const dbc = tx ?? this.db
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(and(eq(stops.issueId, issueId), isNull(stops.resolvedAt)))
+		return rows.map(row => this.toStop(row))
 	}
 
 	// ── Mapping ───────────────────────────────────────────────────────────────────────────────────
@@ -186,6 +221,37 @@ export class DrizzleThreadRepository extends ThreadRepository {
 	 * (`schema-sqlite/thread.ts`), so the row is already narrowed and `as TranscriptKind` only hid that
 	 * fact — and hid it in the one place a real mismatch would matter.
 	 */
+	private stopToPersistence(stop: Stop): typeof stops.$inferInsert {
+		return {
+			id: stop.stopId,
+			ownerId: stop.ownerId,
+			issueId: stop.issueId ?? null,
+			threadId: stop.threadId,
+			kind: stop.kind,
+			title: stop.title,
+			detail: stop.detail,
+			raisedAt: stop.raisedAt,
+			resolution: stop.resolution ?? null,
+			resolvedAt: stop.resolvedAt ?? null,
+		}
+	}
+
+	// No casts, same reason as `toEntry`: `issue_stops.kind` and `.resolution` carry `$type<…>()`.
+	private toStop(row: typeof stops.$inferSelect): Stop {
+		return {
+			stopId: row.id,
+			ownerId: row.ownerId,
+			issueId: row.issueId ?? undefined,
+			threadId: row.threadId,
+			kind: row.kind,
+			title: row.title,
+			detail: row.detail,
+			raisedAt: row.raisedAt,
+			resolution: row.resolution ?? undefined,
+			resolvedAt: row.resolvedAt ?? undefined,
+		}
+	}
+
 	private toEntry(row: typeof transcriptEntries.$inferSelect): TranscriptEntry {
 		return {
 			entryId: row.id,

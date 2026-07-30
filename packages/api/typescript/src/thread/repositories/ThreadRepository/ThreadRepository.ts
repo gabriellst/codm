@@ -1,10 +1,10 @@
 import { Repository } from '@codedm/core-typescript'
 import type { Transaction } from '@codedm/core-typescript'
-import { Thread, type TranscriptEntry } from '../../entities/Thread'
+import { Thread, type Stop, type TranscriptEntry } from '../../entities/Thread'
 
 /**
- * The persistence boundary of the `Thread` AGGREGATE — the thread row plus the transcript entries the
- * aggregate accumulated (B4, decision 1).
+ * The persistence boundary of the `Thread` AGGREGATE — the thread row plus the transcript entries and
+ * the stops the aggregate accumulated (B4, decisions 1 and 4).
  *
  * ### Why the child reads live here and not in a second repository
  * `TranscriptRepository` is gone: it was a child-table repository with no entity behind it, which is
@@ -13,16 +13,17 @@ import { Thread, type TranscriptEntry } from '../../entities/Thread'
  * `TranscriptReader` seam instead would recreate the thing being deleted under a new name, and in
  * `mock` mode it would need a store shared with `MockThreadRepository` to be usable at all.
  *
- * ### `findById` does NOT hydrate the transcript
+ * ### `findById` does NOT hydrate the transcript or the stops
  * Loading a thread stays exactly one row, forever. A conversation has no bound, so an aggregate that
  * loaded its own history would make every pause/resume/steer proportional to how long the thread has
  * been alive. The write side needs no history to be correct: `recordEntry` validates a citation against
- * a reference the caller resolved, not against a loaded collection.
+ * a reference the caller resolved, and `resolveStop` against a stop the caller loaded — never against a
+ * loaded collection.
  *
  * ### `save` is atomic only with a transaction
- * The pending entries are written on the SAME `dbc` as the thread row, so passing `tx` is what makes
- * thread+entries atomic — identical to how the entity row and its domain-event row are atomic only
- * because the use case wraps both in `withTransaction`. Every production writer passes it.
+ * The pending entries and stops are written on the SAME `dbc` as the thread row, so passing `tx` is what
+ * makes thread+children atomic — identical to how the entity row and its domain-event row are atomic
+ * only because the use case wraps both in `withTransaction`. Every production writer passes it.
  */
 export abstract class ThreadRepository extends Repository<Thread> {
 	abstract findById(id: string, tx?: Transaction): Promise<Thread | undefined>
@@ -41,4 +42,13 @@ export abstract class ThreadRepository extends Repository<Thread> {
 	 * record with its `threadId`, which is the proof of membership the aggregate checks.
 	 */
 	abstract findEntry(entryId: string, tx?: Transaction): Promise<TranscriptEntry | undefined>
+
+	// ── Child reads: the stops this aggregate owns ─────────────────────────────────────────────────
+
+	/** One stop by id — how a caller loads what it will hand to `Thread.resolveStop`. */
+	abstract findStop(stopId: string, tx?: Transaction): Promise<Stop | undefined>
+	/** Unresolved stops on a thread — WITH and WITHOUT an issue (that is the point of decision 4). */
+	abstract openStops(threadId: string, tx?: Transaction): Promise<Stop[]>
+	/** Unresolved stops of one issue. Survives for the issue-detail read and the lifecycle tests. */
+	abstract openStopsByIssue(issueId: string, tx?: Transaction): Promise<Stop[]>
 }

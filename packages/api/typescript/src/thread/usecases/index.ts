@@ -19,3 +19,12 @@ export { GetSessionChat, GetSessionChatInputSchema, GetSessionChatOutputSchema }
 export { GetThreadSettings, GetThreadSettingsInputSchema, GetThreadSettingsOutputSchema } from './GetThreadSettings'
 export { DeliverChannelMessage } from './DeliverChannelMessage'
 export { RecordOrchestratorReply } from './RecordOrchestratorReply'
+// The stop control plane — moved from issue/ in B4: the Stop is a child of the Thread aggregate.
+export { RaiseStop, RaiseStopInputSchema, RaiseStopOutputSchema } from './RaiseStop'
+export { ResolveStop, ResolveStopInputSchema, ResolveStopOutputSchema } from './ResolveStop'
+export {
+	UpdateStopCriteriaConfig,
+	UpdateStopCriteriaConfigInputSchema,
+	UpdateStopCriteriaConfigOutputSchema,
+} from './UpdateStopCriteriaConfig'
+export { GetNeedsYouPanel, GetNeedsYouPanelInputSchema, GetNeedsYouPanelOutputSchema } from './GetNeedsYouPanel'

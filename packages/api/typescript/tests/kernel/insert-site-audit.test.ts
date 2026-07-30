@@ -120,7 +120,7 @@ describe('insert-site audit — every db-generated id and notNull timestamp surv
 		await assertLanded('issue_issues', ['id', 'created_at', 'updated_at'])
 	})
 
-	it('issue_stops — via StopRepository', async () => {
+	it('issue_stops — via ThreadRepository (a Stop is a child of the Thread aggregate)', async () => {
 		await givenStop(testBed, { ownerId: OWNER })
 		await assertLanded('issue_stops', ['id', 'raised_at'])
 	})

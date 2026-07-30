@@ -10,6 +10,10 @@ export type ThreadDomainErrors =
 	| 'QUOTED_ENTRY_NOT_IN_THREAD'
 	| 'CONTACT_ENTRY_REQUIRES_SENDER'
 	| 'AGENT_ENTRY_FORBIDS_SENDER'
+	// Stop invariants (B4, spec decision 4) — the Stop is a child of this aggregate.
+	| 'STOP_NOT_IN_THREAD'
+	| 'STOP_ALREADY_RESOLVED'
+	| 'RESOLUTION_NOT_APPLICABLE'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
 // Application errors — orchestration in the thread use cases + routing pipeline.
@@ -25,6 +29,13 @@ export type ThreadApplicationErrors =
 	| 'ENTRY_NOT_FOUND'
 	| 'ENTRY_NOT_INVOCABLE'
 	| 'CLARIFICATION_ALREADY_PENDING'
+	// The stop control plane, moved here in B4 (spec decision 4) with the use cases that raise it.
+	| 'STOP_NOT_FOUND'
+	| 'STOP_CRITERION_DISABLED'
+	// Read across the boundary by RaiseStop's archived guard — a repository READ of the issue context is
+	// sanctioned, calling its entity method is not, so the two codes are raised HERE against the flag.
+	| 'ISSUE_NOT_FOUND'
+	| 'ISSUE_ARCHIVED'
 	// The Go gateway did not answer a WRITE. Same code the browser-facing proxy already surfaces for
 	// the same cause, declared here too because this context now calls the gateway directly.
 	| 'GATEWAY_UNAVAILABLE'
@@ -45,6 +56,9 @@ registerErrorCodes({
 	QUOTED_ENTRY_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	CONTACT_ENTRY_REQUIRES_SENDER: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	AGENT_ENTRY_FORBIDS_SENDER: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	STOP_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	STOP_ALREADY_RESOLVED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	RESOLUTION_NOT_APPLICABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	THREAD_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_ALREADY_ATTACHED: HttpStatusCode.CONFLICT,
 	THREAD_PAUSED: HttpStatusCode.UNPROCESSABLE_ENTITY,
@@ -59,6 +73,10 @@ registerErrorCodes({
 	// (registerErrorCodes is Object.assign — an idempotent overwrite, not a conflict).
 	WORKSPACE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	PROVIDER_NOT_DETECTED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	STOP_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+	STOP_CRITERION_DISABLED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	ISSUE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+	ISSUE_ARCHIVED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// Same status the external context registers — one code, one meaning, whichever door raised it.
 	GATEWAY_UNAVAILABLE: HttpStatusCode.BAD_GATEWAY,
 })

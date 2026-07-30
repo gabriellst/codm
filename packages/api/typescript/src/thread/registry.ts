@@ -12,6 +12,11 @@ import {
 	DrizzleConsumedMessageRepository,
 	MockConsumedMessageRepository,
 } from './repositories/ConsumedMessageRepository'
+import {
+	StopPolicyConfigRepository,
+	DrizzleStopPolicyConfigRepository,
+	MockStopPolicyConfigRepository,
+} from './repositories/StopPolicyConfigRepository'
 import { OpenIssuesReader, DrizzleOpenIssuesReader, MockOpenIssuesReader } from './services/OpenIssuesReader'
 import { ChannelConnectivity, DrizzleChannelConnectivity, MockChannelConnectivity } from './services/ChannelConnectivity'
 import { GroupMemberReader, DrizzleGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
@@ -31,6 +36,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// the fork instead of after an issue already existed.
 	{ token: ChannelSender, mock: MockChannelSender, integration: MockChannelSender, real: E2E ? MockChannelSender : GatewayChannelSender },
 	{ token: ThreadRepository, mock: MockThreadRepository, real: DrizzleThreadRepository },
+	// The per-owner stop-criteria toggles — a settings row that follows the aggregate raising the stops
+	// it gates (B4, spec decision 4). It was bound in `issue/` while the Stop hung off `Issue`.
+	{ token: StopPolicyConfigRepository, mock: MockStopPolicyConfigRepository, real: DrizzleStopPolicyConfigRepository },
 	// The exactly-once inbound ledger — real (unique-constraint ON CONFLICT DO NOTHING) in real +
 	// integration so the dedup is exercised against a real DB; in-memory set in mock.
 	{

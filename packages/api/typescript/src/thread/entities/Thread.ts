@@ -7,9 +7,13 @@ import {
 	BufferSize,
 	TranscriptKind,
 	ClassificationMethod,
+	StopKind,
+	StopResolution,
 } from '@codedm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
 import { mentionsTag, stripMentionTag, MentionGateSchema } from '../schemas'
+import { isResolutionApplicable } from '../objects/StopResolutions'
+import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
 export const ContactRefSchema = z.object({
@@ -64,6 +68,40 @@ export const QuotedEntryRefSchema = z.object({
 	threadId: z.string().min(1),
 })
 
+/**
+ * A stop — a CHILD RECORD of `Thread` (B4, spec decision 4), not an entity and no longer a child of
+ * `Issue`.
+ *
+ * ### `issueId` is OPTIONAL, and that is the whole reason this moved
+ * While the Stop hung off `Issue` with a mandatory `issueId`, a thread-level stop was UNREACHABLE:
+ * `RaiseStopInputSchema` and `AskOperatorInputSchema` both demanded one, so the orchestrator could never
+ * ask for approval before an issue existed. Re-parenting to `Thread` closes that hole by MODELLING
+ * rather than by relaxing a validator: the thread is the aggregate that always exists.
+ *
+ * It also fixes where `ownerId` comes from. `RaiseStop` used to read it off `issue.ownerId` — impossible
+ * for a raise with no issue. It is stamped from the aggregate here, which is the one place that always
+ * knows it.
+ */
+export const StopSchema = z.object({
+	stopId: z.uuid(),
+	ownerId: z.uuid(),
+	issueId: z.string().optional(),
+	threadId: z.uuid(),
+	kind: z.enum(StopKind),
+	title: z.string().min(1),
+	detail: z.string(),
+	raisedAt: z.date(),
+	resolution: z.enum(StopResolution).optional(),
+	resolvedAt: z.date().optional(),
+})
+
+/** The UPDATE half of a resolution: `save` stamps these two columns on an already-persisted stop. */
+export const StopResolutionPatchSchema = z.object({
+	stopId: z.uuid(),
+	resolution: z.enum(StopResolution),
+	resolvedAt: z.date(),
+})
+
 export const ThreadSchema = z.object({
 	ownerId: z.uuid(),
 	channelId: z.uuid(),
@@ -84,10 +122,14 @@ export type MentionGate = Z.infer<typeof MentionGateSchema>
 export type Participant = Z.infer<typeof ParticipantSchema>
 export type TranscriptEntry = Z.infer<typeof TranscriptEntrySchema>
 export type QuotedEntryRef = Z.infer<typeof QuotedEntryRefSchema>
+export type Stop = Z.infer<typeof StopSchema>
+export type StopResolutionPatch = Z.infer<typeof StopResolutionPatchSchema>
 
 /** What `ThreadRepository.save` drains and writes in the SAME transaction as the thread row. */
 export interface PendingThreadWrites {
 	entries: TranscriptEntry[]
+	stops: Stop[]
+	stopResolutions: StopResolutionPatch[]
 }
 
 /**
@@ -119,10 +161,19 @@ export const OPERATOR_PARTICIPANT_ID = 'operator'
  * to this thread; `CONTACT` needs a sender and the system's own lines must not carry one), and
  * `ThreadRepository.save` persists the accumulated entries in the same transaction as the thread row.
  *
- * READS deliberately stay outside the aggregate: `findById` does NOT hydrate history — loading a
- * thread stays one row, forever — and the query use cases keep reading Drizzle directly (BFF). The
- * agent's context window reads `ThreadRepository.recentEntries`, which is the aggregate's persistence
- * surface, not a second child-table repository.
+ * ### The STOP is part of this aggregate too (B4, spec decision 4)
+ * A Stop used to hang off `Issue` through a `StopRepository` of its own, with a mandatory `issueId` —
+ * which made the thread-level stop (the orchestrator asking for approval before any issue exists)
+ * unreachable, and left `ownerId` to be derived from an issue that might not be there. It is raised and
+ * resolved HERE now: `raiseStop` stamps owner + thread from the aggregate, `resolveStop` owns the three
+ * rules that decide whether a resolution is legal, and both accumulate into the same pending-writes
+ * drain the transcript uses.
+ *
+ * READS deliberately stay outside the aggregate: `findById` does NOT hydrate history or stops — loading
+ * a thread stays one row, forever — and the query use cases keep reading Drizzle directly (BFF). The
+ * agent's context window reads `ThreadRepository.recentEntries` and a resolver loads its stop with
+ * `ThreadRepository.findStop`; both are the aggregate's persistence surface, not a second child-table
+ * repository.
  */
 export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	static override schema = ThreadSchema
@@ -135,6 +186,8 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * `validate()` cannot either. Same mechanism `BaseEntity.domainEvents` already uses.
 	 */
 	private pendingEntries: TranscriptEntry[] = []
+	private pendingStops: Stop[] = []
+	private pendingStopResolutions: StopResolutionPatch[] = []
 
 	static create(data: {
 		ownerId: string
@@ -266,15 +319,91 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	}
 
 	/**
+	 * Raise a stop on this thread (B4, spec decision 4) — with or without an issue behind it.
+	 *
+	 * `stopId` is accepted rather than always minted because the id is frequently DECIDED UPSTREAM: the
+	 * terminal engine's stop fact carries one, and honouring it is what makes a redelivered fact land on
+	 * the same row instead of a second Needs-you card. When the producer has none (the console path), one
+	 * is minted here.
+	 *
+	 * What this method is FOR, since it enforces no state transition: identity and OWNERSHIP. `ownerId`
+	 * and `threadId` are stamped from the aggregate, which is exactly the bug the re-parenting fixes —
+	 * `RaiseStop` derived `ownerId` from `issue.ownerId`, and a stop with no issue had nowhere to get it.
+	 *
+	 * It raises NO domain event. The fact `integration.issue.stop_raised` is the CAUSE of this call, not
+	 * its effect: it is published upstream by `PublishAgentIntegrationEvents` from
+	 * `AgentRunStopRaisedEvent`, and this is the consumer materializing it. Re-announcing it here would
+	 * be a loop.
+	 */
+	raiseStop(input: { stopId?: string; issueId?: string; kind: StopKind; title: string; detail: string }): Stop {
+		const stop: Stop = {
+			stopId: input.stopId ?? Id.value(),
+			ownerId: this.ownerId,
+			issueId: input.issueId,
+			threadId: this.id.value,
+			kind: input.kind,
+			title: input.title,
+			detail: input.detail,
+			raisedAt: new Date(),
+			resolution: undefined,
+			resolvedAt: undefined,
+		}
+		this.pendingStops.push(stop)
+		return stop
+	}
+
+	/**
+	 * Resolve a stop of this thread (B4, spec decision 4).
+	 *
+	 * Takes the LOADED stop rather than an id, for the same reason `recordEntry` takes a resolved
+	 * citation: the aggregate does no I/O, and `findById` does not hydrate children. The caller reads it
+	 * with `ThreadRepository.findStop` and hands it over; the aggregate then owns all three invariants,
+	 * one of which (`RESOLUTION_NOT_APPLICABLE`) used to be an application-level check inside the use
+	 * case — it is a rule about the stop, so it is a DomainError now.
+	 *
+	 * Unlike `raiseStop` this DOES raise a domain event, and the asymmetry is the point: a resolution is
+	 * a decision this system made, so `thread.stop_resolved` is a fact it authors and
+	 * `PublishThreadIntegrationEvents` bridges. `pullDomainEvents()` — the mechanism `BaseEntity` has
+	 * always exposed and no TypeScript aggregate had used yet (the Go `Channel` uses its twin) — is
+	 * drained by the use case inside the same transaction as the write.
+	 */
+	resolveStop(stop: Stop, resolution: StopResolution): void {
+		if (stop.threadId !== this.id.value) {
+			throw new BaseError<DomainErrors>('STOP_NOT_IN_THREAD', `stop ${stop.stopId} belongs to thread ${stop.threadId}`)
+		}
+		if (stop.resolvedAt) {
+			throw new BaseError<DomainErrors>('STOP_ALREADY_RESOLVED', `stop ${stop.stopId} was resolved at ${stop.resolvedAt.toISOString()}`)
+		}
+		if (!isResolutionApplicable(stop.kind, resolution)) {
+			throw new BaseError<DomainErrors>('RESOLUTION_NOT_APPLICABLE', `${resolution} does not apply to a ${stop.kind} stop`)
+		}
+
+		this.pendingStopResolutions.push({ stopId: stop.stopId, resolution, resolvedAt: new Date() })
+		this.addDomainEvent(
+			new ThreadStopResolvedEvent({
+				entityId: this.id.value,
+				ownerId: this.ownerId,
+				payload: { stopId: stop.stopId, issueId: stop.issueId, threadId: this.id.value, resolution },
+			}),
+		)
+	}
+
+	/**
 	 * Drain the writes accumulated in this unit of work. Called by `ThreadRepository.save` only.
 	 *
 	 * Mirrors `pullDomainEvents()`: one drain, clears the buffer, so a second `save` of the same
 	 * instance cannot re-insert what already committed.
 	 */
 	pullPendingWrites(): PendingThreadWrites {
-		const entries = this.pendingEntries
+		const writes: PendingThreadWrites = {
+			entries: this.pendingEntries,
+			stops: this.pendingStops,
+			stopResolutions: this.pendingStopResolutions,
+		}
 		this.pendingEntries = []
-		return { entries }
+		this.pendingStops = []
+		this.pendingStopResolutions = []
+		return writes
 	}
 
 	/**

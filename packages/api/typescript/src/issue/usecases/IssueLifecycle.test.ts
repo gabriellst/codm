@@ -1,17 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenIssue } from '@test/support'
+import { TestBed, givenIssue, givenThread } from '@test/support'
 import { BaseError, DomainEventRepository } from '@codedm/core-typescript'
 import { IssueStatus, StopKind, StopResolution } from '@codedm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ArchiveIssue } from './ArchiveIssue'
 import { RestoreIssue } from './RestoreIssue'
-import { RaiseStop } from './RaiseStop'
-import { ResolveStop } from './ResolveStop'
 import { AutoArchiveCompletedIssues } from './AutoArchiveCompletedIssues'
-import { UpdateStopCriteriaConfig } from './UpdateStopCriteriaConfig'
+// The stop control plane lives in `thread/` since B4 (spec decision 4) — the Stop is a child of the
+// Thread aggregate. This suite still drives it because the issue-scoped read (`openStopsByIssue`) is
+// what the issue lifecycle cares about.
+import { RaiseStop } from '@thread/usecases/RaiseStop'
+import { ResolveStop } from '@thread/usecases/ResolveStop'
+import { UpdateStopCriteriaConfig } from '@thread/usecases/UpdateStopCriteriaConfig'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { IssueRepository } from '../repositories/IssueRepository'
-import { StopRepository } from '../repositories/StopRepository'
 import { IssueArchivedEvent } from '../events'
 
 describe('Issue lifecycle + stop control plane', () => {
@@ -44,22 +47,30 @@ describe('Issue lifecycle + stop control plane', () => {
 	})
 
 	it('RaiseStop records a stop, then ResolveStop matches the kind', async () => {
-		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID })
+		// The thread is CREATED, not invented: since B4 `RaiseStop` loads it to stamp owner + thread on the
+		// Stop, so an issue carrying a dangling `threadId` is a state the product cannot reach.
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID, threadId: thread.id.value })
 		const stopId = '00000000-0000-4000-8000-0000000000f1'
-		await testBed.resolve(RaiseStop).execute({ stopId, issueId: issue.id.value, kind: StopKind.APPROVAL_NEEDED, title: 't', detail: 'd' })
+		await testBed
+			.resolve(RaiseStop)
+			.execute({ stopId, threadId: thread.id.value, issueId: issue.id.value, kind: StopKind.APPROVAL_NEEDED, title: 't', detail: 'd' })
 
-		const stops = testBed.resolve(StopRepository)
-		expect(await stops.openByIssue(issue.id.value)).toHaveLength(1)
+		const threads = testBed.resolve(ThreadRepository)
+		expect(await threads.openStopsByIssue(issue.id.value)).toHaveLength(1)
 
 		// APPROVE applies to APPROVAL_NEEDED.
 		await testBed.resolve(ResolveStop).execute({ ownerId: OPERATOR_ID, stopId, resolution: StopResolution.APPROVE })
-		expect(await stops.openByIssue(issue.id.value)).toHaveLength(0)
+		expect(await threads.openStopsByIssue(issue.id.value)).toHaveLength(0)
 	})
 
 	it('ResolveStop rejects an inapplicable resolution (RESOLUTION_NOT_APPLICABLE)', async () => {
-		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID, threadId: thread.id.value })
 		const stopId = '00000000-0000-4000-8000-0000000000f2'
-		await testBed.resolve(RaiseStop).execute({ stopId, issueId: issue.id.value, kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
+		await testBed
+			.resolve(RaiseStop)
+			.execute({ stopId, threadId: thread.id.value, issueId: issue.id.value, kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
 		// APPROVE does NOT apply to SERVER_ERROR.
 		await expect(
 			testBed.resolve(ResolveStop).execute({ ownerId: OPERATOR_ID, stopId, resolution: StopResolution.APPROVE }),
@@ -67,29 +78,27 @@ describe('Issue lifecycle + stop control plane', () => {
 	})
 
 	it('RaiseStop respects a disabled criterion (STOP_CRITERION_DISABLED)', async () => {
-		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID })
-		await testBed
-			.resolve(UpdateStopCriteriaConfig)
-			.execute({
-				ownerId: OPERATOR_ID,
-				stopCriteria: {
-					serverErrors: false,
-					blockedByClassification: true,
-					humanRequested: true,
-					approvalNeeded: true,
-					authRequired: true,
-				},
-			})
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const issue = await givenIssue(testBed, { ownerId: OPERATOR_ID, threadId: thread.id.value })
+		await testBed.resolve(UpdateStopCriteriaConfig).execute({
+			ownerId: OPERATOR_ID,
+			stopCriteria: {
+				serverErrors: false,
+				blockedByClassification: true,
+				humanRequested: true,
+				approvalNeeded: true,
+				authRequired: true,
+			},
+		})
 		await expect(
-			testBed
-				.resolve(RaiseStop)
-				.execute({
-					stopId: '00000000-0000-4000-8000-0000000000f3',
-					issueId: issue.id.value,
-					kind: StopKind.SERVER_ERROR,
-					title: 't',
-					detail: 'd',
-				}),
+			testBed.resolve(RaiseStop).execute({
+				stopId: '00000000-0000-4000-8000-0000000000f3',
+				threadId: thread.id.value,
+				issueId: issue.id.value,
+				kind: StopKind.SERVER_ERROR,
+				title: 't',
+				detail: 'd',
+			}),
 		).rejects.toThrow(BaseError)
 	})
 
