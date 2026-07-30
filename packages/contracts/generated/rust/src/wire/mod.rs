@@ -3,3 +3,4 @@ pub mod enums;
 pub mod unions;
 pub mod events;
 pub mod envelope;
+pub mod slots;

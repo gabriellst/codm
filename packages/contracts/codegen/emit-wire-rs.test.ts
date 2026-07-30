@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { emitRsEnums, emitRsEnvelope, emitRsEvents, emitRsUnions } from './emit-wire-rs'
+import { emitRsEnums, emitRsEnvelope, emitRsEvents, emitRsSlots, emitRsUnions } from './emit-wire-rs'
 import type { EventField, ParsedEnum, ParsedEvent, ParsedUnion } from './lib/parse-openapi'
 
 const mkEvent = (over: Partial<ParsedEvent> & { ownFields: EventField[] }): ParsedEvent => ({
@@ -223,6 +223,43 @@ describe('emitRsEvents — type matrix', () => {
 		expect(out).toContain('pub content: Option<serde_json::Value>,')
 		// slot metadata is stamped as doc so readers know where the shapes live
 		expect(out).toContain('union slot')
+	})
+})
+
+describe('emitRsSlots', () => {
+	const slotted = mkEvent({
+		modelName: 'ChannelMessageReceivedEvent',
+		wireName: 'integration.channel_message.received',
+		ownFields: [
+			{ name: 'platform', type: { kind: 'string' }, required: true },
+			{ name: 'messageType', type: { kind: 'enum-ref', ref: 'MessageType' }, required: true },
+			{ name: 'content', type: { kind: 'unknown' }, required: false },
+		],
+		unionSlots: [
+			{
+				field: 'content',
+				discriminators: ['platform', 'messageType'],
+				variants: [
+					{ values: ['WHATSAPP', 'TEXT'], typeName: 'WhatsAppTextContent', owner: 'apiGo' },
+					{ values: ['INTERNAL', 'TEXT'], typeName: 'InternalTextContent', owner: 'apiGo' },
+				],
+			},
+		],
+	})
+
+	test('emits a machine-readable manifest const per slotted event (TS <Model>Unions parity)', () => {
+		const out = emitRsSlots([slotted])
+		expect(out).toContain('pub struct UnionSlotMeta {')
+		expect(out).toContain('pub const CHANNEL_MESSAGE_RECEIVED_EVENT_SLOTS: &[UnionSlotMeta] = &[')
+		expect(out).toContain('field: "content",')
+		expect(out).toContain('discriminators: &["platform", "messageType"],')
+		expect(out).toContain('UnionVariantMeta { values: &["WHATSAPP", "TEXT"], type_name: "WhatsAppTextContent", owner: "apiGo" },')
+	})
+
+	test('slot-less contract still emits the meta types (stable mod surface), no consts', () => {
+		const out = emitRsSlots([mkEvent({ ownFields: [] })])
+		expect(out).toContain('pub struct UnionSlotMeta {')
+		expect(out).not.toContain('_SLOTS')
 	})
 })
 

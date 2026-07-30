@@ -567,6 +567,15 @@ Ordem interna: **(a) spike → (b) union-ref → (c) union-slots.**
 rodar o binário `rust-codegen`, ler o que sai. Resultado esperado decide se o cliente ganha
 enums tagged de graça ou se precisamos de pós-processamento. Registrar o achado aqui.
 
+> **ACHADO (2026-07-30, spike executado):** progenitor 0.10 com `oneOf`+`discriminator`
+> emite `#[serde(untagged)]` com variantes newtype (`TextContent(TextContent)`) — **ignora**
+> o discriminator para o tagging serde. A discriminação acontece semanticamente: cada struct
+> variante carrega seu campo discriminador como enum de 1 valor (`ImageContentMessageType`),
+> então o untagged ainda resolve certo. Consequências: (1) as SHAPES das variantes vêm
+> corretas e utilizáveis do cliente — a decisão (i) se sustenta; (2) o enum de dispatch do
+> progenitor NÃO serve para forward-compat (valor desconhecido → erro "did not match any
+> variant") — o `Slot<T>` do wire crate continua necessário e é quem carrega a regra §2.5.
+
 **(b) `union-ref`** — `unions.rs` com um enum serde por união fechada:
 
 ```rust

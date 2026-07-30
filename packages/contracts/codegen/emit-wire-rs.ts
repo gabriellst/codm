@@ -362,6 +362,63 @@ export function emitRsEnvelope(events: ParsedEvent[]): string {
 	return `${lines.join('\n')}\n`
 }
 
+/**
+ * Union-slot MANIFEST (union-slots spec §2.2) — the Rust twin of the TS `<Model>Unions`
+ * export: slot → discriminators → [{values, typeName, owner}]. Machine-readable consts a
+ * consumer (or the union-parity rail) can walk; the variant SHAPES stay with the owner
+ * workspace and reach Rust only through the owner's generated client (decode via
+ * `crate::slot::Slot`).
+ */
+export function emitRsSlots(events: ParsedEvent[]): string {
+	const slotted = events.filter(ev => ev.unionSlots.length > 0).sort((a, b) => a.modelName.localeCompare(b.modelName))
+	const lines: string[] = [
+		HEADER,
+		'/// One union slot on an event payload: which field, discriminated by what, with',
+		'/// which declared variants. Shapes are NOT here (union-slots spec §6) — decode the',
+		'/// opaque value with [`crate::slot::Slot`] against the owner-client type.',
+		'#[derive(Debug, Clone, Copy, PartialEq, Eq)]',
+		'pub struct UnionSlotMeta {',
+		"\tpub field: &'static str,",
+		"\tpub discriminators: &'static [&'static str],",
+		"\tpub variants: &'static [UnionVariantMeta],",
+		'}',
+		'',
+		'/// One declared variant: discriminator values (positional, zipped with the slot',
+		"/// discriminators), the owner-workspace type name, and the owner's WORKSPACES id.",
+		'#[derive(Debug, Clone, Copy, PartialEq, Eq)]',
+		'pub struct UnionVariantMeta {',
+		"\tpub values: &'static [&'static str],",
+		"\tpub type_name: &'static str,",
+		"\tpub owner: &'static str,",
+		'}',
+		'',
+	]
+	if (slotted.length === 0) {
+		lines.push('// no union-slotted events declared in the contract')
+		return `${lines.join('\n')}\n`
+	}
+	for (const ev of slotted) {
+		lines.push(`/// Union-slot manifest of \`${ev.wireName}\`.`)
+		lines.push(`pub const ${screaming(ev.modelName)}_SLOTS: &[UnionSlotMeta] = &[`)
+		for (const slot of ev.unionSlots) {
+			lines.push('\tUnionSlotMeta {')
+			lines.push(`\t\tfield: "${slot.field}",`)
+			lines.push(`\t\tdiscriminators: &[${slot.discriminators.map(d => `"${d}"`).join(', ')}],`)
+			lines.push('\t\tvariants: &[')
+			for (const v of slot.variants) {
+				lines.push(
+					`\t\t\tUnionVariantMeta { values: &[${v.values.map(x => `"${x}"`).join(', ')}], type_name: "${v.typeName}", owner: "${v.owner}" },`,
+				)
+			}
+			lines.push('\t\t],')
+			lines.push('\t},')
+		}
+		lines.push('];')
+		lines.push('')
+	}
+	return lines.join('\n')
+}
+
 async function run() {
 	const yamlText = await readFile(INPUT, 'utf-8')
 	const parsed = parseContractsOpenapi(yamlText)
@@ -375,7 +432,8 @@ async function run() {
 	await writeFile(join(OUTPUT, 'unions.rs'), parsed.unions.length > 0 ? emitRsUnions(parsed.unions) : `${HEADER}// no unions declared in the contract\n`)
 	await writeFile(join(OUTPUT, 'events.rs'), emitRsEvents(parsed.events))
 	await writeFile(join(OUTPUT, 'envelope.rs'), emitRsEnvelope(parsed.events))
-	await writeFile(join(OUTPUT, 'mod.rs'), `${HEADER}pub mod enums;\npub mod unions;\npub mod events;\npub mod envelope;\n`)
+	await writeFile(join(OUTPUT, 'slots.rs'), emitRsSlots(parsed.events))
+	await writeFile(join(OUTPUT, 'mod.rs'), `${HEADER}pub mod enums;\npub mod unions;\npub mod events;\npub mod envelope;\npub mod slots;\n`)
 	console.log(`✔ emitted Rust bindings: ${parsed.enums.length} enums, ${parsed.unions.length} unions, ${parsed.events.length} events`)
 }
 
