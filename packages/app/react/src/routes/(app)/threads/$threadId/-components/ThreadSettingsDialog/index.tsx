@@ -1,4 +1,4 @@
-import { type ReactElement, type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -10,7 +10,7 @@ import {
 	useSetParticipantInvocation,
 } from '@codedm/client-typescript/typescript'
 import type { BufferSize } from '@codedm/client-typescript/typescript'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,27 +30,29 @@ function SectionLabel({ children }: { children: ReactNode }) {
 	return <h3 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">{children}</h3>
 }
 
-/** Per-thread behavior modal (T10): respond trigger, who can invoke agents, and context buffer depth. */
-export function ThreadSettingsDialog({ threadId, trigger }: { threadId: string; trigger: ReactElement }) {
+/**
+ * Per-thread behavior modal (T10): respond trigger, who can invoke agents, and context buffer depth.
+ *
+ * Pure content driven by `useDialogStore` (component bp-24): the caller does
+ * `show(<ThreadSettingsDialog threadId={…} />)` and MOUNTED is what "open" means here — which is why
+ * the body is no longer gated on a local `open` flag. The store is what dismisses it.
+ */
+export function ThreadSettingsDialog({ threadId }: { threadId: string }) {
 	const { t } = useTranslation()
-	const [open, setOpen] = useState(false)
 	// The thread's name, for the subtitle. Its own query rather than a prop: React Query already holds
 	// this exact key (the header mounts it), so it costs no request and keeps the dialog owning its data.
 	const { data: session } = useGetSessionChat(threadId)
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger render={trigger} />
-			<DialogContent className="max-w-lg">
-				<DialogHeader>
-					<DialogTitle>{t('session.settingsTitle')}</DialogTitle>
-					<DialogDescription>
-						{session ? t('session.settingsDescriptionNamed', { name: session.thread.displayName }) : t('session.settingsDescription')}
-					</DialogDescription>
-				</DialogHeader>
-				{open && <ThreadSettingsBody threadId={threadId} />}
-			</DialogContent>
-		</Dialog>
+		<DialogContent className="max-w-lg">
+			<DialogHeader>
+				<DialogTitle>{t('session.settingsTitle')}</DialogTitle>
+				<DialogDescription>
+					{session ? t('session.settingsDescriptionNamed', { name: session.thread.displayName }) : t('session.settingsDescription')}
+				</DialogDescription>
+			</DialogHeader>
+			<ThreadSettingsBody threadId={threadId} />
+		</DialogContent>
 	)
 }
 

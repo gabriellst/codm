@@ -17,6 +17,7 @@ import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 import { enumLabel } from '@/lib'
 import { Dot } from '@/components/console/StatusDot'
 import { providerLabel } from '@/components/console/glyphs'
+import { useDialogStore } from '@/stores/useDialogStore'
 import { ThreadSettingsDialog } from '../ThreadSettingsDialog'
 
 type Session = GetSessionChatQueryResponse
@@ -63,6 +64,7 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 	const queryClient = useQueryClient()
 	const pathname = useRouterState({ select: s => s.location.pathname })
 	const { data, isLoading } = useGetSessionChat(threadId)
+	const show = useDialogStore(s => s.show)
 	const pause = usePauseThread()
 	const resume = useResumeThread()
 
@@ -143,20 +145,16 @@ export function SessionHeader({ threadId }: { threadId: string }) {
 								</Button>
 							)}
 
-							<ThreadSettingsDialog
-								threadId={threadId}
-								trigger={
-									<Button
-										variant="outline"
-										size="icon"
-										aria-label={t('session.threadSettings')}
-										title={t('session.threadSettings')}
-										className="rounded-full"
-									>
-										<IconSettings2 />
-									</Button>
-								}
-							/>
+							<Button
+								variant="outline"
+								size="icon"
+								aria-label={t('session.threadSettings')}
+								title={t('session.threadSettings')}
+								className="rounded-full"
+								onClick={() => show(<ThreadSettingsDialog threadId={threadId} />)}
+							>
+								<IconSettings2 />
+							</Button>
 						</div>
 					</>
 				)}

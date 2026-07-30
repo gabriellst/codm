@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next'
-import { IconFolder } from '@tabler/icons-react'
+import { IconFolder, IconPlus } from '@tabler/icons-react'
 import { useListWorkspaces } from '@codedm/client-typescript/typescript'
 import type { ListWorkspacesQueryResponse } from '@codedm/client-typescript/typescript'
 import { PageHeader } from '@/components/console/PageHeader'
 import { enumLabel } from '@/lib'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
+import { useDialogStore } from '@/stores/useDialogStore'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 
 type Workspace = ListWorkspacesQueryResponse['workspaces'][number]
@@ -15,11 +17,19 @@ type Workspace = ListWorkspacesQueryResponse['workspaces'][number]
 export function WorkspacesSection() {
 	const { t } = useTranslation()
 	const { data, isLoading } = useListWorkspaces()
+	const show = useDialogStore(s => s.show)
 	const workspaces = data?.workspaces ?? []
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
-			<PageHeader title={t('workspaces.title')} action={<AddWorkspaceDialog />} />
+			<PageHeader
+				title={t('workspaces.title')}
+				action={
+					<Button onClick={() => show(<AddWorkspaceDialog />)}>
+						<IconPlus data-icon="inline-start" /> {t('workspaces.addFolder')}
+					</Button>
+				}
+			/>
 
 			<div className="flex flex-col gap-2">
 				<h2 className="label-eyebrow px-1">{t('workspaces.projectFolders')}</h2>

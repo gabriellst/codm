@@ -5,7 +5,9 @@ import type { ChannelKind, ChannelStatus } from '@codedm/client-typescript/types
 import { PageHeader } from '@/components/console/PageHeader'
 import { enumLabel } from '@/lib'
 import { CHANNEL_KINDS, channelGlyph } from '@/components/console/glyphs'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDialogStore } from '@/stores/useDialogStore'
 import { ConnectChannelDialog } from '../ConnectChannelDialog'
 
 /**
@@ -19,12 +21,16 @@ const CONNECTABLE: readonly ChannelKind[] = ['WHATSAPP']
 export function ChannelsSection() {
 	const { t } = useTranslation()
 	const { data, isLoading } = useGetHomeDashboard()
+	const show = useDialogStore(s => s.show)
 
 	const statusByKind = new Map<ChannelKind, ChannelStatus>((data?.channels ?? []).map(c => [c.kind, c.status]))
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20">
-			<PageHeader title={t('channels.title')} action={<ConnectChannelDialog />} />
+			<PageHeader
+				title={t('channels.title')}
+				action={<Button onClick={() => show(<ConnectChannelDialog />)}>{t('channels.connectChannel')}</Button>}
+			/>
 
 			<div className="flex flex-col gap-2">
 				<h2 className="label-eyebrow px-1">{t('channels.yourChannels')}</h2>
@@ -63,16 +69,18 @@ export function ChannelsSection() {
 								)
 							}
 
+							// The handler is explicit now: the row calls `show()` itself instead of handing a
+							// trigger element to a dialog that owned its own `open` (component bp-24).
 							return (
-								<ConnectChannelDialog
+								<button
 									key={kind}
-									trigger={
-										<button type="button" className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted">
-											{body}
-											<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-										</button>
-									}
-								/>
+									type="button"
+									className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted"
+									onClick={() => show(<ConnectChannelDialog />)}
+								>
+									{body}
+									<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+								</button>
 							)
 						})}
 					</div>
