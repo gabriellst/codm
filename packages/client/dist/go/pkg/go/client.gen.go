@@ -899,6 +899,27 @@ func (e MailboxTargetKind) Valid() bool {
 	}
 }
 
+// Defines values for McpScope.
+const (
+	McpScopeISSUEHANDLING McpScope = "issue-handling"
+	McpScopeorchestration McpScope = "orchestration"
+	McpScopesystem        McpScope = "system"
+)
+
+// Valid indicates whether the value is a known member of the McpScope enum.
+func (e McpScope) Valid() bool {
+	switch e {
+	case McpScopeISSUEHANDLING:
+		return true
+	case McpScopeorchestration:
+		return true
+	case McpScopesystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MembershipAction.
 const (
 	MembershipActionDemoted  MembershipAction = "demoted"
@@ -3655,6 +3676,9 @@ type MailboxItemKind string
 
 // MailboxTargetKind defines model for MailboxTargetKind.
 type MailboxTargetKind string
+
+// McpScope defines model for McpScope.
+type McpScope string
 
 // MembershipAction defines model for MembershipAction.
 type MembershipAction string

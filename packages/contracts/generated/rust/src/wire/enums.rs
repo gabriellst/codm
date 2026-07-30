@@ -605,6 +605,25 @@ pub enum MailboxTargetKind {
 	ISSUE,
 }
 
+/// Which declared MCP tool surface a credential opens. The value is the WIRE spelling — it is the path segment of the JSON-RPC door (/v1/mcp/<value>), the synthetic OpenAPI tag (mcp:<value>) the Kubb tag filter matches on, and the directory the per-scope generated server is emitted into. Changing a value renames all three at once.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpScope {
+	#[serde(rename = "issue-handling")]
+	#[strum(serialize = "issue-handling")]
+	ISSUE_HANDLING,
+	#[serde(rename = "orchestration")]
+	#[strum(serialize = "orchestration")]
+	orchestration,
+	#[serde(rename = "system")]
+	#[strum(serialize = "system")]
+	system,
+}
+
 /// A live change to a group's member set. Descends the medscall channel MembershipAction. Lowercase wire values preserved verbatim. Defined-and-dormant: the membership_added / membership_removed wire events model the join/leave facts directly (with `isAdmin`); this enum is the harmonized closed set for the promoted/demoted transitions the source also emits.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,

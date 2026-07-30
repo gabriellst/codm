@@ -36,6 +36,7 @@ import "./enums/provider-status.tsp";
 // `model: string` / `stopReason: string` cannot exist at any call site.
 import "./enums/agent-model-id.tsp";
 import "./enums/agent-stop-reason.tsp";
+import "./enums/mcp-scope.tsp";
 import "./enums/workspace-badge.tsp";
 import "./enums/thread-status.tsp";
 import "./enums/thread-mode.tsp";

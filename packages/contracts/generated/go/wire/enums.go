@@ -408,6 +408,23 @@ func ParseMailboxTargetKind(s string) (MailboxTargetKind, error) {
 	}
 }
 
+type McpScope string
+
+const (
+	McpScopeISSUE_HANDLING McpScope = "issue-handling"
+	McpScopeorchestration McpScope = "orchestration"
+	McpScopesystem McpScope = "system"
+)
+
+func ParseMcpScope(s string) (McpScope, error) {
+	switch McpScope(s) {
+	case McpScopeISSUE_HANDLING, McpScopeorchestration, McpScopesystem:
+		return McpScope(s), nil
+	default:
+		return "", fmt.Errorf("invalid McpScope: %q", s)
+	}
+}
+
 type MembershipAction string
 
 const (
