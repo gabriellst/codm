@@ -7,14 +7,22 @@ import { BaseError } from '../../types/BaseError'
 import { Handler } from '../../types/Handler'
 import { tryCatchAsync } from '../../utils/TryCatch'
 import { DrizzleDatabaseDriver } from '../../db/drivers/DrizzleDatabaseDriver'
+import { DomainEventRepository } from '../../repositories/DomainEventRepository'
+import { BaseIntegrationEvent, type AnyIntegrationEvent } from '../../types/BaseIntegrationEvent'
 import { EventCallback, ExternalMediator, Unsubscribe, handlerEventNames } from './Mediator'
 import { adaptWireEnvelope, reviveIsoDates } from './wire'
 
 /**
- * The lane this mediator owns. `integration` is the Go gateway's EGRESS to us: the gateway writes
- * rows, we are the ONLY claimant. (`api` belongs to DrizzleOutboxDispatcher, `gateway` to the Go
- * dispatcher.) There is deliberately no `integration:gateway` lane yet — nothing TS-published is
- * consumed by Go today; if that changes it gets its OWN lane rather than sharing this one.
+ * The lane this mediator owns — and it carries BOTH directions.
+ *
+ * The old text described `integration` as the Go gateway's egress to us and nothing else. That was a
+ * restriction of the moment, not a property of the lane (founder, 29-jul): since B3 the TS side
+ * PUBLISHES here too (`publish()` → `saveIntegrationEvent`), and the claim does not care who produced
+ * a row — it filters by NAME (only names with a registered handler) and leases. There is still exactly
+ * ONE claimant, because the Go twin is built EGRESS-ONLY on this lane
+ * (`NewSqlExternalMediatorWithoutIngress`); when Go one day needs to consume a TS-published fact it
+ * registers a handler for that name — same lane, same claim, no new lane.
+ * (`api` belongs to DrizzleOutboxDispatcher, `gateway` to the Go dispatcher.)
  */
 const LANE = 'integration'
 
@@ -47,11 +55,20 @@ interface ClaimedOutboxRow {
  * and hands it to the registered external handlers. That is also why it can be the `real` binding
  * even under the e2e harness, which boots no Go process: nothing about it needs a peer to be up.
  *
- * WHAT IT DOES NOT DO: it never INSERTs into the outbox. TS-published integration events already
- * travel on the `api` lane, written by DrizzleDomainEventRepository's saveIntegrationEvent, and the
- * domain dispatcher routes `integration.*` names here for fan-out. A second row would deliver
- * everything twice. So both outbound methods (`dispatch`, and `publish` for callers that use the
- * alias) are pure in-process fan-out.
+ * PUBLISH PERSISTS, AND ONLY PERSISTS (B3, decisions 4/5). `publish()` INSERTs the event on this lane
+ * via `DomainEventRepository.saveIntegrationEvent` and returns — it dispatches nothing in the caller's
+ * call stack and fires no callback there. Every delivery, Go-published or TS-published, comes from
+ * `drainOnce`: one poller, one claim/lease, at-least-once, and consumers dedup (the core
+ * `IdempotencyGuard`, or a UNIQUE latch like thread's consumed-message ledger). That is what makes a
+ * TS→TS integration event survive a crash between the publish and the consumer. Until B3 this method
+ * was an alias of `dispatch()`: nothing was written, so "the outbox will retry it" was simply false for
+ * that direction.
+ *
+ * ORDERING, said out loud because the alias used to provide it by accident: an awaited in-memory
+ * fan-out delivered A before B by construction. On the lane, order is `created_at` WITHIN one claim
+ * batch and delivery is sequential — but a failed row does NOT hold back its successors here (this lane
+ * does not group by owner; see `finalizeFailure`). A consumer that cannot tolerate "the later fact
+ * arrived first" must say so at its own site.
  */
 @injectable()
 export class SqlExternalMediator extends ExternalMediator {
@@ -64,7 +81,10 @@ export class SqlExternalMediator extends ExternalMediator {
 	private draining = false
 	private stopped = true
 
-	constructor(private driver: DrizzleDatabaseDriver) {
+	constructor(
+		private driver: DrizzleDatabaseDriver,
+		private domainEvents: DomainEventRepository,
+	) {
 		super()
 	}
 
@@ -107,24 +127,30 @@ export class SqlExternalMediator extends ExternalMediator {
 	}
 
 	/**
-	 * Alias of dispatch — awaited, NOT fire-and-forget. Same rule as `dispatch`: no row is written.
+	 * PERSIST. Nothing else.
 	 *
-	 * MUST await: every `Publish*IntegrationEvents` handler in this codebase re-publishes several
-	 * integration events for the SAME entity from a single domain-event handler, in a sequence that
-	 * only holds if each `publish()` delivers before the next line runs (e.g. terminal's
-	 * `issue.opened` must reach `OpenIssue` before `issue.completed` reaches `CompleteIssue`, since
-	 * `CompleteIssue` treats "issue not found yet" as an idempotent no-op with no retry — see
-	 * RunIssueTurnOnClassification / PublishAgentIntegrationEvents). A fire-and-forget
-	 * `void tryCatchAsync(...)` here breaks that ordering: the outer `DrizzleOutboxDispatcher` owner
-	 * loop moves on to dispatch the NEXT row (completed) while THIS row's fan-out (opened) is still an
-	 * unawaited floating promise, so the two can race and land out of order — silently and
-	 * permanently dropping the completion. Confirmed by reproduction: `CompleteIssue` observed
-	 * `found=false` while `OpenIssue`'s save was still in flight. Unlike `RedisExternalMediator`
-	 * (where `publish` hands off to a real transport and decoupling is the point), this mediator's
-	 * `publish` is pure same-process fan-out — there is no transport to justify not awaiting it.
+	 * The row is written inside the driver's write transaction (the only legitimate write path) and the
+	 * method returns; `drainOnce` delivers it. The long note this docblock used to carry — about why the
+	 * in-memory fan-out had to be awaited so `issue.opened` reached its consumer before
+	 * `issue.completed` — described a property of the ALIAS, which is gone. What replaces it is the
+	 * ORDERING paragraph on the class: intra-batch order, and consumers that dedup.
 	 */
 	async publish(event: BaseEvent): Promise<void> {
-		await this.dispatch(event)
+		// `publish` is typed on the widest event (the Mediator contract), but only integration events may
+		// ride this lane: the row is scoped by the envelope `ownerId`, which a domain event does not have,
+		// and an unscoped row is a row nothing can deliver. Fail loud rather than write it.
+		if (!(event instanceof BaseIntegrationEvent)) {
+			throw new BaseError<BaseInfrastructureErrors>(
+				'INVALID_OUTBOX_PAYLOAD',
+				`SqlExternalMediator.publish accepts integration events only — got '${event.name}'. Domain events are persisted by DomainEventRepository.save and dispatched on the api lane.`,
+			)
+		}
+		// ONE documented boundary cast: `AnyIntegrationEvent` is the widest integration type the
+		// persistence API accepts, but `instanceof` narrows to the class's DEFAULT schema instantiation,
+		// not the concrete wire schema the row actually carries. A single widening cast is enough — the
+		// two instantiations overlap structurally — and the `instanceof` IS the runtime proof.
+		const integrationEvent = event as AnyIntegrationEvent
+		await this.driver.transaction(tx => this.domainEvents.saveIntegrationEvent(integrationEvent, tx))
 	}
 
 	async execute<T extends Handler>(_handler: T['name'], _input: T['input']): Promise<T['output']> {
@@ -155,11 +181,21 @@ export class SqlExternalMediator extends ExternalMediator {
 	 */
 	async drainOnce(): Promise<number> {
 		const names = [...this.handlerMap.keys()]
-		// No external handler registered ⇒ claim NOTHING. Claiming rows we cannot deliver would
-		// burn their attempts budget and dead-letter the gateway's traffic. Mirrors the Go twin.
-		if (names.length === 0) return 0
+		// EMENDA O1 (B3) — THE CLAIM SERVES THE CALLBACKS TOO. A global callback (the SSE broadcaster is
+		// one, registered once per process) consumes EVERY integration fact, not a named subset, so while
+		// one exists the claim covers the WHOLE lane: handlers run for the names that have them,
+		// `notifyCallbacks` fires for every claimed row. Without this, decision 5 ("the SSE fires FROM the
+		// poller") would silently drop every TS-published fact with no backend consumer —
+		// `thread.attached`, `issue.archived`, `issue.stop_resolved` — because they have no handler name
+		// to be claimed by. Desired side effect: dormant rows are tombstoned after the broadcast instead
+		// of accumulating unprocessed forever.
+		const broadcasting = this.callbacks.size > 0
+		// No handler AND no global callback ⇒ claim NOTHING. Claiming rows we cannot deliver would
+		// burn their attempts budget and dead-letter the gateway's traffic. Mirrors the Go twin, and it
+		// is what keeps a headless script (no SSE, no handlers) from tombstoning traffic it never reads.
+		if (!broadcasting && names.length === 0) return 0
 
-		const claimed = await this.claimBatch(names)
+		const claimed = await this.claimBatch(broadcasting ? null : names)
 		if (claimed.length === 0) return 0
 
 		for (const row of claimed) {
@@ -188,19 +224,24 @@ export class SqlExternalMediator extends ExternalMediator {
 	 * handler-name filter. One `BEGIN IMMEDIATE` transaction, COMMITTED before anything is
 	 * dispatched.
 	 *
+	 * `names === null` means "the whole lane" — the EMENDA O1 mode `drainOnce` selects while a global
+	 * callback is registered. Any other value narrows to those names, as before.
+	 *
 	 * `attempts` is charged HERE, not on failure. An ingress event that kills the process has
 	 * exactly the same failure mode as a domain one — and this is the lane carrying payloads the TS
 	 * daemon never validated, so if either claimant were to go without a crash-loop ceiling it would
 	 * be the wrong one. The poison sweep collects rows that burned the budget without ever
 	 * finalizing; without it they are neither claimable nor terminal, i.e. invisible.
 	 */
-	private async claimBatch(names: string[]): Promise<ClaimedOutboxRow[]> {
+	private async claimBatch(names: string[] | null): Promise<ClaimedOutboxRow[]> {
 		const now = Date.now()
 		const token = crypto.randomUUID()
-		const nameList = sql.join(
-			names.map(n => sql`${n}`),
-			sql`, `,
-		)
+		const nameFilter = names
+			? sql`AND ${outbox.name} IN (${sql.join(
+					names.map(n => sql`${n}`),
+					sql`, `,
+				)})`
+			: sql``
 
 		return this.driver.transaction(async tx => {
 			await tx.run(sql`
@@ -220,7 +261,7 @@ export class SqlExternalMediator extends ExternalMediator {
 					AND ${outbox.processedAt} IS NULL
 					AND ${outbox.attempts} < ${MAX_ATTEMPTS}
 					AND (${outbox.leaseUntil} IS NULL OR ${outbox.leaseUntil} < ${now})
-					AND ${outbox.name} IN (${nameList})
+					${nameFilter}
 				ORDER BY ${outbox.createdAt}
 				LIMIT ${BATCH_SIZE}
 			`)

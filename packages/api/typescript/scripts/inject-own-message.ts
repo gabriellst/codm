@@ -20,10 +20,10 @@
  *
  * # The vacuous check to not repeat
  *
- * Polling `shared_outbox` for `integration.channel.delivery_requested` proves NOTHING: TS-published
- * integration events are dispatched IN-PROCESS (`SqlExternalMediator.publish` → `dispatch`), so they
- * never land in the outbox. Only Go→TS events do. Watch `channel.message_sent` and the consumed
- * ledger instead — those are rows that actually get written.
+ * `integration.channel.delivery_requested` NÃO EXISTE MAIS (B3): a entrega é o comando
+ * `deliver_channel_message` em `shared_scheduled_commands`. E desde B3 todo integration event
+ * publicado pelo TS SIM cai no `shared_outbox`, na lane `integration` — `publish()` persiste. Para
+ * observar a entrega, olhe a fila de comandos; para observar um fato cruzando, olhe a lane.
  */
 import { Database } from 'bun:sqlite'
 import { homedir } from 'node:os'

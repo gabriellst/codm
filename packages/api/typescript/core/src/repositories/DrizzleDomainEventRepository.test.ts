@@ -17,6 +17,7 @@ import { OutboxSource } from '@codedm/contracts-typescript/wire/enums'
 import { LibsqlDriver } from '../db/drivers/LibsqlDriver'
 import type { DrizzleClient } from '../db/client'
 import { BaseDomainEvent } from '../types/BaseDomainEvent'
+import { BaseIntegrationEvent } from '../types/BaseIntegrationEvent'
 import { z } from '../utils/schema'
 import { DrizzleDomainEventRepository } from './DrizzleDomainEventRepository'
 
@@ -69,6 +70,26 @@ describe('DrizzleDomainEventRepository', () => {
 		expect(auditRow?.occurredAt).toBeInstanceOf(Date)
 		expect(outboxRow?.id).toBe(auditRow?.id as string)
 		expect(outboxRow?.source).toBe(OutboxSource.api)
+		expect(outboxRow?.processedAt).toBeNull()
+	})
+
+	const ProbeIntegrationEventSchema = z.integrationEvent('integration.probe.happened', { marker: z.string() })
+	class ProbeIntegrationEvent extends BaseIntegrationEvent<typeof ProbeIntegrationEventSchema> {
+		static override readonly name = 'integration.probe.happened' as const
+		static readonly schema = ProbeIntegrationEventSchema
+	}
+
+	it('an INTEGRATION event lands on the `integration` lane — the lane whose claimant is SqlExternalMediator', async () => {
+		await driver.transaction(tx =>
+			repo.saveIntegrationEvent(new ProbeIntegrationEvent({ ownerId: OWNER, payload: { marker: 'crossing' } }), tx as DrizzleClient),
+		)
+
+		const [auditRow] = await driver.db.select().from(events)
+		const [outboxRow] = await driver.db.select().from(outbox)
+
+		// The audit row records WHO PRODUCED it (this daemon = api); the outbox row records WHO CLAIMS it.
+		expect(auditRow?.source).toBe(OutboxSource.api)
+		expect(outboxRow?.source).toBe(OutboxSource.integration)
 		expect(outboxRow?.processedAt).toBeNull()
 	})
 

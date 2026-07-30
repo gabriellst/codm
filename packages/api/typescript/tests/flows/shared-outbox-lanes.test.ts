@@ -24,6 +24,7 @@ import * as schema from '@codedm/contracts/db'
 import { outbox } from '@codedm/contracts/db'
 import { migrationsDir } from '@codedm/contracts/db/migrations'
 import {
+	DrizzleDomainEventRepository,
 	DrizzleOutboxDispatcher,
 	InternalMediator,
 	LibsqlDriver,
@@ -133,7 +134,7 @@ describe('shared_outbox lanes (api / gateway / integration) over one file', () =
 	beforeEach(async () => {
 		await driver.reset()
 		internal = new ScriptedInternalMediator()
-		external = new SqlExternalMediator(driver)
+		external = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver.db))
 		dispatcher = new DrizzleOutboxDispatcher(driver, internal, external, new MockLoggingService())
 	})
 

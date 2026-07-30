@@ -9,7 +9,9 @@ import { eq } from 'drizzle-orm'
 import * as schema from '@codedm/contracts/db'
 import { outbox } from '@codedm/contracts/db'
 import { migrationsDir } from '@codedm/contracts/db/migrations'
+import { ChannelConnectedEvent } from '@codedm/contracts-typescript/wire/events'
 import { LibsqlDriver } from '../../db/drivers/LibsqlDriver'
+import { DrizzleDomainEventRepository } from '../../repositories/DrizzleDomainEventRepository'
 import type { Handler } from '../../types/Handler'
 import { SqlExternalMediator } from './SqlExternalMediator'
 
@@ -66,7 +68,7 @@ describe('SqlExternalMediator (shared-outbox ingress)', () => {
 
 	beforeEach(async () => {
 		await driver.reset()
-		mediator = new SqlExternalMediator(driver)
+		mediator = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver.db))
 	})
 
 	it('claims NOTHING while no external handler is registered', async () => {
@@ -213,17 +215,54 @@ describe('SqlExternalMediator (shared-outbox ingress)', () => {
 		expect((await row(id))?.attempts).toBe(2)
 	})
 
-	it('the OUTBOUND path writes NO row — TS integration events already travel on the api lane', async () => {
-		const { handler, calls } = makeHandler(EVENT)
+	it('publish PERSISTS on this lane and dispatches NOTHING in the same call stack', async () => {
+		const { handler, calls } = makeHandler(OTHER_EVENT)
 		await mediator.register(handler)
 
-		// biome-ignore lint/suspicious/noExplicitAny: minimal BaseEvent-shaped literal for the fan-out
-		const event = { name: EVENT, id: crypto.randomUUID(), time: new Date().toISOString(), payload: {} } as any
-		await mediator.dispatch(event)
-		await mediator.publish(event)
+		await mediator.publish(
+			new ChannelConnectedEvent({
+				ownerId: 'owner-1',
+				payload: { channelId: crypto.randomUUID(), platform: 'whatsapp', ownerId: 'owner-1' },
+			}),
+		)
 
-		expect(calls.length).toBeGreaterThanOrEqual(1)
+		// (a) THE ROW EXISTS — durable before anyone is told, on the lane this class claims, unprocessed.
 		const rows = await driver.db.select().from(outbox)
-		expect(rows).toHaveLength(0) // a second row would deliver everything twice
+		expect(rows).toHaveLength(1)
+		expect({ name: rows[0]?.name, source: rows[0]?.source, processed: rows[0]?.processedAt ?? null }).toEqual({
+			name: OTHER_EVENT,
+			source: 'integration',
+			processed: null,
+		})
+
+		// (b) AND NOBODY RAN. This is the whole point of the change: before B3 `publish` was an alias of
+		// `dispatch`, so the handler had already executed by this line and no row existed at all.
+		expect(calls).toHaveLength(0)
+
+		// (c) The POLLER is what delivers it — one claim, one lease, whoever produced the row.
+		expect(await mediator.drainOnce()).toBe(1)
+		expect(calls).toHaveLength(1)
+		expect((await driver.db.select().from(outbox))[0]?.processedAt).toBeInstanceOf(Date)
+	})
+
+	it('EMENDA O1 — a row with NO registered handler is still claimed FOR THE CALLBACKS, then tombstoned', async () => {
+		// The SSE broadcaster is a global callback, not a named handler. Before this change the claim
+		// filtered by registered-handler names only, so a TS-published fact with no backend consumer
+		// (stop_resolved, issue.archived, thread.attached) never reached the browser again. With a
+		// callback registered, the poller claims EVERY row on the lane: handlers run where they exist,
+		// callbacks fire for all — and dormant rows stop accumulating unprocessed.
+		const seen: unknown[] = []
+		mediator.registerCallback(async event => void seen.push(event))
+
+		await mediator.publish(
+			new ChannelConnectedEvent({
+				ownerId: 'owner-1',
+				payload: { channelId: crypto.randomUUID(), platform: 'whatsapp', ownerId: 'owner-1' },
+			}),
+		)
+
+		expect(await mediator.drainOnce()).toBe(1)
+		expect(seen).toHaveLength(1)
+		expect((await driver.db.select().from(outbox))[0]?.processedAt).toBeInstanceOf(Date)
 	})
 })

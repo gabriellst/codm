@@ -1409,6 +1409,31 @@ para:
 	})
 ```
 
+3. Acrescente um SEGUNDO caso novo logo abaixo (EMENDA O1 — a API exata de callback do mediator é a que o `ListenEvents.ensureBroadcaster` usa hoje; ajuste o nome do método ao real se divergir):
+
+```typescript
+	it('EMENDA O1 — a row with NO registered handler is still claimed FOR THE CALLBACKS, then tombstoned', async () => {
+		// The SSE broadcaster is a global callback, not a named handler. Before this change the claim
+		// filtered by registered-handler names only, so a TS-published fact with no backend consumer
+		// (stop_resolved, issue.archived, thread.attached) never reached the browser again. With a
+		// callback registered, the poller claims EVERY row on the lane: handlers run where they exist,
+		// callbacks fire for all — and dormant rows stop accumulating unprocessed.
+		const seen: unknown[] = []
+		mediator.registerCallback(async event => void seen.push(event))
+
+		await mediator.publish(
+			new ChannelConnectedEvent({
+				ownerId: 'owner-1',
+				payload: { channelId: crypto.randomUUID(), platform: 'whatsapp', ownerId: 'owner-1' },
+			}),
+		)
+
+		expect(await mediator.drainOnce()).toBe(1)
+		expect(seen).toHaveLength(1)
+		expect((await driver.db.select().from(outbox))[0]?.processedAt).toBeInstanceOf(Date)
+	})
+```
+
 ### Step T5.2 — Rodar e ver o vermelho (falseador 1)
 
 Run: `cd packages/api/typescript/core && bun test src/services/Mediator/SqlExternalMediator.test.ts`
@@ -1544,6 +1569,8 @@ import { BaseIntegrationEvent, type AnyIntegrationEvent } from '../../types/Base
 		await this.driver.transaction(tx => this.domainEvents.saveIntegrationEvent(integrationEvent, tx))
 	}
 ```
+
+**(5) EMENDA O1 — o claim serve também aos callbacks.** Modifique o claim (`claimBatch`/`drainOnce`): quando existe ≥1 callback global registrado, o claim cobre **todas** as linhas da lane (hoje filtra `name IN (nomes com handler)`); na entrega, handlers rodam onde houver handler para o nome e `notifyCallbacks` dispara para TODA linha claimada. Sem nenhum callback registrado, o comportamento atual permanece (claim só de nomes com handler — scripts headless não tombstonam o que não consomem). Racional: é a implementação fiel da decisão 5 da spec ("o SSE dispara a partir do poller") somada à ratificação no-allowlist de 23-jul ("todo o surface integration.* vai ao browser") — sem isso, fatos TS sem consumidor backend nunca mais chegariam ao console, e o B5 quebraria por construção. Efeito colateral desejado: linhas dormentes (eventos Go sem consumidor) param de acumular sem processamento — são tombstonadas após o broadcast.
 
 ### Step T5.6 — Os dois call sites de construção nos testes
 
@@ -2187,7 +2214,7 @@ linguagens (AC-10)."
 - **A edição não commitada do founder em `packages/api/typescript/src/thread/entities/Thread.ts`** não é tocada nem stageada por nenhuma Task deste plano. Se algum gate acusar erro nesse arquivo, PARE e reporte — não é deste plano.
 - **Paridade de `publish()` por env.** `real` é o único env que muda: `SqlExternalMediator` persiste. `mock` (`MockExternalMediator`) já tinha a semântica nova por construção — `publish` REGISTRA o evento e não executa handler nenhum (só `dispatch` executa), então "publish não despacha" vale lá desde sempre. `integration` e o `TestBed` (que troca ambos os mediators por `SpyMediator` sobre `EventEmitter2Mediator`) **mantêm o fan-out em memória DE PROPÓSITO**: o harness não roda poller, e um double que exigisse `drainOnce` faria todo flow test crescer um loop de poll. A semântica da lane é provada onde ela existe — contra a classe real sobre um arquivo real (`tests/flows/ts-integration-lane.flow.test.ts`, `core/.../SqlExternalMediator.test.ts`). `RedisExternalMediator` não é bindado por nenhum env deste produto e fica intocado.
 - **Achado C8 (observação, NÃO virou Task — fora das Decisions).** O `DrizzleOutboxDispatcher` retém o lease como backoff (`finalizeFailure`, linha ~323: "Lease deliberately retained → natural 30s backoff"), então **uma falha transiente custa 30s de latência de materialização** — foi o que estourou o poll de 20s do e2e com `workers: 2` e levou o C8 a fixar `workers: 1`. Fora de teste, o mesmo custo aparece como "a issue demorou meio minuto pra aparecer". Candidato a backoff menor/jitter no PRIMEIRO retry; decisão do founder, e o B3 não a antecipa.
-- **O1 (observação, NÃO virou Task).** O broadcaster SSE (`ui/controllers/ListenEvents.ts:119`) é um callback sem nome, e o poller só chama `notifyCallbacks` para linhas que ele CLAIMA — e o claim filtra por nomes com handler registrado (`drainOnce`, linha 157-160). Como a decisão 5 manda o callback disparar do poller (não do publish), integration events publicados pelo TS **sem consumidor TS** deixam de chegar ao console em tempo real: hoje isso inclui `integration.issue.stop_resolved` (que o `BrowserFrameEnricher` mapeia para `browser.thread_status_changed` — "needs-you cleared"), `integration.issue.archived` e `integration.thread.attached`. Antes de B3 chegavam porque `publish` → `dispatch` → `notifyCallbacks`. As três saídas possíveis (claim por lane quando existe callback global · notificar callbacks no `publish` à moda do Go · aceitar a perda) são decisão do founder — nenhuma Task deste plano a toma, e o comportamento resultante está descrito no docblock atualizado.
+- **O1 — RESOLVIDA (emenda no T5.5(5) + caso de teste no T5.1(3)): o poller entrega também aos callbacks.** O achado: o claim filtrava por nomes com handler registrado, então com o publish→lane os fatos TS sem consumidor backend (`stop_resolved`, `issue.archived`, `thread.attached`) nunca mais chegariam ao SSE. A resolução NÃO é decisão nova — é derivação de três decisões aprovadas: a decisão 5 desta spec ("o SSE broadcaster passa a disparar A PARTIR DO POLLER"), a ratificação no-allowlist de 23-jul ("todo o surface integration.* vai ao browser", citada na spec do B5) e o desenho aprovado do B5 (front escuta `integration.thread.stop_resolved` cru). As alternativas (notificar no `publish`; aceitar a perda) contradiriam essas decisões. Premissa anotada, reversível — veto do founder desfaz com um commit.
 - **O2 (observação, NÃO virou Task).** A lane não tem owner-skip (`finalizeFailure`: "this lane does not group by owner"), então a ordenação que o `publish` awaited garantia por construção — `issue.opened` antes de `issue.completed` — passa a valer só INTRA-BATCH (`ORDER BY created_at`). Um predecessor que falha não segura o sucessor. `CompleteIssue` trata "issue not found" como no-op idempotente sem retry, o que era exatamente o cenário que o docblock antigo dizia proteger. A spec já responde com "consumidores deduplicam" (decisão 5); um degrau a mais (sequência por owner na lane) é decisão do founder.
 - **O3 (observação, NÃO virou Task).** `DeliverChannelMessage` **nunca passou `quotedMessageId` ao `sender.send()`** — a citação que `RecordOrchestratorReply` resolve via `findPlatformId` é montada, viaja e é descartada no envio (idem `replyEntryId`, que o docblock diz existir para um `linkEntry` que não é chamado). O comando carrega os dois campos para preservar a resolução dos produtores; o executor mantém o comportamento shipped. Ativar a citação no wire é mudança de comportamento e não é do B3.
 - **O4 (observação, NÃO virou Task).** O `@doc` de `packages/contracts/wire/enums/outbox-source.tsp` afirma que "the Go SqlExternalMediator claims `integration`" — falso desde que o gêmeo Go virou egress-only, e mais falso depois do B3. Corrigir mexe em arquivos gerados + `contracts.openapi.yaml`; ficou fora porque a decisão 5 nomeia o docblock do `SqlExternalMediator`, não o do enum.

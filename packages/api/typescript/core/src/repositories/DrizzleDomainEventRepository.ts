@@ -224,6 +224,15 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		}
 	}
 
+	// Integration events carry no aggregate `entityId` (they describe a cross-context fact about an
+	// owner/tenant), so the outbox row leaves the uuid entityId column null.
+	//
+	// THE LANE IS `integration`, NOT `api` (B3, decisions 4/5): `source` decides WHO CLAIMS the row, and
+	// the claimant of an integration event is `SqlExternalMediator`, never the api-lane domain
+	// dispatcher. On `api` the row would be handed to the domain dispatcher, which routes `integration.*`
+	// names to `ExternalMediator.dispatch` — an in-memory fan-out with a 30s retry lease, i.e. exactly
+	// the durability hole this change closes. The audit row in `events` stays on `api`: that column
+	// records WHO PRODUCED the fact, and this daemon is the producer.
 	private toIntegrationOutboxRow(event: AnyIntegrationEvent): typeof outbox.$inferInsert {
 		return {
 			id: event.id,
@@ -231,7 +240,7 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 			entityId: undefined,
 			ownerId: event.ownerId,
 			payload: event.toJSON() as unknown as Record<string, unknown>,
-			source: OutboxSource.api,
+			source: OutboxSource.integration,
 		}
 	}
 }
