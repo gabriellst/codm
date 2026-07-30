@@ -18,3 +18,4 @@ export { IngestChannelMessage, IngestChannelMessageInputSchema, IngestChannelMes
 export { GetSessionChat, GetSessionChatInputSchema, GetSessionChatOutputSchema } from './GetSessionChat'
 export { GetThreadSettings, GetThreadSettingsInputSchema, GetThreadSettingsOutputSchema } from './GetThreadSettings'
 export { DeliverChannelMessage } from './DeliverChannelMessage'
+export { RecordOrchestratorReply } from './RecordOrchestratorReply'

@@ -7,8 +7,7 @@ import { MailboxRepository } from '@agent/repositories'
 import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
 import { AgentRunOutcome } from '@agent/enums'
 import { OrchestratorRepliedEvent } from '@agent/events/OrchestratorRepliedEvent'
-import { DomainEventRepository, MockOutboxDispatcher } from '@codedm/core-typescript'
-import { ChannelDeliveryRequestedEvent } from '@codedm/contracts-typescript/wire/events'
+import { CommandQueue, DomainEventRepository, MockOutboxDispatcher } from '@codedm/core-typescript'
 import { PublishAgentIntegrationEvents } from '@agent/handlers/PublishAgentIntegrationEvents'
 import { DeliverOrchestratorReply } from '@thread/handlers/DeliverOrchestratorReply'
 
@@ -60,7 +59,11 @@ describe('Flow (integration): ISSUE_RESULT → composed reply that quotes the re
 
 	it('AC-B1.2 — the composed turn carries replyToEntryId = the issue origin', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
-		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value, providers: [ProviderKind.CLAUDE_CODE] })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
 
 		expect(await queueResult(thread.id.value, '019fac48-06c6-7a11-afdf-29fff08d4a99')).toBe(true)
 		expect(await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()).toBe(1)
@@ -84,7 +87,11 @@ describe('Flow (integration): ISSUE_RESULT → composed reply that quotes the re
 	 */
 	it('AC-B3.2 — one finished issue produces exactly ONE channel delivery', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
-		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value, providers: [ProviderKind.CLAUDE_CODE] })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
 
 		await testBed.spy.register(testBed.resolve(PublishAgentIntegrationEvents))
 
@@ -100,16 +107,27 @@ describe('Flow (integration): ISSUE_RESULT → composed reply that quotes the re
 		expect(replied).toHaveLength(1)
 		expect(testBed.externalSpy.getPublishedOfType('integration.agent.reply_drafted')).toHaveLength(0)
 
+		// The delivery is a COMMAND now (B3): in mock mode the queue executes inline, so a recording
+		// handler under the command's name is what "the order was placed" looks like here.
+		const ordered: Array<{ text: string; author: string }> = []
+		await testBed.resolve(CommandQueue).registerCommandHandler({
+			name: 'deliver_channel_message',
+			execute: async (input: unknown) => void ordered.push(input as { text: string; author: string }),
+		} as never)
+
 		await testBed.resolve(DeliverOrchestratorReply).handle(replied[0] as never)
 
-		const deliveries = testBed.externalSpy.getPublishedOfType('integration.channel.delivery_requested')
-		expect(deliveries).toHaveLength(1)
-		expect((deliveries[0] as ChannelDeliveryRequestedEvent).payload.text).toBeTruthy()
+		expect(ordered).toHaveLength(1)
+		expect(ordered[0]?.text).toBeTruthy()
 	})
 
 	it('a redelivered outcome announces once — the issue id is the dedup key', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
-		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value, providers: [ProviderKind.CLAUDE_CODE] })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
 		const issueId = '019fac48-06c6-7a11-afdf-29fff08d4a98'
 
 		expect(await queueResult(thread.id.value, issueId)).toBe(true)

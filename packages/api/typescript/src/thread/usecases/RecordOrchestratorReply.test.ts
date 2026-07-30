@@ -1,0 +1,146 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { container, type DependencyContainer } from 'tsyringe-neo'
+import { scheduledCommands } from '@codedm/contracts/db'
+import { DrizzleClient, DrizzleDatabaseDriver } from '@codedm/core-typescript'
+import { TestBed, givenThread } from '@test/support'
+import { MessageAuthor, TranscriptKind } from '@codedm/contracts-typescript/wire/enums'
+import { OPERATOR_ID } from '@auth/operator'
+import { RecordOrchestratorReply } from './RecordOrchestratorReply'
+import { TranscriptRepository } from '../repositories/TranscriptRepository'
+import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+
+/**
+ * The transactional body the handler used to run OUTSIDE any transaction (the outbox dispatches with
+ * no tx — DrizzleOutboxDispatcher's phase 2). It does three things, and each closes a gap:
+ *
+ *  1. WRITES THE SYSTEM TRANSCRIPT ENTRY — without it the agent's own words are absent from the very
+ *     buffer its next turn reads, so a conversation looks, to the orchestrator, like a series of
+ *     unanswered operator messages.
+ *  2. RESOLVES THE QUOTE — `findPlatformId(replyToEntryId)` turns our entry id into the platform
+ *     message id a WhatsApp quote needs. Absent-but-requested DEGRADES to no quote rather than
+ *     failing: a retried conversational turn is a second message in a real group.
+ *  3. ORDERS THE DELIVERY as a durable command, in the SAME transaction as (1). Before B3 these were
+ *     two independent operations, and the second one persisted nothing.
+ */
+describe('RecordOrchestratorReply — the reply is transcribed and its delivery ordered, atomically', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+	let db: DrizzleClient
+	let driver: DrizzleDatabaseDriver
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+		db = testBed.resolve(DrizzleClient)
+		driver = testBed.resolve(DrizzleDatabaseDriver)
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const commands = async () => db.select().from(scheduledCommands)
+
+	it('writes the SYSTEM entry and enqueues the delivery carrying the entry it IS', async () => {
+		const thread = await givenThread(testBed)
+
+		await testBed.resolve(RecordOrchestratorReply).execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'sim, claro' })
+
+		const entries = await testBed.resolve(TranscriptRepository).recentByThread(thread.id.value, 10)
+		const system = entries.find(e => e.kind === TranscriptKind.SYSTEM)
+		expect(system?.text).toBe('sim, claro')
+
+		const [command] = await commands()
+		expect({ name: command?.name, id: command?.id, input: command?.input }).toEqual({
+			name: 'deliver_channel_message',
+			id: system?.entryId,
+			input: {
+				ownerId: OPERATOR_ID,
+				channelId: thread.channelId,
+				contactExternalId: thread.contactRef.externalId,
+				text: 'sim, claro',
+				author: MessageAuthor.SYSTEM,
+				// The link that lets a human's reply TO this message resolve back to an entry (§8, flow 3).
+				replyEntryId: system?.entryId,
+			},
+		})
+	})
+
+	it('no citation requested — no quote on the wire', async () => {
+		const thread = await givenThread(testBed)
+
+		await testBed
+			.resolve(RecordOrchestratorReply)
+			.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'está dessa forma: xxx' })
+
+		const [command] = await commands()
+		const input = command?.input as { quotedMessageId?: string }
+		expect(input.quotedMessageId).toBeUndefined()
+	})
+
+	it('a citation that cannot be resolved degrades to no quote, and still orders the delivery', async () => {
+		const thread = await givenThread(testBed)
+
+		await testBed.resolve(RecordOrchestratorReply).execute({
+			ownerId: OPERATOR_ID,
+			threadId: thread.id.value,
+			text: 'resolvido',
+			replyToEntryId: '019e4d24-6524-7041-9e1c-8108180cddff',
+		})
+
+		const [command] = await commands()
+		const input = command?.input as { text: string; quotedMessageId?: string }
+		expect(input).toMatchObject({ text: 'resolvido' })
+		expect(input.quotedMessageId).toBeUndefined()
+	})
+
+	it('a citation that RESOLVES travels as the platform id the gateway quotes', async () => {
+		const thread = await givenThread(testBed)
+		const quoted = await testBed
+			.resolve(TranscriptRepository)
+			.append({ ownerId: OPERATOR_ID, threadId: thread.id.value, kind: TranscriptKind.CONTACT, text: 'e o cupom?' })
+		await testBed
+			.resolve(ConsumedMessageRepository)
+			.claim({ ownerId: OPERATOR_ID, channelId: thread.channelId, platformMessageId: 'wamid-asked' })
+		await testBed.resolve(ConsumedMessageRepository).linkEntry({
+			channelId: thread.channelId,
+			platformMessageId: 'wamid-asked',
+			threadId: thread.id.value,
+			entryId: quoted.entryId,
+		})
+
+		await testBed
+			.resolve(RecordOrchestratorReply)
+			.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'saiu', replyToEntryId: quoted.entryId })
+
+		const [command] = await commands()
+		const input = command?.input as { quotedMessageId?: string }
+		expect(input.quotedMessageId).toBe('wamid-asked')
+	})
+
+	it('a reply for a vanished thread is dropped, not forged — nothing is written and nothing is ordered', async () => {
+		const before = await testBed.probe().snapshot(['transcriptEntries', 'scheduledCommands'] as const)
+
+		await testBed
+			.resolve(RecordOrchestratorReply)
+			.execute({ ownerId: OPERATOR_ID, threadId: '019e4d24-6524-7041-9e1c-8108180cdd99', text: 'olá' })
+
+		expect(await testBed.probe().snapshot(['transcriptEntries', 'scheduledCommands'] as const)).toEqual(before)
+	})
+
+	it('ATOMICITY — a rolled-back transaction leaves NEITHER the entry NOR the command', async () => {
+		const thread = await givenThread(testBed)
+		const before = await testBed.probe().snapshot(['transcriptEntries', 'scheduledCommands'] as const)
+
+		await driver
+			.transaction(async tx => {
+				await testBed.resolve(RecordOrchestratorReply).execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'morre junto' }, tx)
+				throw new Error('the turn died after the writes, before the commit')
+			})
+			.catch(() => {})
+
+		expect(await testBed.probe().snapshot(['transcriptEntries', 'scheduledCommands'] as const)).toEqual(before)
+	})
+})

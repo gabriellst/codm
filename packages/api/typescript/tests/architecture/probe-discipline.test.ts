@@ -38,6 +38,14 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: "the SCHEDULED-COMMAND row is the subject (B3): it asserts the enqueued row's `id` (= entryId, the dedup handle), `name` and JSON `input` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; the atomicity case DOES use probe().snapshot()",
 	},
 	{
+		path: 'src/thread/usecases/RecordOrchestratorReply.test.ts',
+		why: "the SCHEDULED-COMMAND row is the subject (B3): it asserts the enqueued row's `name`/`id` and the JSON `input`'s `quotedMessageId`/`replyEntryId` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; the drop + atomicity cases DO use probe().snapshot()",
+	},
+	{
+		path: 'src/thread/handlers/DeliverOrchestratorReply.test.ts',
+		why: 'the SCHEDULED-COMMAND row is the subject (B3): the delegation case asserts the enqueued row `name` on `shared_scheduled_commands`, a column the probe does not expose; the envelope-guard case DOES use probe().snapshot()',
+	},
+	{
 		path: 'tests/kernel/DomainEventListByNameSince.test.ts',
 		why: 'raw db.update(events) write-only seed — backdates `occurred_at` timestamps to age event rows into/out of the sweep window while exercising DomainEventRepository.listByNameSince; no persisted-data read assertion goes through the raw client',
 	},
