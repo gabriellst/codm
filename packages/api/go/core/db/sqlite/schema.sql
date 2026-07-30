@@ -197,7 +197,7 @@ CREATE TABLE "issue_stop_policy_config" (
 CREATE TABLE "issue_stops" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_id" text NOT NULL,
-	"issue_id" text NOT NULL,
+	"issue_id" text,
 	"thread_id" text NOT NULL,
 	"kind" text NOT NULL,
 	"title" text NOT NULL,

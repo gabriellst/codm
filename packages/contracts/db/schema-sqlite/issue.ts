@@ -1,11 +1,12 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import { IssueStatus, ProviderKind, StopKind, StopResolution, IssueArchiveReason } from '../../generated/typescript/src/wire/enums'
+import { IssueStatus, ProviderKind, IssueArchiveReason } from '../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
  * `issue` (pgSchema namespace) → `issue_*` table prefix. SQLite-dialect mirror of
- * db/schema/issue.ts. Issues as units of concurrent work — the per-issue stops
- * (human-in-the-loop), the terminal log, and the global stop-criteria config.
+ * db/schema/issue.ts. Issues as units of concurrent work — the terminal log and
+ * the global stop-criteria config. The stops themselves moved to schema-sqlite/thread.ts
+ * (B4): a Stop is a child of the THREAD aggregate, not of the Issue.
  * bigint→integer (terminal_lines.seq); enum→text + CHECK.
  */
 export const issues = sqliteTable(
@@ -66,35 +67,6 @@ export const issues = sqliteTable(
 		index('issues_owner_status_idx').on(t.ownerId, t.status),
 		index('issues_thread_id_idx').on(t.threadId),
 		index('issues_completed_at_idx').on(t.completedAt),
-	],
-)
-
-export const stops = sqliteTable(
-	'issue_stops',
-	{
-		id: text('id').primaryKey(),
-
-		ownerId: text('owner_id').notNull(),
-		issueId: text('issue_id').notNull(),
-		threadId: text('thread_id').notNull(),
-
-		// StopKind (SERVER_ERROR | BLOCKED_BY_CLASSIFICATION | HUMAN_REQUESTED | APPROVAL_NEEDED | AUTH_REQUIRED).
-		kind: text('kind').$type<StopKind>().notNull(),
-		title: text('title').notNull(),
-		detail: text('detail').notNull(),
-		raisedAt: integer('raised_at', { mode: 'timestamp_ms' })
-			.notNull()
-			.$defaultFn(() => new Date()),
-
-		// StopResolution (must match the kind) — null while open.
-		resolution: text('resolution').$type<StopResolution>(),
-		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
-	},
-	t => [
-		enumCheck('issue_stops_kind_check', t.kind, Object.values(StopKind)),
-		enumCheck('issue_stops_resolution_check', t.resolution, Object.values(StopResolution)),
-		index('stops_issue_id_idx').on(t.issueId),
-		index('stops_thread_id_idx').on(t.threadId),
 	],
 )
 

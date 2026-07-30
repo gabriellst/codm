@@ -6,6 +6,8 @@ import {
 	BufferSize,
 	TranscriptKind,
 	ClassificationMethod,
+	StopKind,
+	StopResolution,
 } from '../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
@@ -101,6 +103,52 @@ export const transcriptEntries = sqliteTable(
 		enumCheck('thread_transcript_entries_classification_check', t.classification, Object.values(ClassificationMethod)),
 		index('transcript_entries_thread_at_idx').on(t.threadId, t.at),
 		index('transcript_entries_issue_id_idx').on(t.issueId),
+	],
+)
+
+/**
+ * `issue_stops` — the human-in-the-loop stops. Defined HERE, in the thread schema, because a Stop is a
+ * CHILD OF THE THREAD aggregate since B4 (spec decision 4): `Thread.raiseStop` / `Thread.resolveStop`
+ * are the only writers, and `ThreadRepository.save` persists them in the thread's transaction.
+ *
+ * ### The physical name stays `issue_stops` (B4, decision D-A)
+ * Ownership is expressed by this file, not by the prefix. The rename is a separate front: the Go side
+ * reads this table from THREE hand-written sqlc query files (`core/db/sqlite/query/{issue,thread,ui}.sql`,
+ * one of them an `UPDATE`) plus six generated ones, and drizzle-kit cannot infer a table rename — it
+ * emits DROP + CREATE and, under `strict: true`, asks. The Drizzle symbol (`stops`) and the index names
+ * (`stops_*_idx`) were already prefix-free, so nothing in TS reads the physical name at all.
+ *
+ * `issue_id` is NULLABLE (B4, spec decision 4). That is the whole point of the migration: a stop can be
+ * raised at THREAD level — the orchestrator's needs-approval, before any issue exists — which was
+ * unreachable while `RaiseStopInputSchema`/`AskOperatorInputSchema` demanded an `issueId`. Additive: no
+ * backfill, every existing row already has one.
+ */
+export const stops = sqliteTable(
+	'issue_stops',
+	{
+		id: text('id').primaryKey(),
+
+		ownerId: text('owner_id').notNull(),
+		issueId: text('issue_id'),
+		threadId: text('thread_id').notNull(),
+
+		// StopKind (SERVER_ERROR | BLOCKED_BY_CLASSIFICATION | HUMAN_REQUESTED | APPROVAL_NEEDED | AUTH_REQUIRED).
+		kind: text('kind').$type<StopKind>().notNull(),
+		title: text('title').notNull(),
+		detail: text('detail').notNull(),
+		raisedAt: integer('raised_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+
+		// StopResolution (must match the kind) — null while open.
+		resolution: text('resolution').$type<StopResolution>(),
+		resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
+	},
+	t => [
+		enumCheck('issue_stops_kind_check', t.kind, Object.values(StopKind)),
+		enumCheck('issue_stops_resolution_check', t.resolution, Object.values(StopResolution)),
+		index('stops_issue_id_idx').on(t.issueId),
+		index('stops_thread_id_idx').on(t.threadId),
 	],
 )
 
