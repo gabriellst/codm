@@ -22,6 +22,24 @@ export class DrizzleOpenIssuesReader extends OpenIssuesReader {
 		return result.success ? result.data : []
 	}
 
+	/**
+	 * NO `tryCatchAsync`, unlike its two siblings — and the asymmetry is the point.
+	 *
+	 * `openIssues` and `issueIdForEntry` feed a CLASSIFIER: degrading to "no candidates" on a read error
+	 * costs a context match and the message still lands. This one feeds a GUARD on a destructive action,
+	 * where the same posture reads "I could not check, so go ahead and delete it" — a read failure would
+	 * silently authorise the exact thing decision 2 exists to refuse. A guard that cannot read must fail
+	 * CLOSED, and the honest way to fail closed is to let the error out.
+	 */
+	async hasWorkingIssue(threadId: string): Promise<boolean> {
+		const rows = await this.db
+			.select({ id: issues.id })
+			.from(issues)
+			.where(and(eq(issues.threadId, threadId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false)))
+			.limit(1)
+		return rows.length > 0
+	}
+
 	async issueIdForEntry(entryId: string): Promise<string | undefined> {
 		const result = await tryCatchAsync(async () => {
 			const rows = await this.db

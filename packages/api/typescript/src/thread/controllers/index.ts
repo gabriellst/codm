@@ -1,4 +1,5 @@
 export { AttachThreadController } from './AttachThread'
+export { DeleteThreadController } from './DeleteThread'
 export { ConfigureContextBufferController } from './ConfigureContextBuffer'
 export { ConfigureMentionGateController } from './ConfigureMentionGate'
 export { GetSessionChatController } from './GetSessionChat'

@@ -14,6 +14,8 @@ export type ThreadDomainErrors =
 	| 'STOP_NOT_IN_THREAD'
 	| 'STOP_ALREADY_RESOLVED'
 	| 'RESOLUTION_NOT_APPLICABLE'
+	// Soft delete (thread-deletion spec, decision 8) — `Thread.delete()` refuses a second deletion.
+	| 'THREAD_ALREADY_DELETED'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
 // Application errors — orchestration in the thread use cases + routing pipeline.
@@ -29,6 +31,11 @@ export type ThreadApplicationErrors =
 	| 'ENTRY_NOT_FOUND'
 	| 'ENTRY_NOT_INVOCABLE'
 	| 'CLARIFICATION_ALREADY_PENDING'
+	// Soft delete (thread-deletion spec, decision 2). CROSS-AGGREGATE, which is why it is an application
+	// code and not a domain one: neither the WORKING issue (another context's row) nor the open stop (a
+	// child `Thread` does not hydrate) is visible to the aggregate, so `DeleteThread` reads both and
+	// decides. Never a 200 — the operator resolves or cancels the work first.
+	| 'THREAD_HAS_ACTIVE_WORK'
 	// The stop control plane, moved here in B4 (spec decision 4) with the use cases that raise it.
 	| 'STOP_NOT_FOUND'
 	| 'STOP_CRITERION_DISABLED'
@@ -59,6 +66,12 @@ registerErrorCodes({
 	STOP_NOT_IN_THREAD: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	STOP_ALREADY_RESOLVED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	RESOLUTION_NOT_APPLICABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// CONFLICT, not 422: the request is well-formed and was legal a moment ago — the row simply moved on.
+	// Same status THREAD_ALREADY_ATTACHED carries, for the same "you are acting on a stale screen" cause.
+	THREAD_ALREADY_DELETED: HttpStatusCode.CONFLICT,
+	// 422 like every other "the state forbids this right now" code in this context (THREAD_PAUSED,
+	// ISSUE_ARCHIVED): the operator resolves the stop or lets the issue finish, then deletes.
+	THREAD_HAS_ACTIVE_WORK: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	THREAD_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_ALREADY_ATTACHED: HttpStatusCode.CONFLICT,
 	THREAD_PAUSED: HttpStatusCode.UNPROCESSABLE_ENTITY,

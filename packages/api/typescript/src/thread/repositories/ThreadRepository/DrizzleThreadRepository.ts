@@ -70,6 +70,16 @@ export class DrizzleThreadRepository extends ThreadRepository {
 						participants: data.participants,
 						bufferSize: data.bufferSize,
 						status: data.status,
+						// Load-bearing for BOTH directions of the soft delete: `delete()` stamps it and
+						// `revive()` clears it, and neither reaches the database if this column is missing from
+						// the update set — the row already exists, so `save` is always the UPDATE branch here.
+						deletedAt: data.deletedAt,
+						// The contact's own fields travel too, because `revive()` re-applies the wizard's new
+						// settings on the SAME row (thread-deletion spec, decision 4). Without them a re-attach
+						// would silently keep the workspace and display name of the conversation that was deleted.
+						contactDisplayName: data.contactDisplayName,
+						contactKind: data.contactKind,
+						workspaceId: data.workspaceId,
 						updatedAt: new Date(),
 						version: data.version,
 					},
@@ -173,6 +183,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			participants: row.participants as Participant[],
 			bufferSize: row.bufferSize as BufferSize,
 			status: row.status as ThreadStatus,
+			deletedAt: row.deletedAt ?? undefined,
 		})
 		return new Thread({ ...parsed, id: row.id, createdAt: row.createdAt, updatedAt: row.updatedAt, version: row.version })
 	}
@@ -193,6 +204,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			participants: entity.participants,
 			bufferSize: entity.bufferSize,
 			status: entity.status,
+			deletedAt: entity.deletedAt ?? null,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 			version: entity.version,

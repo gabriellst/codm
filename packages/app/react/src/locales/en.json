@@ -425,6 +425,8 @@
 		"TERMINAL_ALREADY_RUNNING": "A terminal session is already running for this issue.",
 		"TERMINAL_SPAWN_FAILED": "Failed to start the terminal session.",
 		"THREAD_ALREADY_ATTACHED": "A thread is already attached to this contact.",
+		"THREAD_ALREADY_DELETED": "This conversation has already been deleted.",
+		"THREAD_HAS_ACTIVE_WORK": "This conversation has work in progress — resolve the stop or wait for the agent to finish before deleting.",
 		"THREAD_NOT_FOUND": "Thread not found.",
 		"THREAD_NOT_PAUSED": "Pause the thread to talk directly.",
 		"THREAD_PAUSED": "This thread is paused — use direct mode instead.",

@@ -341,4 +341,74 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 		})
 		expect((event as ThreadStopResolvedEvent).payload.issueId).toBeUndefined()
 	})
+
+	// ── Soft delete (thread-deletion spec, decisions 1, 4 and 8) ────────────────────────────────────
+
+	it('delete() stamps deletedAt — a born thread has none', () => {
+		const t = Thread.create(base)
+		expect(t.deletedAt).toBeUndefined()
+
+		t.delete()
+
+		expect(t.deletedAt).toBeInstanceOf(Date)
+	})
+
+	it('AC-1 — deleting twice is rejected (THREAD_ALREADY_DELETED)', () => {
+		const t = Thread.create(base)
+		t.delete()
+
+		expect(() => t.delete()).toThrow(expect.objectContaining({ name: 'THREAD_ALREADY_DELETED' }))
+	})
+
+	/**
+	 * AC-5, the ENTITY half. The row SURVIVES a delete, so reviving it is a state transition on the same
+	 * aggregate rather than a construction — which is exactly why `AttachThread` cannot simply call
+	 * `Thread.create` again: the unique on (owner, channel, contact) would reject the insert (decision 4).
+	 */
+	it('AC-5 — revive() clears deletedAt and re-applies the new attach settings', () => {
+		const t = Thread.create(base)
+		t.pause()
+		t.delete()
+
+		t.revive({
+			contactRef: { externalId: 'c1', displayName: 'Contact Renamed', kind: ContactKind.USER },
+			workspaceId: '00000000-0000-4000-8000-0000000000cc',
+			providers: [ProviderKind.CODEX],
+			mentionTag: '@other-workspace',
+			participants: [
+				{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true },
+				{ participantId: 'c1', name: 'Contact Renamed', source: 'WA', canInvoke: false },
+			],
+		})
+
+		expect(t.deletedAt).toBeUndefined()
+		expect(t.workspaceId).toBe('00000000-0000-4000-8000-0000000000cc')
+		expect(t.providers).toEqual([ProviderKind.CODEX])
+		expect(t.mentionGate).toEqual({ enabled: true, tag: '@other-workspace' })
+		expect(t.contactRef.displayName).toBe('Contact Renamed')
+		// A revived thread behaves like a freshly attached one — the pause it carried to its grave does
+		// not survive the re-configuration.
+		expect(t.paused).toBe(false)
+		expect(t.status).toBe('IDLE')
+	})
+
+	it('revive() keeps the create-time invariants — no providers, no invoker, no revival', () => {
+		const deleted = () => {
+			const t = Thread.create(base)
+			t.delete()
+			return t
+		}
+		const settings = { contactRef: base.contactRef, workspaceId: base.workspaceId, mentionTag: '@base' }
+
+		expect(() => deleted().revive({ ...settings, providers: [], participants: base.participants })).toThrow(
+			expect.objectContaining({ name: 'NO_PROVIDER_SELECTED' }),
+		)
+		expect(() =>
+			deleted().revive({
+				...settings,
+				providers: [ProviderKind.CLAUDE_CODE],
+				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false }],
+			}),
+		).toThrow(expect.objectContaining({ name: 'LAST_INVOKER' }))
+	})
 })

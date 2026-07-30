@@ -13,4 +13,9 @@ export class MockOpenIssuesReader extends OpenIssuesReader {
 	async issueIdForEntry(_entryId: string): Promise<string | undefined> {
 		return undefined
 	}
+
+	/** No issue table at all in `mock`, so nothing is working — this half never blocks a delete. */
+	async hasWorkingIssue(_threadId: string): Promise<boolean> {
+		return false
+	}
 }

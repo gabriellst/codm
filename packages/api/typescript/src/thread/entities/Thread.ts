@@ -114,6 +114,14 @@ export const ThreadSchema = z.object({
 	participants: z.array(ParticipantSchema),
 	bufferSize: z.enum(BufferSize),
 	status: z.enum(ThreadStatus),
+	/**
+	 * SOFT DELETE (thread-deletion spec, decision 1) — absent while the conversation is configured.
+	 *
+	 * It sits on the aggregate rather than only on the row because two RULES read it: `delete()` refuses
+	 * a second deletion, and `revive()` is the only way back. A column the entity could not see would
+	 * push both into the repository, where neither is enforceable.
+	 */
+	deletedAt: z.date().optional(),
 })
 
 export type ThreadProps = Z.infer<typeof ThreadSchema>
@@ -219,6 +227,76 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			bufferSize: data.bufferSize ?? BufferSize._50,
 			status: ThreadStatus.IDLE,
 		})
+	}
+
+	/**
+	 * Apagar a conversa (thread-deletion spec, decisions 1 and 8) — a SOFT delete.
+	 *
+	 * Nothing is removed. The row stays, and so does every child it owns: the transcript, the issues, the
+	 * stops, the artifacts. What changes is that the conversation stops being CONFIGURED — every console
+	 * read filters this column out (decision 5) and an inbound from the contact is dropped exactly as if
+	 * it had never been attached (decision 3).
+	 *
+	 * The double-delete guard is a domain rule and not a repository `WHERE deleted_at IS NULL`: a second
+	 * delete is the operator acting on a stale screen, and the honest answer is a named refusal, not a
+	 * silent no-op that reports success. The cross-aggregate half of "may I delete this" — an issue still
+	 * WORKING, a stop still open — is deliberately NOT here: this aggregate hydrates neither, so it would
+	 * have to be handed facts it cannot verify. `DeleteThread` reads them and raises THREAD_HAS_ACTIVE_WORK.
+	 *
+	 * It raises NO domain event, and that is decision 6 rather than an omission: the console is
+	 * single-operator and invalidates its queries on the mutation's `onSuccess`, so there is no consumer
+	 * for the fact. An event nobody subscribes to is an outbox row that costs a write and teaches a reader
+	 * that something reacts.
+	 */
+	delete(): void {
+		if (this.deletedAt) {
+			throw new BaseError<DomainErrors>('THREAD_ALREADY_DELETED', `thread ${this.id.value} was deleted at ${this.deletedAt.toISOString()}`)
+		}
+		this.deletedAt = new Date()
+	}
+
+	/**
+	 * Re-attach the same contact (thread-deletion spec, decision 4) — the way BACK from `delete()`.
+	 *
+	 * Why a transition and not a fresh `Thread.create`: the row never left, and
+	 * `threads_owner_channel_contact_unq` would reject the second insert. Reviving in place is also what
+	 * makes the promise in the decision true — the OLD TRANSCRIPT SURVIVES, because it hangs off this id
+	 * and this id is unchanged. It is the same conversation, reconfigured.
+	 *
+	 * Everything the wizard just chose WINS: workspace, providers, citation tag, roster, contact display
+	 * name, buffer. And the control plane resets to what a freshly attached thread has — a thread that
+	 * was paused when it was deleted must not come back mute, because the operator who re-attached it
+	 * never asked for silence.
+	 *
+	 * The two create-time invariants are re-checked rather than assumed: `revive` accepts the same
+	 * caller-supplied data `create` does, so it admits exactly the same two ways of being wrong.
+	 *
+	 * There is deliberately no "this thread is not deleted" guard. `AttachThread` is the only caller and
+	 * it reaches this method only on the deleted branch — the live branch raises THREAD_ALREADY_ATTACHED
+	 * before getting here. Inventing a domain code for a state the one call site cannot produce would be
+	 * vocabulary the product does not have.
+	 */
+	revive(data: {
+		contactRef: ContactRef
+		workspaceId: string
+		providers: ProviderKind[]
+		mentionTag: string
+		participants: Participant[]
+		bufferSize?: BufferSize
+	}): void {
+		if (data.providers.length === 0) throw new BaseError<DomainErrors>('NO_PROVIDER_SELECTED')
+		if (!data.participants.some(p => p.canInvoke)) throw new BaseError<DomainErrors>('LAST_INVOKER', 'a thread needs at least one invoker')
+
+		this.deletedAt = undefined
+		this.contactRef = data.contactRef
+		this.workspaceId = data.workspaceId
+		this.providers = data.providers
+		this.mentionGate = { enabled: true, tag: data.mentionTag }
+		this.participants = data.participants
+		this.bufferSize = data.bufferSize ?? BufferSize._50
+		this.paused = false
+		this.status = ThreadStatus.IDLE
+		this.validate()
 	}
 
 	pause(): void {

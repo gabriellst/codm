@@ -1,4 +1,5 @@
 export { AttachThread, AttachThreadInputSchema, AttachThreadOutputSchema } from './AttachThread'
+export { DeleteThread, DeleteThreadInputSchema, DeleteThreadOutputSchema } from './DeleteThread'
 export { PauseThread, PauseThreadInputSchema, PauseThreadOutputSchema } from './PauseThread'
 export { ResumeThread, ResumeThreadInputSchema, ResumeThreadOutputSchema } from './ResumeThread'
 export {

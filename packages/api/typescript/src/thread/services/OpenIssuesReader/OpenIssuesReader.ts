@@ -23,4 +23,14 @@ export abstract class OpenIssuesReader {
 	abstract openIssues(threadId: string): Promise<OpenIssueRef[]>
 	/** Resolve which issue a transcript entry was routed to (for reply-quote authority). */
 	abstract issueIdForEntry(entryId: string): Promise<string | undefined>
+	/**
+	 * Is an agent WORKING on this thread right now? The live-work half of the delete guard
+	 * (thread-deletion spec, decision 2), which `DeleteThread` pairs with `ThreadRepository.openStops`.
+	 *
+	 * Deliberately narrower than `openIssues`, and the two must not be conflated: `openIssues` is the
+	 * classifier's candidate set (anything non-archived and non-COMPLETED — a NEEDS_INPUT issue belongs
+	 * in it), while this asks the far smaller question the decision names, "non-archived AND WORKING".
+	 * An operator whose thread is full of issues waiting on THEM must still be able to delete it.
+	 */
+	abstract hasWorkingIssue(threadId: string): Promise<boolean>
 }

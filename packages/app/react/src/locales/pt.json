@@ -425,6 +425,8 @@
 		"TERMINAL_ALREADY_RUNNING": "Já existe uma sessão de terminal ativa para esta issue.",
 		"TERMINAL_SPAWN_FAILED": "Falha ao iniciar a sessão de terminal.",
 		"THREAD_ALREADY_ATTACHED": "Já existe uma thread para este contato.",
+		"THREAD_ALREADY_DELETED": "Esta conversa já foi apagada.",
+		"THREAD_HAS_ACTIVE_WORK": "Esta conversa tem trabalho em andamento — resolva o stop ou aguarde o agente terminar antes de apagar.",
 		"THREAD_NOT_FOUND": "Thread não encontrada.",
 		"THREAD_NOT_PAUSED": "Pause a thread para falar diretamente.",
 		"THREAD_PAUSED": "Esta thread está pausada — use o modo direto.",
