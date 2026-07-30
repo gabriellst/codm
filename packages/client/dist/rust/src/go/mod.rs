@@ -229,7 +229,7 @@ pub mod types {
         pub owner_id: ::std::string::String,
         #[serde(rename = "senderId")]
         pub sender_id: ::std::string::String,
-        pub state: codedm_contracts_rust::wire::enums::ChatPresenceType,
+        pub state: ::codedm_contracts_rust::wire::enums::ChatPresenceType,
     }
     impl ::std::convert::From<&ChannelChatPresenceUpdatedPayload>
     for ChannelChatPresenceUpdatedPayload {
@@ -324,7 +324,7 @@ pub mod types {
         pub name: ::std::string::String,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
     }
     impl ::std::convert::From<&ChannelCreatedPayload> for ChannelCreatedPayload {
         fn from(value: &ChannelCreatedPayload) -> Self {
@@ -1625,7 +1625,7 @@ pub mod types {
         pub message_id: ::std::string::String,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "remoteId")]
         pub remote_id: ::std::string::String,
     }
@@ -1761,10 +1761,10 @@ pub mod types {
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
-        pub message_type: codedm_contracts_rust::wire::enums::MessageType,
+        pub message_type: ::codedm_contracts_rust::wire::enums::MessageType,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "remoteId")]
         pub remote_id: ::std::string::String,
         #[serde(rename = "senderId")]
@@ -1993,7 +1993,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadInternalText {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2117,7 +2117,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappAudio {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2241,7 +2241,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappContact {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2365,7 +2365,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappDocument {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2489,7 +2489,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappImage {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2613,7 +2613,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappLocation {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2737,7 +2737,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappPoll {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2861,7 +2861,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappReaction {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2985,7 +2985,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappSticker {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3109,7 +3109,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappText {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -3233,7 +3233,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ChannelMessageReceivedPayloadWhatsappVideo {
-        pub author: codedm_contracts_rust::wire::enums::MessageAuthor,
+        pub author: ::codedm_contracts_rust::wire::enums::MessageAuthor,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -4963,11 +4963,11 @@ pub mod types {
         pub channel_id: ::uuid::Uuid,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "remoteId")]
         pub remote_id: ::std::string::String,
         #[serde(rename = "remoteType")]
-        pub remote_type: codedm_contracts_rust::wire::enums::ContactKind,
+        pub remote_type: ::codedm_contracts_rust::wire::enums::ContactKind,
     }
     impl ::std::convert::From<&ChannelRemoteCreatedPayload>
     for ChannelRemoteCreatedPayload {
@@ -5385,7 +5385,7 @@ pub mod types {
         #[serde(rename = "remoteId")]
         pub remote_id: ::std::string::String,
         #[serde(rename = "type")]
-        pub type_: codedm_contracts_rust::wire::enums::ContactKind,
+        pub type_: ::codedm_contracts_rust::wire::enums::ContactKind,
     }
     impl ::std::convert::From<&ChannelRemoteUpdatedPayload>
     for ChannelRemoteUpdatedPayload {
@@ -5631,7 +5631,7 @@ pub mod types {
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(rename = "historySyncType")]
-        pub history_sync_type: codedm_contracts_rust::wire::enums::HistorySyncType,
+        pub history_sync_type: ::codedm_contracts_rust::wire::enums::HistorySyncType,
         #[serde(rename = "ownerId")]
         pub owner_id: ::std::string::String,
         pub percent: i64,
@@ -6137,8 +6137,8 @@ pub mod types {
         pub created_at: ::chrono::DateTime<::chrono::offset::Utc>,
         pub id: ::std::string::String,
         pub name: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
-        pub status: codedm_contracts_rust::wire::enums::ChannelStatus,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub status: ::codedm_contracts_rust::wire::enums::ChannelStatus,
     }
     impl ::std::convert::From<&CreateChannelOutput> for CreateChannelOutput {
         fn from(value: &CreateChannelOutput) -> Self {
@@ -8239,8 +8239,8 @@ pub mod types {
         pub name: ::std::string::String,
         #[serde(rename = "ownerRemoteId")]
         pub owner_remote_id: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
-        pub status: codedm_contracts_rust::wire::enums::ChannelStatus,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub status: ::codedm_contracts_rust::wire::enums::ChannelStatus,
     }
     impl ::std::convert::From<&GetChannelOutput> for GetChannelOutput {
         fn from(value: &GetChannelOutput) -> Self {
@@ -8311,8 +8311,8 @@ pub mod types {
         pub name: ::std::string::String,
         #[serde(rename = "ownerRemoteId")]
         pub owner_remote_id: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
-        pub status: codedm_contracts_rust::wire::enums::ChannelStatus,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub status: ::codedm_contracts_rust::wire::enums::ChannelStatus,
     }
     impl ::std::convert::From<&GetOrCreateChannelOutput> for GetOrCreateChannelOutput {
         fn from(value: &GetOrCreateChannelOutput) -> Self {
@@ -9511,8 +9511,8 @@ pub mod types {
         pub credentials: ::serde_json::Value,
         pub id: ::std::string::String,
         pub name: ::std::string::String,
-        pub platform: codedm_contracts_rust::wire::enums::ChannelKind,
-        pub status: codedm_contracts_rust::wire::enums::ChannelStatus,
+        pub platform: ::codedm_contracts_rust::wire::enums::ChannelKind,
+        pub status: ::codedm_contracts_rust::wire::enums::ChannelStatus,
     }
     impl ::std::convert::From<&ListChannelsItem> for ListChannelsItem {
         fn from(value: &ListChannelsItem) -> Self {
@@ -10648,7 +10648,7 @@ pub mod types {
     pub struct SendChatPresenceBody {
         #[serde(rename = "channelId")]
         pub channel_id: ::std::string::String,
-        pub presence: codedm_contracts_rust::wire::enums::ChatPresenceType,
+        pub presence: ::codedm_contracts_rust::wire::enums::ChatPresenceType,
         #[serde(rename = "remoteId")]
         pub remote_id: ::std::string::String,
     }
@@ -11407,7 +11407,7 @@ pub mod types {
         )]
         pub file_name: ::std::option::Option<::std::string::String>,
         #[serde(rename = "mediaType")]
-        pub media_type: codedm_contracts_rust::wire::enums::MessageType,
+        pub media_type: ::codedm_contracts_rust::wire::enums::MessageType,
         #[serde(rename = "mediaUrl")]
         pub media_url: ::std::string::String,
         #[serde(rename = "remoteId")]
@@ -11730,7 +11730,7 @@ pub mod types {
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub font: ::std::option::Option<::std::string::String>,
         #[serde(rename = "statusType")]
-        pub status_type: codedm_contracts_rust::wire::enums::MessageType,
+        pub status_type: ::codedm_contracts_rust::wire::enums::MessageType,
     }
     impl ::std::convert::From<&SendStatusBody> for SendStatusBody {
         fn from(value: &SendStatusBody) -> Self {
@@ -12536,7 +12536,7 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SetPresenceBody {
-        pub presence: codedm_contracts_rust::wire::enums::PresenceType,
+        pub presence: ::codedm_contracts_rust::wire::enums::PresenceType,
     }
     impl ::std::convert::From<&SetPresenceBody> for SetPresenceBody {
         fn from(value: &SetPresenceBody) -> Self {
@@ -13520,7 +13520,7 @@ Sends a `GET` request to `/channel/channels/resolve`
 */
     pub async fn get_or_create_channel<'a>(
         &'a self,
-        platform: &'a codedm_contracts_rust::wire::enums::ChannelKind,
+        platform: &'a ::codedm_contracts_rust::wire::enums::ChannelKind,
     ) -> Result<
         ResponseValue<types::GetOrCreateChannelOutput>,
         Error<types::ErrorResponse>,

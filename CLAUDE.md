@@ -11,14 +11,14 @@ Domain-agnostic: the base ships **auth, multi-tenancy (single `ownerId` axis), b
 | Path | Stack | Role |
 |---|---|---|
 | `packages/contracts` | TypeSpec + Drizzle | Source of truth: cross-boundary enums, integration events, DB schema |
-| `packages/contracts/generated/{ts,go}` | codegen output | Per-language wire bindings consumed by services |
+| `packages/contracts/generated/{ts,go,rust}` | codegen output | Per-language wire bindings consumed by services (rust = crate standalone `codedm-contracts-rust`, path dep do shell Tauri) |
 | `packages/api/typescript` | Bun + Drizzle + tsyringe | Auth, reads, projections, BFF queries |
 | `packages/api/go` | Go + database/sql + fx + net/http | Workers, indexers, schedulers |
 | `packages/app/react` | React + Vite + TanStack Router/Start | App (`/app/...`) — auth, dashboards, mutations |
 | `packages/app/astro` | Astro 5 + MDX + Tailwind 4 | Landing pages + blog + SEO (served at `/`, with locale prefixes) |
 | `packages/app/tauri` | Tauri v2 (Rust shell) | Desktop shell hosting the react console + TS/Go sidecars (see `.claude/skills/desktop-shell/SKILL.md`) |
 | `packages/app/styles` | CSS (design tokens) | Shared tokens consumed by `app-react` + `app-astro` (`@codedm/app-styles/tokens.css`). |
-| `packages/client/{ts,go}` | Kubb / oapi-codegen | Symmetric SDKs (each consumes all 2 backends) |
+| `packages/client/{ts,go,rust}` | Kubb / oapi-codegen / progenitor | Symmetric SDKs (each consumes all 2 backends; rust = crate standalone `codedm-client-rust`, enums de contrato deduplicados via `codedm-contracts-rust`) |
 | `packages/e2e` | Playwright | Cross-stack E2E |
 
 Build orchestrated by **Nx** for TS targets + **Go modules** for Go.
@@ -100,7 +100,7 @@ bun lint             # lint em todos os workspaces
 # SDK + OpenAPI + contracts
 bun sdk              # regenera SDK (client:generate + emit-openapi upstream)
 bun emit-openapi     # regenera só os openapi.json (api-ts + api-go)
-bun contracts        # regenera bindings de contracts (TypeSpec → ts/go)
+bun contracts        # regenera bindings de contracts (TypeSpec → ts/go/rust + fixtures; roda cargo check no crate rust)
 
 # Banco de dados (um arquivo SQLite; o boot migra sozinho — `migrate:dev` é só conveniência)
 bun migrate:create           # AUTORA uma migração SQLite (drizzle-kit generate →

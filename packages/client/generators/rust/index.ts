@@ -61,7 +61,9 @@ function splitDefaultResponses(spec: Record<string, unknown>): void {
 async function contractEnumReplacements(): Promise<Record<string, string>> {
 	const yamlText = await readFile(contractsSpec, 'utf-8')
 	const parsed = parseContractsOpenapi(yamlText)
-	return Object.fromEntries(parsed.enums.map(e => [e.name, `codedm_contracts_rust::wire::enums::${e.name}`]))
+	// Leading `::` — absolute path, immune to relative resolution inside progenitor's
+	// nested `mod types` (matches progenitor's own `::std::...` style).
+	return Object.fromEntries(parsed.enums.map(e => [e.name, `::codedm_contracts_rust::wire::enums::${e.name}`]))
 }
 
 async function preprocessAll(sources: ApiSource[]): Promise<Plan[]> {

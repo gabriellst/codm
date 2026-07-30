@@ -26,3 +26,7 @@ progenitor-client = "0.10"
 # progenitor emits ::regress::Regex for pattern-validated strings; version paired with typify 0.4.
 regress = "0.10"
 codedm-contracts-rust = { path = "../../../contracts/generated/rust" }
+
+[dev-dependencies]
+# live_smoke.rs only (#[ignore]d by default — needs live backends).
+tokio = { version = "1", features = ["macros", "rt"] }

@@ -618,6 +618,20 @@ substitui a definição local por re-export do crate de contracts. Resultado: **
 definido no contracts, visível no cliente. Rail negativo: grep no código gerado do cliente
 proíbe `pub enum <NomeDeEnumDeContrato>`.
 
+> **ACHADOS DE IMPLEMENTAÇÃO (2026-07-30):**
+> 1. `with_replacement(name, "::codedm_contracts_rust::wire::enums::<Name>", [Display, FromStr])`
+>    — o caminho DEVE ser absoluto (`::`-prefixado, estilo do próprio progenitor) e o crate
+>    de contracts DEVE estar em `[dependencies]` do dist (não `[dev-dependencies]` — cargo só
+>    passa `--extern` do lib para deps normais; a mensagem `E0433 unlinked crate` é o sintoma).
+> 2. **Panic do progenitor 0.10** (`method.rs:1197 response_types.len() <= 1`): TODA operação
+>    do api-go declara `default` (envelope de erro) ao lado do 2xx específico — progenitor só
+>    descarta `default` após um range `2XX`, então 200+default entram ambos no filtro de
+>    sucesso. Contorno rust-local no gerador (`splitDefaultResponses`): `default` → `4XX`+`5XX`,
+>    que caem no filtro de ERRO — preserva o envelope de erro **tipado** em vez de descartá-lo.
+>    kubb/oapi-codegen seguem consumindo `default`; o preprocess compartilhado não muda.
+> 3. `regress = "0.10"` é dep obrigatória do dist: progenitor emite `::regress::Regex` para
+>    strings com `pattern` (o spec do daemon TS tem).
+
 ### F5 — Suíte vermelha + testes extensivos (corrige §2.4 e entrega §4)
 
 1. Os 3 testes vermelhos **morrem nesta rodada**: os de Rust são reescritos contra o emissor
