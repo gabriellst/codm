@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Sidebar } from '@/components/Navbar'
 import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
-import { AppChrome } from '@/components/console/AppChrome'
 import { SupervisionBanner } from '@/components/console/SupervisionBanner'
 import { Dialog } from '@/components/ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
@@ -19,9 +18,11 @@ function AuthLayout() {
 	const drawerContent = useDrawerStore(s => s.content)
 
 	return (
-		<div className="flex h-dvh flex-col overflow-hidden bg-route-background text-foreground">
-			{/* Integrated window title bar (native traffic lights overlay it on macOS). */}
-			<AppChrome />
+		// `h-full`, not `h-dvh`: the integrated title bar (AppChrome) is mounted in `__root.tsx` — it
+		// belongs to the WINDOW, not to the authenticated console — and has already taken its band out
+		// of the viewport. Sizing against the viewport here would push the console past the window's
+		// bottom edge by the height of the bar.
+		<div className="flex h-full flex-col overflow-hidden bg-route-background text-foreground">
 			{/* Runtime supervision, above everything and outside the scroll: a dead gateway means the
 			    channel is deaf, and the operator has to see that from any screen. Renders null while
 			    the fleet is healthy. */}

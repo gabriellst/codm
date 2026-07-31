@@ -39,7 +39,9 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	}
 
 	return (
-		<div className={cn('flex min-h-dvh flex-col bg-route-background text-foreground', className)} {...props}>
+		// `min-h-full`, not `min-h-dvh`: sized against the box the root layout left under the AppChrome
+		// title bar, never against the viewport (which no longer belongs entirely to the route).
+		<div className={cn('flex min-h-full flex-col bg-route-background text-foreground', className)} {...props}>
 			<header className="flex items-center justify-between px-6 py-6 md:px-10">
 				<Logo />
 				<Link to="/dashboard" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">

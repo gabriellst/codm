@@ -92,7 +92,8 @@ function StyleguideRoute() {
 
 	return (
 		<div className={dark ? 'dark' : undefined}>
-			<div className="min-h-dvh bg-route-background text-foreground">
+			{/* `min-h-full`: the AppChrome title bar in `__root.tsx` owns the top band of the viewport. */}
+			<div className="min-h-full bg-route-background text-foreground">
 				<div className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-12 md:px-10 md:py-16">
 					{/* Masthead */}
 					<header className="flex flex-col gap-6">

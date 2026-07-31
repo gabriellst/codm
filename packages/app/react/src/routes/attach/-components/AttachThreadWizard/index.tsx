@@ -124,7 +124,10 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 	}
 
 	return (
-		<div className={cn('flex min-h-dvh flex-col bg-route-background text-foreground', className)} {...props}>
+		// `min-h-full`, not `min-h-dvh`: the AppChrome title bar (mounted in `__root.tsx`) already took
+		// its band out of the viewport, so the wizard fills the box the root left it and grows past it
+		// into the root's scroller when a step is tall.
+		<div className={cn('flex min-h-full flex-col bg-route-background text-foreground', className)} {...props}>
 			<header className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-5 md:px-10">
 				<Logo className="text-base" />
 				<nav className="flex items-center justify-center gap-6">
