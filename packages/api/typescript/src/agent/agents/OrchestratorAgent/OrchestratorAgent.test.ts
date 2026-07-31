@@ -37,6 +37,10 @@ const input = () =>
 		contactKind: ContactKind.GROUP,
 		mentionTag: '@codm',
 		window: { seeded: true, entries: [] },
+		// REQUIRED even when empty (issue-resume spec, AC-4). "Nothing is pending" is a fact the turn
+		// always knows, so an absent field could only ever mean the seam was never wired — which is the
+		// exact failure that field exists to make unshippable, and the schema refuses the run without it.
+		openStops: [],
 		item: {
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
 			entryId: '00000000-0000-4000-8000-0000000000dd',

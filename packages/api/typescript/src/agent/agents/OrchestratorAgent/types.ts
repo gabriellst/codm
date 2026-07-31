@@ -2,6 +2,7 @@ import { z } from '@codm/core-typescript'
 import { AgentModelId, ContactKind, MailboxItemKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
+import { OpenStopSchema } from '../../usecases/GetOpenStops'
 
 /**
  * One line of the conversation window (§7.5).
@@ -93,6 +94,20 @@ export const OrchestratorInputSchema = z.agentInput({
 	 * `RunIssueTurn.resolveSession` but keyed by thread.
 	 */
 	window: z.object({ seeded: z.boolean(), entries: z.array(WindowEntrySchema) }),
+	/**
+	 * The thread's UNANSWERED QUESTIONS (issue-resume spec, AC-4) — empty when nothing is pending.
+	 *
+	 * REUSED from `GetOpenStops` rather than restated, and the difference from `WindowEntrySchema`
+	 * above is the whole reason: that one is restated because it crosses a CONTEXT boundary, and an
+	 * agent input must not be coupled to `thread`'s persistence shape. This read lives in THIS context
+	 * and exists for THIS prompt and nothing else — its own docblock says so ("its only consumer is the
+	 * prompt builder"). Two spellings of one fact, ten lines apart, would only ever drift.
+	 *
+	 * REQUIRED, not optional-with-a-default. The turn always knows the answer (it asks on every turn),
+	 * so "absent" would mean nothing except "somebody forgot to wire it" — and that is exactly the
+	 * failure this field exists to make impossible to ship silently a second time.
+	 */
+	openStops: z.array(OpenStopSchema),
 	/** §7.6 — it travels for the 1:1-vs-group quote policy, which is the only thing it branches. */
 	contactKind: z.enum(ContactKind),
 	/**

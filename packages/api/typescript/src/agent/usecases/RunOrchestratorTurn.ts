@@ -21,6 +21,7 @@ import { TerminalOutputAccumulator } from '../services/TerminalOutputAccumulator
 import { AgentSessionRepository } from '../repositories'
 import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
+import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
 
 export const RunOrchestratorTurnInputSchema = z.object({
@@ -128,6 +129,12 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		private readonly providerDetector: ProviderDetector,
 		private readonly sessions: AgentSessionRepository,
 		private readonly threads: ThreadRepository,
+		/**
+		 * AC-4's read, injected as a child Handler — the shape the pipeline supports and the dispatcher
+		 * documents (`DrizzleMailboxDispatcher.handlerFor`: "the parent bound the child"). It opens no
+		 * transaction of its own; it is a read, and it belongs to this context.
+		 */
+		private readonly openStops: GetOpenStops,
 		private readonly streams: ReplyStreamer,
 		/**
 		 * Held for ONE reason: `beginTypingPresence` is a stateless seam and takes the queue it enqueues
@@ -151,6 +158,14 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// The window is built only for a FRESH session: a resumed one already holds the conversation in
 		// the CLI's own session, and re-sending it would both waste context and contradict §7.5.
 		const entries = session.resumed ? [] : await this.buildWindow(thread)
+
+		// THE UNANSWERED QUESTIONS (issue-resume spec, AC-4). Read on EVERY turn, resumed sessions
+		// included, and unlike the window that is not an inconsistency: the window is CONVERSATION, which
+		// the CLI's own session already holds, while this is STATE — a stop the operator answered two turns
+		// ago must be gone from the next prompt, and one raised since must appear in it. Same reason
+		// `customPrompt` is read fresh off the aggregate below; the runner folds the system prompt into
+		// every run, resumed ones included, which is what makes both possible.
+		const { stops } = await this.openStops.execute({ threadId: input.threadId })
 
 		// "digitando…" ON (streaming spec, AC-10 — `SustainTypingPresence` names this call site as "WHO
 		// TURNS IT ON"). Here and not earlier: the indicator claims the agent is WRITING, and the two
@@ -193,6 +208,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			cwd: input.workspacePath,
 			item: input.item,
 			window: { seeded: !session.resumed, entries },
+			openStops: stops,
 			contactKind: thread.contactRef.kind as ContactKind,
 			mentionTag: thread.mentionGate.enabled ? thread.mentionGate.tag : undefined,
 			// Read fresh off the aggregate on EVERY turn, not captured when the CLI session opened — which

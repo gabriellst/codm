@@ -13,6 +13,10 @@ import { AskOperatorController } from '../controllers/AskOperator'
 import { ForkIssueController } from '../controllers/ForkIssue'
 import { SteerIssueTurnController } from '../controllers/SteerIssueTurn'
 import { RecordArtifactController } from '@artifact/controllers'
+// BY NAME as well as through the namespace above, for the prose re-export at the bottom — same shape
+// and same license as `RecordArtifactController` on the line before it. Both lines are covered by the
+// per-file POLICY_EXCEPTIONS entry this module already carries for `<ctx>/controllers`.
+import { ResolveStopController } from '@thread/controllers'
 import { wireToolName } from './wire'
 
 /**
@@ -169,4 +173,10 @@ export {
 	AskOperatorController,
 	ForkIssueController,
 	RecordArtifactController,
+	// The two halves of a resume-by-conversation (issue-resume spec, decision 1), named by the
+	// orchestrator prompt when the thread has an unanswered question. `ResolveStopController` lives in
+	// `thread` and reaches this file through the barrel this module is already licensed to import —
+	// which is the entire reason the prose list exists rather than the prompt builder importing it.
+	ResolveStopController,
+	SteerIssueTurnController,
 }

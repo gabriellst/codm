@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { ContactKind, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
-import { toolNameOf, ForkIssueController } from '../../mcp/exposure'
+import { toolNameOf, ForkIssueController, ResolveStopController, SteerIssueTurnController } from '../../mcp/exposure'
 import { AgentRunOutcome } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import type { OrchestratorInputSchema } from './types'
@@ -9,6 +9,7 @@ import type { OrchestratorInputSchema } from './types'
 type OrchestratorInput = Z.output<typeof OrchestratorInputSchema> & AgentInputEnvelope
 type MailboxItem = OrchestratorInput['item']
 type WindowEntry = OrchestratorInput['window']['entries'][number]
+type OpenStop = OrchestratorInput['openStops'][number]
 
 /**
  * The prompt half of `OrchestratorAgent` (§7.1) — and, per the handoff, THE VOICE OF THE PRODUCT.
@@ -57,6 +58,7 @@ export class OrchestratorPromptBuilder {
 			...this.room(input),
 			'',
 			...this.issues(),
+			...this.stops(input),
 			...this.quoting(input),
 			...this.operatorInstructions(input),
 		].join('\n')
@@ -202,6 +204,71 @@ export class OrchestratorPromptBuilder {
 			'  operator: crie uma issue específica para isso e vamos resolver',
 			'  you: criei a issue dark-mode-toggle — te aviso quando tiver resultado',
 		]
+	}
+
+	/**
+	 * THE UNANSWERED QUESTIONS (issue-resume spec, AC-4 + decision 1).
+	 *
+	 * ### The decision this paragraph implements
+	 * Decision 1 puts the JUDGEMENT here, in the model, deliberately: no deterministic rule anywhere
+	 * tries to read "pode seguir" or "usa a opção 2" out of a chat message, because that rule would be
+	 * wrong in both directions — resuming work nobody approved, and leaving an approved issue stopped.
+	 * The agent already reads the conversation; what it could not do was SEE the questions. This is the
+	 * whole of what the system owes it in exchange for taking the judgement.
+	 *
+	 * ### Why the ids are printed, in a prompt whose quoting rule bans ids
+	 * That rule bans ids in the REPLY — the operator never sees ids, so one in prose is a defect they
+	 * read. These are tool ARGUMENTS: `ResolveStop` is reached by `stopId` and `SteerIssueTurn` by
+	 * `issueId`, and a question the model cannot name is a question it cannot close. So they are given,
+	 * and the prohibition on repeating them to a human is restated on the spot rather than left to be
+	 * inferred from a paragraph three sections down that only renders on some turns.
+	 *
+	 * ### Why the ORDER of the two calls is stated
+	 * Resolving first is what makes the console stop showing a question that has been answered; steering
+	 * second is what puts the operator's own words into the resumed turn. Reversed, a steer can land and
+	 * the stop stay open — the exact half-finished state decision 1 exists to remove.
+	 *
+	 * ### A stop with no issue is not an oversight
+	 * Since B4 the Stop is a child of the THREAD, so the orchestrator's own needs-approval is raised
+	 * before any issue exists. There is nothing to steer for those, and saying so is load-bearing: a
+	 * model told to "resolve and steer" with no issue id will either invent one or call the tool without
+	 * it and narrate a failure to somebody's chat.
+	 *
+	 * NOTHING RENDERS when the list is empty — the same rule `operatorInstructions` follows. A heading
+	 * announcing pending questions and then listing none is how a model starts asking the operator to
+	 * confirm things nobody ever asked about.
+	 */
+	private stops(input: OrchestratorInput): string[] {
+		if (input.openStops.length === 0) return []
+		const resolveStop = toolNameOf(ResolveStopController)
+		const steerIssue = toolNameOf(SteerIssueTurnController)
+		return [
+			'',
+			'UNANSWERED QUESTIONS',
+			'Work of yours is STOPPED, waiting on an answer from this conversation. Oldest first:',
+			'',
+			...input.openStops.flatMap(stop => this.stopLines(stop)),
+			'If the operator’s message answers one of these, do it in THIS turn, in this order:',
+			`  1. call ${resolveStop} with that stop id and the resolution their answer amounts to;`,
+			`  2. call ${steerIssue} with that issue id and WHAT THEY SAID, in their words — not "the operator approved". ` +
+				'The worker resumes with that text as its instruction, so a steer that carries no content resumes it blind.',
+			'A stop with no issue is your own: resolve it and answer here. There is nothing to steer.',
+			'If the message does not answer any of them, leave them alone. Never resolve a question on a guess, and never ' +
+				'chase the operator for one they did not bring up.',
+			'Then say what you did, in one line, in your own voice — and never put a stop id or an issue id in a reply.',
+		]
+	}
+
+	/**
+	 * ONE unanswered question. `title` and `detail` ARE "what was asked" — the two columns a stop has
+	 * for it — so both are rendered: the title alone is a headline written for a card, and the detail is
+	 * where the agent actually stated the choice it needs made. `detail` may legitimately be empty.
+	 */
+	private stopLines(stop: OpenStop): string[] {
+		const head = stop.issueId
+			? `- stop ${stop.stopId} — issue ${stop.issueId} — ${stop.kind}`
+			: `- stop ${stop.stopId} — no issue — ${stop.kind}`
+		return [head, `  ${stop.title}`, ...(stop.detail ? [`  ${stop.detail}`] : []), '']
 	}
 
 	/**

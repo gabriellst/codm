@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { ContactKind, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
-import { toolNameOf, ForkIssueController } from '../../mcp/exposure'
+import { toolNameOf, ForkIssueController, ResolveStopController, SteerIssueTurnController } from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'
 
 /**
@@ -24,6 +24,9 @@ const base = {
 	contactKind: ContactKind.GROUP,
 	mentionTag: '@codm',
 	window: { seeded: true, entries: [] },
+	// The DEFAULT is "nothing pending" — the state most turns are in. Every case below that does not
+	// say otherwise is therefore also asserting, silently, that the section does not leak in.
+	openStops: [],
 }
 
 const operatorTurn = (overrides: Record<string, unknown> = {}) =>
@@ -174,5 +177,74 @@ describe('OrchestratorPromptBuilder', () => {
 	/** No prompt, no heading. A heading with nothing under it tells the model an instruction exists. */
 	it('(i) no section at all when the operator never wrote one', () => {
 		expect(builder.system(operatorTurn())).not.toContain('INSTRUCTIONS FROM THE OPERATOR')
+	})
+
+	/**
+	 * AC-4 (issue-resume spec) — THE OPEN STOPS, and the instruction that makes them actionable.
+	 *
+	 * Decision 1 hands the JUDGEMENT to the model: no deterministic rule tries to read "pode seguir" or
+	 * "usa a opção 2" out of a chat message. What the system owes it in exchange is the three things it
+	 * cannot infer — WHICH question is open, WHAT was asked, and WHICH issue is waiting on the answer —
+	 * plus the two tool names that close the loop. A prompt that listed the questions without naming
+	 * the tools would produce a model that recognises the answer and does nothing with it.
+	 */
+	const stops = [
+		{
+			stopId: '00000000-0000-4000-8000-000000000001',
+			issueId: '00000000-0000-4000-8000-000000000002',
+			kind: StopKind.HUMAN_REQUESTED,
+			title: 'Refund window',
+			detail: 'Full or partial for orders older than 90 days?',
+		},
+		{
+			// A THREAD-LEVEL stop: raised before any issue existed (B4, decision 4). There is nothing to
+			// steer, and the prompt has to say so or the model calls the steer tool with no id.
+			stopId: '00000000-0000-4000-8000-000000000003',
+			kind: StopKind.APPROVAL_NEEDED,
+			title: 'Drop the legacy column',
+			detail: 'The migration drops `orders.legacy_ref` — confirm before I run it.',
+		},
+	]
+
+	it('(j) AC-4 — the open stops are rendered with their issue, kind and the question that was asked', () => {
+		const system = builder.system(operatorTurn({ openStops: stops }))
+
+		expect(system).toContain('UNANSWERED QUESTIONS')
+		for (const stop of stops) {
+			// The id is what `ResolveStop` is called with — a listed question the model cannot name is a
+			// question it cannot close.
+			expect(system).toContain(stop.stopId)
+			expect(system).toContain(stop.kind)
+			// `title` + `detail` ARE "o que foi perguntado" — the two columns the stop actually has.
+			expect(system).toContain(stop.title)
+			expect(system).toContain(stop.detail)
+		}
+		// The issue waiting on the answer, so the steer can be aimed. Only the first stop has one.
+		expect(system).toContain('00000000-0000-4000-8000-000000000002')
+	})
+
+	/**
+	 * The tool names are DERIVED, exactly like `ForkIssue` in (d) — replace either with a literal and
+	 * this goes red. Both are already in the `orchestration` scope, so the sentence names something the
+	 * model can actually call; naming a tool outside its `--allowedTools` would produce a turn that
+	 * narrates a call it cannot make, which is the failure `issues()` documents.
+	 */
+	it('(k) AC-4 — resolving and steering are named by the controller class, never typed out', () => {
+		const system = builder.system(operatorTurn({ openStops: stops }))
+
+		expect(system).toContain(toolNameOf(ResolveStopController))
+		expect(system).toContain(toolNameOf(SteerIssueTurnController))
+	})
+
+	/**
+	 * THE OTHER HALF OF AC-4, and the one that keeps the first honest: no stops, no section. A heading
+	 * over an empty list tells a model that something is pending and then refuses to say what — which is
+	 * how it starts asking the operator to confirm things nobody asked about.
+	 */
+	it('(l) AC-4 — a thread with nothing open renders no section at all', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).not.toContain('UNANSWERED QUESTIONS')
+		expect(system).not.toContain(toolNameOf(ResolveStopController))
 	})
 })
