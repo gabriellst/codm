@@ -37,5 +37,17 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 
 # The readiness loop is async (the typed probe awaits), and `tauri::async_runtime` re-exports
 # neither `sleep` nor a re-entrant `block_on` — so the supervisor sleeps on tokio directly. Already
-# in Cargo.lock as a tauri transitive dep: declaring it adds no crate and does not touch the lock.
-tokio = { version = "1", features = ["time"] }
+# in Cargo.lock as a tauri transitive dep: declaring it adds no crate.
+#
+# `signal` is what lets the shell take the fleet down on SIGTERM/SIGINT/SIGHUP and not only on
+# `RunEvent::Exit` (src/sidecars/lifecycle.rs). It is a self-pipe implementation: it neither blocks
+# signals for tauri's own threads nor runs any of our code inside a signal handler.
+tokio = { version = "1", features = ["time", "signal"] }
+
+# Raw process signals, for exactly three helpers in src/sidecars/lifecycle.rs: SIGTERM before
+# SIGKILL (so a daemon gets to run its own drain and take its provider CLI process groups with it),
+# SIGKILL for a leftover we hold no handle to, and `kill(pid, 0)` to tell a dead pid from a live
+# one. Unix-gated because none of the three exist on Windows, where `RunEvent::Exit` is the only
+# shutdown path anyway. Also a pre-existing tauri transitive dep.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

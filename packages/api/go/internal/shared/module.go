@@ -54,6 +54,12 @@ var Module = fx.Module("shared",
 
 	// Lifecycle hooks
 	fx.Invoke(registerDocsRoutes),
+
+	// PARENT WATCHDOG — the gateway's dead-man's switch. The desktop shell cannot kill its sidecars
+	// when it is itself SIGKILLed (no hook of a dead parent runs), so the child watches the pid the
+	// shell stamped on it and asks fx for a graceful stop the moment it is reparented. Inert unless
+	// CODM_PARENT_PID is set, which is why `bun dev` and the tests never see it. See watchdog.go.
+	fx.Invoke(startParentWatchdog),
 )
 
 // provideHealthController hands the readiness controller the shared store's db

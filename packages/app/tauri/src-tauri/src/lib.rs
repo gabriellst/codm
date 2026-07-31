@@ -84,6 +84,19 @@ pub fn run() {
             let children = Arc::new(sidecars::ChildRegistry::default());
             app.manage(children.clone());
 
+            // EVERY EXIT, not just the graceful one. `RunEvent::Exit` (below) never fires for a
+            // shell that was signalled from outside — and outside is where the founder's orphans
+            // came from: `tauri dev` kills the shell on every recompile. Installed before the fleet
+            // spawns so a signal arriving mid-boot still finds a registry to drain.
+            sidecars::install_signal_handlers(app.handle(), children.clone());
+
+            // STARTUP SWEEP, before the first spawn and therefore before `port_conflict` runs.
+            // What no exit hook could clean (the shell was SIGKILLed, or crashed) is cleaned one
+            // boot late, matched by the BINARY PATH we are about to exec — never by port, so a
+            // sibling repo's process on :3030 is refused, not killed. See `sidecars::reaper`.
+            let names: Vec<&str> = fleet.iter().map(|s| s.name()).collect();
+            sidecars::reap_previous_run(&names);
+
             for sidecar in fleet {
                 sidecars::boot_sidecar(
                     app.handle(),
@@ -102,8 +115,11 @@ pub fn run() {
             // window close that something vetoes). Killing the fleet there would leave a still-open
             // app with no backend. `Exit` is the last thing that happens before the process goes.
             //
-            // This covers the ORDINARY shutdown; it cannot cover `SIGKILL` or a dev watcher that
-            // hard-kills the app, which is why `port_conflict` guards the next boot (spec Decision 8b).
+            // This covers the ORDINARY shutdown — one of THREE layers, because it is the weakest:
+            //   · signalled shutdown  → `sidecars::install_signal_handlers` (setup, above);
+            //   · unobservable death  → each sidecar's own `CODM_PARENT_PID` watchdog;
+            //   · whatever still slipped through → `sidecars::reap_previous_run` at the next boot,
+            //     with `port_conflict` refusing anything foreign that is left (spec Decision 8b).
             if let tauri::RunEvent::Exit = event {
                 app.state::<Arc<sidecars::ChildRegistry>>().kill_all();
             }

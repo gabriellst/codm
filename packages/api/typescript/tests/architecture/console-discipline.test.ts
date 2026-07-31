@@ -30,6 +30,9 @@ import { join, relative } from 'node:path'
  *   - auth/handlers/UserRegisteredHandler.ts — a scaffold handler whose body is a placeholder
  *     `console.log`; carries a `// TODO` to migrate to the injected LoggingService once handler-side
  *     logging is wired (this exemption is temporary, not a sanctioned bottom like index.ts).
+ *   - watchdog.ts — the desktop shell's dead-man's switch, started BY index.ts and in the same
+ *     bootstrap class: it speaks once, on the way out, when the supervising shell has died. Same
+ *     sanctioned bottom as index.ts, not a temporary one.
  *
  * False positives go in EXEMPTIONS below with a `why`, never by weakening the regex.
  *
@@ -43,6 +46,10 @@ const EXEMPTIONS: { file: string; why: string }[] = [
 	{
 		file: 'index.ts',
 		why: 'composition root / bootstrap + graceful-shutdown + start-failure handlers — must survive even a broken LoggingService binding, and run both before and after the DI-driven request-handling window, so it cannot resolve the injected LoggingService for its startup/shutdown console output.',
+	},
+	{
+		file: 'watchdog.ts',
+		why: "process-lifecycle dead-man's switch, in the same bootstrap class as index.ts (which is what starts it): its ONE line is the last thing this process says before shutting itself down because the desktop shell died, so it must survive a broken LoggingService and cannot ship through an OTLP exporter that the very next step tears down. It is also the only channel that reaches the operator at all — the shell has no logging backend (tauri-plugin-log is deliberately absent), and a sidecar that vanished silently is precisely the bug this file exists to make legible.",
 	},
 ]
 

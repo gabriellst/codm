@@ -31,6 +31,9 @@ pub use supervision::*;
 mod lifecycle;
 pub use lifecycle::*;
 
+mod reaper;
+pub use reaper::*;
+
 /// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`), the port
 /// it listens on, which SDK sub-client probes it, the working directory it must be
 /// spawned in, and the env the process boots with.
@@ -80,6 +83,14 @@ fn port_from_env(key: &str, default: u16) -> u16 {
 ///                  `migrations`     — the Drizzle migrations the daemon applies on boot;
 ///                  `daemon-runtime` — the libsql native-prebuild closure, which is the
 ///                                     daemon's spawn CWD (see `Sidecar::cwd`).
+///
+/// EVERY sidecar also gets `CODM_PARENT_PID`. It is the one thing the shell can hand a child that
+/// survives the shell's own sudden death: no exit hook of ours runs under `SIGKILL`, so the last
+/// line of defense has to be the child noticing it was orphaned. Each sidecar polls its own parent
+/// pid against this value and shuts itself down when they stop matching — see
+/// `api/typescript/src/watchdog.ts` and `api/go/internal/shared/watchdog.go`. Unset (a sidecar
+/// started by hand, or by `bun dev`) DISABLES the watchdog, which is why it is passed here, at the
+/// one place that actually knows a supervising shell exists.
 pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> {
     let api_port = port_from_env("API_PORT", 3030);
     let channel_port = port_from_env("CHANNEL_PORT", 3032);
@@ -87,6 +98,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
         .join("migrations")
         .to_string_lossy()
         .into_owned();
+    let parent_pid = std::process::id().to_string();
     vec![
         Sidecar {
             name: "codm-daemon",
@@ -101,6 +113,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
                 ("CODM_MIGRATIONS_DIR".into(), migrations_dir),
                 ("API_GO_URL".into(), "http://localhost:3032".into()),
                 ("NODE_ENV".into(), "production".into()),
+                ("CODM_PARENT_PID".into(), parent_pid.clone()),
             ],
         },
         Sidecar {
@@ -116,6 +129,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
                     "CHANNEL_ALLOWED_ORIGINS".into(),
                     "tauri://localhost,http://localhost:5173".into(),
                 ),
+                ("CODM_PARENT_PID".into(), parent_pid),
             ],
         },
     ]

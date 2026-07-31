@@ -17,6 +17,9 @@ import 'reflect-metadata'
 // above the composition-root import below; see src/boot.ts.
 import './boot'
 
+// The desktop shell's dead-man's switch, armed at the END of start() — see the call site.
+import { startParentWatchdog } from './watchdog'
+
 import {
 	Config,
 	MainRouter,
@@ -154,6 +157,14 @@ async function start(): Promise<void> {
 	process.on('SIGTERM', () => shutdown('SIGTERM'))
 	process.on('SIGINT', () => shutdown('SIGINT'))
 	process.on('SIGUSR2', () => shutdown('SIGUSR2'))
+
+	// PARENT WATCHDOG — started HERE, and not in `./boot`, precisely because it needs the handlers
+	// above to already exist: its reaction is a SIGTERM to ourselves, so the whole drain runs and
+	// the provider CLI process groups die with us. Started earlier it would only find the DataDirLock
+	// listener, which releases the lockfile and re-raises — a hard exit that leaks every agent.
+	//
+	// No-op unless a desktop shell stamped CODM_PARENT_PID on this process. See ./watchdog.
+	startParentWatchdog()
 }
 
 start().catch(error => {
