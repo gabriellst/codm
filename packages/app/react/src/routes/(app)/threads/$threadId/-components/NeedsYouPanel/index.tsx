@@ -69,7 +69,7 @@ function StopRow({ threadId, stop }: { threadId: string; stop: Stop }) {
 			<Badge variant="outline" className="shrink-0">
 				{enumLabel('StopKind', stop.kind)}
 			</Badge>
-			<div className="flex min-w-0 flex-1 flex-col">
+			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 				<span className="font-medium text-foreground">{stop.title}</span>
 				<span className="truncate text-sm text-muted-foreground">{stop.detail}</span>
 			</div>

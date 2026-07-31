@@ -76,7 +76,7 @@ export function IssueDetailSection({
 			    grows instead and shoves the archive button off the edge. The badge and the button are
 			    `shrink-0` so the NAME is what gives way, which is what puts the ellipsis on it. */}
 			<div className="flex items-start justify-between gap-4">
-				<div className="flex min-w-0 flex-1 flex-col gap-2">
+				<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 					<div className="flex min-w-0 items-center gap-3">
 						{/* `title` keeps the full text reachable on hover once it is visually cut. */}
 						<h1 className="heading-display truncate text-2xl text-foreground" title={data.issue.title}>

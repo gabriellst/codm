@@ -91,7 +91,7 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 				) : (
 					<>
 						<ThreadAvatar name={data.thread.displayName} channelKind={data.thread.channelKind} size="lg" />
-						<div className="flex min-w-0 flex-1 flex-col">
+						<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 							<div className="flex flex-wrap items-center gap-2">
 								<h1 className="heading-display truncate text-xl text-foreground md:text-2xl">{data.thread.displayName}</h1>
 								<span

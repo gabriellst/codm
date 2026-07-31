@@ -62,7 +62,7 @@ function ArtifactCard({ artifact }: { artifact: Artifact }) {
 				<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
 					<Glyph className="size-4" />
 				</span>
-				<div className="flex min-w-0 flex-1 flex-col">
+				<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 					<span className="truncate font-medium text-foreground">{artifact.name}</span>
 					<span className="truncate text-sm text-muted-foreground">
 						{enumLabel('ArtifactKind', artifact.kind)} · {artifact.meta}

@@ -14,7 +14,7 @@ type AppRoute = FileRouteTypes['to']
 
 const rowBase = 'flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-colors'
 const rowIdle = 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60'
-const rowActive = 'bg-sidebar-accent text-sidebar-foreground'
+const rowActive = 'bg-sidebar-accent text-sidebar-foregroundr'
 
 /**
  * The CODM console rail: primary destinations with live counts, then the THREADS

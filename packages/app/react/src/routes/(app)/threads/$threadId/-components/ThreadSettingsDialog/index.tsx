@@ -9,6 +9,7 @@ import {
 	getThreadSettingsQueryKey,
 	useConfigureContextBuffer,
 	useConfigureMentionGate,
+	useConfigurePrompt,
 	useDeleteThread,
 	useGetSessionChat,
 	useGetThreadSettings,
@@ -18,6 +19,7 @@ import type { BufferSize } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +47,18 @@ function SectionLabel({ children }: { children: ReactNode }) {
  * Pure content driven by `useDialogStore` (component bp-24): the caller does
  * `show(<ThreadSettingsDialog threadId={…} />)` and MOUNTED is what "open" means here — which is why
  * the body is no longer gated on a local `open` flag. The store is what dismisses it.
+ *
+ * DUAS COLUNAS a partir de `lg`, e a divisão não é estética: as chaves da esquerda são escolhas de um
+ * clique que salvam sozinhas, e a da direita é um texto que se escreve devagar e COMITA. Empilhá-las
+ * numa coluna só empurrava o prompt para baixo da dobra — o operador rolava por quatro seções que ele
+ * já configurou para chegar à única que ele voltou para editar. Lado a lado, as duas começam na mesma
+ * linha e a caixa de texto cresce até a altura da coluna irmã (é o `flex-1` lá embaixo), que é o que
+ * "equilibrado" quer dizer aqui.
+ *
+ * Abaixo de `lg` a grade vira uma coluna e a ordem de leitura volta a ser a de antes — ajustes, prompt,
+ * zona de perigo. Por isso a zona de perigo atravessa as DUAS colunas em vez de morar dentro da
+ * primeira: empilhada, ela tem que continuar sendo a última coisa da tela, nunca o que separa os
+ * ajustes do prompt.
  */
 export function ThreadSettingsDialog({
 	threadId,
@@ -56,19 +70,30 @@ export function ThreadSettingsDialog({
 	const { data: session } = useGetSessionChat(threadId)
 
 	return (
-		<DialogContent className={cn('max-w-lg', className)}>
+		// A largura só cresce onde há espaço para duas colunas (`lg`), e cresce até um número escolhido, não
+		// redondo: `56rem` menos o padding e a calha dá ~25rem por coluna — que é EXATAMENTE a largura útil
+		// que este diálogo tinha quando era uma coluna só (`sm:max-w-md`). É o que mantém as linhas da
+		// esquerda quebrando como quebravam. Abaixo de `lg` a base do primitivo segue valendo, intocada.
+		<DialogContent className={cn('lg:max-w-4xl', className)}>
 			<DialogHeader>
 				<DialogTitle>{t('session.settingsTitle')}</DialogTitle>
 				<DialogDescription>
 					{session ? t('session.settingsDescriptionNamed', { name: session.thread.displayName }) : t('session.settingsDescription')}
 				</DialogDescription>
 			</DialogHeader>
-			<ThreadSettingsBody threadId={threadId} />
-			{/* The name is READ HERE and handed down, deliberately breaking the "each component owns its
-			    data" habit for one prop: the confirmation must say WHICH conversation is about to go, and
-			    this component already holds the query that knows. A second `useGetSessionChat` inside the
-			    danger zone would be the same cache entry read twice. */}
-			<DangerZone threadId={threadId} threadName={session?.thread.displayName} />
+			{/* O corpo rola, o cabeçalho e o botão de fechar não. O teto é o viewport menos a moldura do
+			    diálogo (margem + padding + cabeçalho): numa janela baixa — o mínimo do shell é 520px de
+			    altura — duas colunas ainda estouram, e um modal que cresce para fora da tela esconde o
+			    botão que o operador precisa clicar. */}
+			<div className="grid max-h-[calc(100dvh-11rem)] gap-6 overflow-y-auto lg:grid-cols-2 lg:gap-x-10">
+				<ThreadSettingsBody threadId={threadId} />
+				<CustomPromptSection threadId={threadId} />
+				{/* The name is READ HERE and handed down, deliberately breaking the "each component owns its
+				    data" habit for one prop: the confirmation must say WHICH conversation is about to go, and
+				    this component already holds the query that knows. A second `useGetSessionChat` inside the
+				    danger zone would be the same cache entry read twice. */}
+				<DangerZone threadId={threadId} threadName={session?.thread.displayName} className="lg:col-span-2" />
+			</div>
 		</DialogContent>
 	)
 }
@@ -84,7 +109,7 @@ export function ThreadSettingsDialog({
  * `confirm()` from `useDialogStore` replaces this dialog's content with the shared `ConfirmDialog` and
  * resolves a boolean, so cancelling costs the operator nothing but a re-open.
  */
-function DangerZone({ threadId, threadName }: { threadId: string; threadName?: string }) {
+function DangerZone({ threadId, threadName, className, ...props }: { threadId: string; threadName?: string } & ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
@@ -125,8 +150,8 @@ function DangerZone({ threadId, threadName }: { threadId: string; threadName?: s
 	}
 
 	return (
-		<section className="flex flex-col gap-3">
-			<h3 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">{t('session.deleteThread.sectionTitle')}</h3>
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<SectionLabel>{t('session.deleteThread.sectionTitle')}</SectionLabel>
 			<div className="flex items-center justify-between gap-4">
 				<p className="text-sm text-muted-foreground">{t('session.deleteThread.hint')}</p>
 				<Button variant="destructive" className="shrink-0" disabled={deleteThread.isPending} onClick={onDelete}>
@@ -162,9 +187,13 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 	}
 
 	if (isLoading || !data) {
+		// Uma barra por seção, com o MESMO `gap-6` da coluna carregada — o esqueleto tem que ocupar a
+		// altura que o conteúdo vai ocupar, senão a grade encolhe e volta a crescer na frente do operador.
 		return (
-			<div className="flex flex-col gap-4">
+			<div className="flex flex-col gap-6">
 				<Skeleton className="h-14 rounded-xl" />
+				<Skeleton className="h-32 rounded-xl" />
+				<Skeleton className="h-24 rounded-xl" />
 				<Skeleton className="h-24 rounded-xl" />
 			</div>
 		)
@@ -239,7 +268,7 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 					{data.participants.map(participant => (
 						<label key={participant.participantId} className="flex items-center gap-3 py-1.5">
 							<ThreadAvatar name={participant.name} />
-							<div className="flex min-w-0 flex-1 flex-col">
+							<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 								<span className="truncate text-sm font-semibold text-foreground">{participant.name}</span>
 								<span className="truncate text-xs text-muted-foreground">{participant.source}</span>
 							</div>
@@ -286,5 +315,98 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 				</div>
 			</section>
 		</div>
+	)
+}
+
+/**
+ * PROMPT PERSONALIZADO — as instruções que o operador escreve para ESTA conversa.
+ *
+ * A única seção deste diálogo que NÃO salva sozinha, e a diferença é deliberada. O switch, a tag e as
+ * pilhas de buffer são escolhas de um clique: salvar no `onChange`/`onBlur` é o comportamento óbvio
+ * delas. Um prompt é texto escrito aos poucos, e um autosave no meio da frase muda como o agente fala
+ * com pessoas de verdade antes de o operador ter terminado de pensar. Por isso ele COMITA, e o botão
+ * habilitado é o que torna "não salvo" legível.
+ *
+ * Esvaziar a caixa e salvar é o caminho de apagar — `Thread.configurePrompt` transforma vazio em
+ * ausência, então não há um segundo botão para a mesma intenção.
+ *
+ * É a SEGUNDA COLUNA do diálogo, e por isso lê a própria query em vez de receber `data` por prop
+ * (CMP-P01): a chave já está no cache — a coluna irmã a montou — então é a mesma requisição, e a
+ * coluna continua sendo dona do que mostra.
+ */
+function CustomPromptSection({ threadId }: { threadId: string }) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const { data, isLoading } = useGetThreadSettings(threadId)
+	const configurePrompt = useConfigurePrompt()
+
+	/**
+	 * O RASCUNHO do prompt — o caso 5 do state-placement (draft local, transitório, não deep-linkável).
+	 *
+	 * Semeado a partir do servidor num efeito, e não derivado dele a cada render: uma textarea
+	 * controlada por `data.customPrompt` seria reescrita por baixo dos dedos do operador no primeiro
+	 * refetch da query.
+	 */
+	const [prompt, setPrompt] = useState('')
+
+	useEffect(() => {
+		if (!data) return
+		setPrompt(data.customPrompt)
+	}, [data])
+
+	// "Não salvo" = o rascunho difere do que o servidor devolveu. Comparar com o SERVIDOR (e não guardar
+	// um booleano `touched`) faz o botão desabilitar sozinho quando o operador desfaz a própria edição.
+	const promptDirty = prompt !== (data?.customPrompt ?? '')
+
+	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+
+	if (isLoading || !data) {
+		// O esqueleto tem a FORMA da coluna carregada — rótulo, explicação, caixa alta e rodapé — para o
+		// diálogo não pular de altura quando as duas colunas chegam.
+		return (
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-10 rounded-lg" />
+				<Skeleton className="min-h-40 flex-1 rounded-2xl" />
+				<Skeleton className="h-9 rounded-lg" />
+			</div>
+		)
+	}
+
+	return (
+		<section className="flex flex-col gap-3">
+			<SectionLabel>{t('session.customPrompt')}</SectionLabel>
+			<p className="text-sm text-muted-foreground">{t('session.customPromptHint')}</p>
+			{/* `flex-1` é o que equilibra as alturas: a coluna é um item da grade, então ela já se estica
+			    até a altura da coluna de ajustes, e a caixa de texto absorve essa sobra em vez de deixar um
+			    vão. `resize-none` porque a altura passou a ser do LAYOUT — uma alça de arrastar aqui só
+			    brigaria com ela; empilhado, `min-h-40` é o piso. */}
+			<Textarea
+				aria-label={t('session.customPrompt')}
+				placeholder={t('session.customPromptPlaceholder')}
+				className="min-h-40 flex-1 resize-none"
+				maxLength={data.customPromptMaxLength}
+				value={prompt}
+				onChange={e => setPrompt(e.target.value)}
+			/>
+			<div className="flex items-center justify-between gap-4">
+				<span className="text-xs text-muted-foreground">
+					{/* O contador conta contra o MESMO limite que o backend valida — ele viaja no DTO
+					    (`customPromptMaxLength`) em vez de ser redigitado aqui, porque um contador que
+					    discorda do validador é pior que nenhum. */}
+					{!promptDirty && configurePrompt.isSuccess
+						? t('session.customPromptSaved')
+						: t('session.customPromptCounter', { used: prompt.length, max: data.customPromptMaxLength })}
+				</span>
+				<Button
+					variant="outline"
+					className="shrink-0"
+					disabled={!promptDirty || configurePrompt.isPending}
+					onClick={() => configurePrompt.mutate({ threadId, data: { customPrompt: prompt } }, { onSuccess: invalidate })}
+				>
+					{t('session.customPromptSave')}
+				</Button>
+			</div>
+		</section>
 	)
 }

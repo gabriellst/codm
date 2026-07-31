@@ -30,7 +30,7 @@ export function SessionChatSection({ threadId, className, ...props }: ComponentP
 	}
 
 	return (
-		<div className={cn('flex flex-col h-full', className)} {...props}>
+		<div className={cn('flex flex-col grow', className)} {...props}>
 			<NeedsYouPanel threadId={threadId} />
 
 			{data.transcript.length === 0 ? (
@@ -39,7 +39,7 @@ export function SessionChatSection({ threadId, className, ...props }: ComponentP
 					<EmptyDescription>{t('session.chatEmptyDescription')}</EmptyDescription>
 				</Empty>
 			) : (
-				<div className="flex flex-col gap-4 py-2 h-full">
+				<div className="flex flex-col gap-4 py-2 grow">
 					{data.transcript.map(entry => (
 						<TranscriptBubble key={entry.entryId} entry={entry} threadId={threadId} />
 					))}
