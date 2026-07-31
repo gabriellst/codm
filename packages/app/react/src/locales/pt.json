@@ -585,6 +585,7 @@
 		"generalAppVersion": "Versão do app",
 		"generalDataDir": "Diretório de dados",
 		"providerNotFound": "não encontrado no PATH",
+		"rescanProviders": "Reescanear",
 		"stopCriteria": "Critérios de parada",
 		"stopCriteriaDescription": "Quando qualquer um desses ocorre, o agente para, a conversa é marcada como \"Precisa de você\" e a parada aparece na sessão até você resolvê-la.",
 		"title": "Configurações"

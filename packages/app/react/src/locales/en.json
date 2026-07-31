@@ -585,6 +585,7 @@
 		"generalAppVersion": "App version",
 		"generalDataDir": "Data directory",
 		"providerNotFound": "not found in PATH",
+		"rescanProviders": "Rescan",
 		"stopCriteria": "Stop criteria",
 		"stopCriteriaDescription": "When any of these happen the agent stops, the thread is flagged \"Needs you\", and the stop shows up in the session until you resolve it.",
 		"title": "Settings"

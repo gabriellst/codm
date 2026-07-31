@@ -2,13 +2,20 @@ import { describe, expect, it } from 'bun:test'
 import type { HttpControllerRequest } from '@codm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { MockProviderDetector } from '../services/ProviderDetector/MockProviderDetector'
+import { ProviderDetector, KNOWN_PROVIDERS, type ProviderDetection } from '../services/ProviderDetector'
 import { FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { StubAgentRunner } from '../services/AgentRunner'
 import { DetectProvidersController } from './DetectProviders'
 
-function buildRequest(): HttpControllerRequest<unknown> {
-	const raw = new Request('http://localhost/v1/terminal/providers')
-	return { url: raw.url, ctx: {}, raw }
+/**
+ * `query` is a FIELD on the envelope, populated by the HTTP adapter — `executeController` never
+ * re-parses it out of `url`. So the values here are the raw STRINGS the adapter delivers ('true',
+ * not true), which also puts `z.stringToBoolean()` on the path under test rather than around it.
+ */
+function buildRequest(query?: Record<string, string>): HttpControllerRequest<unknown> {
+	const search = query ? `?${new URLSearchParams(query).toString()}` : ''
+	const raw = new Request(`http://localhost/v1/terminal/providers${search}`)
+	return { url: raw.url, ctx: {}, query, raw }
 }
 
 /**
@@ -115,5 +122,99 @@ describe('DetectProvidersController — comingSoon', () => {
 
 		expect(body.providers.find(p => p.name === ProviderKind.CODEX)?.comingSoon).toBe(true)
 		expect(body.providers.find(p => p.name === ProviderKind.OPENCODE)?.comingSoon).toBe(true)
+	})
+})
+
+/**
+ * A detector with the REAL caching semantics of `SystemProviderDetector`: the first `detect()` probes
+ * the machine and every later one is served from an in-memory cache until `{ refresh: true }` forces
+ * a re-probe. The cache is per PROCESS — nothing expires it, no TTL, no filesystem watch — so until
+ * something asks for a refresh the catalog the daemon serves is the one it built at boot.
+ *
+ * `machine` is read at probe time, not at construction, so a test can install a CLI BETWEEN probes
+ * and see exactly what the operator sees: nothing, until they ask again.
+ */
+class CachingSpyDetector extends ProviderDetector {
+	probes = 0
+	private cache: ProviderDetection[] | undefined
+
+	constructor(private readonly machine: () => Partial<Record<ProviderKind, ProviderDetection>>) {
+		super()
+	}
+
+	async detect(options?: { refresh?: boolean }): Promise<ProviderDetection[]> {
+		if (this.cache && !options?.refresh) return this.cache
+		this.probes += 1
+		const installed = this.machine()
+		this.cache = KNOWN_PROVIDERS.map(name => installed[name] ?? { name, status: ProviderStatus.NOT_INSTALLED })
+		return this.cache
+	}
+
+	async resolve(name: ProviderKind): Promise<ProviderDetection | undefined> {
+		return (await this.detect()).find(d => d.name === name)
+	}
+}
+
+/**
+ * `?refresh=true` — the capability C07 shipped with and no console consumer ever reached.
+ *
+ * The endpoint has always accepted the flag; what was never pinned is that it REACHES the detector.
+ * Without that, a "Rescan" button would be a button that re-renders the same cached catalog forever:
+ * the operator installs a CLI, clicks, and nothing changes — the worst kind of broken, because it
+ * looks like it worked.
+ */
+describe('DetectProvidersController — ?refresh=true', () => {
+	/** Nothing installed at boot; codex appears on the machine afterwards. */
+	const machineWhereCodexArrivesLater = () => {
+		let codexInstalled = false
+		const detector = new CachingSpyDetector(() =>
+			codexInstalled
+				? {
+						[ProviderKind.CODEX]: {
+							name: ProviderKind.CODEX,
+							status: ProviderStatus.DETECTED,
+							binaryPath: '/usr/local/bin/codex',
+							version: '3.1.0',
+						},
+					}
+				: {},
+		)
+		return { detector, install: () => (codexInstalled = true) }
+	}
+
+	const statusOf = async (controller: DetectProvidersController, query?: Record<string, string>) => {
+		const response = await controller.executeController(buildRequest(query))
+		const body = (await response.json()) as { providers: { name: string; status: string }[] }
+		return body.providers.find(p => p.name === ProviderKind.CODEX)?.status
+	}
+
+	it('FALSEADOR — sem refresh serve o catálogo velho; com refresh re-sonda a máquina', async () => {
+		const { detector, install } = machineWhereCodexArrivesLater()
+		const controller = new DetectProvidersController(detector, runnerFactory())
+
+		expect(await statusOf(controller)).toBe(ProviderStatus.NOT_INSTALLED)
+		expect(detector.probes).toBe(1)
+
+		// O operador instala o CLI com o daemon rodando — o que o cache por processo não tem como notar.
+		install()
+
+		// Sem refresh: a resposta continua a de antes. É ESTE o estado que o botão existe para sair.
+		expect(await statusOf(controller)).toBe(ProviderStatus.NOT_INSTALLED)
+		expect(detector.probes).toBe(1)
+
+		// Com refresh: re-sonda e a máquina nova aparece.
+		expect(await statusOf(controller, { refresh: 'true' })).toBe(ProviderStatus.DETECTED)
+		expect(detector.probes).toBe(2)
+	})
+
+	it('refresh=false é tratado como ausente — só a intenção explícita re-sonda', async () => {
+		const { detector, install } = machineWhereCodexArrivesLater()
+		const controller = new DetectProvidersController(detector, runnerFactory())
+
+		await statusOf(controller)
+		install()
+
+		expect(await statusOf(controller, { refresh: 'false' })).toBe(ProviderStatus.NOT_INSTALLED)
+		expect(detector.probes).toBe(1)
 	})
 })
