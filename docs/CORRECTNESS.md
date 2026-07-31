@@ -35,7 +35,7 @@ Every correctness concern is owned at exactly ONE rung — the strongest that ca
 | Rung | Mechanism | p | Examples in this repo |
 |---|---|---|---|
 | **1. Eliminate** | type system, codegen, scaffolds | ≈ 1.0 | `ValidEnvelope` makes a flat controller key a tsc error; typed i18n keys force locale entries; `bun cli` scaffolds emit the canonical shape (`--labels` writes the t() wiring + seeds the catalog) |
-| **2. Detect** | mechanical walkers + CI gates | ≈ 1.0 at merge | `route-closure` (registration drift), `component-props` (bp-20), dynamic-`t()`-outside-`enums.*`, `slice-closure`, `registry-scan`, `import-direction` |
+| **2. Detect** | mechanical walkers + typed lint rules + CI gates | ≈ 1.0 at merge | `route-closure` (registration drift), `local/component-props` (bp-20/bp-29 — the className doctrine, type-aware eslint), dynamic-`t()`-outside-`enums.*`, `slice-closure`, `registry-scan`, `import-direction` |
 | **3. Document** | single-owner judgment rules | ~0.7–0.95, carrier-dependent | package `CLAUDE.md` sections, skill `SKILL.md`/`registry.yaml` patterns |
 | **4. Measure** | eval probes + scoreboards | n/a (this rung measures the others) | `scripts/skill-evals/` |
 
@@ -176,7 +176,8 @@ directions: no premature victory (families still open ≠ converged) and no nois
 
 | Artifact | Where | Role |
 |---|---|---|
-| CI gates | `bun detect` → `.github/workflows/correctness.yml` | rung-2 guarantees on every merge: registry-scan, import-direction, slice-closure, route-closure, component-props |
+| CI gates | `bun detect` → `.github/workflows/correctness.yml` | rung-2 guarantees on every merge: registry-scan, import-direction, slice-closure, route-closure, component-props (route shells) |
+| Typed lint rules | `scripts/eslint-rules/` → `bun lint` | rung-2 where the question needs the CHECKER, not a regex: `local/component-props` (className doctrine), `local/no-enum-widening`, `local/no-hardcoded-jsx-text` |
 | Edit-time nudges | `.claude/hooks/classify-edit-core.ts` (+ registries) | the same mechanical rules, surfaced while writing |
 | Scaffolds | `bun cli` recipes (`docs/CLI.md`) | rung-1: the canonical shape is emitted, not remembered ("if you wrote it, the CLI should write it") |
 | Probe suite | `scripts/skill-evals/tasks/*.yaml` | the measurement battery (15 synthetics; every axis covered) |

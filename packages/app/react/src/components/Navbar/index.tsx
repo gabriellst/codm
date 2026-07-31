@@ -21,7 +21,7 @@ const rowActive = 'bg-sidebar-accent text-sidebar-foreground'
  * list. Owns its own data — the dashboard read supplies threads, channel health and
  * the agent count; workspaces and issues reads supply the two remaining counts.
  */
-export function Sidebar({ className }: React.ComponentProps<'aside'>) {
+export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) {
 	const { t } = useTranslation()
 	const { data: dashboard } = useGetHomeDashboard()
 	const { data: workspaces } = useListWorkspaces()
@@ -36,7 +36,7 @@ export function Sidebar({ className }: React.ComponentProps<'aside'>) {
 	const threads = dashboard?.threads ?? []
 
 	return (
-		<aside className={cn('bg-sidebar flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border px-4 py-6', className)}>
+		<aside className={cn('bg-sidebar flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border px-4 py-6', className)} {...props}>
 			<div className="px-1">
 				<Logo />
 			</div>

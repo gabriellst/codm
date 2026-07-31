@@ -67,7 +67,7 @@
 		"detect:slice": "bun scripts/detectors/slice-closure.ts",
 		"detect:baseline": "bun scripts/detectors/registry-scan.ts --update-baseline",
 		"detect:self-test": "bun test ./.claude/hooks ./packages/app/tauri/config ./scripts/detectors",
-		"test:tooling": "bun tsc:scripts && bun test ./.claude/hooks ./packages/app/tauri/config ./scripts/detectors ./scripts/cli ./scripts/db ./scripts/lib ./scripts/examples ./scripts/sync ./scripts/create-template ./scripts/taxonomy-parity.test.ts ./scripts/skill-examples.test.ts ./scripts/review-plan.test.ts ./scripts/skill-evals/run.test.ts ./scripts/skill-evals/validate-grader-ids.test.ts ./packages/api/typescript/tests/architecture/union-parity.test.ts",
+		"test:tooling": "bun tsc:scripts && bun test ./.claude/hooks ./packages/app/tauri/config ./scripts/detectors ./scripts/eslint-rules ./scripts/cli ./scripts/db ./scripts/lib ./scripts/examples ./scripts/sync ./scripts/create-template ./scripts/taxonomy-parity.test.ts ./scripts/skill-examples.test.ts ./scripts/review-plan.test.ts ./scripts/skill-evals/run.test.ts ./scripts/skill-evals/validate-grader-ids.test.ts ./packages/api/typescript/tests/architecture/union-parity.test.ts",
 		"tsc:scripts": "tsc -p tsconfig.scripts.json --noEmit",
 		"env:generate": "bun scripts/env/generate.ts",
 		"check:generated": "bun scripts/check-generated.ts",

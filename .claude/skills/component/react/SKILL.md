@@ -403,7 +403,7 @@ export function AddWorkspaceDialog({ className }: Pick<ComponentProps<typeof Dia
 }
 ```
 
-`className?: string` à mão continua proibido (bp-20/CP-02): o tipo da raiz já tem o campo.
+`className?: string` à mão continua proibido (bp-20, `local/component-props` → `handTyped`): o tipo da raiz já tem o campo.
 
 **O spread cego (`{...props}`) — CONDICIONAL.** Numa raiz DOM ele é o default. Numa raiz **controlada**
 (`ToggleGroup` / `Tabs` / `Select`) espalhar props arbitrárias briga com o contrato controlado; numa raiz
@@ -423,9 +423,17 @@ chamador apagaria `"toaster group"`).
    Popover>, 'className'>` nem type-checa); arquivo que não é componente (`console/glyphs.tsx` é um mapa de
    ícones).
 
-Qualquer outra "isenção" é **achado para reportar**, não linha de whitelist. Gate: `bun
-scripts/detectors/component-props.ts` (CP-04). Em `components/ui/` quem manda é a rail C,
-`packages/app/react/tests/architecture/primitive-props.test.ts`.
+Qualquer outra "isenção" é **achado para reportar**, não linha de whitelist. E as duas isenções não são
+whitelist nem no gate: a isenção 2 é a MESMA pergunta que o gate já faz — *o tipo de props da raiz tem
+`className`?* Um `Ctx.Provider` (`{ value, children }`) e um `Popover.Root` headless não têm; exigir
+className deles seria exigir um erro de tsc.
+
+Gate: `bun lint` → regra eslint type-aware **`local/component-props`**
+(`scripts/eslint-rules/component-props.ts`), que vale para todo componente que outro módulo pode
+renderizar — inclusive `components/ui/`, cujos 34 de 40 arquivos exportam por barrel no rodapé e por isso
+eram invisíveis ao walker que ela substituiu. Em `components/ui/` a rail C
+(`packages/app/react/tests/architecture/primitive-props.test.ts`) continua dona da metade de declaração
+(`*Props` fechada) e do clobber em componentes module-private.
 
 ### Use cn() for Conditional Classes
 

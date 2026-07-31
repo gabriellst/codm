@@ -9,20 +9,24 @@ import { join, resolve } from 'node:path'
  * `aria-*`, não passa `data-testid`, e o próximo dev copia o primitivo em vez de compô-lo. A regra
  * já é doutrina (primitive PRM-04 / PRM-P01); faltava falhar.
  *
- * POR QUE AQUI E NÃO NO DETECTOR (re-decidido em 30/07, MANTIDO): `scripts/detectors/component-props.ts`
- * varre bp-20/bp-29 repo-wide e EXCLUI `/ui/` de propósito. Trazer `ui/` para lá seria um gate VAZIO: o
- * `componentBlocks()` do detector só enxerga `^export function X`, e 34 dos 40 arquivos de primitivo
- * exportam por barrel no rodapé (`export { Dialog, DialogContent, … }`) — são 168 componentes de
- * primitivo e o walker veria um punhado. Esta rail roda onde os primitivos moram e lê todos eles, com um
- * predicado mais forte: a DECLARAÇÃO de props é que precisa referenciar o vocabulário, não a raiz (o que
- * pega `ConfirmDialog`, cuja raiz é `<DialogContent>` e escaparia do CP-01, que só olha raiz minúscula).
+ * O QUE ESTA RAIL AINDA POSSUI (revisado em 31/07, quando a doutrina de className virou a regra
+ * eslint type-aware `local/component-props`): a metade de DECLARAÇÃO — TODA declaração `*Props` de um
+ * primitivo referencia o vocabulário da raiz. É um predicado sobre o TIPO, não sobre o componente, e
+ * mais forte que o da regra: pega `ConfirmDialog` (raiz `<DialogContent>`) e pega uma `*Props` fechada
+ * mesmo em um componente module-private, que é população fora da regra (ela mede quem OUTRO módulo
+ * renderiza). A regra eslint, do seu lado, avalia 283 componentes deste diretório — o walker antigo,
+ * que só enxergava `^export function X`, via um punhado, porque 34 dos 40 arquivos exportam por barrel
+ * no rodapé (`export { Dialog, DialogContent, … }`).
  *
- * AS DUAS METADES: a doutrina de `className` tem uma metade de DECLARAÇÃO (o tipo expõe a superfície) e
- * uma de ENCANAMENTO (o valor do chamador chega mesmo na raiz). Os dois primeiros testes são a primeira
- * metade. O terceiro é a segunda: uma raiz com `className="…"` literal AO LADO de `{...props}` não mescla
- * — o último a escrever ganha, e quem passou `className` ou apaga o estilo do primitivo ou é apagado por
- * ele. `cn()` é o que mescla. Nascido vermelho em `sonner.tsx` (`<Sonner className="toaster group" …
- * {...props} />`), o único caso do diretório na medição de 30/07.
+ * O QUE SAIU DAQUI: o teste de `className?: string` à mão. Ele agora é `local/component-props`
+ * (messageId `handTyped`), que é um visitor de `TSPropertySignature` — repo-wide, sem depender de
+ * export, cobrindo estritamente mais que o regex que morava aqui. Uma doutrina, um gate.
+ *
+ * A METADE DE ENCANAMENTO fica: uma raiz com `className="…"` literal AO LADO de `{...props}` não
+ * mescla — o último a escrever ganha, e quem passou `className` ou apaga o estilo do primitivo ou é
+ * apagado por ele. `cn()` é o que mescla. Nascido vermelho em `sonner.tsx` (`<Sonner className="toaster
+ * group" … {...props} />`), o único caso do diretório na medição de 30/07. A regra eslint diz o mesmo
+ * (`clobbered`) para componentes exportados; esta rail cobre também os module-private do diretório.
  *
  * ESCOPO: `components/ui/*.tsx`, UM nível — o glob literal que `.claude/registry.yaml` usa para
  * mapear a skill `primitive`. `icons/` fica fora por construção: os 125 ícones são
@@ -84,18 +88,6 @@ describe('rail C — primitivo de components/ui/ estende as props da raiz (primi
 			for (const m of source.matchAll(/^(?:export\s+)?(?:interface|type)\s+([A-Z][A-Za-z0-9]*Props)\b/gm)) {
 				if (EXTENDS_ROOT.test(declarationBody(source, m.index ?? 0, m[0].length))) continue
 				offenders.push(`${file}:${source.slice(0, m.index).split('\n').length} ${m[1]}`)
-			}
-		}
-		expect(offenders).toEqual([])
-	})
-
-	it('nenhum `className?: string` à mão — quem estende a raiz já ganhou className', async () => {
-		const offenders: string[] = []
-		for (const file of await primitiveFiles()) {
-			if (WHITELIST[file]) continue
-			const source = readFileSync(join(UI, file), 'utf8')
-			for (const m of source.matchAll(/className\?:\s*string/g)) {
-				offenders.push(`${file}:${source.slice(0, m.index).split('\n').length}`)
 			}
 		}
 		expect(offenders).toEqual([])

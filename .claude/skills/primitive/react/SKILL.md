@@ -623,11 +623,17 @@ tipado pela raiz (`function Collapsible({ ...props }: ComponentProps<typeof Coll
 → `<CollapsiblePrimitive.Root {...props} />`) já entrega o `className` inteiro pelo spread — nada a
 mesclar. A pergunta é sempre "o className do chamador chega na raiz?", nunca "tem `cn()` no arquivo?".
 
-Gate: `packages/app/react/tests/architecture/primitive-props.test.ts` (rail C) — 3 asserções sobre
-`components/ui/*.tsx`: declaração aberta, zero `className?: string` à mão, zero raiz com clobber.
-`components/ui/` fica FORA de `scripts/detectors/component-props.ts` de propósito: o walker dele só
-enxerga `^export function X` e 34 dos 40 arquivos de primitivo exportam por barrel no rodapé — mover
-para lá seria um gate vazio sobre 168 componentes.
+Gate principal desde 31/07: a regra eslint type-aware **`local/component-props`**
+(`scripts/eslint-rules/component-props.ts`), que roda em `bun lint` e enxerga **283 componentes de
+`components/ui/`** — o walker que ela substituiu só via `^export function X`, e 34 dos 40 arquivos de
+primitivo exportam por barrel no rodapé, então `ui/` ficava de fora. Ela pergunta ao checker se a raiz
+aceita `className` (é assim que `Popover.Root`/`Ctx.Provider` se isentam, sem whitelist) e exige
+superfície + merge.
+
+Rail C (`packages/app/react/tests/architecture/primitive-props.test.ts`) segue com as duas asserções que
+são dela: nenhuma declaração `*Props` fechada (predicado sobre o TIPO, mais forte que o da regra) e
+nenhuma raiz com clobber em componente module-private. A asserção de `className?: string` saiu de lá — é
+`local/component-props` (`handTyped`) e cobre estritamente mais.
 
 ### Use data-slot for Identification
 

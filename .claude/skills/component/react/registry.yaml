@@ -1086,7 +1086,7 @@ registry:
         compor. Tipe a superfície A PARTIR DA RAIZ — `ComponentProps<'tag'>` quando a raiz é DOM (ganha
         aria-*/data-*/handlers de graça), `ComponentProps<typeof X>` ou
         `Pick<ComponentProps<typeof X>, 'className'>` quando a raiz é um componente. Nunca
-        `className?: string` à mão (bp-20/CP-02). Mesclar é cn(): um literal `className="…"` ao lado de
+        `className?: string` à mão (bp-20, messageId `handTyped`). Mesclar é cn(): um literal `className="…"` ao lado de
         `{...props}` na mesma raiz NÃO mescla — o último a escrever ganha e um dos dois lados some.
         O SPREAD CEGO é outra regra (bp-20) e continua CONDICIONAL — em raiz controlada
         (ToggleGroup/Tabs/Select) espalhar props arbitrárias briga com o contrato controlado. O perigo
@@ -1121,12 +1121,17 @@ registry:
       detect_skip:
         - 'className=\{cn\('
       rail: >
-        scripts/detectors/component-props.ts — CP-04 é a metade repo-wide e a que importa: para CADA
-        componente exportado sob -components/ e components/ (menos ui/), resolve a raiz, pergunta se ela
-        aceita className (isenção (b) decidida por estrutura: `.Provider` e wrappers headless caem fora) e
-        exige superfície + merge. O regex de `detect` acima só pega o clobber literal+spread no edit-time;
-        a metade "não declara className" não é regex-ável e é do detector. Autoteste em
-        scripts/detectors/component-props.test.ts. Nos primitivos (components/ui/) o dono é a rail C,
-        packages/app/react/tests/architecture/primitive-props.test.ts — o walker do detector só enxerga
-        `^export function X` e 34 dos 40 arquivos de primitivo exportam por barrel, então movê-los para cá
-        seria gate vazio.
+        Regra eslint type-aware `local/component-props` (scripts/eslint-rules/component-props.ts). Para
+        CADA componente que outro módulo pode renderizar — named export, barrel no rodapé, export default,
+        arrow, memo/forwardRef — ela resolve a raiz JSX, pergunta ao CHECKER se a raiz aceita className
+        (isenção (b) sem whitelist: `.Provider` e raiz headless simplesmente não têm className no tipo de
+        props) e exige superfície + merge; `noSpread` cobra a metade condicional do spread só em raiz DOM.
+        Módulo de rota é a isenção (a), decidida pelo caminho. O regex de `detect` acima só pega o clobber
+        literal+spread no edit-time. Autoteste (RuleTester, com tipos) em
+        scripts/eslint-rules/component-props.test.ts.
+        MIGRADO em 31/07 de scripts/detectors/component-props.ts (CP-01/CP-02/CP-04), que só enxergava
+        `^export function X` e por isso EXCLUÍA components/ui/ — 34 dos 40 arquivos de primitivo exportam
+        por barrel. A regra AST avalia 337 componentes, 283 deles em ui/. Naquele detector sobrou só CP-03
+        (route shell), que é sobre ONDE o arquivo mora. Em components/ui/ a rail C
+        (packages/app/react/tests/architecture/primitive-props.test.ts) continua dona da metade de
+        DECLARAÇÃO (`*Props` fechada) e do clobber em componentes module-private.

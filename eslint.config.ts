@@ -1,4 +1,5 @@
 import eslint from '@eslint/js'
+import componentProps from './scripts/eslint-rules/component-props'
 import componentQuality from './scripts/eslint-rules/component-quality'
 import localRules from './scripts/eslint-rules/no-enum-widening'
 // @ts-expect-error
@@ -58,7 +59,7 @@ export default tseslint.config([
 		},
 		plugins: {
 			'@typescript-eslint': tseslint.plugin,
-			local: { rules: { ...localRules.rules, ...componentQuality.rules } },
+			local: { rules: { ...localRules.rules, ...componentQuality.rules, ...componentProps.rules } },
 		},
 		rules: {
 			'local/no-enum-widening': 'error',
@@ -74,6 +75,19 @@ export default tseslint.config([
 			'@typescript-eslint/no-dynamic-delete': 'warn',
 			'@typescript-eslint/no-empty-object-type': 'off',
 			'@typescript-eslint/no-empty-function': 'warn',
+		},
+	},
+	// component-props (the className doctrine, component bp-20/bp-29) — react app only: `className` +
+	// `cn()` + ComponentProps are the react/tailwind vocabulary, and the rule reads the JSX root's
+	// props type, which only means something there. It lands at 'error' rather than the 'warn while we
+	// burn down the backlog' convention because there IS no backlog: it evaluates 337 components
+	// (283 of them in components/ui/, which the old walker could not see at all) and, after the one
+	// finding it was born red on, reports zero. Route modules exempt themselves inside the rule.
+	{
+		files: ['packages/app/react/src/**/*.tsx'],
+		ignores: ['**/*.test.*', '**/*.spec.*', '**/*.stories.*', '**/.storybook/**'],
+		rules: {
+			'local/component-props': 'error',
 		},
 	},
 	// Client-side services (.claude/skills/desktop-shell): the react console consumes capability

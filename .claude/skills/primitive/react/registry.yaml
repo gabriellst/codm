@@ -237,13 +237,16 @@ registry:
       mechanical: true
       detect:
         - 'className\?:\s*string'
-      refs: [PRM-04, "packages/app/react/tests/architecture/primitive-props.test.ts (rail C)"]
+      refs: [PRM-04, "scripts/eslint-rules/component-props.ts (local/component-props, messageId handTyped)"]
       note: >
         PRM-04 already named this shape as `when: always`, but only as a pattern — nothing failed
-        when a primitive violated it (component-props.ts deliberately excludes /ui/; see its
-        docblock). This bad_practice is the doctrine catching up to what the rail C test now
-        enforces mechanically, repo-wide, over components/ui/*.tsx. Esta é a metade de DECLARAÇÃO;
-        a de ENCANAMENTO é bp-06.
+        when a primitive violated it, because the walker that owned bp-20 could only see
+        `^export function X` and therefore excluded /ui/ entirely. Since 31/07 the owner is the
+        type-aware eslint rule `local/component-props` (`handTyped`): a TSPropertySignature visitor,
+        so it fires repo-wide, inside any type alias or inline param type, export or not. Rail C
+        (packages/app/react/tests/architecture/primitive-props.test.ts) dropped its duplicate of this
+        check the same day — one doctrine, one gate. Esta é a metade de DECLARAÇÃO; a de ENCANAMENTO
+        é bp-06.
 
     - id: bp-06
       name: "Root that clobbers the caller's className (literal + spread, no cn)"
