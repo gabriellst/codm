@@ -2,6 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenRemote, givenThread, givenWorkspace } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
+import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
+import { ConfigurePrompt } from './ConfigureThreadSettings'
 import { GetThreadSettings } from './GetThreadSettings'
 
 const CHANNEL = '019e4d24-0000-7041-9e1c-0000000000c1'
@@ -79,6 +81,47 @@ describe('GetThreadSettings — participant names come from the contact book', (
 		const { participants } = await settingsFor(thread.id.value)
 
 		expect(participants.find(p => p.participantId === 'operator')?.name).toBe('Operator')
+	})
+
+	/**
+	 * THE CUSTOM PROMPT SURVIVES THE ROUND TRIP — entity → column → entity → DTO.
+	 *
+	 * Asserted end-to-end rather than on `configurePrompt` alone because every one of those hops is a
+	 * place the value can be dropped SILENTLY: a column missing from the repository's `onConflictDoUpdate`
+	 * set writes nothing and reports success, and a DTO that forgets the field renders an empty box over
+	 * a stored prompt the agent is still obeying. Both failures look identical from the console — "my
+	 * prompt did not save" — and neither makes anything red.
+	 */
+	it('round-trips the operator custom prompt, and reports the cap the console counts down to', async () => {
+		const thread = await threadWithContact(JID)
+		const configure = testBed.resolve(ConfigurePrompt)
+
+		await configure.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, customPrompt: 'Fale sempre em inglês com este cliente.' })
+
+		const settings = await settingsFor(thread.id.value)
+		expect(settings.customPrompt).toBe('Fale sempre em inglês com este cliente.')
+		expect(settings.customPromptMaxLength).toBe(CUSTOM_PROMPT_MAX_LENGTH)
+	})
+
+	/**
+	 * CLEARING has to reach the database too. This is the half a missing `onConflictDoUpdate` entry
+	 * breaks most cruelly: the console shows the box empty (it echoes what was typed), and the agent
+	 * keeps obeying an instruction the operator can no longer see anywhere.
+	 */
+	it('an empty prompt ERASES the stored one', async () => {
+		const thread = await threadWithContact(JID)
+		const configure = testBed.resolve(ConfigurePrompt)
+		await configure.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, customPrompt: 'Nunca prometa prazo.' })
+
+		await configure.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, customPrompt: '' })
+
+		expect((await settingsFor(thread.id.value)).customPrompt).toBe('')
+	})
+
+	/** Never written ⇒ the empty string, not `undefined` — the read is consumed by a textarea. */
+	it('reports an empty prompt when the operator never wrote one', async () => {
+		const thread = await threadWithContact(JID)
+		expect((await settingsFor(thread.id.value)).customPrompt).toBe('')
 	})
 
 	/** A contact of ANOTHER channel with the same JID must not leak in — the key is (channel, remote). */

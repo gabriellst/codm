@@ -69,6 +69,10 @@ export class DrizzleThreadRepository extends ThreadRepository {
 						mentionGateTag: data.mentionGateTag,
 						participants: data.participants,
 						bufferSize: data.bufferSize,
+						// Both directions, like `deletedAt` above: `configurePrompt` writes text AND erases it, and
+						// an erase that never reaches the UPDATE set is the worst kind of no-op — the console shows
+						// an empty box, the agent keeps obeying the instruction nobody can see any more.
+						customPrompt: data.customPrompt,
 						status: data.status,
 						// Load-bearing for BOTH directions of the soft delete: `delete()` stamps it and
 						// `revive()` clears it, and neither reaches the database if this column is missing from
@@ -182,6 +186,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			mentionGate,
 			participants: row.participants as Participant[],
 			bufferSize: row.bufferSize as BufferSize,
+			customPrompt: row.customPrompt ?? undefined,
 			status: row.status as ThreadStatus,
 			deletedAt: row.deletedAt ?? undefined,
 		})
@@ -203,6 +208,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			mentionGateTag: entity.mentionGate.enabled ? entity.mentionGate.tag : null,
 			participants: entity.participants,
 			bufferSize: entity.bufferSize,
+			customPrompt: entity.customPrompt ?? null,
 			status: entity.status,
 			deletedAt: entity.deletedAt ?? null,
 			createdAt: entity.createdAt,

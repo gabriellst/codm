@@ -77,6 +77,7 @@ const (
 	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
 	PATHNOTADIRECTORY               ApiErrors = "PATH_NOT_A_DIRECTORY"
 	PATHNOTFOUND                    ApiErrors = "PATH_NOT_FOUND"
+	PROMPTTOOLONG                   ApiErrors = "PROMPT_TOO_LONG"
 	PROVIDERCOMINGSOON              ApiErrors = "PROVIDER_COMING_SOON"
 	PROVIDERNOTDETECTED             ApiErrors = "PROVIDER_NOT_DETECTED"
 	QUOTEDENTRYNOTINTHREAD          ApiErrors = "QUOTED_ENTRY_NOT_IN_THREAD"
@@ -219,6 +220,8 @@ func (e ApiErrors) Valid() bool {
 	case PATHNOTADIRECTORY:
 		return true
 	case PATHNOTFOUND:
+		return true
+	case PROMPTTOOLONG:
 		return true
 	case PROVIDERCOMINGSOON:
 		return true
@@ -1323,6 +1326,11 @@ type SetParticipantInvocationJSONBody struct {
 	CanInvoke bool `json:"canInvoke"`
 }
 
+// ConfigurePromptJSONBody defines parameters for ConfigurePrompt.
+type ConfigurePromptJSONBody struct {
+	CustomPrompt *string `json:"customPrompt,omitempty"`
+}
+
 // GetThreadSettings200JSONResponseBodyMentionGate0 defines parameters for GetThreadSettings.
 type GetThreadSettings200JSONResponseBodyMentionGate0 struct {
 	Enabled bool `json:"enabled"`
@@ -1408,6 +1416,9 @@ type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
 
 // SetParticipantInvocationJSONRequestBody defines body for SetParticipantInvocation for application/json ContentType.
 type SetParticipantInvocationJSONRequestBody SetParticipantInvocationJSONBody
+
+// ConfigurePromptJSONRequestBody defines body for ConfigurePrompt for application/json ContentType.
+type ConfigurePromptJSONRequestBody ConfigurePromptJSONBody
 
 // SteerThreadJSONRequestBody defines body for SteerThread for application/json ContentType.
 type SteerThreadJSONRequestBody SteerThreadJSONBody
@@ -1817,6 +1828,11 @@ type ClientInterface interface {
 
 	// PauseThread request
 	PauseThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigurePromptWithBody request with any body
+	ConfigurePromptWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigurePrompt(ctx context.Context, threadId string, body ConfigurePromptJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResumeThread request
 	ResumeThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2500,6 +2516,30 @@ func (c *Client) SetParticipantInvocation(ctx context.Context, threadId string, 
 
 func (c *Client) PauseThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPauseThreadRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigurePromptWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigurePromptRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigurePrompt(ctx context.Context, threadId string, body ConfigurePromptJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigurePromptRequest(c.Server, threadId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4167,6 +4207,53 @@ func NewPauseThreadRequest(server string, threadId string) (*http.Request, error
 	return req, nil
 }
 
+// NewConfigurePromptRequest calls the generic ConfigurePrompt builder with application/json body
+func NewConfigurePromptRequest(server string, threadId string, body ConfigurePromptJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigurePromptRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigurePromptRequestWithBody generates requests for ConfigurePrompt with any type of body
+func NewConfigurePromptRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/prompt", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewResumeThreadRequest generates requests for ResumeThread
 func NewResumeThreadRequest(server string, threadId string) (*http.Request, error) {
 	var err error
@@ -4797,6 +4884,11 @@ type ClientWithResponsesInterface interface {
 
 	// PauseThreadWithResponse request
 	PauseThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*PauseThreadResponse, error)
+
+	// ConfigurePromptWithBodyWithResponse request with any body
+	ConfigurePromptWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigurePromptResponse, error)
+
+	ConfigurePromptWithResponse(ctx context.Context, threadId string, body ConfigurePromptJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigurePromptResponse, error)
 
 	// ResumeThreadWithResponse request
 	ResumeThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ResumeThreadResponse, error)
@@ -6125,6 +6217,36 @@ func (r PauseThreadResponse) ContentType() string {
 	return ""
 }
 
+type ConfigurePromptResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigurePromptResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigurePromptResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigurePromptResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ResumeThreadResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -6159,10 +6281,12 @@ type GetThreadSettingsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		BufferSize   BufferSize                                       `json:"bufferSize"`
-		InvokerCount int                                              `json:"invokerCount"`
-		MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
-		Participants []struct {
+		BufferSize            BufferSize                                       `json:"bufferSize"`
+		CustomPrompt          string                                           `json:"customPrompt"`
+		CustomPromptMaxLength int                                              `json:"customPromptMaxLength"`
+		InvokerCount          int                                              `json:"invokerCount"`
+		MentionGate           GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+		Participants          []struct {
 			CanInvoke     bool   `json:"canInvoke"`
 			Name          string `json:"name"`
 			ParticipantId string `json:"participantId"`
@@ -7134,6 +7258,23 @@ func (c *ClientWithResponses) PauseThreadWithResponse(ctx context.Context, threa
 		return nil, err
 	}
 	return ParsePauseThreadResponse(rsp)
+}
+
+// ConfigurePromptWithBodyWithResponse request with arbitrary body returning *ConfigurePromptResponse
+func (c *ClientWithResponses) ConfigurePromptWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigurePromptResponse, error) {
+	rsp, err := c.ConfigurePromptWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigurePromptResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigurePromptWithResponse(ctx context.Context, threadId string, body ConfigurePromptJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigurePromptResponse, error) {
+	rsp, err := c.ConfigurePrompt(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigurePromptResponse(rsp)
 }
 
 // ResumeThreadWithResponse request returning *ResumeThreadResponse
@@ -8399,6 +8540,32 @@ func ParsePauseThreadResponse(rsp *http.Response) (*PauseThreadResponse, error) 
 	return response, nil
 }
 
+// ParseConfigurePromptResponse parses an HTTP response from a ConfigurePromptWithResponse call
+func ParseConfigurePromptResponse(rsp *http.Response) (*ConfigurePromptResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigurePromptResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseResumeThreadResponse parses an HTTP response from a ResumeThreadWithResponse call
 func ParseResumeThreadResponse(rsp *http.Response) (*ResumeThreadResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -8441,10 +8608,12 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			BufferSize   BufferSize                                       `json:"bufferSize"`
-			InvokerCount int                                              `json:"invokerCount"`
-			MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
-			Participants []struct {
+			BufferSize            BufferSize                                       `json:"bufferSize"`
+			CustomPrompt          string                                           `json:"customPrompt"`
+			CustomPromptMaxLength int                                              `json:"customPromptMaxLength"`
+			InvokerCount          int                                              `json:"invokerCount"`
+			MentionGate           GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+			Participants          []struct {
 				CanInvoke     bool   `json:"canInvoke"`
 				Name          string `json:"name"`
 				ParticipantId string `json:"participantId"`

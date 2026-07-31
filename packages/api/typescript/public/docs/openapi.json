@@ -2090,6 +2090,63 @@
         ]
       }
     },
+    "/v1/threads/{threadId}/prompt": {
+      "put": {
+        "tags": [
+          "thread",
+          "mcp:system"
+        ],
+        "description": "Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)",
+        "operationId": "ConfigurePrompt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "customPrompt": {
+                    "type": "string",
+                    "maxLength": 8000
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "customPrompt": "Fale sempre em português. Nunca sugira migrar de framework."
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
+      }
+    },
     "/v1/threads/{threadId}": {
       "delete": {
         "tags": [
@@ -2510,6 +2567,15 @@
                     "bufferSize": {
                       "$ref": "#/components/schemas/BufferSize"
                     },
+                    "customPrompt": {
+                      "type": "string"
+                    },
+                    "customPromptMaxLength": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991
+                    },
                     "providers": {
                       "type": "array",
                       "items": {
@@ -2535,6 +2601,8 @@
                     "participants",
                     "invokerCount",
                     "bufferSize",
+                    "customPrompt",
+                    "customPromptMaxLength",
                     "providers"
                   ],
                   "additionalProperties": false
@@ -7754,6 +7822,7 @@
           "PASSWORD_TOO_WEAK",
           "PATH_NOT_A_DIRECTORY",
           "PATH_NOT_FOUND",
+          "PROMPT_TOO_LONG",
           "PROVIDER_COMING_SOON",
           "PROVIDER_NOT_DETECTED",
           "QUOTED_ENTRY_NOT_IN_THREAD",
@@ -8138,6 +8207,7 @@
     "PASSWORD_TOO_WEAK",
     "PATH_NOT_A_DIRECTORY",
     "PATH_NOT_FOUND",
+    "PROMPT_TOO_LONG",
     "PROVIDER_COMING_SOON",
     "PROVIDER_NOT_DETECTED",
     "QUOTED_ENTRY_NOT_IN_THREAD",
@@ -8186,6 +8256,7 @@
       "AddWorkspace",
       "ConfigureContextBuffer",
       "ConfigureMentionGate",
+      "ConfigurePrompt",
       "CreateOwner",
       "DisableOwner",
       "EnableOwner",

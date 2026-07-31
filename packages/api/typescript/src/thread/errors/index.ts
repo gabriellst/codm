@@ -16,6 +16,9 @@ export type ThreadDomainErrors =
 	| 'RESOLUTION_NOT_APPLICABLE'
 	// Soft delete (thread-deletion spec, decision 8) — `Thread.delete()` refuses a second deletion.
 	| 'THREAD_ALREADY_DELETED'
+	// The operator's custom prompt is capped: it rides in EVERY turn this conversation answers, so an
+	// unbounded box is an unbounded per-message cost. Raised by `CustomPromptSchema`'s `.max()`.
+	| 'PROMPT_TOO_LONG'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
 // Application errors — orchestration in the thread use cases + routing pipeline.
@@ -77,6 +80,9 @@ registerErrorCodes({
 	// CONFLICT, not 422: the request is well-formed and was legal a moment ago — the row simply moved on.
 	// Same status THREAD_ALREADY_ATTACHED carries, for the same "you are acting on a stale screen" cause.
 	THREAD_ALREADY_DELETED: HttpStatusCode.CONFLICT,
+	// 422 like the other "well-formed, but the value breaks a rule of the aggregate" codes: the payload
+	// IS a string, it is simply longer than one conversation is allowed to carry.
+	PROMPT_TOO_LONG: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// 422 like every other "the state forbids this right now" code in this context (THREAD_PAUSED,
 	// ISSUE_ARCHIVED): the operator resolves the stop or lets the issue finish, then deletes.
 	THREAD_HAS_ACTIVE_WORK: HttpStatusCode.UNPROCESSABLE_ENTITY,

@@ -153,4 +153,26 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(builder.user(operatorTurn({ window: { seeded: true, entries } }))).toContain('CONVERSATION SO FAR')
 		expect(builder.user(operatorTurn({ window: { seeded: false, entries } }))).toContain('SINCE YOU LAST SPOKE')
 	})
+
+	/**
+	 * The operator's custom prompt has to REACH the model and has to arrive where it can win.
+	 *
+	 * Both halves are asserted because both fail silently. A section that renders but sits above the
+	 * house voice loses every conflict with it, and the operator sees a text box that changed nothing —
+	 * which is indistinguishable, from the console, from the feature not being wired at all.
+	 */
+	it('(h) a custom prompt is rendered VERBATIM and LAST, after the house defaults', () => {
+		const customPrompt = 'Fale sempre em inglês com este cliente. Nunca prometa prazo.'
+
+		const system = builder.system(operatorTurn({ customPrompt }))
+
+		expect(system).toContain(customPrompt)
+		expect(system.indexOf('INSTRUCTIONS FROM THE OPERATOR')).toBeGreaterThan(system.indexOf('HOW YOU TALK'))
+		expect(system.trimEnd().endsWith(customPrompt)).toBe(true)
+	})
+
+	/** No prompt, no heading. A heading with nothing under it tells the model an instruction exists. */
+	it('(i) no section at all when the operator never wrote one', () => {
+		expect(builder.system(operatorTurn())).not.toContain('INSTRUCTIONS FROM THE OPERATOR')
+	})
 })

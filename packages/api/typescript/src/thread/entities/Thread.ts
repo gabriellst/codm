@@ -11,7 +11,7 @@ import {
 	StopResolution,
 } from '@codm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
-import { mentionsTag, stripMentionTag, MentionGateSchema } from '../schemas'
+import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
 import { isResolutionApplicable } from '../objects/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 
@@ -113,6 +113,17 @@ export const ThreadSchema = z.object({
 	mentionGate: MentionGateSchema,
 	participants: z.array(ParticipantSchema),
 	bufferSize: z.enum(BufferSize),
+	/**
+	 * The operator's own standing instructions for this conversation — ABSENT until they write some.
+	 *
+	 * It lives on the aggregate rather than only on the row because the thread is what the instruction
+	 * is ABOUT: one conversation may need a different voice, a different vocabulary, a different set of
+	 * things never to do, and that is a property of the room, not of the installation. The global
+	 * defaults keep coming from `OrchestratorPromptBuilder`; this composes with them.
+	 *
+	 * Optional and never `''` — see `CustomPromptSchema`. `configurePrompt(undefined)` is the way back.
+	 */
+	customPrompt: CustomPromptSchema.optional(),
 	status: z.enum(ThreadStatus),
 	/**
 	 * SOFT DELETE (thread-deletion spec, decision 1) — absent while the conversation is configured.
@@ -290,6 +301,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * The two create-time invariants are re-checked rather than assumed: `revive` accepts the same
 	 * caller-supplied data `create` does, so it admits exactly the same two ways of being wrong.
 	 *
+	 * ONE piece of the control plane deliberately SURVIVES: `customPrompt`. Everything reset above is
+	 * something the wizard just re-chose or something a fresh thread is defined as having; the operator's
+	 * standing instructions are neither. The wizard never asks for them, so clearing them here would
+	 * destroy hand-written text with nothing in the flow that hints it happened — while the promise the
+	 * delete confirmation makes is that re-attaching brings the conversation back.
+	 *
 	 * There is deliberately no "this thread is not deleted" guard. `AttachThread` is the only caller and
 	 * it reaches this method only on the deleted branch — the live branch raises THREAD_ALREADY_ATTACHED
 	 * before getting here. Inventing a domain code for a state the one call site cannot produce would be
@@ -335,6 +352,30 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 
 	configureContextBuffer(size: BufferSize): void {
 		this.bufferSize = size
+	}
+
+	/**
+	 * Write (or erase) the operator's standing instructions for this conversation.
+	 *
+	 * ### The empty string is not a value here, it is the ERASE
+	 * The console sends whatever is in a textarea, and an operator who selects-all-and-deletes sends
+	 * `''`. Storing that would create a second spelling of "no custom prompt" that every reader —
+	 * the settings DTO, the prompt builder, the persistence mapper — would have to normalize
+	 * independently, and the first one to forget renders an empty `OPERATOR INSTRUCTIONS` heading into
+	 * a real conversation's system prompt. So blank-in means absent-out, decided ONCE, here.
+	 *
+	 * Whitespace-only counts as blank for the same reason: a newline the operator left behind is not an
+	 * instruction, and `CustomPromptSchema` would trim it to `''` and then reject it as too short —
+	 * turning a perfectly ordinary "clear the box" into a VALIDATION_ERROR the operator cannot explain.
+	 *
+	 * ### The cap is the SCHEMA's rule, not this method's
+	 * `CustomPromptSchema` carries `error: 'PROMPT_TOO_LONG'` on its `.max()`, so `validate()` raises the
+	 * named code and the console renders the operator's own limit — no hand-rolled `safeParse` here, and
+	 * no format check duplicated between the schema and the behaviour (entity `bp-10`/`bp-11`).
+	 */
+	configurePrompt(customPrompt: string | undefined): void {
+		this.customPrompt = customPrompt?.trim() || undefined
+		this.validate()
 	}
 
 	setParticipantInvocation(participantId: string, canInvoke: boolean): void {

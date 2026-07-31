@@ -259,6 +259,7 @@ pub mod types {
     ///    "PASSWORD_TOO_WEAK",
     ///    "PATH_NOT_A_DIRECTORY",
     ///    "PATH_NOT_FOUND",
+    ///    "PROMPT_TOO_LONG",
     ///    "PROVIDER_COMING_SOON",
     ///    "PROVIDER_NOT_DETECTED",
     ///    "QUOTED_ENTRY_NOT_IN_THREAD",
@@ -414,6 +415,8 @@ pub mod types {
         PathNotADirectory,
         #[serde(rename = "PATH_NOT_FOUND")]
         PathNotFound,
+        #[serde(rename = "PROMPT_TOO_LONG")]
+        PromptTooLong,
         #[serde(rename = "PROVIDER_COMING_SOON")]
         ProviderComingSoon,
         #[serde(rename = "PROVIDER_NOT_DETECTED")]
@@ -545,6 +548,7 @@ pub mod types {
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
                 Self::PathNotADirectory => f.write_str("PATH_NOT_A_DIRECTORY"),
                 Self::PathNotFound => f.write_str("PATH_NOT_FOUND"),
+                Self::PromptTooLong => f.write_str("PROMPT_TOO_LONG"),
                 Self::ProviderComingSoon => f.write_str("PROVIDER_COMING_SOON"),
                 Self::ProviderNotDetected => f.write_str("PROVIDER_NOT_DETECTED"),
                 Self::QuotedEntryNotInThread => f.write_str("QUOTED_ENTRY_NOT_IN_THREAD"),
@@ -640,6 +644,7 @@ pub mod types {
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
                 "PATH_NOT_A_DIRECTORY" => Ok(Self::PathNotADirectory),
                 "PATH_NOT_FOUND" => Ok(Self::PathNotFound),
+                "PROMPT_TOO_LONG" => Ok(Self::PromptTooLong),
                 "PROVIDER_COMING_SOON" => Ok(Self::ProviderComingSoon),
                 "PROVIDER_NOT_DETECTED" => Ok(Self::ProviderNotDetected),
                 "QUOTED_ENTRY_NOT_IN_THREAD" => Ok(Self::QuotedEntryNotInThread),
@@ -1375,6 +1380,124 @@ pub mod types {
     }
     impl<'de> ::serde::Deserialize<'de>
     for ConfigureMentionGateBodyMentionGateVariant1Tag {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`ConfigurePromptBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "customPrompt": {
+    ///      "type": "string",
+    ///      "maxLength": 8000
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ConfigurePromptBody {
+        #[serde(
+            rename = "customPrompt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub custom_prompt: ::std::option::Option<ConfigurePromptBodyCustomPrompt>,
+    }
+    impl ::std::convert::From<&ConfigurePromptBody> for ConfigurePromptBody {
+        fn from(value: &ConfigurePromptBody) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for ConfigurePromptBody {
+        fn default() -> Self {
+            Self {
+                custom_prompt: Default::default(),
+            }
+        }
+    }
+    ///`ConfigurePromptBodyCustomPrompt`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 8000
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ConfigurePromptBodyCustomPrompt(::std::string::String);
+    impl ::std::ops::Deref for ConfigurePromptBodyCustomPrompt {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ConfigurePromptBodyCustomPrompt>
+    for ::std::string::String {
+        fn from(value: ConfigurePromptBodyCustomPrompt) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ConfigurePromptBodyCustomPrompt>
+    for ConfigurePromptBodyCustomPrompt {
+        fn from(value: &ConfigurePromptBodyCustomPrompt) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ConfigurePromptBodyCustomPrompt {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 8000usize {
+                return Err("longer than 8000 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ConfigurePromptBodyCustomPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ConfigurePromptBodyCustomPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ConfigurePromptBodyCustomPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ConfigurePromptBodyCustomPrompt {
         fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
         where
             D: ::serde::Deserializer<'de>,
@@ -5793,6 +5916,8 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "bufferSize",
+    ///    "customPrompt",
+    ///    "customPromptMaxLength",
     ///    "invokerCount",
     ///    "mentionGate",
     ///    "participants",
@@ -5801,6 +5926,14 @@ pub mod types {
     ///  "properties": {
     ///    "bufferSize": {
     ///      "$ref": "#/components/schemas/BufferSize"
+    ///    },
+    ///    "customPrompt": {
+    ///      "type": "string"
+    ///    },
+    ///    "customPromptMaxLength": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "exclusiveMinimum": 0.0
     ///    },
     ///    "invokerCount": {
     ///      "type": "integer",
@@ -5901,6 +6034,10 @@ pub mod types {
     pub struct GetThreadSettingsResponse {
         #[serde(rename = "bufferSize")]
         pub buffer_size: ::codm_contracts_rust::wire::enums::BufferSize,
+        #[serde(rename = "customPrompt")]
+        pub custom_prompt: ::std::string::String,
+        #[serde(rename = "customPromptMaxLength")]
+        pub custom_prompt_max_length: ::std::num::NonZeroU64,
         #[serde(rename = "invokerCount")]
         pub invoker_count: i64,
         #[serde(rename = "mentionGate")]
@@ -9777,6 +9914,44 @@ Sends a `POST` request to `/v1/threads/{threadId}/pause`
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)
+
+Sends a `PUT` request to `/v1/threads/{threadId}/prompt`
+
+*/
+    pub async fn configure_prompt<'a>(
+        &'a self,
+        thread_id: &'a str,
+        body: &'a types::ConfigurePromptBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/prompt", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;

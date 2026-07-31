@@ -31,6 +31,8 @@ export const getThreadSettings200Schema = z.object({
 get "bufferSize"(){
                 return bufferSizeSchema
               },
+"customPrompt": z.string(),
+"customPromptMaxLength": z.int().max(9007199254740991).gt(0),
 "providers": z.array(z.object({
     get "provider"(){
                 return providerKindSchema

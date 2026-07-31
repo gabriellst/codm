@@ -143,6 +143,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			window: { seeded: !session.resumed, entries },
 			contactKind: thread.contactRef.kind as ContactKind,
 			mentionTag: thread.mentionGate.enabled ? thread.mentionGate.tag : undefined,
+			// Read fresh off the aggregate on EVERY turn, not captured when the CLI session opened — which
+			// is what makes editing the prompt in the console take effect on the next message instead of
+			// after the session happens to be invalidated. It works because the runner folds `systemPrompt`
+			// into the first stdin line of every run, resumed ones included.
+			customPrompt: thread.customPrompt,
 			model: input.model ?? AgentModelId.DEFAULT,
 			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 			binaryPath: detection.binaryPath,

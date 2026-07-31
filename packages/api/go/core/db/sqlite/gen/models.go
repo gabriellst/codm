@@ -313,6 +313,7 @@ type ThreadThread struct {
 	UpdatedAt          int64
 	Version            int64
 	DeletedAt          sql.NullInt64
+	CustomPrompt       sql.NullString
 }
 
 type ThreadTranscriptEntry struct {

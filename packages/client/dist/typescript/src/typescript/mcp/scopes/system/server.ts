@@ -6,6 +6,7 @@
 import { addWorkspaceHandler } from "./addWorkspace.ts";
 import { configureContextBufferHandler } from "./configureContextBuffer.ts";
 import { configureMentionGateHandler } from "./configureMentionGate.ts";
+import { configurePromptHandler } from "./configurePrompt.ts";
 import { createOwnerHandler } from "./createOwner.ts";
 import { disableOwnerHandler } from "./disableOwner.ts";
 import { enableOwnerHandler } from "./enableOwner.ts";
@@ -29,6 +30,7 @@ import { updateOwnerSettingsHandler } from "./updateOwnerSettings.ts";
 import { addWorkspaceMutationRequestSchema, addWorkspaceMutationResponseSchema } from "../../../zod/addWorkspaceSchema.ts";
 import { configureContextBufferMutationRequestSchema, configureContextBufferMutationResponseSchema } from "../../../zod/configureContextBufferSchema.ts";
 import { configureMentionGateMutationRequestSchema, configureMentionGateMutationResponseSchema } from "../../../zod/configureMentionGateSchema.ts";
+import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
 import { createOwnerMutationRequestSchema, createOwnerMutationResponseSchema } from "../../../zod/createOwnerSchema.ts";
 import { disableOwnerMutationRequestSchema, disableOwnerMutationResponseSchema } from "../../../zod/disableOwnerSchema.ts";
 import { enableOwnerMutationResponseSchema } from "../../../zod/enableOwnerSchema.ts";
@@ -153,6 +155,15 @@ server.registerTool("ConfigureMentionGate", {
   inputSchema: { threadId: z.string(), data: configureMentionGateMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return configureMentionGateHandler({ threadId, data })
+})
+          
+
+server.registerTool("ConfigurePrompt", {
+  description: "Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)",
+  outputSchema: { data: configurePromptMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: configurePromptMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return configurePromptHandler({ threadId, data })
 })
           
 

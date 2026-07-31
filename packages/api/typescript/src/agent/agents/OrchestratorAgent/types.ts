@@ -100,6 +100,19 @@ export const OrchestratorInputSchema = z.agentInput({
 	 * no `tag` on the disabled arm, so a flat optional string is the honest restatement of it.
 	 */
 	mentionTag: z.string().min(1).optional(),
+	/**
+	 * The operator's own standing instructions for THIS conversation, when they wrote any.
+	 *
+	 * Optional and `min(1)`, mirroring `mentionTag`: absent ⟺ unset. The empty string is not a state the
+	 * agent can be handed — `Thread.configurePrompt` collapses blank into absence at the write — so the
+	 * prompt builder branches on presence alone and never has to ask whether a section is "empty enough"
+	 * to skip.
+	 *
+	 * Restated here as a plain string rather than imported from the thread context, for the reason
+	 * `WindowEntrySchema` states above: an agent input describes what it is HANDED, and reaching into
+	 * `thread`'s schemas would couple the agent runtime to that aggregate's shape.
+	 */
+	customPrompt: z.string().min(1).optional(),
 	/** Which model to ask the CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
 	model: z.enum(AgentModelId).optional(),
 	/** EXACTLY ONE is set by `RunOrchestratorTurn` — continue the thread's session or open a new one. */

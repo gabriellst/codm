@@ -76,6 +76,15 @@ export type GetThreadSettings200 = {
     */
     bufferSize: BufferSize;
     /**
+     * @type string
+    */
+    customPrompt: string;
+    /**
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    customPromptMaxLength: number;
+    /**
      * @type array
     */
     providers: {

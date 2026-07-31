@@ -49,7 +49,17 @@ type WindowEntry = OrchestratorInput['window']['entries'][number]
 export class OrchestratorPromptBuilder {
 	/** Standing instructions: who it is, how it speaks, what it must not touch, and how it may quote. */
 	system(input: OrchestratorInput): string {
-		return [...this.identity(input), '', ...this.voice(), '', ...this.room(input), '', ...this.issues(), ...this.quoting(input)].join('\n')
+		return [
+			...this.identity(input),
+			'',
+			...this.voice(),
+			'',
+			...this.room(input),
+			'',
+			...this.issues(),
+			...this.quoting(input),
+			...this.operatorInstructions(input),
+		].join('\n')
 	}
 
 	/**
@@ -229,6 +239,52 @@ export class OrchestratorPromptBuilder {
 			`  [quote: ${input.item.entryId}]`,
 			'No line, no quote. That is the only place an id may ever appear — the operator never sees ids, so one in your ' +
 				'prose is a bug they will read.',
+		]
+	}
+
+	/**
+	 * THE OPERATOR'S OWN INSTRUCTIONS for this conversation — everything above is the default they are
+	 * allowed to overrule.
+	 *
+	 * ### Why it is LAST, and why it says it WINS
+	 * Both halves are the same decision. Everything before it is a house default: a register read off
+	 * the founder's canonical example, a formatting rule for WhatsApp, a policy on issues. Defaults are
+	 * what you get when nobody said otherwise — and this is the operator saying otherwise, about their
+	 * own conversation. A custom prompt that loses every conflict with the built-in voice is a text box
+	 * that does nothing, which is worse than not having one, because the operator cannot tell.
+	 *
+	 * Position carries the same weight the runner already relies on for `structuredOutputDirective`
+	 * ("appended LAST, after the turn body, because instruction recency is what the model actually
+	 * obeys"). Saying it wins AND putting it last means the sentence and the mechanism agree.
+	 *
+	 * ### The two carve-outs, and why only two
+	 * The off-limits pair (git history, dependency installs) survives because it is not about voice or
+	 * task at all — it is about blast radius on a machine other people are standing on, and `identity()`
+	 * already says it holds "whoever asks". The quote sentinel survives because it is TRANSPORT:
+	 * `parseReply` parses that line, so an instruction that changed its spelling would not restyle the
+	 * reply, it would leak a raw id into someone's chat.
+	 *
+	 * Nothing else is fenced off, deliberately. A longer list of things the operator may not touch would
+	 * be this file guessing which of its own paragraphs are load-bearing, and the honest answer is that
+	 * the rest are preferences.
+	 *
+	 * Rendered only when there IS text (`customPrompt` is absent, never `''` — `Thread.configurePrompt`
+	 * collapses blank into absence at the write). An empty heading in the system prompt would tell the
+	 * model an instruction exists and then not supply it, which is how a model starts inventing one.
+	 */
+	private operatorInstructions(input: OrchestratorInput): string[] {
+		if (!input.customPrompt) return []
+		return [
+			'',
+			'INSTRUCTIONS FROM THE OPERATOR',
+			'The person who owns this repository wrote the following for THIS conversation. Everything above is the ' +
+				'default; this is them saying otherwise. Where the two disagree — voice, length, language, what to do ' +
+				'and what to leave alone — follow this.',
+			'Two things it does not repeal, because neither is a matter of style: you still never rewrite git history ' +
+				'or install dependencies, and the [quote: …] line keeps its exact shape — that line is parsed by this ' +
+				'system, so changing it puts a raw id in front of a human.',
+			'',
+			input.customPrompt,
 		]
 	}
 

@@ -1,2 +1,3 @@
+export * from './CustomPrompt'
 export * from './MentionGate'
 export * from './ThreadParam'

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { BaseError } from '@codm/core-typescript'
 import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
+import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import { INVOCATION_FRESHNESS_WINDOW_MS, Thread } from './Thread'
 
 const base = {
@@ -84,6 +85,71 @@ describe('Thread entity', () => {
 		// live thread mints `@codm`. A scoped package name must NOT summon the agent.
 		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'bump @bot/core to 2.0' })).toBe(false)
 		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'see bot.ts and @botanical' })).toBe(false)
+	})
+
+	/**
+	 * BLANK MEANS ERASE, and it is decided exactly here.
+	 *
+	 * The console sends the contents of a textarea, so "the operator cleared the box" arrives as `''` and
+	 * "the operator left a stray newline" arrives as `'\n'`. Neither is an instruction. If either were
+	 * stored, "no custom prompt" would have three spellings and every reader downstream — the settings
+	 * DTO, the persistence mapper, the prompt builder that renders a heading iff there is text — would
+	 * have to normalize it independently. The first one to forget prints an empty `INSTRUCTIONS FROM THE
+	 * OPERATOR` heading into a real conversation's system prompt.
+	 */
+	it('configurePrompt: text is kept trimmed; blank and whitespace ERASE it', () => {
+		const t = Thread.create(base)
+		expect(t.customPrompt).toBeUndefined()
+
+		t.configurePrompt('  Fale sempre em inglês com este cliente.  ')
+		expect(t.customPrompt).toBe('Fale sempre em inglês com este cliente.')
+
+		t.configurePrompt('')
+		expect(t.customPrompt).toBeUndefined()
+
+		t.configurePrompt('Nunca prometa prazo.')
+		t.configurePrompt('   \n  ')
+		expect(t.customPrompt).toBeUndefined()
+
+		// Omission erases too — an MCP client with no concept of an empty text box sends nothing.
+		t.configurePrompt('Nunca prometa prazo.')
+		t.configurePrompt(undefined)
+		expect(t.customPrompt).toBeUndefined()
+	})
+
+	/**
+	 * The cap is an INVARIANT, not a form hint. This text is prepended to every turn this conversation
+	 * ever answers, so an unbounded box is an unbounded per-message cost the operator pays forever.
+	 *
+	 * Asserted on the CODE, never the message: the code is what the console translates and what the
+	 * frontend's error catalogue is compile-time checked against. It reaches `BaseError` because
+	 * `CustomPromptSchema` carries `error: 'PROMPT_TOO_LONG'` on its `.max()` — the house way of naming
+	 * an invariant the schema owns, rather than re-checking the length inside the behaviour.
+	 */
+	it('configurePrompt: refuses a prompt past the cap with PROMPT_TOO_LONG', () => {
+		const t = Thread.create(base)
+		expect(() => t.configurePrompt('x'.repeat(CUSTOM_PROMPT_MAX_LENGTH + 1))).toThrow(expect.objectContaining({ name: 'PROMPT_TOO_LONG' }))
+		// Exactly at the cap is ALLOWED — an off-by-one here is a limit the operator cannot reach.
+		expect(() => t.configurePrompt('x'.repeat(CUSTOM_PROMPT_MAX_LENGTH))).not.toThrow()
+	})
+
+	/**
+	 * Re-attaching a deleted conversation resets the control plane — pause, status, buffer, roster, tag —
+	 * because each of those is either something the wizard just re-chose or part of what a fresh thread
+	 * IS. The operator's own instructions are neither, and the wizard never asks for them, so clearing
+	 * them would destroy hand-written text with nothing in the flow that hints it happened.
+	 */
+	it('revive() keeps the operator custom prompt while resetting everything else', () => {
+		const t = Thread.create(base)
+		t.configurePrompt('Fale sempre em inglês com este cliente.')
+		t.pause()
+		t.delete()
+
+		t.revive({ ...base, contactRef: base.contactRef })
+
+		expect(t.customPrompt).toBe('Fale sempre em inglês com este cliente.')
+		expect(t.paused).toBe(false)
+		expect(t.deletedAt).toBeUndefined()
 	})
 
 	it('textWithoutMention strips the citation, and never empties a bare summon', () => {
