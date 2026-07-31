@@ -6,6 +6,7 @@ import { BufferSize, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 // The LEAF, not the barrel — see `AttachThread` and that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { OPERATOR_PARTICIPANT_ID, type Participant } from '../entities/Thread'
+import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import type { ApplicationErrors } from '../errors'
 
 export const GetThreadSettingsInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
@@ -18,6 +19,19 @@ export const GetThreadSettingsOutputSchema = z.object({
 	participants: z.array(z.object({ participantId: z.string(), name: z.string(), source: z.string(), canInvoke: z.boolean() })),
 	invokerCount: z.number().int(),
 	bufferSize: z.enum(BufferSize),
+	/**
+	 * The operator's standing instructions for this conversation — `''` when they never wrote any.
+	 *
+	 * The one place absence is spelled as the empty string rather than as an absent field, and it is the
+	 * READ that gets to do it: the consumer is a textarea, whose value is `''` in exactly that case. An
+	 * optional field would make the console write `data.customPrompt ?? ''` and hold a controlled input
+	 * that is briefly `undefined` — the React warning about switching an input from uncontrolled to
+	 * controlled, earned for nothing. The WRITE keeps the distinction honest (`Thread.configurePrompt`
+	 * turns blank back into absence), so nothing downstream of the DB sees an empty string.
+	 */
+	customPrompt: z.string(),
+	/** The cap the textarea counts down to — the SAME number `ConfigurePrompt` validates against. */
+	customPromptMaxLength: z.number().int().positive(),
 	/**
 	 * The providers this conversation DECLARES, each flagged against what the engine can actually drive.
 	 *
@@ -98,6 +112,8 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 			participants: participants.map(p => ({ ...p, name: nameByRemoteId.get(p.participantId) ?? p.name })),
 			invokerCount: participants.filter(p => p.canInvoke).length,
 			bufferSize: thread.bufferSize as BufferSize,
+			customPrompt: thread.customPrompt ?? '',
+			customPromptMaxLength: CUSTOM_PROMPT_MAX_LENGTH,
 			providers: (thread.providers as ProviderKind[]).map(provider => ({ provider, comingSoon: !drivable.includes(provider) })),
 		}
 	}

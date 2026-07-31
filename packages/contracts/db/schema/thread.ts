@@ -51,6 +51,16 @@ export const threads = sqliteTable(
 		// BufferSize string tiers (25 | 50 | 100 | 200).
 		bufferSize: text('buffer_size').$type<BufferSize>().notNull(),
 
+		/**
+		 * The operator's own standing instructions for THIS conversation — null while unset.
+		 *
+		 * Nullable rather than `NOT NULL DEFAULT ''` because "the operator never wrote one" and "the
+		 * operator wrote an empty one" are the same fact, and only one of them should be representable:
+		 * the prompt builder renders the section iff there is text, so a stored `''` would be a second
+		 * spelling of absent that every reader has to remember to normalize.
+		 */
+		customPrompt: text('custom_prompt'),
+
 		// ThreadStatus (RUNNING | IDLE | NEEDS_ATTENTION | PAUSED).
 		status: text('status').$type<ThreadStatus>().notNull(),
 

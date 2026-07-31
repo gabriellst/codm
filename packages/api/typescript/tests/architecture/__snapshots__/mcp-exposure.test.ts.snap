@@ -22,6 +22,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__AddWorkspace",
     "mcp__codm__ConfigureContextBuffer",
     "mcp__codm__ConfigureMentionGate",
+    "mcp__codm__ConfigurePrompt",
     "mcp__codm__CreateOwner",
     "mcp__codm__DisableOwner",
     "mcp__codm__EnableOwner",
