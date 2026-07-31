@@ -5,26 +5,38 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 // CODM badges are monochrome pills. Status lives in a small colored leading dot
-// (baked in as a `before:` pseudo, spaced by the flex `gap`), never in the fill —
-// the pill itself stays neutral gray/hairline. `default` is the dominant soft-gray
-// tag (git · Detected · Connected · 3 files).
+// (a `before:` pseudo, spaced by the flex `gap`), never in the fill — the pill itself
+// stays neutral gray/hairline. `default` is the dominant soft-gray tag
+// (git · Detected · Connected · 3 files).
+//
+// THE DOT'S GEOMETRY BELONGS TO THE STATUS VARIANTS, NOT THE BASE. Tailwind injects
+// `content: var(--tw-content, "")` into every `before:*` utility, so keeping
+// `before:size-1.5 before:rounded-full` on the base GENERATED the pseudo-element on
+// EVERY badge — including `default`/`secondary`/`outline`, which have no dot to show.
+// The result was an invisible 6px box plus its `gap` in front of the label of every
+// non-status badge in the app (visible in devtools as a `::before` under the span).
+// Now only the variants that set a `before:bg-*` carry the geometry, so a badge with
+// no status renders nothing but its text.
 
 const badgeVariants = cva(
-	'h-5 gap-1.5 rounded-full border border-transparent px-2.5 py-0.5 text-xs font-medium transition-all has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&>svg]:size-3! inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:pointer-events-none before:shrink-0 before:size-1.5 before:rounded-full focus-visible:border-ring focus-visible:ring-ring/40 focus-visible:ring-[0.1875rem] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive overflow-hidden group/badge',
+	'h-5 gap-1.5 rounded-full border border-transparent px-2.5 py-0.5 text-xs font-medium transition-all has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&>svg]:size-3! inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/40 focus-visible:ring-[0.1875rem] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive overflow-hidden group/badge',
 	{
 		variants: {
+			// The leading dot, spelled out per status variant: content + geometry + color travel
+			// together, so a variant either draws a dot or generates no pseudo-element at all.
 			variant: {
 				default: 'bg-muted text-foreground [a]:hover:bg-secondary',
 				secondary: 'bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80',
 				solid: 'bg-primary text-primary-foreground [a]:hover:bg-primary/90',
-				destructive: "bg-muted text-foreground before:content-[''] before:bg-destructive",
+				destructive:
+					"bg-muted text-foreground before:content-[''] before:shrink-0 before:size-1.5 before:rounded-full before:bg-destructive",
 				outline: 'border-border text-foreground [a]:hover:bg-muted',
 				ghost: 'text-muted-foreground hover:bg-muted hover:text-foreground',
 				link: 'text-foreground underline-offset-4 hover:underline',
-				success: "bg-muted text-foreground before:content-[''] before:bg-success",
-				info: "bg-muted text-foreground before:content-[''] before:bg-info",
-				warning: "bg-muted text-foreground before:content-[''] before:bg-warning",
-				error: "bg-muted text-foreground before:content-[''] before:bg-destructive",
+				success: "bg-muted text-foreground before:content-[''] before:shrink-0 before:size-1.5 before:rounded-full before:bg-success",
+				info: "bg-muted text-foreground before:content-[''] before:shrink-0 before:size-1.5 before:rounded-full before:bg-info",
+				warning: "bg-muted text-foreground before:content-[''] before:shrink-0 before:size-1.5 before:rounded-full before:bg-warning",
+				error: "bg-muted text-foreground before:content-[''] before:shrink-0 before:size-1.5 before:rounded-full before:bg-destructive",
 			},
 		},
 		defaultVariants: {
