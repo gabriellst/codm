@@ -1789,12 +1789,16 @@ pub mod types {
     ///      "items": {
     ///        "type": "object",
     ///        "required": [
+    ///          "comingSoon",
     ///          "name",
     ///          "status"
     ///        ],
     ///        "properties": {
     ///          "binaryPath": {
     ///            "type": "string"
+    ///          },
+    ///          "comingSoon": {
+    ///            "type": "boolean"
     ///          },
     ///          "name": {
     ///            "$ref": "#/components/schemas/ProviderKind"
@@ -1832,12 +1836,16 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "comingSoon",
     ///    "name",
     ///    "status"
     ///  ],
     ///  "properties": {
     ///    "binaryPath": {
     ///      "type": "string"
+    ///    },
+    ///    "comingSoon": {
+    ///      "type": "boolean"
     ///    },
     ///    "name": {
     ///      "$ref": "#/components/schemas/ProviderKind"
@@ -1862,6 +1870,8 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub binary_path: ::std::option::Option<::std::string::String>,
+        #[serde(rename = "comingSoon")]
+        pub coming_soon: bool,
         pub name: ::codm_contracts_rust::wire::enums::ProviderKind,
         pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -2317,11 +2327,15 @@ pub mod types {
     ///        "type": "object",
     ///        "required": [
     ///          "available",
+    ///          "comingSoon",
     ///          "provider",
     ///          "status"
     ///        ],
     ///        "properties": {
     ///          "available": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "comingSoon": {
     ///            "type": "boolean"
     ///          },
     ///          "provider": {
@@ -2520,11 +2534,15 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "available",
+    ///    "comingSoon",
     ///    "provider",
     ///    "status"
     ///  ],
     ///  "properties": {
     ///    "available": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "comingSoon": {
     ///      "type": "boolean"
     ///    },
     ///    "provider": {
@@ -2545,6 +2563,8 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetAttachThreadWizardResponseProvidersItem {
         pub available: bool,
+        #[serde(rename = "comingSoon")]
+        pub coming_soon: bool,
         pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -5497,11 +5517,15 @@ pub mod types {
     ///        "type": "object",
     ///        "required": [
     ///          "available",
+    ///          "comingSoon",
     ///          "provider",
     ///          "status"
     ///        ],
     ///        "properties": {
     ///          "available": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "comingSoon": {
     ///            "type": "boolean"
     ///          },
     ///          "provider": {
@@ -5616,11 +5640,15 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "available",
+    ///    "comingSoon",
     ///    "provider",
     ///    "status"
     ///  ],
     ///  "properties": {
     ///    "available": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "comingSoon": {
     ///      "type": "boolean"
     ///    },
     ///    "provider": {
@@ -5641,6 +5669,8 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetSettingsResponseProvidersItem {
         pub available: bool,
+        #[serde(rename = "comingSoon")]
+        pub coming_soon: bool,
         pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -8925,7 +8955,7 @@ Sends a `POST` request to `/v1/stops/{stopId}/resolve`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status
+    /**Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
 
 Sends a `GET` request to `/v1/terminal/providers`
 

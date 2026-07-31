@@ -27,7 +27,7 @@ export function detectProvidersQueryOptions(params?: DetectProvidersQueryParams,
 }
 
 /**
- * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status
+ * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
  * {@link /v1/terminal/providers}
  */
 export function useDetectProviders<TData = DetectProvidersQueryResponse, TQueryData = DetectProvidersQueryResponse, TQueryKey extends QueryKey = DetectProvidersQueryKey>(params?: DetectProvidersQueryParams, options: 

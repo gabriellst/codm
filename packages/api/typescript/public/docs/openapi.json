@@ -916,7 +916,7 @@
         "tags": [
           "agent"
         ],
-        "description": "Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status",
+        "description": "Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)",
         "operationId": "DetectProviders",
         "parameters": [
           {
@@ -930,7 +930,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status",
+            "description": "Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)",
             "content": {
               "application/json": {
                 "schema": {
@@ -952,11 +952,15 @@
                           },
                           "version": {
                             "type": "string"
+                          },
+                          "comingSoon": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
                           "name",
-                          "status"
+                          "status",
+                          "comingSoon"
                         ],
                         "additionalProperties": false
                       }
@@ -973,15 +977,18 @@
                           "name": "CLAUDE_CODE",
                           "status": "DETECTED",
                           "binaryPath": "/usr/local/bin/claude",
-                          "version": "1.0.0"
+                          "version": "1.0.0",
+                          "comingSoon": false
                         },
                         {
                           "name": "CODEX",
-                          "status": "NOT_INSTALLED"
+                          "status": "NOT_INSTALLED",
+                          "comingSoon": true
                         },
                         {
                           "name": "OPENCODE",
-                          "status": "NOT_INSTALLED"
+                          "status": "NOT_INSTALLED",
+                          "comingSoon": true
                         }
                       ]
                     }
@@ -995,15 +1002,18 @@
                           "name": "CLAUDE_CODE",
                           "status": "DETECTED",
                           "binaryPath": "/usr/local/bin/claude",
-                          "version": "1.0.0"
+                          "version": "1.0.0",
+                          "comingSoon": false
                         },
                         {
                           "name": "CODEX",
-                          "status": "NOT_INSTALLED"
+                          "status": "NOT_INSTALLED",
+                          "comingSoon": true
                         },
                         {
                           "name": "OPENCODE",
-                          "status": "NOT_INSTALLED"
+                          "status": "NOT_INSTALLED",
+                          "comingSoon": true
                         }
                       ]
                     },
@@ -3773,6 +3783,9 @@
                           "available": {
                             "type": "boolean"
                           },
+                          "comingSoon": {
+                            "type": "boolean"
+                          },
                           "version": {
                             "type": "string"
                           }
@@ -3780,7 +3793,8 @@
                         "required": [
                           "provider",
                           "status",
-                          "available"
+                          "available",
+                          "comingSoon"
                         ],
                         "additionalProperties": false
                       }
@@ -4171,6 +4185,9 @@
                           "available": {
                             "type": "boolean"
                           },
+                          "comingSoon": {
+                            "type": "boolean"
+                          },
                           "version": {
                             "type": "string"
                           }
@@ -4178,7 +4195,8 @@
                         "required": [
                           "provider",
                           "status",
-                          "available"
+                          "available",
+                          "comingSoon"
                         ],
                         "additionalProperties": false
                       }

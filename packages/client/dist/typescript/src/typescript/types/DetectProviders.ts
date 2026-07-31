@@ -14,7 +14,7 @@ export type DetectProvidersQueryParams = {
 };
 
 /**
- * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status
+ * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
 */
 export type DetectProviders200 = {
     /**
@@ -37,6 +37,10 @@ export type DetectProviders200 = {
          * @type string | undefined
         */
         version?: string;
+        /**
+         * @type boolean
+        */
+        comingSoon: boolean;
     }[];
 };
 

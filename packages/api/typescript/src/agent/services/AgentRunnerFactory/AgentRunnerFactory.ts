@@ -1,8 +1,13 @@
-import { injectable } from 'tsyringe-neo'
 import { BaseError } from '@codm/core-typescript'
 import type { BaseInfrastructureErrors } from '@codm/core-typescript'
 import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
-import { AgentRunner, ClaudeAgentRunner } from '../AgentRunner'
+// TYPE-only, and it must stay that way: this module is a LEAF on purpose. `services/AgentRunner`'s
+// barrel reaches `agent/mcp/exposure.ts`, which imports `@ui/controllers` — so a VALUE import here
+// would drag the whole `ui` context into every consumer of this token. The `ui` BFF reads inject this
+// token (to answer "can we drive this CLI?", see `comingSoon`), and that import must not cycle back
+// into `ui` and leave the class in the TDZ while decorators run. Implementations live in their own
+// files beside this one for the same reason.
+import type { AgentRunner } from '../AgentRunner'
 
 /**
  * WHERE `ProviderKind` → RUNNER IS RESOLVED (Fase 4.5's rule, finally given a home).
@@ -29,8 +34,8 @@ import { AgentRunner, ClaudeAgentRunner } from '../AgentRunner'
  *
  * ### Bound per ENV, not `@injectable()`-and-done (founder decision A)
  * SVC-P13 says a factory over CONCRETE implementations needs no registry entry. That is true of the
- * `real` implementation below and it is why `DefaultAgentRunnerFactory` injects `ClaudeAgentRunner`
- * concretely. But the binding this factory REPLACES was also the env seam that makes "no test spawns a
+ * `real` implementation (`DefaultAgentRunnerFactory`, in its own file beside this one) and it is why
+ * that class injects `ClaudeAgentRunner` concretely. But the binding this factory REPLACES was also the env seam that makes "no test spawns a
  * provider CLI" a property of DI rather than of test discipline (§8 rule 8) — collapsing it into one
  * `@injectable()` class would push `process.env.CODM_E2E` inside a domain class. So the ABSTRACT
  * token below is bound per env in `agent/registry.ts`, and each env's factory is honest about the one
@@ -72,41 +77,4 @@ export abstract class AgentRunnerFactory {
 
 	/** Release every runner this factory owns. Idempotent. */
 	abstract shutdown(): Promise<void>
-}
-
-/**
- * The `real` factory. ONE entry today, because exactly one CLI has a runner class.
- *
- * `ClaudeAgentRunner` is injected by CONCRETE type (SVC-P13): it is no longer bound to any token, so
- * this factory is the only thing in the process that can produce one — which is what makes "the `real`
- * env is the only env that can spawn a CLI" true by construction rather than by a comment.
- *
- * A second CLI landing (Fase 6+) adds a constructor parameter and a map entry HERE, and still not a
- * branch inside a runner.
- */
-@injectable()
-export class DefaultAgentRunnerFactory extends AgentRunnerFactory {
-	private readonly runners: ReadonlyMap<ProviderKind, AgentRunner>
-
-	constructor(claude: ClaudeAgentRunner) {
-		super()
-		this.runners = new Map<ProviderKind, AgentRunner>([[ProviderKind.CLAUDE_CODE, claude]])
-	}
-
-	override readonly supported: readonly ProviderKind[] = [ProviderKind.CLAUDE_CODE]
-
-	protected runnerFor(provider: ProviderKind): AgentRunner | undefined {
-		return this.runners.get(provider)
-	}
-
-	/**
-	 * Kill every live provider PROCESS GROUP — the daemon's `shutdown` step (`src/index.ts`) resolves
-	 * THIS token now that `AgentRunner` is not a token at all. The factory is a container SINGLETON, so
-	 * the runners it hands out are the same instances that hold the processes; a transient binding here
-	 * would hand shutdown a freshly-built runner owning nothing while the real children outlived the
-	 * daemon.
-	 */
-	async shutdown(): Promise<void> {
-		await Promise.all([...this.runners.values()].map(runner => runner.shutdown()))
-	}
 }

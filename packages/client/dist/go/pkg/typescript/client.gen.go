@@ -5387,6 +5387,7 @@ type DetectProvidersResponse struct {
 	JSON200      *struct {
 		Providers []struct {
 			BinaryPath *string        `json:"binaryPath,omitempty"`
+			ComingSoon bool           `json:"comingSoon"`
 			Name       ProviderKind   `json:"name"`
 			Status     ProviderStatus `json:"status"`
 			Version    *string        `json:"version,omitempty"`
@@ -6292,10 +6293,11 @@ type GetAttachThreadWizardResponse struct {
 		ContactsNextCursor nullable.Nullable[string] `json:"contactsNextCursor"`
 		NoChannelConnected bool                      `json:"noChannelConnected"`
 		Providers          []struct {
-			Available bool           `json:"available"`
-			Provider  ProviderKind   `json:"provider"`
-			Status    ProviderStatus `json:"status"`
-			Version   *string        `json:"version,omitempty"`
+			Available  bool           `json:"available"`
+			ComingSoon bool           `json:"comingSoon"`
+			Provider   ProviderKind   `json:"provider"`
+			Status     ProviderStatus `json:"status"`
+			Version    *string        `json:"version,omitempty"`
 		} `json:"providers"`
 		Workspaces []struct {
 			Badges      []WorkspaceBadge   `json:"badges"`
@@ -6439,10 +6441,11 @@ type GetSettingsResponse struct {
 			Timezone     string `json:"timezone"`
 		} `json:"general"`
 		Providers []struct {
-			Available bool           `json:"available"`
-			Provider  ProviderKind   `json:"provider"`
-			Status    ProviderStatus `json:"status"`
-			Version   *string        `json:"version,omitempty"`
+			Available  bool           `json:"available"`
+			ComingSoon bool           `json:"comingSoon"`
+			Provider   ProviderKind   `json:"provider"`
+			Status     ProviderStatus `json:"status"`
+			Version    *string        `json:"version,omitempty"`
 		} `json:"providers"`
 		StopCriteria struct {
 			ApprovalNeeded          bool `json:"approvalNeeded"`
@@ -7759,6 +7762,7 @@ func ParseDetectProvidersResponse(rsp *http.Response) (*DetectProvidersResponse,
 		var dest struct {
 			Providers []struct {
 				BinaryPath *string        `json:"binaryPath,omitempty"`
+				ComingSoon bool           `json:"comingSoon"`
 				Name       ProviderKind   `json:"name"`
 				Status     ProviderStatus `json:"status"`
 				Version    *string        `json:"version,omitempty"`
@@ -8555,10 +8559,11 @@ func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWiz
 			ContactsNextCursor nullable.Nullable[string] `json:"contactsNextCursor"`
 			NoChannelConnected bool                      `json:"noChannelConnected"`
 			Providers          []struct {
-				Available bool           `json:"available"`
-				Provider  ProviderKind   `json:"provider"`
-				Status    ProviderStatus `json:"status"`
-				Version   *string        `json:"version,omitempty"`
+				Available  bool           `json:"available"`
+				ComingSoon bool           `json:"comingSoon"`
+				Provider   ProviderKind   `json:"provider"`
+				Status     ProviderStatus `json:"status"`
+				Version    *string        `json:"version,omitempty"`
 			} `json:"providers"`
 			Workspaces []struct {
 				Badges      []WorkspaceBadge   `json:"badges"`
@@ -8681,10 +8686,11 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				Timezone     string `json:"timezone"`
 			} `json:"general"`
 			Providers []struct {
-				Available bool           `json:"available"`
-				Provider  ProviderKind   `json:"provider"`
-				Status    ProviderStatus `json:"status"`
-				Version   *string        `json:"version,omitempty"`
+				Available  bool           `json:"available"`
+				ComingSoon bool           `json:"comingSoon"`
+				Provider   ProviderKind   `json:"provider"`
+				Status     ProviderStatus `json:"status"`
+				Version    *string        `json:"version,omitempty"`
 			} `json:"providers"`
 			StopCriteria struct {
 				ApprovalNeeded          bool `json:"approvalNeeded"`

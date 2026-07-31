@@ -27,6 +27,10 @@ export type GetSettings200 = {
         */
         available: boolean;
         /**
+         * @type boolean
+        */
+        comingSoon: boolean;
+        /**
          * @type string | undefined
         */
         version?: string;

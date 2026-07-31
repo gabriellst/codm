@@ -154,6 +154,7 @@
 		"breadcrumbLabel": "Trilha de navegação",
 		"cancel": "Cancelar",
 		"close": "Fechar",
+		"comingSoon": "Em breve",
 		"durationHoursSuffix": "h",
 		"errorTitle": "Ocorreu um erro",
 		"goToNextPage": "Ir para a próxima página",
@@ -181,6 +182,11 @@
 		"footerNoAccount": "Sem conta necessária",
 		"noThreadsYet": "Nenhuma conversa ainda",
 		"send": "Enviar",
+		"supervision": {
+			"gatewayDownDescription": "O serviço de mensagens parou de responder. Nada entra nem sai até reiniciar.",
+			"gatewayDownTitle": "Canal offline",
+			"restart": "Reiniciar"
+		},
 		"threads": "Conversas"
 	},
 	"dashboard": {

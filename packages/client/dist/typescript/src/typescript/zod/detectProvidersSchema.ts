@@ -12,7 +12,7 @@ export const detectProvidersQueryParamsSchema = z.object({
     }).optional()
 
 /**
- * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status
+ * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
  */
 export const detectProviders200Schema = z.object({
     "providers": z.array(z.object({
@@ -23,7 +23,8 @@ get "status"(){
                 return providerStatusSchema
               },
 "binaryPath": z.optional(z.string()),
-"version": z.optional(z.string())
+"version": z.optional(z.string()),
+"comingSoon": z.boolean()
     }))
     })
 

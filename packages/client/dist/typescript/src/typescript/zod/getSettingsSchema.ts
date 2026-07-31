@@ -19,6 +19,7 @@ get "status"(){
                 return providerStatusSchema
               },
 "available": z.boolean(),
+"comingSoon": z.boolean(),
 "version": z.optional(z.string())
     })),
 "stopCriteria": z.object({

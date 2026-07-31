@@ -13,7 +13,7 @@ function getDetectProvidersUrl() {
 }
 
 /**
- * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version and status
+ * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
  * {@link /v1/terminal/providers}
  */
 export async function detectProviders(params?: DetectProvidersQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {

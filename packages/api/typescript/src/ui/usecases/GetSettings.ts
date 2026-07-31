@@ -4,6 +4,9 @@ import { Handler, z, DrizzleClient, Config } from '@codm/core-typescript'
 import { owners } from '@codm/contracts/db'
 import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
+// The LEAF, not the barrel: the barrel re-exports the runner implementations, whose graph reaches
+// `agent/mcp/exposure.ts` → `@ui/controllers` → back here. See that barrel's header.
+import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 
 import pkg from '../../../package.json' with { type: 'json' }
@@ -14,7 +17,10 @@ const APP_VERSION: string = pkg.version
 const ProviderAvailabilitySchema = z.object({
 	provider: z.enum(ProviderKind),
 	status: z.enum(ProviderStatus),
+	/** Installed AND drivable — both axes, the same composition the attach wizard applies. */
 	available: z.boolean(),
+	/** No runner class drives this CLI yet — the second axis, documented on `DetectProvidersOutputSchema`. */
+	comingSoon: z.boolean(),
 	version: z.string().optional(),
 })
 
@@ -54,18 +60,25 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 		private readonly db: DrizzleClient,
 		private readonly providerDetector: ProviderDetector,
 		private readonly stopPolicy: StopPolicyConfigRepository,
+		private readonly agentRunnerFactory: AgentRunnerFactory,
 	) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const detections = await this.providerDetector.detect()
-		const providers = detections.map(d => ({
-			provider: d.name,
-			status: d.status,
-			available: d.status === ProviderStatus.DETECTED,
-			version: d.version,
-		}))
+		// The runner-bearing set, from the wiring layer that owns it — never a list restated here.
+		const drivable = this.agentRunnerFactory.supported
+		const providers = detections.map(d => {
+			const comingSoon = !drivable.includes(d.name)
+			return {
+				provider: d.name,
+				status: d.status,
+				available: d.status === ProviderStatus.DETECTED && !comingSoon,
+				comingSoon,
+				version: d.version,
+			}
+		})
 
 		const stopCriteria = await this.stopPolicy.get(input.ownerId)
 

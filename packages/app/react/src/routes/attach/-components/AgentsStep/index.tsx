@@ -77,7 +77,16 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 									</span>
 									<div className="flex flex-1 flex-col">
 										<span className="font-semibold text-foreground">{providerLabel[entry.provider]}</span>
-										<span className="text-sm text-muted-foreground">{enumLabel('ProviderStatus', entry.status)}</span>
+										{/*
+										 * `comingSoon` GANHA do status, com binário ou sem. São dois eixos: `status` responde
+										 * "o CLI está nesta máquina?" e `comingSoon` responde "existe um runner que sabe
+										 * dirigi-lo?" — nenhum valor de `ProviderStatus` diz o segundo. Era "Detectado" aqui
+										 * que fazia o operador escolher um agente cuja run morreria com NOT_IMPLEMENTED; e
+										 * "Não instalado" mandaria instalar um binário que não adiantaria ter.
+										 */}
+										<span className="text-sm text-muted-foreground">
+											{entry.comingSoon ? t('common.comingSoon') : enumLabel('ProviderStatus', entry.status)}
+										</span>
 									</div>
 									<span
 										className={cn(

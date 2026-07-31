@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenWorkspace, givenThread } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
+import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { GetSetupChecklist } from './GetSetupChecklist'
 import { GetSettings } from './GetSettings'
 import { GetAttachThreadWizard } from './GetAttachThreadWizard'
@@ -36,6 +37,24 @@ describe('UI BFF reads', () => {
 		expect(out.stopCriteria).toMatchObject({ serverErrors: expect.any(Boolean), humanRequested: expect.any(Boolean) })
 		expect(out.general).toHaveProperty('dataDir')
 		expect(out.appVersion).toBe('0.0.1')
+	})
+
+	/**
+	 * Settings renders the same two axes the attach wizard does, from a different read — so it carries
+	 * the same flag rather than re-deriving "can we drive this?" from `status`. The values below come
+	 * from the DI-bound `AgentRunnerFactory` (`StubAgentRunnerFactory`, which stands in for claude and
+	 * only claude): widen `supported` and this goes red, which is what proves the field is derived from
+	 * the wiring layer and not from a list typed out beside it.
+	 */
+	it('GetSettings flags providers with no AgentRunner as comingSoon', async () => {
+		const out = await testBed.resolve(GetSettings).execute({ ownerId: OPERATOR_ID })
+
+		const claude = out.providers.find(p => p.provider === ProviderKind.CLAUDE_CODE)
+		expect(claude).toMatchObject({ comingSoon: false, available: true })
+
+		for (const kind of [ProviderKind.CODEX, ProviderKind.OPENCODE]) {
+			expect(out.providers.find(p => p.provider === kind)).toMatchObject({ comingSoon: true, available: false })
+		}
 	})
 
 	it('GetAttachThreadWizard composes contacts + workspaces + providers with the flags', async () => {

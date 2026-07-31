@@ -39,7 +39,14 @@ export function ProvidersSection({ className, ...props }: ComponentProps<'sectio
 										{provider.version ? ` · v${provider.version}` : ''}
 									</span>
 								</div>
-								<Badge variant={detected ? 'secondary' : 'outline'}>{enumLabel('ProviderStatus', provider.status)}</Badge>
+								{/*
+								 * Mesmo eixo duplo do passo de agentes do wizard: `comingSoon` ganha do status, porque
+								 * nenhum valor de `ProviderStatus` consegue dizer "o binário está aqui, mas ainda não
+								 * sabemos dirigi-lo". A variante fica `outline` junto com o resto do que não dá para usar.
+								 */}
+								<Badge variant={detected && !provider.comingSoon ? 'secondary' : 'outline'}>
+									{provider.comingSoon ? t('common.comingSoon') : enumLabel('ProviderStatus', provider.status)}
+								</Badge>
 							</div>
 						)
 					})}

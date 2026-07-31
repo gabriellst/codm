@@ -13,6 +13,9 @@ import {
 	WorkspaceBadge,
 } from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
+// The LEAF, not the barrel: the barrel re-exports the runner implementations, whose graph reaches
+// `agent/mcp/exposure.ts` → `@ui/controllers` → back here. See that barrel's header.
+import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 
 // One page of the contact directory. The picker paginates the gateway's remote read model by
 // `lastMessageAt` (most-recently-active first), so the operator sees live conversations up top.
@@ -43,7 +46,16 @@ const WorkspaceOptionSchema = z.object({
 const ProviderOptionSchema = z.object({
 	provider: z.enum(ProviderKind),
 	status: z.enum(ProviderStatus),
+	/**
+	 * Selectable in the wizard: the binary is here AND this engine has a runner for it.
+	 *
+	 * It was `status === DETECTED` alone, which made an installed-but-undrivable CLI look offerable.
+	 * `AttachThread` accepts such a pick — it only checks installation — so the failure surfaced a
+	 * screen later as NOT_IMPLEMENTED out of `AgentRunnerFactory.for`, on a thread already created.
+	 */
 	available: z.boolean(),
+	/** No runner class drives this CLI yet — the second axis, documented on `DetectProvidersOutputSchema`. */
+	comingSoon: z.boolean(),
 	version: z.string().optional(),
 })
 
@@ -122,6 +134,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 	constructor(
 		private readonly db: DrizzleClient,
 		private readonly providerDetector: ProviderDetector,
+		private readonly agentRunnerFactory: AgentRunnerFactory,
 	) {
 		super()
 	}
@@ -145,12 +158,18 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		const { contacts, contactsNextCursor } = await this.loadContacts(input, ownerChannelIds)
 
 		const detections = await this.providerDetector.detect()
-		const providers = detections.map(d => ({
-			provider: d.name,
-			status: d.status,
-			available: d.status === ProviderStatus.DETECTED,
-			version: d.version,
-		}))
+		// The runner-bearing set, from the wiring layer that owns it — never a list restated here.
+		const drivable = this.agentRunnerFactory.supported
+		const providers = detections.map(d => {
+			const comingSoon = !drivable.includes(d.name)
+			return {
+				provider: d.name,
+				status: d.status,
+				available: d.status === ProviderStatus.DETECTED && !comingSoon,
+				comingSoon,
+				version: d.version,
+			}
+		})
 
 		return {
 			noChannelConnected: connectedChannels.length === 0,

@@ -154,6 +154,7 @@
 		"breadcrumbLabel": "Breadcrumb",
 		"cancel": "Cancel",
 		"close": "Close",
+		"comingSoon": "Coming soon",
 		"durationHoursSuffix": "h",
 		"errorTitle": "Something went wrong",
 		"goToNextPage": "Go to next page",
@@ -181,6 +182,11 @@
 		"footerNoAccount": "No account needed",
 		"noThreadsYet": "No threads yet",
 		"send": "Send",
+		"supervision": {
+			"gatewayDownDescription": "The messaging service stopped responding. Nothing goes in or out until you restart.",
+			"gatewayDownTitle": "Channel offline",
+			"restart": "Restart"
+		},
 		"threads": "Threads"
 	},
 	"dashboard": {

@@ -11,7 +11,8 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { DrizzleDatabaseDriver } from '@codm/core-typescript'
 import { channels, remotes } from '@codm/contracts/db'
-import { ChannelKind, ChannelStatus, ContactKind } from '@codm/contracts-typescript/wire/enums'
+import { ChannelKind, ChannelStatus, ContactKind, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import { ProviderDetector, MockProviderDetector } from '@agent/services/ProviderDetector'
 import { GetAttachThreadWizard } from './GetAttachThreadWizard'
 
 const OWNER = '11111111-1111-4111-8111-111111111111'
@@ -28,6 +29,21 @@ describe('GetAttachThreadWizard', () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OWNER })
 		driver = testBed.resolve(DrizzleDatabaseDriver)
+		// codex INSTALLED — the machine on which `status` alone lies. The default mock catalog reports it
+		// NOT_INSTALLED, which would make `available: false` true for the WRONG reason and leave the
+		// comingSoon case below passing without ever exercising the second axis. Overridden AFTER create()
+		// and BEFORE the consumer is resolved, per TestBed.override's contract.
+		testBed.override(
+			ProviderDetector,
+			MockProviderDetector.with({
+				[ProviderKind.CODEX]: {
+					name: ProviderKind.CODEX,
+					status: ProviderStatus.DETECTED,
+					binaryPath: '/usr/local/bin/codex',
+					version: '3.1.0',
+				},
+			}),
+		)
 		wizard = testBed.resolve(GetAttachThreadWizard)
 	})
 
@@ -149,5 +165,25 @@ describe('GetAttachThreadWizard', () => {
 			'base64url',
 		)
 		await expect(wizard.execute({ ownerId: OWNER, cursor: legacy })).rejects.toMatchObject({ name: 'VALIDATION_ERROR' })
+	})
+
+	/**
+	 * THE SCREEN WHERE THE LIE WAS OPERATOR-VISIBLE.
+	 *
+	 * `available` used to be `status === DETECTED` and nothing else, so an installed codex CLI made the
+	 * wizard offer CODEX as a selectable agent. `AttachThread` accepts it — it only checks installation —
+	 * and the failure surfaces a screen later, at `AgentRunnerFactory.for`, as NOT_IMPLEMENTED, on a
+	 * thread that already exists. `available` now spans both axes: the binary is here AND something in
+	 * this process knows how to drive it.
+	 */
+	it('a DETECTED provider with no runner is comingSoon and NOT available (the wizard must not offer it)', async () => {
+		const out = await wizard.execute({ ownerId: OWNER })
+
+		const codex = out.providers.find(p => p.provider === ProviderKind.CODEX)
+		expect(codex).toMatchObject({ status: ProviderStatus.DETECTED, comingSoon: true, available: false })
+
+		// The one CLI with a runner class stays offerable — the guard narrows the list, it does not empty it.
+		const claude = out.providers.find(p => p.provider === ProviderKind.CLAUDE_CODE)
+		expect(claude).toMatchObject({ status: ProviderStatus.DETECTED, comingSoon: false, available: true })
 	})
 })
