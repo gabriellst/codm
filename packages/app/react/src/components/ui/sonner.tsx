@@ -1,13 +1,16 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 import { IconCircleCheck, IconInfoCircle, IconAlertTriangle, IconAlertOctagon, IconLoader } from '@tabler/icons-react'
 
+import { cn } from '@/lib/utils'
 import { surface } from './surfaces'
 
-function Toaster({ theme = 'system', ...props }: ToasterProps) {
+function Toaster({ theme = 'system', className, ...props }: ToasterProps) {
 	return (
 		<Sonner
 			theme={theme}
-			className="toaster group"
+			// cn(), não literal: `{...props}` vem DEPOIS, então um `className` do chamador substituiria
+			// "toaster group" e derrubaria o alvo dos seletores de tema. Mesclado, ele só se soma.
+			className={cn('toaster group', className)}
 			icons={{
 				success: <IconCircleCheck className="size-4" />,
 				info: <IconInfoCircle className="size-4" />,

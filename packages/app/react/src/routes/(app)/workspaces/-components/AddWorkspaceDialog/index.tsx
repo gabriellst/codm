@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconFolderOpen } from '@tabler/icons-react'
 import { useForm } from '@tanstack/react-form'
@@ -11,9 +11,10 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useFilePicker } from '@/services'
 import { useDialogStore } from '@/stores/useDialogStore'
+import { cn } from '@/lib/utils'
 
 /** "Add folder" flow: point CODM at a project folder; badges are detected server-side. */
-export function AddWorkspaceDialog() {
+export function AddWorkspaceDialog({ className }: Pick<ComponentProps<typeof DialogContent>, 'className'>) {
 	const { t } = useTranslation()
 	const hide = useDialogStore(s => s.hide)
 	const queryClient = useQueryClient()
@@ -56,7 +57,7 @@ export function AddWorkspaceDialog() {
 	}
 
 	return (
-		<DialogContent>
+		<DialogContent className={cn(className)}>
 			<DialogHeader>
 				<DialogTitle>{t('workspaces.addTitle')}</DialogTitle>
 				<DialogDescription>{t('workspaces.addDescription')}</DialogDescription>

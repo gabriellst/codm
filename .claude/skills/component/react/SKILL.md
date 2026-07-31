@@ -377,6 +377,56 @@ function InfoRow({ label, badge }: { label: string; badge: string }) {
 <InfoRow label={product.category} badge={product.type} />
 ```
 
+### `className` é universal; o spread é condicional [CMP-P09, bp-29 / bp-20]
+
+Duas regras que viviam como uma só. A ratificação (30/07) separou-as:
+
+**`className` — UNIVERSAL.** Todo módulo que renderiza uma raiz aceita `className` e o mescla **na raiz**
+com `cn()`. Não importa a caixa da raiz: se `ThreadCard` renderiza `<Card>` e não declara `className`,
+quem escreve `<ThreadCard />` não alcança o `Card` por dentro — fica sem `mt-4`, sem `data-testid`, e a
+saída vira copiar em vez de compor. A superfície vem **do vocabulário da raiz**:
+
+```tsx
+// raiz DOM — ComponentProps<'tag'> traz className + aria-*/data-*/handlers de graça
+export function ProductList({ className, ...props }: ComponentProps<'div'>) {
+  return <div className={cn('grid gap-4', className)} {...props}>…</div>
+}
+
+// raiz componente — o vocabulário dela, sem spread cego
+export function NeedsYouPanel({ threadId, className }: { threadId: string } & Pick<ComponentProps<typeof Card>, 'className'>) {
+  return <Card className={cn('mb-4 border-warning/50', className)}>…</Card>
+}
+
+// raiz sem classe própria — encaminhar É mesclar; cn() mantém o ponto de merge visível
+export function AddWorkspaceDialog({ className }: Pick<ComponentProps<typeof DialogContent>, 'className'>) {
+  return <DialogContent className={cn(className)}>…</DialogContent>
+}
+```
+
+`className?: string` à mão continua proibido (bp-20/CP-02): o tipo da raiz já tem o campo.
+
+**O spread cego (`{...props}`) — CONDICIONAL.** Numa raiz DOM ele é o default. Numa raiz **controlada**
+(`ToggleGroup` / `Tabs` / `Select`) espalhar props arbitrárias briga com o contrato controlado; numa raiz
+de overlay é opcional. Esse sempre foi o único perigo real — e nunca foi sobre `className`.
+
+**Mesclar é `cn()`.** Um literal `className="…"` ao lado de `{...props}` na mesma raiz **não** mescla: o
+último a escrever ganha e um dos lados desaparece (era o bug de `sonner.tsx`, onde um `className` do
+chamador apagaria `"toaster group"`).
+
+**Isenções — duas, e provadas caso a caso:**
+
+1. **Módulos de rota** (`route.tsx`, `__root.tsx`, `index.tsx` de rota): o router os instancia, não existe
+   chamador para passar prop.
+2. **Módulo sem raiz-hospedeira única**: fragmento com irmãos; context Provider (o `DataTable` é um
+   `<Ctx.Provider>` — quem carrega a superfície é o `DataTableContent`); raiz headless que não renderiza
+   elemento (Base UI `Popover.Root`: *"Doesn't render its own HTML element"* — `Pick<ComponentProps<typeof
+   Popover>, 'className'>` nem type-checa); arquivo que não é componente (`console/glyphs.tsx` é um mapa de
+   ícones).
+
+Qualquer outra "isenção" é **achado para reportar**, não linha de whitelist. Gate: `bun
+scripts/detectors/component-props.ts` (CP-04). Em `components/ui/` quem manda é a rail C,
+`packages/app/react/tests/architecture/primitive-props.test.ts`.
+
 ### Use cn() for Conditional Classes
 
 ```typescript

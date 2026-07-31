@@ -223,11 +223,31 @@ registry:
         }
 
     - id: CMP-P09
-      name: "ComponentProps<'div'> spread for layout flexibility"
-      when: "component is used in different layout contexts"
+      name: "className surface typed from the root (universal) + spread (conditional)"
+      when: always
+      reason: >
+        Duas regras que viviam conflacionadas (ratificação do founder, 30/07). `className` é UNIVERSAL —
+        vale para raiz DOM minúscula E para raiz componente maiúscula. O SPREAD é que é condicional.
       rule: |
+        // Raiz DOM: ComponentProps<'tag'> ganha className + aria-*/data-*/handlers e o spread é seguro.
         export function ProductList({ className, ...props }: ComponentProps<'div'>) {
           return <div className={cn('grid gap-4', className)} {...props}>...</div>
+        }
+
+        // Raiz componente: a superfície vem do vocabulário DELE. Sem spread cego — só o className.
+        export function NeedsYouPanel({ threadId, className }: { threadId: string } & Pick<ComponentProps<typeof Card>, 'className'>) {
+          return <Card className={cn('mb-4 border-warning/50', className)}>...</Card>
+        }
+
+        // Raiz sem classe própria: encaminhar É mesclar (cn() mantém o ponto de merge visível).
+        export function AddWorkspaceDialog({ className }: Pick<ComponentProps<typeof DialogContent>, 'className'>) {
+          return <DialogContent className={cn(className)}>...</DialogContent>
+        }
+      wrong: |
+        // A raiz é maiúscula, então "não precisa de className" — é justamente o beco: quem escreve
+        // <NeedsYouPanel /> não alcança o <Card> por dentro.
+        export function NeedsYouPanel({ threadId }: { threadId: string }) {
+          return <Card className="mb-4 border-warning/50">...</Card>
         }
 
     - id: CMP-P10
@@ -856,14 +876,16 @@ registry:
       severity: moderate
       mechanical: true
       rule: >
-        A component that renders a layout/presentational root (div/section/form/tr/Card/...) must extend
-        ComponentProps<root> so callers can pass className + spread props:
+        A component that renders a DOM root (div/section/form/tr/...) must extend ComponentProps<root>:
         `export function X({ className, ...props }: ComponentProps<'div'>)` with
         `<div className={cn('...', className)} {...props}>`. For a leaf that takes an item, intersect —
         `interface XProps extends ComponentProps<'div'> { item: T }`. Never hand-type `className?: string`;
-        extend ComponentProps instead. (Exempt — these are auto-skipped: store/state-driven overlays whose
-        root is Dialog/Sheet/Drawer/AlertDialog Content, controlled primitive-wrappers whose root is
-        ToggleGroup/Tabs/Select, and barrel re-export files.)
+        extend ComponentProps instead. ESTA regra é sobre o SPREAD numa raiz DOM, e é ela que é
+        condicional: numa raiz CONTROLADA (ToggleGroup/Tabs/Select) espalhar props arbitrárias briga com
+        o contrato controlado, e numa raiz de overlay (DialogContent/SheetContent) o spread é opcional.
+        A superfície de `className`, essa, NÃO é condicional e não é assunto daqui — é bp-29, e vale para
+        raiz maiúscula também. As antigas "isenções" desta regra (overlays, raízes controladas) isentam
+        apenas o spread; nunca isentaram o className.
       detect:
         - 'export function [A-Z][A-Za-z0-9]*\(\s*\)'
         - 'className\?:\s*string'
@@ -1052,3 +1074,59 @@ registry:
         - 'else if\s*\([^\n]*\.(kind|type|status|category|platform|mode)\s*==='
       detect_skip:
         - 'components/ui/'
+
+    - id: bp-29
+      name: "Component renders a root the caller cannot reach (no className, or a className that never lands)"
+      severity: critical
+      rule: >
+        `className` é UNIVERSAL: todo módulo que renderiza uma raiz aceita `className` e o mescla NA RAIZ
+        com cn() — INDEPENDENTE de a raiz ser tag DOM minúscula ou componente maiúsculo. Um `ThreadCard`
+        cuja raiz é `<Card>` e que não declara className é um beco: quem escreve `<ThreadCard />` não
+        alcança o Card por dentro, fica sem `mt-4` e sem `data-testid`, e a saída é copiar em vez de
+        compor. Tipe a superfície A PARTIR DA RAIZ — `ComponentProps<'tag'>` quando a raiz é DOM (ganha
+        aria-*/data-*/handlers de graça), `ComponentProps<typeof X>` ou
+        `Pick<ComponentProps<typeof X>, 'className'>` quando a raiz é um componente. Nunca
+        `className?: string` à mão (bp-20/CP-02). Mesclar é cn(): um literal `className="…"` ao lado de
+        `{...props}` na mesma raiz NÃO mescla — o último a escrever ganha e um dos dois lados some.
+        O SPREAD CEGO é outra regra (bp-20) e continua CONDICIONAL — em raiz controlada
+        (ToggleGroup/Tabs/Select) espalhar props arbitrárias briga com o contrato controlado. O perigo
+        sempre foi o spread; nunca foi o className.
+        ISENÇÕES — duas, estruturais, nunca whitelist: (a) módulos de rota (route.tsx / __root.tsx /
+        index.tsx de rota) — o router os instancia, não existe chamador para passar prop; (b) módulo que
+        não renderiza raiz-hospedeira única — fragmento com irmãos, context Provider (o `DataTable` é um
+        `<Ctx.Provider>`: quem carrega a superfície é o `DataTableContent`), raiz headless que não
+        renderiza elemento (Base UI `Popover.Root` — "Doesn't render its own HTML element", e por isso
+        `Pick<ComponentProps<typeof Popover>, 'className'>` nem type-checa), ou arquivo que não é
+        componente (`components/console/glyphs.tsx` é um mapa de ícones). Qualquer outra "isenção" é
+        ACHADO para reportar, não linha de whitelist.
+      wrong: |
+        // raiz maiúscula tratada como se dispensasse className — o chamador não alcança o Card
+        export function NeedsYouPanel({ threadId }: { threadId: string }) {
+          return <Card className="mb-4 border-warning/50">...</Card>
+        }
+        // declara a superfície mas o valor nunca chega na raiz: literal + spread = clobber
+        function Toaster({ theme = 'system', ...props }: ToasterProps) {
+          return <Sonner theme={theme} className="toaster group" {...props} />
+        }
+      right: |
+        export function NeedsYouPanel({ threadId, className }: { threadId: string } & Pick<ComponentProps<typeof Card>, 'className'>) {
+          return <Card className={cn('mb-4 border-warning/50', className)}>...</Card>
+        }
+        function Toaster({ theme = 'system', className, ...props }: ToasterProps) {
+          return <Sonner theme={theme} className={cn('toaster group', className)} {...props} />
+        }
+      mechanical: true
+      detect:
+        - 'className="[^"]*"[^<>]*\{\.\.\.\w'
+      detect_skip:
+        - 'className=\{cn\('
+      rail: >
+        scripts/detectors/component-props.ts — CP-04 é a metade repo-wide e a que importa: para CADA
+        componente exportado sob -components/ e components/ (menos ui/), resolve a raiz, pergunta se ela
+        aceita className (isenção (b) decidida por estrutura: `.Provider` e wrappers headless caem fora) e
+        exige superfície + merge. O regex de `detect` acima só pega o clobber literal+spread no edit-time;
+        a metade "não declara className" não é regex-ável e é do detector. Autoteste em
+        scripts/detectors/component-props.test.ts. Nos primitivos (components/ui/) o dono é a rail C,
+        packages/app/react/tests/architecture/primitive-props.test.ts — o walker do detector só enxerga
+        `^export function X` e 34 dos 40 arquivos de primitivo exportam por barrel, então movê-los para cá
+        seria gate vazio.

@@ -9,11 +9,20 @@ import { join, resolve } from 'node:path'
  * `aria-*`, não passa `data-testid`, e o próximo dev copia o primitivo em vez de compô-lo. A regra
  * já é doutrina (primitive PRM-04 / PRM-P01); faltava falhar.
  *
- * POR QUE AQUI E NÃO NO DETECTOR: `scripts/detectors/component-props.ts` varre bp-20 repo-wide e
- * EXCLUI `/ui/` de propósito (l.51, com o docblock dizendo "excluding ui/ primitives"), e o predicado
- * dele (CP-01) só dispara em raiz JSX minúscula — o que deixaria passar `ConfirmDialog`, cuja raiz é
- * `<DialogContent>`. Esta rail é o complemento no território que o detector recusa, com um predicado
- * mais forte: a DECLARAÇÃO de props é que precisa referenciar o vocabulário, não a raiz.
+ * POR QUE AQUI E NÃO NO DETECTOR (re-decidido em 30/07, MANTIDO): `scripts/detectors/component-props.ts`
+ * varre bp-20/bp-29 repo-wide e EXCLUI `/ui/` de propósito. Trazer `ui/` para lá seria um gate VAZIO: o
+ * `componentBlocks()` do detector só enxerga `^export function X`, e 34 dos 40 arquivos de primitivo
+ * exportam por barrel no rodapé (`export { Dialog, DialogContent, … }`) — são 168 componentes de
+ * primitivo e o walker veria um punhado. Esta rail roda onde os primitivos moram e lê todos eles, com um
+ * predicado mais forte: a DECLARAÇÃO de props é que precisa referenciar o vocabulário, não a raiz (o que
+ * pega `ConfirmDialog`, cuja raiz é `<DialogContent>` e escaparia do CP-01, que só olha raiz minúscula).
+ *
+ * AS DUAS METADES: a doutrina de `className` tem uma metade de DECLARAÇÃO (o tipo expõe a superfície) e
+ * uma de ENCANAMENTO (o valor do chamador chega mesmo na raiz). Os dois primeiros testes são a primeira
+ * metade. O terceiro é a segunda: uma raiz com `className="…"` literal AO LADO de `{...props}` não mescla
+ * — o último a escrever ganha, e quem passou `className` ou apaga o estilo do primitivo ou é apagado por
+ * ele. `cn()` é o que mescla. Nascido vermelho em `sonner.tsx` (`<Sonner className="toaster group" …
+ * {...props} />`), o único caso do diretório na medição de 30/07.
  *
  * ESCOPO: `components/ui/*.tsx`, UM nível — o glob literal que `.claude/registry.yaml` usa para
  * mapear a skill `primitive`. `icons/` fica fora por construção: os 125 ícones são
@@ -48,6 +57,24 @@ function declarationBody(source: string, start: number, matchLength: number): st
 	return next === -1 ? after : after.slice(0, next)
 }
 
+/**
+ * A tag de abertura da primeira raiz JSX de um componente — `<Sonner theme={…} className="…" …>`.
+ * Conta chaves para que um `>` dentro de uma expressão de prop (`onClick={() => x}`) não encerre a tag.
+ */
+function rootOpeningTag(body: string): string | null {
+	const m = body.match(/return(?:\s*\(\s*|\s+)</)
+	if (!m) return null
+	const open = (m.index ?? 0) + m[0].length - 1
+	let depth = 0
+	for (let i = open; i < body.length; i++) {
+		const c = body[i]
+		if (c === '{') depth++
+		else if (c === '}') depth--
+		else if (c === '>' && depth === 0) return body.slice(open, i + 1)
+	}
+	return null
+}
+
 describe('rail C — primitivo de components/ui/ estende as props da raiz (primitive PRM-04)', () => {
 	it('nenhuma declaração *Props fechada', async () => {
 		const offenders: string[] = []
@@ -69,6 +96,24 @@ describe('rail C — primitivo de components/ui/ estende as props da raiz (primi
 			const source = readFileSync(join(UI, file), 'utf8')
 			for (const m of source.matchAll(/className\?:\s*string/g)) {
 				offenders.push(`${file}:${source.slice(0, m.index).split('\n').length}`)
+			}
+		}
+		expect(offenders).toEqual([])
+	})
+
+	it('nenhuma raiz clobbra o className do chamador — literal + spread sem cn()', async () => {
+		const offenders: string[] = []
+		for (const file of await primitiveFiles()) {
+			if (WHITELIST[file]) continue
+			const source = readFileSync(join(UI, file), 'utf8')
+			for (const m of source.matchAll(/^(?:export\s+)?function ([A-Z][A-Za-z0-9]*)/gm)) {
+				const body = declarationBody(source, m.index ?? 0, m[0].length)
+				const tag = rootOpeningTag(body)
+				if (!tag) continue
+				const literal = /className=(["'`])/.test(tag)
+				const spread = /\{\.\.\.[A-Za-z_$][\w$]*\}/.test(tag)
+				const merged = /className=\{[^}]*\bcn\(/.test(tag)
+				if (literal && spread && !merged) offenders.push(`${file}:${source.slice(0, m.index).split('\n').length} ${m[1]}`)
 			}
 		}
 		expect(offenders).toEqual([])

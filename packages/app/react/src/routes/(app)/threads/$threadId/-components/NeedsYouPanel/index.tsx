@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -12,12 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { enumLabel } from '@/lib'
+import { cn } from '@/lib/utils'
 import { resolutionIsPrimary } from '@/components/console/glyphs'
 
 type Stop = GetNeedsYouPanelQueryResponse['stops'][number]
 
 /** Active stops on a thread with per-kind resolution actions (T14). Renders nothing when clear. */
-export function NeedsYouPanel({ threadId }: { threadId: string }) {
+export function NeedsYouPanel({ threadId, className }: { threadId: string } & Pick<ComponentProps<typeof Card>, 'className'>) {
 	const { t } = useTranslation()
 	const { data } = useGetNeedsYouPanel(threadId)
 
@@ -29,7 +31,7 @@ export function NeedsYouPanel({ threadId }: { threadId: string }) {
 	if (stops.length === 0) return null
 
 	return (
-		<Card className="mb-4 border-warning/50">
+		<Card className={cn('mb-4 border-warning/50', className)}>
 			<div className="flex items-center justify-between border-b border-border px-5 py-3">
 				<span className="inline-flex items-center gap-2 font-semibold text-foreground">
 					{t('session.needsYou')} <span className="text-sm font-normal text-muted-foreground">{stops.length}</span>

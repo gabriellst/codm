@@ -593,7 +593,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 ```
 
-### Use cn for Class Merging
+### Use cn for Class Merging [bp-05, bp-06 — as duas metades]
+
+A superfície aberta tem uma metade de **declaração** (o tipo expõe `className`, bp-05) e uma de
+**encanamento** (o valor do chamador chega na raiz, bp-06). As duas falham por caminhos diferentes:
 
 ```typescript
 // WRONG - Overwrites consumer classes
@@ -602,6 +605,29 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // CORRECT - Merges with consumer classes
 <button className={cn(buttonVariants({ variant }), className)} />
 ```
+
+```tsx
+// WRONG - clobber: o `{...props}` vem depois, então um className do chamador APAGA "toaster group"
+function Toaster({ theme = 'system', ...props }: ToasterProps) {
+  return <Sonner theme={theme} className="toaster group" {...props} />
+}
+
+// CORRECT - cn() mescla; o do chamador só se soma
+function Toaster({ theme = 'system', className, ...props }: ToasterProps) {
+  return <Sonner theme={theme} className={cn('toaster group', className)} {...props} />
+}
+```
+
+**`cn()` não é obrigatório quando a raiz não tem classe própria.** Um wrapper que só repassa um bag
+tipado pela raiz (`function Collapsible({ ...props }: ComponentProps<typeof CollapsiblePrimitive.Root>)`
+→ `<CollapsiblePrimitive.Root {...props} />`) já entrega o `className` inteiro pelo spread — nada a
+mesclar. A pergunta é sempre "o className do chamador chega na raiz?", nunca "tem `cn()` no arquivo?".
+
+Gate: `packages/app/react/tests/architecture/primitive-props.test.ts` (rail C) — 3 asserções sobre
+`components/ui/*.tsx`: declaração aberta, zero `className?: string` à mão, zero raiz com clobber.
+`components/ui/` fica FORA de `scripts/detectors/component-props.ts` de propósito: o walker dele só
+enxerga `^export function X` e 34 dos 40 arquivos de primitivo exportam por barrel no rodapé — mover
+para lá seria um gate vazio sobre 168 componentes.
 
 ### Use data-slot for Identification
 

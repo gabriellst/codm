@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-r
 import { getHomeDashboardQueryKey } from '@codm/client-typescript/typescript'
 import { ChannelKindEnum, ChannelStatusEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codm/client-typescript/go'
 import { extractErrorCode, getErrorTranslation } from '@/lib'
+import { cn } from '@/lib/utils'
 import { channelGlyph } from '@/components/console/glyphs'
 import { Button } from '@/components/ui/button'
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -40,7 +41,7 @@ const POLL_INTERVAL_MS = 2000
  * to set `open` to true, and unmounting is what used to reset the pairing state. Nothing about the QR
  * machine changed; only who owns "open" did.
  */
-export function ConnectChannelDialog() {
+export function ConnectChannelDialog({ className }: Pick<ComponentProps<typeof DialogContent>, 'className'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const hide = useDialogStore(s => s.hide)
@@ -155,7 +156,7 @@ export function ConnectChannelDialog() {
 	}
 
 	return (
-		<DialogContent>
+		<DialogContent className={cn(className)}>
 			<DialogHeader>
 				<DialogTitle>
 					<span className="inline-flex items-center gap-2">

@@ -242,7 +242,38 @@ registry:
         PRM-04 already named this shape as `when: always`, but only as a pattern — nothing failed
         when a primitive violated it (component-props.ts deliberately excludes /ui/; see its
         docblock). This bad_practice is the doctrine catching up to what the rail C test now
-        enforces mechanically, repo-wide, over components/ui/*.tsx.
+        enforces mechanically, repo-wide, over components/ui/*.tsx. Esta é a metade de DECLARAÇÃO;
+        a de ENCANAMENTO é bp-06.
+
+    - id: bp-06
+      name: "Root that clobbers the caller's className (literal + spread, no cn)"
+      severity: critical
+      rule: >
+        Declarar a superfície não basta — o `className` do chamador tem de CHEGAR na raiz, mesclado.
+        Uma raiz com `className="…"` literal AO LADO de `{...props}` não mescla: o spread vem depois,
+        então o valor do chamador SUBSTITUI as classes do primitivo (ou é substituído, se a ordem for
+        inversa). Nos dois casos um dos lados some silenciosamente — que é exatamente o beco que a
+        superfície aberta existia para evitar. `cn()` é o que mescla. Sem classes próprias na raiz,
+        encaminhar (`{...props}` sozinho, ou `className={className}`) já é merge completo.
+      wrong: |
+        function Toaster({ theme = 'system', ...props }: ToasterProps) {
+          return <Sonner theme={theme} className="toaster group" {...props} />
+        }
+      right: |
+        function Toaster({ theme = 'system', className, ...props }: ToasterProps) {
+          return <Sonner theme={theme} className={cn('toaster group', className)} {...props} />
+        }
+      mechanical: true
+      detect:
+        - 'className="[^"]*"[^<>]*\{\.\.\.\w'
+      detect_skip:
+        - 'className=\{cn\('
+      refs: [PRM-P01, "packages/app/react/tests/architecture/primitive-props.test.ts (rail C, 3º teste)"]
+      note: >
+        Nasceu vermelho em sonner.tsx (30/07) — 1 caso em 168 componentes de primitivo; os outros dois
+        primitivos sem cn() (collapsible.tsx, confirm-dialog.tsx) estão CORRETOS: repassam um bag tipado
+        pela raiz e não têm classe própria para mesclar, então o spread já entrega o className. Medir
+        "usa cn()" era a métrica errada; o que importa é o className chegar na raiz sem clobber.
 
   canonical_snippet: |
     const buttonVariants = cva(

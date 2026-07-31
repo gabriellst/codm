@@ -16,10 +16,36 @@
  *          props are not typed by ComponentProps (in the signature or via a local
  *          interface/type extending it)                                        error
  *   CP-02  hand-typed `className?: string` in a props declaration               error
+ *   CP-03  route shell (routes/**\/index.tsx) calling a data hook                error
+ *   CP-04  component that renders a root the caller cannot reach: no className
+ *          surface, or a className that never lands on the root                 error
  *
- * bp-20's exemptions fall out naturally: overlay roots (DialogContent/SheetContent/...)
- * and controlled primitive roots (ToggleGroup/Tabs/Select) are UPPERCASE — CP-01 only
- * fires on lowercase DOM roots.
+ * CP-01 vs CP-04 — two halves that used to be conflated (founder ratification, 30/07):
+ *   · `className` is UNIVERSAL (CP-04). A module that renders a root accepts className and
+ *     merges it on that root, WHATEVER the case of the root tag. `<ThreadCard />` whose root
+ *     is `<Card>` and which declares no className is a dead end: the caller cannot add `mt-4`
+ *     or a `data-testid`, and the next dev copies the component instead of composing it.
+ *   · The BLIND SPREAD (`{...props}`) stays CONDITIONAL (CP-01, DOM roots only). On a
+ *     controlled root (ToggleGroup/Tabs/Select) an arbitrary spread fights the controlled
+ *     contract — that is the only real hazard, and it was never about className.
+ * The exemptions are therefore only two, and both are structural rather than whitelisted:
+ *   (a) route modules — the router instantiates them, there is no caller to pass a prop.
+ *       Falls out of the GLOBS below: route.tsx / __root.tsx / a route's own index.tsx are
+ *       not under -components/ and not under components/.
+ *   (b) a module that renders no single host root — a fragment with siblings, a context
+ *       Provider (nothing to attach a class to; its slot components carry the surface — see
+ *       DataTable vs DataTableContent), or a file that is not a component at all
+ *       (components/console/glyphs.tsx is an icon map, it declares no component).
+ * Anything else that seems to want an exemption is a finding to report, not a whitelist entry.
+ *
+ * WHY ui/ IS STILL EXCLUDED (re-decided 30/07, kept): the primitives are covered by rail C,
+ * `packages/app/react/tests/architecture/primitive-props.test.ts`. It owns the DECLARATION half
+ * (a *Props must extend the root's vocabulary) and, since this pass, the PLUMBING half (a root
+ * that carries a literal className plus a `{...props}` spread clobbers the caller's className —
+ * cn() is what merges it). Moving ui/ here instead would be a VACUOUS gate: componentBlocks()
+ * only sees `^export function X`, and 34 of the 40 primitive files export through a bottom
+ * barrel (`export { Dialog, DialogContent, ... }`) — 168 primitive components exist and this
+ * walker would see a handful. The rail runs where the primitives live and reads all of them.
  *
  * Usage:
  *   bun scripts/detectors/component-props.ts [--json] [--update-baseline] [--no-baseline]
@@ -111,6 +137,104 @@ export function jsxRootTag(body: string): string | null {
 	return null
 }
 
+/**
+ * The opening tag of the component's first JSX root — `<Card className={cn('mb-4', className)}>` —
+ * or null when there is none. Brace-balanced so a `>` inside a prop expression (`onClick={() => x}`)
+ * does not end the tag early.
+ */
+export function rootOpeningTag(body: string): string | null {
+	const m = body.match(/return(?:\s*\(\s*|\s+)</)
+	if (!m) return null
+	const open = (m.index ?? 0) + m[0].length - 1
+	let depth = 0
+	for (let i = open; i < body.length; i++) {
+		const c = body[i]
+		if (c === '{') depth++
+		else if (c === '}') depth--
+		else if (c === '>' && depth === 0) return body.slice(open, i + 1)
+	}
+	return null
+}
+
+/** Does the component expose a className surface — destructured param, or a ComponentProps-typed bag? */
+export function declaresClassName(block: ComponentBlock, source: string): boolean {
+	return /\bclassName\b/.test(block.signature) || usesComponentProps(block, source)
+}
+
+/**
+ * Does the caller's className actually LAND on the root? Three honest forms:
+ *   `{...props}` spread (the props bag carries className),
+ *   `className={cn('defaults', className)}` (root has its own classes — cn merges),
+ *   `className={className}` (root has no classes of its own — forwarding IS the merge).
+ * A literal `className="…"` next to a spread is NOT a merge: last-write-wins clobbers one side.
+ */
+export function classNameReachesRoot(tag: string): boolean {
+	const literal = /className=(["'`])/.test(tag)
+	const spread = /\{\.\.\.[A-Za-z_$][\w$]*\}/.test(tag)
+	const merged = /className=\{[^}]*\bcn\(/.test(tag) || /className=\{\s*className\s*\}/.test(tag)
+	if (merged) return true
+	return spread && !literal
+}
+
+/** The source text of `name`'s own declaration, up to the next top-level declaration. */
+function declarationOf(name: string, source: string): string | null {
+	const m = source.match(new RegExp(`^(?:export\\s+)?(?:function|const)\\s+${name}\\b`, 'm'))
+	if (!m) return null
+	const after = source.slice((m.index ?? 0) + m[0].length)
+	const next = after.search(/^(?:export |function |const |interface |type )/m)
+	return next === -1 ? after : after.slice(0, next)
+}
+
+/** Resolve `name` to its defining source: this file, or the module this file imports it from. */
+function definitionSource(name: string, source: string, file: string): string | null {
+	const local = declarationOf(name, source)
+	if (local) return local
+	const imported = [...source.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'([^']+)'/g)].find(m =>
+		m[1].split(',').some(
+			s =>
+				s
+					.trim()
+					.replace(/^type\s+/, '')
+					.split(/\s+as\s+/)[0]
+					.trim() === name,
+		),
+	)
+	if (!imported) return null
+	const spec = imported[2]
+	const base = spec.startsWith('@/') ? join(REACT_SRC, spec.slice(2)) : spec.startsWith('.') ? join(dirname(file), spec) : null
+	if (!base) return null // node_modules — not ours to resolve
+	for (const candidate of [`${base}.tsx`, `${base}.ts`, join(base, 'index.tsx')]) {
+		if (existsSync(candidate)) return declarationOf(name, readFileSync(candidate, 'utf-8'))
+	}
+	return null
+}
+
+/**
+ * Can a className reach this root AT ALL? Exemption (b), decided structurally instead of by
+ * whitelist — the exemption is exactly the case where the requirement is impossible, and the
+ * compiler agrees:
+ *   · lowercase DOM tag → always reachable.
+ *   · `X.Provider` / `X.Consumer` → a context provider renders no element (DataTable's root);
+ *     the surface lives in its slot components (DataTableContent), which do take className.
+ *   · uppercase root → resolve OUR wrapper for it. A wrapper that names className (destructures,
+ *     cn()-merges) or is typed from a DOM element is reachable. A wrapper that only spreads a
+ *     headless `*.Root.Props` is not: Base UI's own d.ts for PopoverRoot says "Groups all parts of
+ *     the popover. Doesn't render its own HTML element." — `Pick<ComponentProps<typeof Popover>,
+ *     'className'>` does not type-check, so demanding it would be demanding a tsc error.
+ *   · unresolvable (a node_modules component such as Link) → assume reachable; demanding className
+ *     is the safe default.
+ * Residual: a wrapper that merely spreads a root which DOES render an element (a Radix `Root`)
+ * reads as unreachable here. Rail C's plumbing assertion pushes those wrappers to cn()-merge,
+ * which flips them back to reachable; none is an app-component root today (measured).
+ */
+export function rootAcceptsClassName(root: string, source: string, file: string): boolean {
+	if (/^[a-z]/.test(root)) return true
+	if (root.includes('.')) return !/\.(Provider|Consumer)$/.test(root)
+	const def = definitionSource(root, source, file)
+	if (def === null) return true
+	return /className/.test(def) || /ComponentProps\s*<\s*'/.test(def)
+}
+
 /** Does this component's props type reference ComponentProps — in the signature or via a local declaration? */
 export function usesComponentProps(block: ComponentBlock, source: string): boolean {
 	if (/ComponentProps\s*</.test(block.signature)) return true
@@ -139,6 +263,27 @@ export async function walk(): Promise<Finding[]> {
 					severity: 'error',
 					message: `${block.name} renders a <${root}> root without extending ComponentProps<'${root}'> — callers cannot pass className/spread props (component bp-20).`,
 				})
+			}
+			// CP-04 — className is universal: the caller must be able to reach whatever root this
+			// component renders, uppercase or lowercase. Exemption (b) is structural: no host root.
+			if (root && rootAcceptsClassName(root, source, file)) {
+				const tag = rootOpeningTag(block.body) ?? ''
+				const declares = declaresClassName(block, source)
+				const reaches = classNameReachesRoot(tag)
+				if (!declares || !reaches) {
+					const why = !declares
+						? `declares no className (type it from the root: ComponentProps<${/^[a-z]/.test(root) ? `'${root}'` : `typeof ${root}`}>)`
+						: 'declares className but never lands it on the root (merge with cn() there)'
+					findings.push({
+						detector: 'component-props',
+						ruleId: 'CP-04',
+						source: 'component#bp-29',
+						file: rel(file),
+						line: lineOf(source, block.index),
+						severity: 'error',
+						message: `${block.name} renders a <${root}> root and ${why} — the caller cannot reach it (component bp-29).`,
+					})
+				}
 			}
 		}
 		for (const m of source.matchAll(/className\?:\s*string/g)) {

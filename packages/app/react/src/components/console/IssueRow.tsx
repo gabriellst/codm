@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { IconAsterisk, IconChevronRight } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import type { IssueStatus } from '@codm/client-typescript/typescript'
@@ -21,12 +22,12 @@ export interface IssueRowItem {
  * One issue in a status-grouped list. NEEDS_INPUT gets the asterisk glyph; the other
  * statuses get a colored dot. Links into the issue drill-down under its thread.
  */
-export function IssueRow({ item }: { item: IssueRowItem }) {
+export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<ComponentProps<'a'>, 'className'>) {
 	return (
 		<Link
 			to="/threads/$threadId/issues/$issueId"
 			params={{ threadId: item.threadId, issueId: item.issueId }}
-			className="flex items-center gap-2 rounded-2xl px-2 py-3 transition-colors hover:bg-muted"
+			className={cn('flex items-center gap-2 rounded-2xl px-2 py-3 transition-colors hover:bg-muted', className)}
 		>
 			<span className="flex w-5 shrink-0 justify-center text-muted-foreground">
 				{item.status === 'NEEDS_INPUT' ? <IconAsterisk className="size-4" /> : <Dot className={issueStatusDot[item.status]} />}

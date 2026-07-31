@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useDialogStore } from '@/stores/useDialogStore'
+import { cn } from '@/lib/utils'
 
 const changePasswordSchema = z
 	.object({
@@ -27,7 +29,7 @@ const changePasswordSchema = z
  * The form is parent-controlled via a stub onSubmit that shows a toast.
  * Link this dialog from the PR that adds the mutation to the SDK.
  */
-export function ChangePasswordDialog() {
+export function ChangePasswordDialog({ className }: Pick<ComponentProps<typeof DialogContent>, 'className'>) {
 	const { t } = useTranslation()
 	const hide = useDialogStore(s => s.hide)
 
@@ -46,7 +48,7 @@ export function ChangePasswordDialog() {
 	})
 
 	return (
-		<DialogContent>
+		<DialogContent className={cn(className)}>
 			<DialogHeader>
 				<DialogTitle>{t('account.security.changePassword.dialogTitle')}</DialogTitle>
 				<DialogDescription>{t('account.security.changePassword.dialogDescription')}</DialogDescription>

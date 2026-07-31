@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ComponentProps, type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
@@ -44,14 +44,17 @@ function SectionLabel({ children }: { children: ReactNode }) {
  * `show(<ThreadSettingsDialog threadId={…} />)` and MOUNTED is what "open" means here — which is why
  * the body is no longer gated on a local `open` flag. The store is what dismisses it.
  */
-export function ThreadSettingsDialog({ threadId }: { threadId: string }) {
+export function ThreadSettingsDialog({
+	threadId,
+	className,
+}: { threadId: string } & Pick<ComponentProps<typeof DialogContent>, 'className'>) {
 	const { t } = useTranslation()
 	// The thread's name, for the subtitle. Its own query rather than a prop: React Query already holds
 	// this exact key (the header mounts it), so it costs no request and keeps the dialog owning its data.
 	const { data: session } = useGetSessionChat(threadId)
 
 	return (
-		<DialogContent className="max-w-lg">
+		<DialogContent className={cn('max-w-lg', className)}>
 			<DialogHeader>
 				<DialogTitle>{t('session.settingsTitle')}</DialogTitle>
 				<DialogDescription>
