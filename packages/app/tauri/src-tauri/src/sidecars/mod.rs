@@ -23,15 +23,8 @@ use crate::api::Api;
 mod gate;
 pub use gate::*;
 
-/// Which SDK sub-client answers for this process. A fact of the SHELL (which binary is which
-/// service), not of the contract: the health PATH lives in the OpenAPI spec and arrives through the
-/// generated method, so there is no longer a literal to keep in step with `config/sidecars.ts`
-/// (spec E2). The `match` in `probe` is total — the compiler proves every service is probeable.
-#[derive(Clone, Copy)]
-pub enum SidecarService {
-    Daemon,
-    Gateway,
-}
+mod supervision;
+pub use supervision::*;
 
 /// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`), the port
 /// it listens on, which SDK sub-client probes it, the working directory it must be
