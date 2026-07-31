@@ -21,6 +21,7 @@ import { OpenIssuesReader, DrizzleOpenIssuesReader, MockOpenIssuesReader } from 
 import { ChannelConnectivity, DrizzleChannelConnectivity, MockChannelConnectivity } from './services/ChannelConnectivity'
 import { GroupMemberReader, DrizzleGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
 import { ThreadStatusDeriver, DrizzleThreadStatusDeriver, MockThreadStatusDeriver } from './services/ThreadStatusDeriver'
+import { ReplyStreamer } from './services/ReplyStreamer'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
@@ -58,4 +59,11 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// Derived thread status: real table reads in real+integration, IDLE in mock. The seam exists because
 	// the three READS behind the precedence were duplicated at every call site (spec decision 7).
 	{ token: ThreadStatusDeriver, mock: MockThreadStatusDeriver, integration: DrizzleThreadStatusDeriver, real: DrizzleThreadStatusDeriver },
+	// The streamed reply's in-flight state (streaming spec). SAME class in all three envs, and a
+	// SINGLETON by the class-binding rule — which is the whole point: the turn that enqueues the cuts,
+	// the executor that applies them and the delivery that finishes them must see ONE map, or the
+	// sequence guard is guarding three separate memories and the final edit cannot find the message it
+	// is supposed to complete. Process-local by design; see the class doc for why durability buys
+	// nothing here.
+	{ token: ReplyStreamer, mock: ReplyStreamer, integration: ReplyStreamer, real: ReplyStreamer },
 ])

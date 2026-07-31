@@ -6,6 +6,7 @@ import * as internalHandlers from './handlers/internal'
 import * as externalHandlers from './handlers/external'
 import { DeliverChannelMessage } from './usecases/DeliverChannelMessage'
 import { ReactToChannelMessage } from './usecases/ReactToChannelMessage'
+import { StreamChannelReply } from './usecases/StreamChannelReply'
 import { SustainTypingPresence } from './usecases/SustainTypingPresence'
 
 const ctx = await BoundedContext.create({
@@ -21,7 +22,12 @@ const ctx = await BoundedContext.create({
 	// The two INSTANT CUES (streaming spec, decision 10) share that failure mode exactly: unregistered,
 	// producers enqueue and nobody claims, so the emoji never appears and the indicator never lights —
 	// with tsc green and every unit test passing.
-	commandHandlers: { DeliverChannelMessage, ReactToChannelMessage, SustainTypingPresence },
+	//
+	// `StreamChannelReply` is the same story once more, with a twist that makes it QUIETER still: left
+	// unregistered, the reply is delivered perfectly well by `DeliverChannelMessage` at the end of the
+	// turn — so nothing is broken, no test fails, and the only symptom is that the streaming this whole
+	// frente exists for silently does not happen.
+	commandHandlers: { DeliverChannelMessage, ReactToChannelMessage, StreamChannelReply, SustainTypingPresence },
 })
 
 export default ctx.router

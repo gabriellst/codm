@@ -3,6 +3,7 @@ import { CommandQueue, Handler, LoggingService, tryCatchAsync, z } from '@codm/c
 import type { Transaction } from '@codm/core-typescript'
 import { MessageAuthor } from '@codm/contracts-typescript/wire/enums'
 import { ChannelSender } from '../services/ChannelSender'
+import { ReplyStreamer, streamKey } from '../services/ReplyStreamer'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { typingBeatJobIds } from '../utils'
 import type { SustainTypingPresence } from './SustainTypingPresence'
@@ -67,6 +68,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 
 	constructor(
 		private readonly sender: ChannelSender,
+		private readonly streams: ReplyStreamer,
 		private readonly consumed: ConsumedMessageRepository,
 		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
@@ -76,6 +78,14 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const { ownerId, channelId, contactExternalId, text, author } = input
+
+		// THE LAST EDIT OF A STREAMED REPLY (streaming spec, decision 7), when this conversation has one
+		// in flight. It is the same delivery it always was — the words still arrive here, and this is
+		// still the only place that decides the reply is DONE — but a reply the contact has been watching
+		// grow must be COMPLETED, not repeated: sending here would put the answer in the conversation
+		// twice. The stream is found by the conversation alone, so nothing had to be threaded through the
+		// event, the handler or this command's schema.
+		if (await this.finishStreamedReply(input, tx)) return
 
 		// EXTERNAL I/O OUTSIDE ANY TRANSACTION — the sanctioned shape (cc-bp-24's named exception):
 		// holding the single SQLite write lock across an HTTP round-trip would block every other writer,
@@ -93,6 +103,54 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		await this.stopTypingPresence(channelId, contactExternalId)
 
 		this.logging.info({ content: { message: 'channel message delivered', channelId, messageId, author } })
+	}
+
+	/**
+	 * Finish a reply the contact has been watching grow, and report whether there was one.
+	 *
+	 * ### The text delivered here is the CANONICAL text (AC-3)
+	 * `input.text` is the transcript entry's own text — the same string `RecordOrchestratorReply` wrote
+	 * and `RunOrchestratorTurn` parsed the sentinel out of. The intermediate cuts came from the model's
+	 * incremental frames, which is a DIFFERENT accumulation and may end anywhere; this one is the
+	 * conversation's own record. Ending on it is what makes "what the channel shows" and "what the
+	 * transcript says" the same string rather than two texts that happen to agree.
+	 *
+	 * That is also the whole of decision 7's self-correction: whatever the intermediate edits did or
+	 * failed to do, this one overwrites the message with the complete and final answer.
+	 *
+	 * ### The window may have closed while the reply was still growing
+	 * Then the remainder continues in a NEW message (decision 4) carrying only what the expired one does
+	 * not already show, so the two balloons concatenate to the whole reply instead of repeating it.
+	 */
+	private async finishStreamedReply(input: this['input'], tx?: Transaction): Promise<boolean> {
+		const { ownerId, channelId, contactExternalId, text, author } = input
+		const key = streamKey(channelId, contactExternalId)
+		const verdict = this.streams.claimFinal(key, Date.now())
+
+		if (verdict.action === 'NONE') return false
+
+		if (verdict.action === 'EDIT') {
+			await this.sender.edit(
+				{ channelId, remoteId: contactExternalId, messageId: verdict.messageId, text: text.slice(verdict.baseOffset) },
+				ownerId,
+			)
+			this.logging.info({ content: { message: 'streamed reply completed by edit', channelId, messageId: verdict.messageId } })
+			return true
+		}
+
+		// Only what the expired message does NOT already show — `baseOffset` here is where the screen
+		// currently ENDS, so the two balloons concatenate to the whole reply instead of repeating it.
+		const remainder = text.slice(verdict.baseOffset)
+		if (remainder.length === 0) return true
+
+		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text: remainder }, ownerId)
+		// The continuation is a message this account sent, so it needs the same echo claim the plain
+		// delivery path takes — otherwise its echo comes back as inbound speech.
+		if (author === MessageAuthor.SYSTEM) {
+			await this.withTransaction(tx, tx => this.consumed.claim({ ownerId, channelId, platformMessageId: messageId }, tx))
+		}
+		this.logging.info({ content: { message: 'streamed reply continued in a new message (edit window closed)', channelId, messageId } })
+		return true
 	}
 
 	/**
