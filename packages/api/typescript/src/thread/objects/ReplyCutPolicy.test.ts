@@ -62,11 +62,26 @@ describe('the reply cut policy — when a growing answer is worth pushing to the
 
 	// ── AC-2 — the hybrid cadence, and the explosion it is defined against ─────────────────────
 
-	describe('after the first send: ~1.5s OR a paragraph, whichever comes first', () => {
+	describe('after the first send: the interval OR a paragraph, whichever comes first', () => {
 		const opened: ReplyCutState = { lastCutAtMs: T0, deliveredLength: 'Primeira frase.'.length }
 
-		it('does not cut before the interval when nothing structural changed', () => {
-			const decision = decideCut({ text: 'Primeira frase. Ainda escrevendo', nowMs: T0 + 900, state: opened })
+		/**
+		 * A FRONTEIRA É RELATIVA AO CONST, e isso é deliberado. Este caso já quebrou uma vez: ele
+		 * cravava `T0 + 900`, que era "antes do intervalo" com 1500ms e virou "depois" quando o founder
+		 * baixou para 750 (31/07). O teste falhou pelo motivo CERTO — estava medindo o intervalo de
+		 * verdade —, mas afinar um número ratificado não deveria custar uma caçada a literais.
+		 *
+		 * Ancorar em `STREAM_CUT_INTERVAL_MS ± 1` NÃO torna o teste vácuo: ele continua reprovando quem
+		 * remover a comparação de tempo (aí o `-1` corta) ou inverter o sinal (aí o `-1` corta e o
+		 * exato não). O que ele deixa de reprovar é a MUDANÇA DO VALOR — que é justamente a coisa que
+		 * se quer poder mudar sem quebrar nada.
+		 */
+		it('does not cut one millisecond before the interval, whatever the interval is', () => {
+			const decision = decideCut({
+				text: 'Primeira frase. Ainda escrevendo',
+				nowMs: T0 + STREAM_CUT_INTERVAL_MS - 1,
+				state: opened,
+			})
 			expect(decision.cut).toBe(false)
 		})
 
