@@ -119,7 +119,13 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmit
 								>
 									<ThreadAvatar name={contact.displayName} channelKind={channelKind} />
 									<div className="flex min-w-0 flex-1 flex-col">
-										<span className="truncate font-semibold text-foreground">{contact.displayName}</span>
+										<span className="flex min-w-0 items-center gap-2">
+											<span className="truncate font-semibold text-foreground">{contact.displayName}</span>
+											{/* `shrink-0`: the name truncates, the kind never does — it is the thing being distinguished. */}
+											<Badge variant="secondary" className="shrink-0">
+												{enumLabel('ContactKind', contact.kind)}
+											</Badge>
+										</span>
 										<span className="text-sm text-muted-foreground">{channelKind ? enumLabel('ChannelKind', channelKind) : ''}</span>
 									</div>
 									{contact.alreadyAttached ? (

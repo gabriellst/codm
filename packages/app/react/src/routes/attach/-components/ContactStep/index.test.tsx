@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { configureClient } from '@codm/client-typescript/http'
+import { enumLabel } from '@/lib'
 import { ContactStep } from '.'
 
 /**
@@ -28,18 +29,38 @@ const DEBOUNCE_MS = 300
 
 const EMPTY_WIZARD = { channels: [], workspaces: [], providers: [], contacts: [], contactsNextCursor: null }
 
+const CHANNEL = '019e4d24-6524-7041-9e1c-8108180cdd01'
+const contact = (externalId: string, displayName: string, kind: 'USER' | 'GROUP') => ({
+	channelId: CHANNEL,
+	externalId,
+	displayName,
+	kind,
+	avatarUrl: null,
+	lastMessageAt: null,
+	participantCount: kind === 'GROUP' ? 12 : null,
+	alreadyAttached: false,
+})
+
+const TWO_KINDS = {
+	...EMPTY_WIZARD,
+	contacts: [contact('55110001@c.us', 'Ada Lovelace', 'USER'), contact('55110002@g.us', 'Equipe Berzerk', 'GROUP')],
+}
+
 describe('ContactStep — a busca vai ao servidor', () => {
 	let root: Root | null = null
 	let host: HTMLDivElement | null = null
 	let requested: string[] = []
 	const realFetch = globalThis.fetch
 
+	let payload: unknown = EMPTY_WIZARD
+
 	beforeEach(() => {
 		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
 		requested = []
+		payload = EMPTY_WIZARD
 		globalThis.fetch = (async (input: RequestInfo | URL) => {
 			requested.push(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
-			return new Response(JSON.stringify(EMPTY_WIZARD), { status: 200, headers: { 'content-type': 'application/json' } })
+			return new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } })
 		}) as typeof globalThis.fetch
 	})
 
@@ -99,6 +120,30 @@ describe('ContactStep — a busca vai ao servidor', () => {
 
 		const searched = requested.filter(url => url.includes(`search=${TERM}`))
 		expect(searched.length).toBeGreaterThan(0)
+	})
+
+	it('cada linha diz se é contato ou grupo, e os dois rótulos são distintos', async () => {
+		payload = TWO_KINDS
+		mount()
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 50))
+		})
+
+		const rows = [...(host?.querySelectorAll('button[type="button"]') ?? [])]
+		expect(rows).toHaveLength(2)
+
+		// O rótulo sai do MESMO `enumLabel` que a linha usa, de propósito: o que precisa falhar quando
+		// o badge some é "o tipo está visível", não a redação — que muda com a língua. A primeira
+		// versão deste teste comparava as duas linhas entre si e passava com o badge REMOVIDO (o span
+		// que envolve o nome duplicava o texto), então ele não provava nada; este falha.
+		const userLabel = enumLabel('ContactKind', 'USER')
+		const groupLabel = enumLabel('ContactKind', 'GROUP')
+		expect(userLabel).not.toBe(groupLabel)
+
+		expect(rows[0]?.textContent).toContain('Ada Lovelace')
+		expect(rows[0]?.textContent).toContain(userLabel)
+		expect(rows[1]?.textContent).toContain('Equipe Berzerk')
+		expect(rows[1]?.textContent).toContain(groupLabel)
 	})
 
 	it('não manda `search` vazio na primeira carga — a página 1 é a lista completa, não uma busca por ""', async () => {

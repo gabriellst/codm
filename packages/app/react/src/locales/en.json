@@ -220,6 +220,11 @@
 			"DISCONNECTED": "Not connected",
 			"DELETED": "Deleted"
 		},
+		"ContactKind": {
+			"USER": "Contact",
+			"GROUP": "Group",
+			"BROADCAST": "Broadcast"
+		},
 		"CurrencyCode": {
 			"AED": "UAE Dirham (AED)",
 			"ALL": "Albanian Lek (ALL)",

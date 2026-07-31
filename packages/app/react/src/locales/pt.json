@@ -220,6 +220,11 @@
 			"DISCONNECTED": "Não conectado",
 			"DELETED": "Excluído"
 		},
+		"ContactKind": {
+			"USER": "Contato",
+			"GROUP": "Grupo",
+			"BROADCAST": "Transmissão"
+		},
 		"CurrencyCode": {
 			"AED": "Dirham (AED)",
 			"ALL": "Lek albanês (ALL)",
