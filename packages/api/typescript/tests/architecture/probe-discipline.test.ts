@@ -54,6 +54,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: 'the SCHEDULED-COMMAND row is the subject (B3): the delegation case asserts the enqueued row `name` on `shared_scheduled_commands`, a column the probe does not expose; the envelope-guard case DOES use probe().snapshot()',
 	},
 	{
+		path: 'tests/flows/issue-result.flow.test.ts',
+		why: "the SCHEDULED-COMMAND row is the subject, one hop further out than RecordOrchestratorReply.test.ts next door: that file proves the use case puts `quotedMessageId` on `shared_scheduled_commands` when handed a resolvable entry, and this one proves the WHOLE chain hands it one — ISSUE_RESULT queued → dispatcher → RunOrchestratorTurn's mandated anchor → outbox → DeliverOrchestratorReply → the delivery order. The anchor's survival is only visible in the JSON `input` column the probe deliberately does not expose (it counts rows, it does not read them), and a chain whose links are each correct and joined nowhere is this repo's documented failure mode — the dispatcher once shipped registered-but-never-started with every unit test green",
+	},
+	{
 		path: 'src/thread/repositories/ThreadRepository/DrizzleThreadRepository.test.ts',
 		why: 'the TWO-TABLE write of the Thread aggregate is the subject (B4): it asserts raw `thread_transcript_entries` columns (`id` = the id `recordEntry` minted, `text`) and the `thread_threads.version` bump surviving-or-not a rollback — columns the probe deliberately does not expose (it counts rows, it does not read them) — same exception class as Drizzle*Repository.test.ts, which this file IS, only living under `src/` rather than `core/`',
 	},
