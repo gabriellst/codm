@@ -1,7 +1,14 @@
 import { injectable } from 'tsyringe-neo'
 import { Config, BaseError } from '@codm/core-typescript'
-import { sendText, sendReaction, sendChatPresence, ChatPresenceTypeEnum } from '@codm/client-typescript/go'
-import { ChannelSender, type ChannelConversation, type ReactToChannelMessageInput, type SendChannelMessageInput } from './ChannelSender'
+import { sendText, sendReaction, sendChatPresence, editMessage, ChatPresenceTypeEnum } from '@codm/client-typescript/go'
+import {
+	ChannelSender,
+	type ChannelCapabilities,
+	type ChannelConversation,
+	type EditChannelMessageInput,
+	type ReactToChannelMessageInput,
+	type SendChannelMessageInput,
+} from './ChannelSender'
 import type { ApplicationErrors } from '../../errors'
 
 /**
@@ -19,6 +26,9 @@ import type { ApplicationErrors } from '../../errors'
  */
 @injectable()
 export class GatewayChannelSender extends ChannelSender {
+	/** The gateway serves `PUT /messages/edit` (`EditMessageController`), so streaming is available here. */
+	readonly capabilities: ChannelCapabilities = { edit: true }
+
 	async send(input: SendChannelMessageInput, ownerId: string): Promise<{ messageId: string }> {
 		try {
 			const out = await sendText(
@@ -59,6 +69,22 @@ export class GatewayChannelSender extends ChannelSender {
 			// whether the gateway is up; `ReactToChannelMessage` is the one that decides a cue failure
 			// is a non-event. Keeping the throw is also what lets a cue command log the real reason.
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', `channel reaction failed: ${String(error)}`)
+		}
+	}
+
+	async edit(input: EditChannelMessageInput, ownerId: string): Promise<void> {
+		try {
+			await editMessage(
+				{ channelId: input.channelId, remoteId: input.remoteId, messageId: input.messageId, text: input.text },
+				{ baseURL: `${Config.env.API_GO_URL}/api`, headers: { 'X-Owner-Id': ownerId } },
+			)
+		} catch (error) {
+			// THROWN, like the send and unlike the cues — and the difference is the point. An edit that
+			// silently did nothing would leave the contact reading a half-finished sentence with nothing
+			// anywhere saying so; the CommandQueue retry is what turns a gateway blip into a late edit
+			// rather than a truncated reply. The caller that must NOT care about a failure (a superseded
+			// intermediate edit) drops it by sequence, not by pretending the wire succeeded.
+			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', `channel edit failed: ${String(error)}`)
 		}
 	}
 

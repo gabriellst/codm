@@ -39,6 +39,35 @@ export interface ReactToChannelMessageInput extends ChannelConversation {
 	reaction: string
 }
 
+/** What the gateway needs to replace the text of a message already on the channel. */
+export interface EditChannelMessageInput extends ChannelConversation {
+	/** The PLATFORM id the original `send` handed back — the only handle an edit can address. */
+	messageId: string
+	/**
+	 * The text the message should now read, WHOLE.
+	 *
+	 * Never a delta: the wire replaces the body, and — decisively — the streaming spec's decision 7
+	 * makes "every edit carries the complete text" the property that renders the mechanism
+	 * self-correcting. A delta-shaped verb would make one lost edit corrupt every edit after it.
+	 */
+	text: string
+}
+
+/**
+ * What a channel can actually DO, declared BY THE PORT rather than guessed from the platform name
+ * (streaming spec, decision 4: "a capacidade é declarada pela porta, não presumida por plataforma").
+ *
+ * The distinction is not pedantry. "WhatsApp supports editing" is a fact about the platform and not
+ * about a particular seam: the E2E harness binds a double, and a gateway build predating
+ * `/messages/edit` cannot edit either. Asking the PORT puts the answer where it is actually known, and
+ * keeps the fallback — one message at the end, exactly today's behaviour — reachable without a
+ * platform switch anywhere in the delivery path.
+ */
+export interface ChannelCapabilities {
+	/** Whether `edit` will actually reach a gateway that serves it. */
+	readonly edit: boolean
+}
+
 /**
  * BC4 → BC1 WRITE seam: put a message on the channel.
  *
@@ -50,16 +79,44 @@ export interface ReactToChannelMessageInput extends ChannelConversation {
  * ABSTRACT ON PURPOSE, and bound per env: this is the one seam in the thread context that opens a
  * socket, so `mock`/`integration` bind a double and no test can depend on the gateway being up.
  *
- * ### The three verbs, and why the cues are verbs here rather than flags on `send`
+ * ### The four verbs, and why the cues are verbs here rather than flags on `send`
  * `send` delivers WORDS; `react` and `signalTyping` deliver SIGNALS ABOUT words that do not exist
  * yet (streaming spec, decision 10). They are separate gateway endpoints, they carry no transcript
  * consequence, and — decisively — they are BEST-EFFORT while `send` is not: a failed send is retried
  * and eventually dead-lettered, a failed cue is swallowed. Folding them into `send` would put those
  * two failure policies behind one call.
+ *
+ * `edit` (streaming spec, decision 5) is the fourth, and it sits on the WORDS side of that split: it
+ * changes what the contact reads, so a failure matters and is retried like a send. It is a verb of its
+ * own rather than a flag on `send` for the blunt reason that it addresses a message that already
+ * exists — it consumes an id instead of producing one.
  */
 export abstract class ChannelSender {
+	/**
+	 * What this channel can do beyond `send` — consulted before a streamed reply is ever started, so a
+	 * send-only channel degrades to one message at the end instead of failing halfway through.
+	 */
+	abstract readonly capabilities: ChannelCapabilities
+
 	/** @returns the platform message id the channel assigned — the handle for quoting and for dedup. */
 	abstract send(input: SendChannelMessageInput, ownerId: string): Promise<{ messageId: string }>
+
+	/**
+	 * Replace the text of a message this account already sent (streaming spec, decision 5).
+	 *
+	 * The verb streaming is built on: the reply lands as soon as there is a first sentence and then
+	 * GROWS, instead of the contact watching silence for the whole generation. Backed by the gateway's
+	 * existing `/messages/edit` — no new endpoint (decision 5).
+	 *
+	 * TWO PROPERTIES THE CALLER OWNS, not this port:
+	 *   - ORDER. The wire has no notion of edit sequence, so a late edit would happily overwrite a newer
+	 *     one and the text would SHRINK on the contact's screen. `ReplyStreamer` carries a monotonic
+	 *     sequence and drops the stale ones (decision 6).
+	 *   - THE WINDOW. WhatsApp refuses an edit roughly 15 minutes after the message was sent, and this
+	 *     port does not pretend otherwise: the caller checks the age and continues in a NEW message
+	 *     rather than discovering the refusal as a failed command (decision 4).
+	 */
+	abstract edit(input: EditChannelMessageInput, ownerId: string): Promise<void>
 
 	/**
 	 * Hang an emoji off a message that is already on the channel.
