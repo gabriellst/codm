@@ -28,6 +28,9 @@ pub use gate::*;
 mod supervision;
 pub use supervision::*;
 
+mod lifecycle;
+pub use lifecycle::*;
+
 /// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`), the port
 /// it listens on, which SDK sub-client probes it, the working directory it must be
 /// spawned in, and the env the process boots with.
@@ -206,8 +209,17 @@ fn supervise(app: &tauri::AppHandle) {
             fleet.len(),
             PROBE_INTERVAL.as_secs()
         );
+        // A PERIOD, not a gap. `sleep(INTERVAL)` at the top of the loop would ADD the cycle's own
+        // cost to the wait, so a sidecar that hangs (each probe burning the full `PROBE_TIMEOUT`)
+        // would stretch the cadence to ~9s and push the 3-failure verdict from the spec's ~15s out
+        // to ~27s — the hysteresis silently getting slower exactly when something IS wrong.
+        // `MissedTickBehavior::Delay` keeps that honest without the opposite failure: after a slow
+        // cycle it waits a full interval instead of firing a burst to "catch up".
+        let mut ticker = tokio::time::interval(PROBE_INTERVAL);
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        ticker.tick().await; // the first tick resolves immediately — that one is the boot's own probe
         loop {
-            tokio::time::sleep(PROBE_INTERVAL).await;
+            ticker.tick().await;
             let api = handle.state::<Api>();
             for (service, name) in &fleet {
                 let outcome = probe_within_budget(&api, *service).await;
@@ -270,7 +282,21 @@ pub fn boot_sidecar(
     sidecar: Sidecar,
     gate: Arc<ReadinessGate>,
     monitor: Arc<SupervisionMonitor>,
+    children: Arc<ChildRegistry>,
 ) {
+    // FAIL LOUD BEFORE SPAWNING (spec Decision 8b / AC-7). A port already held by somebody else is
+    // the incident's first domino: spawn anyway and the new child loses the bind while the OLD
+    // process keeps answering, so the fresh window converses with the previous session's backend and
+    // every health probe passes. Refusing here routes it to the splash with the reason instead.
+    if let Some(reason) = port_conflict(sidecar.port) {
+        let _ = app.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
+        log::error!("[{}] {reason}", sidecar.name);
+        if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+            apply(app, reveal);
+        }
+        return;
+    }
+
     let command = match app.shell().sidecar(sidecar.name) {
         Ok(cmd) => {
             let cmd = cmd.envs(sidecar.env.clone());
@@ -291,7 +317,7 @@ pub fn boot_sidecar(
         }
     };
 
-    let (mut rx, _child) = match command.spawn() {
+    let (mut rx, child) = match command.spawn() {
         Ok(pair) => pair,
         Err(e) => {
             let reason = format!("spawn failed: {e}");
@@ -303,6 +329,10 @@ pub fn boot_sidecar(
             return;
         }
     };
+
+    // The handle is RETAINED, not dropped. Dropping a `CommandChild` does not kill the process —
+    // that is exactly how a shell's children outlive it and start holding ports for nobody.
+    children.adopt(child);
 
     // ONE reader, TWO jobs. Stderr goes to the shell log AND to the gate's ring buffer (the log is
     // for the developer tailing a terminal, the ring is what the boot-error splash shows the

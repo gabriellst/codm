@@ -77,11 +77,35 @@ pub fn run() {
             ));
             app.manage(monitor.clone());
 
+            // CHILD REGISTRY — the handles, kept so the shell can take its processes with it when
+            // it goes (see the `RunEvent::Exit` arm below). Dropping a `CommandChild` does not kill
+            // anything, which is how a previous shell's daemon ended up adopted by launchd and still
+            // holding `:3030` while a brand-new window talked to it.
+            let children = Arc::new(sidecars::ChildRegistry::default());
+            app.manage(children.clone());
+
             for sidecar in fleet {
-                sidecars::boot_sidecar(app.handle(), sidecar, gate.clone(), monitor.clone());
+                sidecars::boot_sidecar(
+                    app.handle(),
+                    sidecar,
+                    gate.clone(),
+                    monitor.clone(),
+                    children.clone(),
+                );
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // `Exit` and not `ExitRequested`: the latter is a REQUEST, and it can be prevented (a
+            // window close that something vetoes). Killing the fleet there would leave a still-open
+            // app with no backend. `Exit` is the last thing that happens before the process goes.
+            //
+            // This covers the ORDINARY shutdown; it cannot cover `SIGKILL` or a dev watcher that
+            // hard-kills the app, which is why `port_conflict` guards the next boot (spec Decision 8b).
+            if let tauri::RunEvent::Exit = event {
+                app.state::<Arc<sidecars::ChildRegistry>>().kill_all();
+            }
+        });
 }
