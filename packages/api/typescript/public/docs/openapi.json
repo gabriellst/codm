@@ -2509,13 +2509,33 @@
                     },
                     "bufferSize": {
                       "$ref": "#/components/schemas/BufferSize"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "$ref": "#/components/schemas/ProviderKind"
+                          },
+                          "comingSoon": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "comingSoon"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "mentionGate",
                     "participants",
                     "invokerCount",
-                    "bufferSize"
+                    "bufferSize",
+                    "providers"
                   ],
                   "additionalProperties": false
                 }
@@ -7730,6 +7750,7 @@
           "PASSWORD_TOO_WEAK",
           "PATH_NOT_A_DIRECTORY",
           "PATH_NOT_FOUND",
+          "PROVIDER_COMING_SOON",
           "PROVIDER_NOT_DETECTED",
           "QUOTED_ENTRY_NOT_IN_THREAD",
           "RATE_LIMITED",
@@ -8113,6 +8134,7 @@
     "PASSWORD_TOO_WEAK",
     "PATH_NOT_A_DIRECTORY",
     "PATH_NOT_FOUND",
+    "PROVIDER_COMING_SOON",
     "PROVIDER_NOT_DETECTED",
     "QUOTED_ENTRY_NOT_IN_THREAD",
     "RATE_LIMITED",

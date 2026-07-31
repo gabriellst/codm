@@ -77,6 +77,7 @@ const (
 	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
 	PATHNOTADIRECTORY               ApiErrors = "PATH_NOT_A_DIRECTORY"
 	PATHNOTFOUND                    ApiErrors = "PATH_NOT_FOUND"
+	PROVIDERCOMINGSOON              ApiErrors = "PROVIDER_COMING_SOON"
 	PROVIDERNOTDETECTED             ApiErrors = "PROVIDER_NOT_DETECTED"
 	QUOTEDENTRYNOTINTHREAD          ApiErrors = "QUOTED_ENTRY_NOT_IN_THREAD"
 	RATELIMITED                     ApiErrors = "RATE_LIMITED"
@@ -218,6 +219,8 @@ func (e ApiErrors) Valid() bool {
 	case PATHNOTADIRECTORY:
 		return true
 	case PATHNOTFOUND:
+		return true
+	case PROVIDERCOMINGSOON:
 		return true
 	case PROVIDERNOTDETECTED:
 		return true
@@ -6165,6 +6168,10 @@ type GetThreadSettingsResponse struct {
 			ParticipantId string `json:"participantId"`
 			Source        string `json:"source"`
 		} `json:"participants"`
+		Providers []struct {
+			ComingSoon bool         `json:"comingSoon"`
+			Provider   ProviderKind `json:"provider"`
+		} `json:"providers"`
 	}
 }
 
@@ -8443,6 +8450,10 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 				ParticipantId string `json:"participantId"`
 				Source        string `json:"source"`
 			} `json:"participants"`
+			Providers []struct {
+				ComingSoon bool         `json:"comingSoon"`
+				Provider   ProviderKind `json:"provider"`
+			} `json:"providers"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

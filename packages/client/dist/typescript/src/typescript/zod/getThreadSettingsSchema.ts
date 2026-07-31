@@ -4,6 +4,7 @@
 */
 
 import { bufferSizeSchema } from "./bufferSizeSchema.ts";
+import { providerKindSchema } from "./providerKindSchema.ts";
 import { z } from "zod/v4";
 
 export const getThreadSettingsPathParamsSchema = z.object({
@@ -29,7 +30,13 @@ export const getThreadSettings200Schema = z.object({
 "invokerCount": z.int().min(-9007199254740991).max(9007199254740991),
 get "bufferSize"(){
                 return bufferSizeSchema
-              }
+              },
+"providers": z.array(z.object({
+    get "provider"(){
+                return providerKindSchema
+              },
+"comingSoon": z.boolean()
+    }))
     })
 
 export const getThreadSettingsQueryResponseSchema = z.lazy(() => getThreadSettings200Schema)

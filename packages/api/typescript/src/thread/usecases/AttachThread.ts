@@ -4,6 +4,9 @@ import type { Transaction } from '@codm/core-typescript'
 import { ProviderKind, ContactKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
+// The LEAF, not the barrel — the barrel pulls the runner implementations, whose graph reaches
+// `agent/mcp/exposure.ts` → `@ui/controllers`. See that barrel's header.
+import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { OPERATOR_PARTICIPANT_ID, Thread } from '../entities/Thread'
 import { mintMentionTag } from '../schemas'
 import { ThreadRepository } from '../repositories/ThreadRepository'
@@ -30,9 +33,24 @@ export const AttachThreadOutputSchema = z.object({
 
 /**
  * C09 AttachThread — binds a contact/group to one workspace + one or more providers. Validates the
- * channel is CONNECTED, the workspace exists, and each provider is DETECTED; seeds participants
- * (operator as invoker, contact observing) and publishes `thread.attached` (→
+ * channel is CONNECTED, the workspace exists, and each provider is both DETECTED and DRIVABLE; seeds
+ * participants (operator as invoker, contact observing) and publishes `thread.attached` (→
  * `integration.thread.attached`, warming BC5 workspace indexing).
+ *
+ * ### Why TWO provider questions, and why this is the place both are asked
+ * "Is the binary installed" and "can this engine drive it" are different axes, and only the first was
+ * ever asked here. `PROVIDER_BINARIES` declares real `bin` names for codex and opencode so they appear
+ * honestly in `DetectProviders`, so a machine with the codex CLI on PATH passed detection cleanly and
+ * the thread was created declaring `providers: ['CODEX']` — the failure then surfaced a screen later,
+ * inside a conversation the operator had already made, as an infrastructure `NOT_IMPLEMENTED` out of
+ * `AgentRunnerFactory.for`. `comingSoon` (commit 8721a9b8) stopped the WIZARD from offering such a
+ * provider; this closes the WRITE, which is the door the wizard is only a sign on — the endpoint takes
+ * a `providers` array from anyone who can reach it, and a stale screen can still post one.
+ *
+ * The drivable set is READ FROM THE FACTORY (`supported`), never restated as a literal here. That is
+ * the entire reason `AgentRunnerFactory.supported` is derived from the same map `for()` consults: this
+ * guard and the runtime resolution cannot disagree, so widening one widens the other. Same source the
+ * three read models already use for `comingSoon`.
  */
 @injectable()
 export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof AttachThreadOutputSchema> {
@@ -44,6 +62,7 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 		private readonly threads: ThreadRepository,
 		private readonly workspaces: WorkspaceRepository,
 		private readonly providerDetector: ProviderDetector,
+		private readonly runners: AgentRunnerFactory,
 		private readonly connectivity: ChannelConnectivity,
 		private readonly groupMembers: GroupMemberReader,
 	) {
@@ -60,10 +79,22 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 			throw new BaseError<ApplicationErrors>('WORKSPACE_NOT_FOUND', `no workspace ${input.workspaceId}`)
 		}
 
+		// The drivable set, from the wiring layer that owns it. Read ONCE outside the loop: it is a
+		// property of the bound factory, not of the provider being examined.
+		const drivable = this.runners.supported
 		for (const provider of input.providers) {
 			const detection = await this.providerDetector.resolve(provider)
 			if (!detection || detection.status !== ProviderStatus.DETECTED) {
 				throw new BaseError<ApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)
+			}
+			// NOT-INSTALLED is reported BEFORE CANNOT-DRIVE, the same order `RunIssueTurn.resolveProvider`
+			// keeps: an operator missing the binary is told to install it, rather than told the product
+			// does not support their CLI.
+			if (!drivable.includes(provider)) {
+				throw new BaseError<ApplicationErrors>(
+					'PROVIDER_COMING_SOON',
+					`provider ${provider} is installed but not drivable yet — this engine has no AgentRunner for it (it can drive ${drivable.join(', ')})`,
+				)
 			}
 		}
 

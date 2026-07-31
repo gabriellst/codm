@@ -259,6 +259,7 @@ pub mod types {
     ///    "PASSWORD_TOO_WEAK",
     ///    "PATH_NOT_A_DIRECTORY",
     ///    "PATH_NOT_FOUND",
+    ///    "PROVIDER_COMING_SOON",
     ///    "PROVIDER_NOT_DETECTED",
     ///    "QUOTED_ENTRY_NOT_IN_THREAD",
     ///    "RATE_LIMITED",
@@ -413,6 +414,8 @@ pub mod types {
         PathNotADirectory,
         #[serde(rename = "PATH_NOT_FOUND")]
         PathNotFound,
+        #[serde(rename = "PROVIDER_COMING_SOON")]
+        ProviderComingSoon,
         #[serde(rename = "PROVIDER_NOT_DETECTED")]
         ProviderNotDetected,
         #[serde(rename = "QUOTED_ENTRY_NOT_IN_THREAD")]
@@ -542,6 +545,7 @@ pub mod types {
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
                 Self::PathNotADirectory => f.write_str("PATH_NOT_A_DIRECTORY"),
                 Self::PathNotFound => f.write_str("PATH_NOT_FOUND"),
+                Self::ProviderComingSoon => f.write_str("PROVIDER_COMING_SOON"),
                 Self::ProviderNotDetected => f.write_str("PROVIDER_NOT_DETECTED"),
                 Self::QuotedEntryNotInThread => f.write_str("QUOTED_ENTRY_NOT_IN_THREAD"),
                 Self::RateLimited => f.write_str("RATE_LIMITED"),
@@ -636,6 +640,7 @@ pub mod types {
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
                 "PATH_NOT_A_DIRECTORY" => Ok(Self::PathNotADirectory),
                 "PATH_NOT_FOUND" => Ok(Self::PathNotFound),
+                "PROVIDER_COMING_SOON" => Ok(Self::ProviderComingSoon),
                 "PROVIDER_NOT_DETECTED" => Ok(Self::ProviderNotDetected),
                 "QUOTED_ENTRY_NOT_IN_THREAD" => Ok(Self::QuotedEntryNotInThread),
                 "RATE_LIMITED" => Ok(Self::RateLimited),
@@ -5790,7 +5795,8 @@ pub mod types {
     ///    "bufferSize",
     ///    "invokerCount",
     ///    "mentionGate",
-    ///    "participants"
+    ///    "participants",
+    ///    "providers"
     ///  ],
     ///  "properties": {
     ///    "bufferSize": {
@@ -5865,6 +5871,25 @@ pub mod types {
     ///        },
     ///        "additionalProperties": false
     ///      }
+    ///    },
+    ///    "providers": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "comingSoon",
+    ///          "provider"
+    ///        ],
+    ///        "properties": {
+    ///          "comingSoon": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "provider": {
+    ///            "$ref": "#/components/schemas/ProviderKind"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -5881,6 +5906,7 @@ pub mod types {
         #[serde(rename = "mentionGate")]
         pub mention_gate: GetThreadSettingsResponseMentionGate,
         pub participants: ::std::vec::Vec<GetThreadSettingsResponseParticipantsItem>,
+        pub providers: ::std::vec::Vec<GetThreadSettingsResponseProvidersItem>,
     }
     impl ::std::convert::From<&GetThreadSettingsResponse> for GetThreadSettingsResponse {
         fn from(value: &GetThreadSettingsResponse) -> Self {
@@ -5987,6 +6013,42 @@ pub mod types {
     impl ::std::convert::From<&GetThreadSettingsResponseParticipantsItem>
     for GetThreadSettingsResponseParticipantsItem {
         fn from(value: &GetThreadSettingsResponseParticipantsItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetThreadSettingsResponseProvidersItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "comingSoon",
+    ///    "provider"
+    ///  ],
+    ///  "properties": {
+    ///    "comingSoon": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "provider": {
+    ///      "$ref": "#/components/schemas/ProviderKind"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetThreadSettingsResponseProvidersItem {
+        #[serde(rename = "comingSoon")]
+        pub coming_soon: bool,
+        pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
+    }
+    impl ::std::convert::From<&GetThreadSettingsResponseProvidersItem>
+    for GetThreadSettingsResponseProvidersItem {
+        fn from(value: &GetThreadSettingsResponseProvidersItem) -> Self {
             value.clone()
         }
     }

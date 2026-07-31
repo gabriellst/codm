@@ -28,6 +28,14 @@ export type ThreadApplicationErrors =
 	| 'CHANNEL_NOT_CONNECTED'
 	| 'WORKSPACE_NOT_FOUND'
 	| 'PROVIDER_NOT_DETECTED'
+	// The SECOND axis of "can this thread run" — installed (above) vs drivable (here). `AttachThread`
+	// used to ask only the first question, so a machine with the codex CLI on PATH could bind a thread
+	// to a provider this engine has no `AgentRunner` for, and the lie surfaced a screen later as an
+	// infrastructure NOT_IMPLEMENTED out of `AgentRunnerFactory.for` — on a conversation already
+	// created. It is an APPLICATION code because the fact is about this deployment's WIRING (which
+	// runners are bound), not about the Thread aggregate: the entity cannot see the factory, and a
+	// thread carrying an undrivable provider is a legal past state that must still load.
+	| 'PROVIDER_COMING_SOON'
 	| 'ENTRY_NOT_FOUND'
 	| 'ENTRY_NOT_INVOCABLE'
 	| 'CLARIFICATION_ALREADY_PENDING'
@@ -86,6 +94,11 @@ registerErrorCodes({
 	// (registerErrorCodes is Object.assign — an idempotent overwrite, not a conflict).
 	WORKSPACE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	PROVIDER_NOT_DETECTED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// 422 beside its sibling: the request is well-formed (the value IS a ProviderKind) and the refusal
+	// is about the state of the world, not the shape of the payload. Never a 501 — NOT_IMPLEMENTED is
+	// infrastructure's "this implementation cannot do that", and raising it from a write path would
+	// tell the operator the SERVER is broken when the honest answer is "not this CLI, not yet".
+	PROVIDER_COMING_SOON: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	STOP_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	STOP_CRITERION_DISABLED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ISSUE_NOT_FOUND: HttpStatusCode.NOT_FOUND,

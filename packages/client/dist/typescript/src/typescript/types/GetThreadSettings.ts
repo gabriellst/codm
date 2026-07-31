@@ -4,6 +4,7 @@
 */
 
 import type { BufferSize } from "./BufferSize.ts";
+import type { ProviderKind } from "./ProviderKind.ts";
 
 export type GetThreadSettingsPathParams = {
     /**
@@ -74,6 +75,19 @@ export type GetThreadSettings200 = {
      * @type string
     */
     bufferSize: BufferSize;
+    /**
+     * @type array
+    */
+    providers: {
+        /**
+         * @type string
+        */
+        provider: ProviderKind;
+        /**
+         * @type boolean
+        */
+        comingSoon: boolean;
+    }[];
 };
 
 export type GetThreadSettingsQueryResponse = GetThreadSettings200;

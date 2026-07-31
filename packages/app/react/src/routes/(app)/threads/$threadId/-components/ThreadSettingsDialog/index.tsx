@@ -20,7 +20,9 @@ import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/c
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { cn } from '@/lib/utils'
 
@@ -196,6 +198,37 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 						onBlur={() => saveGate(true, tag)}
 					/>
 				</label>
+			</section>
+
+			{/*
+			 * OS AGENTES DESTA CONVERSA — e, quando é o caso, o agente MORTO.
+			 *
+			 * `AttachThread` agora recusa anexar um provider que a engine não sabe dirigir, mas conversas
+			 * anexadas ANTES disso continuam lá e continuam abrindo (é a decisão: fechar a escrita, não a
+			 * leitura). Esta seção é onde o operador finalmente VÊ por que aquela conversa nunca responde —
+			 * em vez de descobrir na primeira turn que morre. Mesma palavra do catálogo (`Em breve`) e mesma
+			 * fonte (`AgentRunnerFactory.supported`) que a tela de Ajustes e o passo de agentes do wizard.
+			 */}
+			<section className="flex flex-col gap-3">
+				<SectionLabel>{t('session.boundAgents')}</SectionLabel>
+				<div className="flex flex-col gap-1">
+					{data.providers.map(({ provider, comingSoon }) => {
+						const Glyph = providerGlyph[provider]
+						return (
+							<div key={provider} className="flex items-center gap-3 py-1.5">
+								<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
+									<Glyph className="size-4" />
+								</span>
+								<span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{providerLabel[provider]}</span>
+								{comingSoon ? <Badge variant="outline">{t('common.comingSoon')}</Badge> : null}
+							</div>
+						)
+					})}
+				</div>
+				{/* A explicação só aparece quando há algo a explicar — um aviso permanente vira decoração. */}
+				{data.providers.some(p => p.comingSoon) ? (
+					<p className="text-sm text-muted-foreground">{t('session.boundAgentsComingSoonHint')}</p>
+				) : null}
 			</section>
 
 			<section className="flex flex-col gap-3">
