@@ -1,11 +1,10 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
-import { IconArrowRight, IconCheck } from '@tabler/icons-react'
+import { IconCheck } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema } from '@codm/client-typescript/typescript'
 import type { GetAttachThreadWizardQueryResponse, ProviderKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
 import { enumLabel, type DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
@@ -19,10 +18,9 @@ type AgentsStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
 	defaultValues?: DeepPartial<AgentsStepData>
 	onSubmit: (data: AgentsStepData) => void
 	onBack?: () => void
-	isSubmitting?: boolean
 }
 
-export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: AgentsStepProps) {
+export function AgentsStep({ providers, defaultValues, onSubmit, onBack, className, ...props }: AgentsStepProps) {
 	const { t } = useTranslation()
 
 	const form = useForm({
@@ -36,45 +34,54 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 	})
 
 	/**
-	 * SEM AUTO-AVANÇO AQUI — e é o TIPO da seleção que decide, não a contagem de hoje.
+	 * ESCOLHER É RESPONDER, TAMBÉM AQUI — o clique define o agente E entrega o passo.
 	 *
-	 * Os passos de contato e workspace entregam no clique (lá o campo é escalar: escolher de novo
-	 * substitui, e o primeiro clique já é a resposta inteira). Este é o passo MULTI: `providers` é
-	 * `z.array(providerKindSchema).min(1)`, sem máximo, e a linha faz toggle. Entregar no primeiro
-	 * clique tornaria o segundo provedor inalcançável pelo gesto principal — para escolher dois seria
-	 * preciso escolher um, ser levado embora e voltar.
+	 * ─── DÍVIDA CONHECIDA, ASSUMIDA DE OLHOS ABERTOS ─────────────────────────────────────────────────
 	 *
-	 * Isso não é um problema adiado: `comingSoon` vem de `!drivable.includes(...)`, derivado dos
-	 * AgentRunners REGISTRADOS (`GetAttachThreadWizard.ts`) de propósito, e não de uma lista literal.
-	 * Hoje só CLAUDE_CODE é dirigível, então o passo PARECE de escolha única; no dia em que o segundo
-	 * runner registrar, ele deixa de ser — sem que ninguém volte aqui. Um auto-avanço instalado agora
-	 * viraria uma trave escondida naquele dia.
+	 * A MULTI-SELEÇÃO DEIXOU DE SER ALCANÇÁVEL PELA INTERFACE. `providers` continua sendo
+	 * `z.array(providerKindSchema).min(1)` SEM máximo — o schema e o `AttachThread` aceitam dois agentes
+	 * numa conversa —, mas não existe mais gesto nesta tela que produza uma lista de dois. Quem precisar
+	 * disso hoje não consegue pela UI.
 	 *
-	 * Alternativa considerada e recusada: avançar apenas quando a seleção vai de vazia para um. O mesmo
-	 * gesto, na mesma lista, avançaria ou não conforme um estado invisível — afordância pior do que um
-	 * botão honesto. Aqui o Continuar continua sendo a resposta, porque aqui a pergunta admite mais de
-	 * um sim.
+	 * Isso não foi descuido. A objeção foi levantada e o founder decidiu assim mesmo em 31/07, depois de
+	 * ver a versão com o botão: "Na parte de escolha os agentes, ainda está o botão continuar". A versão
+	 * anterior deste arquivo defendia o Continuar exatamente como a coisa que mantinha o segundo agente
+	 * ao alcance; essa defesa perdeu, e este bloco existe para que ela não se perca junto.
 	 *
-	 * ─── POR QUE A AÇÃO PRIMÁRIA SOBREVIVEU AQUI, QUANDO AS OUTRAS SUMIRAM ───────────────────────────
+	 * QUANDO REVISITAR: `comingSoon` deriva de `!drivable.includes(...)` sobre os AgentRunners
+	 * REGISTRADOS (`GetAttachThreadWizard.ts`), de propósito, e não de uma lista literal. Hoje só
+	 * CLAUDE_CODE é dirigível, então a tela PARECE de escolha única e a dívida não aparece. No dia em que
+	 * um SEGUNDO runner registrar, dois provedores ficam disponíveis sozinhos e esta restrição vira uma
+	 * trave visível — é esse o momento de trazer de volta uma forma de escolher mais de um (um botão
+	 * explícito, um long-press, uma tela própria). Não espere um relatório de bug: procure aqui.
 	 *
-	 * O founder mandou tirar o rodapé da criação da thread: "continuar é inferido pelo clique". Em
-	 * contato e workspace isso se cumpre literalmente — o campo é escalar, o clique É a resposta, e o
-	 * rodapé sumiu por inteiro. Aqui a mesma frase pede o contrário: se o clique fosse o continuar,
-	 * `providers` nunca poderia receber o segundo item, porque o primeiro já teria levado o operador
-	 * embora. O gesto que INFERE o avanço e o gesto que ACRESCENTA à resposta são o mesmo gesto nesta
-	 * lista, e só um deles pode ganhar.
+	 * ─── POR QUE DEFINIR, E NÃO ALTERNAR ─────────────────────────────────────────────────────────────
 	 *
-	 * Isto não é opinião: enxertar o auto-avanço aqui derruba 3 dos 6 casos da suíte deste passo,
-	 * incluindo "dois provedores cabem na mesma resposta". O botão é o que torna a multi-seleção
-	 * alcançável — enquanto ele existir, escolher dois agentes é possível.
+	 * Duas formas de "clicar e entregar" estavam na mesa. Alternar-e-entregar (manter o toggle e chamar
+	 * o submit depois) deixaria a multi-seleção clunky-mas-possível — escolher A, avançar, Voltar,
+	 * escolher B —, mas paga com duas arestas, e ambas violam "previsível, nunca esperto":
 	 *
-	 * O Voltar, esse, foi embora daqui como nos demais: subiu para o `StepHeading`. Ele nunca respondeu
-	 * ao passo — é navegação, e o rodapé agora carrega só o que fecha a pergunta.
+	 *   1. CLIQUE MORTO E DESTRUTIVO. Clicar numa linha JÁ escolhida a desmarcaria; a lista iria a zero,
+	 *      o `.min(1)` barraria a entrega, e o operador levaria um clique que não avança E que apagou a
+	 *      escolha dele. Pior: esse é justamente o caminho de "voltar e seguir sem reescolher" que
+	 *      contato e workspace oferecem — clicar de novo na linha já marcada para seguir.
+	 *   2. ACÚMULO INVISÍVEL. Depois de voltar, a escolha anterior continua no form sem estar em lugar
+	 *      nenhum na cabeça de quem clica. Clicar em B entregaria `[A, B]` para alguém que acredita ter
+	 *      escolhido B. O mesmo gesto, na mesma lista, com resultado diferente conforme um estado que
+	 *      ninguém vê.
+	 *
+	 * Definir (`[provider]`) não tem nenhuma das duas: um clique, um significado, sempre — "este, e
+	 * siga". Clicar no já escolhido reescreve o mesmo valor e entrega, idêntico aos outros dois passos.
+	 * O preço é que a restrição fica dura em vez de clunky, e é por isso que a dívida acima está escrita
+	 * em vez de escondida atrás de um gesto que quase funciona.
+	 *
+	 * Entrega por `handleSubmit()` e não chamando `onSubmit` direto: o clique atravessa o mesmo portão
+	 * de validação (o `safeParse` acima) que os outros passos, nunca um caminho paralelo. Provedor sem
+	 * runner não chega aqui — a linha é `disabled`, e o clique nela não dispara evento.
 	 */
-	const toggle = (provider: ProviderKind) => {
-		const current = (form.getFieldValue('providers') as ProviderKind[] | undefined) ?? []
-		const next = current.includes(provider) ? current.filter(p => p !== provider) : [...current, provider]
-		form.setFieldValue('providers', next)
+	const selectAndAdvance = (provider: ProviderKind) => {
+		form.setFieldValue('providers', [provider])
+		void form.handleSubmit()
 	}
 
 	return (
@@ -103,7 +110,7 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 									key={entry.provider}
 									type="button"
 									disabled={!available}
-									onClick={() => toggle(entry.provider)}
+									onClick={() => selectAndAdvance(entry.provider)}
 									className={cn(
 										'flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors',
 										available ? 'hover:bg-muted' : 'cursor-not-allowed opacity-50',
@@ -139,22 +146,6 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 						})}
 					</div>
 				)}
-			</form.Subscribe>
-
-			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
-				{({ canSubmit, values }) => {
-					const isDisabled = isSubmitting || !canSubmit || !AgentsStepSchema.safeParse(values).success
-					return (
-						// Só a ação. O Voltar subiu para o `StepHeading` como nos outros passos — ele nunca foi
-						// uma resposta a esta pergunta, e navegação não divide barra com o botão que a fecha.
-						<div className="flex justify-end">
-							<Button type="submit" disabled={isDisabled}>
-								{isSubmitting && <Spinner className="mr-2" />}
-								{t('attach.continue')} <IconArrowRight data-icon="inline-end" />
-							</Button>
-						</div>
-					)
-				}}
 			</form.Subscribe>
 		</form>
 	)

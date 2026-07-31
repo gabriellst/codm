@@ -90,28 +90,22 @@ describe('AgentsStep — provedor sem runner se apresenta como "Em breve"', () =
 })
 
 /**
- * ESTE PASSO FICA DE FORA DO AUTO-AVANÇO, E O TIPO DA SELEÇÃO É O MOTIVO.
+ * O CLIQUE PASSOU A ENTREGAR O PASSO — E A ESCOLHA É ÚNICA PELO GESTO.
  *
- * O founder pediu que clicar em "contato, workspace, provedora" avançasse sozinho. Nos dois primeiros
- * o clique É a resposta: o campo é escalar e a segunda escolha substitui a primeira. Aqui não —
- * `providers` é `z.array(providerKindSchema).min(1)`, SEM máximo, e a linha faz `toggle`. Avançar no
- * primeiro clique tornaria o segundo provedor inalcançável pelo gesto principal: quem quisesse dois
- * teria de escolher um, ser levado embora, voltar e escolher o outro.
+ * Esta suíte era o contrário: ela provava que o clique NÃO avançava, e defendia o botão Continuar como
+ * a única coisa que tornava a multi-seleção alcançável. O founder viu o resultado, a objeção do
+ * multi-seleção foi levantada explicitamente, e ele decidiu assim mesmo (31/07): o rodapé sai daqui
+ * também. Os casos abaixo medem o que passou a valer; o docblock do componente carrega a dívida.
  *
- * Não é hipótese guardada para depois: `comingSoon` sai de `!drivable.includes(...)`, derivado dos
- * AgentRunners REGISTRADOS (`GetAttachThreadWizard.ts`) e deliberadamente não de uma lista literal —
- * no dia em que o segundo runner registrar, o segundo provedor fica disponível sozinho e o auto-avanço
- * viraria uma trave escondida. Por isso a decisão é sobre o TIPO da seleção, não sobre a contagem de
- * provedores dirigíveis hoje (que é um).
- *
- * A alternativa considerada — avançar só quando a seleção vai de vazia para um — foi recusada: o mesmo
- * gesto na mesma lista avançaria ou não conforme um estado invisível, afordância pior que um botão
- * honesto.
- *
- * O primeiro caso é a negação direta do auto-avanço e fica vermelho no minuto em que alguém o
- * acrescentar aqui. O segundo prova a capacidade que a decisão protege.
+ * ENTRE AS DUAS FORMAS DE "CLICAR E ENTREGAR", a escolhida foi DEFINIR (`[provider]`), não alternar.
+ * Alternar-e-entregar tem duas arestas que esta suíte existe para manter fechadas:
+ *   1. clicar numa linha JÁ escolhida a desmarcaria — a entrega falharia no `.min(1)` e o operador
+ *      levaria um clique morto que ainda por cima apagou a escolha dele;
+ *   2. depois de voltar, a escolha anterior sobrevive invisível, e clicar noutro provedor ACUMULARIA
+ *      — o mesmo gesto com resultado diferente conforme um estado que ninguém vê.
+ * Definir não tem nenhuma das duas: um clique, um significado, sempre.
  */
-describe('AgentsStep — multi-seleção fica fora do auto-avanço', () => {
+describe('AgentsStep — o clique escolhe e entrega', () => {
 	let root: Root | null = null
 	let host: HTMLDivElement | null = null
 	let submitted: { providers: string[] }[] = []
@@ -135,7 +129,7 @@ describe('AgentsStep — multi-seleção fica fora do auto-avanço', () => {
 		host = null
 	})
 
-	function mount(props: { onBack?: () => void } = {}): void {
+	function mount(props: { onBack?: () => void; defaultValues?: { providers: string[] } } = {}): void {
 		host = document.createElement('div')
 		document.body.appendChild(host)
 		const element = host
@@ -152,12 +146,6 @@ describe('AgentsStep — multi-seleção fica fora do auto-avanço', () => {
 		return row
 	}
 
-	function submitButton(): HTMLButtonElement {
-		const button = host?.querySelector('button[type="submit"]') as HTMLButtonElement | null
-		if (!button) throw new Error('botão de continuar não renderizado')
-		return button
-	}
-
 	async function click(el: HTMLElement): Promise<void> {
 		await act(async () => {
 			el.click()
@@ -167,66 +155,56 @@ describe('AgentsStep — multi-seleção fica fora do auto-avanço', () => {
 		})
 	}
 
-	it('escolher um provedor NÃO entrega o passo — a pergunta ainda pode receber um segundo sim', async () => {
+	it('FALSEADOR — um clique na linha entrega o passo, sem passar por botão nenhum', async () => {
 		mount()
 
 		await click(rowFor('Claude Code'))
 
-		expect(submitted).toEqual([])
+		expect(submitted).toEqual([{ providers: ['CLAUDE_CODE'] }])
 	})
 
-	it('dois provedores cabem na mesma resposta, e é o botão que a fecha', async () => {
-		mount()
+	it('o clique DEFINE a escolha em vez de acumular — voltar e escolher outro entrega só o outro', async () => {
+		mount({ defaultValues: { providers: ['CLAUDE_CODE'] } })
 
-		await click(rowFor('Claude Code'))
 		await click(rowFor('OpenCode'))
-		await click(submitButton())
 
-		expect(submitted).toHaveLength(1)
-		expect([...(submitted[0]?.providers ?? [])].sort()).toEqual(['CLAUDE_CODE', 'OPENCODE'])
+		// Não `['CLAUDE_CODE', 'OPENCODE']`: a escolha anterior sobrevive ao voltar, mas ela é invisível
+		// para quem clica, e acumular faria o mesmo gesto significar coisas diferentes.
+		expect(submitted).toEqual([{ providers: ['OPENCODE'] }])
 	})
 
-	it('um provedor sem runner não entra na seleção nem entrega o passo', async () => {
+	it('FALSEADOR — clicar na linha JÁ escolhida entrega ela de novo: nunca desmarca, nunca entrega vazio', async () => {
+		mount({ defaultValues: { providers: ['CLAUDE_CODE'] } })
+
+		await click(rowFor('Claude Code'))
+
+		// A aresta do alternar-e-entregar: ali este clique zeraria a lista, o `.min(1)` barraria a
+		// entrega, e o operador ficaria preso num passo que acabou de perder a escolha dele.
+		expect(submitted).toEqual([{ providers: ['CLAUDE_CODE'] }])
+	})
+
+	it('um provedor sem runner não entrega nada — a linha continua desabilitada', async () => {
 		mount()
 
 		const codex = rowFor('Codex')
 		expect(codex.disabled).toBe(true)
 		await click(codex)
-		await click(rowFor('Claude Code'))
-		await click(submitButton())
 
-		expect(submitted).toHaveLength(1)
-		expect(submitted[0]?.providers).toEqual(['CLAUDE_CODE'])
+		expect(submitted).toEqual([])
 	})
 
-	/**
-	 * O RODAPÉ ENCOLHEU PARA A AÇÃO — E A AÇÃO FICA.
-	 *
-	 * Os passos de contato e workspace perderam o rodapé inteiro porque lá o clique JÁ é a resposta. Aqui
-	 * não: `providers` é uma lista, o clique faz toggle, e sem um fecho explícito quem escolhe dois
-	 * agentes não tem gesto para dizer "terminei". Este caso é a trava contra a generalização — se
-	 * alguém varrer o Continuar dos quatro passos por simetria, ele fica vermelho aqui, e só aqui.
-	 *
-	 * O Voltar, esse sim, sobe para o título como nos demais: ele nunca foi uma resposta ao passo, é
-	 * navegação — e navegação não divide barra com a ação que fecha a pergunta.
-	 */
-	it('a ação primária SOBREVIVE neste passo — é o único fecho de uma pergunta que aceita vários sins', () => {
+	it('o rodapé sumiu por inteiro — não há mais Continuar neste passo', () => {
 		mount()
 
-		const submit = host?.querySelector('button[type="submit"]') as HTMLButtonElement | null
-		expect(submit).not.toBeNull()
-		expect(submit?.textContent).toContain(i18n.t('attach.continue'))
+		expect(host?.querySelector('button[type="submit"]')).toBeNull()
+		expect(host?.textContent).not.toContain(i18n.t('attach.continue'))
 	})
 
-	it('FALSEADOR — o Voltar saiu do rodapé e foi para o cabeçalho, ao lado do título', () => {
+	it('o Voltar continua no cabeçalho, ao lado do título', () => {
 		mount({ onBack: () => {} })
 
 		const back = host?.querySelector('[data-slot="step-heading"] button') as HTMLButtonElement | null
 		expect(back).not.toBeNull()
 		expect(back?.getAttribute('aria-label')).toBe(i18n.t('attach.back'))
-
-		// E não sobrou um segundo Voltar embaixo: o rodapé agora tem exatamente um botão, o de continuar.
-		const submit = host?.querySelector('button[type="submit"]')
-		expect(submit?.parentElement?.querySelectorAll('button')).toHaveLength(1)
 	})
 })
