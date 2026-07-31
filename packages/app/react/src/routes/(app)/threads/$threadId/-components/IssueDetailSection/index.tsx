@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
+import { VirtualList } from '@/components/ui/virtual-list'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
@@ -127,13 +128,25 @@ export function IssueDetailSection({
  * as its own row is the whole "net gain" of §4.9: the panel can finally say *which* tool, which is
  * the difference between a log and a status.
  */
+/** One row of the panel: a replayed durable line, or a frame off the live stream. */
+type TerminalRow = { key: string } & ({ kind: 'log'; line: string } | { kind: 'frame'; frame: TerminalStreamFrame })
+
 function TerminalPanel({ issueId, lines }: { issueId: string; lines: Detail['terminalLog'] }) {
 	const { t } = useTranslation()
 	const { connected, frames } = useTerminalStream(issueId)
 	const empty = lines.length === 0 && frames.length === 0
 
+	// The two sources become ONE list so the window spans both: a panel that virtualized only the live
+	// tail would still put the whole replayed log in the DOM, and the durable half is the unbounded
+	// one (`GetIssueDetail` selects `terminalLines` for the issue with no LIMIT, while the live tail is
+	// capped at MAX_FRAMES). Concatenated, never interleaved — the original order is the contract.
+	const rows: TerminalRow[] = [
+		...lines.map((line, i) => ({ key: `log-${line.at}-${i}`, kind: 'log' as const, line: line.line })),
+		...frames.map((frame, i) => ({ key: `frame-${frame.at}-${i}`, kind: 'frame' as const, frame })),
+	]
+
 	return (
-		<section className="flex flex-col gap-3 g-">
+		<section className="flex flex-col gap-3">
 			<div className="flex items-center gap-2">
 				<h2 className="label-eyebrow">{t('session.terminalSession')}</h2>
 				{connected && (
@@ -147,28 +160,40 @@ function TerminalPanel({ issueId, lines }: { issueId: string; lines: Detail['ter
 					</span>
 				)}
 			</div>
-			<div
-				data-testid="terminal-panel"
-				className="overflow-x-auto rounded-2xl bg-[oklch(0.16_0_0)] p-4 font-mono text-sm leading-relaxed text-[oklch(0.9_0_0)]"
-			>
-				{empty ? (
+			{empty ? (
+				<div
+					data-testid="terminal-panel"
+					className="rounded-2xl bg-[oklch(0.16_0_0)] p-4 font-mono text-sm leading-relaxed text-[oklch(0.9_0_0)]"
+				>
 					<p className="text-[oklch(0.6_0_0)]">{t('session.waitingTerminal')}</p>
-				) : (
-					<>
-						{lines.map((line, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: terminal log is append-only — index is a stable identity
-							<div key={`log-${line.at}-${i}`} className="flex gap-2 whitespace-pre">
+				</div>
+			) : (
+				/* A BOUNDED BOX, which is new: the panel used to grow with the log and push the steer
+				   composer off the bottom of a long run, and windowing needs a scroller with a definite
+				   height anyway. `h-96` is the terminal's own viewport now, and being end-anchored it
+				   follows the output while it streams — unless the operator has scrolled up to read, which
+				   is exactly the case VirtualList keeps. `overflow-x-auto` survives the merge with the
+				   list's own `overflow-y-auto` (different axes), and rows are `w-max min-w-full` so a long
+				   unwrapped line still scrolls sideways instead of being clipped by a `w-full` row. */
+				<VirtualList
+					data-testid="terminal-panel"
+					items={rows}
+					getItemKey={row => row.key}
+					estimatedItemHeight={22}
+					className="h-96 overflow-x-auto rounded-2xl bg-[oklch(0.16_0_0)] p-4 font-mono text-sm leading-relaxed text-[oklch(0.9_0_0)]"
+					itemClassName="w-max min-w-full"
+					renderItem={row =>
+						row.kind === 'log' ? (
+							<div className="flex gap-2 whitespace-pre">
 								<span className="select-none text-[oklch(0.55_0_0)]">›</span>
-								<span>{line.line}</span>
+								<span>{row.line}</span>
 							</div>
-						))}
-						{frames.map((frame, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: the live tail is append-only — index is a stable identity
-							<TerminalFrameRow key={`frame-${frame.at}-${i}`} frame={frame} />
-						))}
-					</>
-				)}
-			</div>
+						) : (
+							<TerminalFrameRow frame={row.frame} />
+						)
+					}
+				/>
+			)}
 		</section>
 	)
 }

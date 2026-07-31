@@ -1,0 +1,166 @@
+import { configureClient } from '@codm/client-typescript/http'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
+import { act } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import '@/lib/i18n'
+import { installVirtualLayout, silenceLibraryFlushSyncWarning } from '../../../../../../../tests/support/virtualLayout'
+import { SessionChatSection } from './index'
+
+/**
+ * THE TRANSCRIPT IS WINDOWED — asserted on the SCREEN, not on the primitive.
+ *
+ * `virtual-list.test.tsx` proves the primitive windows, anchors and sticks. It cannot prove that THIS
+ * screen uses it, and that is the regression worth guarding: the section shipped as a plain
+ * `data.transcript.map(...)`, and reverting it to one would be a two-line edit that no type-check
+ * catches. So this mounts the REAL section against the REAL generated SDK hook and counts bubbles.
+ *
+ * The stub sits at `fetch`, the repo's existing seam for this (see `SupervisionGate.test.tsx`) —
+ * never `mock.module`, whose registry is per-process in bun and would leak into every other suite.
+ *
+ * Entries are all `CONTACT` on purpose: that branch of `TranscriptBubble` renders no `<Link>`, so the
+ * case needs no router. A kind that links would need a real router instance and `await router.load()`
+ * before render, which is a different (and much heavier) test than "is the list windowed".
+ *
+ * What this does NOT claim: that the chat LOOKS right. happy-dom runs no layout, so the `min-h-0`
+ * flex chain that gives the scroller its height is not verifiable here at any price — that one is
+ * eyes-on-screen, and it is called out as such in the hand-off.
+ */
+
+// A real absolute base URL so ky builds a real Request; the spy is what stops it from leaving.
+configureClient({ typescript: 'http://127.0.0.1:65535' })
+
+const THREAD = '019e4d24-6524-7041-9e1c-8108180cddae'
+
+/** Viewport and row height for the emulated layout — 600/88 ≈ 7 rows visible. */
+const VIEWPORT = 600
+const ROW_HEIGHT = 88
+
+function transcript(count: number) {
+	return Array.from({ length: count }, (_, i) => ({
+		entryId: `019e4d24-6524-7041-9e1c-${String(i).padStart(12, '0')}`,
+		kind: 'CONTACT' as const,
+		text: `mensagem ${i}`,
+		at: '10:00',
+	}))
+}
+
+describe('SessionChatSection — 1000 mensagens não são 1000 subárvores de DOM', () => {
+	let root: Root | null = null
+	let host: HTMLElement | null = null
+	let client: QueryClient | null = null
+	let restores: (() => void)[] = []
+	let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, 'fetch'>>
+
+	beforeEach(() => {
+		restores = [installVirtualLayout({ viewport: VIEWPORT, rowHeight: () => ROW_HEIGHT }), silenceLibraryFlushSyncWarning()]
+	})
+
+	afterEach(async () => {
+		await act(async () => {
+			root?.unmount()
+			await new Promise(resolve => setTimeout(resolve, 20))
+		})
+		root = null
+		host?.remove()
+		host = null
+		client = null
+		fetchSpy.mockRestore()
+		for (const restore of restores.reverse()) restore()
+		restores = []
+	})
+
+	function json(body: unknown): Response {
+		return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+	}
+
+	/** Answer the two reads this section mounts; anything else would be a surprise worth failing on. */
+	function seed(entries: ReturnType<typeof transcript>): void {
+		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async input => {
+			const url = String(input instanceof Request ? input.url : input)
+			if (url.includes('/needs-you')) return json({ stops: [] })
+			if (url.includes('/chat')) return json({ composerMode: 'DIRECT', activeStops: [], transcript: entries })
+			throw new Error(`unexpected request: ${url}`)
+		})
+	}
+
+	/**
+	 * Three act windows: the query resolves in one, the section re-renders with data in the next, and
+	 * the virtualizer's measurement pass lands in the third. Inside each the wait is on the CLIENT
+	 * settling rather than on a fixed clock.
+	 */
+	async function render(entries: ReturnType<typeof transcript>): Promise<HTMLElement> {
+		seed(entries)
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		client = queryClient
+		host = document.createElement('div')
+		document.body.appendChild(host)
+		root = createRoot(host)
+		act(() => {
+			root!.render(
+				<QueryClientProvider client={queryClient}>
+					<SessionChatSection threadId={THREAD} />
+				</QueryClientProvider>,
+			)
+		})
+		for (let pass = 0; pass < 3; pass++) {
+			await act(async () => {
+				for (let i = 0; i < 40; i++) {
+					await new Promise(resolve => setTimeout(resolve, 5))
+					if (client?.isFetching() === 0) break
+				}
+			})
+		}
+		return host!
+	}
+
+	const bubbles = (el: HTMLElement) => el.querySelectorAll('[data-slot="virtual-list-item"]')
+
+	/**
+	 * THE CEILING IS 40, the same number and the same derivation as the primitive's own test:
+	 * ceil(600/88) = 7 visible plus 8 overscan on each side = 23, and `rangeExtractor` returns no more.
+	 * 40 absorbs a measurement pass; a reverted `.map()` is 1000, so nothing plausible fits between.
+	 */
+	it('monta a seção com 1000 entradas e o DOM fica muito abaixo de 1000', async () => {
+		const el = await render(transcript(1_000))
+
+		const scroller = el.querySelector('[data-slot="virtual-list"]')
+		expect(scroller, 'a seção precisa render uma VirtualList, não um .map()').not.toBeNull()
+
+		const count = bubbles(el).length
+		expect(count).toBeLessThanOrEqual(40)
+		// Não-vacuidade: zero bolhas satisfaria "menos que 40" renderizando nada.
+		expect(count).toBeGreaterThanOrEqual(5)
+	})
+
+	/** E a barra de rolagem corresponde às 1000 — 1000 × 88px — e não à janela montada. */
+	it('a altura de rolagem corresponde às 1000 entradas', async () => {
+		const el = await render(transcript(1_000))
+		const scroller = el.querySelector('[data-slot="virtual-list"]') as HTMLElement
+
+		expect(scroller.scrollHeight).toBe(1_000 * ROW_HEIGHT)
+	})
+
+	/** A conversa abre na mensagem mais nova, que é o ponto de uma lista ancorada no fim. */
+	it('abre na última mensagem, não na primeira', async () => {
+		const el = await render(transcript(1_000))
+		const indices = [...bubbles(el)].map(b => Number(b.getAttribute('data-index')))
+
+		expect(indices).toContain(999)
+		expect(indices).not.toContain(0)
+	})
+
+	/**
+	 * O estado vazio continua sendo o estado vazio — não uma lista virtual de zero linhas.
+	 *
+	 * A asserção é no `data-slot` do primitivo `Empty`, não no texto: a cópia é traduzida (e nos
+	 * testes o i18next cai no inglês), então casar string prenderia o teste ao idioma do fallback e
+	 * ao gosto do founder pela frase, nenhum dos dois sendo o comportamento em questão.
+	 */
+	it('sem transcript, mostra o empty state e nenhuma lista', async () => {
+		const el = await render(transcript(0))
+
+		expect(el.querySelector('[data-slot="virtual-list"]')).toBeNull()
+		expect(el.querySelector('[data-slot="empty"]')).not.toBeNull()
+	})
+})

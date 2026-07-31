@@ -88,7 +88,16 @@ export function useTerminalStream(issueId: string): TerminalStream {
 					return
 				}
 				if (!alive.current) return
-				setFrames(previous => [...previous, result.data].slice(-MAX_FRAMES))
+				// `[...previous, frame].slice(-MAX_FRAMES)` allocated TWICE per frame — the concat, then a
+				// full copy — even while the buffer was still filling and the slice was a no-op. The trim
+				// now only runs once there is something to trim. This is the small half of the fix: a
+				// 500-pointer array is ~4KB of short-lived garbage, which a generational GC barely
+				// notices. The expensive half was the 500 DOM rows it fed, and that is what the panel's
+				// windowing addresses.
+				setFrames(previous => {
+					const next = [...previous, result.data]
+					return next.length > MAX_FRAMES ? next.slice(next.length - MAX_FRAMES) : next
+				})
 			},
 			onerror(err) {
 				// A RETURNED delay (not a throw) keeps fetch-event-source retrying: a run that outlives a

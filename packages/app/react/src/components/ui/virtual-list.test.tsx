@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { installVirtualLayout, setScrollTop, silenceLibraryFlushSyncWarning, spacerHeight } from '../../../tests/support/virtualLayout'
 import { VirtualList } from './virtual-list'
 
 /**
@@ -50,97 +51,7 @@ function item(id: string, height = 100): Item {
 	return { id, height, label: `entry ${id}` }
 }
 
-type Restore = () => void
-let restores: Restore[] = []
-
-/**
- * ONE third-party dev warning, filtered by exact text.
- *
- * `measureElement` is a callback ref, so it runs during commit; when an end-anchored list re-pins
- * itself there, virtual-core calls `notify(sync=true)` and react-virtual's `flushSync` lands inside
- * a lifecycle. React declines it and warns — a DEV-ONLY warning, from the library's own re-pin path,
- * about a flush React was going to batch anyway. The alternative is `useFlushSync: false`, which
- * would also disable the sync flush on the SCROLL path (virtual-core notifies sync while scrolling),
- * and that one is load-bearing for smooth scrolling — so the warning is accepted in production and
- * silenced here instead. The match is on the full sentence: any other console.error still surfaces.
- */
-const REACT_FLUSHSYNC_WARNING = 'flushSync was called from inside a lifecycle method'
-
-function silenceLibraryFlushSyncWarning(): void {
-	const original = console.error
-	console.error = (...args: unknown[]) => {
-		if (typeof args[0] === 'string' && args[0].includes(REACT_FLUSHSYNC_WARNING)) return
-		original(...args)
-	}
-	restores.push(() => {
-		console.error = original
-	})
-}
-
-function patch(target: object, prop: string, descriptor: PropertyDescriptor): void {
-	const original = Object.getOwnPropertyDescriptor(target, prop)
-	Object.defineProperty(target, prop, { configurable: true, ...descriptor })
-	restores.push(() => {
-		if (original) Object.defineProperty(target, prop, original)
-		else Reflect.deleteProperty(target, prop)
-	})
-}
-
-const isScroller = (el: Element) => el.getAttribute('data-slot') === 'virtual-list'
-const isRow = (el: Element) => el.getAttribute('data-slot') === 'virtual-list-item'
-
-/** The total size the component wrote onto the spacer — the emulation's source for `scrollHeight`. */
-function spacerHeight(scroller: Element): number {
-	const spacer = scroller.querySelector('[data-slot="virtual-list-spacer"]')
-	return spacer instanceof HTMLElement ? Number.parseFloat(spacer.style.height) || 0 : 0
-}
-
-function declaredRowHeight(row: Element): number {
-	const index = Number(row.getAttribute('data-index'))
-	return mounted[index]?.height ?? 0
-}
-
-/**
- * Give happy-dom just enough of a layout engine for a scroll container to be real: a viewport with a
- * height, a content box as tall as what was rendered into it, a `scrollTop` that clamps like a
- * browser's, and a `scroll` event when it moves.
- */
-function installLayout(): void {
-	patch(HTMLElement.prototype, 'offsetHeight', {
-		get(this: HTMLElement) {
-			if (isScroller(this)) return VIEWPORT
-			if (isRow(this)) return declaredRowHeight(this)
-			return 0
-		},
-	})
-	patch(HTMLElement.prototype, 'clientHeight', {
-		get(this: HTMLElement) {
-			return isScroller(this) ? VIEWPORT : 0
-		},
-	})
-	patch(Element.prototype, 'scrollHeight', {
-		get(this: Element) {
-			return isScroller(this) ? spacerHeight(this) : 0
-		},
-	})
-	// happy-dom's own `scrollTo` assigns `scrollTop` but never clamps and never notifies. The
-	// virtualizer learns its offset ONLY from the `scroll` event, so without the dispatch every
-	// programmatic scroll would be invisible to it.
-	patch(Element.prototype, 'scrollTo', {
-		value(this: Element, options?: ScrollToOptions | number) {
-			const top = typeof options === 'number' ? options : (options?.top ?? 0)
-			setScrollTop(this as HTMLElement, top)
-		},
-		writable: true,
-	})
-}
-
-/** Move a scroller the way a browser would: clamp to the scrollable range, then fire `scroll`. */
-function setScrollTop(element: HTMLElement, top: number): void {
-	const max = Math.max(element.scrollHeight - element.clientHeight, 0)
-	element.scrollTop = Math.min(Math.max(top, 0), max)
-	element.dispatchEvent(new Event('scroll'))
-}
+let restores: (() => void)[] = []
 
 // ── rendering ───────────────────────────────────────────────────────────────────────────────────
 
@@ -189,8 +100,10 @@ function list(count: number, prefix = 'm', height = 100): Item[] {
 }
 
 beforeEach(() => {
-	installLayout()
-	silenceLibraryFlushSyncWarning()
+	restores = [
+		installVirtualLayout({ viewport: VIEWPORT, rowHeight: index => mounted[index]?.height ?? 0 }),
+		silenceLibraryFlushSyncWarning(),
+	]
 	host = document.createElement('div')
 	document.body.appendChild(host)
 	root = createRoot(host)
