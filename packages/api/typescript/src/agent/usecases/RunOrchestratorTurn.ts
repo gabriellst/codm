@@ -11,6 +11,8 @@ import {
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
+import { ReplyStreamer } from '@thread/services'
+import { INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
@@ -88,11 +90,21 @@ interface SessionPlan {
  * `findOrchestratorByThreadId` reads the row where `issue_id IS NULL` (§6.1). One orchestrator per
  * conversation is a DB-level fact (a partial unique), not a convention this use case maintains.
  *
- * ### 2. There is no SSE fan-out
+ * ### 2. There is no SSE fan-out — but there IS a channel one
  * `RunIssueTurn` pushes every frame to `AgentStreamRegistry`; this does not. The SSE frame schemas are
  * issue-keyed, so a conversational turn would need a new observable surface — out of scope for v1
  * (§7.3), and the conversation is already observable where it matters: in WhatsApp and the transcript.
  * Frames are still drained, because the accumulator is what turns them into the reply.
+ *
+ * Since the streaming spec they are drained for a SECOND reason: the reply is pushed to WhatsApp while
+ * it is still being written. That fan-out goes to `ReplyStreamer` and not to the SSE registry, and the
+ * distinction is the point — the console already has its own live view, while the channel, which is
+ * the product's main surface, had nothing but silence until the answer was complete.
+ *
+ * The DOMAIN is untouched by it (decision 3): this use case still saves exactly ONE
+ * `OrchestratorRepliedEvent`, at the end, carrying the whole text. Modelling partial replies as facts
+ * would put fragments in the transcript and hand them back to the model as its own conversation
+ * history. Streaming lives in the delivery layer, and nowhere else.
  *
  * ### 3. The reply is PARSED before it is persisted
  * The model signals a citation with a trailing sentinel, which `parseReply` strips. The event carries
@@ -116,6 +128,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		private readonly providerDetector: ProviderDetector,
 		private readonly sessions: AgentSessionRepository,
 		private readonly threads: ThreadRepository,
+		private readonly streams: ReplyStreamer,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -132,6 +145,22 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// The window is built only for a FRESH session: a resumed one already holds the conversation in
 		// the CLI's own session, and re-sending it would both waste context and contradict §7.5.
 		const entries = session.resumed ? [] : await this.buildWindow(thread)
+
+		// THE STREAMED REPLY (streaming spec). The turn is the only place that holds the answer while it
+		// is still growing, so it is the only place the cadence can be fed from — but it stays ignorant of
+		// the channel: `cut` mints a sequence and enqueues a durable command, and that is all.
+		const streamed = this.streams.begin({
+			ownerId: input.ownerId,
+			channelId: thread.channelId,
+			remoteId: thread.contactRef.externalId,
+		})
+		let cutState: ReplyCutState = INITIAL_CUT_STATE
+		// The reply as the FRAMES have it so far: blocks the decoder has already consolidated, plus the one
+		// still arriving token by token. An APPROXIMATION on purpose — the canonical text is the CLI's own
+		// terminal frame, read below — and decision 7 is what makes the approximation safe: the final edit
+		// carries the canonical string, so anything the frames got slightly wrong is overwritten at the end.
+		let settledText = ''
+		let pendingDelta = ''
 
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.threadId })
 		for await (const event of this.agent.run(runner, {
@@ -154,6 +183,25 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			caps: detection.caps,
 		})) {
 			accumulator.feed(event)
+
+			// `text_delta` is what the SSE panel deliberately drops (rendering deltas AND the consolidated
+			// block would print every token twice) — and it is exactly what streaming needs, because it is
+			// the only frame that arrives WHILE a sentence is still being written. `assistant_text` closes a
+			// block, so it settles what the deltas were building.
+			if (event.type === 'frame') {
+				if (event.frame.kind === 'text_delta') pendingDelta += event.frame.delta
+				else if (event.frame.kind === 'assistant_text') {
+					settledText = settledText.length > 0 ? `${settledText}\n${event.frame.text}` : event.frame.text
+					pendingDelta = ''
+				}
+
+				const nowMs = Date.now()
+				const decision = decideCut({ text: settledText + pendingDelta, nowMs, state: cutState })
+				if (decision.cut) {
+					cutState = advanceCutState(decision, nowMs)
+					await streamed.cut(decision.text)
+				}
+			}
 		}
 
 		const outcome = accumulator.outcome()
