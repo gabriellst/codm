@@ -42,6 +42,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: "the SCHEDULED-COMMAND row is the subject (streaming spec, decisions 10-12): the `👀` cases assert a cue row's existence-by-id (scheduled, then consumed rather than dead-lettered), and the typing loop's whole property is that a beat armed its SUCCESSOR on the OTHER job id with `run_at` in the future — plus a `run_at` rewind so the next beat comes due without sleeping. The probe counts rows, it does not read or write their columns; same exception class as DeliverChannelMessage.test.ts next door",
 	},
 	{
+		path: 'src/agent/usecases/RunOrchestratorTurn.test.ts',
+		why: 'the SCHEDULED-COMMAND row is the subject (streaming spec, AC-10 — the ACTIVATION half): it asserts the turn armed the FIRST typing beat as a row whose `id` is the DERIVED job handle and whose JSON `input` carries the conversation plus the ceiling. A spy on the seam would pass just as happily with the wrong handle, the wrong ceiling or the wrong conversation, each of which is a loop that beats for nobody. The probe counts rows, it does not read their columns; same exception class as ChannelCues.test.ts, which owns the rest of this same loop',
+	},
+	{
 		path: 'src/thread/usecases/RecordOrchestratorReply.test.ts',
 		why: "the SCHEDULED-COMMAND row is the subject (B3): it asserts the enqueued row's `name`/`id` and the JSON `input`'s `quotedMessageId`/`replyEntryId` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; the drop + atomicity cases DO use probe().snapshot()",
 	},

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { BaseError, Handler, LoggingService, z } from '@codm/core-typescript'
+import { BaseError, CommandQueue, Handler, LoggingService, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import {
 	AgentModelId,
@@ -11,7 +11,7 @@ import {
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
-import { ReplyStreamer } from '@thread/services'
+import { ReplyStreamer, beginTypingPresence } from '@thread/services'
 import { INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
@@ -129,6 +129,12 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		private readonly sessions: AgentSessionRepository,
 		private readonly threads: ThreadRepository,
 		private readonly streams: ReplyStreamer,
+		/**
+		 * Held for ONE reason: `beginTypingPresence` is a stateless seam and takes the queue it enqueues
+		 * on. The thread context still owns the command, its payload, its ceiling and its job id — this
+		 * use case never names any of them.
+		 */
+		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -145,6 +151,23 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// The window is built only for a FRESH session: a resumed one already holds the conversation in
 		// the CLI's own session, and re-sending it would both waste context and contradict §7.5.
 		const entries = session.resumed ? [] : await this.buildWindow(thread)
+
+		// "digitando…" ON (streaming spec, AC-10 — `SustainTypingPresence` names this call site as "WHO
+		// TURNS IT ON"). Here and not earlier: the indicator claims the agent is WRITING, and the two
+		// resolutions above can still refuse the turn — a provider that is not installed would light an
+		// indicator for an answer that is never coming. "I saw it" is already covered, at ingest, by the
+		// 👀 (AC-9), which is why nothing is lost by waiting for the run to actually be about to start.
+		//
+		// Nobody turns it OFF from here, and that is the design: the platform expires the signal in ~10s
+		// if a beat is missed, the ceiling in the payload ends the loop even on a healthy process, and
+		// `DeliverChannelMessage` cancels it as an optimisation once the words are on the wire.
+		await beginTypingPresence({
+			commands: this.commands,
+			logging: this.logging,
+			ownerId: input.ownerId,
+			channelId: thread.channelId,
+			remoteId: thread.contactRef.externalId,
+		})
 
 		// THE STREAMED REPLY (streaming spec). The turn is the only place that holds the answer while it
 		// is still growing, so it is the only place the cadence can be fed from — but it stays ignorant of
