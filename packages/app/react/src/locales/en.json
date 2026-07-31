@@ -78,6 +78,8 @@
 		"navWorkspace": "Workspace",
 		"needChannelDescription": "You need at least one connected channel before you can attach a thread.",
 		"needChannelTitle": "Connect a channel first",
+		"noContacts": "No contacts found on this channel.",
+		"noContactsFound": "No contacts for “{{term}}”.",
 		"rowAgents": "Agents",
 		"rowContact": "Contact",
 		"rowWorkspace": "Workspace",

@@ -91,13 +91,9 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 	// contract; the review step additionally receives the typed parent form + option lists.
 	const values = form.state.values
 	const STEP_COMPONENTS: Record<AttachStepId, ReactNode> = {
+		// No `contacts` prop: the step owns that query, because it owns the search term that scopes it.
 		CONTACT: (
-			<ContactStep
-				contacts={data?.contacts ?? []}
-				channelKindById={channelKindById}
-				defaultValues={{ contactRef: values.contactRef }}
-				onSubmit={handleContactSubmit}
-			/>
+			<ContactStep channelKindById={channelKindById} defaultValues={{ contactRef: values.contactRef }} onSubmit={handleContactSubmit} />
 		),
 		WORKSPACE: (
 			<WorkspaceStep

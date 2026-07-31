@@ -78,6 +78,8 @@
 		"navWorkspace": "Espaço",
 		"needChannelDescription": "Você precisa de ao menos um canal conectado antes de vincular uma conversa.",
 		"needChannelTitle": "Conecte um canal primeiro",
+		"noContacts": "Nenhum contato encontrado neste canal.",
+		"noContactsFound": "Nenhum contato para “{{term}}”.",
 		"rowAgents": "Agentes",
 		"rowContact": "Contato",
 		"rowWorkspace": "Espaço de trabalho",
