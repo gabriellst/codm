@@ -1,11 +1,12 @@
 import type { Bindings } from '../core/container'
-import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken } from '../tokens'
+import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken, SupervisionToken } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
 import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService, NativePlatform } from '../HostInfoService/HostInfoService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { SecretsService } from '../SecretsService/SecretsService'
+import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
 
 /**
  * Test composition root — in-memory fakes, no host present. The frontend analogue
@@ -88,6 +89,36 @@ export class FakeHostInfoService implements HostInfoService {
 	}
 }
 
+/**
+ * Seeded with the state a console would find on mount (the PULL); `emit` drives the subscribers the
+ * way the host's event does (the PUSH). Those are the two halves a supervision consumer has to get
+ * right, so the fake exposes both rather than only the easy one.
+ */
+export class FakeSupervisionService implements SupervisionService {
+	readonly listeners = new Set<(state: SupervisionState) => void>()
+	restarts = 0
+	constructor(private state: SupervisionState = { kind: 'healthy' }) {}
+
+	async current(): Promise<SupervisionState> {
+		return this.state
+	}
+
+	async subscribe(listener: (state: SupervisionState) => void): Promise<() => void> {
+		this.listeners.add(listener)
+		return () => this.listeners.delete(listener)
+	}
+
+	async restart(): Promise<void> {
+		this.restarts += 1
+	}
+
+	/** Drive a transition, as the host would. */
+	emit(state: SupervisionState): void {
+		this.state = state
+		for (const listener of this.listeners) listener(state)
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -95,4 +126,5 @@ export default [
 	[SecretsToken, FakeSecretsService],
 	[AutostartToken, FakeAutostartService],
 	[HostInfoToken, FakeHostInfoService],
+	[SupervisionToken, FakeSupervisionService],
 ] as const satisfies Bindings

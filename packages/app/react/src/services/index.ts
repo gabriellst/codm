@@ -25,6 +25,7 @@ export {
 	useNotification,
 	useSecrets,
 	useService,
+	useSupervision,
 } from './hooks'
 export { ServicesProvider, useContainer } from './providers/ServicesProvider'
 export {
@@ -34,6 +35,7 @@ export {
 	HostInfoToken,
 	NotificationToken,
 	SecretsToken,
+	SupervisionToken,
 } from './tokens'
 
 // Port types — for consumers that need to annotate against a capability contract.
@@ -43,3 +45,4 @@ export type { FilePickerService } from './FilePickerService/FilePickerService'
 export type { HostInfoService, NativePlatform } from './HostInfoService/HostInfoService'
 export type { NotificationService } from './NotificationService/NotificationService'
 export type { SecretsService } from './SecretsService/SecretsService'
+export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'

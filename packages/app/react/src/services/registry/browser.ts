@@ -1,11 +1,12 @@
 import type { Bindings } from '../core/container'
-import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken } from '../tokens'
+import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken, SupervisionToken } from '../tokens'
 import { BrowserAutostartService } from '../AutostartService/BrowserAutostartService'
 import { BrowserBadgeService } from '../BadgeService/BrowserBadgeService'
 import { BrowserFilePickerService } from '../FilePickerService/BrowserFilePickerService'
 import { BrowserHostInfoService } from '../HostInfoService/BrowserHostInfoService'
 import { BrowserNotificationService } from '../NotificationService/BrowserNotificationService'
 import { BrowserSecretsService } from '../SecretsService/BrowserSecretsService'
+import { BrowserSupervisionService } from '../SupervisionService/BrowserSupervisionService'
 
 /**
  * Browser composition root — dev server / e2e / any plain tab. DECLARATIVE: a
@@ -22,4 +23,5 @@ export default [
 	[SecretsToken, BrowserSecretsService],
 	[AutostartToken, BrowserAutostartService],
 	[HostInfoToken, BrowserHostInfoService],
+	[SupervisionToken, BrowserSupervisionService],
 ] as const satisfies Bindings

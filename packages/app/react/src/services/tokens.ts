@@ -10,6 +10,7 @@ import type { FilePickerService } from './FilePickerService/FilePickerService'
 import type { HostInfoService } from './HostInfoService/HostInfoService'
 import type { NotificationService } from './NotificationService/NotificationService'
 import type { SecretsService } from './SecretsService/SecretsService'
+import type { SupervisionService } from './SupervisionService/SupervisionService'
 
 export const FilePickerToken = token<FilePickerService>('FilePickerService')
 export const NotificationToken = token<NotificationService>('NotificationService')
@@ -17,3 +18,4 @@ export const BadgeToken = token<BadgeService>('BadgeService')
 export const SecretsToken = token<SecretsService>('SecretsService')
 export const AutostartToken = token<AutostartService>('AutostartService')
 export const HostInfoToken = token<HostInfoService>('HostInfoService')
+export const SupervisionToken = token<SupervisionService>('SupervisionService')

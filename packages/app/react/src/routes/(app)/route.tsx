@@ -2,6 +2,7 @@ import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Sidebar } from '@/components/Navbar'
 import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
 import { AppChrome } from '@/components/console/AppChrome'
+import { SupervisionBanner } from '@/components/console/SupervisionBanner'
 import { Dialog } from '@/components/ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { useDrawerStore } from '@/stores/useDrawerStore'
@@ -21,6 +22,10 @@ function AuthLayout() {
 		<div className="flex h-dvh flex-col overflow-hidden bg-route-background text-foreground">
 			{/* Integrated window title bar (native traffic lights overlay it on macOS). */}
 			<AppChrome />
+			{/* Runtime supervision, above everything and outside the scroll: a dead gateway means the
+			    channel is deaf, and the operator has to see that from any screen. Renders null while
+			    the fleet is healthy. */}
+			<SupervisionBanner />
 			<div className="flex min-h-0 flex-1">
 				<Sidebar />
 				<main className="relative flex flex-1 flex-col overflow-hidden">
