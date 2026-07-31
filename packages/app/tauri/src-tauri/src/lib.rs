@@ -35,7 +35,11 @@ pub fn run() {
             None,
         ))
         .invoke_handler(builder.invoke_handler())
-        .setup(|app| {
+        .setup(move |app| {
+            // Registers the typed event map. `SupervisionChanged::emit` panics without it, so this
+            // line is the difference between the console hearing transitions and hearing nothing.
+            builder.mount_events(app);
+
             let data_dir = app
                 .path()
                 .app_data_dir()
@@ -62,8 +66,19 @@ pub fn run() {
             let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir);
             let gate = Arc::new(sidecars::ReadinessGate::new(fleet.len()));
             app.manage(gate.clone());
+
+            // SUPERVISION picks up where the gate stops (`Reveal::Main` arms it — see
+            // `sidecars::apply`). It watches the same fleet for the rest of the process's life:
+            // the child's exit signal plus a typed health probe every 5s, with the reaction
+            // decided by the pure `SupervisionMonitor`. Managed here because BOTH the boot tasks
+            // (which own each child's event stream) and the `supervision_state` command read it.
+            let monitor = Arc::new(sidecars::SupervisionMonitor::new(
+                fleet.iter().map(|s| (s.service(), s.name().to_owned())).collect(),
+            ));
+            app.manage(monitor.clone());
+
             for sidecar in fleet {
-                sidecars::boot_sidecar(app.handle(), sidecar, gate.clone());
+                sidecars::boot_sidecar(app.handle(), sidecar, gate.clone(), monitor.clone());
             }
             Ok(())
         })

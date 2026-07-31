@@ -39,12 +39,20 @@ async bootFailures() : Promise<SidecarFailure[]> {
  */
 async retryBoot() : Promise<void> {
     await TAURI_INVOKE("retry_boot");
+},
+async supervisionState() : Promise<SupervisionState> {
+    return await TAURI_INVOKE("supervision_state");
 }
 }
 
 /** user-defined events **/
 
 
+export const events = __makeEvents__<{
+supervisionChanged: SupervisionChanged
+}>({
+supervisionChanged: "supervision-changed"
+})
 
 /** user-defined constants **/
 
@@ -64,6 +72,27 @@ reason: string;
  * The retained tail of captured stderr, in chronological order.
  */
 stderr: string[] }
+/**
+ * Which SDK sub-client answers for a sidecar — and, since supervision, which one the console is
+ * being told about. A fact of the SHELL (which binary is which service), never a contract enum:
+ * it crosses to the webview as the shell's own supervision payload (specta), not through
+ * `packages/contracts` (spec Decision 10).
+ */
+export type SidecarService = "daemon" | "gateway"
+/**
+ * The transition, on its way to the console (PUSH half of spec Decision 9). Typed end-to-end by
+ * tauri-specta exactly like the custom commands — the console gets
+ * `events.supervisionChanged.listen(...)`, never a stringly `listen('supervision:changed')`.
+ * 
+ * The derive is TRANSPORT only: `SupervisionMonitor` above neither knows nor can reach it, which is
+ * what keeps the machine testable without an app.
+ */
+export type SupervisionChanged = { state: SupervisionState }
+/**
+ * What the console is shown. `Degraded`/`Down` name WHICH sidecar, because the reaction differs by
+ * sidecar (spec Decision 6): the daemon is the whole app, the gateway is the channel.
+ */
+export type SupervisionState = { kind: "healthy" } | { kind: "degraded"; sidecar: SidecarService } | { kind: "down"; sidecar: SidecarService }
 
 /** tauri-specta globals **/
 

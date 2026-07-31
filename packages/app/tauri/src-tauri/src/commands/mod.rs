@@ -12,16 +12,29 @@ pub use boot::*;
 mod secrets;
 pub use secrets::*;
 
+mod supervision;
+pub use supervision::*;
+
 /// The single `tauri_specta::Builder` collecting every `#[specta::specta]`
-/// custom command. See the module docs for why there is exactly one.
+/// custom command AND every typed event. See the module docs for why there is exactly one.
+///
+/// Events ride the same builder as commands so the console's PUSH channel is generated from the
+/// Rust type too — `events.supervisionChanged.listen(...)`, with the payload shape coming from
+/// `SupervisionState` itself. `Builder::mount_events` (called in `run()`'s setup) is what makes the
+/// registry available at runtime; without it the first `emit` panics, loudly, at boot.
 pub fn specta_builder() -> tauri_specta::Builder {
-    tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
-        secret_get,
-        secret_set,
-        secret_delete,
-        boot_failures,
-        retry_boot
-    ])
+    tauri_specta::Builder::<tauri::Wry>::new()
+        .commands(tauri_specta::collect_commands![
+            secret_get,
+            secret_set,
+            secret_delete,
+            boot_failures,
+            retry_boot,
+            supervision_state
+        ])
+        .events(tauri_specta::collect_events![
+            crate::sidecars::SupervisionChanged
+        ])
 }
 
 // ── typed bindings export ─────────────────────────────────────────────────────────

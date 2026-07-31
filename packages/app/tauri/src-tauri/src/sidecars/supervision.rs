@@ -25,6 +25,26 @@ pub const FAILURE_THRESHOLD: usize = 3;
 /// here nobody is waiting on the answer, so the loop trades latency for near-zero cost.
 pub const PROBE_INTERVAL: Duration = Duration::from_secs(5);
 
+/// Budget for ONE probe, deliberately shorter than the cadence.
+///
+/// The generated client carries no default timeout, so a sidecar that accepts the connection and
+/// then never answers (a wedged event loop, a deadlocked handler) would park the supervision task
+/// forever — the watcher dying silently because the watched process is sick. A cycle that produced
+/// no answer is, from the operator's seat, indistinguishable from a dead process, and it still needs
+/// `FAILURE_THRESHOLD` of them in a row to declare anything.
+pub const PROBE_TIMEOUT: Duration = Duration::from_secs(4);
+
+/// The transition, on its way to the console (PUSH half of spec Decision 9). Typed end-to-end by
+/// tauri-specta exactly like the custom commands — the console gets
+/// `events.supervisionChanged.listen(...)`, never a stringly `listen('supervision:changed')`.
+///
+/// The derive is TRANSPORT only: `SupervisionMonitor` above neither knows nor can reach it, which is
+/// what keeps the machine testable without an app.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+pub struct SupervisionChanged {
+    pub state: SupervisionState,
+}
+
 /// Which SDK sub-client answers for a sidecar — and, since supervision, which one the console is
 /// being told about. A fact of the SHELL (which binary is which service), never a contract enum:
 /// it crosses to the webview as the shell's own supervision payload (specta), not through
