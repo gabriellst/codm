@@ -100,6 +100,44 @@ describe('ResolveStopController — reachable by the console AND from inside an 
 	})
 
 	/**
+	 * THE HOLE THE `orchestration` SCOPE OPENED, and the reason `handle()` has an ownership check at all.
+	 *
+	 * The identity confines `threadId`; the request carries `{ stopId, resolution }`. `compareIdentity`
+	 * walks the keys the IDENTITY has against `{...params, ...body}` — and NONE of them appears there, so
+	 * the middleware finds nothing to disagree with and admits the call. Every other `orchestration` entry
+	 * is thread-shaped (`ForkIssue`, `GetSessionIssues` take `threadId`; `GetIssueStatus` and
+	 * `SteerIssueTurn` check ownership themselves); this one was the exception, and a stop is addressed by
+	 * a uuid that any run could name.
+	 *
+	 * ASSERTING THE STOP, NOT ONLY THE ERROR: a refusal that still wrote would be the same bug wearing a
+	 * 403. Removing the guard from `handle()` must make THIS line red with the stop closed, not merely the
+	 * code line red.
+	 */
+	it("a run of ANOTHER thread cannot close this thread's stop — refused, and the stop stays open", async () => {
+		const mine = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const foreign = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const stop = await givenStop(testBed, { threadId: foreign.id.value, kind: StopKind.APPROVAL_NEEDED })
+		const { middleware, token } = orchestrationRun(mine.id.value)
+		const request = requestFor(stop.stopId, StopResolution.APPROVE, token)
+
+		// The middleware ADMITS it — that is the finding, and it is measured here rather than asserted
+		// away: the boundary this test defends could not live in `compareIdentity`.
+		await middleware.execute(request)
+		const failure = await testBed
+			.resolve(ResolveStopController)
+			.execute(request)
+			.then(
+				() => undefined,
+				(error: unknown) => error as BaseError,
+			)
+
+		const stillOpen = await testBed.resolve(ThreadRepository).findStop(stop.stopId)
+		expect(stillOpen?.resolution).toBeUndefined()
+		expect(stillOpen?.resolvedAt).toBeUndefined()
+		expect(failure?.name).toBe('AGENT_RUN_SCOPE_MISMATCH')
+	})
+
+	/**
 	 * A DEAD run writes NOTHING — the half of the auto-appended middleware that is a boundary rather
 	 * than a pass-through. "No token" means the console; "a token that is present and revoked" means a
 	 * late call from a run that already ended, and the two must not resolve to the same verdict.

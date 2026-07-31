@@ -57,9 +57,14 @@ import { wireToolName } from './wire'
  *    this thread's own. Deliberately NOT the six writes of `issue-handling`: that agent converses and
  *    decides, it never does issue work (§3, "o orquestrador nunca executa trabalho de issue").
  *    Steering is the one exception and it is not issue WORK — it is telling a worker something, which
- *    is conversation pointed at a subagent. Every entry is thread-shaped: `ForkIssue` and
- *    `GetSessionIssues` take `threadId` (which the identity confines), and `GetIssueStatus` takes
- *    both, checking ownership itself.
+ *    is conversation pointed at a subagent. NOT every entry is thread-SHAPED, and the ones that are
+ *    not confine themselves in `handle()` — spec decision 4, "a controller confines what its identity
+ *    does not": `ForkIssue` and `GetSessionIssues` take `threadId`, which the identity confines and
+ *    `compareIdentity` therefore checks for free; `GetIssueStatus` and `SteerIssueTurn` take an
+ *    `issueId` the identity does not carry and check ownership themselves; `ResolveStop` takes a bare
+ *    `stopId` and NOTHING the identity carries appears in its arguments at all, so the generic
+ *    comparison has nothing to reject and its own `handle()` is the ONLY thing keeping a run from
+ *    closing another thread's stop. When a tool joins this surface, that is the question to ask of it.
  *  - `system` — NAVIGATION AND OPERATION of the system. Generated and mounted, but NO internal agent
  *    declares it in this phase — its consumer is an external MCP client (the operator's own agent,
  *    browsing the system). Handing `system` to `IssueWorkAgent` would put `owner/*` and `workspace/*`
