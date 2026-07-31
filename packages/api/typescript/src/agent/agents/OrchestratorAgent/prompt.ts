@@ -65,14 +65,19 @@ export class OrchestratorPromptBuilder {
 	}
 
 	/**
-	 * The turn itself: the elapsed conversation, then the one thing being responded to.
+	 * The turn itself: the elapsed conversation, what the live message is answering, then the message.
 	 *
-	 * The window comes LAST-but-one and the live item LAST because recency dominates attention: the
-	 * message under `THIS TURN` is the one that must be answered, and burying it above forty lines of
-	 * transcript is how a model ends up replying to the wrong thing.
+	 * The window comes FIRST and the live item LAST because recency dominates attention: the message
+	 * under `THIS TURN` is the one that must be answered, and burying it above forty lines of transcript
+	 * is how a model ends up replying to the wrong thing.
+	 *
+	 * `repliedTo` sits BETWEEN them, and the position is the argument: it is not conversation (it is one
+	 * specific line, singled out) and it is not the message (it is what the message is about). Reading
+	 * order becomes what a human's is — the room, then the line being answered, then the answer — and
+	 * `THIS TURN` still lands last, so the quote informs the live message instead of competing with it.
 	 */
 	user(input: OrchestratorInput): string {
-		return [...this.window(input), '', ...this.turn(input.item)].join('\n')
+		return [...this.window(input), '', ...this.repliedTo(input.item), ...this.turn(input.item)].join('\n')
 	}
 
 	/**
@@ -379,6 +384,49 @@ export class OrchestratorPromptBuilder {
 	/** One transcript line. `→ you` is what the D3 paragraph in `room()` refers to. */
 	private line(entry: WindowEntry): string {
 		return `${entry.speaker}${entry.addressed ? ' → you' : ''}: ${entry.text}`
+	}
+
+	/**
+	 * WHAT THE LIVE MESSAGE IS ANSWERING — the other half of the reply-invocation rule.
+	 *
+	 * Quoting the agent already lowers the mention gate: `IngestChannelMessage` computes `repliesToAgent`
+	 * and `Thread.addressedToAgent` stands the tag down for it, because demanding a prefix on the natural
+	 * answer to the agent's own question is how that answer fell on the floor. But the gate was the whole
+	 * of it — the turn was summoned and handed the reply with no antecedent, and a reply is usually a
+	 * FRAGMENT. "depois" is not an answer to anything until you know the question was "agora ou depois do
+	 * deploy?".
+	 *
+	 * ### Why the window is not enough, and this is not a duplicate of it
+	 * Three reasons, and any one is sufficient. The window is capped by `bufferSize`, so the quoted line
+	 * may be older than it. A RESUMED session gets only the tail since the cursor, so on the common path
+	 * the line is not in this prompt at all. And even when it IS present, nothing marks WHICH of forty
+	 * lines was answered — that is precisely the information a quote carries and a transcript does not.
+	 *
+	 * ### Why it says "besides what they just said" out loud
+	 * The founder's ask, and it is not decoration. A model handed two texts will answer the LAST one and
+	 * treat the other as scenery — the same recency pull `user()` exploits for `THIS TURN`. Here that
+	 * default is wrong: the quoted line is half the question. So the instruction names the failure
+	 * instead of trusting the arrangement.
+	 *
+	 * NOTHING RENDERS on an ordinary message — the rule `stops()` and `operatorInstructions()` follow. A
+	 * heading announcing a quoted message and then showing none is how a model starts inventing one.
+	 */
+	private repliedTo(item: MailboxItem): string[] {
+		if (item.kind !== MailboxItemKind.OPERATOR_MESSAGE || !item.quotedAgentText) return []
+		return [
+			'THE MESSAGE THEY REPLIED TO',
+			'The message under THIS TURN is a REPLY, and this is the line it was attached to — your own ' +
+				'words, earlier in this conversation:',
+			'',
+			// Labelled `you`, exactly as the window labels the agent's own lines: an unattributed line
+			// reads as somebody else's and gets answered as one.
+			`  you: ${item.quotedAgentText}`,
+			'',
+			'Answer with BOTH in view. What they just said may be a fragment — "depois", "o segundo", "pode" ' +
+				'— that means nothing except against that line, so read it as the second half of one message ' +
+				'rather than as a new subject.',
+			'',
+		]
 	}
 
 	/**

@@ -247,4 +247,61 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(system).not.toContain('UNANSWERED QUESTIONS')
 		expect(system).not.toContain(toolNameOf(ResolveStopController))
 	})
+
+	/**
+	 * THE MESSAGE THEY REPLIED TO — the half of the reply-invocation rule that was never built.
+	 *
+	 * Quoting the agent already lowers the mention gate (`IngestChannelMessage` computes `repliesToAgent`
+	 * and `Thread.addressedToAgent` stands the tag down for it), so a reply SUMMONS the agent. What it
+	 * did not do was tell it what it had been summoned ABOUT: the model was handed "sim, pode fazer" with
+	 * no idea which of its own questions that answered.
+	 *
+	 * The failure is invisible to every other test in this file, and to the model itself — it does not
+	 * error, it answers the wrong question confidently. Which is why the assertion is that the QUOTED
+	 * TEXT is present, not merely that some heading rendered.
+	 */
+	const REPLIED_TO = 'quer que eu rode a migration agora ou depois do deploy?'
+
+	const replyTurn = () =>
+		operatorTurn({
+			item: {
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				entryId: '00000000-0000-4000-8000-0000000000dd',
+				speaker: 'operator',
+				text: 'depois',
+				quotedAgentText: REPLIED_TO,
+			},
+		})
+
+	it('(m) a turn that replies to the agent carries the QUOTED line, as the agent’s own words', () => {
+		const user = builder.user(replyTurn())
+
+		expect(user).toContain('THE MESSAGE THEY REPLIED TO')
+		// The whole point: the text itself, not a flag saying a quote existed. "depois" is unanswerable
+		// without it.
+		expect(user).toContain(REPLIED_TO)
+		// Attributed to the agent — an unlabelled line reads as somebody else's and gets answered as one.
+		expect(user).toContain(`you: ${REPLIED_TO}`)
+		// The live message still lands LAST: the quote is context for it, never a replacement for it.
+		expect(user.indexOf('THE MESSAGE THEY REPLIED TO')).toBeLessThan(user.indexOf('THIS TURN'))
+	})
+
+	/**
+	 * THE HALF THAT KEEPS THE FIRST HONEST. A section that always rendered would put a heading over
+	 * nothing on the overwhelming majority of turns — the same failure mode `(l)` guards for stops, and
+	 * the one that teaches a model to invent a message it was never shown.
+	 */
+	it('(n) an ordinary message renders no such section', () => {
+		const user = builder.user(operatorTurn())
+
+		expect(user).not.toContain('THE MESSAGE THEY REPLIED TO')
+	})
+
+	/**
+	 * An ISSUE_RESULT turn is not born from a message at all, so there is structurally nothing it could
+	 * be replying to — `OperatorMessageItemSchema` is the only member that carries the field.
+	 */
+	it('(o) an ISSUE_RESULT turn never renders it', () => {
+		expect(builder.user(issueResultTurn())).not.toContain('THE MESSAGE THEY REPLIED TO')
+	})
 })

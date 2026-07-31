@@ -221,4 +221,88 @@ describe('IngestChannelMessage gate matrix', () => {
 			expect(queued).toBe(false)
 		})
 	})
+
+	/**
+	 * WHAT THE QUEUED TURN KNOWS ABOUT THE QUOTE.
+	 *
+	 * `repliesToAgent` has always been computed here and has always been spent entirely on `canInvoke` —
+	 * it opened the door and told the agent nothing about why. The consequence only shows up one context
+	 * away, in the prompt: a reply is usually a FRAGMENT ("depois", "o segundo", "pode"), and a fragment
+	 * handed over with no antecedent gets answered against whatever the model guesses it meant.
+	 *
+	 * The fix carries no new read and no new contract. `quoted` is already resolved above for the gate,
+	 * and the transcript row it returns already holds the text — so the item the mailbox was always going
+	 * to write simply carries it. Asserted on the ENQUEUED PAYLOAD, because that is the only place the
+	 * fact crosses out of this context.
+	 */
+	describe('the mailbox item carries what the message replied to', () => {
+		/** The one turn queued for this thread, as the DISPATCHER reads it. Asserts nothing — callers do. */
+		const queuedItem = async () => {
+			const item = await testBed.resolve(MailboxRepository).claimNext('ingest-test', 60_000)
+			return { targetId: item?.targetId, payload: item?.payload as { text: string; quotedAgentText?: string } | undefined }
+		}
+
+		it('a reply to the agent hands the turn the QUOTED text', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+			// The agent's own line, written the way `RecordOrchestratorReply` writes it: kind SYSTEM.
+			const agentLine = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'rodo a migration agora ou depois do deploy?' })
+			await testBed.resolve(ThreadRepository).save(thread)
+
+			// No citation tag anywhere — the QUOTE is what carries this past the mention gate, which is
+			// exactly the case the payload has to describe.
+			const out = await testBed.resolve(IngestChannelMessage).execute({
+				threadId: thread.id.value,
+				senderExternalId: 'stranger-42',
+				text: 'depois',
+				quotedEntryId: agentLine.entryId,
+				receivedAt: new Date(),
+			})
+
+			expect(out.invocable).toBe(true)
+			const { targetId, payload } = await queuedItem()
+			expect(targetId).toBe(thread.id.value)
+			expect(payload?.text).toBe('depois')
+			expect(payload?.quotedAgentText).toBe('rodo a migration agora ou depois do deploy?')
+		})
+
+		/**
+		 * A quote of ANOTHER PARTICIPANT is not the agent being replied to. It does not lower the mention
+		 * gate, and it must not put words in the prompt as though the agent had said them — the field
+		 * names the agent's OWN line, and a contact's line arriving under it would be rendered as `you:`.
+		 */
+		it('a reply to a CONTACT line carries no quoted text', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+			const humanLine = thread.recordEntry({ kind: TranscriptKind.CONTACT, senderExternalId: 'marina', text: 'alguém mexeu no toggle?' })
+			await testBed.resolve(ThreadRepository).save(thread)
+
+			const out = await testBed.resolve(IngestChannelMessage).execute({
+				threadId: thread.id.value,
+				senderExternalId: 'stranger-42',
+				// The tag IS needed here — quoting a human grants no invocation.
+				text: `${GIVEN_MENTION_TAG} fui eu`,
+				quotedEntryId: humanLine.entryId,
+				receivedAt: new Date(),
+			})
+
+			expect(out.invocable).toBe(true)
+			const { targetId, payload } = await queuedItem()
+			expect(targetId).toBe(thread.id.value)
+			expect(payload?.quotedAgentText).toBeUndefined()
+		})
+
+		it('an ordinary message with no quote at all carries none', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+			await testBed.resolve(IngestChannelMessage).execute({
+				threadId: thread.id.value,
+				senderExternalId: 'stranger-42',
+				text: `${GIVEN_MENTION_TAG} ship the coupon fix`,
+				receivedAt: new Date(),
+			})
+
+			const { targetId, payload } = await queuedItem()
+			expect(targetId).toBe(thread.id.value)
+			expect(payload?.quotedAgentText).toBeUndefined()
+		})
+	})
 })

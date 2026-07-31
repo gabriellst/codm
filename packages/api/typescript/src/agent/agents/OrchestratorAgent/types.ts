@@ -43,6 +43,30 @@ const OperatorMessageItemSchema = z.object({
 	/** Not always the owner: any roster participant with `canInvoke` may address the agent (`Thread.ts:115`). */
 	speaker: z.string().min(1),
 	text: z.string().min(1),
+	/**
+	 * The agent's OWN earlier line that this message is a reply to — the other half of the rule that
+	 * lets a reply summon the agent without a mention tag.
+	 *
+	 * PRESENT ⟺ the message quotes a `SYSTEM` entry. That is the identical predicate `IngestChannelMessage`
+	 * already computes as `repliesToAgent` and hands to `Thread.canInvoke`, reused rather than re-derived:
+	 * one notion of "this replies to me", with the gate and the prompt reading the same fact. A quote of
+	 * another participant, or one that does not resolve, is absent here — it is not the agent being
+	 * answered, and rendering someone else's words as the agent's own would invite it to answer itself.
+	 *
+	 * WHY THE TEXT AND NOT AN ID: the model cannot dereference one. A reply is typically a FRAGMENT
+	 * ("depois", "o segundo", "pode") whose meaning lives entirely in the line it lands on, and the
+	 * window is no substitute — it is capped by `bufferSize`, so the quoted line may be long gone, and
+	 * even when present nothing marks WHICH of forty lines was answered.
+	 *
+	 * It rides the mailbox payload rather than being re-read here because the ingest already resolved
+	 * the entry for the gate (`ThreadRepository.findEntry`) and the row it returns already carries the
+	 * text. A read in this context would be a second query for a fact the producer had in hand, and it
+	 * would have to reach into `thread`'s transcript to get it.
+	 *
+	 * `min(1)`, mirroring `mentionTag` and `customPrompt`: absent ⟺ not a reply to the agent. The empty
+	 * string is not a state — a `SYSTEM` entry with no text is not written.
+	 */
+	quotedAgentText: z.string().min(1).optional(),
 })
 
 /**

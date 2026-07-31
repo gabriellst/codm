@@ -131,6 +131,20 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 							entryId: entry.entryId,
 							speaker: input.senderExternalId,
 							text: thread.textWithoutMention(input.text),
+							// WHAT THE AGENT IS BEING ANSWERED ABOUT. `repliesToAgent` decided, ten lines up, that
+							// this message may summon the agent without a tag; until now that verdict was spent
+							// entirely on the gate and the quote itself was dropped. So the turn arrived knowing it
+							// had been replied to and not to WHAT — and a reply is usually a fragment ("depois",
+							// "pode") that means nothing without the line it lands on.
+							//
+							// Same predicate, not a second one: the field is present exactly when the gate stood
+							// down, so there is one notion of "this replies to me" rather than two that can drift.
+							// The text costs no read — `quoted` was already resolved above for the gate, and the
+							// transcript row it returned already carries it.
+							//
+							// NOT run through `textWithoutMention`: a SYSTEM entry is the agent's own reply and
+							// never carries the tag, so stripping would be a no-op that implies otherwise.
+							quotedAgentText: repliesToAgent ? quoted?.text : undefined,
 						},
 						dedupKey: entry.entryId,
 					},

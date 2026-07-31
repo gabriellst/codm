@@ -209,4 +209,52 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			expect(system).not.toContain('not yours')
 		})
 	})
+
+	/**
+	 * THE QUOTED MESSAGE REACHES THE MODEL — the seam, not the renderer.
+	 *
+	 * `prompt.test.ts` proves the section renders when the INPUT carries a quoted line. This proves the
+	 * turn actually puts it there, which is the half that was missing: `IngestChannelMessage` has always
+	 * computed `repliesToAgent`, spent it on the invocation gate, and thrown the quote away. Nothing
+	 * downstream errored — the agent was simply invoked without being told what it was answering.
+	 *
+	 * Asserted on the USER prompt (`messages[0].content`) rather than the system one, because that is
+	 * where the turn's own material lives: standing instructions go in `system`, and a resumed CLI
+	 * session already holds those.
+	 */
+	describe('the message being replied to travels from the item into the turn', () => {
+		const capturedUserPrompt = async (thread: Thread, quotedAgentText?: string): Promise<string> => {
+			const runner = new CapturingRunner()
+			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+			await testBed.resolve(RunOrchestratorTurn).execute({
+				ownerId: OPERATOR_ID,
+				threadId: thread.id.value,
+				workspacePath: '/tmp/workspace',
+				provider: ProviderKind.CLAUDE_CODE,
+				item: {
+					kind: MailboxItemKind.OPERATOR_MESSAGE,
+					entryId: crypto.randomUUID(),
+					speaker: 'operator',
+					text: 'depois',
+					quotedAgentText,
+				},
+			})
+			return (runner.requests[0]?.messages[0]?.content as string) ?? ''
+		}
+
+		it('an item carrying a quoted agent line puts that line in the prompt', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+			const user = await capturedUserPrompt(thread, 'rodo a migration agora ou depois do deploy?')
+
+			expect(user).toContain('THE MESSAGE THEY REPLIED TO')
+			expect(user).toContain('rodo a migration agora ou depois do deploy?')
+		})
+
+		it('an item without one renders no section — the common turn is untouched', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+			expect(await capturedUserPrompt(thread)).not.toContain('THE MESSAGE THEY REPLIED TO')
+		})
+	})
 })
