@@ -32,7 +32,24 @@ const LANE = 'api'
 
 // Adaptive polling bounds
 const POLL_MIN_MS = 100
-const POLL_MAX_MS = 30_000
+/**
+ * Teto do backoff ocioso. Medido em 31/07: estava em 30s enquanto TODOS os vizinhos param em 2s
+ * (`SqlExternalMediator`, `DrizzleMailboxDispatcher`) e o `CommandQueue` roda fixo em 1s — herança de
+ * contexto de servidor, não decisão para um app local com um operador só.
+ *
+ * A assimetria custava latência pura: num app quieto o poller está no TETO do backoff justamente
+ * quando o evento chega, então um fato de domínio recém-escrito esperava até 30 SEGUNDOS para ser
+ * despachado. O operador sente isso como "o agente demora a responder".
+ *
+ * 1s por decisão do founder (31/07). O custo é uma consulta a mais por segundo num SQLite local —
+ * irrelevante.
+ *
+ * ISTO NÃO É A CORREÇÃO ESTRUTURAL. O lado Go já tem `NotifyStrategy` (`SqliteWalPollingStrategy`),
+ * cujo docblock diz "Notify is only the wake-up": quem escreve acorda o consumidor e o poll vira rede
+ * de segurança. Nenhum dos três pollers do TS tem equivalente — enquanto não tiver, este teto É o
+ * piso da latência, não um detalhe de afinação.
+ */
+const POLL_MAX_MS = 1_000
 const POLL_BACKOFF_FACTOR = 1.5
 
 type OutboxRow = typeof outbox.$inferSelect

@@ -7,11 +7,13 @@ import { forkIssueHandler } from "./forkIssue.ts";
 import { getIssueStatusHandler } from "./getIssueStatus.ts";
 import { getSessionIssuesHandler } from "./getSessionIssues.ts";
 import { raiseStopHandler } from "./raiseStop.ts";
+import { resolveStopHandler } from "./resolveStop.ts";
 import { steerIssueTurnHandler } from "./steerIssueTurn.ts";
 import { forkIssueMutationRequestSchema, forkIssueMutationResponseSchema } from "../../../zod/forkIssueSchema.ts";
 import { getIssueStatusQueryResponseSchema } from "../../../zod/getIssueStatusSchema.ts";
 import { getSessionIssuesQueryResponseSchema } from "../../../zod/getSessionIssuesSchema.ts";
 import { raiseStopMutationRequestSchema, raiseStopMutationResponseSchema } from "../../../zod/raiseStopSchema.ts";
+import { resolveStopMutationRequestSchema, resolveStopMutationResponseSchema } from "../../../zod/resolveStopSchema.ts";
 import { steerIssueTurnMutationRequestSchema, steerIssueTurnMutationResponseSchema } from "../../../zod/steerIssueTurnSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -65,6 +67,15 @@ server.registerTool("GetIssueStatus", {
   inputSchema: { threadId: z.string(), issueId: z.string() },
 }, async ({ threadId, issueId }) => {
   return getIssueStatusHandler({ threadId, issueId })
+})
+          
+
+server.registerTool("ResolveStop", {
+  description: "Resolve a stop — retry / review&send / take over / approve / deny (C25)",
+  outputSchema: { data: resolveStopMutationResponseSchema },
+  inputSchema: { stopId: z.string(), data: resolveStopMutationRequestSchema },
+}, async ({ stopId, data }) => {
+  return resolveStopHandler({ stopId, data })
 })
           
   return server

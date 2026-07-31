@@ -2581,7 +2581,8 @@
     "/v1/stops/{stopId}/resolve": {
       "post": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Resolve a stop — retry / review&send / take over / approve / deny (C25)",
         "operationId": "ResolveStop",
@@ -2630,7 +2631,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       }
     },
     "/v1/threads/{threadId}/resume": {
@@ -8175,6 +8179,7 @@
       "GetIssueStatus",
       "GetSessionIssues",
       "RaiseStop",
+      "ResolveStop",
       "SteerIssueTurn"
     ],
     "system": [

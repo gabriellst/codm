@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { ResolveStop, ResolveStopInputSchema, ResolveStopOutputSchema } from '../usecases/ResolveStop'
 
@@ -19,9 +19,25 @@ export const ResolveStopControllerInputSchema = z
 	])
 export const ResolveStopControllerOutputSchema = ResolveStopOutputSchema
 
+/**
+ * C25 — the operator answers a stop.
+ *
+ * ### Why it is also an `orchestration` tool (issue-resume spec, decision 1)
+ * Half of that decision is "resolve it AND steer the issue with what the operator said", and only the
+ * steering half was callable: the orchestrator holds `SteerIssueTurn` but had no way to close the stop
+ * it was answering, so a conversation that resumed an issue left the stop open forever and the console
+ * kept showing a question that had already been answered. Declaring the scope here is the whole of the
+ * missing half — the door, the use case and the invariants are the console's, unchanged.
+ *
+ * `AgentIdentityMiddleware` is appended automatically by `Controller.executeMiddlewares` because this
+ * static is non-empty; it is NOT fail-closed, so the console operator (who carries no run token) keeps
+ * reaching the same handler exactly as before.
+ */
 // C25
 @injectable()
 export class ResolveStopController extends Controller<typeof ResolveStopControllerInputSchema, typeof ResolveStopControllerOutputSchema> {
+	/** Reachable as an MCP tool under this surface — see `agent/mcp/exposure.ts`. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/stops/:stopId/resolve'
 	readonly method = 'post' as const
 	readonly description = 'Resolve a stop — retry / review&send / take over / approve / deny (C25)'

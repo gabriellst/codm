@@ -15,6 +15,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__GetIssueStatus",
     "mcp__codm__GetSessionIssues",
     "mcp__codm__RaiseStop",
+    "mcp__codm__ResolveStop",
     "mcp__codm__SteerIssueTurn",
   ],
   "system": [
