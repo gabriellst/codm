@@ -1,12 +1,11 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
-import { IconArrowLeft, IconArrowRight, IconChevronRight } from '@tabler/icons-react'
+import { IconChevronRight } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema } from '@codm/client-typescript/typescript'
 import type { GetAttachThreadWizardQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Spinner } from '@/components/ui/spinner'
 import { enumLabel, type DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
 import { StepHeading } from '../StepHeading'
@@ -19,10 +18,9 @@ type WorkspaceStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
 	defaultValues?: DeepPartial<WorkspaceStepData>
 	onSubmit: (data: WorkspaceStepData) => void
 	onBack?: () => void
-	isSubmitting?: boolean
 }
 
-export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isSubmitting, className, ...props }: WorkspaceStepProps) {
+export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, className, ...props }: WorkspaceStepProps) {
 	const { t } = useTranslation()
 
 	const form = useForm({
@@ -43,11 +41,19 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isS
 	 * repetia o que o primeiro já dissera. (O passo de agentes NÃO ganha isto — lá a seleção é uma
 	 * lista, e o primeiro clique não é a resposta inteira; veja o docblock do AgentsStep.)
 	 *
-	 * Entrega por `handleSubmit()` em vez de chamar `onSubmit` direto: assim o clique atravessa o MESMO
-	 * portão de validação do botão (o `safeParse` acima) e não um caminho paralelo que pudesse aceitar
-	 * o que o botão recusaria. O botão fica onde está — é a afordância de teclado, o alvo do Enter, e
-	 * o que fecha o passo quando ele reabre já preenchido por `defaultValues` (voltar e seguir sem
-	 * reescolher).
+	 * Entrega por `handleSubmit()` em vez de chamar `onSubmit` direto: assim o clique atravessa o portão
+	 * de validação do form (o `safeParse` acima) e não um caminho paralelo que pudesse aceitar o que o
+	 * form recusaria.
+	 *
+	 * O RODAPÉ SUMIU POR INTEIRO. O Continuar já era redundante desde que o clique entrega, e o Voltar
+	 * subiu para o `StepHeading` — sem ação e sem volta, não sobrou barra de baixo.
+	 *
+	 * A versão anterior deste docblock defendia manter o Continuar como "o que fecha o passo quando ele
+	 * reabre já preenchido por `defaultValues` (voltar e seguir sem reescolher)". Aquele caminho não se
+	 * perdeu, ele só mudou de gesto: `selectAndAdvance` não pergunta se o valor MUDOU, então clicar de
+	 * novo na linha que já está selecionada entrega o passo igual. É um teste, não uma promessa — veja
+	 * "voltar e seguir sem reescolher" na suíte. Um `if (workspaceId === selected) return` posto aqui
+	 * como otimização trancaria o operador no passo, e é ele que aquele caso derruba.
 	 */
 	const selectAndAdvance = (workspaceId: string) => {
 		form.setFieldValue('workspaceId', workspaceId)
@@ -64,7 +70,7 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isS
 				form.handleSubmit()
 			}}
 		>
-			<StepHeading title={t('attach.stepWorkspaceTitle')} subtitle={t('attach.stepWorkspaceSubtitle')} />
+			<StepHeading title={t('attach.stepWorkspaceTitle')} subtitle={t('attach.stepWorkspaceSubtitle')} onBack={onBack} />
 
 			<form.Subscribe selector={state => state.values.workspaceId}>
 				{selected => (
@@ -96,27 +102,6 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isS
 						))}
 					</div>
 				)}
-			</form.Subscribe>
-
-			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
-				{({ canSubmit, values }) => {
-					const isDisabled = isSubmitting || !canSubmit || !WorkspaceStepSchema.safeParse(values).success
-					return (
-						<div className="flex justify-between">
-							<div>
-								{onBack && (
-									<Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
-										<IconArrowLeft data-icon="inline-start" /> {t('attach.back')}
-									</Button>
-								)}
-							</div>
-							<Button type="submit" disabled={isDisabled}>
-								{isSubmitting && <Spinner className="mr-2" />}
-								{t('attach.continue')} <IconArrowRight data-icon="inline-end" />
-							</Button>
-						</div>
-					)
-				}}
 			</form.Subscribe>
 		</form>
 	)

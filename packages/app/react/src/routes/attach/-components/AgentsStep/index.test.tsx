@@ -135,13 +135,13 @@ describe('AgentsStep — multi-seleção fica fora do auto-avanço', () => {
 		host = null
 	})
 
-	function mount(): void {
+	function mount(props: { onBack?: () => void } = {}): void {
 		host = document.createElement('div')
 		document.body.appendChild(host)
 		const element = host
 		act(() => {
 			root = createRoot(element)
-			root.render(<AgentsStep providers={TWO_AVAILABLE} onSubmit={data => submitted.push(data)} />)
+			root.render(<AgentsStep providers={TWO_AVAILABLE} onSubmit={data => submitted.push(data)} {...props} />)
 		})
 	}
 
@@ -197,5 +197,36 @@ describe('AgentsStep — multi-seleção fica fora do auto-avanço', () => {
 
 		expect(submitted).toHaveLength(1)
 		expect(submitted[0]?.providers).toEqual(['CLAUDE_CODE'])
+	})
+
+	/**
+	 * O RODAPÉ ENCOLHEU PARA A AÇÃO — E A AÇÃO FICA.
+	 *
+	 * Os passos de contato e workspace perderam o rodapé inteiro porque lá o clique JÁ é a resposta. Aqui
+	 * não: `providers` é uma lista, o clique faz toggle, e sem um fecho explícito quem escolhe dois
+	 * agentes não tem gesto para dizer "terminei". Este caso é a trava contra a generalização — se
+	 * alguém varrer o Continuar dos quatro passos por simetria, ele fica vermelho aqui, e só aqui.
+	 *
+	 * O Voltar, esse sim, sobe para o título como nos demais: ele nunca foi uma resposta ao passo, é
+	 * navegação — e navegação não divide barra com a ação que fecha a pergunta.
+	 */
+	it('a ação primária SOBREVIVE neste passo — é o único fecho de uma pergunta que aceita vários sins', () => {
+		mount()
+
+		const submit = host?.querySelector('button[type="submit"]') as HTMLButtonElement | null
+		expect(submit).not.toBeNull()
+		expect(submit?.textContent).toContain(i18n.t('attach.continue'))
+	})
+
+	it('FALSEADOR — o Voltar saiu do rodapé e foi para o cabeçalho, ao lado do título', () => {
+		mount({ onBack: () => {} })
+
+		const back = host?.querySelector('[data-slot="step-heading"] button') as HTMLButtonElement | null
+		expect(back).not.toBeNull()
+		expect(back?.getAttribute('aria-label')).toBe(i18n.t('attach.back'))
+
+		// E não sobrou um segundo Voltar embaixo: o rodapé agora tem exatamente um botão, o de continuar.
+		const submit = host?.querySelector('button[type="submit"]')
+		expect(submit?.parentElement?.querySelectorAll('button')).toHaveLength(1)
 	})
 })

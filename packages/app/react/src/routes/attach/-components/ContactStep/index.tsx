@@ -2,7 +2,7 @@ import { type ComponentProps, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
 import { keepPreviousData } from '@tanstack/react-query'
-import { IconArrowRight, IconChevronRight } from '@tabler/icons-react'
+import { IconChevronRight } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema, useGetAttachThreadWizard } from '@codm/client-typescript/typescript'
 import type { ChannelKind } from '@codm/client-typescript/typescript'
 import { useDebouncedSearch } from '@/hooks'
@@ -23,14 +23,15 @@ export type ContactStepData = (typeof ContactStepSchema)['_zod']['output']
 
 // Omit the native `onSubmit` — the FRM-P17 step contract's `onSubmit(data)` callback (not a form
 // event handler) reuses the name; the component wires the real DOM handler itself.
+// No `onBack`: contact is the FIRST step by construction (`STEPS[0]`), so a back affordance here would
+// model a state that cannot exist. Its absence is exactly what `StepHeading` reads as "no way back".
 type ContactStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
 	channelKindById: Map<string, ChannelKind>
 	defaultValues?: DeepPartial<ContactStepData>
 	onSubmit: (data: ContactStepData) => void
-	isSubmitting?: boolean
 }
 
-export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmitting, className, ...props }: ContactStepProps) {
+export function ContactStep({ channelKindById, defaultValues, onSubmit, className, ...props }: ContactStepProps) {
 	const { t } = useTranslation()
 	/**
 	 * THE SEARCH IS THE SERVER'S, and the step owns the query that carries it (CMP: a component owns
@@ -79,9 +80,13 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmit
 	 * clique que apenas repetia o primeiro. (O passo de agentes NÃO ganha isto — lá a seleção é uma
 	 * lista e o primeiro clique não é a resposta inteira; veja o docblock do AgentsStep.)
 	 *
-	 * Entrega por `handleSubmit()` e não chamando `onSubmit` direto: o clique atravessa o MESMO portão
-	 * de validação do botão (o `safeParse` acima), nunca um caminho paralelo mais permissivo. Contato
-	 * já anexado não chega aqui — a linha é `disabled`, e o clique nela não dispara evento.
+	 * Entrega por `handleSubmit()` e não chamando `onSubmit` direto: o clique atravessa o portão de
+	 * validação do form (o `safeParse` acima), nunca um caminho paralelo mais permissivo. Contato já
+	 * anexado não chega aqui — a linha é `disabled`, e o clique nela não dispara evento.
+	 *
+	 * O RODAPÉ SUMIU POR INTEIRO daqui. Não sobrou Continuar (a linha já entrega) e nunca houve Voltar
+	 * (este é o primeiro passo). O `<form>` continua: ele é dono do estado validado, e mantém o Enter
+	 * no campo de busca como caminho de teclado para o passo.
 	 */
 	const selectAndAdvance = (contactRef: ContactStepData['contactRef']) => {
 		form.setFieldValue('contactRef', contactRef)
@@ -157,20 +162,6 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmit
 						})}
 					</div>
 				)}
-			</form.Subscribe>
-
-			<form.Subscribe selector={state => ({ canSubmit: state.canSubmit, values: state.values })}>
-				{({ canSubmit, values }) => {
-					const isDisabled = isSubmitting || !canSubmit || !ContactStepSchema.safeParse(values).success
-					return (
-						<div className="flex justify-end">
-							<Button type="submit" disabled={isDisabled}>
-								{isSubmitting && <Spinner className="mr-2" />}
-								{t('attach.continue')} <IconArrowRight data-icon="inline-end" />
-							</Button>
-						</div>
-					)
-				}}
 			</form.Subscribe>
 		</form>
 	)

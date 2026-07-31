@@ -1,6 +1,5 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconArrowLeft } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema } from '@codm/client-typescript/typescript'
 import type { ChannelKind, GetAttachThreadWizardQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
@@ -23,12 +22,30 @@ type ReviewStepProps = ComponentProps<'div'> & {
 	isSubmitting?: boolean
 }
 
+/**
+ * `Anexar` NÃO É UM "CONTINUAR", É O COMMIT DO WIZARD — e por isso ficou.
+ *
+ * A varredura dos rodapés tirou a ação primária de contato e workspace porque lá ela era um segundo
+ * clique repetindo o primeiro: escolher já era responder. Aqui não há linha para clicar e não há
+ * próximo passo — este botão dispara a mutation `AttachThread`, que CRIA a conversa. Não existe outro
+ * gesto do qual inferi-lo, e inferi-lo de algum seria criar a conversa sem ninguém ter confirmado: a
+ * tela de revisão existe justamente para que o último ato seja deliberado.
+ *
+ * O Voltar, esse, subiu para o `StepHeading` como nos demais passos, e continua travado
+ * (`backDisabled`) enquanto a mutation está no ar — recuar no meio de um commit é a única volta que
+ * este passo não pode oferecer.
+ */
 export function ReviewStep({ form, channelKindById, workspaces, onBack, onFinish, isSubmitting, className, ...props }: ReviewStepProps) {
 	const { t } = useTranslation()
 
 	return (
 		<div className={cn('flex flex-col gap-5', className)} {...props}>
-			<StepHeading title={t('attach.stepReviewTitle')} subtitle={t('attach.stepReviewSubtitle')} />
+			<StepHeading
+				title={t('attach.stepReviewTitle')}
+				subtitle={t('attach.stepReviewSubtitle')}
+				onBack={onBack}
+				backDisabled={isSubmitting}
+			/>
 
 			<form.Subscribe selector={state => state.values}>
 				{values => {
@@ -54,14 +71,8 @@ export function ReviewStep({ form, channelKindById, workspaces, onBack, onFinish
 								))}
 							</div>
 
-							<div className="flex justify-between">
-								<div>
-									{onBack && (
-										<Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
-											<IconArrowLeft data-icon="inline-start" /> {t('attach.back')}
-										</Button>
-									)}
-								</div>
+							{/* Só o commit. O Voltar subiu para o `StepHeading`, travado enquanto a mutation corre. */}
+							<div className="flex justify-end">
 								<Button type="button" onClick={onFinish} disabled={isSubmitting || !canFinish}>
 									{isSubmitting && <Spinner className="mr-2" />}
 									{isSubmitting ? t('attach.attaching') : t('attach.finish')}

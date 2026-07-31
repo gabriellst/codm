@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
-import { IconArrowLeft, IconArrowRight, IconCheck } from '@tabler/icons-react'
+import { IconArrowRight, IconCheck } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema } from '@codm/client-typescript/typescript'
 import type { GetAttachThreadWizardQueryResponse, ProviderKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
@@ -54,6 +54,22 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 	 * gesto, na mesma lista, avançaria ou não conforme um estado invisível — afordância pior do que um
 	 * botão honesto. Aqui o Continuar continua sendo a resposta, porque aqui a pergunta admite mais de
 	 * um sim.
+	 *
+	 * ─── POR QUE A AÇÃO PRIMÁRIA SOBREVIVEU AQUI, QUANDO AS OUTRAS SUMIRAM ───────────────────────────
+	 *
+	 * O founder mandou tirar o rodapé da criação da thread: "continuar é inferido pelo clique". Em
+	 * contato e workspace isso se cumpre literalmente — o campo é escalar, o clique É a resposta, e o
+	 * rodapé sumiu por inteiro. Aqui a mesma frase pede o contrário: se o clique fosse o continuar,
+	 * `providers` nunca poderia receber o segundo item, porque o primeiro já teria levado o operador
+	 * embora. O gesto que INFERE o avanço e o gesto que ACRESCENTA à resposta são o mesmo gesto nesta
+	 * lista, e só um deles pode ganhar.
+	 *
+	 * Isto não é opinião: enxertar o auto-avanço aqui derruba 3 dos 6 casos da suíte deste passo,
+	 * incluindo "dois provedores cabem na mesma resposta". O botão é o que torna a multi-seleção
+	 * alcançável — enquanto ele existir, escolher dois agentes é possível.
+	 *
+	 * O Voltar, esse, foi embora daqui como nos demais: subiu para o `StepHeading`. Ele nunca respondeu
+	 * ao passo — é navegação, e o rodapé agora carrega só o que fecha a pergunta.
 	 */
 	const toggle = (provider: ProviderKind) => {
 		const current = (form.getFieldValue('providers') as ProviderKind[] | undefined) ?? []
@@ -71,7 +87,7 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 				form.handleSubmit()
 			}}
 		>
-			<StepHeading title={t('attach.stepAgentsTitle')} subtitle={t('attach.stepAgentsSubtitle')} />
+			<StepHeading title={t('attach.stepAgentsTitle')} subtitle={t('attach.stepAgentsSubtitle')} onBack={onBack} />
 
 			<form.Subscribe selector={state => (state.values.providers as ProviderKind[] | undefined) ?? []}>
 				{selected => (
@@ -129,14 +145,9 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 				{({ canSubmit, values }) => {
 					const isDisabled = isSubmitting || !canSubmit || !AgentsStepSchema.safeParse(values).success
 					return (
-						<div className="flex justify-between">
-							<div>
-								{onBack && (
-									<Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
-										<IconArrowLeft data-icon="inline-start" /> {t('attach.back')}
-									</Button>
-								)}
-							</div>
+						// Só a ação. O Voltar subiu para o `StepHeading` como nos outros passos — ele nunca foi
+						// uma resposta a esta pergunta, e navegação não divide barra com o botão que a fecha.
+						<div className="flex justify-end">
 							<Button type="submit" disabled={isDisabled}>
 								{isSubmitting && <Spinner className="mr-2" />}
 								{t('attach.continue')} <IconArrowRight data-icon="inline-end" />

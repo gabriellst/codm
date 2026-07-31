@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { configureClient } from '@codm/client-typescript/http'
 import { enumLabel } from '@/lib'
+import i18n from '@/lib/i18n'
 import { ContactStep } from '.'
 
 /**
@@ -173,7 +174,8 @@ describe('ContactStep — clicar no contato avança o passo', () => {
 	const realFetch = globalThis.fetch
 	let payload: unknown = EMPTY_WIZARD
 
-	beforeEach(() => {
+	beforeEach(async () => {
+		await i18n.changeLanguage('pt')
 		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
 		submitted = []
 		payload = EMPTY_WIZARD
@@ -244,5 +246,25 @@ describe('ContactStep — clicar no contato avança o passo', () => {
 		await click(row)
 
 		expect(submitted).toEqual([])
+	})
+
+	/**
+	 * O RODAPÉ INTEIRO SAIU DESTE PASSO — não sobrou botão nenhum embaixo.
+	 *
+	 * Aqui o Continuar já era redundante desde `44f98160` (o clique na linha entrega o passo), e o
+	 * Voltar nunca existiu: contato é o PRIMEIRO passo, o wizard não lhe passa `onBack`, e é justamente
+	 * essa ausência que o `StepHeading` usa como predicado. Sem ação e sem volta, a barra de baixo não
+	 * tinha mais nada para segurar.
+	 *
+	 * O caso mede a ausência pelos DOIS caminhos — nenhum `type="submit"` e nenhum "Continuar" escrito
+	 * — porque um botão reintroduzido como `type="button"` passaria pela primeira metade sozinha.
+	 */
+	it('o rodapé sumiu por inteiro — nada de Continuar, e nem um Voltar que este passo não tem', async () => {
+		payload = TWO_KINDS
+		await mount()
+
+		expect(host?.querySelector('button[type="submit"]')).toBeNull()
+		expect(host?.textContent).not.toContain(i18n.t('attach.continue'))
+		expect(host?.querySelector('[data-slot="step-heading"] button')).toBeNull()
 	})
 })
