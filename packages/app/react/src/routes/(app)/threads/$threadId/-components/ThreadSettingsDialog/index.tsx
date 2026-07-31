@@ -114,7 +114,39 @@ function DangerZone({ threadId, threadName, className, ...props }: { threadId: s
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 	const { confirm, hide } = useDialogStore()
-	const deleteThread = useDeleteThread()
+	/**
+	 * AS CALLBACKS VIVEM NO HOOK, NUNCA NO `mutate()`. A diferença não é estilo — é a diferença entre
+	 * funcionar e não funcionar aqui.
+	 *
+	 * `confirm()` SUBSTITUI o conteúdo do dialog pelo ConfirmDialog, o que DESMONTA este componente
+	 * enquanto o operador confirma. Callbacks passadas a `mutate(vars, { onSuccess })` vivem no observer
+	 * do React Query, e ele não as chama quando o componente desmontou — a requisição sai, o servidor
+	 * apaga, e o `onSuccess` inteiro simplesmente não roda. Foi esse o bug relatado: a conversa sumia do
+	 * backend e a UI ficava parada na thread apagada.
+	 *
+	 * Callbacks no nível do hook vivem na MUTAÇÃO, não no observer, e sobrevivem ao desmonte.
+	 */
+	const deleteThread = useDeleteThread({
+		mutation: {
+			onSuccess: () => {
+				hide()
+
+				// REMOVE, não invalide, o que pertence à thread apagada: para uma thread que não existe mais,
+				// "busque de novo" só pode responder THREAD_NOT_FOUND (spec de deleção, AC-3).
+				queryClient.removeQueries({ queryKey: getSessionChatQueryKey(threadId) })
+				queryClient.removeQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+				queryClient.removeQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
+
+				// A LISTA também sai do cache: a barra lateral lê `dashboard.threads`, e invalidar deixaria a
+				// conversa apagada aparecendo enquanto o refetch corre. Remover troca o fantasma por skeleton.
+				queryClient.removeQueries({ queryKey: getHomeDashboardQueryKey() })
+
+				// Sempre para a home: com a thread apagada, qualquer rota que dependa daquele id responde
+				// not-found.
+				navigate({ to: '/dashboard' })
+			},
+		},
+	})
 
 	const onDelete = async () => {
 		const ok = await confirm({
@@ -126,43 +158,7 @@ function DangerZone({ threadId, threadName, className, ...props }: { threadId: s
 		})
 		if (!ok) return
 
-		deleteThread.mutate(
-			{ threadId },
-			{
-				onSuccess: () => {
-					hide()
-
-					// REMOVE, não invalide, o que pertence à thread apagada.
-					//
-					// `invalidateQueries` significa "isso envelheceu, busque de novo" — e para uma thread que acabou
-					// de ser apagada, buscar de novo é um refetch que só pode responder THREAD_NOT_FOUND (spec de
-					// deleção, AC-3). `removeQueries` diz a verdade: não há o que revalidar, a entrada morre com a
-					// thread.
-					//
-					// HONESTIDADE SOBRE O GANHO: com o dialog desmontando antes (`hide()` acima), as duas chamadas
-					// são indistinguíveis — sem observador ativo, `invalidateQueries` não refaz busca nenhuma. Tentei
-					// três asserções (rede e cache) e nenhuma fica vermelha sob a mutação. A diferença aparece com a
-					// PÁGINA da thread montada, que é o caso normal, e o teste irmão ainda não monta a rota. Isto é
-					// correção por PRINCÍPIO, não por bug demonstrado — registrado assim de propósito.
-					queryClient.removeQueries({ queryKey: getSessionChatQueryKey(threadId) })
-					queryClient.removeQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
-					queryClient.removeQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
-
-					// A LISTA também sai do cache, em vez de ser invalidada.
-					//
-					// A home é para onde vamos, e a barra lateral lê `dashboard.threads` (Navbar) — o mesmo
-					// payload. Invalidar mantém o valor antigo servindo enquanto o refetch corre, então a
-					// conversa apagada AINDA APARECE na entrada, e some sozinha um instante depois. Remover
-					// troca esse fantasma por um skeleton: o operador vê "carregando" e então a verdade, nunca
-					// a linha que ele acabou de apagar.
-					queryClient.removeQueries({ queryKey: getHomeDashboardQueryKey() })
-
-					// Sempre para a home, não só quando se está vendo a thread: com ela apagada, qualquer rota
-					// que dependa desse id passa a responder not-found.
-					navigate({ to: '/dashboard' })
-				},
-			},
-		)
+		deleteThread.mutate({ threadId })
 	}
 
 	return (

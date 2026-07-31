@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, createMemoryHistory, createRootRoute, createRouter } from '@tanstack/react-router'
 import { configureClient } from '@codm/client-typescript/http'
+import { getHomeDashboardQueryKey, getSessionChatQueryKey } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
 import { Dialog } from '@/components/ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
@@ -309,16 +310,19 @@ describe('ThreadSettingsDialog — apagar a conversa', () => {
 		}
 		expect(deleteIndex).toBeGreaterThanOrEqual(0)
 
-		// O QUE ESTE TESTE PROVA, E O QUE ELE NAO PROVA.
+		// O EFEITO, nao so a chamada. O DELETE sair prova o fluxo ate o servidor; o que o operador vive
+		// depois disso e a navegacao e a lista limpa — e era exatamente isso que faltava.
 		//
-		// Prova: o caminho inteiro funciona pelo host da store — clicar em apagar abre a confirmacao, confirmar
-		// dispara o DELETE. Sem isso, uma regressao no fluxo (botao que nao confirma, confirmacao que nao
-		// dispara) passaria despercebida.
-		//
-		// NAO prova que `removeQueries` e melhor que `invalidateQueries` aqui: tentei tres assercoes (rede,
-		// cache) e NENHUMA fica vermelha sob essa mutacao. O motivo e estrutural — `hide()` desmonta o dialog
-		// antes da limpeza rodar, e sem observador ativo `invalidateQueries` nao refaz busca nenhuma. A
-		// diferenca so aparece com a PAGINA da thread montada (o caso normal: o operador esta vendo a
-		// conversa), e este harness monta so o dialog. Montar a rota junto e o proximo passo, se valer.
+		// POR QUE ISSO QUEBRAVA: `confirm()` SUBSTITUI o conteudo do dialog pelo ConfirmDialog, o que
+		// DESMONTA o DangerZone enquanto o operador confirma. Callbacks passadas a `mutate(vars, {...})`
+		// vivem no observer e o React Query nao as chama quando o componente desmontou — enquanto a
+		// requisicao sai normalmente. Resultado no app real: a conversa era apagada no servidor e a UI
+		// ficava parada. As callbacks no NIVEL DO HOOK vivem na mutacao, nao no observer, e sobrevivem.
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 150))
+		})
+		expect(queryClient.getQueryData(getSessionChatQueryKey(THREAD_ID))).toBeUndefined()
+		expect(queryClient.getQueryData(getHomeDashboardQueryKey())).toBeUndefined()
+		expect(router.state.location.pathname).toBe('/dashboard')
 	})
 })
