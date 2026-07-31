@@ -53,7 +53,7 @@ export function StatCard({ icon: Icon, label, value, deltaPct, tone, adornment, 
 			>
 				<Icon className="size-5" />
 			</span>
-			<div className="flex min-w-0 flex-1 flex-col gap-2">
+			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 				<div className="flex items-end gap-0.5">
 					<span className={cn('truncate text-lg font-medium', onColor ? 'opacity-90' : 'text-muted-foreground')}>{label}</span>
 					{adornment}

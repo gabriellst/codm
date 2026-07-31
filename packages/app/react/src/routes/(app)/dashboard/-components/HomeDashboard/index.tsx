@@ -96,7 +96,7 @@ function ActiveSessions({ sessions }: { sessions: Dashboard['activeSessions'] })
 							className="flex items-center gap-3 p-4 transition-colors hover:bg-muted"
 						>
 							<ThreadAvatar name={session.displayName} channelKind={session.channelKind} />
-							<div className="flex min-w-0 flex-1 flex-col">
+							<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 								<span className="truncate font-medium text-foreground">{session.displayName}</span>
 								<span className="truncate text-sm text-muted-foreground">{session.lastActivity}</span>
 							</div>

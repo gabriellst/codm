@@ -85,7 +85,7 @@ export function ProvidersSection({ className, ...props }: ComponentProps<'sectio
 								<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
 									<Glyph className="size-5" />
 								</span>
-								<div className="flex min-w-0 flex-1 flex-col">
+								<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 									<span className="font-semibold text-foreground">{providerLabel[provider.name]}</span>
 									<span className="truncate font-mono text-xs text-muted-foreground">
 										{path}

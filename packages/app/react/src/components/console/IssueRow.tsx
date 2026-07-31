@@ -41,7 +41,7 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 					<span className="max-w-32 truncate text-sm text-foreground">{item.threadDisplayName}</span>
 				</span>
 			)}
-			<div className="flex min-w-0 flex-1 flex-col">
+			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 				{/* `title` keeps the full sentence reachable on hover — an issue title is dictated prose and
 				    is regularly longer than the row it has to fit in. */}
 				<span

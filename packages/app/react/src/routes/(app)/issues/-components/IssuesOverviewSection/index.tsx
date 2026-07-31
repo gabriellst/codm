@@ -36,7 +36,7 @@ export function IssuesOverviewSection({ className, ...props }: ComponentProps<'d
 	)
 
 	return (
-		<div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
+		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('issues.title')}
 				subtitle={subtitle ?? <Skeleton className="h-4 w-64" />}

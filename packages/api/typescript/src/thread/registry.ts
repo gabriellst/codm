@@ -3,9 +3,6 @@ import './errors' // Side-effect: registers this context's error codes with the 
 
 import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
 import { ChannelSender, GatewayChannelSender, MockChannelSender } from './services/ChannelSender'
-
-/** The Playwright harness boots the real daemon with no gateway behind it — see the ChannelSender binding. */
-const E2E = process.env.CODM_E2E === 'true'
 import { ThreadRepository, DrizzleThreadRepository, MockThreadRepository } from './repositories/ThreadRepository'
 import {
 	ConsumedMessageRepository,
@@ -22,6 +19,9 @@ import { ChannelConnectivity, DrizzleChannelConnectivity, MockChannelConnectivit
 import { GroupMemberReader, DrizzleGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
 import { ThreadStatusDeriver, DrizzleThreadStatusDeriver, MockThreadStatusDeriver } from './services/ThreadStatusDeriver'
 import { ReplyStreamer } from './services/ReplyStreamer'
+
+/** The Playwright harness boots the real daemon with no gateway behind it — see the ChannelSender binding. */
+const E2E = process.env.CODM_E2E === 'true'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —

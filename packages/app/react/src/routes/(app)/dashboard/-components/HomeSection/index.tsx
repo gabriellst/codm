@@ -15,7 +15,7 @@ export function HomeSection({ className, ...props }: ComponentProps<'div'>) {
 
 	if (isLoading || !data) {
 		return (
-			<div className={cn('mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-6 pt-24', className)} {...props}>
+			<div className={cn('mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-6 pt-24', className)} {...props}>
 				<Skeleton className="h-10 w-72" />
 				<Skeleton className="h-64 w-full max-w-xl rounded-2xl" />
 			</div>

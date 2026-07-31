@@ -42,8 +42,8 @@ export function PageHeader({
 				)}
 				{/* Title + subtitle share a column so the subtitle left-aligns with the TITLE TEXT,
 				    not the container edge (it must never hang under the back button). */}
-				<div className="flex min-w-0 flex-col gap-2">
-					<h1 className="heading-display text-3xl text-foreground md:text-4xl">{title}</h1>
+				<div className="flex min-w-0 flex-col gap-1.5">
+					<h1 className="heading-display text-4xl text-foreground md:text-4xl">{title}</h1>
 					{subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
 				</div>
 			</div>

@@ -28,7 +28,7 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 	const statusByKind = new Map<ChannelKind, ChannelStatus>((data?.channels ?? []).map(c => [c.kind, c.status]))
 
 	return (
-		<div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
+		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('channels.title')}
 				action={<Button onClick={() => show(<ConnectChannelDialog />)}>{t('channels.connectChannel')}</Button>}
@@ -54,7 +54,7 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 									<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
 										<Glyph className="size-5" />
 									</span>
-									<div className="flex min-w-0 flex-1 flex-col">
+									<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 										<span className="font-semibold text-foreground">{enumLabel('ChannelKind', kind)}</span>
 										<span className="text-sm text-muted-foreground">
 											{connectable ? enumLabel('ChannelStatus', status) : t('channels.comingSoon')}
@@ -74,15 +74,17 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 							// The handler is explicit now: the row calls `show()` itself instead of handing a
 							// trigger element to a dialog that owned its own `open` (component bp-24).
 							return (
-								<button
+								<Button
+									variant={'ghost'}
+									size="none"
 									key={kind}
 									type="button"
-									className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted"
+									className="flex w-full items-center gap-4 rounded-none p-4 text-left transition-colors hover:bg-muted"
 									onClick={() => show(<ConnectChannelDialog />)}
 								>
 									{body}
 									<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-								</button>
+								</Button>
 							)
 						})}
 					</div>

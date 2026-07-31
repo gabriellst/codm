@@ -190,8 +190,8 @@
 		"threads": "Conversas"
 	},
 	"dashboard": {
-		"activeSessions": "Sessões ativas",
-		"agentsWorkingNone": "Nenhum agente trabalhando agora",
+		"activeSessions": "Sessões de agente ativas",
+		"agentsWorkingNone": "Sem agentes trabalhando agora",
 		"agentsWorking_one": "{{count}} agente trabalhando agora",
 		"agentsWorking_other": "{{count}} agentes trabalhando agora",
 		"channels": "Canais",
@@ -425,6 +425,7 @@
 		"PASSWORD_TOO_WEAK": "Senha muito fraca. Use letras, números e símbolos.",
 		"PATH_NOT_A_DIRECTORY": "O caminho selecionado não é um diretório.",
 		"PATH_NOT_FOUND": "O caminho selecionado não existe.",
+		"PROMPT_TOO_LONG": "O prompt personalizado é longo demais para uma conversa.",
 		"PROVIDER_COMING_SOON": "Este agente ainda não pode ser dirigido. Escolha um que já pode.",
 		"PROVIDER_NOT_DETECTED": "Provedor de agente não detectado.",
 		"QUOTED_ENTRY_NOT_IN_THREAD": "A mensagem citada pertence a outra conversa.",
@@ -533,6 +534,12 @@
 		"composerSteerHint": "Sussurros chegam apenas aos agentes — nunca enviados ao canal.",
 		"contextBuffer": "Buffer de contexto",
 		"contextBufferHint": "Toda mensagem entra num buffer rolante que os agentes podem ler — inclusive de quem não pode invocar.",
+		"customPrompt": "Prompt personalizado",
+		"customPromptCounter": "{{used}} de {{max}} caracteres",
+		"customPromptHint": "Instruções suas para esta conversa. Elas entram no prompt do agente a cada mensagem e valem mais que os padrões da casa — menos reescrever histórico do git e instalar dependências, que continuam proibidos.",
+		"customPromptPlaceholder": "Ex.: fale sempre em inglês com este cliente. Nunca prometa prazo.",
+		"customPromptSave": "Salvar prompt",
+		"customPromptSaved": "Prompt salvo",
 		"deleteThread": {
 			"action": "Apagar conversa",
 			"confirmAction": "Apagar conversa",
