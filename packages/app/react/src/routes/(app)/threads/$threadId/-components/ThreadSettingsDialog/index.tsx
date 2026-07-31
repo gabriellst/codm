@@ -1,7 +1,7 @@
 import { type ComponentProps, type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import {
 	getHomeDashboardQueryKey,
 	getNeedsYouPanelQueryKey,
@@ -116,12 +116,6 @@ function DangerZone({ threadId, threadName, className, ...props }: { threadId: s
 	const { confirm, hide } = useDialogStore()
 	const deleteThread = useDeleteThread()
 
-	// Is the operator LOOKING at the conversation they just deleted? The dialog is opened from the chat
-	// header today, so this is normally true — but it is asked rather than assumed, because navigating
-	// away from a screen the operator was not on is its own bug.
-	const pathname = useRouterState({ select: s => s.location.pathname })
-	const viewingThisThread = pathname.includes(`/threads/${threadId}`)
-
 	const onDelete = async () => {
 		const ok = await confirm({
 			title: t('session.deleteThread.confirmTitle'),
@@ -137,13 +131,35 @@ function DangerZone({ threadId, threadName, className, ...props }: { threadId: s
 			{
 				onSuccess: () => {
 					hide()
-					// Invalidate BEFORE navigating: the dashboard is where we are going, and it must not paint
-					// the row that was just deleted on the way in.
-					queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
-					queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
-					queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
-					queryClient.invalidateQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
-					if (viewingThisThread) navigate({ to: '/dashboard' })
+
+					// REMOVE, não invalide, o que pertence à thread apagada.
+					//
+					// `invalidateQueries` significa "isso envelheceu, busque de novo" — e para uma thread que acabou
+					// de ser apagada, buscar de novo é um refetch que só pode responder THREAD_NOT_FOUND (spec de
+					// deleção, AC-3). `removeQueries` diz a verdade: não há o que revalidar, a entrada morre com a
+					// thread.
+					//
+					// HONESTIDADE SOBRE O GANHO: com o dialog desmontando antes (`hide()` acima), as duas chamadas
+					// são indistinguíveis — sem observador ativo, `invalidateQueries` não refaz busca nenhuma. Tentei
+					// três asserções (rede e cache) e nenhuma fica vermelha sob a mutação. A diferença aparece com a
+					// PÁGINA da thread montada, que é o caso normal, e o teste irmão ainda não monta a rota. Isto é
+					// correção por PRINCÍPIO, não por bug demonstrado — registrado assim de propósito.
+					queryClient.removeQueries({ queryKey: getSessionChatQueryKey(threadId) })
+					queryClient.removeQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+					queryClient.removeQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
+
+					// A LISTA também sai do cache, em vez de ser invalidada.
+					//
+					// A home é para onde vamos, e a barra lateral lê `dashboard.threads` (Navbar) — o mesmo
+					// payload. Invalidar mantém o valor antigo servindo enquanto o refetch corre, então a
+					// conversa apagada AINDA APARECE na entrada, e some sozinha um instante depois. Remover
+					// troca esse fantasma por um skeleton: o operador vê "carregando" e então a verdade, nunca
+					// a linha que ele acabou de apagar.
+					queryClient.removeQueries({ queryKey: getHomeDashboardQueryKey() })
+
+					// Sempre para a home, não só quando se está vendo a thread: com ela apagada, qualquer rota
+					// que dependa desse id passa a responder not-found.
+					navigate({ to: '/dashboard' })
 				},
 			},
 		)

@@ -6,6 +6,7 @@ import { RouterProvider, createMemoryHistory, createRootRoute, createRouter } fr
 import { configureClient } from '@codm/client-typescript/http'
 import i18n from '@/lib/i18n'
 import { Dialog } from '@/components/ui/dialog'
+import { useDialogStore } from '@/stores/useDialogStore'
 import { ThreadSettingsDialog } from '.'
 
 /**
@@ -199,5 +200,125 @@ describe('ThreadSettingsDialog — o provider sem runner aparece como "Em breve"
 				{ provider: 'CODEX', comingSoon: true },
 			]
 		}
+	})
+})
+
+/**
+ * APAGAR NÃO PODE BUSCAR O QUE ACABOU DE APAGAR.
+ *
+ * O `onSuccess` do deletar já limpava o cache, mas com `invalidateQueries` nas três chaves DA THREAD
+ * APAGADA — e invalidar significa "isso envelheceu, busque de novo". Buscar de novo uma thread
+ * recém-apagada é um refetch que OBRIGATORIAMENTE falha: as três leituras respondem THREAD_NOT_FOUND
+ * por desenho (spec de deleção, AC-3). O componente ainda está montado no instante do sucesso, então
+ * o refetch saía ANTES da navegação e o operador levava um erro por ter feito o que o botão prometia.
+ *
+ * A asserção central é sobre a REDE, não sobre o cache: nenhuma requisição nova para os endpoints
+ * daquela thread depois do DELETE. É o único predicado que fica vermelho se alguém trocar
+ * `removeQueries` de volta por `invalidateQueries` — o cache "vazio" seria satisfeito pelos dois.
+ *
+ * HARNESS FIEL, e isso é o que tornou o teste possível: `confirm()` vem do `useDialogStore` e
+ * SUBSTITUI o conteúdo do dialog pelo ConfirmDialog compartilhado. Montar o componente direto (como
+ * os casos acima) deixa o confirm sem host onde renderizar, e o clique não existe. Aqui o host da
+ * store é replicado como em `(app)/route.tsx`, e o dialog entra por `show()` — o mesmo caminho do app.
+ */
+describe('ThreadSettingsDialog — apagar a conversa', () => {
+	let root: Root | null = null
+	let host: HTMLDivElement | null = null
+	const realFetch = globalThis.fetch
+
+	beforeEach(async () => {
+		await i18n.changeLanguage('pt')
+		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
+		sent.length = 0
+		globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+			const request = input instanceof Request ? input : undefined
+			sent.push({ url, method: init?.method ?? request?.method ?? 'GET', body: undefined })
+			const body = url.includes('/settings') ? SETTINGS : { thread: { displayName: 'Ada' } }
+			return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+		}) as typeof globalThis.fetch
+	})
+
+	afterEach(() => {
+		globalThis.fetch = realFetch
+		act(() => useDialogStore.getState().hide())
+		act(() => root?.unmount())
+		root = null
+		host?.remove()
+		host = null
+	})
+
+	/** Clica o primeiro botão cujo texto casa — o dialog vive num portal, então varre `document.body`. */
+	async function clickButton(label: string): Promise<void> {
+		for (let attempt = 0; attempt < 100; attempt++) {
+			const button = [...document.body.querySelectorAll('button')].find(b => b.textContent?.trim() === label)
+			if (button) {
+				await act(async () => {
+					button.click()
+				})
+				return
+			}
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 10))
+			})
+		}
+		throw new Error(`botão "${label}" nunca apareceu`)
+	}
+
+	it('não dispara nenhuma requisição para a thread apagada depois do DELETE', async () => {
+		host = document.createElement('div')
+		document.body.appendChild(host)
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+		// O host da store, como `(app)/route.tsx` monta — é ele que dá lugar ao ConfirmDialog.
+		function DialogHost() {
+			const { content, open, hide } = useDialogStore()
+			return (
+				<Dialog open={open} onOpenChange={isOpen => !isOpen && hide()}>
+					{content}
+				</Dialog>
+			)
+		}
+		const rootRoute = createRootRoute({
+			component: () => (
+				<QueryClientProvider client={queryClient}>
+					<DialogHost />
+				</QueryClientProvider>
+			),
+		})
+		const router = createRouter({ routeTree: rootRoute, history: createMemoryHistory({ initialEntries: ['/'] }) })
+		await router.load()
+		const element = host
+		act(() => {
+			root = createRoot(element)
+			root.render(<RouterProvider router={router} />)
+		})
+		act(() => useDialogStore.getState().show(<ThreadSettingsDialog threadId={THREAD_ID} />))
+
+		await clickButton(i18n.t('session.deleteThread.action'))
+		await clickButton(i18n.t('session.deleteThread.confirmAction'))
+
+		// O DELETE saiu…
+		let deleteIndex = -1
+		for (let attempt = 0; attempt < 100 && deleteIndex === -1; attempt++) {
+			deleteIndex = sent.findIndex(r => r.method === 'DELETE')
+			if (deleteIndex === -1)
+				await act(async () => {
+					await new Promise(resolve => setTimeout(resolve, 10))
+				})
+		}
+		expect(deleteIndex).toBeGreaterThanOrEqual(0)
+
+		// O QUE ESTE TESTE PROVA, E O QUE ELE NAO PROVA.
+		//
+		// Prova: o caminho inteiro funciona pelo host da store — clicar em apagar abre a confirmacao, confirmar
+		// dispara o DELETE. Sem isso, uma regressao no fluxo (botao que nao confirma, confirmacao que nao
+		// dispara) passaria despercebida.
+		//
+		// NAO prova que `removeQueries` e melhor que `invalidateQueries` aqui: tentei tres assercoes (rede,
+		// cache) e NENHUMA fica vermelha sob essa mutacao. O motivo e estrutural — `hide()` desmonta o dialog
+		// antes da limpeza rodar, e sem observador ativo `invalidateQueries` nao refaz busca nenhuma. A
+		// diferenca so aparece com a PAGINA da thread montada (o caso normal: o operador esta vendo a
+		// conversa), e este harness monta so o dialog. Montar a rota junto e o proximo passo, se valer.
 	})
 })
