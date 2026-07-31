@@ -1,9 +1,11 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, LoggingService, z } from '@codm/core-typescript'
+import { CommandQueue, Handler, LoggingService, tryCatchAsync, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { MessageAuthor } from '@codm/contracts-typescript/wire/enums'
 import { ChannelSender } from '../services/ChannelSender'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+import { typingBeatJobIds } from '../utils'
+import type { SustainTypingPresence } from './SustainTypingPresence'
 
 export const DeliverChannelMessageInputSchema = z.object({
 	// The gateway scopes every write by owner and must never be handed a forged one — so the owner is
@@ -66,6 +68,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 	constructor(
 		private readonly sender: ChannelSender,
 		private readonly consumed: ConsumedMessageRepository,
+		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -87,6 +90,37 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 			await this.withTransaction(tx, tx => this.consumed.claim({ ownerId, channelId, platformMessageId: messageId }, tx))
 		}
 
+		await this.stopTypingPresence(channelId, contactExternalId)
+
 		this.logging.info({ content: { message: 'channel message delivered', channelId, messageId, author } })
+	}
+
+	/**
+	 * "Cessa quando o primeiro texto sai" (streaming spec, AC-10) — the typing loop's LAST line of
+	 * defence, not its guarantee.
+	 *
+	 * ### Why the canceller is here and not where the loop started
+	 * This is the moment the words land, and the words are what replace the signal — on WhatsApp a
+	 * message arriving clears the sender's "digitando…" on its own. So the only thing left to do is
+	 * stop paying for beats nobody will see, and the handles are DERIVED from the conversation
+	 * (`typingBeatJobIds`), which means this use case can stop a loop it never started and was never
+	 * told about. Nothing had to be plumbed through the turn.
+	 *
+	 * ### Why AFTER the send, and why swallowed
+	 * After, because until the send returns we are still generating as far as the contact is concerned,
+	 * and a send that throws is retried — the indicator should stay lit across that retry. Swallowed,
+	 * because a cue may never fail a delivery (decision 12): the reply is already on the channel by
+	 * this line, and `SustainTypingPresence` is built so that failing to cancel costs at most one beat
+	 * interval, with the platform's own ~10s expiry and the loop's ceiling behind it.
+	 */
+	private async stopTypingPresence(channelId: string, remoteId: string): Promise<void> {
+		for (const jobId of typingBeatJobIds(channelId, remoteId)) {
+			const outcome = await tryCatchAsync(() =>
+				this.commands.cancelCommand('sustain_typing_presence' satisfies SustainTypingPresence['name'], jobId),
+			)
+			if (!outcome.success) {
+				this.logging.info({ content: { message: 'typing presence not cancelled (best-effort)', channelId, reason: outcome.error.message } })
+			}
+		}
 	}
 }

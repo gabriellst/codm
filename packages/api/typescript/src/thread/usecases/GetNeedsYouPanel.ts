@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
 import { stops, issues, threads } from '@codm/contracts/db'
 import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
-import { resolutionsForKind } from '../objects/StopResolutions'
+import { resolutionsForKind } from '../utils/StopResolutions'
 
 export const GetNeedsYouPanelInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
 export const GetNeedsYouPanelOutputSchema = z.object({

@@ -113,6 +113,11 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 			text,
 			receivedAt: occurredAt,
 			quotedEntryId: quoted?.entryId,
+			// The wamid travels so the ingest can hang the `👀` cue off THIS message when — and only
+			// when — it decides the message wakes the agent (streaming spec, decision 10). It is handed
+			// down rather than looked up because this is the only layer that ever holds it: by step 6
+			// below it is a ledger column, and the ingest has no business reading the ledger.
+			platformMessageId: messageId,
 		})
 
 		// 6. Close the ledger row now that the entry exists — this is what makes THIS message quotable in

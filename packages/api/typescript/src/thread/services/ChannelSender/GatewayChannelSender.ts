@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Config, BaseError } from '@codm/core-typescript'
-import { sendText } from '@codm/client-typescript/go'
-import { ChannelSender, type SendChannelMessageInput } from './ChannelSender'
+import { sendText, sendReaction, sendChatPresence, ChatPresenceTypeEnum } from '@codm/client-typescript/go'
+import { ChannelSender, type ChannelConversation, type ReactToChannelMessageInput, type SendChannelMessageInput } from './ChannelSender'
 import type { ApplicationErrors } from '../../errors'
 
 /**
@@ -38,6 +38,41 @@ export class GatewayChannelSender extends ChannelSender {
 			// attempts, then dead-letter). The old claim that "the outbox will retry it" was false — the
 			// event carrying this send was never written anywhere.
 			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', `channel send failed: ${String(error)}`)
+		}
+	}
+
+	async react(input: ReactToChannelMessageInput, ownerId: string): Promise<void> {
+		try {
+			await sendReaction(
+				{
+					channelId: input.channelId,
+					remoteId: input.remoteId,
+					messageId: input.messageId,
+					fromMe: input.fromMe,
+					reaction: input.reaction,
+				},
+				{ baseURL: `${Config.env.API_GO_URL}/api`, headers: { 'X-Owner-Id': ownerId } },
+			)
+		} catch (error) {
+			// SAME code as the send, DIFFERENT consequence — and the difference is the caller's, not
+			// this class's. A port that swallowed here would be lying to every future caller about
+			// whether the gateway is up; `ReactToChannelMessage` is the one that decides a cue failure
+			// is a non-event. Keeping the throw is also what lets a cue command log the real reason.
+			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', `channel reaction failed: ${String(error)}`)
+		}
+	}
+
+	async signalTyping(input: ChannelConversation, ownerId: string): Promise<void> {
+		try {
+			// `composing` is the gateway's own vocabulary (`ChatPresenceType`), read from the generated
+			// binding rather than retyped — the wire value never gets to drift from the Go enum, and the
+			// port above stays free of it.
+			await sendChatPresence(
+				{ channelId: input.channelId, remoteId: input.remoteId, presence: ChatPresenceTypeEnum.composing },
+				{ baseURL: `${Config.env.API_GO_URL}/api`, headers: { 'X-Owner-Id': ownerId } },
+			)
+		} catch (error) {
+			throw new BaseError<ApplicationErrors>('GATEWAY_UNAVAILABLE', `channel presence failed: ${String(error)}`)
 		}
 	}
 }

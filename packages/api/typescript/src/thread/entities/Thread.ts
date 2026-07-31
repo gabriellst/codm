@@ -12,7 +12,7 @@ import {
 } from '@codm/contracts-typescript/wire/enums'
 import type { DomainErrors } from '../errors'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
-import { isResolutionApplicable } from '../objects/StopResolutions'
+import { isResolutionApplicable } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.

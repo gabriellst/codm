@@ -5,6 +5,8 @@ import { INSTANCE_REGISTRY } from './registry'
 import * as internalHandlers from './handlers/internal'
 import * as externalHandlers from './handlers/external'
 import { DeliverChannelMessage } from './usecases/DeliverChannelMessage'
+import { ReactToChannelMessage } from './usecases/ReactToChannelMessage'
+import { SustainTypingPresence } from './usecases/SustainTypingPresence'
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.thread,
@@ -15,7 +17,11 @@ const ctx = await BoundedContext.create({
 	// THE DELIVERY EXECUTOR (B3, decision 2). Without this line the whole path is inert in the way that
 	// is hardest to notice: producers enqueue, tsc is green, every unit test passes, and no message ever
 	// reaches the channel. Registering it also STARTS the queue's poller in this process.
-	commandHandlers: { DeliverChannelMessage },
+	//
+	// The two INSTANT CUES (streaming spec, decision 10) share that failure mode exactly: unregistered,
+	// producers enqueue and nobody claims, so the emoji never appears and the indicator never lights —
+	// with tsc green and every unit test passing.
+	commandHandlers: { DeliverChannelMessage, ReactToChannelMessage, SustainTypingPresence },
 })
 
 export default ctx.router

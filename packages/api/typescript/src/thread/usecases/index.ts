@@ -12,6 +12,9 @@ export {
 	ConfigureContextBuffer,
 	ConfigureContextBufferInputSchema,
 	ConfigureContextBufferOutputSchema,
+	ConfigurePrompt,
+	ConfigurePromptInputSchema,
+	ConfigurePromptOutputSchema,
 } from './ConfigureThreadSettings'
 export { SteerThread, SteerThreadInputSchema, SteerThreadOutputSchema } from './SteerThread'
 export { SendDirectMessage, SendDirectMessageInputSchema, SendDirectMessageOutputSchema } from './SendDirectMessage'
@@ -20,6 +23,9 @@ export { GetSessionChat, GetSessionChatInputSchema, GetSessionChatOutputSchema }
 export { GetThreadSettings, GetThreadSettingsInputSchema, GetThreadSettingsOutputSchema } from './GetThreadSettings'
 export { DeliverChannelMessage } from './DeliverChannelMessage'
 export { RecordOrchestratorReply } from './RecordOrchestratorReply'
+// The instant cues (streaming spec, decision 10) — best-effort commands, never on the reply's path.
+export { ReactToChannelMessage, ReactToChannelMessageInputSchema, ReactToChannelMessageOutputSchema } from './ReactToChannelMessage'
+export { SustainTypingPresence, SustainTypingPresenceInputSchema, SustainTypingPresenceOutputSchema } from './SustainTypingPresence'
 // The stop control plane — moved from issue/ in B4: the Stop is a child of the Thread aggregate.
 export { RaiseStop, RaiseStopInputSchema, RaiseStopOutputSchema } from './RaiseStop'
 export { ResolveStop, ResolveStopInputSchema, ResolveStopOutputSchema } from './ResolveStop'

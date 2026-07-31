@@ -38,6 +38,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: "the SCHEDULED-COMMAND row is the subject (B3): it asserts the enqueued row's `id` (= entryId, the dedup handle), `name` and JSON `input` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; the atomicity case DOES use probe().snapshot()",
 	},
 	{
+		path: 'src/thread/usecases/ChannelCues.test.ts',
+		why: "the SCHEDULED-COMMAND row is the subject (streaming spec, decisions 10-12): the `👀` cases assert a cue row's existence-by-id (scheduled, then consumed rather than dead-lettered), and the typing loop's whole property is that a beat armed its SUCCESSOR on the OTHER job id with `run_at` in the future — plus a `run_at` rewind so the next beat comes due without sleeping. The probe counts rows, it does not read or write their columns; same exception class as DeliverChannelMessage.test.ts next door",
+	},
+	{
 		path: 'src/thread/usecases/RecordOrchestratorReply.test.ts',
 		why: "the SCHEDULED-COMMAND row is the subject (B3): it asserts the enqueued row's `name`/`id` and the JSON `input`'s `quotedMessageId`/`replyEntryId` on `shared_scheduled_commands` — the probe counts rows, it does not read their columns; the drop + atomicity cases DO use probe().snapshot()",
 	},

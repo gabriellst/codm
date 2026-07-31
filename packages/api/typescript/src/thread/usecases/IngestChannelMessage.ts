@@ -1,10 +1,13 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError } from '@codm/core-typescript'
+import { Handler, z, BaseError, CommandQueue, LoggingService, tryCatchAsync } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { MessageIngestedEvent } from '../events'
+import { CUE_ACKNOWLEDGED } from '../utils'
+import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
+import type { ReactToChannelMessage } from './ReactToChannelMessage'
 import type { ApplicationErrors } from '../errors'
 
 export const IngestChannelMessageInputSchema = z.object({
@@ -13,6 +16,14 @@ export const IngestChannelMessageInputSchema = z.object({
 	text: z.string(),
 	quotedEntryId: z.string().optional(),
 	receivedAt: z.date(),
+	/**
+	 * The PLATFORM id of the message being ingested — the handle the `👀` cue needs to hang itself off.
+	 *
+	 * OPTIONAL because it is not the ingest's business: every gate, the transcript entry and the turn
+	 * are decided without it, and callers that have no platform message (the console, a test) simply
+	 * do not pass one and get no cue. `ConsumeInboundMessage` is the caller that has it.
+	 */
+	platformMessageId: z.string().optional(),
 })
 
 export const IngestChannelMessageOutputSchema = z.object({
@@ -40,6 +51,8 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	constructor(
 		private readonly threads: ThreadRepository,
 		private readonly mailbox: MailboxRepository,
+		private readonly commands: CommandQueue,
+		private readonly logging: LoggingService,
 	) {
 		super()
 	}
@@ -123,6 +136,23 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					},
 					tx,
 				)
+
+				// THE `👀`, ON THE SAME BRANCH AS THE TURN (streaming spec, decision 10) — and the shared
+				// branch IS the decision, not a convenience.
+				//
+				// The cue promises "I saw this and I am on it". Reacting to a message that will NOT wake the
+				// agent — the mention gate closed, the sender read-only, the thread paused, or the message
+				// outside the 5-minute freshness window — turns that promise into a lie the operator has no
+				// way to detect: they get an acknowledgement and then silence, forever, and nothing anywhere
+				// says why. So the cue is not enqueued NEAR the turn; it is enqueued INSIDE the same `if`, on
+				// the same `canInvoke` verdict, in the same transaction. A future gate is inherited for free.
+				//
+				// It rides this transaction for the same reason the mailbox item does — the enqueue commits
+				// with the entry that motivates it. `jobId` is derived from the entry, so a redelivered
+				// gateway event conflicts and re-reacts nothing.
+				if (input.platformMessageId) {
+					await this.enqueueCue(thread.ownerId, thread.channelId, thread.contactRef.externalId, input, entry.entryId, tx)
+				}
 			}
 
 			await this.domainEventRepository.save(
@@ -136,5 +166,56 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 
 			return { entryId: entry.entryId, invocable }
 		})
+	}
+
+	/**
+	 * Schedule the `👀` — and REFUSE to let it break the ingest (streaming spec, decision 12).
+	 *
+	 * The guard is not defensive habit; it names a real caller. `CommandQueue.enqueueCommand` is
+	 * transactional only on the SQLite driver — the broker-backed one declares `transactional = false`
+	 * and its enqueue is NETWORK I/O, which core's own contract says callers on a critical path must
+	 * tolerate failing. An ingest is exactly such a path, and more consequential than most: losing it
+	 * costs the operator the message they can already see in their own chat history, with no answer and
+	 * no trace. A decoration is not allowed to buy that.
+	 *
+	 * So the asymmetry is deliberate: no cue is a shrug, no ingest is the worst bug this file has. By
+	 * the time we get here the entry and the mailbox item are already written into this transaction —
+	 * swallowing is what keeps that commit intact.
+	 */
+	private async enqueueCue(
+		ownerId: string,
+		channelId: string,
+		remoteId: string,
+		input: this['input'],
+		entryId: string,
+		tx: Transaction,
+	): Promise<void> {
+		const outcome = await tryCatchAsync(() =>
+			this.commands.enqueueCommand<ReactToChannelMessage>(
+				'react_to_channel_message',
+				{
+					ownerId,
+					channelId,
+					remoteId,
+					messageId: input.platformMessageId ?? '',
+					// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites
+					// the sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
+					// message key — so the sentinel that already encodes "this account said it" is precisely the
+					// fact the gateway needs, read where it is unambiguous.
+					fromMe: input.senderExternalId === OPERATOR_PARTICIPANT_ID,
+					reaction: CUE_ACKNOWLEDGED,
+				},
+				// Derived from the ENTRY, like the mailbox item's own dedup key: a redelivered gateway event
+				// conflicts on the same id and reacts nothing twice.
+				{ jobId: `cue:${entryId}` },
+				tx,
+			),
+		)
+
+		if (!outcome.success) {
+			this.logging.info({
+				content: { message: 'ack cue not scheduled (best-effort)', threadId: input.threadId, reason: outcome.error.message },
+			})
+		}
 	}
 }
