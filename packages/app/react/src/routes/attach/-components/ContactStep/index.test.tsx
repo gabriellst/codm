@@ -154,3 +154,95 @@ describe('ContactStep — a busca vai ao servidor', () => {
 		expect(requested.every(url => !url.includes('search='))).toBe(true)
 	})
 })
+
+/**
+ * ESCOLHER É RESPONDER — o clique no contato JÁ é a resposta do passo.
+ *
+ * Pedido do founder: "ao clicar no nome do contato, workspace, provedora automaticamente continue,
+ * sem ter que clicar no botão". Seleção ÚNICA: o campo é um `contactRef` escalar (um objeto, um só),
+ * e clicar noutra linha substitui a anterior — não há nada a acrescentar depois do primeiro clique,
+ * então o botão Continuar era um segundo clique que apenas repetia o primeiro.
+ *
+ * O segundo caso é a metade que protege o conserto: a linha de um contato JÁ ANEXADO é desabilitada,
+ * e avanço automático não pode transformar um clique inerte num passo entregue.
+ */
+describe('ContactStep — clicar no contato avança o passo', () => {
+	let root: Root | null = null
+	let host: HTMLDivElement | null = null
+	let submitted: { contactRef: { externalId: string; displayName: string } }[] = []
+	const realFetch = globalThis.fetch
+	let payload: unknown = EMPTY_WIZARD
+
+	beforeEach(() => {
+		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
+		submitted = []
+		payload = EMPTY_WIZARD
+		globalThis.fetch = (async () =>
+			new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof globalThis.fetch
+	})
+
+	afterEach(() => {
+		globalThis.fetch = realFetch
+		act(() => root?.unmount())
+		root = null
+		host?.remove()
+		host = null
+	})
+
+	async function mount(): Promise<void> {
+		host = document.createElement('div')
+		document.body.appendChild(host)
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		const element = host
+		act(() => {
+			root = createRoot(element)
+			root.render(
+				<QueryClientProvider client={queryClient}>
+					<ContactStep channelKindById={new Map()} onSubmit={data => submitted.push(data)} />
+				</QueryClientProvider>,
+			)
+		})
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 50))
+		})
+	}
+
+	function rowFor(label: string): HTMLButtonElement {
+		const rows = [...(host?.querySelectorAll('button[type="button"]') ?? [])] as HTMLButtonElement[]
+		const row = rows.find(r => r.textContent?.includes(label))
+		if (!row) throw new Error(`linha do contato ${label} não renderizada`)
+		return row
+	}
+
+	async function click(el: HTMLElement): Promise<void> {
+		await act(async () => {
+			el.click()
+		})
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 20))
+		})
+	}
+
+	it('FALSEADOR — um clique na linha entrega o passo, sem passar pelo botão Continuar', async () => {
+		payload = TWO_KINDS
+		await mount()
+
+		await click(rowFor('Ada Lovelace'))
+
+		expect(submitted).toHaveLength(1)
+		expect(submitted[0]?.contactRef.externalId).toBe('55110001@c.us')
+		expect(submitted[0]?.contactRef.displayName).toBe('Ada Lovelace')
+	})
+
+	it('um contato JÁ ANEXADO não avança nada — a linha está desabilitada e o clique é inerte', async () => {
+		payload = { ...EMPTY_WIZARD, contacts: [{ ...contact('55110003@c.us', 'Grace Hopper', 'USER'), alreadyAttached: true }] }
+		await mount()
+
+		const row = rowFor('Grace Hopper')
+		expect(row.disabled).toBe(true)
+
+		await click(row)
+
+		expect(submitted).toEqual([])
+	})
+})

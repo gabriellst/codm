@@ -35,6 +35,26 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 		},
 	})
 
+	/**
+	 * SEM AUTO-AVANÇO AQUI — e é o TIPO da seleção que decide, não a contagem de hoje.
+	 *
+	 * Os passos de contato e workspace entregam no clique (lá o campo é escalar: escolher de novo
+	 * substitui, e o primeiro clique já é a resposta inteira). Este é o passo MULTI: `providers` é
+	 * `z.array(providerKindSchema).min(1)`, sem máximo, e a linha faz toggle. Entregar no primeiro
+	 * clique tornaria o segundo provedor inalcançável pelo gesto principal — para escolher dois seria
+	 * preciso escolher um, ser levado embora e voltar.
+	 *
+	 * Isso não é um problema adiado: `comingSoon` vem de `!drivable.includes(...)`, derivado dos
+	 * AgentRunners REGISTRADOS (`GetAttachThreadWizard.ts`) de propósito, e não de uma lista literal.
+	 * Hoje só CLAUDE_CODE é dirigível, então o passo PARECE de escolha única; no dia em que o segundo
+	 * runner registrar, ele deixa de ser — sem que ninguém volte aqui. Um auto-avanço instalado agora
+	 * viraria uma trave escondida naquele dia.
+	 *
+	 * Alternativa considerada e recusada: avançar apenas quando a seleção vai de vazia para um. O mesmo
+	 * gesto, na mesma lista, avançaria ou não conforme um estado invisível — afordância pior do que um
+	 * botão honesto. Aqui o Continuar continua sendo a resposta, porque aqui a pergunta admite mais de
+	 * um sim.
+	 */
 	const toggle = (provider: ProviderKind) => {
 		const current = (form.getFieldValue('providers') as ProviderKind[] | undefined) ?? []
 		const next = current.includes(provider) ? current.filter(p => p !== provider) : [...current, provider]
@@ -61,7 +81,9 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 							const available = entry.available
 							const isSelected = selected.includes(entry.provider)
 							return (
-								<button
+								<Button
+									variant={'ghost'}
+									size={'none'}
 									key={entry.provider}
 									type="button"
 									disabled={!available}
@@ -96,7 +118,7 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, isSubmi
 									>
 										{isSelected && <IconCheck className="size-3.5" />}
 									</span>
-								</button>
+								</Button>
 							)
 						})}
 					</div>

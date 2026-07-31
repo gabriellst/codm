@@ -71,6 +71,23 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmit
 		},
 	})
 
+	/**
+	 * ESCOLHER É RESPONDER — o clique na linha entrega o passo, sem passar pelo botão Continuar.
+	 *
+	 * `contactRef` é uma escolha ÚNICA (um objeto, um só): clicar noutro contato SUBSTITUI o anterior,
+	 * então não há estado intermediário entre "escolhi" e "terminei", e o Continuar cobrava um segundo
+	 * clique que apenas repetia o primeiro. (O passo de agentes NÃO ganha isto — lá a seleção é uma
+	 * lista e o primeiro clique não é a resposta inteira; veja o docblock do AgentsStep.)
+	 *
+	 * Entrega por `handleSubmit()` e não chamando `onSubmit` direto: o clique atravessa o MESMO portão
+	 * de validação do botão (o `safeParse` acima), nunca um caminho paralelo mais permissivo. Contato
+	 * já anexado não chega aqui — a linha é `disabled`, e o clique nela não dispara evento.
+	 */
+	const selectAndAdvance = (contactRef: ContactStepData['contactRef']) => {
+		form.setFieldValue('contactRef', contactRef)
+		void form.handleSubmit()
+	}
+
 	return (
 		<form
 			className={cn('flex flex-col gap-5', className)}
@@ -99,12 +116,14 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmit
 							const channelKind = channelKindById.get(contact.channelId)
 							const isSelected = selected?.externalId === contact.externalId && selected?.channelId === contact.channelId
 							return (
-								<button
+								<Button
+									variant={'ghost'}
+									size={'none'}
 									key={`${contact.channelId}-${contact.externalId}`}
 									type="button"
 									disabled={contact.alreadyAttached}
 									onClick={() =>
-										form.setFieldValue('contactRef', {
+										selectAndAdvance({
 											channelId: contact.channelId,
 											externalId: contact.externalId,
 											displayName: contact.displayName,
@@ -133,7 +152,7 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, isSubmit
 									) : (
 										<IconChevronRight className="size-4 text-muted-foreground" />
 									)}
-								</button>
+								</Button>
 							)
 						})}
 					</div>

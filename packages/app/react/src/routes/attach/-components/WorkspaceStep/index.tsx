@@ -35,6 +35,25 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isS
 		},
 	})
 
+	/**
+	 * ESCOLHER É RESPONDER — o clique na linha entrega o passo, sem passar pelo botão Continuar.
+	 *
+	 * `workspaceId` é um campo ESCALAR: clicar noutra linha SUBSTITUI a anterior, então não há estado
+	 * intermediário entre "escolhi" e "terminei". O Continuar cobrava um segundo clique que apenas
+	 * repetia o que o primeiro já dissera. (O passo de agentes NÃO ganha isto — lá a seleção é uma
+	 * lista, e o primeiro clique não é a resposta inteira; veja o docblock do AgentsStep.)
+	 *
+	 * Entrega por `handleSubmit()` em vez de chamar `onSubmit` direto: assim o clique atravessa o MESMO
+	 * portão de validação do botão (o `safeParse` acima) e não um caminho paralelo que pudesse aceitar
+	 * o que o botão recusaria. O botão fica onde está — é a afordância de teclado, o alvo do Enter, e
+	 * o que fecha o passo quando ele reabre já preenchido por `defaultValues` (voltar e seguir sem
+	 * reescolher).
+	 */
+	const selectAndAdvance = (workspaceId: string) => {
+		form.setFieldValue('workspaceId', workspaceId)
+		void form.handleSubmit()
+	}
+
 	return (
 		<form
 			className={cn('flex flex-col gap-5', className)}
@@ -51,10 +70,12 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isS
 				{selected => (
 					<div className="flex flex-col gap-1">
 						{workspaces.map(workspace => (
-							<button
+							<Button
+								variant={'ghost'}
+								size={'none'}
 								key={workspace.workspaceId}
 								type="button"
-								onClick={() => form.setFieldValue('workspaceId', workspace.workspaceId)}
+								onClick={() => selectAndAdvance(workspace.workspaceId)}
 								className={cn(
 									'flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-muted',
 									selected === workspace.workspaceId && 'bg-muted',
@@ -71,7 +92,7 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, isS
 									</div>
 								</div>
 								<IconChevronRight className="size-4 text-muted-foreground" />
-							</button>
+							</Button>
 						))}
 					</div>
 				)}
