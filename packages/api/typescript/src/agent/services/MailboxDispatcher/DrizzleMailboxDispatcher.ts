@@ -4,7 +4,7 @@ import { LoggingService, type PollingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
-import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
+import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
 import { MailboxDispatcher } from './MailboxDispatcher'
@@ -68,6 +68,10 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		private readonly mailbox: MailboxRepository,
 		private readonly threads: ThreadRepository,
 		private readonly workspaces: WorkspaceRepository,
+		// Read-only here: the dispatcher never writes a session row (`RunIssueTurn` owns that). It reads
+		// the cursor an issue's session is standing on, so the turn it drives can say where it continues
+		// from — see `runIssueWork`.
+		private readonly sessions: AgentSessionRepository,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -248,6 +252,22 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 *
 	 * The per-target lease is what makes a steer safe with a turn already in flight: the item simply
 	 * waits for the lease rather than racing the running turn — no retry-throw, no interleaving.
+	 *
+	 * ### WHY `priorMessageId` IS READ HERE (issue-resume spec, decision 5)
+	 * `AgentSession.resumeDecision` refuses to resume when the cursor it is handed disagrees with the
+	 * one the row stores (`CONVERSATION_ADVANCED`) — the guard that stops a turn from silently
+	 * continuing a session that never consumed part of the conversation. This method used to pass NO
+	 * cursor at all, so `undefined !== lastMessageId` was true on every second and later turn and
+	 * EVERY mailbox-driven turn ran fresh: the `--resume` machinery existed, was never reached, and the
+	 * only trace was a `warn` nobody was reading. That is the "não consigo retomar" the founder hit.
+	 *
+	 * The cursor a mailbox-driven turn continues FROM is the item the previous turn consumed, which is
+	 * exactly what `upsertSessionRecord` stored as `lastMessageId` (`messageId: item.id`, below). So it
+	 * is read from the session row rather than reconstructed. The guard is NOT weakened: it still fires
+	 * for a session with no cursor yet, a moved cwd or a changed model, and it still fires for callers
+	 * that track the conversation themselves (`RunIssueTurn` is unchanged and its transcript-driven
+	 * callers keep passing their own). What changes is that this caller now answers the question
+	 * instead of leaving it blank.
 	 */
 	private async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
 		const payload = item.payload as {
@@ -265,6 +285,8 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		const workspace = await this.workspaces.findById(thread.workspaceId)
 		if (!workspace) return this.dropSilently(item, 'workspace no longer bound')
 
+		const session = await this.sessions.findByIssueId(item.targetId)
+
 		await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
 			issueId: item.targetId,
@@ -278,6 +300,9 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// session is resumed, so the turn needs the NEW instruction, not the original brief again.
 			prompt: item.kind === MailboxItemKind.STEER ? (payload.text ?? '') : (payload.goal ?? ''),
 			messageId: item.id,
+			// The position this turn continues FROM — the item the previous turn consumed. Absent on the
+			// issue's first turn, which is what `resolveSession` reads as "there is nothing to resume".
+			priorMessageId: session?.lastMessageId,
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
 		})

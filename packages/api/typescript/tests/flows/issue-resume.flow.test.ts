@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
+import type { ZodType } from 'zod'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { OutboxDispatcher } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, ProviderKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
@@ -11,10 +12,16 @@ import { RecordStopFromExecution } from '@thread/handlers/RecordStopFromExecutio
 import { ResumeIssueOnStopResolved } from '@thread/handlers/ResumeIssueOnStopResolved'
 import { ThreadStopResolvedEvent } from '@thread/events/ThreadStopResolvedEvent'
 import { ResolveStop } from '@thread/usecases/ResolveStop'
+import { SteerThread } from '@thread/usecases/SteerThread'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { OpenIssuesReader } from '@thread/services'
 import { MailboxRepository } from '@agent/repositories'
+import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
+import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
+import { AgentName, AgentRunOutcome } from '@agent/enums'
+import type { AgentRunRequest, AgentRuntimeEvent } from '@agent/types'
 
 /**
  * DIAGNOSTIC (spec 2026-07-31, Problem 3 / Decision 3) — what happens TODAY to an issue that stopped?
@@ -101,6 +108,24 @@ describe('DIAGNOSTIC: a stopped issue and the steer seam, as of HEAD', () => {
 		expect(response.data.queued).toBe(true)
 	})
 })
+
+/** Captures each request the use case built, and reports a stable CLI session id back. */
+class CapturingRunner extends AgentRunner {
+	static readonly CLI_SESSION_ID = 'cli-session-resume'
+	readonly requests: AgentRunRequest<ZodType | undefined>[] = []
+
+	async *run<OutputSchema extends ZodType | undefined = undefined>(
+		request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent> {
+		this.requests.push(request)
+		yield {
+			type: 'finished',
+			result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: CapturingRunner.CLI_SESSION_ID, failed: false },
+		}
+	}
+
+	async shutdown(): Promise<void> {}
+}
 
 /**
  * THE FEATURE (spec 2026-07-31) — resolving a stop puts the issue back to work, on the SAME CLI
@@ -222,5 +247,32 @@ describe('Flow (integration): a resolved stop puts the issue back to work', () =
 		await resolveStop(stopId, StopResolution.REVIEW_AND_SEND)
 
 		expect((await claimAll()).filter(item => item.targetKind === MailboxTargetKind.ISSUE)).toHaveLength(1)
+	})
+	/**
+	 * AC-2 — asserted on what reaches the RUNNER, per the spec: `session.resumeId` is the id the
+	 * previous turn persisted, not a fresh one.
+	 */
+	it('AC-2 — the resumed turn continues the session the previous turn persisted', async () => {
+		const runner = new CapturingRunner()
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+		const { thread, issue, stopId } = await givenStoppedIssue()
+
+		// TURN 1 — driven by the mailbox exactly as production does, so the cursor it persists is the
+		// one a later turn has to match.
+		await testBed.resolve(SteerThread).execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'começa pelo teste' })
+		await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()
+
+		// TURN 2 — the resume, triggered by the operator resolving the stop.
+		await resolveStop(stopId, StopResolution.REVIEW_AND_SEND)
+		await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()
+
+		const issueTurns = runner.requests.filter(request => request.agentName === AgentName.ISSUE_WORK)
+		expect(issueTurns).toHaveLength(2)
+		expect(issueTurns[0]?.session?.newId).toBeDefined()
+		expect(issueTurns[0]?.session?.resumeId).toBeUndefined()
+		// THE ASSERTION THE SPEC ASKED FOR: the second spawn resumes, and resumes THE id turn 1 stored.
+		expect(issueTurns[1]?.session?.resumeId).toBe(CapturingRunner.CLI_SESSION_ID)
+		expect(issueTurns[1]?.session?.newId).toBeUndefined()
+		expect(await testBed.resolve(MailboxRepository).hasPending(MailboxTargetKind.ISSUE, issue.id.value)).toBe(false)
 	})
 })
