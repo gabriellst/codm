@@ -21,10 +21,11 @@ const WindowEntrySchema = z.object({
 	/** Already through `Thread.textWithoutMention` (`Thread.ts:147`) — the tag is noise to the model. */
 	text: z.string(),
 	/**
-	 * Whether this line was ADDRESSED to the agent — `Thread.canInvoke` (`:128`), which weighs paused,
+	 * Whether this line was ADDRESSED to the agent — `Thread.addressedToAgent`, which weighs paused,
 	 * roster and tag together. Not `mentionsTag` alone: a muted participant's tagged message produced
 	 * no turn, and rendering it as addressed would invite the model to answer something the system
-	 * deliberately ignored.
+	 * deliberately ignored. And not `canInvoke`, which adds the freshness window every history row
+	 * fails by construction.
 	 */
 	addressed: z.boolean(),
 })

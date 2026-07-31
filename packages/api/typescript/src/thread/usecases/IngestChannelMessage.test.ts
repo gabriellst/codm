@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
-import { TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
+import { MailboxRepository } from '@agent/repositories'
 import { IngestChannelMessage } from './IngestChannelMessage'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { MessageIngestedEvent } from '../events'
@@ -10,9 +11,9 @@ import { DomainEventRepository } from '@codm/core-typescript'
 
 /**
  * C16 IngestChannelMessage — the invocation-gate matrix. The message is ALWAYS transcribed +
- * buffered (observation ≠ invocation); `invocable` is the AND of three gates: not paused, sender may
- * invoke, and (when the mention gate is on) the tag is present. Only an invocable inbound hands off
- * to classification downstream.
+ * buffered (observation ≠ invocation); `invocable` is the AND of four gates: not paused, sender may
+ * invoke, (when the mention gate is on) the tag is present, and the message was SENT inside the
+ * freshness window. Only an invocable inbound queues a turn.
  */
 describe('IngestChannelMessage gate matrix', () => {
 	let testBed: TestBed
@@ -89,5 +90,135 @@ describe('IngestChannelMessage gate matrix', () => {
 
 		const withTag = await ingest(thread.id.value, 'stranger-42', 'hey @bot ship it')
 		expect(withTag.invocable).toBe(true)
+	})
+
+	/**
+	 * THE FRESHNESS WINDOW — the gateway-backlog gate (`INVOCATION_FRESHNESS_WINDOW_MS`, 5 min).
+	 *
+	 * The case it exists for: the gateway reconnects to WhatsApp and whatsmeow replays every message
+	 * the phone buffered while the socket was down, each carrying the `occurredAt` the platform stamped
+	 * when it was SENT. Every one of those clears the other three gates. Without a window each one
+	 * schedules a turn, and the operator gets an hour of conversation answered in a burst.
+	 *
+	 * Each test states its age in minutes, and every one of them asserts BOTH SIDES: the transcript
+	 * entry AND the mailbox. Proving only the absence of a turn would let a regression that also stops
+	 * TRANSCRIBING sail through green — and losing the message from the conversation is a worse bug
+	 * than the one being fixed.
+	 */
+	describe('the freshness window (5 min)', () => {
+		const ingestAgedMinutes = (threadId: string, senderExternalId: string, text: string, minutesAgo: number) =>
+			testBed.resolve(IngestChannelMessage).execute({
+				threadId,
+				senderExternalId,
+				text,
+				// `receivedAt` is the event's `occurredAt` — when the PLATFORM says it was sent.
+				receivedAt: new Date(Date.now() - minutesAgo * 60 * 1000),
+			})
+
+		/** Both sides of the ledger for one thread: what the conversation shows, and what got scheduled. */
+		const stateOf = async (thread: { id: { value: string } }) => ({
+			contactEntries: (await testBed.resolve(ThreadRepository).listEntries(thread.id.value)).filter(e => e.kind === TranscriptKind.CONTACT),
+			queued: await testBed.resolve(MailboxRepository).hasPending(MailboxTargetKind.THREAD, thread.id.value),
+		})
+
+		it('a message sent 1 minute ago is invocable and DOES queue the turn', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+			const out = await ingestAgedMinutes(thread.id.value, 'stranger-42', `${GIVEN_MENTION_TAG} ship the coupon fix`, 1)
+
+			expect(out.invocable).toBe(true)
+			const { contactEntries, queued } = await stateOf(thread)
+			expect(contactEntries).toHaveLength(1)
+			expect(queued).toBe(true)
+		})
+
+		it('the SAME message sent 6 minutes ago is transcribed and queues NOTHING', async () => {
+			// THE FOUNDER'S CASE. Identical sender, identical text, identical citation as the test above —
+			// the ONLY variable is the age, so a green here can only be the window talking.
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+			const out = await ingestAgedMinutes(thread.id.value, 'stranger-42', `${GIVEN_MENTION_TAG} ship the coupon fix`, 6)
+
+			expect(out.invocable).toBe(false)
+
+			const { contactEntries, queued } = await stateOf(thread)
+			// SIDE ONE — the message still EXISTS in the conversation. It is history, quotable, and it is
+			// in the console. Being late costs it a turn, not its place in the transcript.
+			expect(contactEntries).toHaveLength(1)
+			expect(contactEntries[0]?.text).toBe(`${GIVEN_MENTION_TAG} ship the coupon fix`)
+			// SIDE TWO — and no turn was scheduled for it.
+			expect(queued).toBe(false)
+		})
+
+		it('a backlog replay of 3 messages transcribes all 3 and queues none', async () => {
+			// The shape of the actual incident, at the scale that motivated it: a reconnect delivers a
+			// burst, all of them citing the tag. Three entries, zero turns.
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+			for (const minutesAgo of [30, 20, 10]) {
+				const out = await ingestAgedMinutes(thread.id.value, 'stranger-42', `${GIVEN_MENTION_TAG} backlog ${minutesAgo}`, minutesAgo)
+				expect(out.invocable).toBe(false)
+			}
+
+			const { contactEntries, queued } = await stateOf(thread)
+			expect(contactEntries).toHaveLength(3)
+			expect(queued).toBe(false)
+		})
+
+		/**
+		 * COMPOSITION, not substitution. The window is ANDed onto the existing gates — it never rescues a
+		 * message the other three refused. Each leg here is FRESH (1 minute) and still denied, by pause,
+		 * by the roster, and by the missing citation respectively.
+		 */
+		it('freshness composes with the other gates — a fresh message is still refused by each of them', async () => {
+			const repo = testBed.resolve(ThreadRepository)
+
+			// PAUSED.
+			const paused = await givenThread(testBed, { ownerId: OPERATOR_ID })
+			paused.pause()
+			await repo.save(paused)
+			expect((await ingestAgedMinutes(paused.id.value, 'stranger-42', `${GIVEN_MENTION_TAG} go`, 1)).invocable).toBe(false)
+			expect((await stateOf(paused)).queued).toBe(false)
+
+			// MUTED PARTICIPANT — the seeded contact is read-only, and cites the tag.
+			const muted = await givenThread(testBed, { ownerId: OPERATOR_ID })
+			expect((await ingestAgedMinutes(muted.id.value, muted.contactRef.externalId, `${GIVEN_MENTION_TAG} go`, 1)).invocable).toBe(false)
+			expect((await stateOf(muted)).queued).toBe(false)
+
+			// NO CITATION — the mention gate.
+			const untagged = await givenThread(testBed, { ownerId: OPERATOR_ID })
+			expect((await ingestAgedMinutes(untagged.id.value, 'stranger-42', 'go', 1)).invocable).toBe(false)
+			expect((await stateOf(untagged)).queued).toBe(false)
+
+			// And every one of those three is still IN the transcript — refusing a turn is never refusing
+			// the message.
+			for (const thread of [paused, muted, untagged]) {
+				expect((await stateOf(thread)).contactEntries).toHaveLength(1)
+			}
+		})
+
+		/**
+		 * The other half of composition: the window does not become the ONLY gate either. A reply to the
+		 * agent bypasses the mention tag (and only that) — but a stale reply is still stale.
+		 */
+		it('a reply to the agent is not exempt — a 6-minute-old reply queues nothing', async () => {
+			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+			// The agent's own line, written the way `RecordOrchestratorReply` writes it: kind SYSTEM.
+			const agentLine = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'quer que eu faça?', at: new Date() })
+			await testBed.resolve(ThreadRepository).save(thread)
+
+			const stale = await testBed.resolve(IngestChannelMessage).execute({
+				threadId: thread.id.value,
+				senderExternalId: 'stranger-42',
+				// No citation at all: it is the QUOTE that would carry it past the mention gate.
+				text: 'sim, pode fazer',
+				quotedEntryId: agentLine.entryId,
+				receivedAt: new Date(Date.now() - 6 * 60 * 1000),
+			})
+
+			expect(stale.invocable).toBe(false)
+			const { queued } = await stateOf(thread)
+			expect(queued).toBe(false)
+		})
 	})
 })

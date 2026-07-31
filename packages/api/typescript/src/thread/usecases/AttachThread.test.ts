@@ -73,8 +73,10 @@ describe('AttachThread use case', () => {
 		// Slugged from the basename: lowercased, spaces collapsed to a dash. The gate is ON from birth —
 		// nobody has to call ConfigureMentionGate for the product to have its default behaviour.
 		expect(thread?.mentionGate).toEqual({ enabled: true, tag: '@berzerk-club' })
-		expect(thread?.canInvoke({ senderExternalId: 'stranger', text: '@berzerk-club fix it' })).toBe(true)
-		expect(thread?.canInvoke({ senderExternalId: 'stranger', text: 'fix it' })).toBe(false)
+		// `addressedToAgent`, not `canInvoke`: what is under test is the MINTED TAG, and `canInvoke` would
+		// drag the freshness window into an assertion that has nothing to do with when a message arrived.
+		expect(thread?.addressedToAgent({ senderExternalId: 'stranger', text: '@berzerk-club fix it' })).toBe(true)
+		expect(thread?.addressedToAgent({ senderExternalId: 'stranger', text: 'fix it' })).toBe(false)
 	})
 
 	it('rejects when the channel is not connected (CHANNEL_NOT_CONNECTED)', async () => {

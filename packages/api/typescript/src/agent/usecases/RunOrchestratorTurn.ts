@@ -257,10 +257,19 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// Already stripped of the tag — it is noise to the model, and leaving it in put `@codm` at
 			// the head of every rendered line.
 			text: thread.textWithoutMention(row.text),
-			// `canInvoke` and NOT `mentionsTag`: a muted participant's tagged message produced no turn, so
-			// rendering it as addressed would invite the model to answer something the system ignored.
+			// `addressedToAgent` and NOT `mentionsTag`: a muted participant's tagged message produced no
+			// turn, so rendering it as addressed would invite the model to answer something the system
+			// ignored.
+			//
+			// And NOT `canInvoke` either, which is the same predicate PLUS the freshness window. Every row
+			// in this window is history — by the time a turn renders it, it is older than the window
+			// almost by definition — so judging it by `canInvoke` would mark all but the newest line
+			// unaddressed and rewrite what the model reads. "Was this for the agent" is a property of the
+			// message; "may it start a turn now" is a property of the moment, and only the ingest asks it.
 			addressed:
-				row.kind === TranscriptKind.SYSTEM ? false : thread.canInvoke({ senderExternalId: row.senderExternalId ?? '', text: row.text }),
+				row.kind === TranscriptKind.SYSTEM
+					? false
+					: thread.addressedToAgent({ senderExternalId: row.senderExternalId ?? '', text: row.text }),
 		}))
 	}
 

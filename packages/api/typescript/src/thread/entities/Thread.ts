@@ -153,6 +153,25 @@ export interface PendingThreadWrites {
 export const OPERATOR_PARTICIPANT_ID = 'operator'
 
 /**
+ * How long an inbound stays SUMMONABLE — the freshness window `canInvoke` judges an inbound against.
+ *
+ * THE BACKLOG. When the gateway reconnects to WhatsApp, whatsmeow replays every message the phone
+ * buffered while the socket was down — all at once, each still carrying the `occurredAt` the platform
+ * stamped when it was originally SENT. Without a window every one of them clears the invocation gates
+ * and schedules a turn of its own: the operator plugs the laptop back in and the agent answers an hour
+ * of conversation in one burst, in someone's real chat. That enxurrada is what this constant exists to
+ * stop, and it is why the threshold is stated once, here, with the reason attached.
+ *
+ * Five minutes is the "somebody is still sitting there waiting" horizon: long enough that a slow
+ * gateway, a retried delivery or a laggy phone still gets its answer, short enough that a replay of
+ * yesterday's chat does not.
+ *
+ * The stale message is NOT discarded. It is transcribed, buffered, quotable and visible in the console
+ * exactly like any other (observation ≠ invocation) — it simply does not get a turn of its own.
+ */
+export const INVOCATION_FRESHNESS_WINDOW_MS = 5 * 60 * 1000
+
+/**
  * `Thread` (BC4 Thread & Routing, Core) — the binding of a conversation to a workspace + providers,
  * and its control plane: pause/resume, mention gate, participant invocation rights, and the rolling
  * context-buffer size. Invariants with teeth: providers non-empty and at least one invoker must
@@ -485,7 +504,8 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	}
 
 	/**
-	 * Whether an inbound sender may invoke agents right now (pause + permission + mention gate).
+	 * Whether this line is ADDRESSED to the agent at all (pause + permission + mention gate) — every
+	 * invocation gate EXCEPT the freshness window.
 	 *
 	 * ### Replying to the agent IS addressing it
 	 * `repliesToAgent` bypasses the MENTION GATE and nothing else. The gate exists to answer one
@@ -497,14 +517,51 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 *
 	 * It deliberately does NOT bypass the two checks above it: a paused thread stays silent and a
 	 * read-only participant stays read-only. A quote is evidence of ADDRESS, never of permission.
+	 *
+	 * ### Why this is split out of `canInvoke`
+	 * The two questions used to have the same answer and stopped having it when the freshness window
+	 * landed. "Was this for the agent" is a property of the MESSAGE; "may it start a turn" is a
+	 * property of the MOMENT. `RunOrchestratorTurn` renders the model's context window from transcript
+	 * rows that are, by construction, already older than the window — asking `canInvoke` there would
+	 * mark every line but the newest as unaddressed and quietly rewrite what the model reads.
 	 */
-	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
+	addressedToAgent(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		if (this.paused) return false
 		const participant = this.participants.find(p => p.participantId === input.senderExternalId)
 		if (participant && !participant.canInvoke) return false
 		if (input.repliesToAgent) return true
 		if (this.mentionGate.enabled && !mentionsTag(input.text, this.mentionGate.tag)) return false
 		return true
+	}
+
+	/**
+	 * Whether an inbound sender may invoke agents RIGHT NOW: addressed to the agent AND still fresh.
+	 *
+	 * Freshness is the last gate, and it COMPOSES with the others rather than replacing any of them —
+	 * a stale message is refused, and so is a fresh one from a paused thread, a muted participant, or
+	 * a sender who never cited the tag. See `INVOCATION_FRESHNESS_WINDOW_MS` for why the window exists.
+	 *
+	 * ### The clock is a PARAMETER, never read here
+	 * `now` is passed in so the entity stays deterministic: the same thread and the same pair of
+	 * instants always answer the same, which is what lets the boundary be pinned by a test instead of
+	 * raced against wall time. Reading `Date.now()` in here would make the one rule anybody will ever
+	 * want to prove the one rule nobody can.
+	 *
+	 * `sentAt` is the instant the PLATFORM says the message was sent (`occurredAt` on the gateway
+	 * event), never the instant we observed it. On a backlog replay `observedAt` is "now" for every
+	 * message in the burst — judging by it would let the whole enxurrada through, which is precisely
+	 * the case this window exists for.
+	 *
+	 * ### The boundary is INCLUSIVE
+	 * A message whose age is exactly the window still invokes (`age <= window`). "Within 5 minutes"
+	 * includes the fifth minute, and the platform reports send times at SECOND granularity, so a
+	 * message landing on the tick is a rounding artifact rather than a decision — the tie goes to
+	 * answering the human. A `sentAt` in the FUTURE (platform clock skew) is fresh for the same
+	 * reason: a clock running fast somewhere else must not mute somebody here.
+	 */
+	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
+		if (!this.addressedToAgent(input)) return false
+		return input.now.getTime() - input.sentAt.getTime() <= INVOCATION_FRESHNESS_WINDOW_MS
 	}
 
 	/**

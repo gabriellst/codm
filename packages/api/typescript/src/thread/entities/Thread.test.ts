@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { BaseError } from '@codm/core-typescript'
 import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
-import { Thread } from './Thread'
+import { INVOCATION_FRESHNESS_WINDOW_MS, Thread } from './Thread'
 
 const base = {
 	ownerId: '00000000-0000-4000-8000-000000000001',
@@ -57,33 +57,33 @@ describe('Thread entity', () => {
 		expect(() => t.setParticipantInvocation('nobody', true)).toThrow(BaseError)
 	})
 
-	it('canInvoke: false when paused', () => {
+	it('addressedToAgent: false when paused', () => {
 		const t = Thread.create(base)
 		t.pause()
 		// CITES the tag, so the refusal can only come from the pause — with a bare 'hi' this test would
 		// pass on the mention gate and prove nothing about pausing.
-		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base hi' })).toBe(false)
+		expect(t.addressedToAgent({ senderExternalId: 'operator', text: '@base hi' })).toBe(false)
 	})
 
-	it('canInvoke: false when the sender is a read-only participant', () => {
+	it('addressedToAgent: false when the sender is a read-only participant', () => {
 		const t = Thread.create(base)
 		// Cites the tag for the same reason as above: isolate the participant-deny branch.
-		expect(t.canInvoke({ senderExternalId: 'c1', text: '@base hi' })).toBe(false)
+		expect(t.addressedToAgent({ senderExternalId: 'c1', text: '@base hi' })).toBe(false)
 	})
 
-	it('canInvoke: mention gate requires the tag as a STANDALONE token', () => {
+	it('addressedToAgent: mention gate requires the tag as a STANDALONE token', () => {
 		const t = Thread.create(base)
 		t.configureMentionGate({ enabled: true, tag: '@bot' })
-		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hello' })).toBe(false)
-		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @bot go' })).toBe(true)
+		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'hello' })).toBe(false)
+		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'hey @bot go' })).toBe(true)
 		// Case-insensitive: the mint lowercases while every UI surface renders the raw folder path, so an
 		// operator reading `/Users/x/MyApp` tells the group to type `@MyApp`.
-		expect(t.canInvoke({ senderExternalId: 'operator', text: 'hey @BOT go' })).toBe(true)
+		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'hey @BOT go' })).toBe(true)
 		// THE REASON THIS IS NOT `String.includes`. The tag is derived from a folder name, so it collides
 		// with the vocabulary of the project it names — this repo's own packages are `@codm/*` and its
 		// live thread mints `@codm`. A scoped package name must NOT summon the agent.
-		expect(t.canInvoke({ senderExternalId: 'operator', text: 'bump @bot/core to 2.0' })).toBe(false)
-		expect(t.canInvoke({ senderExternalId: 'operator', text: 'see bot.ts and @botanical' })).toBe(false)
+		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'bump @bot/core to 2.0' })).toBe(false)
+		expect(t.addressedToAgent({ senderExternalId: 'operator', text: 'see bot.ts and @botanical' })).toBe(false)
 	})
 
 	it('textWithoutMention strips the citation, and never empties a bare summon', () => {
@@ -124,18 +124,54 @@ describe('Thread entity', () => {
 		const t = Thread.create(base)
 		const untagged = { senderExternalId: 'operator', text: 'sim, pode fazer' }
 
-		expect(t.canInvoke(untagged)).toBe(false)
-		expect(t.canInvoke({ ...untagged, repliesToAgent: true })).toBe(true)
+		expect(t.addressedToAgent(untagged)).toBe(false)
+		expect(t.addressedToAgent({ ...untagged, repliesToAgent: true })).toBe(true)
 	})
 
 	it('a reply does NOT buy permission — pause and read-only participants still win', () => {
 		const paused = Thread.create(base)
 		paused.pause()
-		expect(paused.canInvoke({ senderExternalId: 'operator', text: 'oi', repliesToAgent: true })).toBe(false)
+		expect(paused.addressedToAgent({ senderExternalId: 'operator', text: 'oi', repliesToAgent: true })).toBe(false)
 
 		// `c1` is read-only in the fixture. It may quote the agent all day: a quote is address, not rights.
 		const live = Thread.create(base)
-		expect(live.canInvoke({ senderExternalId: 'c1', text: 'oi', repliesToAgent: true })).toBe(false)
+		expect(live.addressedToAgent({ senderExternalId: 'c1', text: 'oi', repliesToAgent: true })).toBe(false)
+	})
+
+	/**
+	 * THE BOUNDARY, pinned deterministically. Both instants are parameters, so this is the one place
+	 * the exact tie can be asserted without racing wall time — a use-case-level version would have to
+	 * subtract from `Date.now()` and lose milliseconds to the trip through the repository.
+	 *
+	 * The choice under test: `age <= window` invokes, `age > window` does not.
+	 */
+	it('canInvoke: the freshness window is INCLUSIVE at exactly 5 minutes, and refuses one ms past it', () => {
+		const t = Thread.create(base)
+		const now = new Date('2026-07-31T12:00:00.000Z')
+		const summon = { senderExternalId: 'operator', text: '@base ship it', now }
+
+		expect(INVOCATION_FRESHNESS_WINDOW_MS).toBe(5 * 60 * 1000)
+
+		// 4:59.999 — inside.
+		expect(t.canInvoke({ ...summon, sentAt: new Date(now.getTime() - (INVOCATION_FRESHNESS_WINDOW_MS - 1)) })).toBe(true)
+		// 5:00.000 exactly — THE TIE, and it goes to answering the human (platform send times land on
+		// whole seconds, so a message on the tick is a rounding artifact, not a decision).
+		expect(t.canInvoke({ ...summon, sentAt: new Date(now.getTime() - INVOCATION_FRESHNESS_WINDOW_MS) })).toBe(true)
+		// 5:00.001 — out. One millisecond is the whole difference, which is what makes `<=` a CHOICE.
+		expect(t.canInvoke({ ...summon, sentAt: new Date(now.getTime() - (INVOCATION_FRESHNESS_WINDOW_MS + 1)) })).toBe(false)
+	})
+
+	/**
+	 * Clock skew on the PLATFORM side must not mute anybody. A `sentAt` in the future yields a negative
+	 * age, and `age <= window` admits it — deliberately, and asserted so nobody "fixes" it into a
+	 * `Math.abs` that would start dropping messages from a phone whose clock runs fast.
+	 */
+	it('canInvoke: a future-dated sentAt (platform clock skew) is fresh, not stale', () => {
+		const t = Thread.create(base)
+		const now = new Date('2026-07-31T12:00:00.000Z')
+		const sentAt = new Date(now.getTime() + 60 * 1000) // the phone thinks it is one minute later
+
+		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base ship it', sentAt, now })).toBe(true)
 	})
 })
 

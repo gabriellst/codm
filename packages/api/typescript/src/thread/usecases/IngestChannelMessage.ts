@@ -23,8 +23,13 @@ export const IngestChannelMessageOutputSchema = z.object({
 /**
  * C16 IngestChannelMessage — appends the inbound to the transcript + rolling context buffer
  * UNCONDITIONALLY (even from read-only participants), then evaluates the invocation gates
- * (paused? sender may invoke? mention tag present when the gate is on?). Returns `invocable` so the
- * ingestion consumer knows whether to hand off to classification.
+ * (paused? sender may invoke? mention tag present when the gate is on? sent recently enough?).
+ * Returns `invocable` so the ingestion consumer knows whether to hand off to classification.
+ *
+ * The last of those gates is the FRESHNESS WINDOW (`INVOCATION_FRESHNESS_WINDOW_MS`), and it changes
+ * nothing about the first half of this use case: a message from a gateway backlog replay is
+ * transcribed, buffered and quotable like any other — it just does not enqueue a turn. Transcription
+ * is observation; the mailbox item is invocation.
  */
 @injectable()
 export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInputSchema, typeof IngestChannelMessageOutputSchema> {
@@ -74,7 +79,20 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			})
 			await this.threads.save(thread, tx)
 
-			const invocable = thread.canInvoke({ senderExternalId: input.senderExternalId, text: input.text, repliesToAgent })
+			// THE CLOCK, READ ONCE AND HANDED DOWN. `Thread.canInvoke` owns the freshness policy and its
+			// threshold; the entity just refuses to read a clock, so the instant of reference is supplied
+			// from here — the one place on this path allowed to know what time it is.
+			//
+			// `input.receivedAt` is the event's `occurredAt`: WHEN THE PLATFORM SAYS THE MESSAGE WAS SENT,
+			// not when the gateway heard about it. That distinction IS the rule — on a reconnect replay
+			// `observedAt` is "now" for the whole backlog and would let every message through.
+			const invocable = thread.canInvoke({
+				senderExternalId: input.senderExternalId,
+				text: input.text,
+				repliesToAgent,
+				sentAt: input.receivedAt,
+				now: new Date(),
+			})
 
 			// THE REPOINT (orchestrator pivot §7.4). An invocable message schedules a turn of the thread's
 			// orchestrator, and the item is written IN THIS TRANSACTION — the same one that created the
