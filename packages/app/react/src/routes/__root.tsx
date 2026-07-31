@@ -2,6 +2,7 @@ import '@/index.css'
 import '@/lib/i18n'
 import { Toaster } from '@/components/ui/sonner'
 import { RouteError } from '@/components/RouteError'
+import { SupervisionGate } from '@/components/console/SupervisionGate'
 import { ServicesProvider } from '@/services'
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -42,7 +43,14 @@ function RootComponent() {
 		<QueryClientProvider client={queryClient}>
 			{/* Client-side services — environment detected & bound ONCE here (see @/services). */}
 			<ServicesProvider>
-				<Outlet />
+				{/* Supervision decides whether the console's server work can succeed AT ALL: with the
+				    daemon down every request is doomed (it is the origin of all of them, the gateway's
+				    proxied ones included), so they get paused rather than fired, failed and retried.
+				    Root-level because the pause is process-wide, and it wraps the Outlet — never the
+				    Toaster — so a held console can still speak. */}
+				<SupervisionGate>
+					<Outlet />
+				</SupervisionGate>
 				<Toaster />
 			</ServicesProvider>
 			<TanStackRouterDevtools />
