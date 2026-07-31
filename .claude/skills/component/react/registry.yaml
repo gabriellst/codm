@@ -1135,3 +1135,53 @@ registry:
         (route shell), que é sobre ONDE o arquivo mora. Em components/ui/ a rail C
         (packages/app/react/tests/architecture/primitive-props.test.ts) continua dona da metade de
         DECLARAÇÃO (`*Props` fechada) e do clobber em componentes module-private.
+
+    - id: bp-30
+      name: "Mutation side effects passed to mutate() from a component the dialog flow unmounts"
+      severity: critical
+      rule: >
+        Efeito de mutação (navegar, limpar cache, fechar) vive nas opções do HOOK —
+        `useX({ mutation: { onSuccess } })` — NUNCA no segundo argumento de `mutate(vars, { onSuccess })`,
+        em qualquer componente que possa desmontar antes da resposta. As callbacks do `mutate()` vivem no
+        OBSERVER do React Query e ele não as chama quando o componente desmontou; as do hook vivem na
+        MUTAÇÃO e sobrevivem. A requisição sai nos dois casos — o servidor executa e a UI fica parada,
+        que é o pior modo de falha possível: nada quebra, nada avisa, e o dado já mudou.
+        POR QUE ISSO É REGRA NESTE REPO, e não teoria: `confirm()` do `useDialogStore` SUBSTITUI o
+        conteúdo do dialog pelo ConfirmDialog compartilhado (CMP-P13),
+        então TODO fluxo destrutivo confirmado desmonta o componente que chamou o `confirm` enquanto o
+        operador decide. Medido em 31/07 no `ThreadSettingsDialog`: apagar a conversa apagava no servidor
+        e a UI ficava na thread apagada, sem navegar e sem limpar a lista.
+        ARMADILHA DE TESTE, registrada porque custou três tentativas: um teste que só assere "a requisição
+        saiu" passa nas DUAS versões — o DELETE sai igual. E asserções sobre o CACHE também não distinguem
+        (`removeQueries` vs `invalidateQueries` são indistinguíveis quando nenhum dos dois roda). O que
+        falseia é assertar o EFEITO OBSERVÁVEL — `router.state.location.pathname` depois da confirmação.
+      wrong: |
+        // o confirm desmonta este componente; o onSuccess nunca roda, mas o DELETE acontece
+        const deleteThread = useDeleteThread()
+        const onDelete = async () => {
+          if (!(await confirm({ ... }))) return
+          deleteThread.mutate({ threadId }, { onSuccess: () => { hide(); navigate({ to: '/dashboard' }) } })
+        }
+      right: |
+        // as callbacks vivem na mutação e sobrevivem ao desmonte do dialog
+        const deleteThread = useDeleteThread({
+          mutation: {
+            onSuccess: () => {
+              hide()
+              queryClient.removeQueries({ queryKey: getSessionChatQueryKey(threadId) })
+              navigate({ to: '/dashboard' })
+            },
+          },
+        })
+        const onDelete = async () => {
+          if (!(await confirm({ ... }))) return
+          deleteThread.mutate({ threadId })
+        }
+      mechanical: true
+      detect:
+        - '\.mutate\([^)]*\{\s*on(Success|Error|Settled)'
+      rail: >
+        Sem rail automatizado hoje — o `detect` acima é heurístico (pega o shape, não o desmonte). O teste
+        que prova o comportamento é `ThreadSettingsDialog/index.test.tsx`, com harness FIEL: o dialog entra
+        pelo host da store (`show(<X />)`) como em `(app)/route.tsx`, e não montado direto — montar direto
+        deixa o `confirm()` sem host onde renderizar e o fluxo inteiro fica inalcançável pelo teste.

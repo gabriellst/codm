@@ -502,6 +502,30 @@ const confirmed = await confirm({ title: 'Excluir?', variant: 'destructive' })
 if (!confirmed) return
 ```
 
+### `confirm()` DESMONTA quem o chamou — e isso decide onde as callbacks vivem (bp-30)
+
+`confirm()` **substitui** o conteúdo do dialog pelo ConfirmDialog compartilhado. Enquanto o operador
+decide, o componente que chamou `confirm` **está desmontado**. Consequência prática, medida em 31/07:
+
+```typescript
+// ERRADO — o onSuccess nunca roda, mas o DELETE acontece
+deleteThread.mutate({ threadId }, { onSuccess: () => navigate({ to: '/dashboard' }) })
+
+// CERTO — a callback vive na mutação e sobrevive ao desmonte
+const deleteThread = useDeleteThread({ mutation: { onSuccess: () => navigate({ to: '/dashboard' }) } })
+deleteThread.mutate({ threadId })
+```
+
+Callbacks passadas a `mutate(vars, {...})` vivem no **observer** do React Query, que não as chama
+quando o componente desmontou; as das opções do hook vivem na **mutação**. A requisição sai nos dois
+casos — o servidor executa e a UI fica parada. É o pior modo de falha: nada quebra, nada avisa, e o
+dado já mudou.
+
+**Ao testar um fluxo com `confirm()`**, monte pelo host da store (`show(<X />)`) como
+`(app)/route.tsx` faz — montar o componente direto deixa o ConfirmDialog sem host onde renderizar e o
+clique de confirmação não existe. E asserte o **efeito observável** (`router.state.location.pathname`),
+nunca só "a requisição saiu": esta última passa nas duas versões.
+
 ## ARIA Labels (AI-Navigable Components)
 
 Every component must be navigable by AI agents and screen readers. Two mechanisms:
