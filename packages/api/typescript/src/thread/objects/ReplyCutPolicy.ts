@@ -31,21 +31,22 @@
 /**
  * Quanto tempo uma resposta pode ficar parada antes de valer uma edição.
  *
- * 750ms por decisão do founder (31/07), baixado de 1500ms para o primeiro teste real. NENHUM dos
- * dois é medição: 1500 era o ponto de partida ratificado na spec, este é a primeira tentativa de
- * afinar contra o WhatsApp de verdade.
+ * 1500ms — o valor ratificado na spec, restaurado pelo founder em 31/07 depois de EXPERIMENTAR 750ms
+ * contra o WhatsApp real e preferir o original. Registrado como experimento feito, não como número
+ * nunca testado: quem for baixar de novo deve saber que já foi tentado.
  *
- * O que muda ao baixar: a resposta avança com o dobro da frequência, ao custo de **até o dobro de
- * edições por resposta**. E o custo que importa não é o nosso — é o que a plataforma acha disso: o
- * WhatsApp marca a mensagem como editada e limita taxa, e ninguém mediu como ele reage a uma rajada.
- * Por isso este é um const nomeado, com `intervalMs` sobrescrevível em `decideCut`: afinar custa uma
- * linha e um teste, não uma caçada.
+ * O que 750ms comprava: a resposta avançando com o dobro da frequência. O que custava: até o dobro de
+ * edições por resposta — e o custo que importa não é o nosso, é o que a plataforma acha disso (o
+ * WhatsApp marca "editada" e limita taxa).
+ *
+ * Este é um const nomeado, com `intervalMs` sobrescrevível em `decideCut`, e o teste de fronteira é
+ * ancorado nele: afinar custa uma linha e nada quebra.
  *
  * O que NÃO muda: os outros dois gatilhos. A primeira frase continua saindo assim que existe (é ela
  * que mata o tempo aparente) e um parágrafo fechado continua cortando na hora — o intervalo governa
  * só o caso do parágrafo longo ainda sendo escrito.
  */
-export const STREAM_CUT_INTERVAL_MS = 750
+export const STREAM_CUT_INTERVAL_MS = 1_500
 
 /** What the caller carries between decisions — the whole memory this policy needs. */
 export interface ReplyCutState {
