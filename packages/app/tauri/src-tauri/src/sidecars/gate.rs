@@ -76,6 +76,31 @@ impl ReadinessGate {
     }
 
     pub fn note_failed(&self, name: &str, reason: &str) -> Option<Reveal> {
+        self.arrive(Some(self.build_failure(name, reason)))
+    }
+
+    /// A sidecar died AFTER the boot finished. Records the failure and hands back the SAME
+    /// `Reveal::BootError` the give-up path returns — deliberately, so a runtime death reuses the
+    /// splash instead of growing a second one: same window, same stderr tail, same retry button, and
+    /// the same `boot_failures` PULL feeding it.
+    ///
+    /// It does NOT touch `arrived`: the boot already reached `total` and its verdict is history.
+    /// This answers a different question ("what is broken NOW?") in the same vocabulary.
+    pub fn note_runtime_failure(&self, name: &str, reason: &str) -> Reveal {
+        let failure = self.build_failure(name, reason);
+        let mut state = self.state.lock().expect("gate mutex");
+        state.failures.push(failure);
+        Reveal::BootError(state.failures.clone())
+    }
+
+    /// The failures accumulated so far — what the `boot_failures` command hands the splash.
+    pub fn failures(&self) -> Vec<SidecarFailure> {
+        self.state.lock().expect("gate mutex").failures.clone()
+    }
+
+    /// A failure record with that sidecar's retained stderr tail attached. Locks and releases before
+    /// the caller takes the lock again — the two paths differ only in what they do with the record.
+    fn build_failure(&self, name: &str, reason: &str) -> SidecarFailure {
         let stderr = {
             let state = self.state.lock().expect("gate mutex");
             state
@@ -85,16 +110,11 @@ impl ReadinessGate {
                 .map(|(_, lines)| lines.iter().cloned().collect())
                 .unwrap_or_default()
         };
-        self.arrive(Some(SidecarFailure {
+        SidecarFailure {
             name: name.to_owned(),
             reason: reason.to_owned(),
             stderr,
-        }))
-    }
-
-    /// The failures accumulated so far — what the `boot_failures` command hands the splash.
-    pub fn failures(&self) -> Vec<SidecarFailure> {
-        self.state.lock().expect("gate mutex").failures.clone()
+        }
     }
 
     fn arrive(&self, failure: Option<SidecarFailure>) -> Option<Reveal> {
@@ -168,6 +188,37 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// AC-5 — uma morte DEPOIS do boot reusa a mesma splash: mesmo stderr, mesmo `boot_failures`
+    /// (o PULL que a pagina ja usa), nenhuma segunda implementacao de tela de erro.
+    #[test]
+    fn a_runtime_death_reuses_the_boot_error_splash() {
+        let gate = ReadinessGate::new(2);
+        gate.record_stderr("codm-daemon", "FATAL: database is locked");
+        assert!(gate.note_ready("codm-daemon").is_none());
+        assert!(
+            matches!(gate.note_ready("codm-gateway"), Some(Reveal::Main)),
+            "o boot terminou bem — a splash so entra em cena depois"
+        );
+
+        let reveal = gate.note_runtime_failure("codm-daemon", "process exited (code Some(1))");
+        let Reveal::BootError(failures) = reveal else {
+            panic!("AC-5: daemon caido em runtime tem de revelar a splash");
+        };
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].name, "codm-daemon");
+        assert_eq!(failures[0].reason, "process exited (code Some(1))");
+        assert_eq!(
+            failures[0].stderr,
+            vec!["FATAL: database is locked"],
+            "a cauda de stderr capturada durante a vida do processo e o que o operador le"
+        );
+        assert_eq!(
+            gate.failures().len(),
+            1,
+            "o mesmo comando boot_failures alimenta a splash — sem canal novo"
+        );
     }
 
     #[test]

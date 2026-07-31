@@ -195,6 +195,7 @@ fn apply(app: &tauri::AppHandle, reveal: Reveal) {
 /// trivially ordered.
 fn supervise(app: &tauri::AppHandle) {
     let monitor = app.state::<Arc<SupervisionMonitor>>().inner().clone();
+    let gate = app.state::<Arc<ReadinessGate>>().inner().clone();
     // Until this line the ReadinessGate alone decides which window opens; after it, supervision does.
     monitor.arm();
     let handle = app.clone();
@@ -212,21 +213,44 @@ fn supervise(app: &tauri::AppHandle) {
                 let outcome = probe_within_budget(&api, *service).await;
                 if let Some(state) = monitor.note_probe(*service, outcome) {
                     log::warn!("[{name}] supervision transition after probe: {outcome:?}");
-                    react(&handle, state);
+                    react(&handle, &gate, &monitor, state);
                 }
             }
         }
     });
 }
 
-/// What a transition DOES. Everyone gets told (the console, through the typed event); the daemon
-/// additionally takes the window away, because nothing in the console works without it.
-fn react(app: &tauri::AppHandle, state: SupervisionState) {
+/// What a transition DOES — the reaction is SPLIT BY SIDECAR (spec Decision 6), because the two
+/// deaths cost different things:
+///
+/// - **daemon down** -> the console is worthless (every read, every write and the SSE stream go
+///   through it), so the window is taken away and the boot-error splash comes back with the stderr
+///   tail and the retry button. REUSED, not reimplemented: `Reveal::BootError` + `apply` are the
+///   same path the boot takes, and the splash reads the same `boot_failures`.
+/// - **gateway down** -> the console stays usable and shows a fixed banner. It renders that from the
+///   event below plus the `supervision_state` command; the shell decides nothing about it.
+///
+/// Everything else (`Degraded`, and the recovery back to `Healthy`) is console-only by construction:
+/// the emit fires for every transition, and only the daemon's death touches a window.
+///
+/// NO AUTO-RESPAWN (spec Decision 7). Detect and show; the operator restarts through `retry_boot`.
+/// A silent respawn hides the failure, and a crash-loop becomes a blinking window with no cause.
+fn react(
+    app: &tauri::AppHandle,
+    gate: &ReadinessGate,
+    monitor: &SupervisionMonitor,
+    state: SupervisionState,
+) {
     log::warn!("supervision state changed: {state:?}");
     // PUSH half of spec Decision 9. The PULL half (`supervision_state`) exists because this emit is
     // lost on anyone who was not mounted yet — the `boot_failures` lesson.
-    if let Err(e) = (SupervisionChanged { state }).emit(app) {
+    if let Err(e) = (SupervisionChanged { state: state.clone() }).emit(app) {
         log::error!("failed to emit supervision change: {e}");
+    }
+    if state == (SupervisionState::Down { sidecar: SidecarService::Daemon }) {
+        let name = monitor.name_of(SidecarService::Daemon);
+        let reveal = gate.note_runtime_failure(&name, "sidecar died while the app was running");
+        apply(app, reveal);
     }
 }
 
@@ -305,7 +329,7 @@ pub fn boot_sidecar(
                         payload.signal
                     );
                     if let Some(state) = log_monitor.note_exit(log_service) {
-                        react(&log_handle, state);
+                        react(&log_handle, &log_gate, &log_monitor, state);
                     }
                 }
                 _ => {}
