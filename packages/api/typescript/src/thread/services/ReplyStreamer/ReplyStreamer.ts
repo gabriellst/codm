@@ -110,8 +110,26 @@ export class ReplyStreamer {
 	 *
 	 * Returns a handle rather than exposing the sequence counter, so the caller cannot get the ordering
 	 * wrong: sequences are minted here, in call order, and the turn just says "here is the text now".
+	 *
+	 * ### `replyToEntryId` — the anchor, handed over BEFORE a word exists
+	 * "Ao finalizar uma tarefa, deve responder a mensagem que a criou" (founder). A streamed reply can
+	 * only be quoted by the message that OPENS it: an edit replaces text and carries no citation field,
+	 * so a balloon that went out unquoted stays unquoted. The anchor therefore has to be known here, at
+	 * `begin`, before the model has said anything — and it is, because the mandate is not the model's to
+	 * make: `RunOrchestratorTurn` takes `originEntryId` as INPUT on an ISSUE_RESULT turn (the mandatory
+	 * half of D6) and hands it straight through.
+	 *
+	 * It is the ENTRY id, not the platform id. Resolving the ledger here would put a thread-context read
+	 * inside a service the turn calls; `StreamChannelReply` already holds `ConsumedMessageRepository` for
+	 * its echo claim and resolves it there, in the context that owns the ledger and exactly where
+	 * `RecordOrchestratorReply` resolves the same thing. The durable row also keeps a stable domain id
+	 * rather than a platform id frozen at enqueue time.
+	 *
+	 * A conversational citation the MODEL chooses (its sentinel, parsed after the run) cannot ride this
+	 * path — it does not exist yet when the stream opens. Those replies still get their quote from the
+	 * final `deliver_channel_message`, which is unstreamed whenever no cut ever landed.
 	 */
-	begin(conversation: { ownerId: string; channelId: string; remoteId: string }): ReplyStreamHandle {
+	begin(conversation: { ownerId: string; channelId: string; remoteId: string; replyToEntryId?: string }): ReplyStreamHandle {
 		const key = streamKey(conversation.channelId, conversation.remoteId)
 		// A previous reply in the SAME conversation may still be parked here (closed, kept so stragglers
 		// die). This turn's reply is a new message, so the slot starts clean.
@@ -128,7 +146,18 @@ export class ReplyStreamer {
 				const scheduled = await tryCatchAsync(() =>
 					this.commands.enqueueCommand<StreamChannelReply>(
 						'stream_channel_reply',
-						{ ownerId: conversation.ownerId, channelId: conversation.channelId, remoteId: conversation.remoteId, text, sequence },
+						{
+							ownerId: conversation.ownerId,
+							channelId: conversation.channelId,
+							remoteId: conversation.remoteId,
+							text,
+							sequence,
+							// Rides EVERY cut, though only the one that OPENS a message will spend it. Carrying it on
+							// each row keeps the cut self-contained: which cut opens the message is decided by
+							// `claimCut` at execution time (a retried first cut can be overtaken), so the executor
+							// must be able to open a message from whichever row happens to get there first.
+							replyToEntryId: conversation.replyToEntryId,
+						},
 						// UNIQUE job id per cut. A stable one would be worse than useless: `enqueueCommand`
 						// dedups with ON CONFLICT DO NOTHING, so a second cut would be silently DROPPED and the
 						// contact would keep reading the older text.

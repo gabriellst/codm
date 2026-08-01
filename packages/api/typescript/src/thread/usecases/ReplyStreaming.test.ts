@@ -346,4 +346,146 @@ describe('the streamed reply — it starts early, it grows, and it never regress
 			expect(sender.screen().join('')).toBe(FINAL)
 		})
 	})
+	// ─────────────────────────────────────────────────────────────────────────────
+	// THE CITATION — it rides the FIRST cut, because that is the message that exists
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * "AO FINALIZAR UMA TAREFA, DEVE RESPONDER A MENSAGEM QUE A CRIOU" (founder), for the case that is
+	 * actually the common one.
+	 *
+	 * The plain delivery already quotes. A STREAMED reply could not, and streaming is not an edge case:
+	 * `RunOrchestratorTurn` opens a stream on EVERY turn, so in practice no finished task was arriving
+	 * with a citation at all. It cannot be retrofitted at the end either — `ChannelSender.edit` takes
+	 * `{channelId, remoteId, messageId, text}` and the gateway's `PUT /messages/edit` has no quote field,
+	 * so a message that went out unquoted stays unquoted forever.
+	 *
+	 * So the citation travels with the OPENING send: the turn hands the anchor to `ReplyStreamer.begin`,
+	 * every cut carries it on its durable row, and the cut that actually opens the message resolves it
+	 * through the ledger and puts it on the wire. Later cuts only edit, and an edit needs no quote —
+	 * quem cita é a mensagem, uma vez.
+	 */
+	describe('the citation rides the first cut', () => {
+		/** The operator's message that asked for the work — a real entry, LINKED like a real inbound. */
+		const givenOriginMessage = async (thread: Awaited<ReturnType<typeof givenThread>>, platformMessageId: string) => {
+			const entry = thread.recordEntry({
+				kind: TranscriptKind.CONTACT,
+				text: 'arruma o cupom por favor',
+				senderExternalId: thread.contactRef.externalId,
+			})
+			await testBed.resolve(ThreadRepository).save(thread)
+			const ledger = testBed.resolve(ConsumedMessageRepository)
+			await ledger.claim({ ownerId: OPERATOR_ID, channelId: thread.channelId, platformMessageId })
+			await ledger.linkEntry({
+				channelId: thread.channelId,
+				platformMessageId,
+				threadId: thread.id.value,
+				entryId: entry.entryId,
+			})
+			return entry
+		}
+
+		/** Same clock trick the window suite uses — cross ~15 minutes in a millisecond. */
+		const afterTheWindow = async <T>(fn: () => Promise<T>): Promise<T> => {
+			const realNow = Date.now
+			Date.now = () => realNow() + EDIT_WINDOW_MS + 1_000
+			try {
+				return await fn()
+			} finally {
+				Date.now = realNow
+			}
+		}
+
+		it('FALSEADOR — the opening send carries the quote ON THE WIRE, driven from the turn seam', async () => {
+			const { thread, channelId, remoteId } = await givenConversation()
+			await givenOriginMessage(thread, 'wamid-asked')
+			const origin = (await testBed.resolve(ThreadRepository).listEntries(thread.id.value))[0]
+
+			// The turn's own entry point, anchored the way `RunOrchestratorTurn` anchors an ISSUE_RESULT.
+			const handle = streamer.begin({ ownerId: OPERATOR_ID, channelId, remoteId, replyToEntryId: origin?.entryId })
+			await handle.cut(FIRST)
+			await queue.tick()
+
+			// ON THE WIRE — what the SENDER received, never the command row. That distinction is what let
+			// this ship broken twice. Remove the pass-through and this is `undefined`.
+			expect(sender.sent).toHaveLength(1)
+			expect(sender.sent[0]).toMatchObject({ channelId, remoteId, text: FIRST, quotedMessageId: 'wamid-asked' })
+		})
+
+		it('the cuts that follow EDIT and never re-cite — one utterance cites once', async () => {
+			const { thread, channelId, remoteId } = await givenConversation()
+			await givenOriginMessage(thread, 'wamid-asked')
+			const origin = (await testBed.resolve(ThreadRepository).listEntries(thread.id.value))[0]
+
+			const handle = streamer.begin({ ownerId: OPERATOR_ID, channelId, remoteId, replyToEntryId: origin?.entryId })
+			await handle.cut(FIRST)
+			await handle.cut(GROWN)
+			await handle.cut(FINAL)
+			await queue.tick()
+
+			// ONE balloon, quoted once, grown by edits that carry no citation of their own.
+			expect(sender.sent).toHaveLength(1)
+			expect(sender.sent[0]?.quotedMessageId).toBe('wamid-asked')
+			expect(sender.edits.length).toBeGreaterThan(0)
+			expect(sender.screen()).toEqual([FINAL])
+		})
+
+		/**
+		 * THE CONTINUATION DOES NOT RE-CITE, and the reason CHANGED with this commit.
+		 *
+		 * It used to be "consistency with a first balloon that never cites". That premise is gone — the
+		 * first balloon cites now. The rule that replaces it is stronger and survives the change: a
+		 * citation anchors an UTTERANCE, and the utterance is already anchored by the balloon above. The
+		 * contact would otherwise see the same quoted bubble stapled to two consecutive messages, which
+		 * reads as two separate replies to one question rather than one answer that ran past a limit.
+		 */
+		it('a continuation opened after the window does NOT re-cite — the head balloon already did', async () => {
+			const { thread, channelId, remoteId } = await givenConversation()
+			await givenOriginMessage(thread, 'wamid-asked')
+			const origin = (await testBed.resolve(ThreadRepository).listEntries(thread.id.value))[0]
+
+			const handle = streamer.begin({ ownerId: OPERATOR_ID, channelId, remoteId, replyToEntryId: origin?.entryId })
+			await handle.cut(FIRST)
+			await queue.tick()
+			await afterTheWindow(async () => {
+				await handle.cut(FINAL)
+				await queue.tick()
+			})
+
+			expect(sender.sent).toHaveLength(2)
+			expect(sender.sent[0]?.quotedMessageId).toBe('wamid-asked')
+			expect(sender.sent[1]?.text).toBe(FINAL.slice(FIRST.length))
+			expect(sender.sent[1]?.quotedMessageId).toBeUndefined()
+			expect(sender.screen().join('')).toBe(FINAL)
+		})
+
+		it('an anchor that cannot be resolved opens the stream UNQUOTED, and does not fail', async () => {
+			const { channelId, remoteId } = await givenConversation()
+
+			// Names an entry that reached no ledger row — a message from before the thread was attached.
+			const handle = streamer.begin({
+				ownerId: OPERATOR_ID,
+				channelId,
+				remoteId,
+				replyToEntryId: '019e4d24-6524-7041-9e1c-8108180cddff',
+			})
+			await handle.cut(FIRST)
+			await queue.tick()
+
+			expect(sender.sent).toHaveLength(1)
+			expect(sender.sent[0]?.text).toBe(FIRST)
+			expect(sender.sent[0]?.quotedMessageId).toBeUndefined()
+		})
+
+		it('a stream with no anchor at all is unchanged — conversation replies open unquoted', async () => {
+			const { channelId, remoteId } = await givenConversation()
+
+			const handle = streamer.begin({ ownerId: OPERATOR_ID, channelId, remoteId })
+			await handle.cut(FIRST)
+			await queue.tick()
+
+			expect(sender.sent).toHaveLength(1)
+			expect(sender.sent[0]?.quotedMessageId).toBeUndefined()
+		})
+	})
 })

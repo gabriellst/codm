@@ -191,6 +191,16 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			ownerId: input.ownerId,
 			channelId: thread.channelId,
 			remoteId: thread.contactRef.externalId,
+			// THE ANCHOR, HANDED OVER BEFORE THE MODEL HAS SAID ANYTHING (founder: "ao finalizar uma tarefa,
+			// deve responder a mensagem que a criou").
+			//
+			// Only `originEntryId` can ride this, and that is precisely the case the ask is about. D6's two
+			// halves split right here: the ISSUE_RESULT anchor is a MANDATE that arrives as INPUT, so it
+			// already exists at `begin`; the conversational citation is the model's own sentinel and is not
+			// parsed until the run ends — by which time the first balloon is long sent, and an edit cannot
+			// add a quote. Those replies still get their citation from the final `deliver_channel_message`,
+			// which is the unstreamed path whenever no cut ever landed.
+			replyToEntryId: input.originEntryId,
 		})
 		let cutState: ReplyCutState = INITIAL_CUT_STATE
 		// The reply as the FRAMES have it so far: blocks the decoder has already consolidated, plus the one

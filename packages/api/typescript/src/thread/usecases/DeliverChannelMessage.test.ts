@@ -453,19 +453,23 @@ describe('DeliverChannelMessage — the citation reaches the wire, which is the 
 	})
 
 	/**
-	 * THE CONTINUATION DOES NOT CITE — a decision, pinned so it cannot drift into one by accident.
+	 * THE CONTINUATION STILL DOES NOT CITE — same verdict, DIFFERENT REASON, and the reason was rewritten
+	 * on purpose rather than left standing.
 	 *
-	 * A continuation is the REST of one utterance whose head is already on the contact's screen, sent by
-	 * `StreamChannelReply` — which has no `quotedMessageId` in its schema and therefore never quotes. So
-	 * quoting here would attach the citation to the TAIL of a split answer and to nothing else, which
-	 * reads as a second, separate reply to an older message rather than as the end of this one. It would
-	 * also make the citation appear only when the 14-minute edit window happened to expire mid-reply: the
-	 * contact would see a quote or not depending on a timing accident.
+	 * The original argument was "consistency with a first balloon that never cites". That premise is now
+	 * FALSE: `StreamChannelReply` carries `replyToEntryId` and quotes the message it opens, so the head
+	 * balloon of a streamed reply does cite. A decision resting on a premise that has been deleted has to
+	 * be re-made, not inherited.
 	 *
-	 * Consistency with the first balloon is the rule, and the first balloon does not cite. Making the
-	 * streamed reply carry the citation is a real fix, but it belongs where the reply STARTS.
+	 * Re-made, it lands in the same place on a stronger footing: a citation anchors an UTTERANCE, and
+	 * this utterance is ALREADY anchored by the balloon above it. Repeating the quote would staple the
+	 * same bubble to two consecutive messages, which reads as two separate replies to one question rather
+	 * than one answer that ran past a platform limit. Quem cita é a mensagem, uma vez.
+	 *
+	 * The old secondary argument survives untouched and still matters: quoting here would make the
+	 * citation's presence depend on whether the 14-minute window happened to expire mid-reply.
 	 */
-	it('the continuation of a streamed reply sends UNQUOTED, like the balloon it continues', async () => {
+	it('the continuation of a streamed reply sends UNQUOTED — the head balloon already carried the citation', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const sender = new MockChannelSender()
 		testBed.override(ChannelSender, sender)
@@ -474,9 +478,11 @@ describe('DeliverChannelMessage — the citation reaches the wire, which is the 
 		const origin = await givenOriginMessage(thread, 'wamid-asked')
 
 		// A stream whose message is older than the edit window: the final text CONTINUES in a new message.
+		// The head carries the citation, because that is what `StreamChannelReply` now puts on the balloon
+		// that OPENS a reply — the fixture mirrors the real opening send rather than an obsolete one.
 		const head = 'terminei, '
 		const { messageId } = await sender.send(
-			{ channelId: thread.channelId, remoteId: thread.contactRef.externalId, text: head },
+			{ channelId: thread.channelId, remoteId: thread.contactRef.externalId, text: head, quotedMessageId: 'wamid-asked' },
 			OPERATOR_ID,
 		)
 		streams.opened(streamKey(thread.channelId, thread.contactRef.externalId), {
@@ -496,7 +502,8 @@ describe('DeliverChannelMessage — the citation reaches the wire, which is the 
 		// The tail went out as its own message, carrying only what the expired one does not show...
 		expect(sender.sent).toHaveLength(2)
 		expect(sender.sent[1]?.text).toBe('subiu')
-		// ...and WITHOUT a citation, exactly like the balloon above it.
+		// ...and the citation sits on the HEAD and nowhere else: one utterance, quoted once.
+		expect(sender.sent[0]?.quotedMessageId).toBe('wamid-asked')
 		expect(sender.sent[1]?.quotedMessageId).toBeUndefined()
 		expect(sender.edits).toHaveLength(0)
 	})

@@ -145,15 +145,15 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 	 * Then the remainder continues in a NEW message (decision 4) carrying only what the expired one does
 	 * not already show, so the two balloons concatenate to the whole reply instead of repeating it.
 	 *
-	 * ### A STREAMED REPLY STILL CARRIES NO CITATION, and it cannot be fixed from here
-	 * The plain send now quotes the message that created the task. This path cannot: an edit REPLACES
-	 * text and nothing else — `ChannelSender.edit` takes `{channelId, remoteId, messageId, text}`, and the
-	 * gateway's `PUT /messages/edit` has no quote field — so a message that went out unquoted stays
-	 * unquoted no matter what completes it. The citation would have to ride the FIRST cut, which means
-	 * threading `quotedMessageId` through `StreamChannelReply`'s schema (a durable command payload) and
-	 * through `ReplyStreamer.begin`/`cut`. That is a real change with its own contract surface and is NOT
-	 * bundled here; it is the remaining half of the founder's ask, and it is stated rather than hidden
-	 * because a streamed reply is the common case, not the exception.
+	 * ### THE CITATION IS ALREADY ON THE SCREEN BY THE TIME THIS RUNS
+	 * Nothing here quotes, and nothing here needs to. An edit REPLACES text and nothing else
+	 * (`ChannelSender.edit` takes `{channelId, remoteId, messageId, text}`; the gateway's
+	 * `PUT /messages/edit` has no quote field), so a citation could never be ADDED at the end — which is
+	 * precisely why it is added at the START: `ReplyStreamer.begin` carries the anchor and
+	 * `StreamChannelReply` puts it on the balloon that OPENS the reply. By the time the final text lands
+	 * here, the message being completed is already the quoted one.
+	 *
+	 * The continuation below stays unquoted for the same reason — see the note there.
 	 */
 	private async finishStreamedReply(input: this['input'], tx?: Transaction): Promise<boolean> {
 		const { ownerId, channelId, contactExternalId, text, author } = input
@@ -185,16 +185,14 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 
 		// DELIBERATELY UNQUOTED, and this is the decision rather than an omission.
 		//
-		// A continuation is the REST of one utterance whose head is already on the contact's screen — sent
-		// by `StreamChannelReply`, which has no `quotedMessageId` in its schema and therefore never quotes.
-		// Citing here would hang the citation on the TAIL of a split answer and on nothing else, which
-		// reads as a second, separate reply to an older message instead of the end of this one. Worse, it
-		// would make the quote appear only when the 14-minute edit window happened to expire mid-reply: the
-		// contact would see a citation or not depending on a timing accident.
+		// A continuation is the REST of one utterance whose head is already on the contact's screen, and
+		// that head now CARRIES the citation (`StreamChannelReply` quotes the balloon it opens). So the
+		// utterance is already anchored: repeating the quote here would staple the same bubble to two
+		// consecutive messages, which reads as two separate replies to one question instead of one answer
+		// that ran past a platform limit. Quem cita é a mensagem, uma vez.
 		//
-		// The rule is consistency with the first balloon, and the first balloon does not cite. Making a
-		// STREAMED reply carry the citation is a real and separate fix, and it belongs where the reply
-		// STARTS — see the note on `finishStreamedReply` for why it cannot be retrofitted by an edit.
+		// It would also make the citation's presence depend on whether the 14-minute window happened to
+		// expire mid-reply — a timing accident deciding what the contact sees.
 		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text: remainder }, ownerId)
 		// The continuation is a message this account sent, so it needs the same echo claim the plain
 		// delivery path takes — otherwise its echo comes back as inbound speech — and the same link, so a

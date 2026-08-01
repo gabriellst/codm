@@ -21,6 +21,19 @@ export const StreamChannelReplyInputSchema = z.object({
 	 * cuts have landed. The number is what lets the late one be recognised and dropped.
 	 */
 	sequence: z.number().int().positive(),
+	/**
+	 * The transcript entry this reply ANSWERS, when the turn imposed one (founder: "ao finalizar uma
+	 * tarefa, deve responder a mensagem que a criou").
+	 *
+	 * OPTIONAL, and that is also the whole migration story: this is a DURABLE payload
+	 * (`shared_scheduled_commands.input`), so rows enqueued before the field existed parse with it absent
+	 * and open their message unquoted — exactly today's behaviour. No backfill, no in-flight row failing
+	 * validation, and a cut is seconds old in any case.
+	 *
+	 * The ENTRY id, not the platform id: it is resolved to a wamid below, in the context that owns the
+	 * ledger, at the one moment a message is actually being opened.
+	 */
+	replyToEntryId: z.string().optional(),
 })
 
 export const StreamChannelReplyOutputSchema = z.void()
@@ -69,7 +82,7 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 	}
 
 	protected async handle(input: this['input'], _tx?: Transaction): Promise<void> {
-		const { ownerId, channelId, remoteId, text, sequence } = input
+		const { ownerId, channelId, remoteId, text, sequence, replyToEntryId } = input
 
 		// AC-6, AND THE FALSEADOR'S TARGET. Drop the two lines below and a send-only channel gets a
 		// PARTIAL first message that nothing can ever complete.
@@ -86,7 +99,20 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 				return
 
 			case 'SEND':
-				await this.openMessage(key, { ownerId, channelId, remoteId, text: text, sequence, baseOffset: 0 })
+				// THE ONE MESSAGE THAT MAY CARRY THE CITATION. This is the balloon that OPENS the reply, so
+				// it is the only one for which "this answers that" is true of the whole utterance — and the
+				// only one that can say it at all, since every later cut is an edit and an edit has no quote
+				// field. Resolved here rather than at `begin` because the ledger belongs to this context, and
+				// resolved only on this branch because no other branch opens the reply.
+				await this.openMessage(key, {
+					ownerId,
+					channelId,
+					remoteId,
+					text: text,
+					sequence,
+					baseOffset: 0,
+					quotedMessageId: await this.resolveQuote(replyToEntryId),
+				})
 				// The first words are on the wire — the indicator has done its job (AC-10).
 				await this.stopTypingPresence(channelId, remoteId)
 				return
@@ -94,6 +120,11 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 			case 'CONTINUE':
 				// THE WINDOW CLOSED MID-REPLY (decision 4). The rest goes out as a NEW message rather than as
 				// a failed edit, and `baseOffset` is what keeps the two balloons from repeating each other.
+				//
+				// DELIBERATELY UNQUOTED. A citation anchors an UTTERANCE, and this utterance is already
+				// anchored by the balloon above — the one the `SEND` branch opened and quoted. Repeating the
+				// quote would staple the same bubble to two consecutive messages, which reads as two separate
+				// replies to one question instead of one answer that ran past a platform limit.
 				await this.openMessage(key, { ownerId, channelId, remoteId, text, sequence, baseOffset: verdict.baseOffset })
 				return
 
@@ -114,7 +145,15 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 	 */
 	private async openMessage(
 		key: string,
-		message: { ownerId: string; channelId: string; remoteId: string; text: string; sequence: number; baseOffset: number },
+		message: {
+			ownerId: string
+			channelId: string
+			remoteId: string
+			text: string
+			sequence: number
+			baseOffset: number
+			quotedMessageId?: string
+		},
 		tx?: Transaction,
 	): Promise<void> {
 		const body = message.text.slice(message.baseOffset)
@@ -122,7 +161,10 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 		// balloon in the conversation.
 		if (body.length === 0) return
 
-		const { messageId } = await this.sender.send({ channelId: message.channelId, remoteId: message.remoteId, text: body }, message.ownerId)
+		const { messageId } = await this.sender.send(
+			{ channelId: message.channelId, remoteId: message.remoteId, text: body, quotedMessageId: message.quotedMessageId },
+			message.ownerId,
+		)
 
 		this.streams.opened(key, {
 			ownerId: message.ownerId,
@@ -136,6 +178,24 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 		await this.withTransaction(tx, tx =>
 			this.consumed.claim({ ownerId: message.ownerId, channelId: message.channelId, platformMessageId: messageId }, tx),
 		)
+	}
+
+	/**
+	 * The anchor entry → the platform id a WhatsApp quote actually needs.
+	 *
+	 * The SAME inverse lookup `RecordOrchestratorReply` performs for the unstreamed reply, deliberately
+	 * spelled the same way and degrading the same way: an entry with no ledger row — one from before the
+	 * thread was attached, or one that never reached the channel — yields `undefined`, the message opens
+	 * unquoted, and the reply still lands. An unquoted answer is worth far more than a silence, and a
+	 * citation is never worth failing a command that is already on the critical path of the first words.
+	 *
+	 * Read HERE and not at `begin` for two reasons: the ledger is this context's, and a cut is the only
+	 * moment we know a message is actually being opened — resolving eagerly for every turn would pay a
+	 * query for the majority of cuts, which only ever edit.
+	 */
+	private async resolveQuote(replyToEntryId?: string): Promise<string | undefined> {
+		if (!replyToEntryId) return undefined
+		return this.consumed.findPlatformId(replyToEntryId)
 	}
 
 	/** Same derived handles `DeliverChannelMessage` cancels, and swallowed for the same reason (decision 12). */
