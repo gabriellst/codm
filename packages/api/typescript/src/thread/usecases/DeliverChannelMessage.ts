@@ -31,10 +31,12 @@ export const DeliverChannelMessageInputSchema = z.object({
 	// existed simply carry no link — they are single messages already delivered, and they self-heal by
 	// being replaced with the next reply.
 	//
-	// STILL NOT SENT, and stated rather than hidden: `quotedMessageId` reaches this schema and stops
-	// here — the gateway send has never received it, so an agent reply carries no WhatsApp quote of its
-	// own. That is a separate pre-existing gap (registered as an observation when B3 moved this leg),
-	// independent of the ledger link below, and not what this change repairs.
+	// `quotedMessageId` is the OTHER direction, and it now reaches the wire: it is handed to
+	// `ChannelSender.send`, which is what makes "ao finalizar uma tarefa, responde a mensagem que a
+	// criou" visible to the contact instead of merely durable. It used to stop at this schema — the send
+	// destructured `text` and dropped it — and the reason that survived so long is worth keeping written
+	// down: the tests that claimed to cover it asserted on the enqueued COMMAND ROW, one hop short of
+	// the wire, so the chain was measured up to the row and declared finished.
 	quotedMessageId: z.string().optional(),
 	replyEntryId: z.string().optional(),
 	replyThreadId: z.string().optional(),
@@ -93,7 +95,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
-		const { ownerId, channelId, contactExternalId, text, author } = input
+		const { ownerId, channelId, contactExternalId, text, author, quotedMessageId } = input
 
 		// THE LAST EDIT OF A STREAMED REPLY (streaming spec, decision 7), when this conversation has one
 		// in flight. It is the same delivery it always was — the words still arrive here, and this is
@@ -106,7 +108,18 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		// EXTERNAL I/O OUTSIDE ANY TRANSACTION — the sanctioned shape (cc-bp-24's named exception):
 		// holding the single SQLite write lock across an HTTP round-trip would block every other writer,
 		// and a failure here must roll nothing back. The queue's lease IS the retry.
-		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text }, ownerId)
+		//
+		// THE CITATION TRAVELS (founder, 31-jul). `quotedMessageId` is the platform id
+		// `RecordOrchestratorReply` resolved out of the ledger, and handing it to the port is the last
+		// step of "ao finalizar uma tarefa, deve responder a mensagem que a criou": the anchor is imposed
+		// by `RunOrchestratorTurn` (D6), resolved by the producer, carried by the command row, forwarded by
+		// `GatewayChannelSender` — and, until now, dropped precisely here.
+		//
+		// `undefined` is a REAL and expected value, not a defect: an entry from before the thread was
+		// attached has no ledger row, so `findPlatformId` answers nothing and the reply goes out unquoted.
+		// `GatewayChannelSender` spreads the field conditionally, so it never reaches the wire as a null,
+		// and an unquoted answer is worth far more than a silence.
+		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text, quotedMessageId }, ownerId)
 
 		await this.recordOutbound(messageId, input, tx)
 
@@ -131,6 +144,16 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 	 * ### The window may have closed while the reply was still growing
 	 * Then the remainder continues in a NEW message (decision 4) carrying only what the expired one does
 	 * not already show, so the two balloons concatenate to the whole reply instead of repeating it.
+	 *
+	 * ### A STREAMED REPLY STILL CARRIES NO CITATION, and it cannot be fixed from here
+	 * The plain send now quotes the message that created the task. This path cannot: an edit REPLACES
+	 * text and nothing else — `ChannelSender.edit` takes `{channelId, remoteId, messageId, text}`, and the
+	 * gateway's `PUT /messages/edit` has no quote field — so a message that went out unquoted stays
+	 * unquoted no matter what completes it. The citation would have to ride the FIRST cut, which means
+	 * threading `quotedMessageId` through `StreamChannelReply`'s schema (a durable command payload) and
+	 * through `ReplyStreamer.begin`/`cut`. That is a real change with its own contract surface and is NOT
+	 * bundled here; it is the remaining half of the founder's ask, and it is stated rather than hidden
+	 * because a streamed reply is the common case, not the exception.
 	 */
 	private async finishStreamedReply(input: this['input'], tx?: Transaction): Promise<boolean> {
 		const { ownerId, channelId, contactExternalId, text, author } = input
@@ -160,6 +183,18 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		const remainder = text.slice(verdict.baseOffset)
 		if (remainder.length === 0) return true
 
+		// DELIBERATELY UNQUOTED, and this is the decision rather than an omission.
+		//
+		// A continuation is the REST of one utterance whose head is already on the contact's screen — sent
+		// by `StreamChannelReply`, which has no `quotedMessageId` in its schema and therefore never quotes.
+		// Citing here would hang the citation on the TAIL of a split answer and on nothing else, which
+		// reads as a second, separate reply to an older message instead of the end of this one. Worse, it
+		// would make the quote appear only when the 14-minute edit window happened to expire mid-reply: the
+		// contact would see a citation or not depending on a timing accident.
+		//
+		// The rule is consistency with the first balloon, and the first balloon does not cite. Making a
+		// STREAMED reply carry the citation is a real and separate fix, and it belongs where the reply
+		// STARTS — see the note on `finishStreamedReply` for why it cannot be retrofitted by an edit.
 		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text: remainder }, ownerId)
 		// The continuation is a message this account sent, so it needs the same echo claim the plain
 		// delivery path takes — otherwise its echo comes back as inbound speech — and the same link, so a

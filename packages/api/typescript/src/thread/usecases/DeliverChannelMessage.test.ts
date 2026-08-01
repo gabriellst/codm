@@ -13,7 +13,8 @@ import { ChannelSender, MockChannelSender, type SendChannelMessageInput } from '
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumeInboundMessage } from '../handlers/ConsumeInboundMessage'
-import { ReplyStreamer, streamKey } from '../services/ReplyStreamer'
+import { EDIT_WINDOW_MS, ReplyStreamer, streamKey } from '../services/ReplyStreamer'
+import { RecordOrchestratorReply } from './RecordOrchestratorReply'
 import type { Thread } from '../entities/Thread'
 
 /**
@@ -346,5 +347,157 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 		const { targetId, payload } = await queuedTurn()
 		expect(targetId).toBe(thread.id.value)
 		expect(payload?.quotedAgentText).toBe(AGENT_LINE)
+	})
+})
+
+/**
+ * THE CITATION THAT NEVER LEFT THE BUILDING (founder, 31-jul).
+ *
+ * The ask, in the founder's words: "ao finalizar uma tarefa, deve responder a mensagem que a criou pra
+ * indicar finalização". Everything upstream was built for it — `RunOrchestratorTurn` imposes the anchor
+ * (`replyToEntryId = originEntryId`, the mandatory half of D6), `RecordOrchestratorReply` resolves it
+ * through the ledger into a platform id, the command row carries it, and `GatewayChannelSender` forwards
+ * it to the gateway. And `DeliverChannelMessage` dropped it on the floor: it destructured `text` and
+ * never passed `quotedMessageId` to `sender.send`. The contact saw an unquoted message.
+ *
+ * IT SURVIVED BECAUSE OF WHERE THE TESTS LOOKED. Two of them are literally named "no quote ON THE WIRE"
+ * and "travels as the platform id THE GATEWAY QUOTES", and both assert on `command.input` — the durable
+ * row, one hop short of the wire. The chain was measured up to the row and declared finished. So these
+ * cases assert on what the SENDER RECEIVES, which is the only surface that corresponds to what the
+ * contact actually sees.
+ */
+describe('DeliverChannelMessage — the citation reaches the wire, which is the only place the contact can see it', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+	let db: DrizzleClient
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+		db = testBed.resolve(DrizzleClient)
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	/** The operator's message that asked for the work — a real entry, LINKED in the ledger like a real inbound. */
+	const givenOriginMessage = async (thread: Thread, platformMessageId: string) => {
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: 'arruma o cupom por favor',
+			senderExternalId: thread.contactRef.externalId,
+		})
+		await testBed.resolve(ThreadRepository).save(thread)
+		const ledger = testBed.resolve(ConsumedMessageRepository)
+		await ledger.claim({ ownerId: OPERATOR_ID, channelId: thread.channelId, platformMessageId })
+		await ledger.linkEntry({ channelId: thread.channelId, platformMessageId, threadId: thread.id.value, entryId: entry.entryId })
+		return entry
+	}
+
+	/** The delivery order exactly as `RecordOrchestratorReply` wrote it — never hand-built. */
+	const enqueuedDelivery = async () => (await db.select().from(scheduledCommands))[0]?.input
+
+	it('FALSEADOR — a finished task QUOTES the message that created it, all the way to the sender', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const sender = new MockChannelSender()
+		testBed.override(ChannelSender, sender)
+
+		const origin = await givenOriginMessage(thread, 'wamid-asked')
+
+		// The whole chain the founder asked for, driven end to end: the orchestrator's reply anchors on the
+		// message that created the task, and the delivery order is the one the use case actually enqueued.
+		await testBed
+			.resolve(RecordOrchestratorReply)
+			.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: 'terminei, subiu', replyToEntryId: origin.entryId })
+
+		await testBed.resolve(DeliverChannelMessage).execute((await enqueuedDelivery()) as never)
+
+		// ON THE WIRE — not on the command row, which is where the previous tests stopped and is exactly
+		// how this shipped broken. Remove the pass-through and this is `undefined`.
+		expect(sender.sent).toHaveLength(1)
+		expect(sender.sent[0]).toMatchObject({
+			channelId: thread.channelId,
+			remoteId: thread.contactRef.externalId,
+			text: 'terminei, subiu',
+			quotedMessageId: 'wamid-asked',
+		})
+	})
+
+	/**
+	 * THE REAL DEGRADATION, and it is not hypothetical: an entry from before the thread was attached has
+	 * no ledger row, so `findPlatformId` answers undefined and the order carries no quote. The send must
+	 * go out UNQUOTED rather than fail — an unquoted answer is worth far more than a silence, and the
+	 * conditional spread in `GatewayChannelSender` is what keeps the field off the wire entirely.
+	 */
+	it('a citation that cannot be resolved sends WITHOUT a quote, and does not fail', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const sender = new MockChannelSender()
+		testBed.override(ChannelSender, sender)
+
+		await testBed.resolve(RecordOrchestratorReply).execute({
+			ownerId: OPERATOR_ID,
+			threadId: thread.id.value,
+			text: 'resolvido',
+			// Names an entry that exists nowhere — the shape of a message predating the attach.
+			replyToEntryId: '019e4d24-6524-7041-9e1c-8108180cddff',
+		})
+
+		await testBed.resolve(DeliverChannelMessage).execute((await enqueuedDelivery()) as never)
+
+		expect(sender.sent).toHaveLength(1)
+		expect(sender.sent[0]?.text).toBe('resolvido')
+		expect(sender.sent[0]?.quotedMessageId).toBeUndefined()
+	})
+
+	/**
+	 * THE CONTINUATION DOES NOT CITE — a decision, pinned so it cannot drift into one by accident.
+	 *
+	 * A continuation is the REST of one utterance whose head is already on the contact's screen, sent by
+	 * `StreamChannelReply` — which has no `quotedMessageId` in its schema and therefore never quotes. So
+	 * quoting here would attach the citation to the TAIL of a split answer and to nothing else, which
+	 * reads as a second, separate reply to an older message rather than as the end of this one. It would
+	 * also make the citation appear only when the 14-minute edit window happened to expire mid-reply: the
+	 * contact would see a quote or not depending on a timing accident.
+	 *
+	 * Consistency with the first balloon is the rule, and the first balloon does not cite. Making the
+	 * streamed reply carry the citation is a real fix, but it belongs where the reply STARTS.
+	 */
+	it('the continuation of a streamed reply sends UNQUOTED, like the balloon it continues', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const sender = new MockChannelSender()
+		testBed.override(ChannelSender, sender)
+		const streams = testBed.resolve(ReplyStreamer)
+
+		const origin = await givenOriginMessage(thread, 'wamid-asked')
+
+		// A stream whose message is older than the edit window: the final text CONTINUES in a new message.
+		const head = 'terminei, '
+		const { messageId } = await sender.send(
+			{ channelId: thread.channelId, remoteId: thread.contactRef.externalId, text: head },
+			OPERATOR_ID,
+		)
+		streams.opened(streamKey(thread.channelId, thread.contactRef.externalId), {
+			ownerId: OPERATOR_ID,
+			messageId,
+			sentAtEpochMs: Date.now() - EDIT_WINDOW_MS - 1_000,
+			sequence: 1,
+			baseOffset: 0,
+			deliveredLength: head.length,
+		})
+
+		await testBed
+			.resolve(RecordOrchestratorReply)
+			.execute({ ownerId: OPERATOR_ID, threadId: thread.id.value, text: `${head}subiu`, replyToEntryId: origin.entryId })
+		await testBed.resolve(DeliverChannelMessage).execute((await enqueuedDelivery()) as never)
+
+		// The tail went out as its own message, carrying only what the expired one does not show...
+		expect(sender.sent).toHaveLength(2)
+		expect(sender.sent[1]?.text).toBe('subiu')
+		// ...and WITHOUT a citation, exactly like the balloon above it.
+		expect(sender.sent[1]?.quotedMessageId).toBeUndefined()
+		expect(sender.edits).toHaveLength(0)
 	})
 })

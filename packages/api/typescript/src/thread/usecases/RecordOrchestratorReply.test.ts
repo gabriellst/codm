@@ -72,7 +72,16 @@ describe('RecordOrchestratorReply — the reply is transcribed and its delivery 
 		})
 	})
 
-	it('no citation requested — no quote on the wire', async () => {
+	/*
+	 * THESE THREE CASES STOP AT THE ORDER, and the names now say so.
+	 *
+	 * They used to claim "the wire" and "the gateway quotes" while asserting on `command.input` — the
+	 * durable row, one hop short of the send. That gap is exactly where the citation was being dropped:
+	 * `DeliverChannelMessage` never handed `quotedMessageId` to `ChannelSender.send`, and a suite that
+	 * measured the row read green the whole time. What reaches the SENDER is asserted in
+	 * `DeliverChannelMessage.test.ts` ("the citation reaches the wire"); this file owns the resolution.
+	 */
+	it('no citation requested — no quote on the ORDER', async () => {
 		const thread = await givenThread(testBed)
 
 		await testBed
@@ -100,7 +109,7 @@ describe('RecordOrchestratorReply — the reply is transcribed and its delivery 
 		expect(input.quotedMessageId).toBeUndefined()
 	})
 
-	it('a citation that RESOLVES travels as the platform id the gateway quotes', async () => {
+	it('a citation that RESOLVES rides the ORDER as the platform id the gateway will quote', async () => {
 		const thread = await givenThread(testBed)
 		// The seed goes through the AGGREGATE since B4 — never a loose append. A CONTACT line carries the
 		// sender that spoke, which is the invariant `recordEntry` owns.
