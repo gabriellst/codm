@@ -63,7 +63,11 @@ describe('RecordOrchestratorReply — the reply is transcribed and its delivery 
 				text: 'sim, claro',
 				author: MessageAuthor.SYSTEM,
 				// The link that lets a human's reply TO this message resolve back to an entry (§8, flow 3).
+				// BOTH columns of the ledger row travel, because `linkEntry` names `threadId` too and the
+				// PRODUCER is the layer holding the aggregate — the delivery leg would have to re-derive it
+				// from (channel, contact) and could land on a thread other than the one it just wrote to.
 				replyEntryId: system?.entryId,
+				replyThreadId: thread.id.value,
 			},
 		})
 	})

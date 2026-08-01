@@ -17,13 +17,27 @@ export const DeliverChannelMessageInputSchema = z.object({
 	contactExternalId: z.string(),
 	text: z.string().min(1),
 	author: z.enum(MessageAuthor),
-	// Both fields travel because the PRODUCERS resolve them (F1's inverse lookup:
-	// `RecordOrchestratorReply` turns an entry id into the platform id a WhatsApp quote needs, and the
-	// entry the outbound message IS). This executor's use of them is UNCHANGED from the EventHandler it
-	// replaces — the gateway send has never received the quote. Fixing that is a behaviour change B3
-	// does not make; it is registered as an observation in the plan's Notes.
+	// These travel because the PRODUCERS resolve them (F1's inverse lookup: `RecordOrchestratorReply`
+	// turns an entry id into the platform id a WhatsApp quote needs, and names the entry the outbound
+	// message IS). `replyEntryId`/`replyThreadId` are what let this leg BIND the sent message to that
+	// entry — this is the only layer that can, because the platform id does not exist until the send
+	// returns.
+	//
+	// `replyThreadId` is CARRIED rather than derived. This use case could reach the thread through
+	// (channelId, contactExternalId), the way `ConsumeInboundMessage` does, but the producer already
+	// holds the aggregate and its answer is the TRUE one: the entry belongs to THAT thread by
+	// construction, while a contact since re-attached would make the lookup name a different one. An
+	// optional field costs no read and cannot be wrong. Older command rows enqueued before this field
+	// existed simply carry no link — they are single messages already delivered, and they self-heal by
+	// being replaced with the next reply.
+	//
+	// STILL NOT SENT, and stated rather than hidden: `quotedMessageId` reaches this schema and stops
+	// here — the gateway send has never received it, so an agent reply carries no WhatsApp quote of its
+	// own. That is a separate pre-existing gap (registered as an observation when B3 moved this leg),
+	// independent of the ledger link below, and not what this change repairs.
 	quotedMessageId: z.string().optional(),
 	replyEntryId: z.string().optional(),
+	replyThreadId: z.string().optional(),
 })
 
 export const DeliverChannelMessageOutputSchema = z.void()
@@ -48,7 +62,9 @@ export const DeliverChannelMessageOutputSchema = z.void()
  *   1. THE CLAIM, and it is the structural one. The send returns the platform message id; we write it
  *      into the same exactly-once ledger `ConsumeInboundMessage` consults FIRST. When the echo arrives
  *      — from either Go emission site, both carrying that id — `claim` finds the row and the whole
- *      handler is a no-op before any thread lookup.
+ *      handler is a no-op before any thread lookup. The row is also LINKED to the entry it is (see
+ *      `recordOutbound`), which is a different job from the claim and is what makes a human's reply to
+ *      the agent resolvable at all.
  *   2. THE AUTHOR. A SYSTEM message is the product speaking; recording it under the ledger is what
  *      makes the id known. A HUMAN message is the owner's own speech — claiming it would make the
  *      transcript miss the words they actually said on the channel.
@@ -92,13 +108,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		// and a failure here must roll nothing back. The queue's lease IS the retry.
 		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text }, ownerId)
 
-		// LAYER 1 — claim our own message before its echo can be heard. `claim` is the same
-		// `INSERT ... ON CONFLICT DO NOTHING` the inbound consumer runs first, so the echo returns `false`
-		// there and the handler stops before touching a thread. Idempotent by construction: a retried
-		// command re-claims the same id and the conflict makes it a no-op.
-		if (author === MessageAuthor.SYSTEM) {
-			await this.withTransaction(tx, tx => this.consumed.claim({ ownerId, channelId, platformMessageId: messageId }, tx))
-		}
+		await this.recordOutbound(messageId, input, tx)
 
 		await this.stopTypingPresence(channelId, contactExternalId)
 
@@ -134,6 +144,13 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 				{ channelId, remoteId: contactExternalId, messageId: verdict.messageId, text: text.slice(verdict.baseOffset) },
 				ownerId,
 			)
+			// THE STREAMED MESSAGE IS THE AGENT'S REPLY, and this is where it finally gets a name. The id
+			// was minted one use case away — by `StreamChannelReply` when the first cut opened the message —
+			// so this leg never sent it and, before the link existed, never recorded it as anything either.
+			// Binding it HERE is what makes a reply to the balloon the contact watched grow resolve to the
+			// same entry a reply to a plain send resolves to. Without this line the whole fix covers only
+			// short replies: every reply long enough to stream stays as broken as it was.
+			await this.recordOutbound(verdict.messageId, input, tx)
 			this.logging.info({ content: { message: 'streamed reply completed by edit', channelId, messageId: verdict.messageId } })
 			return true
 		}
@@ -145,12 +162,70 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 
 		const { messageId } = await this.sender.send({ channelId, remoteId: contactExternalId, text: remainder }, ownerId)
 		// The continuation is a message this account sent, so it needs the same echo claim the plain
-		// delivery path takes — otherwise its echo comes back as inbound speech.
-		if (author === MessageAuthor.SYSTEM) {
-			await this.withTransaction(tx, tx => this.consumed.claim({ ownerId, channelId, platformMessageId: messageId }, tx))
-		}
+		// delivery path takes — otherwise its echo comes back as inbound speech — and the same link, so a
+		// reply to it reaches the entry too.
+		//
+		// It is the LAST balloon of this reply that carries the name: the earlier one, opened while the
+		// edit window was still open, keeps the bare claim `StreamChannelReply` gave it. Quoting the tail
+		// of an answer is the reflex anyway (it is the part still on screen), and linking both would put
+		// two rows on one entry, which `findPlatformId`'s single-row lookup has no way to choose between.
+		await this.recordOutbound(messageId, input, tx)
 		this.logging.info({ content: { message: 'streamed reply continued in a new message (edit window closed)', channelId, messageId } })
 		return true
+	}
+
+	/**
+	 * Record the platform message this account just put on the channel: CLAIM it against its own echo,
+	 * and BIND it to the transcript entry it is. Two writes, one transaction, and each part is load-bearing.
+	 *
+	 * ### `claim` and `linkEntry` are two different jobs, and neither one subsumes the other
+	 * `claim` is the exactly-once LATCH — `INSERT ... ON CONFLICT DO NOTHING` on
+	 * `UNIQUE(channelId, platformMessageId)` — whose RETURN VALUE ("was this the first delivery?") is what
+	 * makes the echo of our own message a no-op in `ConsumeInboundMessage`, before any thread lookup.
+	 * `linkEntry` is an UPDATE filling that row's `threadId`/`entryId`: the MAP, read back by `findEntry`.
+	 * This leg only ever did the first, so the agent's own speech sat in the ledger as an UNATTRIBUTED
+	 * row — enough to recognise the echo, never enough to answer "which entry is this?". That is the
+	 * whole bug: `findEntry` returned undefined for it, so `IngestChannelMessage` scored every reply to
+	 * the agent as `repliesToAgent: false` and the mention gate kept demanding a tag.
+	 *
+	 * They cannot be collapsed into one call, and the streamed path is the reason. `claim` does accept
+	 * `threadId`/`entryId` and would insert a row born linked — but ON CONFLICT DO NOTHING means it writes
+	 * NOTHING when a row already exists, and on the streamed path one always does: `StreamChannelReply`
+	 * claimed it when the first cut opened the message. A link that was only ever an insert would silently
+	 * skip every streamed reply. The converse fails harder: `linkEntry` alone creates nothing, so dropping
+	 * the claim would delete the echo defence outright and the agent would start answering itself. Claim
+	 * then link — the first guarantees the row and the latch, the second gives it a name.
+	 *
+	 * ### ONE transaction, because the retry exposure must not grow
+	 * The send above is external I/O and is already committed on the wire by the time we get here. If this
+	 * commit fails, the `CommandQueue` re-executes the whole command and the contact gets the message a
+	 * SECOND time. That hazard is not new, and it is NOT repaired here — repairing it needs a platform id
+	 * minted before the wire call, which is the gateway change the class doc names as the RESIDUAL. What
+	 * matters is that it is not made worse: both writes ride the single `withTransaction` the claim
+	 * already used, so there is exactly ONE commit after the send, exactly as before. Adding a second,
+	 * independent write would have been a second way to lose that race.
+	 *
+	 * Both statements are idempotent under that retry anyway — the claim conflicts into a no-op, the
+	 * update rewrites the same two columns with the same two values.
+	 *
+	 * ### Only what the PRODUCT said (layer 2, THE AUTHOR)
+	 * A `HUMAN` message is the owner's own speech, forwarded. It is deliberately not claimed — claiming it
+	 * would make the transcript miss the words they actually said on the channel — and for the same reason
+	 * it is not linked: its echo is ingested as a real inbound and `ConsumeInboundMessage` binds the row to
+	 * the entry THAT produces. Two owners for one row would be a race with no winner worth having.
+	 */
+	private async recordOutbound(messageId: string, input: this['input'], tx?: Transaction): Promise<void> {
+		const { ownerId, channelId, author, replyEntryId, replyThreadId } = input
+		if (author !== MessageAuthor.SYSTEM) return
+
+		await this.withTransaction(tx, async tx => {
+			await this.consumed.claim({ ownerId, channelId, platformMessageId: messageId }, tx)
+			// A delivery with no entry behind it still claims, it just stays unnamed — exactly as every
+			// outbound row was until now. Reachable by a command row enqueued before these fields existed.
+			if (replyEntryId && replyThreadId) {
+				await this.consumed.linkEntry({ channelId, platformMessageId: messageId, threadId: replyThreadId, entryId: replyEntryId }, tx)
+			}
+		})
 	}
 
 	/**

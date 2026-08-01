@@ -90,8 +90,16 @@ export class RecordOrchestratorReply extends Handler<
 					text: input.text,
 					author: MessageAuthor.SYSTEM,
 					quotedMessageId,
-					// Carried so the ledger row can link back to the entry this message IS.
+					// Carried so the ledger row can link back to the entry this message IS — the binding that
+					// makes a human's reply to this message resolve to this entry, and so summon the agent
+					// without a citation tag. The delivery leg is the only layer that can write it: the
+					// platform id it keys on does not exist until the send returns.
+					//
+					// The THREAD comes along because `linkEntry` names both columns and this is where the
+					// aggregate is in hand — deriving it down there from (channel, contact) would be a second
+					// read that can disagree with the entry we just recorded.
 					replyEntryId: entry.entryId,
+					replyThreadId: thread.id.value,
 				},
 				{ jobId: entry.entryId },
 				tx,
