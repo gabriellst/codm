@@ -1,9 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
+import { LoggingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
-import { MailboxRepository } from '../../repositories'
+import { ThreadRepository } from '@thread/repositories'
+import { WorkspaceRepository } from '@workspace/repositories'
+import { AgentSessionRepository, MailboxRepository } from '../../repositories'
+import { DrizzleMailboxDispatcher } from './DrizzleMailboxDispatcher'
 
 /**
  * T5 — the scheduling guarantees, exercised against the REAL table.
@@ -152,5 +156,125 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 
 		expect(await enqueue(repo, THREAD_A, 'same-fact')).toBe(true)
 		expect(await enqueue(repo, THREAD_A, 'same-fact')).toBe(false)
+	})
+})
+
+/**
+ * The DRAIN LOOP itself — the seam the suite above deliberately does not cover.
+ *
+ * Its preamble says the loop "is three lines over `claimNext`; what makes it correct is what
+ * `claimNext` promises here". That was the blind spot: every claim-level guarantee held, and the
+ * loop still stranded work, because the defect was in WHEN the loop asks — not in what the answer
+ * is. So this suite drives `drain()` and asserts on scheduling, not on claiming.
+ *
+ * The turn is held in flight by gating `ThreadRepository.findById`, which is the FIRST await in both
+ * `runThreadTurn` and `runIssueWork`. That keeps a turn genuinely in flight without a provider CLI,
+ * a workspace or a use case — none of which is what is under test.
+ */
+describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrives mid-turn', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	const ISSUE_ID = '019e4d24-6524-7041-9e1c-8108180cdd10'
+	const ISSUE_THREAD = '019e4d24-6524-7041-9e1c-8108180cdd11'
+	const OTHER_THREAD = '019e4d24-6524-7041-9e1c-8108180cdd12'
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const until = async (predicate: () => Promise<boolean>, timeoutMs: number): Promise<boolean> => {
+		const deadline = Date.now() + timeoutMs
+		while (Date.now() < deadline) {
+			if (await predicate()) return true
+			await new Promise(resolve => setTimeout(resolve, 10))
+		}
+		return false
+	}
+
+	/**
+	 * A long issue turn must not silence the orchestrator.
+	 *
+	 * Reproduces the production trace verbatim: a WORK item claimed first and still running, then an
+	 * OPERATOR_MESSAGE for a DIFFERENT target queued while it runs. Before `settleOrPoll` the loop was
+	 * parked in `Promise.race(inflight)` and the message stayed at `attempts = 0` until the issue turn
+	 * ended — minutes, for a coding agent. The falsifier is exact: restore the bare
+	 * `await Promise.race(inflight)` and this goes RED while every claim-level test stays green.
+	 */
+	it('answers a thread message queued while an issue turn is still in flight', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+
+		// The gate. `findById` for the issue's thread never settles until the test releases it, so the
+		// issue turn stays in flight; every other lookup answers "gone", which routes the item straight
+		// to `dropSilently` — a completed turn with no collaborators involved.
+		let releaseIssueTurn = (): void => {}
+		const issueTurnStarted = Promise.withResolvers<void>()
+		const gate = new Promise<void>(resolve => {
+			releaseIssueTurn = resolve
+		})
+		const realFindById = threads.findById.bind(threads)
+		threads.findById = async (id: string) => {
+			if (id === ISSUE_THREAD) {
+				issueTurnStarted.resolve()
+				await gate
+			}
+			return undefined
+		}
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(testContainer)
+
+		try {
+			await mailbox.enqueue({
+				ownerId: OPERATOR_ID,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: ISSUE_ID,
+				kind: MailboxItemKind.WORK,
+				payload: { threadId: ISSUE_THREAD, key: 'some-issue', title: 'Some issue', provider: 'CLAUDE_CODE' },
+				dedupKey: 'issue-work-1',
+			})
+
+			// NOT awaited: the drain is the thing under test and it will not return until the gate opens.
+			const draining = dispatcher.drain()
+			await issueTurnStarted.promise
+
+			// The operator writes WHILE the issue runs. This is the moment the bug swallowed.
+			await mailbox.enqueue({
+				ownerId: OPERATOR_ID,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: OTHER_THREAD,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
+				dedupKey: 'operator-msg-1',
+			})
+
+			// Generous next to the 250ms poll floor, and deliberately so: the assertion is "the loop wakes
+			// at all with the issue still gated", not "it wakes in exactly one interval".
+			const answered = await until(async () => !(await mailbox.hasPending(MailboxTargetKind.THREAD, OTHER_THREAD)), 3_000)
+
+			expect(answered).toBe(true)
+			// The gate is still shut — proving the wakeup came from the poll floor and not from the issue
+			// turn finishing. Without this line the test would also pass on the broken loop.
+			expect(await mailbox.hasPending(MailboxTargetKind.ISSUE, ISSUE_ID)).toBe(true)
+
+			releaseIssueTurn()
+			await draining
+		} finally {
+			threads.findById = realFindById
+			releaseIssueTurn()
+		}
 	})
 })
