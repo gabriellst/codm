@@ -5,7 +5,12 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'astro/config'
 
 export default defineConfig({
-	site: process.env.SITE_URL ?? 'http://localhost:4321',
+	// `||`, not `??`: the env registry (template.config.ts REPO.env.SITE_URL) declares the key with
+	// `example: ''` and documents "empty falls back to http://localhost:4321". A fresh `.env` copied
+	// from the generated `.env.example` therefore carries SITE_URL as the EMPTY STRING, which is not
+	// nullish — `??` passed it straight through and Astro rejected it (`site: Invalid url`), breaking
+	// `astro check` on every fresh clone. `||` makes the declared fallback true.
+	site: process.env.SITE_URL || 'http://localhost:4321',
 	output: 'static',
 	integrations: [
 		react(),
