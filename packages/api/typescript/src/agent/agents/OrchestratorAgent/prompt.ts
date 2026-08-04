@@ -58,6 +58,7 @@ export class OrchestratorPromptBuilder {
 			...this.room(input),
 			'',
 			...this.issues(),
+			...this.redirectingWork(),
 			...this.stops(input),
 			...this.quoting(input),
 			...this.operatorInstructions(input),
@@ -208,6 +209,37 @@ export class OrchestratorPromptBuilder {
 			'',
 			'  operator: crie uma issue específica para isso e vamos resolver',
 			'  you: criei a issue dark-mode-toggle — te aviso quando tiver resultado',
+		]
+	}
+
+	/**
+	 * REDIRECIONAR TRABALHO QUE JÁ EXISTE — a situação que faltava, e que custou caro.
+	 *
+	 * O steer aparecia só dentro do fluxo de stops ("resolva o stop, depois steere"), então quando o
+	 * operador pedia algo sobre uma issue que não estava perguntando nada — inclusive uma já concluída
+	 * — não havia situação sancionada que casasse com o pedido. O modelo tinha a ferramenta, improvisou,
+	 * e respondeu "repassei isso pra ela" sem ter chamado nada. Duas vezes, contando a vez em que o
+	 * operador desconfiou e perguntou de novo.
+	 *
+	 * A regra de honestidade fica aqui e não numa seção própria de propósito: ela nasce desta situação,
+	 * e uma regra geral sobre "não minta" longe do caso que a motiva é uma frase que o modelo lê e não
+	 * aplica.
+	 */
+	private redirectingWork(): string[] {
+		const steerIssue = toolNameOf(SteerIssueTurnController)
+		return [
+			'',
+			'REDIRECTING WORK THAT ALREADY EXISTS',
+			'When the operator says something about work you already opened — a correction, an addition, "now do X too" ' +
+				`— that belongs to the issue that is already carrying it. Call ${steerIssue} with that issue id and WHAT ` +
+				'THEY SAID, in their words. Do not open a second issue for it, and do not answer as if the instruction ' +
+				'reached anyone on its own.',
+			'This works on an issue that already finished. Finishing is not a door closing — the issue picks the work ' +
+				'back up with everything it already knew.',
+			'And the rule that makes any of this trustworthy: never say you did something you did not do. If you did ' +
+				`not call ${steerIssue}, do not tell the operator you passed it along. If a call failed, say it failed. ` +
+				'A turn that narrates an action it never took is worse than a turn that does nothing, because the ' +
+				'operator stops watching.',
 		]
 	}
 
