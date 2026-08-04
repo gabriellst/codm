@@ -417,6 +417,7 @@
 		"NO_CHANNEL_CONNECTED": "Connect a channel first.",
 		"NO_PROVIDER_SELECTED": "Select at least one provider.",
 		"OPTIMISTIC_LOCK_CONFLICT": "The record was changed by another operation. Reload and try again.",
+		"ISSUE_NOT_COMPLETED": "This issue is not completed.",
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",
 		"OWNER_NOT_FOUND": "Account not found.",

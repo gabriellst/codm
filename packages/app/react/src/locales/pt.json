@@ -417,6 +417,7 @@
 		"NO_CHANNEL_CONNECTED": "Conecte um canal primeiro.",
 		"NO_PROVIDER_SELECTED": "Selecione ao menos um provider.",
 		"OPTIMISTIC_LOCK_CONFLICT": "O registro foi alterado por outra operação. Recarregue e tente novamente.",
+		"ISSUE_NOT_COMPLETED": "Esta issue não está concluída.",
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",
 		"OWNER_NOT_FOUND": "Conta não encontrada.",

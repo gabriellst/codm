@@ -7,6 +7,7 @@ import { OPERATOR_ID } from '@auth/operator'
 import { ArchiveIssue } from './ArchiveIssue'
 import { RestoreIssue } from './RestoreIssue'
 import { AutoArchiveCompletedIssues } from './AutoArchiveCompletedIssues'
+import { ReopenIssue } from './ReopenIssue'
 // The stop control plane lives in `thread/` since B4 (spec decision 4) — the Stop is a child of the
 // Thread aggregate. This suite still drives it because the issue-scoped read (`openStopsByIssue`) is
 // what the issue lifecycle cares about.
@@ -114,5 +115,29 @@ describe('Issue lifecycle + stop control plane', () => {
 		const repo = testBed.resolve(IssueRepository)
 		expect((await repo.findById(stale.id.value))?.archived).toBe(true)
 		expect((await repo.findById(fresh.id.value))?.archived).toBe(false)
+	})
+
+	it('uma issue reaberta não é selecionada pelo auto-arquivamento', async () => {
+		const reopenIssue = testBed.resolve(ReopenIssue)
+		const autoArchive = testBed.resolve(AutoArchiveCompletedIssues)
+		// `AutoArchiveCompletedIssues` varre por `completedBefore(now - WINDOW_MS)`, então as duas
+		// precisam estar VENCIDAS. Sem retrodatar, nenhuma seria arquivada e o teste passaria vazio,
+		// sem provar nada sobre a reabertura.
+		const staleAt = new Date(Date.now() - 48 * 60 * 60 * 1000)
+
+		const control = await givenIssue(testBed, { status: IssueStatus.COMPLETED, completedAt: staleAt })
+		const reopened = await givenIssue(testBed, { status: IssueStatus.COMPLETED, completedAt: staleAt })
+
+		await reopenIssue.execute({ ownerId: testBed.ownerId, issueId: reopened.id.value })
+		const { archivedIssueIds } = await autoArchive.execute({})
+
+		// O controle prova que o varredor está de fato funcionando nesta janela…
+		expect(archivedIssueIds).toContain(control.id.value)
+		// …e a reaberta escapou dele, porque `reopen()` zerou o carimbo pelo qual ele seleciona.
+		expect(archivedIssueIds).not.toContain(reopened.id.value)
+
+		const after = await testBed.resolve(IssueRepository).findById(reopened.id.value)
+		expect(after?.archived).toBe(false)
+		expect(after?.status).toBe(IssueStatus.WORKING)
 	})
 })

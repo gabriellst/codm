@@ -81,6 +81,25 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 		if (meta !== undefined) this.meta = meta
 	}
 
+	/**
+	 * COMPLETED → WORKING — o caminho de volta, e o ÚNICO.
+	 *
+	 * Não existe um "reabrir" que o operador aciona por si: receber trabalho é o que reabre uma issue
+	 * (spec Decisão 4). Reabrir sem instrução deixaria a issue em `WORKING` sem nada enfileirado, que é
+	 * um estado que ninguém consegue explicar depois. Por isso este método é chamado do caminho do
+	 * steer e de lugar nenhum além dele.
+	 *
+	 * `completedAt` é ZERADO, e isso não é arrumação: `AutoArchiveCompletedIssues` seleciona por essa
+	 * coluna. Uma issue reaberta que mantivesse o carimbo antigo seria arquivada por baixo de um agente
+	 * que está trabalhando dentro dela — o pior tipo de bug, porque o sintoma aparece longe da causa.
+	 */
+	reopen(): void {
+		this.assertNotArchived()
+		if (this.status !== IssueStatus.COMPLETED) throw new BaseError<DomainErrors>('ISSUE_NOT_COMPLETED')
+		this.status = IssueStatus.WORKING
+		this.completedAt = undefined
+	}
+
 	archive(reason: IssueArchiveReason): void {
 		if (this.archived) throw new BaseError<DomainErrors>('ISSUE_ALREADY_ARCHIVED')
 		this.archived = true
