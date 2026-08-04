@@ -44,6 +44,7 @@ export class IssueWorkPromptBuilder {
 				'summary the requester will read in a chat message — not a diff, not a transcript.',
 			'',
 			...this.declarationInstruction(input),
+			...this.operatorInstructions(input),
 		].join('\n')
 	}
 
@@ -67,6 +68,32 @@ export class IssueWorkPromptBuilder {
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,
+		]
+	}
+
+	/**
+	 * INSTRUÇÃO DO OPERADOR — o mesmo `Thread.customPrompt` que o orquestrador recebe, com moldura
+	 * própria.
+	 *
+	 * A moldura do orquestrador NÃO serve aqui, e copiá-la seria pior que não ter nenhuma. Ela fixa o
+	 * formato da linha `[quote: …]`, que esta agente nunca emite — falar disso a instruiria sobre um
+	 * canal que não é dela — e proíbe instalar dependências, uma regra que existe porque o orquestrador
+	 * divide o chão com a conversa inteira. Uma issue que não pode preparar o próprio ambiente não
+	 * consegue trabalhar.
+	 *
+	 * Renderizado só quando HÁ texto: um cabeçalho sem conteúdo diz ao modelo que existe uma instrução
+	 * e depois não a fornece, que é exatamente como um modelo começa a inventar uma.
+	 */
+	private operatorInstructions(input: IssueWorkInput): string[] {
+		if (!input.customPrompt) return []
+		return [
+			'',
+			'INSTRUCTIONS FROM THE OPERATOR',
+			'The person who owns this repository wrote the following for THIS conversation. It applies to the work ' +
+				'itself — how to build, what to leave alone, what to always do before you call it done. Where it ' +
+				'disagrees with anything above, follow this.',
+			'',
+			input.customPrompt,
 		]
 	}
 }

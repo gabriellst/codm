@@ -340,6 +340,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the
 			// session is resumed, so the turn needs the NEW instruction, not the original brief again.
 			prompt: item.kind === MailboxItemKind.STEER ? (payload.text ?? '') : (payload.goal ?? ''),
+			customPrompt: thread.customPrompt,
 			messageId: item.id,
 			// The position this turn continues FROM — the item the previous turn consumed. Absent on the
 			// issue's first turn, which is what `resolveSession` reads as "there is nothing to resume".

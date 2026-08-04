@@ -225,3 +225,41 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		expect(runner.requests[0]?.model).toBe(AgentModelId.DEFAULT)
 	})
 })
+
+describe('instrução permanente do operador', () => {
+	const baseInput = {
+		ownerId: '00000000-0000-4000-8000-000000000001',
+		issueId: '019e4d24-6524-7041-9e1c-8108180cddaf',
+		threadId: '019e4d24-6524-7041-9e1c-8108180cddae',
+		cwd: '/tmp/workspace',
+		prompt: 'implemente os loops',
+		key: 'loops',
+		title: 'Loops',
+	}
+
+	it('renderiza o texto do operador quando a thread tem customPrompt', () => {
+		const builder = new IssueWorkPromptBuilder()
+		const system = builder.system({ ...baseInput, customPrompt: 'Sempre suba um PR ao final.' })
+
+		expect(system).toContain('Sempre suba um PR ao final.')
+	})
+
+	it('não renderiza cabeçalho algum quando a thread não tem customPrompt', () => {
+		const builder = new IssueWorkPromptBuilder()
+		const system = builder.system(baseInput)
+
+		// Um cabeçalho vazio diria ao modelo que existe uma instrução e não a forneceria —
+		// que é como um modelo começa a inventar uma.
+		expect(system).not.toContain('INSTRUCTIONS FROM THE OPERATOR')
+	})
+
+	it('não repete as ressalvas do orquestrador, que não são da issue', () => {
+		const builder = new IssueWorkPromptBuilder()
+		const system = builder.system({ ...baseInput, customPrompt: 'Sempre suba um PR ao final.' })
+
+		// A issue PODE preparar o próprio ambiente e não fala no chat; herdar as duas ressalvas do
+		// orquestrador a proibiria de trabalhar e a instruiria sobre um formato que ela nunca emite.
+		expect(system).not.toContain('[quote:')
+		expect(system).not.toContain('install dependencies')
+	})
+})
