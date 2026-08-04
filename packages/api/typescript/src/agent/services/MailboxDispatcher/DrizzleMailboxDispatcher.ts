@@ -164,6 +164,12 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * ### The end-of-turn re-poll (AC-T5.3) is the `continue` after a completion
 	 * When a turn settles, its target is free and the loop immediately tries to claim again — so a
 	 * second message that arrived mid-turn is answered at once rather than at the next tick.
+	 *
+	 * ### …but completion CANNOT be the only wakeup
+	 * That re-poll covers the same target. It says nothing about an item for a DIFFERENT target that
+	 * arrives while a long turn runs, and for a while this loop answered that case by parking until
+	 * the long turn ended — silently serializing the very conversations `MAX_CONCURRENT_TURNS` exists
+	 * to overlap. `settleOrPoll` is the second wakeup; see its docblock for the production trace.
 	 */
 	private async drainLoop(): Promise<number> {
 		let handled = 0
@@ -182,8 +188,43 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// Nothing claimable. If nothing is running either, the queue is drained.
 			if (inflight.size === 0) return handled
 			// Otherwise wait for ONE turn to settle — which frees its target and may unblock its own
-			// next item — then try again. This is both the concurrency cap and the re-poll.
-			await Promise.race(inflight)
+			// next item — OR for the poll floor, whichever lands first. Then try again.
+			await this.settleOrPoll(inflight)
+		}
+	}
+
+	/**
+	 * Wait for a turn to finish OR for the poll floor — and the timer is the whole point.
+	 *
+	 * ### The bug this exists to kill
+	 * `await Promise.race(inflight)` alone parks the loop until a turn COMPLETES. An item enqueued
+	 * after the last `claimNext` came back empty is then invisible until some unrelated turn ends —
+	 * even with free slots and a different target. Measured in production: an issue turn claimed at
+	 * 16:34:31 (a coding agent, minutes long) left two orchestrator messages queued at 16:34:55 and
+	 * 16:35:51 sitting at `attempts = 0`, unclaimed, while the operator watched a chat go silent and
+	 * asked "por que você não me respondeu?". Three of the four turn slots were idle the whole time.
+	 *
+	 * `tick()` cannot rescue it: `drain()`'s re-entrancy guard hands back the drain that is already
+	 * parked, so the timer next door spins without ever reaching `claimNext`.
+	 *
+	 * The end-of-turn re-poll (AC-T5.3) is still exactly as immediate — a settled turn wins this race
+	 * the moment it resolves. What the floor adds is the OTHER wakeup: new work arriving mid-turn.
+	 *
+	 * The timer is always cleared, including when a turn wins the race. Left dangling it would hold
+	 * the event loop open past `stop()` — the difference between a daemon that exits and one that
+	 * lingers for a poll interval on every shutdown.
+	 */
+	private async settleOrPoll(inflight: Set<Promise<void>>): Promise<void> {
+		let timer: ReturnType<typeof setTimeout> | undefined
+		try {
+			await Promise.race([
+				...inflight,
+				new Promise<void>(resolve => {
+					timer = setTimeout(resolve, POLL_MIN_MS)
+				}),
+			])
+		} finally {
+			if (timer) clearTimeout(timer)
 		}
 	}
 
