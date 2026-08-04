@@ -50,6 +50,7 @@ const (
 	INVALIDID                       ApiErrors = "INVALID_ID"
 	INVALIDIDVALUESLENGTH           ApiErrors = "INVALID_ID_VALUES_LENGTH"
 	INVALIDLANGUAGE                 ApiErrors = "INVALID_LANGUAGE"
+	INVALIDLOOPTIME                 ApiErrors = "INVALID_LOOP_TIME"
 	INVALIDOUTBOXPAYLOAD            ApiErrors = "INVALID_OUTBOX_PAYLOAD"
 	INVALIDPHONE                    ApiErrors = "INVALID_PHONE"
 	INVALIDPICTUREURL               ApiErrors = "INVALID_PICTURE_URL"
@@ -62,6 +63,9 @@ const (
 	ISSUENOTARCHIVED                ApiErrors = "ISSUE_NOT_ARCHIVED"
 	ISSUENOTFOUND                   ApiErrors = "ISSUE_NOT_FOUND"
 	LASTINVOKER                     ApiErrors = "LAST_INVOKER"
+	LOOPNOTFOUND                    ApiErrors = "LOOP_NOT_FOUND"
+	LOOPPROMPTTOOLONG               ApiErrors = "LOOP_PROMPT_TOO_LONG"
+	LOOPWITHOUTWEEKDAY              ApiErrors = "LOOP_WITHOUT_WEEKDAY"
 	MISSINGENVIRONMENTVARIABLE      ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
 	MISSINGLOGCONTENT               ApiErrors = "MISSING_LOG_CONTENT"
 	NOCHANNELCONNECTED              ApiErrors = "NO_CHANNEL_CONNECTED"
@@ -167,6 +171,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case INVALIDLANGUAGE:
 		return true
+	case INVALIDLOOPTIME:
+		return true
 	case INVALIDOUTBOXPAYLOAD:
 		return true
 	case INVALIDPHONE:
@@ -190,6 +196,12 @@ func (e ApiErrors) Valid() bool {
 	case ISSUENOTFOUND:
 		return true
 	case LASTINVOKER:
+		return true
+	case LOOPNOTFOUND:
+		return true
+	case LOOPPROMPTTOOLONG:
+		return true
+	case LOOPWITHOUTWEEKDAY:
 		return true
 	case MISSINGENVIRONMENTVARIABLE:
 		return true
@@ -688,6 +700,39 @@ func (e CurrencyCode) Valid() bool {
 	}
 }
 
+// Defines values for DayOfWeek.
+const (
+	FRIDAY    DayOfWeek = "FRIDAY"
+	MONDAY    DayOfWeek = "MONDAY"
+	SATURDAY  DayOfWeek = "SATURDAY"
+	SUNDAY    DayOfWeek = "SUNDAY"
+	THURSDAY  DayOfWeek = "THURSDAY"
+	TUESDAY   DayOfWeek = "TUESDAY"
+	WEDNESDAY DayOfWeek = "WEDNESDAY"
+)
+
+// Valid indicates whether the value is a known member of the DayOfWeek enum.
+func (e DayOfWeek) Valid() bool {
+	switch e {
+	case FRIDAY:
+		return true
+	case MONDAY:
+		return true
+	case SATURDAY:
+		return true
+	case SUNDAY:
+		return true
+	case THURSDAY:
+		return true
+	case TUESDAY:
+		return true
+	case WEDNESDAY:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HistorySyncType.
 const (
 	Initial HistorySyncType = "initial"
@@ -1114,6 +1159,9 @@ type ContactKind string
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
 
+// DayOfWeek defines model for DayOfWeek.
+type DayOfWeek string
+
 // HistorySyncType defines model for HistorySyncType.
 type HistorySyncType string
 
@@ -1161,6 +1209,9 @@ type ThreadMode string
 
 // ThreadStatus defines model for ThreadStatus.
 type ThreadStatus string
+
+// Timezone defines model for Timezone.
+type Timezone = string
 
 // TranscriptKind defines model for TranscriptKind.
 type TranscriptKind string
@@ -1300,6 +1351,31 @@ type RaiseStopJSONBody struct {
 	Kind   StopKind `json:"kind"`
 }
 
+// CreateThreadLoopJSONBody defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBody struct {
+	Prompt   string `json:"prompt"`
+	Schedule struct {
+		TimeOfDay string      `json:"timeOfDay"`
+		Timezone  Timezone    `json:"timezone"`
+		Weekdays  []DayOfWeek `json:"weekdays"`
+	} `json:"schedule"`
+}
+
+// UpdateThreadLoopJSONBody defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBody struct {
+	Prompt   string `json:"prompt"`
+	Schedule struct {
+		TimeOfDay string      `json:"timeOfDay"`
+		Timezone  Timezone    `json:"timezone"`
+		Weekdays  []DayOfWeek `json:"weekdays"`
+	} `json:"schedule"`
+}
+
+// SetThreadLoopEnabledJSONBody defines parameters for SetThreadLoopEnabled.
+type SetThreadLoopEnabledJSONBody struct {
+	Enabled bool `json:"enabled"`
+}
+
 // ConfigureMentionGateJSONBody defines parameters for ConfigureMentionGate.
 type ConfigureMentionGateJSONBody struct {
 	MentionGate ConfigureMentionGateJSONBody_MentionGate `json:"mentionGate"`
@@ -1410,6 +1486,15 @@ type SteerIssueTurnJSONRequestBody SteerIssueTurnJSONBody
 
 // RaiseStopJSONRequestBody defines body for RaiseStop for application/json ContentType.
 type RaiseStopJSONRequestBody RaiseStopJSONBody
+
+// CreateThreadLoopJSONRequestBody defines body for CreateThreadLoop for application/json ContentType.
+type CreateThreadLoopJSONRequestBody CreateThreadLoopJSONBody
+
+// UpdateThreadLoopJSONRequestBody defines body for UpdateThreadLoop for application/json ContentType.
+type UpdateThreadLoopJSONRequestBody UpdateThreadLoopJSONBody
+
+// SetThreadLoopEnabledJSONRequestBody defines body for SetThreadLoopEnabled for application/json ContentType.
+type SetThreadLoopEnabledJSONRequestBody SetThreadLoopEnabledJSONBody
 
 // ConfigureMentionGateJSONRequestBody defines body for ConfigureMentionGate for application/json ContentType.
 type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
@@ -1812,6 +1897,27 @@ type ClientInterface interface {
 	RaiseStopWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	RaiseStop(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListThreadLoops request
+	ListThreadLoops(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateThreadLoopWithBody request with any body
+	CreateThreadLoopWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateThreadLoop(ctx context.Context, threadId string, body CreateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteThreadLoop request
+	DeleteThreadLoop(ctx context.Context, threadId string, loopId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateThreadLoopWithBody request with any body
+	UpdateThreadLoopWithBody(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateThreadLoop(ctx context.Context, threadId string, loopId string, body UpdateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetThreadLoopEnabledWithBody request with any body
+	SetThreadLoopEnabledWithBody(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetThreadLoopEnabled(ctx context.Context, threadId string, loopId string, body SetThreadLoopEnabledJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ConfigureMentionGateWithBody request with any body
 	ConfigureMentionGateWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2444,6 +2550,102 @@ func (c *Client) RaiseStopWithBody(ctx context.Context, threadId string, issueId
 
 func (c *Client) RaiseStop(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRaiseStopRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListThreadLoops(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListThreadLoopsRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateThreadLoopWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateThreadLoopRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateThreadLoop(ctx context.Context, threadId string, body CreateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateThreadLoopRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteThreadLoop(ctx context.Context, threadId string, loopId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteThreadLoopRequest(c.Server, threadId, loopId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateThreadLoopWithBody(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateThreadLoopRequestWithBody(c.Server, threadId, loopId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateThreadLoop(ctx context.Context, threadId string, loopId string, body UpdateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateThreadLoopRequest(c.Server, threadId, loopId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetThreadLoopEnabledWithBody(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetThreadLoopEnabledRequestWithBody(c.Server, threadId, loopId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetThreadLoopEnabled(ctx context.Context, threadId string, loopId string, body SetThreadLoopEnabledJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetThreadLoopEnabledRequest(c.Server, threadId, loopId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4038,6 +4240,236 @@ func NewRaiseStopRequestWithBody(server string, threadId string, issueId string,
 	return req, nil
 }
 
+// NewListThreadLoopsRequest generates requests for ListThreadLoops
+func NewListThreadLoopsRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/loops", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateThreadLoopRequest calls the generic CreateThreadLoop builder with application/json body
+func NewCreateThreadLoopRequest(server string, threadId string, body CreateThreadLoopJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateThreadLoopRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewCreateThreadLoopRequestWithBody generates requests for CreateThreadLoop with any type of body
+func NewCreateThreadLoopRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/loops", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteThreadLoopRequest generates requests for DeleteThreadLoop
+func NewDeleteThreadLoopRequest(server string, threadId string, loopId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "loopId", loopId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/loops/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateThreadLoopRequest calls the generic UpdateThreadLoop builder with application/json body
+func NewUpdateThreadLoopRequest(server string, threadId string, loopId string, body UpdateThreadLoopJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateThreadLoopRequestWithBody(server, threadId, loopId, "application/json", bodyReader)
+}
+
+// NewUpdateThreadLoopRequestWithBody generates requests for UpdateThreadLoop with any type of body
+func NewUpdateThreadLoopRequestWithBody(server string, threadId string, loopId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "loopId", loopId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/loops/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSetThreadLoopEnabledRequest calls the generic SetThreadLoopEnabled builder with application/json body
+func NewSetThreadLoopEnabledRequest(server string, threadId string, loopId string, body SetThreadLoopEnabledJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetThreadLoopEnabledRequestWithBody(server, threadId, loopId, "application/json", bodyReader)
+}
+
+// NewSetThreadLoopEnabledRequestWithBody generates requests for SetThreadLoopEnabled with any type of body
+func NewSetThreadLoopEnabledRequestWithBody(server string, threadId string, loopId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "loopId", loopId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/loops/%s/enabled", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewConfigureMentionGateRequest calls the generic ConfigureMentionGate builder with application/json body
 func NewConfigureMentionGateRequest(server string, threadId string, body ConfigureMentionGateJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -4868,6 +5300,27 @@ type ClientWithResponsesInterface interface {
 	RaiseStopWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error)
 
 	RaiseStopWithResponse(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error)
+
+	// ListThreadLoopsWithResponse request
+	ListThreadLoopsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListThreadLoopsResponse, error)
+
+	// CreateThreadLoopWithBodyWithResponse request with any body
+	CreateThreadLoopWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateThreadLoopResponse, error)
+
+	CreateThreadLoopWithResponse(ctx context.Context, threadId string, body CreateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateThreadLoopResponse, error)
+
+	// DeleteThreadLoopWithResponse request
+	DeleteThreadLoopWithResponse(ctx context.Context, threadId string, loopId string, reqEditors ...RequestEditorFn) (*DeleteThreadLoopResponse, error)
+
+	// UpdateThreadLoopWithBodyWithResponse request with any body
+	UpdateThreadLoopWithBodyWithResponse(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateThreadLoopResponse, error)
+
+	UpdateThreadLoopWithResponse(ctx context.Context, threadId string, loopId string, body UpdateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateThreadLoopResponse, error)
+
+	// SetThreadLoopEnabledWithBodyWithResponse request with any body
+	SetThreadLoopEnabledWithBodyWithResponse(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetThreadLoopEnabledResponse, error)
+
+	SetThreadLoopEnabledWithResponse(ctx context.Context, threadId string, loopId string, body SetThreadLoopEnabledJSONRequestBody, reqEditors ...RequestEditorFn) (*SetThreadLoopEnabledResponse, error)
 
 	// ConfigureMentionGateWithBodyWithResponse request with any body
 	ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
@@ -6086,6 +6539,175 @@ func (r RaiseStopResponse) ContentType() string {
 	return ""
 }
 
+type ListThreadLoopsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Loops []struct {
+			Enabled     bool               `json:"enabled"`
+			LastFiredAt *string            `json:"lastFiredAt,omitempty"`
+			LoopId      openapi_types.UUID `json:"loopId"`
+			NextRunAt   *string            `json:"nextRunAt,omitempty"`
+			Prompt      string             `json:"prompt"`
+			TimeOfDay   string             `json:"timeOfDay"`
+			Timezone    string             `json:"timezone"`
+			Weekdays    []DayOfWeek        `json:"weekdays"`
+		} `json:"loops"`
+		PromptMaxLength int `json:"promptMaxLength"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ListThreadLoopsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListThreadLoopsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListThreadLoopsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateThreadLoopResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		LoopId    openapi_types.UUID `json:"loopId"`
+		NextRunAt string             `json:"nextRunAt"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateThreadLoopResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateThreadLoopResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateThreadLoopResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteThreadLoopResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteThreadLoopResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteThreadLoopResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteThreadLoopResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateThreadLoopResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		NextRunAt *string `json:"nextRunAt,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateThreadLoopResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateThreadLoopResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateThreadLoopResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetThreadLoopEnabledResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		NextRunAt *string `json:"nextRunAt,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SetThreadLoopEnabledResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetThreadLoopEnabledResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetThreadLoopEnabledResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ConfigureMentionGateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7206,6 +7828,75 @@ func (c *ClientWithResponses) RaiseStopWithResponse(ctx context.Context, threadI
 		return nil, err
 	}
 	return ParseRaiseStopResponse(rsp)
+}
+
+// ListThreadLoopsWithResponse request returning *ListThreadLoopsResponse
+func (c *ClientWithResponses) ListThreadLoopsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListThreadLoopsResponse, error) {
+	rsp, err := c.ListThreadLoops(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListThreadLoopsResponse(rsp)
+}
+
+// CreateThreadLoopWithBodyWithResponse request with arbitrary body returning *CreateThreadLoopResponse
+func (c *ClientWithResponses) CreateThreadLoopWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateThreadLoopResponse, error) {
+	rsp, err := c.CreateThreadLoopWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateThreadLoopResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateThreadLoopWithResponse(ctx context.Context, threadId string, body CreateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateThreadLoopResponse, error) {
+	rsp, err := c.CreateThreadLoop(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateThreadLoopResponse(rsp)
+}
+
+// DeleteThreadLoopWithResponse request returning *DeleteThreadLoopResponse
+func (c *ClientWithResponses) DeleteThreadLoopWithResponse(ctx context.Context, threadId string, loopId string, reqEditors ...RequestEditorFn) (*DeleteThreadLoopResponse, error) {
+	rsp, err := c.DeleteThreadLoop(ctx, threadId, loopId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteThreadLoopResponse(rsp)
+}
+
+// UpdateThreadLoopWithBodyWithResponse request with arbitrary body returning *UpdateThreadLoopResponse
+func (c *ClientWithResponses) UpdateThreadLoopWithBodyWithResponse(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateThreadLoopResponse, error) {
+	rsp, err := c.UpdateThreadLoopWithBody(ctx, threadId, loopId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateThreadLoopResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateThreadLoopWithResponse(ctx context.Context, threadId string, loopId string, body UpdateThreadLoopJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateThreadLoopResponse, error) {
+	rsp, err := c.UpdateThreadLoop(ctx, threadId, loopId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateThreadLoopResponse(rsp)
+}
+
+// SetThreadLoopEnabledWithBodyWithResponse request with arbitrary body returning *SetThreadLoopEnabledResponse
+func (c *ClientWithResponses) SetThreadLoopEnabledWithBodyWithResponse(ctx context.Context, threadId string, loopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetThreadLoopEnabledResponse, error) {
+	rsp, err := c.SetThreadLoopEnabledWithBody(ctx, threadId, loopId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetThreadLoopEnabledResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetThreadLoopEnabledWithResponse(ctx context.Context, threadId string, loopId string, body SetThreadLoopEnabledJSONRequestBody, reqEditors ...RequestEditorFn) (*SetThreadLoopEnabledResponse, error) {
+	rsp, err := c.SetThreadLoopEnabled(ctx, threadId, loopId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetThreadLoopEnabledResponse(rsp)
 }
 
 // ConfigureMentionGateWithBodyWithResponse request with arbitrary body returning *ConfigureMentionGateResponse
@@ -8414,6 +9105,155 @@ func ParseRaiseStopResponse(rsp *http.Response) (*RaiseStopResponse, error) {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			StopId openapi_types.UUID `json:"stopId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListThreadLoopsResponse parses an HTTP response from a ListThreadLoopsWithResponse call
+func ParseListThreadLoopsResponse(rsp *http.Response) (*ListThreadLoopsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListThreadLoopsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Loops []struct {
+				Enabled     bool               `json:"enabled"`
+				LastFiredAt *string            `json:"lastFiredAt,omitempty"`
+				LoopId      openapi_types.UUID `json:"loopId"`
+				NextRunAt   *string            `json:"nextRunAt,omitempty"`
+				Prompt      string             `json:"prompt"`
+				TimeOfDay   string             `json:"timeOfDay"`
+				Timezone    string             `json:"timezone"`
+				Weekdays    []DayOfWeek        `json:"weekdays"`
+			} `json:"loops"`
+			PromptMaxLength int `json:"promptMaxLength"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateThreadLoopResponse parses an HTTP response from a CreateThreadLoopWithResponse call
+func ParseCreateThreadLoopResponse(rsp *http.Response) (*CreateThreadLoopResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateThreadLoopResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			LoopId    openapi_types.UUID `json:"loopId"`
+			NextRunAt string             `json:"nextRunAt"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteThreadLoopResponse parses an HTTP response from a DeleteThreadLoopWithResponse call
+func ParseDeleteThreadLoopResponse(rsp *http.Response) (*DeleteThreadLoopResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteThreadLoopResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateThreadLoopResponse parses an HTTP response from a UpdateThreadLoopWithResponse call
+func ParseUpdateThreadLoopResponse(rsp *http.Response) (*UpdateThreadLoopResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateThreadLoopResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			NextRunAt *string `json:"nextRunAt,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetThreadLoopEnabledResponse parses an HTTP response from a SetThreadLoopEnabledWithResponse call
+func ParseSetThreadLoopEnabledResponse(rsp *http.Response) (*SetThreadLoopEnabledResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetThreadLoopEnabledResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			NextRunAt *string `json:"nextRunAt,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

@@ -232,6 +232,7 @@ pub mod types {
     ///    "INVALID_ID",
     ///    "INVALID_ID_VALUES_LENGTH",
     ///    "INVALID_LANGUAGE",
+    ///    "INVALID_LOOP_TIME",
     ///    "INVALID_OUTBOX_PAYLOAD",
     ///    "INVALID_PHONE",
     ///    "INVALID_PICTURE_URL",
@@ -244,6 +245,9 @@ pub mod types {
     ///    "ISSUE_NOT_ARCHIVED",
     ///    "ISSUE_NOT_FOUND",
     ///    "LAST_INVOKER",
+    ///    "LOOP_NOT_FOUND",
+    ///    "LOOP_PROMPT_TOO_LONG",
+    ///    "LOOP_WITHOUT_WEEKDAY",
     ///    "MISSING_ENVIRONMENT_VARIABLE",
     ///    "MISSING_LOG_CONTENT",
     ///    "NOT_FOUND",
@@ -361,6 +365,8 @@ pub mod types {
         InvalidIdValuesLength,
         #[serde(rename = "INVALID_LANGUAGE")]
         InvalidLanguage,
+        #[serde(rename = "INVALID_LOOP_TIME")]
+        InvalidLoopTime,
         #[serde(rename = "INVALID_OUTBOX_PAYLOAD")]
         InvalidOutboxPayload,
         #[serde(rename = "INVALID_PHONE")]
@@ -385,6 +391,12 @@ pub mod types {
         IssueNotFound,
         #[serde(rename = "LAST_INVOKER")]
         LastInvoker,
+        #[serde(rename = "LOOP_NOT_FOUND")]
+        LoopNotFound,
+        #[serde(rename = "LOOP_PROMPT_TOO_LONG")]
+        LoopPromptTooLong,
+        #[serde(rename = "LOOP_WITHOUT_WEEKDAY")]
+        LoopWithoutWeekday,
         #[serde(rename = "MISSING_ENVIRONMENT_VARIABLE")]
         MissingEnvironmentVariable,
         #[serde(rename = "MISSING_LOG_CONTENT")]
@@ -519,6 +531,7 @@ pub mod types {
                 Self::InvalidId => f.write_str("INVALID_ID"),
                 Self::InvalidIdValuesLength => f.write_str("INVALID_ID_VALUES_LENGTH"),
                 Self::InvalidLanguage => f.write_str("INVALID_LANGUAGE"),
+                Self::InvalidLoopTime => f.write_str("INVALID_LOOP_TIME"),
                 Self::InvalidOutboxPayload => f.write_str("INVALID_OUTBOX_PAYLOAD"),
                 Self::InvalidPhone => f.write_str("INVALID_PHONE"),
                 Self::InvalidPictureUrl => f.write_str("INVALID_PICTURE_URL"),
@@ -531,6 +544,9 @@ pub mod types {
                 Self::IssueNotArchived => f.write_str("ISSUE_NOT_ARCHIVED"),
                 Self::IssueNotFound => f.write_str("ISSUE_NOT_FOUND"),
                 Self::LastInvoker => f.write_str("LAST_INVOKER"),
+                Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
+                Self::LoopPromptTooLong => f.write_str("LOOP_PROMPT_TOO_LONG"),
+                Self::LoopWithoutWeekday => f.write_str("LOOP_WITHOUT_WEEKDAY"),
                 Self::MissingEnvironmentVariable => {
                     f.write_str("MISSING_ENVIRONMENT_VARIABLE")
                 }
@@ -617,6 +633,7 @@ pub mod types {
                 "INVALID_ID" => Ok(Self::InvalidId),
                 "INVALID_ID_VALUES_LENGTH" => Ok(Self::InvalidIdValuesLength),
                 "INVALID_LANGUAGE" => Ok(Self::InvalidLanguage),
+                "INVALID_LOOP_TIME" => Ok(Self::InvalidLoopTime),
                 "INVALID_OUTBOX_PAYLOAD" => Ok(Self::InvalidOutboxPayload),
                 "INVALID_PHONE" => Ok(Self::InvalidPhone),
                 "INVALID_PICTURE_URL" => Ok(Self::InvalidPictureUrl),
@@ -629,6 +646,9 @@ pub mod types {
                 "ISSUE_NOT_ARCHIVED" => Ok(Self::IssueNotArchived),
                 "ISSUE_NOT_FOUND" => Ok(Self::IssueNotFound),
                 "LAST_INVOKER" => Ok(Self::LastInvoker),
+                "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
+                "LOOP_PROMPT_TOO_LONG" => Ok(Self::LoopPromptTooLong),
+                "LOOP_WITHOUT_WEEKDAY" => Ok(Self::LoopWithoutWeekday),
                 "MISSING_ENVIRONMENT_VARIABLE" => Ok(Self::MissingEnvironmentVariable),
                 "MISSING_LOG_CONTENT" => Ok(Self::MissingLogContent),
                 "NOT_FOUND" => Ok(Self::NotFound),
@@ -1898,6 +1918,310 @@ pub mod types {
     }
     impl ::std::convert::From<&CreateOwnerResponse> for CreateOwnerResponse {
         fn from(value: &CreateOwnerResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`CreateThreadLoopBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "prompt",
+    ///    "schedule"
+    ///  ],
+    ///  "properties": {
+    ///    "prompt": {
+    ///      "type": "string",
+    ///      "maxLength": 2000,
+    ///      "minLength": 1
+    ///    },
+    ///    "schedule": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "timeOfDay",
+    ///        "timezone",
+    ///        "weekdays"
+    ///      ],
+    ///      "properties": {
+    ///        "timeOfDay": {
+    ///          "type": "string",
+    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///        },
+    ///        "timezone": {
+    ///          "$ref": "#/components/schemas/Timezone"
+    ///        },
+    ///        "weekdays": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/DayOfWeek"
+    ///          },
+    ///          "minItems": 1
+    ///        }
+    ///      }
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct CreateThreadLoopBody {
+        pub prompt: CreateThreadLoopBodyPrompt,
+        pub schedule: CreateThreadLoopBodySchedule,
+    }
+    impl ::std::convert::From<&CreateThreadLoopBody> for CreateThreadLoopBody {
+        fn from(value: &CreateThreadLoopBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`CreateThreadLoopBodyPrompt`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct CreateThreadLoopBodyPrompt(::std::string::String);
+    impl ::std::ops::Deref for CreateThreadLoopBodyPrompt {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CreateThreadLoopBodyPrompt> for ::std::string::String {
+        fn from(value: CreateThreadLoopBodyPrompt) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&CreateThreadLoopBodyPrompt>
+    for CreateThreadLoopBodyPrompt {
+        fn from(value: &CreateThreadLoopBodyPrompt) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for CreateThreadLoopBodyPrompt {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for CreateThreadLoopBodyPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for CreateThreadLoopBodyPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for CreateThreadLoopBodyPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for CreateThreadLoopBodyPrompt {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`CreateThreadLoopBodySchedule`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "timeOfDay",
+    ///    "timezone",
+    ///    "weekdays"
+    ///  ],
+    ///  "properties": {
+    ///    "timeOfDay": {
+    ///      "type": "string",
+    ///      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///    },
+    ///    "timezone": {
+    ///      "$ref": "#/components/schemas/Timezone"
+    ///    },
+    ///    "weekdays": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/DayOfWeek"
+    ///      },
+    ///      "minItems": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct CreateThreadLoopBodySchedule {
+        #[serde(rename = "timeOfDay")]
+        pub time_of_day: CreateThreadLoopBodyScheduleTimeOfDay,
+        pub timezone: ::codm_contracts_rust::wire::enums::Timezone,
+        pub weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+    }
+    impl ::std::convert::From<&CreateThreadLoopBodySchedule>
+    for CreateThreadLoopBodySchedule {
+        fn from(value: &CreateThreadLoopBodySchedule) -> Self {
+            value.clone()
+        }
+    }
+    ///`CreateThreadLoopBodyScheduleTimeOfDay`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct CreateThreadLoopBodyScheduleTimeOfDay(::std::string::String);
+    impl ::std::ops::Deref for CreateThreadLoopBodyScheduleTimeOfDay {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CreateThreadLoopBodyScheduleTimeOfDay>
+    for ::std::string::String {
+        fn from(value: CreateThreadLoopBodyScheduleTimeOfDay) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&CreateThreadLoopBodyScheduleTimeOfDay>
+    for CreateThreadLoopBodyScheduleTimeOfDay {
+        fn from(value: &CreateThreadLoopBodyScheduleTimeOfDay) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for CreateThreadLoopBodyScheduleTimeOfDay {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^([01]\\d|2[0-3]):[0-5]\\d$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err(
+                    "doesn't match pattern \"^([01]\\d|2[0-3]):[0-5]\\d$\"".into(),
+                );
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for CreateThreadLoopBodyScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for CreateThreadLoopBodyScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for CreateThreadLoopBodyScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for CreateThreadLoopBodyScheduleTimeOfDay {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`CreateThreadLoopResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "loopId",
+    ///    "nextRunAt"
+    ///  ],
+    ///  "properties": {
+    ///    "loopId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "nextRunAt": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct CreateThreadLoopResponse {
+        #[serde(rename = "loopId")]
+        pub loop_id: ::uuid::Uuid,
+        #[serde(rename = "nextRunAt")]
+        pub next_run_at: ::std::string::String,
+    }
+    impl ::std::convert::From<&CreateThreadLoopResponse> for CreateThreadLoopResponse {
+        fn from(value: &CreateThreadLoopResponse) -> Self {
             value.clone()
         }
     }
@@ -6645,6 +6969,166 @@ pub mod types {
             value.clone()
         }
     }
+    ///`ListThreadLoopsResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "loops",
+    ///    "promptMaxLength"
+    ///  ],
+    ///  "properties": {
+    ///    "loops": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "enabled",
+    ///          "loopId",
+    ///          "prompt",
+    ///          "timeOfDay",
+    ///          "timezone",
+    ///          "weekdays"
+    ///        ],
+    ///        "properties": {
+    ///          "enabled": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "lastFiredAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "loopId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "nextRunAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "prompt": {
+    ///            "type": "string"
+    ///          },
+    ///          "timeOfDay": {
+    ///            "type": "string"
+    ///          },
+    ///          "timezone": {
+    ///            "type": "string"
+    ///          },
+    ///          "weekdays": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "$ref": "#/components/schemas/DayOfWeek"
+    ///            }
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "promptMaxLength": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "exclusiveMinimum": 0.0
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ListThreadLoopsResponse {
+        pub loops: ::std::vec::Vec<ListThreadLoopsResponseLoopsItem>,
+        #[serde(rename = "promptMaxLength")]
+        pub prompt_max_length: ::std::num::NonZeroU64,
+    }
+    impl ::std::convert::From<&ListThreadLoopsResponse> for ListThreadLoopsResponse {
+        fn from(value: &ListThreadLoopsResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`ListThreadLoopsResponseLoopsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "enabled",
+    ///    "loopId",
+    ///    "prompt",
+    ///    "timeOfDay",
+    ///    "timezone",
+    ///    "weekdays"
+    ///  ],
+    ///  "properties": {
+    ///    "enabled": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "lastFiredAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "loopId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "nextRunAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "prompt": {
+    ///      "type": "string"
+    ///    },
+    ///    "timeOfDay": {
+    ///      "type": "string"
+    ///    },
+    ///    "timezone": {
+    ///      "type": "string"
+    ///    },
+    ///    "weekdays": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/DayOfWeek"
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ListThreadLoopsResponseLoopsItem {
+        pub enabled: bool,
+        #[serde(
+            rename = "lastFiredAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub last_fired_at: ::std::option::Option<::std::string::String>,
+        #[serde(rename = "loopId")]
+        pub loop_id: ::uuid::Uuid,
+        #[serde(
+            rename = "nextRunAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub next_run_at: ::std::option::Option<::std::string::String>,
+        pub prompt: ::std::string::String,
+        #[serde(rename = "timeOfDay")]
+        pub time_of_day: ::std::string::String,
+        pub timezone: ::std::string::String,
+        pub weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+    }
+    impl ::std::convert::From<&ListThreadLoopsResponseLoopsItem>
+    for ListThreadLoopsResponseLoopsItem {
+        fn from(value: &ListThreadLoopsResponseLoopsItem) -> Self {
+            value.clone()
+        }
+    }
     ///`ListWorkspacesResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -7391,6 +7875,72 @@ pub mod types {
     for SetParticipantInvocationBody {
         fn from(value: &SetParticipantInvocationBody) -> Self {
             value.clone()
+        }
+    }
+    ///`SetThreadLoopEnabledBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "enabled"
+    ///  ],
+    ///  "properties": {
+    ///    "enabled": {
+    ///      "type": "boolean"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SetThreadLoopEnabledBody {
+        pub enabled: bool,
+    }
+    impl ::std::convert::From<&SetThreadLoopEnabledBody> for SetThreadLoopEnabledBody {
+        fn from(value: &SetThreadLoopEnabledBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`SetThreadLoopEnabledResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "nextRunAt": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct SetThreadLoopEnabledResponse {
+        #[serde(
+            rename = "nextRunAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub next_run_at: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&SetThreadLoopEnabledResponse>
+    for SetThreadLoopEnabledResponse {
+        fn from(value: &SetThreadLoopEnabledResponse) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for SetThreadLoopEnabledResponse {
+        fn default() -> Self {
+            Self {
+                next_run_at: Default::default(),
+            }
         }
     }
     ///`Status`
@@ -8544,6 +9094,310 @@ pub mod types {
     for UpdateStopCriteriaBodyStopCriteria {
         fn from(value: &UpdateStopCriteriaBodyStopCriteria) -> Self {
             value.clone()
+        }
+    }
+    ///`UpdateThreadLoopBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "prompt",
+    ///    "schedule"
+    ///  ],
+    ///  "properties": {
+    ///    "prompt": {
+    ///      "type": "string",
+    ///      "maxLength": 2000,
+    ///      "minLength": 1
+    ///    },
+    ///    "schedule": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "timeOfDay",
+    ///        "timezone",
+    ///        "weekdays"
+    ///      ],
+    ///      "properties": {
+    ///        "timeOfDay": {
+    ///          "type": "string",
+    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///        },
+    ///        "timezone": {
+    ///          "$ref": "#/components/schemas/Timezone"
+    ///        },
+    ///        "weekdays": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/DayOfWeek"
+    ///          },
+    ///          "minItems": 1
+    ///        }
+    ///      }
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct UpdateThreadLoopBody {
+        pub prompt: UpdateThreadLoopBodyPrompt,
+        pub schedule: UpdateThreadLoopBodySchedule,
+    }
+    impl ::std::convert::From<&UpdateThreadLoopBody> for UpdateThreadLoopBody {
+        fn from(value: &UpdateThreadLoopBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`UpdateThreadLoopBodyPrompt`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct UpdateThreadLoopBodyPrompt(::std::string::String);
+    impl ::std::ops::Deref for UpdateThreadLoopBodyPrompt {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<UpdateThreadLoopBodyPrompt> for ::std::string::String {
+        fn from(value: UpdateThreadLoopBodyPrompt) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&UpdateThreadLoopBodyPrompt>
+    for UpdateThreadLoopBodyPrompt {
+        fn from(value: &UpdateThreadLoopBodyPrompt) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for UpdateThreadLoopBodyPrompt {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for UpdateThreadLoopBodyPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for UpdateThreadLoopBodyPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for UpdateThreadLoopBodyPrompt {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for UpdateThreadLoopBodyPrompt {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`UpdateThreadLoopBodySchedule`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "timeOfDay",
+    ///    "timezone",
+    ///    "weekdays"
+    ///  ],
+    ///  "properties": {
+    ///    "timeOfDay": {
+    ///      "type": "string",
+    ///      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///    },
+    ///    "timezone": {
+    ///      "$ref": "#/components/schemas/Timezone"
+    ///    },
+    ///    "weekdays": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/DayOfWeek"
+    ///      },
+    ///      "minItems": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct UpdateThreadLoopBodySchedule {
+        #[serde(rename = "timeOfDay")]
+        pub time_of_day: UpdateThreadLoopBodyScheduleTimeOfDay,
+        pub timezone: ::codm_contracts_rust::wire::enums::Timezone,
+        pub weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+    }
+    impl ::std::convert::From<&UpdateThreadLoopBodySchedule>
+    for UpdateThreadLoopBodySchedule {
+        fn from(value: &UpdateThreadLoopBodySchedule) -> Self {
+            value.clone()
+        }
+    }
+    ///`UpdateThreadLoopBodyScheduleTimeOfDay`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct UpdateThreadLoopBodyScheduleTimeOfDay(::std::string::String);
+    impl ::std::ops::Deref for UpdateThreadLoopBodyScheduleTimeOfDay {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<UpdateThreadLoopBodyScheduleTimeOfDay>
+    for ::std::string::String {
+        fn from(value: UpdateThreadLoopBodyScheduleTimeOfDay) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&UpdateThreadLoopBodyScheduleTimeOfDay>
+    for UpdateThreadLoopBodyScheduleTimeOfDay {
+        fn from(value: &UpdateThreadLoopBodyScheduleTimeOfDay) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for UpdateThreadLoopBodyScheduleTimeOfDay {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^([01]\\d|2[0-3]):[0-5]\\d$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err(
+                    "doesn't match pattern \"^([01]\\d|2[0-3]):[0-5]\\d$\"".into(),
+                );
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for UpdateThreadLoopBodyScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for UpdateThreadLoopBodyScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for UpdateThreadLoopBodyScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for UpdateThreadLoopBodyScheduleTimeOfDay {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`UpdateThreadLoopResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "nextRunAt": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct UpdateThreadLoopResponse {
+        #[serde(
+            rename = "nextRunAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub next_run_at: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&UpdateThreadLoopResponse> for UpdateThreadLoopResponse {
+        fn from(value: &UpdateThreadLoopResponse) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for UpdateThreadLoopResponse {
+        fn default() -> Self {
+            Self {
+                next_run_at: Default::default(),
+            }
         }
     }
     ///`UploadAvatarResponse`
@@ -9761,6 +10615,193 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/stops`
         let mut request = self
             .client
             .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**This conversation's scheduled prompts (loops) (T11)
+
+Sends a `GET` request to `/v1/threads/{threadId}/loops`
+
+*/
+    pub async fn list_thread_loops<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<types::ListThreadLoopsResponse>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/loops", self.baseurl, encode_path(& thread_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Schedule a recurring whisper into this conversation (C21)
+
+Sends a `POST` request to `/v1/threads/{threadId}/loops`
+
+*/
+    pub async fn create_thread_loop<'a>(
+        &'a self,
+        thread_id: &'a str,
+        body: &'a types::CreateThreadLoopBody,
+    ) -> Result<ResponseValue<types::CreateThreadLoopResponse>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/loops", self.baseurl, encode_path(& thread_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Edit a loop — its prompt and its schedule (C22)
+
+Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}`
+
+*/
+    pub async fn update_thread_loop<'a>(
+        &'a self,
+        thread_id: &'a str,
+        loop_id: &'a str,
+        body: &'a types::UpdateThreadLoopBody,
+    ) -> Result<ResponseValue<types::UpdateThreadLoopResponse>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/loops/{}", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& loop_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Remove a loop (C24)
+
+Sends a `DELETE` request to `/v1/threads/{threadId}/loops/{loopId}`
+
+*/
+    pub async fn delete_thread_loop<'a>(
+        &'a self,
+        thread_id: &'a str,
+        loop_id: &'a str,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/loops/{}", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& loop_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .delete(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Pause or resume a loop (C23)
+
+Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}/enabled`
+
+*/
+    pub async fn set_thread_loop_enabled<'a>(
+        &'a self,
+        thread_id: &'a str,
+        loop_id: &'a str,
+        body: &'a types::SetThreadLoopEnabledBody,
+    ) -> Result<ResponseValue<types::SetThreadLoopEnabledResponse>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/loops/{}/enabled", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& loop_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
             .header(
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),

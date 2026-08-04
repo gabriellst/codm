@@ -2147,6 +2147,222 @@
         ]
       }
     },
+    "/v1/threads/{threadId}/loops": {
+      "post": {
+        "tags": [
+          "thread"
+        ],
+        "description": "Schedule a recurring whisper into this conversation (C21)",
+        "operationId": "CreateThreadLoop",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "schedule": {
+                    "type": "object",
+                    "properties": {
+                      "timeOfDay": {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                      },
+                      "weekdays": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/DayOfWeek"
+                        }
+                      },
+                      "timezone": {
+                        "$ref": "#/components/schemas/Timezone"
+                      }
+                    },
+                    "required": [
+                      "timeOfDay",
+                      "weekdays",
+                      "timezone"
+                    ]
+                  }
+                },
+                "required": [
+                  "prompt",
+                  "schedule"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "prompt": "Pergunte ao time como está o deploy de hoje e resuma em três linhas.",
+                    "schedule": {
+                      "timeOfDay": "09:00",
+                      "weekdays": [
+                        "MONDAY",
+                        "WEDNESDAY",
+                        "FRIDAY"
+                      ],
+                      "timezone": "America/Sao_Paulo"
+                    }
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule a recurring whisper into this conversation (C21)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "loopId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "nextRunAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "loopId",
+                    "nextRunAt"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "loopId": "019e4d24-6524-7041-9e1c-8108180cddb1",
+                      "nextRunAt": "2026-08-05T12:00:00.000Z"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "loopId": "019e4d24-6524-7041-9e1c-8108180cddb1",
+                      "nextRunAt": "2026-08-05T12:00:00.000Z"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "thread",
+          "mcp:system"
+        ],
+        "description": "This conversation's scheduled prompts (loops) (T11)",
+        "operationId": "ListThreadLoops",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "This conversation's scheduled prompts (loops) (T11)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "loops": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "loopId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "prompt": {
+                            "type": "string"
+                          },
+                          "timeOfDay": {
+                            "type": "string"
+                          },
+                          "weekdays": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/DayOfWeek"
+                            }
+                          },
+                          "timezone": {
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "nextRunAt": {
+                            "type": "string"
+                          },
+                          "lastFiredAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "loopId",
+                          "prompt",
+                          "timeOfDay",
+                          "weekdays",
+                          "timezone",
+                          "enabled"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "promptMaxLength": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "loops",
+                    "promptMaxLength"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
+      }
+    },
     "/v1/threads/{threadId}": {
       "delete": {
         "tags": [
@@ -2171,6 +2387,164 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/threads/{threadId}/loops/{loopId}": {
+      "delete": {
+        "tags": [
+          "thread"
+        ],
+        "description": "Remove a loop (C24)",
+        "operationId": "DeleteThreadLoop",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "loopId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remove a loop (C24)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "thread"
+        ],
+        "description": "Edit a loop — its prompt and its schedule (C22)",
+        "operationId": "UpdateThreadLoop",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "schedule": {
+                    "type": "object",
+                    "properties": {
+                      "timeOfDay": {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                      },
+                      "weekdays": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/DayOfWeek"
+                        }
+                      },
+                      "timezone": {
+                        "$ref": "#/components/schemas/Timezone"
+                      }
+                    },
+                    "required": [
+                      "timeOfDay",
+                      "weekdays",
+                      "timezone"
+                    ]
+                  }
+                },
+                "required": [
+                  "prompt",
+                  "schedule"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "prompt": "Pergunte ao time como está o deploy de hoje e resuma em três linhas.",
+                    "schedule": {
+                      "timeOfDay": "09:00",
+                      "weekdays": [
+                        "MONDAY",
+                        "WEDNESDAY",
+                        "FRIDAY"
+                      ],
+                      "timezone": "America/Sao_Paulo"
+                    }
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "loopId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Edit a loop — its prompt and its schedule (C22)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nextRunAt": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "nextRunAt": "2026-08-05T12:00:00.000Z"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "nextRunAt": "2026-08-05T12:00:00.000Z"
+                    },
+                    "summary": "Example"
+                  }
+                }
               }
             }
           }
@@ -2879,6 +3253,87 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/threads/{threadId}/loops/{loopId}/enabled": {
+      "put": {
+        "tags": [
+          "thread"
+        ],
+        "description": "Pause or resume a loop (C23)",
+        "operationId": "SetThreadLoopEnabled",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "enabled": false
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "loopId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pause or resume a loop (C23)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nextRunAt": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "examples": [
+                    {}
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
               }
             }
           }
@@ -7795,6 +8250,7 @@
           "INVALID_ID",
           "INVALID_ID_VALUES_LENGTH",
           "INVALID_LANGUAGE",
+          "INVALID_LOOP_TIME",
           "INVALID_OUTBOX_PAYLOAD",
           "INVALID_PHONE",
           "INVALID_PICTURE_URL",
@@ -7807,6 +8263,9 @@
           "ISSUE_NOT_ARCHIVED",
           "ISSUE_NOT_FOUND",
           "LAST_INVOKER",
+          "LOOP_NOT_FOUND",
+          "LOOP_PROMPT_TOO_LONG",
+          "LOOP_WITHOUT_WEEKDAY",
           "MISSING_ENVIRONMENT_VARIABLE",
           "MISSING_LOG_CONTENT",
           "NOT_FOUND",
@@ -7936,6 +8395,27 @@
           "50",
           "100",
           "200"
+        ]
+      },
+      "Timezone": {
+        "type": "string",
+        "x-tpl-zod-refinements": [
+          {
+            "function": "(tz) => tryCatch(() => new Intl.DateTimeFormat(\"en-US\", { timeZone: tz }).format(new Date)).success",
+            "error": "INVALID_TIMEZONE"
+          }
+        ]
+      },
+      "DayOfWeek": {
+        "type": "string",
+        "enum": [
+          "MONDAY",
+          "TUESDAY",
+          "WEDNESDAY",
+          "THURSDAY",
+          "FRIDAY",
+          "SATURDAY",
+          "SUNDAY"
         ]
       },
       "StopResolution": {
@@ -8180,6 +8660,7 @@
     "INVALID_ID",
     "INVALID_ID_VALUES_LENGTH",
     "INVALID_LANGUAGE",
+    "INVALID_LOOP_TIME",
     "INVALID_OUTBOX_PAYLOAD",
     "INVALID_PHONE",
     "INVALID_PICTURE_URL",
@@ -8192,6 +8673,9 @@
     "ISSUE_NOT_ARCHIVED",
     "ISSUE_NOT_FOUND",
     "LAST_INVOKER",
+    "LOOP_NOT_FOUND",
+    "LOOP_PROMPT_TOO_LONG",
+    "LOOP_WITHOUT_WEEKDAY",
     "MISSING_ENVIRONMENT_VARIABLE",
     "MISSING_LOG_CONTENT",
     "NOT_FOUND",
@@ -8273,6 +8757,7 @@
       "GetThreadSettings",
       "GetUserInfo",
       "ListArtifacts",
+      "ListThreadLoops",
       "ListWorkspaces",
       "RemoveWorkspace",
       "SetActiveOwner",

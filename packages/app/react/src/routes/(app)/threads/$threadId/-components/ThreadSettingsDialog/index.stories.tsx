@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { getSessionChatQueryOptions, getThreadSettingsQueryOptions } from '@codm/client-typescript/typescript'
+import { getSessionChatQueryOptions, getThreadSettingsQueryOptions, listThreadLoopsQueryOptions } from '@codm/client-typescript/typescript'
 import { Dialog } from '@/components/ui/dialog'
 import { connected, mockQuery } from '@/storybook'
 import { ThreadSettingsDialog } from '.'
@@ -29,6 +29,31 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					],
 				}),
 				mockQuery(getSessionChatQueryOptions(THREAD_ID), { thread: { displayName: 'Ada Lovelace' } }),
+				// TWO loops on purpose: one running and one paused, because the paused row is the state whose
+				// styling (dimmed, "Pausado" instead of a next run) has no other way of being seen.
+				mockQuery(listThreadLoopsQueryOptions(THREAD_ID), {
+					loops: [
+						{
+							loopId: '019e4d24-6524-7041-9e1c-8108180cddb1',
+							prompt: 'Pergunte ao time como está o deploy de hoje e resuma em três linhas.',
+							timeOfDay: '09:00',
+							weekdays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+							timezone: 'America/Sao_Paulo',
+							enabled: true,
+							nextRunAt: '2026-08-05T12:00:00.000Z',
+							lastFiredAt: '2026-08-03T12:00:00.000Z',
+						},
+						{
+							loopId: '019e4d24-6524-7041-9e1c-8108180cddb2',
+							prompt: 'Feche a semana: o que ficou pendente?',
+							timeOfDay: '18:30',
+							weekdays: ['FRIDAY'],
+							timezone: 'America/Sao_Paulo',
+							enabled: false,
+						},
+					],
+					promptMaxLength: 2000,
+				}),
 			],
 		},
 	}),

@@ -25,6 +25,31 @@ schedulers"), calling the deliver-due endpoint on a cron/ticker. The worker hold
 it just pokes the seam. (Keep the cadence coarse; due-window precision is the `scheduledAt <= now`
 query, not the poll frequency.)
 
+### In THIS fork the trigger is a repeatable JOB, not a Go worker (SCH-03a)
+
+`packages/api/go` here is the WhatsApp gateway, not a worker fleet — there is nothing on that side to
+hang a ticker on, and a cross-service hop would buy nothing. What this repo has instead is a durable
+scheduler in core: `SqliteCommandQueue` writes `shared_scheduled_commands` rows in the SAME SQLite
+file as the domain, polls them once a second, and honours `opts.repeat.every` by RE-ARMING the row
+after each run. `BoundedContext.create({ jobs: [{ handler, repeat: { every } }] })` is the one-line
+registration — it resolves + binds the handler, registers it as a command handler, and upserts the
+repeatable row.
+
+So: still a deliver-due use case (SCH-02), still no business logic in the trigger — the trigger is
+just `jobs:`. Exemplars: `AutoArchiveCompletedIssues` (hourly, `issue/index.ts`) and `FireDueLoops`
+(per minute, `thread/index.ts`).
+
+**A `setInterval` is never the answer here**, and the reason is sharper than durability in the
+abstract: this daemon is a Tauri sidecar that dies every time the operator quits the desktop app.
+
+### A missed run is a DECISION, not an accident (SCH-04)
+
+A poller that was asleep when the alarm rang comes back to a row that is due *and stale*. Firing it
+anyway is rarely right for anything a human sees: a 09:00 prompt delivered at 14:00 reads as broken,
+and after a weekend's downtime the whole backlog fires in sequence. Give the sweep a grace window,
+skip past it, and make "skipped" a DIFFERENT transition from "delivered" so the read model never
+reports a delivery that did not happen (`Loop.skipRun` vs `Loop.markFired`).
+
 ## Anti-patterns
 
 - `setTimeout`/`setInterval` in the request handler to defer delivery — lost on restart, not durable.

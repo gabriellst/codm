@@ -38,3 +38,20 @@ export {
 	UpdateStopCriteriaConfigOutputSchema,
 } from './UpdateStopCriteriaConfig'
 export { GetNeedsYouPanel, GetNeedsYouPanelInputSchema, GetNeedsYouPanelOutputSchema } from './GetNeedsYouPanel'
+// Thread LOOPS — the operator's recurring prompt for one conversation, and the sweep that fires it.
+export {
+	CreateThreadLoop,
+	CreateThreadLoopInputSchema,
+	CreateThreadLoopOutputSchema,
+	UpdateThreadLoop,
+	UpdateThreadLoopInputSchema,
+	UpdateThreadLoopOutputSchema,
+	SetThreadLoopEnabled,
+	SetThreadLoopEnabledInputSchema,
+	SetThreadLoopEnabledOutputSchema,
+	DeleteThreadLoop,
+	DeleteThreadLoopInputSchema,
+	DeleteThreadLoopOutputSchema,
+} from './ManageThreadLoops'
+export { ListThreadLoops, ListThreadLoopsInputSchema, ListThreadLoopsOutputSchema } from './ListThreadLoops'
+export { FireDueLoops, FireDueLoopsInputSchema, FireDueLoopsOutputSchema, FIRE_DUE_LOOPS_INTERVAL_MS } from './FireDueLoops'

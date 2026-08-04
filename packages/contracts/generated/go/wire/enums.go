@@ -275,6 +275,27 @@ func ParseCurrencyCode(s string) (CurrencyCode, error) {
 	}
 }
 
+type DayOfWeek string
+
+const (
+	DayOfWeekMONDAY DayOfWeek = "MONDAY"
+	DayOfWeekTUESDAY DayOfWeek = "TUESDAY"
+	DayOfWeekWEDNESDAY DayOfWeek = "WEDNESDAY"
+	DayOfWeekTHURSDAY DayOfWeek = "THURSDAY"
+	DayOfWeekFRIDAY DayOfWeek = "FRIDAY"
+	DayOfWeekSATURDAY DayOfWeek = "SATURDAY"
+	DayOfWeekSUNDAY DayOfWeek = "SUNDAY"
+)
+
+func ParseDayOfWeek(s string) (DayOfWeek, error) {
+	switch DayOfWeek(s) {
+	case DayOfWeekMONDAY, DayOfWeekTUESDAY, DayOfWeekWEDNESDAY, DayOfWeekTHURSDAY, DayOfWeekFRIDAY, DayOfWeekSATURDAY, DayOfWeekSUNDAY:
+		return DayOfWeek(s), nil
+	default:
+		return "", fmt.Errorf("invalid DayOfWeek: %q", s)
+	}
+}
+
 type Direction string
 
 const (

@@ -12,3 +12,4 @@ export {
 	DrizzleStopPolicyConfigRepository,
 	MockStopPolicyConfigRepository,
 } from './StopPolicyConfigRepository'
+export { LoopRepository, DrizzleLoopRepository, MockLoopRepository } from './LoopRepository'

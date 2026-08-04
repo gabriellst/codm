@@ -19,6 +19,12 @@ export type ThreadDomainErrors =
 	// The operator's custom prompt is capped: it rides in EVERY turn this conversation answers, so an
 	// unbounded box is an unbounded per-message cost. Raised by `CustomPromptSchema`'s `.max()`.
 	| 'PROMPT_TOO_LONG'
+	// Loop invariants — raised by `LoopSchedule` / `LoopPromptSchema` at construction, so an unfireable
+	// loop never reaches the table. A schedule with no weekday would sit enabled and never run; a
+	// `09:70` would parse as a date nobody chose.
+	| 'INVALID_LOOP_TIME'
+	| 'LOOP_WITHOUT_WEEKDAY'
+	| 'LOOP_PROMPT_TOO_LONG'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
 // Application errors — orchestration in the thread use cases + routing pipeline.
@@ -57,6 +63,10 @@ export type ThreadApplicationErrors =
 	// The Go gateway did not answer a WRITE. Same code the browser-facing proxy already surfaces for
 	// the same cause, declared here too because this context now calls the gateway directly.
 	| 'GATEWAY_UNAVAILABLE'
+	// A loop id that is not this owner's, or not this thread's. ONE code for both, deliberately: the
+	// console only ever addresses loops it has just listed, so the only way to reach either branch is a
+	// stale screen or a probe, and telling the second one apart from "no such loop" is a favour to it.
+	| 'LOOP_NOT_FOUND'
 export type ApplicationErrors = BaseApplicationErrors | ThreadApplicationErrors
 
 export type ThreadInterfaceErrors = never
@@ -86,6 +96,12 @@ registerErrorCodes({
 	// 422 like every other "the state forbids this right now" code in this context (THREAD_PAUSED,
 	// ISSUE_ARCHIVED): the operator resolves the stop or lets the issue finish, then deletes.
 	THREAD_HAS_ACTIVE_WORK: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// The loop's three shape rules. 422 beside their siblings above: the payload IS well-formed JSON
+	// with the right types — it simply says something a schedule may not say.
+	INVALID_LOOP_TIME: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	LOOP_WITHOUT_WEEKDAY: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	LOOP_PROMPT_TOO_LONG: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	LOOP_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_ALREADY_ATTACHED: HttpStatusCode.CONFLICT,
 	THREAD_PAUSED: HttpStatusCode.UNPROCESSABLE_ENTITY,

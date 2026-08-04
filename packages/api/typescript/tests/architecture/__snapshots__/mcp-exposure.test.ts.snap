@@ -39,6 +39,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__GetThreadSettings",
     "mcp__codm__GetUserInfo",
     "mcp__codm__ListArtifacts",
+    "mcp__codm__ListThreadLoops",
     "mcp__codm__ListWorkspaces",
     "mcp__codm__RemoveWorkspace",
     "mcp__codm__SetActiveOwner",
