@@ -15,6 +15,18 @@ export interface OpenIssueRef {
 }
 
 /**
+ * Uma issue que o orquestrador PODE steerar — o mesmo shape, mais o estado que decide se o steer
+ * precisa reabri-la antes de enfileirar.
+ *
+ * `completed` é um boolean e não o `IssueStatus` inteiro de propósito: o chamador só tem uma decisão a
+ * tomar ("preciso reabrir?"), e devolver o enum convidaria o contexto `agent` a ramificar sobre o
+ * ciclo de vida da issue, que não é dele.
+ */
+export interface SteerableIssueRef extends OpenIssueRef {
+	completed: boolean
+}
+
+/**
  * Reads the open (non-completed, non-archived) issues of a thread — the classifier's context-match
  * candidate set. Modeled as a read Service (BFF-style table read, not a cross-context write-model
  * import): the classification decision needs to know what issues already exist on the thread.
@@ -33,4 +45,16 @@ export abstract class OpenIssuesReader {
 	 * An operator whose thread is full of issues waiting on THEM must still be able to delete it.
 	 */
 	abstract hasWorkingIssue(threadId: string): Promise<boolean>
+	/**
+	 * Esta issue é steerável POR ESTA THREAD? — a terceira pergunta distinta, e distinta de propósito.
+	 *
+	 * `openIssues` é o conjunto candidato do classificador e por isso exclui `COMPLETED`. Redirecionar
+	 * trabalho é outra coisa: uma issue concluída é um alvo LEGÍTIMO (é o caminho de volta que a spec
+	 * abre), e só o arquivamento a torna inalcançável. Reusar `openIssues` aqui foi exatamente o que
+	 * fez o steer recusar uma issue concluída com `AGENT_RUN_SCOPE_MISMATCH`.
+	 *
+	 * Devolve `undefined` para "não é sua" E para "está arquivada", sem distinguir: o chamador
+	 * transforma os dois no mesmo erro, e é isso que impede o endpoint de virar oráculo de ids.
+	 */
+	abstract steerableIssue(threadId: string, issueId: string): Promise<SteerableIssueRef | undefined>
 }

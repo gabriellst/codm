@@ -6,3 +6,4 @@ export { AskOperator, AskOperatorInputSchema, AskOperatorOutputSchema } from './
 export { ForkIssue, ForkIssueInputSchema, ForkIssueOutputSchema } from './ForkIssue'
 export { RunOrchestratorTurn, RunOrchestratorTurnInputSchema, RunOrchestratorTurnOutputSchema } from './RunOrchestratorTurn'
 export { GetOpenStops, GetOpenStopsInputSchema, GetOpenStopsOutputSchema, OpenStopSchema } from './GetOpenStops'
+export * from './SteerIssueTurn'

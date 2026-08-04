@@ -1,10 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { OpenIssuesReader } from '@thread/services'
 import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
-import { MailboxRepository } from '../repositories'
+import { SteerIssueTurn } from '../usecases/SteerIssueTurn'
 import type { AgentInterfaceErrors } from '../errors'
 
 /**
@@ -17,7 +16,7 @@ export const SteerIssueTurnControllerInputSchema = z
 		ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
 		params: z.object({ threadId: z.uuid(), issueId: z.uuid() }),
 		body: z.object({
-			/** The new instruction for work already in flight. */
+			/** The new instruction for work already in flight — or for work that already finished. */
 			text: z.string().trim().min(1).max(2000),
 		}),
 	})
@@ -42,7 +41,7 @@ export const SteerIssueTurnControllerOutputSchema = z
 	.example([{ issueId: '019e4d24-6524-7041-9e1c-8108180cddaf', queued: true }])
 
 /**
- * `SteerIssueTurn` — the orchestrator redirects work already in flight (D7, §7.7).
+ * `SteerIssueTurn` — o orquestrador redireciona trabalho de uma issue desta thread (D7, §7.7).
  *
  * ### Why this is not the console's `SteerIssue`
  * That one lives at `/issues/:issueId/steer`, takes no `threadId`, and writes a terminal line. Under an
@@ -56,6 +55,12 @@ export const SteerIssueTurnControllerOutputSchema = z
  * Nothing here interrupts anything. It ENQUEUES, and the dispatcher's per-target lease decides when the
  * item runs — if the subagent is mid-turn, the steer simply waits for the lease. That is why §7.7 can
  * promise "sem corrida, sem retry-throw": the queue is the synchronisation, not this handler.
+ *
+ * ### Uma issue CONCLUÍDA é alvo legítimo
+ * Antes, a checagem de pertencimento era feita lendo `openIssues`, que exclui `COMPLETED` — então o
+ * único caminho para redirecionar trabalho a uma issue terminada respondia `AGENT_RUN_SCOPE_MISMATCH`,
+ * e o operador via a conversa emudecer. A pergunta certa vive agora em `steerableIssue`, e a reabertura
+ * acontece na mesma transação do enfileiramento, dentro do use case.
  */
 @injectable()
 export class SteerIssueTurnController extends Controller<
@@ -66,7 +71,7 @@ export class SteerIssueTurnController extends Controller<
 	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/issues/:issueId/steer'
 	readonly method = 'post' as const
-	readonly description = 'Redirect an issue that is already being worked, mid-flight'
+	readonly description = 'Redirect an issue of this thread — including one that already finished'
 	readonly inputSchema = SteerIssueTurnControllerInputSchema
 	readonly outputSchema = SteerIssueTurnControllerOutputSchema
 	// `OperatorMiddleware` answers "who is this daemon" (`ctx.ownerId`). "Which run is speaking" is no
@@ -74,10 +79,7 @@ export class SteerIssueTurnController extends Controller<
 	// `Controller.executeMiddlewares`. A tool-callable door cannot be built without it.
 	override middlewares = [OperatorMiddleware]
 
-	constructor(
-		private readonly openIssues: OpenIssuesReader,
-		private readonly mailbox: MailboxRepository,
-	) {
+	constructor(private readonly steerIssueTurn: SteerIssueTurn) {
 		super()
 	}
 
@@ -99,26 +101,12 @@ export class SteerIssueTurnController extends Controller<
 			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'this run is not attached to that thread')
 		}
 
-		// …and the issue must belong to that thread — THE ownership check spec decision 4 makes a
-		// requirement, asserted here precisely because the identity carries no `issueId` for the generic
-		// comparison to read. Read through the thread's OWN open-issue seam rather than by issue id, so
-		// "is it yours" and "is it open" are one question. A closed or foreign issue is refused
-		// identically — answering differently would make this an oracle for issue ids.
-		const open = await this.openIssues.openIssues(threadId)
-		if (!open.some(issue => issue.issueId === issueId)) {
-			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'no open issue with that id on this thread')
-		}
-
-		const target = open.find(issue => issue.issueId === issueId)
-		const queued = await this.mailbox.enqueue({
+		const { queued } = await this.steerIssueTurn.execute({
 			ownerId: request.ctx.ownerId,
-			targetKind: MailboxTargetKind.ISSUE,
-			targetId: issueId,
-			kind: MailboxItemKind.STEER,
-			payload: { issueId, threadId, key: target?.key ?? '', title: target?.title ?? '', text: request.body.text },
-			// The ENTRY the orchestrator was answering when it decided to steer. Two different steers from
-			// two different turns are two items; the same turn retried is one.
-			dedupKey: `steer:${identity.entryId ?? issueId}:${issueId}`,
+			threadId,
+			issueId,
+			entryId: identity.entryId,
+			text: request.body.text,
 		})
 
 		return { status: HttpStatusCode.ACCEPTED, data: { issueId, queued } }
