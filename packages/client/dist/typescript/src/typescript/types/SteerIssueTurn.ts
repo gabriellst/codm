@@ -16,7 +16,7 @@ export type SteerIssueTurnPathParams = {
 };
 
 /**
- * @description Redirect an issue that is already being worked, mid-flight
+ * @description Redirect an issue of this thread — including one that already finished
 */
 export type SteerIssueTurn200 = {
     /**

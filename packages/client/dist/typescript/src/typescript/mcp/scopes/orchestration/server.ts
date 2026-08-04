@@ -53,7 +53,7 @@ server.registerTool("RaiseStop", {
           
 
 server.registerTool("SteerIssueTurn", {
-  description: "Redirect an issue that is already being worked, mid-flight",
+  description: "Redirect an issue of this thread — including one that already finished",
   outputSchema: { data: steerIssueTurnMutationResponseSchema },
   inputSchema: { threadId: z.string(), issueId: z.string(), data: steerIssueTurnMutationRequestSchema },
 }, async ({ threadId, issueId, data }) => {

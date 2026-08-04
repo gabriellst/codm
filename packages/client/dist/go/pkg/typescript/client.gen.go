@@ -61,6 +61,7 @@ const (
 	ISSUEALREADYCOMPLETED           ApiErrors = "ISSUE_ALREADY_COMPLETED"
 	ISSUEARCHIVED                   ApiErrors = "ISSUE_ARCHIVED"
 	ISSUENOTARCHIVED                ApiErrors = "ISSUE_NOT_ARCHIVED"
+	ISSUENOTCOMPLETED               ApiErrors = "ISSUE_NOT_COMPLETED"
 	ISSUENOTFOUND                   ApiErrors = "ISSUE_NOT_FOUND"
 	LASTINVOKER                     ApiErrors = "LAST_INVOKER"
 	LOOPNOTFOUND                    ApiErrors = "LOOP_NOT_FOUND"
@@ -192,6 +193,8 @@ func (e ApiErrors) Valid() bool {
 	case ISSUEARCHIVED:
 		return true
 	case ISSUENOTARCHIVED:
+		return true
+	case ISSUENOTCOMPLETED:
 		return true
 	case ISSUENOTFOUND:
 		return true

@@ -26,7 +26,7 @@ export function steerIssueTurnMutationOptions<TContext = unknown>(config: Partia
 }
 
 /**
- * @description Redirect an issue that is already being worked, mid-flight
+ * @description Redirect an issue of this thread — including one that already finished
  * {@link /v1/threads/:threadId/issues/:issueId/steer}
  */
 export function useSteerIssueTurn<TContext>(options: 

@@ -1228,7 +1228,7 @@
           "agent",
           "mcp:orchestration"
         ],
-        "description": "Redirect an issue that is already being worked, mid-flight",
+        "description": "Redirect an issue of this thread — including one that already finished",
         "operationId": "SteerIssueTurn",
         "requestBody": {
           "content": {
@@ -1279,7 +1279,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Redirect an issue that is already being worked, mid-flight",
+            "description": "Redirect an issue of this thread — including one that already finished",
             "content": {
               "application/json": {
                 "schema": {
@@ -8261,6 +8261,7 @@
           "ISSUE_ALREADY_COMPLETED",
           "ISSUE_ARCHIVED",
           "ISSUE_NOT_ARCHIVED",
+          "ISSUE_NOT_COMPLETED",
           "ISSUE_NOT_FOUND",
           "LAST_INVOKER",
           "LOOP_NOT_FOUND",
@@ -8671,6 +8672,7 @@
     "ISSUE_ALREADY_COMPLETED",
     "ISSUE_ARCHIVED",
     "ISSUE_NOT_ARCHIVED",
+    "ISSUE_NOT_COMPLETED",
     "ISSUE_NOT_FOUND",
     "LAST_INVOKER",
     "LOOP_NOT_FOUND",

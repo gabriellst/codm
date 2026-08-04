@@ -11,7 +11,7 @@ export const steerIssueTurnPathParamsSchema = z.object({
     })
 
 /**
- * @description Redirect an issue that is already being worked, mid-flight
+ * @description Redirect an issue of this thread — including one that already finished
  */
 export const steerIssueTurn200Schema = z.object({
     "issueId": z.uuid(),

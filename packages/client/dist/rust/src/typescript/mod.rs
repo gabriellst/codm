@@ -243,6 +243,7 @@ pub mod types {
     ///    "ISSUE_ALREADY_COMPLETED",
     ///    "ISSUE_ARCHIVED",
     ///    "ISSUE_NOT_ARCHIVED",
+    ///    "ISSUE_NOT_COMPLETED",
     ///    "ISSUE_NOT_FOUND",
     ///    "LAST_INVOKER",
     ///    "LOOP_NOT_FOUND",
@@ -387,6 +388,8 @@ pub mod types {
         IssueArchived,
         #[serde(rename = "ISSUE_NOT_ARCHIVED")]
         IssueNotArchived,
+        #[serde(rename = "ISSUE_NOT_COMPLETED")]
+        IssueNotCompleted,
         #[serde(rename = "ISSUE_NOT_FOUND")]
         IssueNotFound,
         #[serde(rename = "LAST_INVOKER")]
@@ -542,6 +545,7 @@ pub mod types {
                 Self::IssueAlreadyCompleted => f.write_str("ISSUE_ALREADY_COMPLETED"),
                 Self::IssueArchived => f.write_str("ISSUE_ARCHIVED"),
                 Self::IssueNotArchived => f.write_str("ISSUE_NOT_ARCHIVED"),
+                Self::IssueNotCompleted => f.write_str("ISSUE_NOT_COMPLETED"),
                 Self::IssueNotFound => f.write_str("ISSUE_NOT_FOUND"),
                 Self::LastInvoker => f.write_str("LAST_INVOKER"),
                 Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
@@ -644,6 +648,7 @@ pub mod types {
                 "ISSUE_ALREADY_COMPLETED" => Ok(Self::IssueAlreadyCompleted),
                 "ISSUE_ARCHIVED" => Ok(Self::IssueArchived),
                 "ISSUE_NOT_ARCHIVED" => Ok(Self::IssueNotArchived),
+                "ISSUE_NOT_COMPLETED" => Ok(Self::IssueNotCompleted),
                 "ISSUE_NOT_FOUND" => Ok(Self::IssueNotFound),
                 "LAST_INVOKER" => Ok(Self::LastInvoker),
                 "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
@@ -10551,7 +10556,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/status`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Redirect an issue that is already being worked, mid-flight
+    /**Redirect an issue of this thread — including one that already finished
 
 Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/steer`
 
