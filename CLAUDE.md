@@ -45,7 +45,7 @@ These hold regardless of framework, language, or feature. Everything else bends 
 
 ## Environment Setup
 
-Pré-requisitos: `bun >= 1.0`, `docker`, `go` (para o api-go).
+Pré-requisitos: `bun >= 1.0`, `docker`, `go` (para o api-go), `cargo`/`rustup` (não é só pro shell Tauri: `bun sdk` compila o `rust-codegen` via `cargo build` e `bun contracts` roda `cargo check` — sem cargo os dois falham).
 
 ```bash
 # 1. Variáveis de ambiente — único arquivo na raiz, lido por todos os workspaces (api-typescript, api-go, apps).

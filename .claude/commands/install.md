@@ -56,11 +56,26 @@ move on (don't fail).
 ```bash
 command -v bun     >/dev/null || { echo "missing: bun";    exit 1; }
 command -v docker  >/dev/null || { echo "missing: docker"; exit 1; }
+command -v go      >/dev/null || { echo "missing: go";     exit 1; }
+command -v cargo   >/dev/null || { echo "missing: cargo";  exit 1; }
 git rev-parse --is-inside-work-tree >/dev/null || { echo "not a git repo"; exit 1; }
 ```
 
 If any prerequisite is missing, **stop and report** with the install
-hint for the user's platform.
+hint for the user's platform:
+
+- `bun` — `curl -fsSL https://bun.sh/install | bash`
+- `docker` — Docker Desktop; on a first-ever launch it parks on a
+  license screen and never opens `/var/run/docker.sock` until a human
+  clicks through, so `docker info` failing is not always "not installed".
+- `go` — `brew install go`
+- `cargo` — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+**`go` and `cargo` are gates on Step 7, not optional extras.** Step 7
+runs the Go `emit-openapi` (`go run ./cmd/openapi`) and the rust client
+generator (`cargo build --bin rust-codegen`,
+`packages/client/generators/rust/index.ts`). Missing either one fails
+`bun sdk` — which is why they belong in this check and not in a footnote.
 
 **Worktree settings (local scope).** `EnterWorktree` and the
 background-isolation write guard are configured under the `worktree`
@@ -169,21 +184,27 @@ it into the Go embed with
 ### Step 7 — Regenerate the SDK
 
 ```bash
-bun sdk:channel
-bun sdk:api
+bun contracts
+bun sdk
 ```
 
-`sdk:channel` must run before `sdk:api` — the api SDK pulls types
-from the channel SDK build output. The nx task graph already encodes
-this dependency (`client:generate:api` depends on `client:build:channel`),
-so a single `bun sdk` would also work — but explicit ordering keeps
-the install log readable.
+`bun sdk` (`nx run client:generate`) is a single target — nx resolves
+the ordering internally, emitting both `openapi.json` files (api-typescript
+and api-go) before running Kubb + progenitor. There is no `sdk:channel`
+or `sdk:api`; the root scripts are `sdk`, `sdk:typescript`, `sdk:go`,
+`sdk:build`.
+
+`bun contracts` comes first on a **cold** checkout: the rust client
+generator reads `packages/contracts/dist/contracts.openapi.yaml`, which
+is a TypeSpec build output and is not committed. Without it `bun sdk`
+dies with `ENOENT … contracts.openapi.yaml`. On a warm tree it's a
+no-op, so running it unconditionally is safe.
 
 > Note (aspirational): ideally `bun dev` would auto-trigger SDK
-> regeneration via nx when api/channel controllers changed. Today
-> only `app:dev` has that dependsOn wired; `api:dev` and `channel:dev`
-> do not. Until that's fixed, run `bun sdk` after backend controller
-> changes manually.
+> regeneration via nx when backend controllers changed. Today only
+> `app-react:dev` has that dependsOn wired; `api-typescript:dev` and
+> `api-go:dev` do not. Until that's fixed, run `bun sdk` after backend
+> controller changes manually.
 
 ### Step 8 — Start `bun dev` (skip if `--skip-dev`)
 
@@ -191,12 +212,14 @@ the install log readable.
 bun dev
 ```
 
-This runs `nx run-many -t dev -p api,channel,app --parallel=3`. Three
-servers boot:
+This runs
+`nx run-many -t dev -p api-typescript,api-go,app-react,app-astro --parallel=4`.
+Four servers boot:
 
-- `api` on `PORT` (default 3030)
-- `channel` on `CHANNEL_PORT` (default 3031)
-- `app` on `VITE_PORT` (default 5173, with `--host` for LAN access)
+- `api-typescript` on `PORT` (default 3030)
+- `api-go` on `API_GO_PORT` (default 3032)
+- `app-react` on `VITE_PORT` (default 5173, with `--host` for LAN access)
+- `app-astro` on 4321
 
 `bun dev` is long-running. `/install` should NOT block waiting on
 it — start it in the background OR end the `/install` flow telling
@@ -228,12 +251,12 @@ Environment:
   SDK: regenerated (api-ts + api-go)
 
 Next:
-  bun dev     # start api + channel + app on default ports
+  bun dev     # start api-typescript + api-go + app-react + app-astro
   bun test    # run integration tests (in-process SQLite, no services needed)
   bun e2e     # run Playwright E2E
 
 Worktree note: only one worktree should run `bun dev` at a time —
-otherwise port 3030/3031/5173 will collide and they'll share the
+otherwise ports 3030/3032/5173/4321 will collide and they'll share the
 same database.
 ```
 
