@@ -2094,7 +2094,8 @@
       "put": {
         "tags": [
           "thread",
-          "mcp:system"
+          "mcp:system",
+          "mcp:orchestration"
         ],
         "description": "Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)",
         "operationId": "ConfigurePrompt",
@@ -2143,7 +2144,8 @@
           }
         },
         "x-mcp-scope": [
-          "system"
+          "system",
+          "orchestration"
         ]
       }
     },
@@ -8731,6 +8733,7 @@
       "TransitionIssueStatus"
     ],
     "orchestration": [
+      "ConfigurePrompt",
       "ForkIssue",
       "GetIssueStatus",
       "GetSessionIssues",
