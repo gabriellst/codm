@@ -39,6 +39,15 @@ const SETTINGS = {
 	],
 }
 
+/**
+ * A resposta de `GET /v1/threads/:id/loops` — a seção de loops (T11/C21-C24) mora dentro deste
+ * mesmo dialog e dispara sua própria query. `loops` NUNCA é opcional na SDK (`ListThreadLoops200`),
+ * então o dublê de rede tem que devolver a forma inteira ou `LoopsSection` quebra em
+ * `data.loops.map` antes do resto do corpo sair do skeleton — vazio é uma resposta válida, ausente
+ * não é.
+ */
+const LOOPS = { loops: [], promptMaxLength: 2000 }
+
 /** Toda requisição que o diálogo dispara, para as asserções de ESCRITA (o prompt personalizado). */
 const sent: { url: string; method: string; body?: string }[] = []
 
@@ -62,8 +71,9 @@ describe('ThreadSettingsDialog — o provider sem runner aparece como "Em breve"
 				body: typeof init?.body === 'string' ? init.body : await request?.clone().text(),
 			})
 			// Só a leitura de settings interessa aqui; o chat é a query irmã que o cabeçalho usa para o
-			// subtítulo, e entra com o mínimo que ele lê.
-			const body = url.includes('/settings') ? SETTINGS : { thread: { displayName: 'Ada' } }
+			// subtítulo, e os loops são a seção-irmã que atravessa as duas colunas — ambos entram com o
+			// mínimo que cada um lê.
+			const body = url.includes('/settings') ? SETTINGS : url.includes('/loops') ? LOOPS : { thread: { displayName: 'Ada' } }
 			return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 		}) as typeof globalThis.fetch
 	})
@@ -235,7 +245,7 @@ describe('ThreadSettingsDialog — apagar a conversa', () => {
 			const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
 			const request = input instanceof Request ? input : undefined
 			sent.push({ url, method: init?.method ?? request?.method ?? 'GET', body: undefined })
-			const body = url.includes('/settings') ? SETTINGS : { thread: { displayName: 'Ada' } }
+			const body = url.includes('/settings') ? SETTINGS : url.includes('/loops') ? LOOPS : { thread: { displayName: 'Ada' } }
 			return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 		}) as typeof globalThis.fetch
 	})

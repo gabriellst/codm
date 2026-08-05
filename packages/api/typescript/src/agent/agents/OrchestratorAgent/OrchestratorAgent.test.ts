@@ -7,7 +7,7 @@ import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
 import { InMemoryAgentIdentityService } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
-import { toolsInScope } from '../../mcp/exposure'
+import { toolNameOf, toolsInScope, SteerIssueTurnController } from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'
 import { OrchestratorAgent } from './OrchestratorAgent'
 
@@ -124,5 +124,24 @@ describe('OrchestratorAgent', () => {
 		expect(request?.systemPrompt).toContain('QUOTING')
 		expect(request?.messages).toHaveLength(1)
 		expect(request?.messages?.[0]?.content).toContain('pode me tirar uma dúvida?')
+	})
+})
+
+describe('redirecionar uma issue existente', () => {
+	it('ensina a situação e nomeia a ferramenta de steer pelo símbolo', () => {
+		const builder = new OrchestratorPromptBuilder()
+		const system = builder.system(input())
+
+		// O nome vem de `toolNameOf(SteerIssueTurnController)` — nunca digitado como literal, para
+		// que um rename siga o símbolo em vez de deixar a frase apontando para o vazio.
+		expect(system).toContain(toolNameOf(SteerIssueTurnController))
+		expect(system).toContain('REDIRECTING WORK THAT ALREADY EXISTS')
+	})
+
+	it('proíbe afirmar uma ação que não foi executada', () => {
+		const builder = new OrchestratorPromptBuilder()
+		const system = builder.system(input())
+
+		expect(system).toContain('never say you did something you did not do')
 	})
 })

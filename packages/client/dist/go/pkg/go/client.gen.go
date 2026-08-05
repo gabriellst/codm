@@ -524,6 +524,39 @@ func (e CurrencyCode) Valid() bool {
 	}
 }
 
+// Defines values for DayOfWeek.
+const (
+	DayOfWeekFRIDAY    DayOfWeek = "FRIDAY"
+	DayOfWeekMONDAY    DayOfWeek = "MONDAY"
+	DayOfWeekSATURDAY  DayOfWeek = "SATURDAY"
+	DayOfWeekSUNDAY    DayOfWeek = "SUNDAY"
+	DayOfWeekTHURSDAY  DayOfWeek = "THURSDAY"
+	DayOfWeekTUESDAY   DayOfWeek = "TUESDAY"
+	DayOfWeekWEDNESDAY DayOfWeek = "WEDNESDAY"
+)
+
+// Valid indicates whether the value is a known member of the DayOfWeek enum.
+func (e DayOfWeek) Valid() bool {
+	switch e {
+	case DayOfWeekFRIDAY:
+		return true
+	case DayOfWeekMONDAY:
+		return true
+	case DayOfWeekSATURDAY:
+		return true
+	case DayOfWeekSUNDAY:
+		return true
+	case DayOfWeekTHURSDAY:
+		return true
+	case DayOfWeekTUESDAY:
+		return true
+	case DayOfWeekWEDNESDAY:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Direction.
 const (
 	DirectionReceived Direction = "RECEIVED"
@@ -3283,6 +3316,9 @@ type CreateChannelOutput struct {
 
 // CurrencyCode defines model for CurrencyCode.
 type CurrencyCode string
+
+// DayOfWeek defines model for DayOfWeek.
+type DayOfWeek string
 
 // DeleteChannelOutput defines model for DeleteChannelOutput.
 type DeleteChannelOutput struct {

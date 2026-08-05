@@ -9,7 +9,9 @@ import {
 	configurePrompt,
 	createIssue,
 	createOwner,
+	createThreadLoop,
 	deleteThread,
+	deleteThreadLoop,
 	detectProviders,
 	disableOwner,
 	enableOwner,
@@ -30,6 +32,7 @@ import {
 	getUserInfo,
 	health,
 	listArtifacts,
+	listThreadLoops,
 	listWorkspaces,
 	listenEvents,
 	pauseThread,
@@ -42,6 +45,7 @@ import {
 	sendDirectMessage,
 	setActiveOwner,
 	setParticipantInvocation,
+	setThreadLoopEnabled,
 	steerIssue,
 	steerIssueTurn,
 	steerThread,
@@ -49,6 +53,7 @@ import {
 	transitionIssueStatus,
 	updateOwnerSettings,
 	updateStopCriteria,
+	updateThreadLoop,
 	uploadAvatar,
 } from './client/index.ts'
 
@@ -100,8 +105,16 @@ export class TypescriptClient {
 		return (createOwner as (...a: any[]) => ReturnType<typeof createOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	createThreadLoop(...args: Parameters<typeof createThreadLoop>): ReturnType<typeof createThreadLoop> {
+		return (createThreadLoop as (...a: any[]) => ReturnType<typeof createThreadLoop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	deleteThread(...args: Parameters<typeof deleteThread>): ReturnType<typeof deleteThread> {
 		return (deleteThread as (...a: any[]) => ReturnType<typeof deleteThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	deleteThreadLoop(...args: Parameters<typeof deleteThreadLoop>): ReturnType<typeof deleteThreadLoop> {
+		return (deleteThreadLoop as (...a: any[]) => ReturnType<typeof deleteThreadLoop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	detectProviders(...args: Parameters<typeof detectProviders>): ReturnType<typeof detectProviders> {
@@ -184,6 +197,10 @@ export class TypescriptClient {
 		return (listArtifacts as (...a: any[]) => ReturnType<typeof listArtifacts>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	listThreadLoops(...args: Parameters<typeof listThreadLoops>): ReturnType<typeof listThreadLoops> {
+		return (listThreadLoops as (...a: any[]) => ReturnType<typeof listThreadLoops>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	listWorkspaces(...args: Parameters<typeof listWorkspaces>): ReturnType<typeof listWorkspaces> {
 		return (listWorkspaces as (...a: any[]) => ReturnType<typeof listWorkspaces>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -232,6 +249,10 @@ export class TypescriptClient {
 		return (setParticipantInvocation as (...a: any[]) => ReturnType<typeof setParticipantInvocation>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	setThreadLoopEnabled(...args: Parameters<typeof setThreadLoopEnabled>): ReturnType<typeof setThreadLoopEnabled> {
+		return (setThreadLoopEnabled as (...a: any[]) => ReturnType<typeof setThreadLoopEnabled>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	steerIssue(...args: Parameters<typeof steerIssue>): ReturnType<typeof steerIssue> {
 		return (steerIssue as (...a: any[]) => ReturnType<typeof steerIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -258,6 +279,10 @@ export class TypescriptClient {
 
 	updateStopCriteria(...args: Parameters<typeof updateStopCriteria>): ReturnType<typeof updateStopCriteria> {
 		return (updateStopCriteria as (...a: any[]) => ReturnType<typeof updateStopCriteria>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	updateThreadLoop(...args: Parameters<typeof updateThreadLoop>): ReturnType<typeof updateThreadLoop> {
+		return (updateThreadLoop as (...a: any[]) => ReturnType<typeof updateThreadLoop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	uploadAvatar(...args: Parameters<typeof uploadAvatar>): ReturnType<typeof uploadAvatar> {

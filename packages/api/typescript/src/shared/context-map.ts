@@ -157,6 +157,26 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 		imports: `${context}/controllers`,
 		why: NOTE_MCP_EXPOSURE,
 	})),
+	{
+		file: 'agent/usecases/SteerIssueTurn.ts',
+		imports: 'issue/usecases',
+		why:
+			'The redirect-to-a-completed-issue ladder, descended in order and stopped at the first rung that passed:\n' +
+			"  degrau 1 (refactor to repositories/services) — NOT TAKEN, deliberately. The rail's default advice assumes " +
+			'the importer is a PEER context; `agent` is not one, it IS the orchestration layer over the other contexts. ' +
+			"Moving the reopen into `agent` as a raw `IssueRepository` load/mutate/save would scatter `Issue`'s own " +
+			'lifecycle invariant (the `reopen()` transition and the `ISSUE_NOT_COMPLETED` guard it enforces) outside the ' +
+			'context that owns it — the exact write-model leak the `forbidden` list exists to catch, just reached from ' +
+			'the repositories surface instead of the entities one.\n' +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. `agent → issue` is already a declared ' +
+			'CONTEXT_MAP edge (agent/mcp/exposure.ts reads issue/controllers); this exception extends the SAME edge to ' +
+			"the usecases surface, for this one file. Composing the destination context's OWN use case is orchestration " +
+			"expressed directly: `Issue.reopen()` stays reachable only through `issue`'s own guarded entrypoint " +
+			'(`ReopenIssue`), and the permission is per-file and liveness-gated, so it cannot outlive this one import.\n' +
+			'  degrau 3 (integration event) — NOT NEEDED. The steer must reopen the issue and enqueue the STEER mailbox ' +
+			'item in ONE transaction (`Handler.withTransaction`, shared with `ReopenIssue` via the `tx` it accepts) — an ' +
+			'event would make the reopen eventual, letting a STEER reach an issue that is still COMPLETED.',
+	},
 ]
 
 /**

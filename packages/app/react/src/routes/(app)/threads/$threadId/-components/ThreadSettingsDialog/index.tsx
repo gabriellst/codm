@@ -27,6 +27,7 @@ import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { cn } from '@/lib/utils'
+import { LoopsSection } from './LoopsSection'
 
 const BUFFER_SIZES: BufferSize[] = ['25', '50', '100', '200']
 
@@ -88,6 +89,10 @@ export function ThreadSettingsDialog({
 			<div className="grid max-h-[calc(100dvh-11rem)] gap-6 overflow-y-auto lg:grid-cols-2 lg:gap-x-10">
 				<ThreadSettingsBody threadId={threadId} />
 				<CustomPromptSection threadId={threadId} />
+				{/* Os LOOPS atravessam as duas colunas pela mesma razão que a zona de perigo: uma linha de loop
+				    carrega um texto, um horário, os dias e três controles, e espremida numa coluna de ~25rem ela
+				    quebra em quatro alturas diferentes. Empilhado, ela continua lendo entre o prompt e o perigo. */}
+				<LoopsSection threadId={threadId} className="lg:col-span-2" />
 				{/* The name is READ HERE and handed down, deliberately breaking the "each component owns its
 				    data" habit for one prop: the confirmation must say WHICH conversation is about to go, and
 				    this component already holds the query that knows. A second `useGetSessionChat` inside the

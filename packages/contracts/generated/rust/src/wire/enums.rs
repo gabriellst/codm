@@ -462,6 +462,37 @@ pub enum CurrencyCode {
 	ZMW,
 }
 
+/// Day of the week a recurring thread loop may fire on. Named days rather than an index because the WIRE is what the console renders and what the DB stores: an integer would need a base (0=Sunday? 1=Monday?) agreed in three places, and getting it wrong is a silent one-day shift, not a type error. Ordered Monday-first, which is the order the console's weekday picker renders.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum DayOfWeek {
+	#[serde(rename = "MONDAY")]
+	#[strum(serialize = "MONDAY")]
+	MONDAY,
+	#[serde(rename = "TUESDAY")]
+	#[strum(serialize = "TUESDAY")]
+	TUESDAY,
+	#[serde(rename = "WEDNESDAY")]
+	#[strum(serialize = "WEDNESDAY")]
+	WEDNESDAY,
+	#[serde(rename = "THURSDAY")]
+	#[strum(serialize = "THURSDAY")]
+	THURSDAY,
+	#[serde(rename = "FRIDAY")]
+	#[strum(serialize = "FRIDAY")]
+	FRIDAY,
+	#[serde(rename = "SATURDAY")]
+	#[strum(serialize = "SATURDAY")]
+	SATURDAY,
+	#[serde(rename = "SUNDAY")]
+	#[strum(serialize = "SUNDAY")]
+	SUNDAY,
+}
+
 /// Whether a gateway message row is outbound (SENT by the owner) or inbound (RECEIVED). Descends the medscall channel Direction. The gateway.messages projector derives it from which lifecycle event drove the row (channel_message.sent -> SENT, channel_message.received -> RECEIVED); persisted as the `direction` column.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,

@@ -4,6 +4,7 @@ import './errors' // Side-effect: registers this context's error codes with the 
 import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
 import { ChannelSender, GatewayChannelSender, MockChannelSender } from './services/ChannelSender'
 import { ThreadRepository, DrizzleThreadRepository, MockThreadRepository } from './repositories/ThreadRepository'
+import { LoopRepository, DrizzleLoopRepository, MockLoopRepository } from './repositories/LoopRepository'
 import {
 	ConsumedMessageRepository,
 	DrizzleConsumedMessageRepository,
@@ -38,6 +39,11 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// the fork instead of after an issue already existed.
 	{ token: ChannelSender, mock: MockChannelSender, integration: MockChannelSender, real: E2E ? MockChannelSender : GatewayChannelSender },
 	{ token: ThreadRepository, mock: MockThreadRepository, real: DrizzleThreadRepository },
+	// The scheduled whispers of a conversation. Real in real+integration (the due-sweep's whole
+	// behaviour is a `next_run_at <= now` query against an index, so it must be exercised against a
+	// real database); an in-memory map in mock, where `findDue` reuses `Loop.isDue` so the double
+	// cannot disagree with the SQL about what "due" means.
+	{ token: LoopRepository, mock: MockLoopRepository, real: DrizzleLoopRepository },
 	// The per-owner stop-criteria toggles — a settings row that follows the aggregate raising the stops
 	// it gates (B4, spec decision 4). It was bound in `issue/` while the Stop hung off `Issue`.
 	{ token: StopPolicyConfigRepository, mock: MockStopPolicyConfigRepository, real: DrizzleStopPolicyConfigRepository },

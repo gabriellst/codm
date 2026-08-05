@@ -23,6 +23,7 @@ import { getSetupChecklistHandler } from "./getSetupChecklist.ts";
 import { getThreadSettingsHandler } from "./getThreadSettings.ts";
 import { getUserInfoHandler } from "./getUserInfo.ts";
 import { listArtifactsHandler } from "./listArtifacts.ts";
+import { listThreadLoopsHandler } from "./listThreadLoops.ts";
 import { listWorkspacesHandler } from "./listWorkspaces.ts";
 import { removeWorkspaceHandler } from "./removeWorkspace.ts";
 import { setActiveOwnerHandler } from "./setActiveOwner.ts";
@@ -47,6 +48,7 @@ import { getSetupChecklistQueryResponseSchema } from "../../../zod/getSetupCheck
 import { getThreadSettingsQueryResponseSchema } from "../../../zod/getThreadSettingsSchema.ts";
 import { getUserInfoQueryResponseSchema } from "../../../zod/getUserInfoSchema.ts";
 import { listArtifactsQueryResponseSchema } from "../../../zod/listArtifactsSchema.ts";
+import { listThreadLoopsQueryResponseSchema } from "../../../zod/listThreadLoopsSchema.ts";
 import { listWorkspacesQueryResponseSchema } from "../../../zod/listWorkspacesSchema.ts";
 import { removeWorkspaceMutationResponseSchema } from "../../../zod/removeWorkspaceSchema.ts";
 import { setActiveOwnerMutationResponseSchema } from "../../../zod/setActiveOwnerSchema.ts";
@@ -164,6 +166,15 @@ server.registerTool("ConfigurePrompt", {
   inputSchema: { threadId: z.string(), data: configurePromptMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return configurePromptHandler({ threadId, data })
+})
+          
+
+server.registerTool("ListThreadLoops", {
+  description: "This conversation's scheduled prompts (loops) (T11)",
+  outputSchema: { data: listThreadLoopsQueryResponseSchema },
+  inputSchema: { threadId: z.string() },
+}, async ({ threadId }) => {
+  return listThreadLoopsHandler({ threadId })
 })
           
 

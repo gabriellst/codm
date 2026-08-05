@@ -27,6 +27,8 @@ export const RunIssueTurnInputSchema = z.object({
 	provider: z.enum(ProviderKind),
 	workspacePath: z.string().trim().min(1),
 	prompt: z.string().trim().min(1),
+	/** A instrução permanente da thread — repassada ao prompt do agente. */
+	customPrompt: z.string().trim().min(1).optional(),
 	/** The transcript entry being fed — becomes the session's cursor once the turn commits. */
 	messageId: z.uuid(),
 	/**
@@ -231,6 +233,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			prompt: input.prompt,
 			key: input.key,
 			title: input.title,
+			customPrompt: input.customPrompt,
 			model: input.model ?? AgentModelId.DEFAULT,
 			// EXACTLY ONE of the two is set. `buildArgs` treats them as mutually exclusive by
 			// construction, so handing it both would make the argv version-dependent.

@@ -13,3 +13,11 @@ export { SteerThreadController } from './SteerThread'
 export { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 export { ResolveStopController } from './ResolveStop'
 export { UpdateStopCriteriaController } from './UpdateStopCriteria'
+// Thread LOOPS — the recurring scheduled whisper, five doors in one file (T11 / C21-C24).
+export {
+	ListThreadLoopsController,
+	CreateThreadLoopController,
+	UpdateThreadLoopController,
+	SetThreadLoopEnabledController,
+	DeleteThreadLoopController,
+} from './ThreadLoops'

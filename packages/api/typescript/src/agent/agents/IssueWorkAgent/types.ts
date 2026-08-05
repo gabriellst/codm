@@ -43,4 +43,11 @@ export const IssueWorkInputSchema = z.agentInput({
 	binaryPath: z.string().optional(),
 	/** What the probe found THIS install supports. Absent = the conservative set (no optional flag passed). */
 	caps: ProviderCapabilitiesSchema.optional(),
+	/**
+	 * A instrução permanente que o operador escreveu para ESTA conversa (`Thread.customPrompt`).
+	 *
+	 * Ausente, nunca `''` — `Thread.configurePrompt` colapsa branco em ausência no write, e o prompt
+	 * builder conta com isso para não renderizar um cabeçalho vazio.
+	 */
+	customPrompt: z.string().min(1).optional(),
 })

@@ -8,6 +8,7 @@ import {
 	ClassificationMethod,
 	StopKind,
 	StopResolution,
+	DayOfWeek,
 } from '../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
@@ -174,6 +175,70 @@ export const stops = sqliteTable(
 		enumCheck('issue_stops_resolution_check', t.resolution, Object.values(StopResolution)),
 		index('stops_issue_id_idx').on(t.issueId),
 		index('stops_thread_id_idx').on(t.threadId),
+	],
+)
+
+/**
+ * `thread_loops` — the recurring prompt an operator schedules INTO one conversation.
+ *
+ * A loop is a whisper with a clock: the same text `SteerThread` puts in the transcript, delivered by
+ * the product itself at the hour and on the weekdays the operator chose ("toda segunda, quarta e
+ * sexta às 09:00, pergunte como está o deploy"). Its own table, and not columns on `thread_threads`,
+ * because a conversation has MANY of them and each has its own lifecycle — edit one, pause one, delete
+ * one — which a set of columns cannot express.
+ *
+ * ### `next_run_at` is DERIVED, and stored anyway
+ * It is `schedule.nextRunAfter(now)` and nothing else — recomputed by the aggregate on every write
+ * that can move it (create, reschedule, enable, fire). It is persisted because the SWEEP has to answer
+ * "which loops are due?" in SQL: with only `time_of_day` + `weekdays` + `timezone` on the row, every
+ * tick would have to load every loop of every conversation and evaluate the recurrence in JS. Indexed
+ * for exactly that query.
+ *
+ * NULL means "no next run" — the one spelling of "this loop is not scheduled", which is what
+ * `enabled = false` produces. The due filter is therefore `enabled AND next_run_at <= now`, and a
+ * paused loop is invisible to it by both columns.
+ */
+export const loops = sqliteTable(
+	'thread_loops',
+	{
+		id: text('id').primaryKey(),
+
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+
+		/** What gets whispered. The operator's words, verbatim — never a template we expand. */
+		prompt: text('prompt').notNull(),
+
+		// LoopSchedule VO (flattened): the wall-clock time, the weekdays it repeats on, and the zone
+		// those two are read in. `HH:MM` as text rather than minutes-since-midnight because it is what
+		// the operator typed and what the console renders back — a number would need the same
+		// conversion in three places to say the same thing.
+		timeOfDay: text('time_of_day').notNull(),
+		// DayOfWeek[] — sqlite json, same convention as `threads.providers`.
+		weekdays: text('weekdays', { mode: 'json' }).$type<DayOfWeek[]>().notNull(),
+		/** IANA zone. 09:00 means 09:00 WHERE THE OPERATOR IS, which an instant alone cannot say. */
+		timezone: text('timezone').notNull(),
+
+		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+
+		/** Derived — see the table docblock. Null iff the loop is disabled. */
+		nextRunAt: integer('next_run_at', { mode: 'timestamp_ms' }),
+		/** When it last actually whispered — null until the first fire. The console renders it. */
+		lastFiredAt: integer('last_fired_at', { mode: 'timestamp_ms' }),
+
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		version: integer('version').notNull().default(1),
+	},
+	t => [
+		index('loops_thread_id_idx').on(t.threadId),
+		// THE SWEEP'S index — `FireDueLoops` runs every minute for as long as the daemon is up, so the
+		// one query it makes must never be a table scan.
+		index('loops_next_run_at_idx').on(t.nextRunAt),
 	],
 )
 

@@ -51,6 +51,10 @@ import "./enums/mailbox-item-kind.tsp";
 import "./enums/mailbox-target-kind.tsp";
 import "./enums/message-author.tsp";
 import "./enums/buffer-size.tsp";
+// The weekday axis of a thread LOOP's recurrence — the scheduled prompt the operator configures per
+// conversation. Cross-boundary because the same closed set types the DB column, the controller schema
+// (and therefore the SDK the console's weekday picker renders from) and the schedule value object.
+import "./enums/day-of-week.tsp";
 import "./enums/attach-flow-style.tsp";
 // Persistence-lane discriminator of the SINGLE shared_outbox table in the shared SQLite
 // store. Cross-boundary because BOTH backends write rows into that one table and each

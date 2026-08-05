@@ -3,7 +3,7 @@ import { and, eq, ne } from 'drizzle-orm'
 import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
 import { issues, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
-import type { OpenIssueRef } from './OpenIssuesReader'
+import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
 @injectable()
@@ -50,5 +50,23 @@ export class DrizzleOpenIssuesReader extends OpenIssuesReader {
 			return rows[0]?.issueId ?? undefined
 		})
 		return result.success ? (result.data ?? undefined) : undefined
+	}
+
+	/**
+	 * SEM `tryCatchAsync`, pela mesma razão que `hasWorkingIssue`: isto alimenta um GUARD de
+	 * autorização, não um classificador. Degradar para `undefined` num erro de leitura diria "não
+	 * consegui verificar, então recuse" — o que parece seguro mas transforma qualquer soluço do banco
+	 * numa recusa silenciosa que o operador leria como "o agente me ignorou de novo". Deixar o erro
+	 * sair é a forma honesta de falhar.
+	 */
+	async steerableIssue(threadId: string, issueId: string): Promise<SteerableIssueRef | undefined> {
+		const rows = await this.db
+			.select({ issueId: issues.id, key: issues.key, title: issues.title, status: issues.status })
+			.from(issues)
+			.where(and(eq(issues.threadId, threadId), eq(issues.id, issueId), eq(issues.archived, false)))
+			.limit(1)
+		const row = rows[0]
+		if (!row) return undefined
+		return { issueId: row.issueId, key: row.key, title: row.title, completed: row.status === IssueStatus.COMPLETED }
 	}
 }

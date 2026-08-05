@@ -1,9 +1,7 @@
 import { injectable } from 'tsyringe-neo'
-import type { OpenIssueRef } from './OpenIssuesReader'
+import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
-/** Test double — no open issues by default (every inbound resolves to NEW_ISSUE). Tests that exercise
- *  reply-quote / context-match override with a stub returning the candidate set they want. */
 @injectable()
 export class MockOpenIssuesReader extends OpenIssuesReader {
 	async openIssues(_threadId: string): Promise<OpenIssueRef[]> {
@@ -17,5 +15,10 @@ export class MockOpenIssuesReader extends OpenIssuesReader {
 	/** No issue table at all in `mock`, so nothing is working — this half never blocks a delete. */
 	async hasWorkingIssue(_threadId: string): Promise<boolean> {
 		return false
+	}
+
+	/** Mesma razão: sem tabela de issues em `mock`, nada é steerável. */
+	async steerableIssue(_threadId: string, _issueId: string): Promise<SteerableIssueRef | undefined> {
+		return undefined
 	}
 }

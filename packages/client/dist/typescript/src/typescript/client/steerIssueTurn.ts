@@ -13,7 +13,7 @@ function getSteerIssueTurnUrl(threadId: SteerIssueTurnPathParams["threadId"], is
 }
 
 /**
- * @description Redirect an issue that is already being worked, mid-flight
+ * @description Redirect an issue of this thread — including one that already finished
  * {@link /v1/threads/:threadId/issues/:issueId/steer}
  */
 export async function steerIssueTurn(threadId: SteerIssueTurnPathParams["threadId"], issueId: SteerIssueTurnPathParams["issueId"], data: SteerIssueTurnMutationRequest, config: Partial<RequestConfig<SteerIssueTurnMutationRequest>> & { client?: Client } = {}) {
