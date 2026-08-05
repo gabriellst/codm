@@ -179,6 +179,14 @@ export const OPERATOR_PARTICIPANT_ID = 'operator'
  *
  * The stale message is NOT discarded. It is transcribed, buffered, quotable and visible in the console
  * exactly like any other (observation ≠ invocation) — it simply does not get a turn of its own.
+ *
+ * THE OPERATOR IS EXEMPT (`canInvoke`, 2026-08-05). Read the paragraph above again and notice what it
+ * is afraid of: "an hour of CONVERSATION", "someone's real chat" — a replay of other people talking.
+ * The operator's own message is not that. It is the instruction, and the cost of muting a late one is
+ * the opposite of a flood: the operator watches a message sit delivered and unanswered, with nothing
+ * anywhere saying why. That happened — a reconnect delivered "Consegue mergear esse pr na main?" 650s
+ * after it was sent, 350s past this window, and it was swallowed in silence. So the window now judges
+ * THIRD PARTIES, which is where the enxurrada actually comes from.
  */
 export const INVOCATION_FRESHNESS_WINDOW_MS = 5 * 60 * 1000
 
@@ -602,6 +610,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
 		if (!this.addressedToAgent(input)) return false
+		// THE OPERATOR IS NOT A BACKLOG, and the window was never aimed at them. What it exists to stop
+		// is a replay of CONVERSATION scheduling a turn per message; the operator's own line is the
+		// INSTRUCTION, and a late instruction is still the instruction. Measured 2026-08-05: a reconnect
+		// delivered "Consegue mergear esse pr na main?" 650s after it was sent, and it was transcribed
+		// and silently never answered. Third parties keep the window — that is where the flood is.
+		if (input.senderExternalId === OPERATOR_PARTICIPANT_ID) return true
 		return input.now.getTime() - input.sentAt.getTime() <= INVOCATION_FRESHNESS_WINDOW_MS
 	}
 
