@@ -1,10 +1,14 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError } from '@codm/core-typescript'
+import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { StopKind } from '@codm/contracts-typescript/wire/enums'
+import { MessageAuthor, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { OwnerDirectory } from '@shared/services'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { StopPolicyConfigRepository, type StopPolicy } from '../repositories/StopPolicyConfigRepository'
+import { NOTIFIES_ON_CHANNEL } from '../utils/StopChannelNotice'
+import { THREAD_MESSAGES } from '../i18n'
+import type { DeliverChannelMessage } from './DeliverChannelMessage'
 import type { ApplicationErrors } from '../errors'
 
 export const RaiseStopInputSchema = z.object({
@@ -17,7 +21,13 @@ export const RaiseStopInputSchema = z.object({
 	 */
 	issueId: z.uuid().optional(),
 	kind: z.enum(StopKind),
-	title: z.string(),
+	/**
+	 * OPCIONAL desde o catálogo de canal: o título PADRÃO de cada kind agora vive em `THREAD_MESSAGES`
+	 * e é resolvido aqui, onde o idioma do operador está em mãos. Quem passa um título explícito é
+	 * `RecordStopFromExecution` no caso `HUMAN_REQUESTED`, onde o título É a pergunta que o agente
+	 * escreveu — texto de autor, não rótulo de condição, e por isso não pertence a catálogo nenhum.
+	 */
+	title: z.string().optional(),
 	detail: z.string(),
 })
 
@@ -46,6 +56,15 @@ const POLICY_KEY: Record<StopKind, keyof StopPolicy> = {
  * ### `ownerId` comes from the THREAD
  * It used to come from `issue.ownerId`, which is exactly what made a stop without an issue impossible to
  * scope. The thread always exists and always knows its owner.
+ *
+ * ### Por que o AVISO NO CANAL é enfileirado AQUI
+ * Porque aqui existe transação. O handler acima roda fora de uma, e uma queda entre "o stop foi
+ * gravado" e "o aviso foi enfileirado" perderia exatamente o aviso — a classe de falha que esta
+ * feature existe para corrigir. Enfileirado dentro do mesmo `withTransaction` que salva a thread, um
+ * stop que commita sempre avisou, e um que falha nunca deixa mensagem órfã no canal. É a mesma forma
+ * que `RecordOrchestratorReply` usa, e nenhum agent runner participa: entrada `SYSTEM` no transcript
+ * mais comando durável, que é a propriedade que torna o aviso possível justamente quando o agente não
+ * pode falar.
  */
 @injectable()
 export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof RaiseStopOutputSchema> {
@@ -57,6 +76,8 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 		private readonly threads: ThreadRepository,
 		private readonly issues: IssueRepository,
 		private readonly policy: StopPolicyConfigRepository,
+		private readonly owners: OwnerDirectory,
+		private readonly commands: CommandQueue,
 	) {
 		super()
 	}
@@ -88,14 +109,46 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 			throw new BaseError<ApplicationErrors>('STOP_CRITERION_DISABLED', `the ${input.kind} criterion is disabled`)
 		}
 
+		// O idioma como transporte: quem resolve o owner já traz. `language` ausente cai em
+		// `DEFAULT_LANGUAGE` dentro do catálogo, então não há ramificação sobre idioma aqui.
+		const tenancy = await this.owners.getOwner(thread.ownerId, tx)
+		const language = tenancy?.language
+
 		return this.withTransaction(tx, async tx => {
 			const stop = thread.raiseStop({
 				stopId: input.stopId,
 				issueId: input.issueId,
 				kind: input.kind,
-				title: input.title,
+				title: input.title ?? THREAD_MESSAGES.stopTitle(language, { kind: input.kind }),
 				detail: input.detail,
 			})
+
+			if (NOTIFIES_ON_CHANNEL[input.kind]) {
+				const entry = thread.recordEntry({
+					kind: TranscriptKind.SYSTEM,
+					text: THREAD_MESSAGES.stopChannelNotice(language, { kind: input.kind, detail: input.detail }),
+				})
+				await this.threads.save(thread, tx)
+
+				// `jobId` é o id da entrada: a fila dedup nele, então uma redelivery que já commitou não
+				// agenda um segundo envio do mesmo aviso.
+				await this.commands.enqueueCommand<DeliverChannelMessage>(
+					'deliver_channel_message',
+					{
+						ownerId: thread.ownerId,
+						channelId: thread.channelId,
+						contactExternalId: thread.contactRef.externalId,
+						text: entry.text,
+						author: MessageAuthor.SYSTEM,
+						replyEntryId: entry.entryId,
+						replyThreadId: thread.id.value,
+					},
+					{ jobId: entry.entryId },
+					tx,
+				)
+				return { stopId: stop.stopId }
+			}
+
 			await this.threads.save(thread, tx)
 			return { stopId: stop.stopId }
 		})
