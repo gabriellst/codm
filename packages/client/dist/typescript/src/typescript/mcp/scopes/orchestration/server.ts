@@ -3,12 +3,14 @@
 * Do not edit manually.
 */
 
+import { configurePromptHandler } from "./configurePrompt.ts";
 import { forkIssueHandler } from "./forkIssue.ts";
 import { getIssueStatusHandler } from "./getIssueStatus.ts";
 import { getSessionIssuesHandler } from "./getSessionIssues.ts";
 import { raiseStopHandler } from "./raiseStop.ts";
 import { resolveStopHandler } from "./resolveStop.ts";
 import { steerIssueTurnHandler } from "./steerIssueTurn.ts";
+import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
 import { forkIssueMutationRequestSchema, forkIssueMutationResponseSchema } from "../../../zod/forkIssueSchema.ts";
 import { getIssueStatusQueryResponseSchema } from "../../../zod/getIssueStatusSchema.ts";
 import { getSessionIssuesQueryResponseSchema } from "../../../zod/getSessionIssuesSchema.ts";
@@ -67,6 +69,15 @@ server.registerTool("GetIssueStatus", {
   inputSchema: { threadId: z.string(), issueId: z.string() },
 }, async ({ threadId, issueId }) => {
   return getIssueStatusHandler({ threadId, issueId })
+})
+          
+
+server.registerTool("ConfigurePrompt", {
+  description: "Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)",
+  outputSchema: { data: configurePromptMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: configurePromptMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return configurePromptHandler({ threadId, data })
 })
           
 
