@@ -607,6 +607,55 @@ export class OpenAPI {
 	}
 
 	/**
+	 * When a union's discriminant literals ARE a registered enum, emit that enum as a named component.
+	 *
+	 * The branches keep their `const` — that is what narrows the union for every consumer, and it must
+	 * stay a literal. But a `const` is not an `enum: [...]`, so an enum used ONLY as a discriminator
+	 * (`z.literal(LoopScheduleKind.DAILY)` in one member, `…INTERVAL` in the other) would never be
+	 * named, and the generated SDK would carry a per-operation `ScheduleKindEnum3` instead of the one
+	 * iterable const the console needs to render a selector from. Registering it here is the same trick
+	 * `z.enumRecord` gets below, for the same reason: the value set identifies the enum even when no
+	 * single field spells it out.
+	 *
+	 * Matching is EXACT on the sorted value set, so a union that happens to cover only some of an
+	 * enum's members names nothing — a partial cover is a different closed set from the enum itself.
+	 */
+	private promoteDiscriminantEnums(variants: unknown[]): void {
+		if (variants.length < 2) return
+
+		// Per property name, the literal each variant pins it to. A property is a discriminant only if
+		// EVERY variant pins it — one that some variant leaves free is data, not a discriminant.
+		//
+		// Both spellings are read: this pass runs BEFORE the recursion that collapses a single-value
+		// `enum` into a `const`, and the OAS-3.0 target zod emits for is the one that produces
+		// `enum: ["DAILY"]` in the first place.
+		const literalOf = (prop: { const?: unknown; enum?: unknown }): string | undefined => {
+			if (typeof prop?.const === 'string') return prop.const
+			if (Array.isArray(prop?.enum) && prop.enum.length === 1 && typeof prop.enum[0] === 'string') return prop.enum[0]
+			return undefined
+		}
+
+		const constsByProperty = new Map<string, string[]>()
+		for (const variant of variants) {
+			const properties = (variant as { properties?: Record<string, { const?: unknown; enum?: unknown }> })?.properties
+			if (!properties || typeof properties !== 'object') return
+			for (const [key, propSchema] of Object.entries(properties)) {
+				const literal = literalOf(propSchema)
+				if (literal === undefined) continue
+				constsByProperty.set(key, [...(constsByProperty.get(key) ?? []), literal])
+			}
+		}
+
+		for (const [, values] of constsByProperty) {
+			if (values.length !== variants.length) continue
+			const sorted = [...new Set(values)].sort()
+			const enumName = this.enumNameMap.get(JSON.stringify(sorted))
+			if (!enumName || this.reusableSchemas.has(enumName)) continue
+			this.reusableSchemas.set(enumName, { type: 'string', enum: sorted } as OpenAPIV3.SchemaObject)
+		}
+	}
+
+	/**
 	 * Walks the given JSON schema and extracts any subschema that carries
 	 * `x-zod-refinements` into a named component (if it isn't already a $ref).
 	 *
@@ -1199,6 +1248,10 @@ export class OpenAPI {
 			}
 			return this.handleEnumSchema(schemaObj, path)
 		}
+
+		// A union of OBJECTS discriminated by a const property — name the enum those consts belong to.
+		const objectVariants = schemaObj.oneOf ?? schemaObj.anyOf
+		if (Array.isArray(objectVariants)) this.promoteDiscriminantEnums(objectVariants)
 
 		// Convert anyOf with const values to enum
 		if ('anyOf' in schemaObj && Array.isArray(schemaObj.anyOf)) {

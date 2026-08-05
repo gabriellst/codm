@@ -2166,27 +2166,54 @@
                     "maxLength": 2000
                   },
                   "schedule": {
-                    "type": "object",
-                    "properties": {
-                      "timeOfDay": {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "DAILY"
+                          },
+                          "timeOfDay": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "weekdays": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/DayOfWeek"
+                            }
+                          },
+                          "timezone": {
+                            "$ref": "#/components/schemas/Timezone"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "timeOfDay",
+                          "weekdays",
+                          "timezone"
+                        ]
                       },
-                      "weekdays": {
-                        "minItems": 1,
-                        "type": "array",
-                        "items": {
-                          "$ref": "#/components/schemas/DayOfWeek"
-                        }
-                      },
-                      "timezone": {
-                        "$ref": "#/components/schemas/Timezone"
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "INTERVAL"
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "everyMinutes"
+                        ]
                       }
-                    },
-                    "required": [
-                      "timeOfDay",
-                      "weekdays",
-                      "timezone"
                     ]
                   }
                 },
@@ -2200,6 +2227,7 @@
                   "value": {
                     "prompt": "Pergunte ao time como está o deploy de hoje e resuma em três linhas.",
                     "schedule": {
+                      "kind": "DAILY",
                       "timeOfDay": "09:00",
                       "weekdays": [
                         "MONDAY",
@@ -2308,17 +2336,58 @@
                           "prompt": {
                             "type": "string"
                           },
-                          "timeOfDay": {
-                            "type": "string"
-                          },
-                          "weekdays": {
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/components/schemas/DayOfWeek"
-                            }
-                          },
-                          "timezone": {
-                            "type": "string"
+                          "schedule": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "DAILY"
+                                  },
+                                  "timeOfDay": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                  },
+                                  "weekdays": {
+                                    "minItems": 1,
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/DayOfWeek"
+                                    }
+                                  },
+                                  "timezone": {
+                                    "$ref": "#/components/schemas/Timezone"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "timeOfDay",
+                                  "weekdays",
+                                  "timezone"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "INTERVAL"
+                                  },
+                                  "everyMinutes": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1440
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "everyMinutes"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
                           },
                           "enabled": {
                             "type": "boolean"
@@ -2333,9 +2402,7 @@
                         "required": [
                           "loopId",
                           "prompt",
-                          "timeOfDay",
-                          "weekdays",
-                          "timezone",
+                          "schedule",
                           "enabled"
                         ],
                         "additionalProperties": false
@@ -2346,11 +2413,25 @@
                       "minimum": 0,
                       "exclusiveMinimum": true,
                       "maximum": 9007199254740991
+                    },
+                    "minIntervalMinutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991
+                    },
+                    "maxIntervalMinutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
                     "loops",
-                    "promptMaxLength"
+                    "promptMaxLength",
+                    "minIntervalMinutes",
+                    "maxIntervalMinutes"
                   ],
                   "additionalProperties": false
                 }
@@ -2449,27 +2530,54 @@
                     "maxLength": 2000
                   },
                   "schedule": {
-                    "type": "object",
-                    "properties": {
-                      "timeOfDay": {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "DAILY"
+                          },
+                          "timeOfDay": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "weekdays": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/DayOfWeek"
+                            }
+                          },
+                          "timezone": {
+                            "$ref": "#/components/schemas/Timezone"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "timeOfDay",
+                          "weekdays",
+                          "timezone"
+                        ]
                       },
-                      "weekdays": {
-                        "minItems": 1,
-                        "type": "array",
-                        "items": {
-                          "$ref": "#/components/schemas/DayOfWeek"
-                        }
-                      },
-                      "timezone": {
-                        "$ref": "#/components/schemas/Timezone"
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "INTERVAL"
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "everyMinutes"
+                        ]
                       }
-                    },
-                    "required": [
-                      "timeOfDay",
-                      "weekdays",
-                      "timezone"
                     ]
                   }
                 },
@@ -2483,13 +2591,8 @@
                   "value": {
                     "prompt": "Pergunte ao time como está o deploy de hoje e resuma em três linhas.",
                     "schedule": {
-                      "timeOfDay": "09:00",
-                      "weekdays": [
-                        "MONDAY",
-                        "WEDNESDAY",
-                        "FRIDAY"
-                      ],
-                      "timezone": "America/Sao_Paulo"
+                      "kind": "INTERVAL",
+                      "everyMinutes": 15
                     }
                   },
                   "summary": "Example"
@@ -8250,6 +8353,7 @@
           "INVALID_ID",
           "INVALID_ID_VALUES_LENGTH",
           "INVALID_LANGUAGE",
+          "INVALID_LOOP_INTERVAL",
           "INVALID_LOOP_TIME",
           "INVALID_OUTBOX_PAYLOAD",
           "INVALID_PHONE",
@@ -8405,6 +8509,13 @@
             "function": "(tz) => tryCatch(() => new Intl.DateTimeFormat(\"en-US\", { timeZone: tz }).format(new Date)).success",
             "error": "INVALID_TIMEZONE"
           }
+        ]
+      },
+      "LoopScheduleKind": {
+        "type": "string",
+        "enum": [
+          "DAILY",
+          "INTERVAL"
         ]
       },
       "DayOfWeek": {
@@ -8661,6 +8772,7 @@
     "INVALID_ID",
     "INVALID_ID_VALUES_LENGTH",
     "INVALID_LANGUAGE",
+    "INVALID_LOOP_INTERVAL",
     "INVALID_LOOP_TIME",
     "INVALID_OUTBOX_PAYLOAD",
     "INVALID_PHONE",

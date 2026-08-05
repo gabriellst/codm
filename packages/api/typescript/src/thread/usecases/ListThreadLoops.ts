@@ -2,8 +2,8 @@ import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
 import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
 import { threads } from '@codm/contracts/db'
-import { DayOfWeek } from '@codm/contracts-typescript/wire/enums'
 import { LoopRepository } from '../repositories/LoopRepository'
+import { LoopScheduleInputSchema, LOOP_MIN_INTERVAL_MINUTES, LOOP_MAX_INTERVAL_MINUTES } from '../objects/LoopSchedule'
 import { LOOP_PROMPT_MAX_LENGTH } from '../schemas'
 import type { ApplicationErrors } from '../errors'
 
@@ -14,9 +14,14 @@ export const ListThreadLoopsOutputSchema = z.object({
 		z.object({
 			loopId: z.uuid(),
 			prompt: z.string(),
-			timeOfDay: z.string(),
-			weekdays: z.array(z.enum(DayOfWeek)),
-			timezone: z.string(),
+			/**
+			 * The SAME union the write doors accept, not a flattened echo of it.
+			 *
+			 * Which means the console can hand `loop.schedule` straight back as the edit form's default
+			 * values — the read and the write speak one shape, so there is no mapping layer to get wrong,
+			 * and a loop whose schedule has no time of day simply does not carry the field.
+			 */
+			schedule: LoopScheduleInputSchema,
 			enabled: z.boolean(),
 			/** ISO — absent iff the loop is paused. The console renders "próxima: …" from it. */
 			nextRunAt: z.string().optional(),
@@ -31,6 +36,9 @@ export const ListThreadLoopsOutputSchema = z.object({
 	 * validator is worse than no counter, and the wire is the one place both sides can read it from.
 	 */
 	promptMaxLength: z.number().int().positive(),
+	/** The cadence field's bounds, for the same reason and from the same source as the cap above. */
+	minIntervalMinutes: z.number().int().positive(),
+	maxIntervalMinutes: z.number().int().positive(),
 })
 
 /**
@@ -71,14 +79,16 @@ export class ListThreadLoops extends Handler<typeof ListThreadLoopsInputSchema, 
 			loops: loops.map(loop => ({
 				loopId: loop.id.value,
 				prompt: loop.prompt,
-				timeOfDay: loop.schedule.timeOfDay,
-				weekdays: loop.schedule.weekdays,
-				timezone: loop.schedule.timezone,
+				// The value object IS the wire member — it carries `kind` and exactly that member's fields,
+				// so there is nothing to map and no branch to write here.
+				schedule: loop.schedule,
 				enabled: loop.enabled,
 				nextRunAt: loop.nextRunAt?.toISOString(),
 				lastFiredAt: loop.lastFiredAt?.toISOString(),
 			})),
 			promptMaxLength: LOOP_PROMPT_MAX_LENGTH,
+			minIntervalMinutes: LOOP_MIN_INTERVAL_MINUTES,
+			maxIntervalMinutes: LOOP_MAX_INTERVAL_MINUTES,
 		}
 	}
 }

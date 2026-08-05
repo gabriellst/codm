@@ -78,6 +78,13 @@
       "when": 1785872543971,
       "tag": "0010_sudden_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785889190540,
+      "tag": "0011_jittery_the_anarchist",
+      "breakpoints": true
     }
   ]
 }

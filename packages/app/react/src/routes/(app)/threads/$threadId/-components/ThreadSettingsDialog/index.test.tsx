@@ -46,7 +46,7 @@ const SETTINGS = {
  * `data.loops.map` antes do resto do corpo sair do skeleton — vazio é uma resposta válida, ausente
  * não é.
  */
-const LOOPS = { loops: [], promptMaxLength: 2000 }
+const LOOPS = { loops: [], promptMaxLength: 2000, minIntervalMinutes: 1, maxIntervalMinutes: 1440 }
 
 /** Toda requisição que o diálogo dispara, para as asserções de ESCRITA (o prompt personalizado). */
 const sent: { url: string; method: string; body?: string }[] = []

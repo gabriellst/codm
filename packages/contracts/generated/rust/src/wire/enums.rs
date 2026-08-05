@@ -598,6 +598,22 @@ pub enum Language {
 	EN_US,
 }
 
+/// Which SHAPE a thread loop's schedule has — the discriminant of the schedule union. DAILY is a wall clock plus a set of weekdays read in one timezone ("toda segunda e quarta às 09:00"); INTERVAL is a plain cadence with no clock and no zone at all ("a cada 15 minutos"). Two genuinely different shapes rather than one all-optional object, because a loop that repeats every quarter hour has no time of day to state and no weekday set that would mean anything — and the console picks which form it renders from this value.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum LoopScheduleKind {
+	#[serde(rename = "DAILY")]
+	#[strum(serialize = "DAILY")]
+	DAILY,
+	#[serde(rename = "INTERVAL")]
+	#[strum(serialize = "INTERVAL")]
+	INTERVAL,
+}
+
 /// Why a turn is being scheduled. OPERATOR_MESSAGE = the operator addressed the orchestrator; ISSUE_RESULT = a subagent finished and its outcome must be composed into a reply; WORK = a newly created issue's first subagent turn; STEER = mid-flight guidance for a running issue. The first two target a THREAD, the last two an ISSUE — the pairing is not encoded here on purpose: a producer states what happened, the dispatcher decides what runs.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,

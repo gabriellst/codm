@@ -55,6 +55,11 @@ import "./enums/buffer-size.tsp";
 // conversation. Cross-boundary because the same closed set types the DB column, the controller schema
 // (and therefore the SDK the console's weekday picker renders from) and the schedule value object.
 import "./enums/day-of-week.tsp";
+// WHICH SHAPE that recurrence has — a wall clock on chosen weekdays, or a plain "every N minutes".
+// Cross-boundary for the same three reasons the weekday axis is: it discriminates the DB row, the
+// controller's schedule union (and therefore the SDK member the console validates against), and the
+// value object that answers "when is the next run?".
+import "./enums/loop-schedule-kind.tsp";
 import "./enums/attach-flow-style.tsp";
 // Persistence-lane discriminator of the SINGLE shared_outbox table in the shared SQLite
 // store. Cross-boundary because BOTH backends write rows into that one table and each

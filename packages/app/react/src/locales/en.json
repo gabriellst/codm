@@ -331,6 +331,10 @@
 			"en-US": "English (US)",
 			"pt-BR": "Português (Brasil)"
 		},
+		"LoopScheduleKind": {
+			"DAILY": "Fixed time",
+			"INTERVAL": "Every so often"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Daily digest",
 			"FEATURE_ANNOUNCEMENT": "Feature announcement",
@@ -406,6 +410,7 @@
 		"INVALID_ID": "Invalid identifier.",
 		"INVALID_ID_VALUES_LENGTH": "Invalid identifier values.",
 		"INVALID_LANGUAGE": "Invalid language. Use a BCP-47 tag such as \"en-US\".",
+		"INVALID_LOOP_INTERVAL": "The loop's interval must be a whole number of minutes, from 1 to 1440.",
 		"INVALID_LOOP_TIME": "The loop's time must be in HH:MM (24-hour) format.",
 		"INVALID_OUTBOX_PAYLOAD": "Internal event processing error. Try again shortly.",
 		"INVALID_PHONE": "Invalid phone number.",
@@ -574,10 +579,14 @@
 			"deleteConfirmDescription": "This scheduled prompt stops being sent. Whatever it already whispered stays in the conversation history.",
 			"deleteConfirmTitle": "Delete this loop?",
 			"edit": "Edit loop",
-			"emptyDescription": "A loop is a prompt CODM whispers into this conversation on its own, at the time and on the days you choose.",
+			"emptyDescription": "A loop is a prompt CODM whispers into this conversation on its own — at a fixed time on the days you choose, or every so many minutes.",
 			"emptyTitle": "No loops yet",
 			"enabledToggle": "Active",
 			"hint": "Prompts that repeat on their own in this conversation. Each run arrives as a whisper — only the agents read it, never the contact.",
+			"intervalBadge": "Every {{minutes}} min",
+			"intervalLabel": "Every (minutes)",
+			"intervalNote": "From {{min}} to {{max}} minutes.",
+			"kindLabel": "Repeats",
 			"lastFired": "Last: {{when}}",
 			"never": "never",
 			"nextRun": "Next: {{when}}",

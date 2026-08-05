@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { DayOfWeek, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { DayOfWeek, LoopScheduleKind, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import {
 	CreateThreadLoop,
@@ -29,12 +29,22 @@ import { ThreadParam } from '../schemas'
 const OWNER = '00000000-0000-4000-8000-000000000001'
 const THREAD = '019e4d24-6524-7041-9e1c-8108180cddae'
 const LOOP = '019e4d24-6524-7041-9e1c-8108180cddb1'
-/** The example schedule every door below shows: weekday mornings, in the operator's own zone. */
+/**
+ * The example schedule the create door shows: weekday mornings, in the operator's own zone.
+ *
+ * The EDIT door shows the other member instead (below), so the generated docs and SDK examples carry
+ * one of each — a reader who only ever sees the wall-clock shape would reasonably conclude it is the
+ * only one, which is precisely the misreading a discriminated contract exists to prevent.
+ */
 const SCHEDULE = {
+	kind: LoopScheduleKind.DAILY as const,
 	timeOfDay: '09:00',
 	weekdays: [DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY],
 	timezone: 'America/Sao_Paulo',
 }
+
+/** "A cada quinze minutos" — the cadence member, with no clock and no zone. */
+const INTERVAL_SCHEDULE = { kind: LoopScheduleKind.INTERVAL, everyMinutes: 15 } as const
 const PROMPT = 'Pergunte ao time como está o deploy de hoje e resuma em três linhas.'
 
 /** The (ctx.ownerId, params.{threadId,loopId}) envelope the per-loop doors share. */
@@ -102,7 +112,7 @@ export class CreateThreadLoopController extends Controller<
 
 export const UpdateThreadLoopControllerInputSchema = LoopParam.extend({
 	body: UpdateThreadLoopInputSchema.pick({ prompt: true, schedule: true }),
-}).example([{ ctx: { ownerId: OWNER }, params: { threadId: THREAD, loopId: LOOP }, body: { prompt: PROMPT, schedule: SCHEDULE } }])
+}).example([{ ctx: { ownerId: OWNER }, params: { threadId: THREAD, loopId: LOOP }, body: { prompt: PROMPT, schedule: INTERVAL_SCHEDULE } }])
 export const UpdateThreadLoopControllerOutputSchema = UpdateThreadLoopOutputSchema.example([{ nextRunAt: '2026-08-05T12:00:00.000Z' }])
 
 // C22

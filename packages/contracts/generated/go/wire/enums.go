@@ -395,6 +395,22 @@ func ParseLanguage(s string) (Language, error) {
 	}
 }
 
+type LoopScheduleKind string
+
+const (
+	LoopScheduleKindDAILY LoopScheduleKind = "DAILY"
+	LoopScheduleKindINTERVAL LoopScheduleKind = "INTERVAL"
+)
+
+func ParseLoopScheduleKind(s string) (LoopScheduleKind, error) {
+	switch LoopScheduleKind(s) {
+	case LoopScheduleKindDAILY, LoopScheduleKindINTERVAL:
+		return LoopScheduleKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid LoopScheduleKind: %q", s)
+	}
+}
+
 type MailboxItemKind string
 
 const (

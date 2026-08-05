@@ -1,15 +1,22 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
-import { DayOfWeek } from '@codm/contracts-typescript/wire/enums'
+import { DayOfWeek, LoopScheduleKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { LoopRepository } from '../repositories/LoopRepository'
+import type { LoopScheduleInput } from '../objects/LoopSchedule'
 import { LOOP_PROMPT_MAX_LENGTH } from '../schemas'
 import { ListThreadLoops } from './ListThreadLoops'
 import { CreateThreadLoop, DeleteThreadLoop, SetThreadLoopEnabled, UpdateThreadLoop } from './ManageThreadLoops'
 
 const OTHER_OWNER = '00000000-0000-4000-8000-0000000000ff'
-const SCHEDULE = { timeOfDay: '09:00', weekdays: [DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY], timezone: 'America/Sao_Paulo' }
+const SCHEDULE: LoopScheduleInput = {
+	kind: LoopScheduleKind.DAILY,
+	timeOfDay: '09:00',
+	weekdays: [DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY],
+	timezone: 'America/Sao_Paulo',
+}
+const EVERY_15_MIN: LoopScheduleInput = { kind: LoopScheduleKind.INTERVAL, everyMinutes: 15 }
 
 /**
  * The console's four writes and its one read, against a real database.
@@ -33,7 +40,7 @@ describe('Thread loops — create, list, edit, pause, delete', () => {
 		await testBed.destroy()
 	})
 
-	const create = (threadId: string, overrides: Partial<{ prompt: string; schedule: typeof SCHEDULE }> = {}) =>
+	const create = (threadId: string, overrides: Partial<{ prompt: string; schedule: LoopScheduleInput }> = {}) =>
 		testBed.resolve(CreateThreadLoop).execute({
 			ownerId: OPERATOR_ID,
 			threadId,
@@ -53,9 +60,7 @@ describe('Thread loops — create, list, edit, pause, delete', () => {
 		expect(loops[0]).toMatchObject({
 			loopId,
 			prompt: 'pergunte como está o deploy',
-			timeOfDay: '09:00',
-			weekdays: [DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY],
-			timezone: 'America/Sao_Paulo',
+			schedule: SCHEDULE,
 			enabled: true,
 			nextRunAt,
 		})
@@ -89,6 +94,50 @@ describe('Thread loops — create, list, edit, pause, delete', () => {
 		expect((await list(thread.id.value)).loops).toHaveLength(0)
 	})
 
+	/**
+	 * THE CADENCE MEMBER, end to end: through the use case, into the row, and back out of the read the
+	 * dialog renders. What this proves that the value object's own test cannot is the round trip — that
+	 * `kind` survives the write and that no wall-clock column leaks into a loop that has no wall clock.
+	 */
+	it('creates a loop that repeats every N minutes and lists it back as such', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+		const { loopId, nextRunAt } = await create(thread.id.value, { prompt: 'veja se o build quebrou', schedule: EVERY_15_MIN })
+
+		const { loops, minIntervalMinutes, maxIntervalMinutes } = await list(thread.id.value)
+		expect(loops[0]).toMatchObject({ loopId, prompt: 'veja se o build quebrou', schedule: EVERY_15_MIN, enabled: true, nextRunAt })
+		// A quarter of an hour from now, give or take the milliseconds the use case took.
+		expect(new Date(nextRunAt).getTime() - Date.now()).toBeGreaterThan(14 * 60 * 1000)
+		expect(new Date(nextRunAt).getTime() - Date.now()).toBeLessThanOrEqual(15 * 60 * 1000)
+		// The bounds the console's numeric field enforces come from the same place the validator does.
+		expect({ minIntervalMinutes, maxIntervalMinutes }).toEqual({ minIntervalMinutes: 1, maxIntervalMinutes: 1440 })
+	})
+
+	it('refuses a cadence outside the allowed range — INVALID_LOOP_INTERVAL, before anything is stored', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+		await expect(create(thread.id.value, { schedule: { kind: LoopScheduleKind.INTERVAL, everyMinutes: 0 } })).rejects.toThrow()
+
+		expect((await list(thread.id.value)).loops).toHaveLength(0)
+	})
+
+	it('changes a loop from a wall clock to a cadence — and the row keeps nothing of the old shape', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const { loopId } = await create(thread.id.value)
+
+		await testBed.resolve(UpdateThreadLoop).execute({
+			ownerId: OPERATOR_ID,
+			threadId: thread.id.value,
+			loopId,
+			prompt: 'agora de quinze em quinze',
+			schedule: EVERY_15_MIN,
+		})
+
+		// `toEqual` on the whole schedule, not `toMatchObject`: the assertion IS that `timeOfDay`,
+		// `weekdays` and `timezone` are gone, not merely that `everyMinutes` arrived.
+		expect((await list(thread.id.value)).loops[0]?.schedule).toEqual(EVERY_15_MIN)
+	})
+
 	it('edits both the prompt and the schedule, and re-derives the next run', async () => {
 		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 		const { loopId, nextRunAt: before } = await create(thread.id.value)
@@ -98,12 +147,15 @@ describe('Thread loops — create, list, edit, pause, delete', () => {
 			threadId: thread.id.value,
 			loopId,
 			prompt: 'agora pergunte outra coisa',
-			schedule: { timeOfDay: '18:30', weekdays: [DayOfWeek.SATURDAY], timezone: 'America/Sao_Paulo' },
+			schedule: { kind: LoopScheduleKind.DAILY, timeOfDay: '18:30', weekdays: [DayOfWeek.SATURDAY], timezone: 'America/Sao_Paulo' },
 		})
 
 		expect(after).not.toBe(before)
 		const [loop] = (await list(thread.id.value)).loops
-		expect(loop).toMatchObject({ prompt: 'agora pergunte outra coisa', timeOfDay: '18:30', weekdays: [DayOfWeek.SATURDAY] })
+		expect(loop).toMatchObject({
+			prompt: 'agora pergunte outra coisa',
+			schedule: { kind: LoopScheduleKind.DAILY, timeOfDay: '18:30', weekdays: [DayOfWeek.SATURDAY] },
+		})
 	})
 
 	it('pausing clears the next run; resuming arms it again', async () => {
